@@ -1,0 +1,74 @@
+# Repository rules
+
+These rules apply to the entire `TheLastCaretakerMods` repository.
+
+## Sources of truth
+
+- Treat `mods/DonkLiftKeyboardControl/Scripts/main.lua` and the latest
+  game-validated Git checkpoint as the control implementation of record.
+- Treat older control/HUD designs in `docs/` as historical research when they
+  disagree with the current source. In particular, do not restore the old
+  `ReceiveTick`, setter-hook, `Acceleration`/`Steering`, or direct HUD-widget
+  architecture without a new, isolated experiment.
+- The installed test copy is
+  `P:\SteamLibrary\steamapps\common\Voyage\Voyage\Binaries\Win64\ue4ss\Mods\DonkLiftKeyboardControl\Scripts\main.lua`.
+  The repository copy and installed copy must have matching hashes before a
+  test is handed to the user.
+
+## Verified DonkLift input contract
+
+- The reliable interception points are the pre-hooks for
+  `/Script/Voyage.VoyageVehicleForkliftPawn:GetThrottleInput` and
+  `/Script/Voyage.VoyageVehicleForkliftPawn:GetSteeringInput`.
+- The game writes exact digital commands `-1`, `0`, and `1` into
+  `ThrottleInput` and `SteeringInput`. The mod reads those exact values as
+  direction events, integrates its own state on a fixed 50 ms clock, and
+  writes the integrated value back before the native getter reads it. This
+  path drives both the vehicle and the native HUD.
+- Never let a mod-produced active input equal an exact command marker.
+  `0.9999` is the positive/negative limit and renders as `100%`; `0.0001` is
+  the active neutral sentinel and renders as `0%`. Exact `0` is reserved for
+  the game's release command and for shutting down an exited vehicle.
+- `X` resets throttle immediately and `C` resets steering immediately. Both
+  reset their direction/ramp or velocity state as well as the input field.
+- On acquisition, initialize both mod states to `0.0001`. On exit, write an
+  honest `0` to both input fields and clear the cached state.
+- UE4SS may return different Lua wrappers for the same UObject on consecutive
+  `context:get()` calls. Never use Lua wrapper identity (`==`) as persistent
+  actor identity. A direct `IsPlayerControlled()` check is the verified hot
+  path filter; `GetFullName()` may be used only on cold acquire/release paths.
+- Known accepted limitation: writing `SteeringInput = 0` on exit stops the
+  mod's steering input but does not visually recenter already turned wheels.
+  The forklift appears to retain wheel position elsewhere. Do not broaden the
+  control mod to chase this unless the user explicitly requests it.
+
+## Performance rules
+
+- Lua is interpreted and both native getter hooks may run several times per
+  frame. Keep their steady-state paths free of `pcall`, closures, logging,
+  object searches, string construction, `GetFullName()`, and redundant helper
+  calls.
+- Put integration, ramping, clamping, lifecycle validation, and other work that
+  does not require getter timing in the fixed 50 ms loop.
+- Optimize measured or structurally hot work, but do not assume UObject wrapper
+  identity or remove a defensive boundary without a real-game test. Preserve a
+  known-good Git checkpoint before every optimization experiment.
+- Production logging should be limited to one-time initialization failures.
+  Temporary diagnostic logging must be removed after the experiment.
+
+## Change and validation workflow
+
+- Confirm that the game process is closed before replacing the installed Lua
+  file. Never hot-copy this mod into a running game.
+- Keep control-path and HUD experiments separate. Do not change both in one
+  experiment because feedback between them previously caused autonomous
+  throttle/steering and crashes.
+- Before committing gameplay behavior, require real-game validation of:
+  throttle, steering, both directions, limits, immediate `X`, immediate `C`,
+  native HUD values, exit, and re-entry. A successful load or clean log is not
+  sufficient.
+- Commit each validated checkpoint before starting the next experiment. If an
+  experiment removes control, causes autonomous movement, or crashes, return
+  to the latest checkpoint instead of layering speculative fixes on it.
+- Preserve unrelated worktree changes and stage only the exact files belonging
+  to the validated change.
