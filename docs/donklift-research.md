@@ -41,8 +41,10 @@
 - Visible lower-left vehicle hints live under
   `BP_DynamicPlayerInputHorizontalWidget_Bottom.ContextInputActionsRoot`.
 - `KeybindRoot` is not the visible `E/H` host and is empty at runtime.
-- `DonkLiftHotkeyHints` creates two native `WBP_InteractIndicator_C` copies and
-  configures them after their widget trees become available.
+- The HUD section of `DonkLiftKeyboardControl` creates two native
+  `WBP_InteractIndicator_C` copies and configures them after their widget trees
+  become available. It runs independently from the 50 ms control loop and
+  never writes vehicle input.
 - The custom `FText_Constructor.lua` resolves `FText(FString&&)` to a unique
   match in the validated Voyage executable. Without it, marshaling a new
   `FText` fails and may crash. Revalidate the signature after game updates.
@@ -55,6 +57,7 @@
 
 ## Research rule
 
-Keep physical control and HUD work in separate modules. Revalidate both the
-runtime widget hierarchy and the version-pinned `FText` signature after a game
-update before changing or redistributing the HUD mod.
+Ship physical control and HUD hints as one mod, but keep their code paths and
+state isolated. Revalidate both the runtime widget hierarchy and the
+version-pinned `FText` signature after a game update before changing or
+redistributing the mod.

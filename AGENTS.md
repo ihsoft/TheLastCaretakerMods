@@ -6,9 +6,9 @@ These rules apply to the entire `TheLastCaretakerMods` repository.
 
 - Treat `mods/DonkLiftKeyboardControl/Scripts/main.lua` and the latest
   game-validated Git checkpoint as the control implementation of record.
-- Treat `mods/DonkLiftHotkeyHints/Scripts/main.lua` together with
-  `ue4ss/UE4SS_Signatures/FText_Constructor.lua` as the game-validated hotkey
-  HUD implementation of record.
+- Treat the HUD section of `mods/DonkLiftKeyboardControl/Scripts/main.lua`
+  together with `ue4ss/UE4SS_Signatures/FText_Constructor.lua` as the
+  game-validated hotkey HUD implementation of record.
 - Treat older control/HUD designs in `docs/` as historical research when they
   disagree with the current source. In particular, do not restore the old
   `ReceiveTick`, setter-hook, `Acceleration`/`Steering`, or direct HUD-widget
@@ -70,8 +70,14 @@ These rules apply to the entire `TheLastCaretakerMods` repository.
 - `EVoyageLanguageType` values verified for the current labels are `English=1`
   and `Russian=11`. The production hint labels are `Brake / Center` and
   `Тормоз / Выровнять`; unsupported languages fall back to English.
-- Keep `DonkLiftHotkeyHints` separate from `DonkLiftKeyboardControl`. The HUD
-  module must never write throttle or steering state.
+- Ship control and its `X/C` hints as the single `DonkLiftKeyboardControl` mod.
+  Keep their internal loops and state independent: the HUD section must never
+  write throttle or steering state.
+- Separate temporary mods are acceptable while isolating a risky experiment,
+  but merge a validated feature back into the owning user-facing mod when it
+  has no standalone purpose. Do not leave probe/diagnostic mods in `mods/` or
+  in the installed game after the experiment ends; keep reusable inspectors
+  under `tools/` instead.
 
 ## Performance rules
 
@@ -91,9 +97,9 @@ These rules apply to the entire `TheLastCaretakerMods` repository.
 
 - Confirm that the game process is closed before replacing the installed Lua
   file. Never hot-copy this mod into a running game.
-- Before testing `DonkLiftHotkeyHints`, ensure its repository and installed Lua
-  hashes match and the installed `FText_Constructor.lua` matches the repository
-  signature file.
+- Before testing the HUD section, ensure the repository and installed
+  `DonkLiftKeyboardControl` Lua hashes match and the installed
+  `FText_Constructor.lua` matches the repository signature file.
 - Keep control-path and HUD experiments separate. Do not change both in one
   experiment because feedback between them previously caused autonomous
   throttle/steering and crashes.
