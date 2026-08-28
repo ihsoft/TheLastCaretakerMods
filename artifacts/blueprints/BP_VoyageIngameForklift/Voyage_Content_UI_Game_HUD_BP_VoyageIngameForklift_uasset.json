@@ -1,0 +1,4018 @@
+[
+  {
+    "Type": "Border",
+    "Name": "Border",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Border'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "BrushColor": {
+        "R": 0.333316,
+        "G": 1.0,
+        "B": 0.068632,
+        "A": 1.0,
+        "Hex": "9CFF4A"
+      },
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.HornPanelRoot.OverlaySlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.51"
+      }
+    }
+  },
+  {
+    "Type": "Border",
+    "Name": "Border_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Border'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "BrushColor": {
+        "R": 0.0,
+        "G": 0.505428,
+        "B": 1.0,
+        "A": 1.0,
+        "Hex": "00BDFF"
+      },
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.ForkPanelRoot.OverlaySlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.50"
+      }
+    }
+  },
+  {
+    "Type": "BP_ButtonInfo_Vertical_Container_C",
+    "Name": "BP_ButtonInfoContainer_Action",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "WidgetBlueprintGeneratedClass'/Game/UI/Game/Inputs/BP_ButtonInfo_Vertical_Container.BP_ButtonInfo_Vertical_Container_C'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Template": {
+      "ObjectName": "BP_ButtonInfo_Vertical_Container_C'Default__BP_ButtonInfo_Vertical_Container_C'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo_Vertical_Container.1"
+    },
+    "Properties": {
+      "ContextAsset": {
+        "ObjectName": "VoyageInputContextAsset'DA_Input_Context_Forklift'",
+        "ObjectPath": "/Game/Game/Input/Vehicle/DA_Input_Context_Forklift.0"
+      },
+      "ButtonInfoWidgetClass": {
+        "ObjectName": "WidgetBlueprintGeneratedClass'BP_ButtonInfoDetailed_C'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfoDetailed.41"
+      },
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.KeybindRoot.VerticalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.100"
+      }
+    }
+  },
+  {
+    "Type": "BP_DropWidgetArea_C",
+    "Name": "ItemDropArea",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "WidgetBlueprintGeneratedClass'/Game/UI/Game/HUD/BP_DropWidgetArea.BP_DropWidgetArea_C'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Template": {
+      "ObjectName": "BP_DropWidgetArea_C'Default__BP_DropWidgetArea_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_DropWidgetArea.0"
+    },
+    "Properties": {
+      "Slot": {
+        "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_5'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.13"
+      },
+      "Cursor": "EMouseCursor::None"
+    }
+  },
+  {
+    "Type": "BP_DynamicPlayerInputHorizontalWidget_C",
+    "Name": "BP_DynamicPlayerInputHorizontalWidget_Bottom",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "WidgetBlueprintGeneratedClass'/Game/UI/Game/BP_DynamicPlayerInputHorizontalWidget.BP_DynamicPlayerInputHorizontalWidget_C'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Template": {
+      "ObjectName": "BP_DynamicPlayerInputHorizontalWidget_C'Default__BP_DynamicPlayerInputHorizontalWidget_C'",
+      "ObjectPath": "/Game/UI/Game/BP_DynamicPlayerInputHorizontalWidget.0"
+    },
+    "Properties": {
+      "ContextAsset": {
+        "ObjectName": "VoyageInputContextAsset'DA_Input_Context_Forklift'",
+        "ObjectPath": "/Game/Game/Input/Vehicle/DA_Input_Context_Forklift.0"
+      },
+      "bFilterByActionType": true,
+      "Slot": {
+        "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_3'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.12"
+      }
+    }
+  },
+  {
+    "Type": "BP_DynamicPlayerInputHorizontalWidget_C",
+    "Name": "BP_DynamicPlayerInputHorizontalWidget_Center",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "WidgetBlueprintGeneratedClass'/Game/UI/Game/BP_DynamicPlayerInputHorizontalWidget.BP_DynamicPlayerInputHorizontalWidget_C'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Template": {
+      "ObjectName": "BP_DynamicPlayerInputHorizontalWidget_C'Default__BP_DynamicPlayerInputHorizontalWidget_C'",
+      "ObjectPath": "/Game/UI/Game/BP_DynamicPlayerInputHorizontalWidget.0"
+    },
+    "Properties": {
+      "ContextAsset": {
+        "ObjectName": "VoyageInputContextAsset'DA_Input_Context_Forklift'",
+        "ObjectPath": "/Game/Game/Input/Vehicle/DA_Input_Context_Forklift.0"
+      },
+      "bFilterByActionType": true,
+      "InputActionType": "EPlayerInputInterfaceActionType::Context",
+      "Slot": {
+        "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.9"
+      }
+    }
+  },
+  {
+    "Type": "BP_LocatorHudWidget_C",
+    "Name": "BP_LocatorHudWidget",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "WidgetBlueprintGeneratedClass'/Game/UI/Game/Locator/BP_LocatorHudWidget.BP_LocatorHudWidget_C'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Template": {
+      "ObjectName": "BP_LocatorHudWidget_C'Default__BP_LocatorHudWidget_C'",
+      "ObjectPath": "/Game/UI/Game/Locator/BP_LocatorHudWidget.0"
+    },
+    "Properties": {
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.LocatorRoot.OverlaySlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.52"
+      }
+    }
+  },
+  {
+    "Type": "BP_VoyageIngameForklift_C",
+    "Name": "Default__BP_VoyageIngameForklift_C",
+    "Flags": "RF_Public | RF_ClassDefaultObject | RF_ArchetypeObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "WidgetBlueprintGeneratedClass'/Game/UI/Game/HUD/BP_VoyageIngameForklift.BP_VoyageIngameForklift_C'",
+    "Package": "/Game/UI/Game/HUD/BP_VoyageIngameForklift",
+    "Properties": {
+      "UberGraphFrame": {},
+      "ResourceType": "EModuleResourceType::Petrol",
+      "bHasScriptImplementedTick": false,
+      "bHasScriptImplementedPaint": false
+    }
+  },
+  {
+    "Type": "CanvasPanel",
+    "Name": "RootCanvasPanel",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'CanvasPanel'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_5'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.13"
+        },
+        {
+          "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_13'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.10"
+        },
+        {
+          "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_7'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.14"
+        },
+        {
+          "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_2'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.11"
+        },
+        {
+          "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_3'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.12"
+        },
+        {
+          "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.9"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "PanelSlot'BP_VoyageIngameForklift_C:WidgetTree.InvalidationBox_0.PanelSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.59"
+      },
+      "bIsVariable": true
+    }
+  },
+  {
+    "Type": "CanvasPanelSlot",
+    "Name": "CanvasPanelSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'CanvasPanelSlot'",
+    "Outer": {
+      "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+    },
+    "Properties": {
+      "LayoutData": {
+        "Offsets": {
+          "Top": -128.0
+        },
+        "Anchors": {
+          "Minimum": {
+            "X": 0.5,
+            "Y": 1.0
+          },
+          "Maximum": {
+            "X": 0.5,
+            "Y": 1.0
+          }
+        },
+        "Alignment": {
+          "X": 0.5,
+          "Y": 1.0
+        }
+      },
+      "bAutoSize": true,
+      "Parent": {
+        "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+      },
+      "Content": {
+        "ObjectName": "BP_DynamicPlayerInputHorizontalWidget_C'BP_VoyageIngameForklift_C:WidgetTree.BP_DynamicPlayerInputHorizontalWidget_Center'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.5"
+      }
+    }
+  },
+  {
+    "Type": "CanvasPanelSlot",
+    "Name": "CanvasPanelSlot_13",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'CanvasPanelSlot'",
+    "Outer": {
+      "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+    },
+    "Properties": {
+      "LayoutData": {
+        "Offsets": {
+          "Right": 0.0,
+          "Bottom": 0.0
+        },
+        "Anchors": {
+          "Maximum": {
+            "X": 1.0,
+            "Y": 1.0
+          }
+        }
+      },
+      "Parent": {
+        "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+      },
+      "Content": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.LocatorRoot'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.45"
+      }
+    }
+  },
+  {
+    "Type": "CanvasPanelSlot",
+    "Name": "CanvasPanelSlot_2",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'CanvasPanelSlot'",
+    "Outer": {
+      "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+    },
+    "Properties": {
+      "LayoutData": {
+        "Offsets": {
+          "Left": 16.0,
+          "Top": -16.0,
+          "Bottom": 40.0
+        },
+        "Anchors": {
+          "Minimum": {
+            "X": 0.0,
+            "Y": 1.0
+          },
+          "Maximum": {
+            "X": 0.0,
+            "Y": 1.0
+          }
+        },
+        "Alignment": {
+          "X": 0.0,
+          "Y": 1.0
+        }
+      },
+      "bAutoSize": true,
+      "Parent": {
+        "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+      },
+      "Content": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.KeybindRoot'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.86"
+      }
+    }
+  },
+  {
+    "Type": "CanvasPanelSlot",
+    "Name": "CanvasPanelSlot_3",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'CanvasPanelSlot'",
+    "Outer": {
+      "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+    },
+    "Properties": {
+      "LayoutData": {
+        "Offsets": {
+          "Left": 16.0,
+          "Top": -16.0
+        },
+        "Anchors": {
+          "Minimum": {
+            "X": 0.0,
+            "Y": 1.0
+          },
+          "Maximum": {
+            "X": 0.0,
+            "Y": 1.0
+          }
+        },
+        "Alignment": {
+          "X": 0.0,
+          "Y": 1.0
+        }
+      },
+      "bAutoSize": true,
+      "Parent": {
+        "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+      },
+      "Content": {
+        "ObjectName": "BP_DynamicPlayerInputHorizontalWidget_C'BP_VoyageIngameForklift_C:WidgetTree.BP_DynamicPlayerInputHorizontalWidget_Bottom'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.4"
+      }
+    }
+  },
+  {
+    "Type": "CanvasPanelSlot",
+    "Name": "CanvasPanelSlot_5",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'CanvasPanelSlot'",
+    "Outer": {
+      "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+    },
+    "Properties": {
+      "LayoutData": {
+        "Offsets": {
+          "Right": 0.0,
+          "Bottom": 0.0
+        },
+        "Anchors": {
+          "Maximum": {
+            "X": 1.0,
+            "Y": 1.0
+          }
+        }
+      },
+      "Parent": {
+        "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+      },
+      "Content": {
+        "ObjectName": "BP_DropWidgetArea_C'BP_VoyageIngameForklift_C:WidgetTree.ItemDropArea'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.3"
+      }
+    }
+  },
+  {
+    "Type": "CanvasPanelSlot",
+    "Name": "CanvasPanelSlot_7",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'CanvasPanelSlot'",
+    "Outer": {
+      "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+    },
+    "Properties": {
+      "LayoutData": {
+        "Offsets": {
+          "Left": -16.0,
+          "Top": 20.0,
+          "Right": 256.0,
+          "Bottom": 256.0
+        },
+        "Anchors": {
+          "Minimum": {
+            "X": 1.0,
+            "Y": 1.0
+          },
+          "Maximum": {
+            "X": 1.0,
+            "Y": 1.0
+          }
+        },
+        "Alignment": {
+          "X": 1.0,
+          "Y": 1.0
+        }
+      },
+      "bAutoSize": true,
+      "Parent": {
+        "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+      },
+      "Content": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.SpeedometerRoot'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.49"
+      }
+    }
+  },
+  {
+    "Type": "Function",
+    "Name": "Construct",
+    "Flags": "RF_Public | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Function'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.117"
+    },
+    "SuperStruct": {
+      "ObjectName": "Class'UserWidget:Construct'",
+      "ObjectPath": "/Script/UMG"
+    },
+    "FunctionFlags": "FUNC_BlueprintCosmetic | FUNC_Event | FUNC_Public | FUNC_BlueprintEvent"
+  },
+  {
+    "Type": "Function",
+    "Name": "ExecuteUbergraph_BP_VoyageIngameForklift",
+    "Flags": "RF_Public | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Function'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.117"
+    },
+    "ChildProperties": [
+      {
+        "Type": "IntProperty",
+        "Name": "EntryPoint",
+        "Flags": "RF_Public",
+        "ElementSize": 4,
+        "PropertyFlags": "BlueprintVisible | BlueprintReadOnly | Parm"
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "Temp_bool_Variable",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "K2Node_CustomEvent_bVisible",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "K2Node_CustomEvent_Target",
+        "Flags": "RF_Public",
+        "ElementSize": 8,
+        "PropertyFlags": "InstancedReference",
+        "PropertyClass": {
+          "ObjectName": "Class'Widget'",
+          "ObjectPath": "/Script/UMG"
+        }
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_IsValid_ReturnValue",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "StructProperty",
+        "Name": "K2Node_Event_CustomSettings",
+        "Flags": "RF_Public",
+        "ElementSize": 280,
+        "PropertyFlags": "ConstParm",
+        "Struct": {
+          "ObjectName": "Class'VoyageCustomGameUserSettings'",
+          "ObjectPath": "/Script/Voyage"
+        }
+      },
+      {
+        "Type": "EnumProperty",
+        "Name": "Temp_byte_Variable",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "Enum": {
+          "ObjectName": "Class'ESlateVisibility'",
+          "ObjectPath": "/Script/UMG"
+        },
+        "UnderlyingProp": {
+          "Type": "ByteProperty",
+          "Name": "UnderlyingType",
+          "Flags": "RF_Public",
+          "ElementSize": 1,
+          "Enum": null
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "CallFunc_GetGameUserSettings_ReturnValue",
+        "Flags": "RF_Public",
+        "ElementSize": 8,
+        "PropertyClass": {
+          "ObjectName": "Class'GameUserSettings'",
+          "ObjectPath": "/Script/Engine"
+        }
+      },
+      {
+        "Type": "StructProperty",
+        "Name": "K2Node_CustomEvent_InSettings",
+        "Flags": "RF_Public",
+        "ElementSize": 280,
+        "PropertyFlags": "ConstParm",
+        "Struct": {
+          "ObjectName": "Class'VoyageCustomGameUserSettings'",
+          "ObjectPath": "/Script/Voyage"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "K2Node_DynamicCast_AsVoyage_Game_User_Settings",
+        "Flags": "RF_Public",
+        "ElementSize": 8,
+        "PropertyClass": {
+          "ObjectName": "Class'VoyageGameUserSettings'",
+          "ObjectPath": "/Script/Voyage"
+        }
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "K2Node_DynamicCast_bSuccess",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_GetState_Value",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_GetState_Value_1",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_NotEqual_ByteByte_ReturnValue",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_GetState_Value_2",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_GetState_Value_3",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_GetState_Value_4",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_GetState_Value_5",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "K2Node_SwitchEnum_CmpSuccess",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "EnumProperty",
+        "Name": "Temp_byte_Variable_1",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "Enum": {
+          "ObjectName": "Class'ESlateVisibility'",
+          "ObjectPath": "/Script/UMG"
+        },
+        "UnderlyingProp": {
+          "Type": "ByteProperty",
+          "Name": "UnderlyingType",
+          "Flags": "RF_Public",
+          "ElementSize": 1,
+          "Enum": null
+        }
+      },
+      {
+        "Type": "EnumProperty",
+        "Name": "K2Node_Select_Default",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "Enum": {
+          "ObjectName": "Class'ESlateVisibility'",
+          "ObjectPath": "/Script/UMG"
+        },
+        "UnderlyingProp": {
+          "Type": "ByteProperty",
+          "Name": "UnderlyingType",
+          "Flags": "RF_Public",
+          "ElementSize": 1,
+          "Enum": null
+        }
+      }
+    ],
+    "FunctionFlags": "FUNC_Final | FUNC_UbergraphFunction | FUNC_HasDefaults"
+  },
+  {
+    "Type": "Function",
+    "Name": "GetState",
+    "Flags": "RF_Public | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Function'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.117"
+    },
+    "ChildProperties": [
+      {
+        "Type": "BoolProperty",
+        "Name": "Default",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "PropertyFlags": "BlueprintVisible | BlueprintReadOnly | Parm",
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "EnumProperty",
+        "Name": "Mode",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "PropertyFlags": "BlueprintVisible | BlueprintReadOnly | Parm",
+        "Enum": {
+          "ObjectName": "Class'EVoyageInterfaceMode'",
+          "ObjectPath": "/Script/Voyage"
+        },
+        "UnderlyingProp": {
+          "Type": "ByteProperty",
+          "Name": "UnderlyingType",
+          "Flags": "RF_Public",
+          "ElementSize": 1,
+          "Enum": null
+        }
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "Value",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "PropertyFlags": "Parm | OutParm",
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_EqualEqual_ByteByte_ReturnValue",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_EqualEqual_ByteByte_ReturnValue_1",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_BooleanAND_ReturnValue",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_EqualEqual_ByteByte_ReturnValue_2",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "BoolProperty",
+        "Name": "CallFunc_BooleanOR_ReturnValue",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      }
+    ],
+    "FunctionFlags": "FUNC_Public | FUNC_HasOutParms | FUNC_BlueprintCallable | FUNC_BlueprintEvent | FUNC_BlueprintPure"
+  },
+  {
+    "Type": "Function",
+    "Name": "PostInterfaceSettingsChanged",
+    "Flags": "RF_Public | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Function'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.117"
+    },
+    "SuperStruct": {
+      "ObjectName": "Class'VoyageInGameWidget:PostInterfaceSettingsChanged'",
+      "ObjectPath": "/Script/Voyage"
+    },
+    "ChildProperties": [
+      {
+        "Type": "StructProperty",
+        "Name": "CustomSettings",
+        "Flags": "RF_Public",
+        "ElementSize": 280,
+        "PropertyFlags": "ConstParm | BlueprintVisible | BlueprintReadOnly | Parm | OutParm | ReferenceParm",
+        "Struct": {
+          "ObjectName": "Class'VoyageCustomGameUserSettings'",
+          "ObjectPath": "/Script/Voyage"
+        }
+      }
+    ],
+    "FunctionFlags": "FUNC_Event | FUNC_Public | FUNC_HasOutParms | FUNC_BlueprintEvent"
+  },
+  {
+    "Type": "Function",
+    "Name": "SetWidgetState",
+    "Flags": "RF_Public | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Function'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.117"
+    },
+    "ChildProperties": [
+      {
+        "Type": "BoolProperty",
+        "Name": "bVisible",
+        "Flags": "RF_Public",
+        "ElementSize": 1,
+        "PropertyFlags": "BlueprintVisible | BlueprintReadOnly | Parm",
+        "FieldSize": 1,
+        "ByteOffset": 0,
+        "ByteMask": 1,
+        "FieldMask": 255,
+        "BoolSize": 1,
+        "bIsNativeBool": true
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "Target",
+        "Flags": "RF_Public",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | BlueprintReadOnly | Parm | InstancedReference",
+        "PropertyClass": {
+          "ObjectName": "Class'Widget'",
+          "ObjectPath": "/Script/UMG"
+        }
+      }
+    ],
+    "FunctionFlags": "FUNC_BlueprintCallable | FUNC_BlueprintEvent"
+  },
+  {
+    "Type": "Function",
+    "Name": "UpdateInterfaceSettings",
+    "Flags": "RF_Public | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Function'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.117"
+    },
+    "ChildProperties": [
+      {
+        "Type": "StructProperty",
+        "Name": "InSettings",
+        "Flags": "RF_Public",
+        "ElementSize": 280,
+        "PropertyFlags": "ConstParm | BlueprintVisible | BlueprintReadOnly | Parm | OutParm | ReferenceParm",
+        "Struct": {
+          "ObjectName": "Class'VoyageCustomGameUserSettings'",
+          "ObjectPath": "/Script/Voyage"
+        }
+      }
+    ],
+    "FunctionFlags": "FUNC_HasOutParms | FUNC_BlueprintCallable | FUNC_BlueprintEvent"
+  },
+  {
+    "Type": "HorizontalBox",
+    "Name": "HorizontalBox_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'HorizontalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "HorizontalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0.HorizontalBoxSlot_2'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.26"
+        },
+        {
+          "ObjectName": "HorizontalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0.HorizontalBoxSlot_1'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.25"
+        },
+        {
+          "ObjectName": "HorizontalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0.HorizontalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.24"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.Overlay_67.OverlaySlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.57"
+      }
+    }
+  },
+  {
+    "Type": "HorizontalBox",
+    "Name": "HorizontalBox_3",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'HorizontalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slot": {
+        "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_4.SizeBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.75"
+      }
+    }
+  },
+  {
+    "Type": "HorizontalBox",
+    "Name": "HorizontalBox_58",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'HorizontalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_9'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.99"
+      }
+    }
+  },
+  {
+    "Type": "HorizontalBoxSlot",
+    "Name": "HorizontalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'HorizontalBoxSlot'",
+    "Outer": {
+      "ObjectName": "HorizontalBox'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.21"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "HorizontalBox'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.21"
+      },
+      "Content": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_2'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.89"
+      }
+    }
+  },
+  {
+    "Type": "HorizontalBoxSlot",
+    "Name": "HorizontalBoxSlot_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'HorizontalBoxSlot'",
+    "Outer": {
+      "ObjectName": "HorizontalBox'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.21"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "HorizontalBox'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.21"
+      },
+      "Content": {
+        "ObjectName": "Spacer'BP_VoyageIngameForklift_C:WidgetTree.Spacer_416'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.79"
+      }
+    }
+  },
+  {
+    "Type": "HorizontalBoxSlot",
+    "Name": "HorizontalBoxSlot_2",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'HorizontalBoxSlot'",
+    "Outer": {
+      "ObjectName": "HorizontalBox'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.21"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Center",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Center",
+      "Parent": {
+        "ObjectName": "HorizontalBox'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.21"
+      },
+      "Content": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_2'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.64"
+      }
+    }
+  },
+  {
+    "Type": "Image",
+    "Name": "Image",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Image'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Brush": {
+        "ImageType": "ESlateBrushImageType::FullColor",
+        "ImageSize": {
+          "X": 16.0,
+          "Y": 16.0
+        },
+        "ResourceObject": {
+          "ObjectName": "Texture2D'petrolIcon'",
+          "ObjectPath": "/Game/Textures/Sprites/TEMP/Scanner/petrolIcon.0"
+        }
+      },
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.Overlay_1.OverlaySlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.55"
+      }
+    }
+  },
+  {
+    "Type": "InvalidationBox",
+    "Name": "InvalidationBox_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InvalidationBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "PanelSlot'BP_VoyageIngameForklift_C:WidgetTree.InvalidationBox_0.PanelSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.59"
+        }
+      ]
+    }
+  },
+  {
+    "Type": "MovieScene",
+    "Name": "HideAnim",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieScene'",
+    "Outer": {
+      "ObjectName": "WidgetAnimation'BP_VoyageIngameForklift_C:HideAnim_INST'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.114"
+    },
+    "Properties": {
+      "Possessables": [
+        {
+          "Tags": [],
+          "Guid": "9A8CD109-46ADA194-A722B4BE-36D3DCE3",
+          "Name": "RootCanvasPanel",
+          "ParentGuid": "00000000-00000000-00000000-00000000",
+          "SpawnableObjectBindingID": {
+            "Guid": "00000000-00000000-00000000-00000000",
+            "SequenceID": 0,
+            "ResolveParentIndex": -1
+          }
+        }
+      ],
+      "ObjectBindings": [
+        {
+          "ObjectGuid": "9A8CD109-46ADA194-A722B4BE-36D3DCE3",
+          "Tracks": [
+            {
+              "ObjectName": "MovieSceneFloatTrack'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim.MovieSceneFloatTrack_0'",
+              "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.41"
+            }
+          ],
+          "Decorations": []
+        }
+      ],
+      "PlaybackRange": {
+        "Value": {
+          "LowerBound": {
+            "Type": 1,
+            "Value": {
+              "Value": 0
+            }
+          },
+          "UpperBound": {
+            "Type": 0,
+            "Value": {
+              "Value": 18000
+            }
+          }
+        }
+      },
+      "DisplayRate": {
+        "Numerator": 20
+      },
+      "Signature": "7E95F659-439F7196-1E7C928B-750EBDE7"
+    }
+  },
+  {
+    "Type": "MovieScene",
+    "Name": "OnAnchorAnim",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieScene'",
+    "Outer": {
+      "ObjectName": "WidgetAnimation'BP_VoyageIngameForklift_C:OnAnchorAnim_INST'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.115"
+    },
+    "Properties": {
+      "PlaybackRange": {
+        "Value": {
+          "LowerBound": {
+            "Type": 1,
+            "Value": {
+              "Value": 0
+            }
+          },
+          "UpperBound": {
+            "Type": 0,
+            "Value": {
+              "Value": 15001
+            }
+          }
+        }
+      },
+      "DisplayRate": {
+        "Numerator": 20
+      },
+      "Signature": "59B77DA9-45DA0BA3-5B504CA9-A92292C4"
+    }
+  },
+  {
+    "Type": "MovieScene",
+    "Name": "RevealAnim",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieScene'",
+    "Outer": {
+      "ObjectName": "WidgetAnimation'BP_VoyageIngameForklift_C:RevealAnim_INST'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.116"
+    },
+    "Properties": {
+      "Possessables": [
+        {
+          "Tags": [],
+          "Guid": "E1514B2B-4A33AD93-9E29A4A8-69BC3A7E",
+          "Name": "RootCanvasPanel",
+          "ParentGuid": "00000000-00000000-00000000-00000000",
+          "SpawnableObjectBindingID": {
+            "Guid": "00000000-00000000-00000000-00000000",
+            "SequenceID": 0,
+            "ResolveParentIndex": -1
+          }
+        }
+      ],
+      "ObjectBindings": [
+        {
+          "ObjectGuid": "E1514B2B-4A33AD93-9E29A4A8-69BC3A7E",
+          "Tracks": [
+            {
+              "ObjectName": "MovieSceneFloatTrack'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim.MovieSceneFloatTrack_1'",
+              "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.42"
+            }
+          ],
+          "Decorations": []
+        }
+      ],
+      "PlaybackRange": {
+        "Value": {
+          "LowerBound": {
+            "Type": 1,
+            "Value": {
+              "Value": 0
+            }
+          },
+          "UpperBound": {
+            "Type": 0,
+            "Value": {
+              "Value": 60000
+            }
+          }
+        }
+      },
+      "DisplayRate": {
+        "Numerator": 20
+      },
+      "Signature": "D712B3F3-41067720-CF386385-4EA4B61D"
+    }
+  },
+  {
+    "Type": "MovieSceneBuiltInEasingFunction",
+    "Name": "EaseInFunction",
+    "Flags": "RF_Public | RF_Transactional | RF_DefaultSubObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneBuiltInEasingFunction'",
+    "Outer": {
+      "ObjectName": "MovieSceneFloatSection'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim.MovieSceneFloatTrack_0.MovieSceneFloatSection_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.39"
+    }
+  },
+  {
+    "Type": "MovieSceneBuiltInEasingFunction",
+    "Name": "EaseOutFunction",
+    "Flags": "RF_Public | RF_Transactional | RF_DefaultSubObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneBuiltInEasingFunction'",
+    "Outer": {
+      "ObjectName": "MovieSceneFloatSection'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim.MovieSceneFloatTrack_0.MovieSceneFloatSection_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.39"
+    }
+  },
+  {
+    "Type": "MovieSceneBuiltInEasingFunction",
+    "Name": "EaseInFunction",
+    "Flags": "RF_Public | RF_Transactional | RF_DefaultSubObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneBuiltInEasingFunction'",
+    "Outer": {
+      "ObjectName": "MovieSceneFloatSection'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim.MovieSceneFloatTrack_1.MovieSceneFloatSection_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.40"
+    }
+  },
+  {
+    "Type": "MovieSceneBuiltInEasingFunction",
+    "Name": "EaseOutFunction",
+    "Flags": "RF_Public | RF_Transactional | RF_DefaultSubObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneBuiltInEasingFunction'",
+    "Outer": {
+      "ObjectName": "MovieSceneFloatSection'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim.MovieSceneFloatTrack_1.MovieSceneFloatSection_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.40"
+    }
+  },
+  {
+    "Type": "MovieSceneCompiledData",
+    "Name": "CompiledData",
+    "Flags": "RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneCompiledData'",
+    "Outer": {
+      "ObjectName": "WidgetAnimation'BP_VoyageIngameForklift_C:HideAnim_INST'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.114"
+    },
+    "Properties": {
+      "EntityComponentField": {
+        "PersistentEntityTree": {
+          "SerializedData": {
+            "Data": {
+              "Entries": [
+                {
+                  "StartIndex": 0,
+                  "Size": 1,
+                  "Capacity": 1
+                }
+              ],
+              "Items": [
+                {
+                  "EntityIndex": 0,
+                  "MetaDataIndex": -1
+                }
+              ]
+            },
+            "RootNode": {
+              "Range": {
+                "LowerBound": {
+                  "Type": 2,
+                  "Value": {
+                    "Value": 0
+                  }
+                },
+                "UpperBound": {
+                  "Type": 2,
+                  "Value": {
+                    "Value": 0
+                  }
+                }
+              },
+              "Parent": {
+                "ChildrenHandle": {
+                  "EntryIndex": -1
+                },
+                "Index": -1
+              },
+              "ChildrenID": {
+                "EntryIndex": 0
+              },
+              "DataID": {
+                "EntryIndex": -1
+              }
+            },
+            "ChildNodes": {
+              "Entries": [
+                {
+                  "StartIndex": 0,
+                  "Size": 1,
+                  "Capacity": 1
+                }
+              ],
+              "Items": [
+                {
+                  "Range": {
+                    "LowerBound": {
+                      "Type": 1,
+                      "Value": {
+                        "Value": 0
+                      }
+                    },
+                    "UpperBound": {
+                      "Type": 0,
+                      "Value": {
+                        "Value": 18000
+                      }
+                    }
+                  },
+                  "Parent": {
+                    "ChildrenHandle": {
+                      "EntryIndex": -1
+                    },
+                    "Index": 0
+                  },
+                  "ChildrenID": {
+                    "EntryIndex": -1
+                  },
+                  "DataID": {
+                    "EntryIndex": 0
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "Entities": [
+          {
+            "Key": {
+              "EntityOwner": {
+                "ObjectName": "MovieSceneFloatSection'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim.MovieSceneFloatTrack_0.MovieSceneFloatSection_0'",
+                "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.39"
+              },
+              "EntityID": 0
+            },
+            "SharedMetaDataIndex": 0
+          }
+        ],
+        "SharedMetaData": [
+          {
+            "ObjectBindingID": "9A8CD109-46ADA194-A722B4BE-36D3DCE3"
+          }
+        ]
+      },
+      "DeterminismFences": [
+        {
+          "FrameNumber": {
+            "Value": 18000
+          },
+          "bInclusive": false
+        }
+      ],
+      "CompiledSignature": "ADE2FE64-4F80D9DE-71565188-AA86CAFE",
+      "CompilerVersion": "7D4B9809-2FAC4A6B-964ECF72-D8279EF8",
+      "AccumulatedMask": "EMovieSceneSequenceCompilerMask::EntityComponentField",
+      "AllocatedMask": "EMovieSceneSequenceCompilerMask::EntityComponentField"
+    }
+  },
+  {
+    "Type": "MovieSceneCompiledData",
+    "Name": "CompiledData",
+    "Flags": "RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneCompiledData'",
+    "Outer": {
+      "ObjectName": "WidgetAnimation'BP_VoyageIngameForklift_C:OnAnchorAnim_INST'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.115"
+    },
+    "Properties": {
+      "CompiledSignature": "302A3D02-44DEAD44-35AC1E83-6DB81458",
+      "CompilerVersion": "7D4B9809-2FAC4A6B-964ECF72-D8279EF8"
+    }
+  },
+  {
+    "Type": "MovieSceneCompiledData",
+    "Name": "CompiledData",
+    "Flags": "RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneCompiledData'",
+    "Outer": {
+      "ObjectName": "WidgetAnimation'BP_VoyageIngameForklift_C:RevealAnim_INST'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.116"
+    },
+    "Properties": {
+      "EntityComponentField": {
+        "PersistentEntityTree": {
+          "SerializedData": {
+            "Data": {
+              "Entries": [
+                {
+                  "StartIndex": 0,
+                  "Size": 1,
+                  "Capacity": 1
+                }
+              ],
+              "Items": [
+                {
+                  "EntityIndex": 0,
+                  "MetaDataIndex": -1
+                }
+              ]
+            },
+            "RootNode": {
+              "Range": {
+                "LowerBound": {
+                  "Type": 2,
+                  "Value": {
+                    "Value": 0
+                  }
+                },
+                "UpperBound": {
+                  "Type": 2,
+                  "Value": {
+                    "Value": 0
+                  }
+                }
+              },
+              "Parent": {
+                "ChildrenHandle": {
+                  "EntryIndex": -1
+                },
+                "Index": -1
+              },
+              "ChildrenID": {
+                "EntryIndex": 0
+              },
+              "DataID": {
+                "EntryIndex": -1
+              }
+            },
+            "ChildNodes": {
+              "Entries": [
+                {
+                  "StartIndex": 0,
+                  "Size": 1,
+                  "Capacity": 1
+                }
+              ],
+              "Items": [
+                {
+                  "Range": {
+                    "LowerBound": {
+                      "Type": 1,
+                      "Value": {
+                        "Value": 0
+                      }
+                    },
+                    "UpperBound": {
+                      "Type": 0,
+                      "Value": {
+                        "Value": 60000
+                      }
+                    }
+                  },
+                  "Parent": {
+                    "ChildrenHandle": {
+                      "EntryIndex": -1
+                    },
+                    "Index": 0
+                  },
+                  "ChildrenID": {
+                    "EntryIndex": -1
+                  },
+                  "DataID": {
+                    "EntryIndex": 0
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "Entities": [
+          {
+            "Key": {
+              "EntityOwner": {
+                "ObjectName": "MovieSceneFloatSection'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim.MovieSceneFloatTrack_1.MovieSceneFloatSection_0'",
+                "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.40"
+              },
+              "EntityID": 0
+            },
+            "SharedMetaDataIndex": 0
+          }
+        ],
+        "SharedMetaData": [
+          {
+            "ObjectBindingID": "E1514B2B-4A33AD93-9E29A4A8-69BC3A7E"
+          }
+        ]
+      },
+      "DeterminismFences": [
+        {
+          "FrameNumber": {
+            "Value": 60000
+          },
+          "bInclusive": false
+        }
+      ],
+      "CompiledSignature": "279AC76E-485CFB77-A3FED7B2-93F8DA95",
+      "CompilerVersion": "7D4B9809-2FAC4A6B-964ECF72-D8279EF8",
+      "AccumulatedMask": "EMovieSceneSequenceCompilerMask::EntityComponentField",
+      "AllocatedMask": "EMovieSceneSequenceCompilerMask::EntityComponentField"
+    }
+  },
+  {
+    "Type": "MovieSceneFloatSection",
+    "Name": "MovieSceneFloatSection_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneFloatSection'",
+    "Outer": {
+      "ObjectName": "MovieSceneFloatTrack'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim.MovieSceneFloatTrack_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.41"
+    },
+    "Properties": {
+      "FloatCurve": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 18000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "Easing": {
+        "EaseIn": {
+          "ObjectName": "MovieSceneBuiltInEasingFunction'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim.MovieSceneFloatTrack_0.MovieSceneFloatSection_0.EaseInFunction'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.32"
+        },
+        "EaseOut": {
+          "ObjectName": "MovieSceneBuiltInEasingFunction'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim.MovieSceneFloatTrack_0.MovieSceneFloatSection_0.EaseOutFunction'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.33"
+        }
+      },
+      "SectionRange": {
+        "Value": {
+          "LowerBound": {
+            "Type": 1,
+            "Value": {
+              "Value": 0
+            }
+          },
+          "UpperBound": {
+            "Type": 0,
+            "Value": {
+              "Value": 18000
+            }
+          }
+        }
+      },
+      "Signature": "38DC57B5-471C41EE-B8ED13A3-C64CCCA8"
+    }
+  },
+  {
+    "Type": "MovieSceneFloatSection",
+    "Name": "MovieSceneFloatSection_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneFloatSection'",
+    "Outer": {
+      "ObjectName": "MovieSceneFloatTrack'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim.MovieSceneFloatTrack_1'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.42"
+    },
+    "Properties": {
+      "FloatCurve": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 30000
+          },
+          {
+            "Value": 60000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "Easing": {
+        "EaseIn": {
+          "ObjectName": "MovieSceneBuiltInEasingFunction'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim.MovieSceneFloatTrack_1.MovieSceneFloatSection_0.EaseInFunction'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.34"
+        },
+        "EaseOut": {
+          "ObjectName": "MovieSceneBuiltInEasingFunction'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim.MovieSceneFloatTrack_1.MovieSceneFloatSection_0.EaseOutFunction'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.35"
+        }
+      },
+      "SectionRange": {
+        "Value": {
+          "LowerBound": {
+            "Type": 1,
+            "Value": {
+              "Value": 0
+            }
+          },
+          "UpperBound": {
+            "Type": 0,
+            "Value": {
+              "Value": 60000
+            }
+          }
+        }
+      },
+      "Signature": "E9BC8B32-40DF2DBE-136843A1-E4EAAC34"
+    }
+  },
+  {
+    "Type": "MovieSceneFloatTrack",
+    "Name": "MovieSceneFloatTrack_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneFloatTrack'",
+    "Outer": {
+      "ObjectName": "MovieScene'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.29"
+    },
+    "Properties": {
+      "PropertyBinding": {
+        "PropertyName": "RenderOpacity",
+        "PropertyPath": "RenderOpacity",
+        "bCanUseClassLookup": true
+      },
+      "Sections": [
+        {
+          "ObjectName": "MovieSceneFloatSection'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim.MovieSceneFloatTrack_0.MovieSceneFloatSection_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.39"
+        }
+      ],
+      "EvaluationFieldGuid": "C456D16B-43863D98-98EAB485-4287FC16",
+      "EvaluationField": {
+        "Entries": [
+          {
+            "Section": {
+              "ObjectName": "MovieSceneFloatSection'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim.MovieSceneFloatTrack_0.MovieSceneFloatSection_0'",
+              "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.39"
+            },
+            "Range": {
+              "LowerBound": {
+                "Type": "ERangeBoundTypes::Inclusive",
+                "Value": {
+                  "Value": 0
+                }
+              },
+              "UpperBound": {
+                "Type": "ERangeBoundTypes::Exclusive",
+                "Value": {
+                  "Value": 18000
+                }
+              }
+            },
+            "ForcedTime": {
+              "Value": -2147483648
+            },
+            "Flags": "ESectionEvaluationFlags::None",
+            "LegacySortOrder": 0
+          }
+        ]
+      },
+      "Signature": "C456D16B-43863D98-98EAB485-4287FC16"
+    }
+  },
+  {
+    "Type": "MovieSceneFloatTrack",
+    "Name": "MovieSceneFloatTrack_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneFloatTrack'",
+    "Outer": {
+      "ObjectName": "MovieScene'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.31"
+    },
+    "Properties": {
+      "PropertyBinding": {
+        "PropertyName": "RenderOpacity",
+        "PropertyPath": "RenderOpacity",
+        "bCanUseClassLookup": true
+      },
+      "Sections": [
+        {
+          "ObjectName": "MovieSceneFloatSection'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim.MovieSceneFloatTrack_1.MovieSceneFloatSection_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.40"
+        }
+      ],
+      "EvaluationFieldGuid": "8DFDB57D-41797E38-C83DC5AC-A288A9FD",
+      "EvaluationField": {
+        "Entries": [
+          {
+            "Section": {
+              "ObjectName": "MovieSceneFloatSection'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim.MovieSceneFloatTrack_1.MovieSceneFloatSection_0'",
+              "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.40"
+            },
+            "Range": {
+              "LowerBound": {
+                "Type": "ERangeBoundTypes::Inclusive",
+                "Value": {
+                  "Value": 0
+                }
+              },
+              "UpperBound": {
+                "Type": "ERangeBoundTypes::Exclusive",
+                "Value": {
+                  "Value": 60000
+                }
+              }
+            },
+            "ForcedTime": {
+              "Value": -2147483648
+            },
+            "Flags": "ESectionEvaluationFlags::None",
+            "LegacySortOrder": 0
+          }
+        ]
+      },
+      "Signature": "8DFDB57D-41797E38-C83DC5AC-A288A9FD"
+    }
+  },
+  {
+    "Type": "Overlay",
+    "Name": "ForkPanelRoot",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Overlay'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.ForkPanelRoot.OverlaySlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.50"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_3'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.97"
+      },
+      "Visibility": "ESlateVisibility::Hidden"
+    }
+  },
+  {
+    "Type": "Overlay",
+    "Name": "HornPanelRoot",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Overlay'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.HornPanelRoot.OverlaySlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.51"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_2'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.96"
+      },
+      "Visibility": "ESlateVisibility::Hidden"
+    }
+  },
+  {
+    "Type": "Overlay",
+    "Name": "LocatorRoot",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Overlay'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.LocatorRoot.OverlaySlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.52"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_13'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.10"
+      },
+      "bIsVariable": true
+    }
+  },
+  {
+    "Type": "Overlay",
+    "Name": "Overlay_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Overlay'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.Overlay_0.OverlaySlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.53"
+        },
+        {
+          "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.Overlay_0.OverlaySlot_1'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.54"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_8.VerticalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.111"
+      }
+    }
+  },
+  {
+    "Type": "Overlay",
+    "Name": "Overlay_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Overlay'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.Overlay_1.OverlaySlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.55"
+        },
+        {
+          "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.Overlay_1.OverlaySlot_1'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.56"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_8'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.98"
+      },
+      "bOverride_Cursor": true
+    }
+  },
+  {
+    "Type": "Overlay",
+    "Name": "Overlay_67",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Overlay'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.Overlay_67.OverlaySlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.57"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SpeedometerSizeBox.SizeBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.76"
+      }
+    }
+  },
+  {
+    "Type": "Overlay",
+    "Name": "SpeedometerRoot",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Overlay'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.SpeedometerRoot.OverlaySlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.58"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_7'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.14"
+      },
+      "bIsVariable": true
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.ForkPanelRoot'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.43"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Fill",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Fill",
+      "Parent": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.ForkPanelRoot'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.43"
+      },
+      "Content": {
+        "ObjectName": "Border'BP_VoyageIngameForklift_C:WidgetTree.Border_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.1"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.HornPanelRoot'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.44"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Fill",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Fill",
+      "Parent": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.HornPanelRoot'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.44"
+      },
+      "Content": {
+        "ObjectName": "Border'BP_VoyageIngameForklift_C:WidgetTree.Border'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.0"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.LocatorRoot'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.45"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Fill",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Fill",
+      "Parent": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.LocatorRoot'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.45"
+      },
+      "Content": {
+        "ObjectName": "BP_LocatorHudWidget_C'BP_VoyageIngameForklift_C:WidgetTree.BP_LocatorHudWidget'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.6"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.46"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.46"
+      },
+      "Content": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.62"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.46"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Center",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Center",
+      "Parent": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.46"
+      },
+      "Content": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_1'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.47"
+    },
+    "Properties": {
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Center",
+      "Parent": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.47"
+      },
+      "Content": {
+        "ObjectName": "Image'BP_VoyageIngameForklift_C:WidgetTree.Image'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.27"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_1'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.47"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Center",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Center",
+      "Parent": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.47"
+      },
+      "Content": {
+        "ObjectName": "TextBlock'BP_VoyageIngameForklift_C:WidgetTree.ResourceTB'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.81"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_67'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.48"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Fill",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Fill",
+      "Parent": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_67'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.48"
+      },
+      "Content": {
+        "ObjectName": "HorizontalBox'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.21"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.SpeedometerRoot'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.49"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.SpeedometerRoot'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.49"
+      },
+      "Content": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SpeedometerSizeBox'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.69"
+      }
+    }
+  },
+  {
+    "Type": "PanelSlot",
+    "Name": "PanelSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'PanelSlot'",
+    "Outer": {
+      "ObjectName": "InvalidationBox'BP_VoyageIngameForklift_C:WidgetTree.InvalidationBox_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.28"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "InvalidationBox'BP_VoyageIngameForklift_C:WidgetTree.InvalidationBox_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.28"
+      },
+      "Content": {
+        "ObjectName": "CanvasPanel'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.8"
+      }
+    }
+  },
+  {
+    "Type": "RadialSlider",
+    "Name": "SpeedRadialSlider",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'RadialSlider'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Value": 0.120529,
+      "SliderRange": {
+        "EditorCurveData": {}
+      },
+      "WidgetStyle": {
+        "BarThickness": 30.0
+      },
+      "SliderBarColor": {
+        "R": 1.0,
+        "G": 1.0,
+        "B": 1.0,
+        "A": 0.2,
+        "Hex": "33FFFFFF"
+      },
+      "ShowSliderHandle": false,
+      "Slot": {
+        "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_0.SizeBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.71"
+      }
+    }
+  },
+  {
+    "Type": "SizeBox",
+    "Name": "SizeBox",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "WidthOverride": 94.0,
+      "bOverride_WidthOverride": true,
+      "Slots": [
+        {
+          "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox.SizeBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.70"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_8.VerticalBoxSlot_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.112"
+      },
+      "RenderTransform": {
+        "Translation": {
+          "X": 0.0,
+          "Y": -24.0
+        }
+      }
+    }
+  },
+  {
+    "Type": "SizeBox",
+    "Name": "SizeBox_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "WidthOverride": 150.0,
+      "HeightOverride": 150.0,
+      "bOverride_WidthOverride": true,
+      "bOverride_HeightOverride": true,
+      "Slots": [
+        {
+          "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_0.SizeBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.71"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.Overlay_0.OverlaySlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.53"
+      }
+    }
+  },
+  {
+    "Type": "SizeBox",
+    "Name": "SizeBox_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "MinDesiredHeight": 92.0,
+      "bOverride_MinDesiredHeight": true,
+      "Slots": [
+        {
+          "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_1.SizeBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.72"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_3.VerticalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.106"
+      }
+    }
+  },
+  {
+    "Type": "SizeBox",
+    "Name": "SizeBox_2",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "MinDesiredWidth": 42.0,
+      "bOverride_MinDesiredWidth": true,
+      "Slots": [
+        {
+          "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_2.SizeBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.73"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "HorizontalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0.HorizontalBoxSlot_2'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.26"
+      }
+    }
+  },
+  {
+    "Type": "SizeBox",
+    "Name": "SizeBox_3",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_3.SizeBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.74"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7.VerticalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.108"
+      }
+    }
+  },
+  {
+    "Type": "SizeBox",
+    "Name": "SizeBox_4",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "MinDesiredWidth": 72.0,
+      "bOverride_MinDesiredWidth": true,
+      "Slots": [
+        {
+          "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_4.SizeBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.75"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_1.VerticalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.101"
+      }
+    }
+  },
+  {
+    "Type": "SizeBox",
+    "Name": "SizeBox_6",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "bOverride_MinDesiredWidth": true,
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7.VerticalBoxSlot_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.109"
+      }
+    }
+  },
+  {
+    "Type": "SizeBox",
+    "Name": "SizeBox_7",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "MinDesiredWidth": 72.0,
+      "bOverride_MinDesiredWidth": true,
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_1.VerticalBoxSlot_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.102"
+      }
+    }
+  },
+  {
+    "Type": "SizeBox",
+    "Name": "SpeedometerSizeBox",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "MinDesiredWidth": 128.0,
+      "MinDesiredHeight": 128.0,
+      "bOverride_MinDesiredWidth": true,
+      "bOverride_MinDesiredHeight": true,
+      "Slots": [
+        {
+          "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SpeedometerSizeBox.SizeBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.76"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.SpeedometerRoot.OverlaySlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.58"
+      }
+    }
+  },
+  {
+    "Type": "SizeBoxSlot",
+    "Name": "SizeBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBoxSlot'",
+    "Outer": {
+      "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.61"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.61"
+      },
+      "Content": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.91"
+      }
+    }
+  },
+  {
+    "Type": "SizeBoxSlot",
+    "Name": "SizeBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBoxSlot'",
+    "Outer": {
+      "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_0'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.62"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.62"
+      },
+      "Content": {
+        "ObjectName": "RadialSlider'BP_VoyageIngameForklift_C:WidgetTree.SpeedRadialSlider'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.60"
+      }
+    }
+  },
+  {
+    "Type": "SizeBoxSlot",
+    "Name": "SizeBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBoxSlot'",
+    "Outer": {
+      "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_1'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.63"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.63"
+      },
+      "Content": {
+        "ObjectName": "Slider'BP_VoyageIngameForklift_C:WidgetTree.ThrottleSlider'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.78"
+      }
+    }
+  },
+  {
+    "Type": "SizeBoxSlot",
+    "Name": "SizeBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBoxSlot'",
+    "Outer": {
+      "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_2'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.64"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_2'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.64"
+      },
+      "Content": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_3'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.90"
+      }
+    }
+  },
+  {
+    "Type": "SizeBoxSlot",
+    "Name": "SizeBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBoxSlot'",
+    "Outer": {
+      "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_3'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.65"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_3'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.65"
+      },
+      "Content": {
+        "ObjectName": "Slider'BP_VoyageIngameForklift_C:WidgetTree.SteeringSlider'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.77"
+      }
+    }
+  },
+  {
+    "Type": "SizeBoxSlot",
+    "Name": "SizeBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBoxSlot'",
+    "Outer": {
+      "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_4'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.66"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_4'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.66"
+      },
+      "Content": {
+        "ObjectName": "HorizontalBox'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_3'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.22"
+      }
+    }
+  },
+  {
+    "Type": "SizeBoxSlot",
+    "Name": "SizeBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBoxSlot'",
+    "Outer": {
+      "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SpeedometerSizeBox'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.69"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SpeedometerSizeBox'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.69"
+      },
+      "Content": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_67'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.48"
+      }
+    }
+  },
+  {
+    "Type": "Slider",
+    "Name": "SteeringSlider",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Slider'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Value": 0.118933,
+      "WidgetStyle": {
+        "NormalBarImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "HoveredBarImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "DisabledBarImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "NormalThumbImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "HoveredThumbImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "DisabledThumbImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "BarThickness": 13.055344
+      },
+      "SliderBarColor": {
+        "R": 0.255208,
+        "G": 0.255208,
+        "B": 0.255208,
+        "A": 0.466669,
+        "Hex": "778A8A8A"
+      },
+      "SliderHandleColor": {
+        "R": 0.0,
+        "G": 0.0,
+        "B": 0.0,
+        "A": 1.0,
+        "Hex": "000000"
+      },
+      "IndentHandle": true,
+      "IsFocusable": false,
+      "Slot": {
+        "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_3.SizeBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.74"
+      },
+      "RenderTransform": {
+        "Scale": {
+          "X": 0.75,
+          "Y": 0.5
+        }
+      }
+    }
+  },
+  {
+    "Type": "Slider",
+    "Name": "ThrottleSlider",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Slider'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "WidgetStyle": {
+        "NormalBarImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "HoveredBarImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "DisabledBarImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "NormalThumbImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "HoveredThumbImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "DisabledThumbImage": {
+          "DrawAs": "ESlateBrushDrawType::Box"
+        },
+        "BarThickness": 13.0
+      },
+      "orientation": "EOrientation::Orient_Vertical",
+      "SliderBarColor": {
+        "R": 0.254152,
+        "G": 0.254152,
+        "B": 0.254152,
+        "A": 0.466667,
+        "Hex": "778A8A8A"
+      },
+      "SliderHandleColor": {
+        "R": 0.0,
+        "G": 0.0,
+        "B": 0.0,
+        "A": 1.0,
+        "Hex": "000000"
+      },
+      "IndentHandle": true,
+      "IsFocusable": false,
+      "Slot": {
+        "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_1.SizeBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.72"
+      },
+      "RenderTransform": {
+        "Scale": {
+          "X": 0.5,
+          "Y": 0.75
+        }
+      }
+    }
+  },
+  {
+    "Type": "Spacer",
+    "Name": "Spacer_416",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Spacer'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Size": {
+        "X": 4.0,
+        "Y": 4.0
+      },
+      "Slot": {
+        "ObjectName": "HorizontalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0.HorizontalBoxSlot_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.25"
+      }
+    }
+  },
+  {
+    "Type": "TextBlock",
+    "Name": "ForkValueTB",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'TextBlock'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Text": {
+        "Namespace": "",
+        "Key": "832D0BF24EF2B4AA44E2A6865AD070E9",
+        "SourceString": "0",
+        "LocalizedString": "0"
+      },
+      "ColorAndOpacity": {
+        "SpecifiedColor": {
+          "R": 0.5,
+          "G": 0.5,
+          "B": 0.5,
+          "A": 1.0,
+          "Hex": "BCBCBC"
+        }
+      },
+      "Font": {
+        "FontObject": {
+          "ObjectName": "Font'VoyageRoboto'",
+          "ObjectPath": "/Game/UI/VoyageRoboto.0"
+        },
+        "TypefaceFontName": "Regular",
+        "Size": 10.0
+      },
+      "TextTransformPolicy": "ETextTransformPolicy::ToUpper",
+      "Justification": "ETextJustify::Center",
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.95"
+      }
+    }
+  },
+  {
+    "Type": "TextBlock",
+    "Name": "ResourceTB",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'TextBlock'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Text": {
+        "Namespace": "",
+        "Key": "632D4B564362BD4D03C51E942C9F50F7",
+        "SourceString": "0 L",
+        "LocalizedString": "0 L"
+      },
+      "ColorAndOpacity": {
+        "SpecifiedColor": {
+          "R": 0.5,
+          "G": 0.5,
+          "B": 0.5,
+          "A": 1.0,
+          "Hex": "BCBCBC"
+        }
+      },
+      "Font": {
+        "FontObject": {
+          "ObjectName": "Font'VoyageRoboto'",
+          "ObjectPath": "/Game/UI/VoyageRoboto.0"
+        },
+        "TypefaceFontName": "Regular",
+        "Size": 10.0
+      },
+      "TextTransformPolicy": "ETextTransformPolicy::ToUpper",
+      "Justification": "ETextJustify::Center",
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.Overlay_1.OverlaySlot_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.56"
+      }
+    }
+  },
+  {
+    "Type": "TextBlock",
+    "Name": "SpeedTB",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'TextBlock'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Text": {
+        "Namespace": "",
+        "Key": "9FAEFC3549759E45606E78A6ED0FCCEC",
+        "SourceString": "00 kmh",
+        "LocalizedString": "00 kmh"
+      },
+      "Font": {
+        "FontObject": {
+          "ObjectName": "Font'VoyageRoboto'",
+          "ObjectPath": "/Game/UI/VoyageRoboto.0"
+        },
+        "TypefaceFontName": "Regular",
+        "Size": 14.0
+      },
+      "TextTransformPolicy": "ETextTransformPolicy::ToUpper",
+      "Justification": "ETextJustify::Center",
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.94"
+      }
+    }
+  },
+  {
+    "Type": "TextBlock",
+    "Name": "SteeringTB",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'TextBlock'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Text": {
+        "Namespace": "",
+        "Key": "3F61126042FD14833CB3A0B5BCC0F8D5",
+        "SourceString": "-100",
+        "LocalizedString": "-100"
+      },
+      "Font": {
+        "FontObject": {
+          "ObjectName": "Font'VoyageRoboto'",
+          "ObjectPath": "/Game/UI/VoyageRoboto.0"
+        },
+        "TypefaceFontName": "Regular",
+        "Size": 9.0
+      },
+      "Justification": "ETextJustify::Center",
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_10.VerticalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.103"
+      },
+      "RenderTransform": {
+        "Translation": {
+          "X": 0.0,
+          "Y": -6.0
+        }
+      }
+    }
+  },
+  {
+    "Type": "TextBlock",
+    "Name": "ThrottleTB",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'TextBlock'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Text": {
+        "Namespace": "",
+        "Key": "C87F513D47CC7282CAC098963190A910",
+        "SourceString": "100%",
+        "LocalizedString": "100%"
+      },
+      "Font": {
+        "FontObject": {
+          "ObjectName": "Font'VoyageRoboto'",
+          "ObjectPath": "/Game/UI/VoyageRoboto.0"
+        },
+        "TypefaceFontName": "Regular",
+        "Size": 9.0
+      },
+      "Justification": "ETextJustify::Center",
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_9.VerticalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.113"
+      },
+      "RenderTransform": {
+        "Translation": {
+          "X": 9.0,
+          "Y": -55.0
+        },
+        "Angle": 270.0
+      }
+    }
+  },
+  {
+    "Type": "VerticalBox",
+    "Name": "CenterTexts",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.94"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_9'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.99"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_8'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.98"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_1'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.95"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_2'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.96"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts.VerticalBoxSlot_3'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.97"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_VoyageIngameForklift_C:WidgetTree.Overlay_0.OverlaySlot_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.54"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBox",
+    "Name": "KeybindRoot",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.KeybindRoot.VerticalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.100"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "CanvasPanelSlot'BP_VoyageIngameForklift_C:WidgetTree.RootCanvasPanel.CanvasPanelSlot_2'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.11"
+      },
+      "bIsVariable": true
+    }
+  },
+  {
+    "Type": "VerticalBox",
+    "Name": "VerticalBox_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_1.VerticalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.101"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_1.VerticalBoxSlot_1'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.102"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_2.VerticalBoxSlot_2'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.105"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBox",
+    "Name": "VerticalBox_10",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_10.VerticalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.103"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7.VerticalBoxSlot_2'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.110"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBox",
+    "Name": "VerticalBox_2",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_2.VerticalBoxSlot_2'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.105"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_2.VerticalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.104"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "HorizontalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_0.HorizontalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.24"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBox",
+    "Name": "VerticalBox_3",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_3.VerticalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.106"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_3.VerticalBoxSlot_1'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.107"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_2.SizeBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.73"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBox",
+    "Name": "VerticalBox_7",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7.VerticalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.108"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7.VerticalBoxSlot_1'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.109"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7.VerticalBoxSlot_2'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.110"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "SizeBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.SizeBox.SizeBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.70"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBox",
+    "Name": "VerticalBox_8",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_8.VerticalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.111"
+        },
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_8.VerticalBoxSlot_1'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.112"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_2.VerticalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.104"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBox",
+    "Name": "VerticalBox_9",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_9.VerticalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.113"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "VerticalBoxSlot'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_3.VerticalBoxSlot_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.107"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Center",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Top",
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+      },
+      "Content": {
+        "ObjectName": "TextBlock'BP_VoyageIngameForklift_C:WidgetTree.SpeedTB'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.82"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+    },
+    "Properties": {
+      "Size": {
+        "SizeRule": "ESlateSizeRule::Fill"
+      },
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Center",
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+      },
+      "Content": {
+        "ObjectName": "TextBlock'BP_VoyageIngameForklift_C:WidgetTree.ForkValueTB'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.80"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_2",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+      },
+      "Content": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.HornPanelRoot'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.44"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_3",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+      },
+      "Content": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.ForkPanelRoot'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.43"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_8",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+      },
+      "Content": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.47"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_9",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.CenterTexts'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.85"
+      },
+      "Content": {
+        "ObjectName": "HorizontalBox'BP_VoyageIngameForklift_C:WidgetTree.HorizontalBox_58'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.23"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.KeybindRoot'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.86"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.KeybindRoot'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.86"
+      },
+      "Content": {
+        "ObjectName": "BP_ButtonInfo_Vertical_Container_C'BP_VoyageIngameForklift_C:WidgetTree.BP_ButtonInfoContainer_Action'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.2"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_1'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.87"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.87"
+      },
+      "Content": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_4'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.66"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_1'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.87"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.87"
+      },
+      "Content": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_7'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.68"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_10'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.88"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_10'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.88"
+      },
+      "Content": {
+        "ObjectName": "TextBlock'BP_VoyageIngameForklift_C:WidgetTree.SteeringTB'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.83"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_2'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.89"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_2'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.89"
+      },
+      "Content": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_8'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.92"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_2",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_2'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.89"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Center",
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_2'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.89"
+      },
+      "Content": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.87"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_3'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.90"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Center",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Center",
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_3'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.90"
+      },
+      "Content": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_1'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.63"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_3'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.90"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Center",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Center",
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_3'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.90"
+      },
+      "Content": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_9'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.93"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.91"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.91"
+      },
+      "Content": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_3'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.65"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.91"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.91"
+      },
+      "Content": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox_6'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.67"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_2",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.91"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_7'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.91"
+      },
+      "Content": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_10'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.88"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_8'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.92"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_8'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.92"
+      },
+      "Content": {
+        "ObjectName": "Overlay'BP_VoyageIngameForklift_C:WidgetTree.Overlay_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.46"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_8'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.92"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Center",
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_8'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.92"
+      },
+      "Content": {
+        "ObjectName": "SizeBox'BP_VoyageIngameForklift_C:WidgetTree.SizeBox'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.61"
+      }
+    }
+  },
+  {
+    "Type": "VerticalBoxSlot",
+    "Name": "VerticalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'VerticalBoxSlot'",
+    "Outer": {
+      "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_9'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.93"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "VerticalBox'BP_VoyageIngameForklift_C:WidgetTree.VerticalBox_9'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.93"
+      },
+      "Content": {
+        "ObjectName": "TextBlock'BP_VoyageIngameForklift_C:WidgetTree.ThrottleTB'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.84"
+      }
+    }
+  },
+  {
+    "Type": "WidgetAnimation",
+    "Name": "HideAnim_INST",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'WidgetAnimation'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.117"
+    },
+    "Properties": {
+      "MovieScene": {
+        "ObjectName": "MovieScene'BP_VoyageIngameForklift_C:HideAnim_INST.HideAnim'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.29"
+      },
+      "AnimationBindings": [
+        {
+          "WidgetName": "RootCanvasPanel",
+          "SlotWidgetName": "None",
+          "AnimationGuid": "9A8CD109-46ADA194-A722B4BE-36D3DCE3",
+          "bIsRootWidget": false,
+          "DynamicBinding": {
+            "Function": null,
+            "ResolveParamsProperty": {
+              "Path": [],
+              "ResolvedOwner": null
+            }
+          }
+        }
+      ],
+      "DisplayLabel": "HideAnim",
+      "CompiledData": {
+        "ObjectName": "MovieSceneCompiledData'BP_VoyageIngameForklift_C:HideAnim_INST.CompiledData'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.36"
+      },
+      "Signature": "ADE2FE64-4F80D9DE-71565188-AA86CAFE"
+    }
+  },
+  {
+    "Type": "WidgetAnimation",
+    "Name": "OnAnchorAnim_INST",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'WidgetAnimation'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.117"
+    },
+    "Properties": {
+      "MovieScene": {
+        "ObjectName": "MovieScene'BP_VoyageIngameForklift_C:OnAnchorAnim_INST.OnAnchorAnim'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.30"
+      },
+      "DisplayLabel": "OnAnchorAnim",
+      "CompiledData": {
+        "ObjectName": "MovieSceneCompiledData'BP_VoyageIngameForklift_C:OnAnchorAnim_INST.CompiledData'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.37"
+      },
+      "Signature": "302A3D02-44DEAD44-35AC1E83-6DB81458"
+    }
+  },
+  {
+    "Type": "WidgetAnimation",
+    "Name": "RevealAnim_INST",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'WidgetAnimation'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.117"
+    },
+    "Properties": {
+      "MovieScene": {
+        "ObjectName": "MovieScene'BP_VoyageIngameForklift_C:RevealAnim_INST.RevealAnim'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.31"
+      },
+      "AnimationBindings": [
+        {
+          "WidgetName": "RootCanvasPanel",
+          "SlotWidgetName": "None",
+          "AnimationGuid": "E1514B2B-4A33AD93-9E29A4A8-69BC3A7E",
+          "bIsRootWidget": false,
+          "DynamicBinding": {
+            "Function": null,
+            "ResolveParamsProperty": {
+              "Path": [],
+              "ResolvedOwner": null
+            }
+          }
+        }
+      ],
+      "DisplayLabel": "RevealAnim",
+      "CompiledData": {
+        "ObjectName": "MovieSceneCompiledData'BP_VoyageIngameForklift_C:RevealAnim_INST.CompiledData'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.38"
+      },
+      "Signature": "279AC76E-485CFB77-A3FED7B2-93F8DA95"
+    }
+  },
+  {
+    "Type": "WidgetBlueprintGeneratedClass",
+    "Name": "BP_VoyageIngameForklift_C",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'WidgetBlueprintGeneratedClass'",
+    "Package": "/Game/UI/Game/HUD/BP_VoyageIngameForklift",
+    "Properties": {
+      "WidgetTree": {
+        "ObjectName": "WidgetTree'BP_VoyageIngameForklift_C:WidgetTree'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.118"
+      },
+      "bClassRequiresNativeTick": true,
+      "Animations": [
+        {
+          "ObjectName": "WidgetAnimation'BP_VoyageIngameForklift_C:RevealAnim_INST'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.116"
+        },
+        {
+          "ObjectName": "WidgetAnimation'BP_VoyageIngameForklift_C:OnAnchorAnim_INST'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.115"
+        },
+        {
+          "ObjectName": "WidgetAnimation'BP_VoyageIngameForklift_C:HideAnim_INST'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.114"
+        }
+      ],
+      "UberGraphFunction": {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:ExecuteUbergraph_BP_VoyageIngameForklift'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.16"
+      },
+      "CookedPropertyGuids": [
+        {
+          "Key": "OnAnchorAnim",
+          "Value": "B686FC80-E51B3213-99DB5DF2-5979B4AD"
+        },
+        {
+          "Key": "BP_ButtonInfoContainer_Action",
+          "Value": "29D082C3-342434E9-B03119EA-16CFCF56"
+        },
+        {
+          "Key": "BP_DynamicPlayerInputHorizontalWidget_Bottom",
+          "Value": "D92BF38D-4C8B8495-2D6CF2AD-B6AD8208"
+        },
+        {
+          "Key": "BP_DynamicPlayerInputHorizontalWidget_Center",
+          "Value": "061F2BEF-4C24F9EA-651F459D-ECA48D83"
+        },
+        {
+          "Key": "BP_LocatorHudWidget",
+          "Value": "11A00443-FF9732BE-A04FF0AB-11872B33"
+        },
+        {
+          "Key": "Image",
+          "Value": "DB10C029-40345407-C1791684-9EFD310F"
+        },
+        {
+          "Key": "InvalidationBox_0",
+          "Value": "F2113A7D-4630EA34-9F0624AC-111CE101"
+        },
+        {
+          "Key": "ItemDropArea",
+          "Value": "32A6F85A-FFFA3F1F-829A254B-779512B2"
+        },
+        {
+          "Key": "KeybindRoot",
+          "Value": "86FBF66B-B3E93E43-B4F7FE4B-953B987F"
+        },
+        {
+          "Key": "LocatorRoot",
+          "Value": "58B5176F-42F24D03-28884DBE-D9F041C2"
+        },
+        {
+          "Key": "RootCanvasPanel",
+          "Value": "62934EE9-A047307A-96741991-60B4350B"
+        },
+        {
+          "Key": "SpeedometerRoot",
+          "Value": "F1EA7CB3-4942AD7B-945575BC-403B4987"
+        }
+      ]
+    },
+    "SuperStruct": {
+      "ObjectName": "Class'VoyageIngameForkliftWidget'",
+      "ObjectPath": "/Script/Voyage"
+    },
+    "Children": [
+      {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:GetState'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.17"
+      },
+      {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:PostInterfaceSettingsChanged'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.18"
+      },
+      {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:SetWidgetState'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.19"
+      },
+      {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:Construct'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.15"
+      },
+      {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:UpdateInterfaceSettings'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.20"
+      },
+      {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:ExecuteUbergraph_BP_VoyageIngameForklift'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.16"
+      }
+    ],
+    "ChildProperties": [
+      {
+        "Type": "StructProperty",
+        "Name": "UberGraphFrame",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 16,
+        "PropertyFlags": "Transient | DuplicateTransient",
+        "Struct": {
+          "ObjectName": "Class'PointerToUberGraphFrame'",
+          "ObjectPath": "/Script/Engine"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "SpeedometerRoot",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "Class'Overlay'",
+          "ObjectPath": "/Script/UMG"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "RootCanvasPanel",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "Class'CanvasPanel'",
+          "ObjectPath": "/Script/UMG"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "LocatorRoot",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "Class'Overlay'",
+          "ObjectPath": "/Script/UMG"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "KeybindRoot",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "Class'VerticalBox'",
+          "ObjectPath": "/Script/UMG"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "ItemDropArea",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "WidgetBlueprintGeneratedClass'BP_DropWidgetArea_C'",
+          "ObjectPath": "/Game/UI/Game/HUD/BP_DropWidgetArea.4"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "InvalidationBox_0",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "Class'InvalidationBox'",
+          "ObjectPath": "/Script/UMG"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "Image",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "Class'Image'",
+          "ObjectPath": "/Script/UMG"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "BP_LocatorHudWidget",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "WidgetBlueprintGeneratedClass'BP_LocatorHudWidget_C'",
+          "ObjectPath": "/Game/UI/Game/Locator/BP_LocatorHudWidget.2"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "BP_DynamicPlayerInputHorizontalWidget_Center",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "WidgetBlueprintGeneratedClass'BP_DynamicPlayerInputHorizontalWidget_C'",
+          "ObjectPath": "/Game/UI/Game/BP_DynamicPlayerInputHorizontalWidget.2"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "BP_DynamicPlayerInputHorizontalWidget_Bottom",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "WidgetBlueprintGeneratedClass'BP_DynamicPlayerInputHorizontalWidget_C'",
+          "ObjectPath": "/Game/UI/Game/BP_DynamicPlayerInputHorizontalWidget.2"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "BP_ButtonInfoContainer_Action",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "WidgetBlueprintGeneratedClass'BP_ButtonInfo_Vertical_Container_C'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo_Vertical_Container.4"
+        }
+      },
+      {
+        "Type": "ObjectProperty",
+        "Name": "OnAnchorAnim",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | BlueprintReadOnly | Transient | RepSkip",
+        "PropertyClass": {
+          "ObjectName": "Class'WidgetAnimation'",
+          "ObjectPath": "/Script/UMG"
+        }
+      }
+    ],
+    "FuncMap": {
+      "ExecuteUbergraph_BP_VoyageIngameForklift": {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:ExecuteUbergraph_BP_VoyageIngameForklift'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.16"
+      },
+      "UpdateInterfaceSettings": {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:UpdateInterfaceSettings'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.20"
+      },
+      "Construct": {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:Construct'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.15"
+      },
+      "SetWidgetState": {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:SetWidgetState'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.19"
+      },
+      "PostInterfaceSettingsChanged": {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:PostInterfaceSettingsChanged'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.18"
+      },
+      "GetState": {
+        "ObjectName": "Function'BP_VoyageIngameForklift_C:GetState'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.17"
+      }
+    },
+    "ClassFlags": "CLASS_EditInlineNew | CLASS_CompiledFromBlueprint | CLASS_DefaultToInstanced | CLASS_HasInstancedReference",
+    "ClassWithin": {
+      "ObjectName": "Class'Object'",
+      "ObjectPath": "/Script/CoreUObject"
+    },
+    "ClassConfigName": "Engine",
+    "bCooked": true,
+    "ClassDefaultObject": {
+      "ObjectName": "BP_VoyageIngameForklift_C'Default__BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.7"
+    },
+    "EditorTags": {
+      "BlueprintType": "BPTYPE_Normal"
+    }
+  },
+  {
+    "Type": "WidgetTree",
+    "Name": "WidgetTree",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'WidgetTree'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_VoyageIngameForklift_C'",
+      "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.117"
+    },
+    "Properties": {
+      "RootWidget": {
+        "ObjectName": "InvalidationBox'BP_VoyageIngameForklift_C:WidgetTree.InvalidationBox_0'",
+        "ObjectPath": "/Game/UI/Game/HUD/BP_VoyageIngameForklift.28"
+      }
+    }
+  }
+]

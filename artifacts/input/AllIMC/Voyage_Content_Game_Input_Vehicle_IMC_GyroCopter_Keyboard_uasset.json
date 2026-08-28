@@ -1,0 +1,263 @@
+[
+  {
+    "Type": "InputMappingContext",
+    "Name": "IMC_GyroCopter_Keyboard",
+    "Flags": "RF_Public | RF_Standalone | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputMappingContext'",
+    "Package": "/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard",
+    "Properties": {
+      "DefaultKeyMappings": {
+        "Mappings": [
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_GyroCopter_Keyboard:InputModifierNegate_4'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.2"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookUp'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookUp.0"
+            },
+            "Key": {
+              "KeyName": "MouseY"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookRight'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookRight.0"
+            },
+            "Key": {
+              "KeyName": "MouseX"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Zoom'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Zoom.0"
+            },
+            "Key": {
+              "KeyName": "MouseWheelAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_GyroCopter_Keyboard:InputTriggerPressed_0'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.3"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleExit'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleExit.1"
+            },
+            "Key": {
+              "KeyName": "E"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_GyroCopter_Keyboard:InputTriggerPressed_2'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.4"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleSwitchCamera'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleSwitchCamera.2"
+            },
+            "Key": {
+              "KeyName": "T"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_GyroCopterThrottleUp'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_GyroCopterThrottleUp.0"
+            },
+            "Key": {
+              "KeyName": "SpaceBar"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_GyroCopterThrottleDown'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_GyroCopterThrottleDown.0"
+            },
+            "Key": {
+              "KeyName": "LeftControl"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_GyroCopter_Keyboard:InputModifierNegate_2'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.1"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_GyroCopterSteeringLeft'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_GyroCopterSteeringLeft.0"
+            },
+            "Key": {
+              "KeyName": "Left"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_GyroCopterSteeringRight'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_GyroCopterSteeringRight.0"
+            },
+            "Key": {
+              "KeyName": "Right"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_GyroCopterTiltForward'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_GyroCopterTiltForward.0"
+            },
+            "Key": {
+              "KeyName": "W"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_GyroCopterTiltBackward'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_GyroCopterTiltBackward.0"
+            },
+            "Key": {
+              "KeyName": "S"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_GyroCopterTiltSideLeft'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_GyroCopterTiltSideLeft.0"
+            },
+            "Key": {
+              "KeyName": "A"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_GyroCopterTiltSideRight'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_GyroCopterTiltSideRight.0"
+            },
+            "Key": {
+              "KeyName": "D"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_GyroCopterDropCargo'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_GyroCopterDropCargo.0"
+            },
+            "Key": {
+              "KeyName": "F"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          }
+        ]
+      },
+      "ContextDescription": {
+        "Namespace": "",
+        "Key": "27044A7347A27A5DBBEBC497D38FF2B1",
+        "SourceString": "Vehicle keyboard",
+        "LocalizedString": "Vehicle keyboard"
+      }
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_2",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_GyroCopter_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_4",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_GyroCopter_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_0",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_GyroCopter_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_2",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_GyroCopter_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.0"
+    }
+  }
+]

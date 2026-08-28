@@ -1,0 +1,559 @@
+[
+  {
+    "Type": "InputMappingContext",
+    "Name": "IMC_Cameraman_Keyboard",
+    "Flags": "RF_Public | RF_Standalone | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputMappingContext'",
+    "Package": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard",
+    "Properties": {
+      "DefaultKeyMappings": {
+        "Mappings": [
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveForward'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveForward.0"
+            },
+            "Key": {
+              "KeyName": "W"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Cameraman_Keyboard:InputModifierNegate_0'",
+                "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.1"
+              }
+            ],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveForward'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveForward.0"
+            },
+            "Key": {
+              "KeyName": "S"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveForward'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveForward.0"
+            },
+            "Key": {
+              "KeyName": "Up"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Cameraman_Keyboard:InputModifierNegate_1'",
+                "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.2"
+              }
+            ],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveForward'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveForward.0"
+            },
+            "Key": {
+              "KeyName": "Down"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Cameraman_Keyboard:InputModifierNegate_2'",
+                "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.3"
+              }
+            ],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveRight'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveRight.0"
+            },
+            "Key": {
+              "KeyName": "A"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveRight'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveRight.0"
+            },
+            "Key": {
+              "KeyName": "D"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Cameraman_Keyboard:InputModifierNegate_4'",
+                "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.5"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_Cameraman_LookUp'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_LookUp.0"
+            },
+            "Key": {
+              "KeyName": "MouseY"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Cameraman_LookRight'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_LookRight.0"
+            },
+            "Key": {
+              "KeyName": "MouseX"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_IncreaseSpeed'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_IncreaseSpeed.1"
+            },
+            "Key": {
+              "KeyName": "MouseScrollUp"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_DecreaseSpeed'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_DecreaseSpeed.1"
+            },
+            "Key": {
+              "KeyName": "MouseScrollDown"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_ToggleHelp'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_ToggleHelp.1"
+            },
+            "Key": {
+              "KeyName": "Tab"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_ToggleHelp'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_ToggleHelp.1"
+            },
+            "Key": {
+              "KeyName": "H"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_CameramanSelect'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_CameramanSelect.1"
+            },
+            "Key": {
+              "KeyName": "LeftMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_CameramanDeleteKey'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_CameramanDeleteKey.0"
+            },
+            "Key": {
+              "KeyName": "Delete"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_CameramanAddKey'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_CameramanAddKey.0"
+            },
+            "Key": {
+              "KeyName": "Insert"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_ToggleGizmoMode'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_ToggleGizmoMode.1"
+            },
+            "Key": {
+              "KeyName": "N"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_ToggleGizmoAxis'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_ToggleGizmoAxis.1"
+            },
+            "Key": {
+              "KeyName": "X"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_SelectGizmoAxis'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_SelectGizmoAxis.0"
+            },
+            "Key": {
+              "KeyName": "LeftMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveUp'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveUp.0"
+            },
+            "Key": {
+              "KeyName": "E"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveUp'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveUp.0"
+            },
+            "Key": {
+              "KeyName": "SpaceBar"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Cameraman_Keyboard:InputModifierNegate_7'",
+                "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.7"
+              }
+            ],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveUp'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveUp.0"
+            },
+            "Key": {
+              "KeyName": "Q"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Cameraman_Keyboard:InputModifierNegate_8'",
+                "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.8"
+              }
+            ],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveUp'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveUp.0"
+            },
+            "Key": {
+              "KeyName": "LeftControl"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Cameraman_Keyboard:InputModifierNegate_9'",
+                "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.9"
+              }
+            ],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveUp'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveUp.0"
+            },
+            "Key": {
+              "KeyName": "C"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_ExitCameramanMode'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_ExitCameramanMode.1"
+            },
+            "Key": {
+              "KeyName": "X"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_AdminMenu'",
+              "ObjectPath": "/Game/Game/Input/Spectator/IA_AdminMenu.0"
+            },
+            "Key": {
+              "KeyName": "M"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_ToggleGizmoMode_Translation'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_ToggleGizmoMode_Translation.1"
+            },
+            "Key": {
+              "KeyName": "T"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_ToggleGizmoMode_Rotation'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_ToggleGizmoMode_Rotation.1"
+            },
+            "Key": {
+              "KeyName": "R"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Cameraman_Keyboard:InputModifierNegate_3'",
+                "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.4"
+              }
+            ],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveRight'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveRight.0"
+            },
+            "Key": {
+              "KeyName": "Left"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_MoveRight'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_MoveRight.0"
+            },
+            "Key": {
+              "KeyName": "Right"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_ThrottleUp'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_ThrottleUp.0"
+            },
+            "Key": {
+              "KeyName": "PageUp"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Cameraman_Keyboard:InputModifierNegate_5'",
+                "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.6"
+              }
+            ],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IA_Cameraman_ThrottleUp'",
+              "ObjectPath": "/Game/Game/Input/Cameraman/IA_Cameraman_ThrottleUp.0"
+            },
+            "Key": {
+              "KeyName": "PageDown"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          }
+        ]
+      },
+      "ContextDescription": {
+        "Namespace": "",
+        "Key": "0012F7CB455C1930D51395AC49EE2152",
+        "SourceString": "Character keyboard",
+        "LocalizedString": "Character keyboard"
+      }
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_0",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Cameraman_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_1",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Cameraman_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_2",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Cameraman_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_3",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Cameraman_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_4",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Cameraman_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_5",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Cameraman_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_7",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Cameraman_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_8",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Cameraman_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_9",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Cameraman_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Cameraman/IMC_Cameraman_Keyboard.0"
+    }
+  }
+]

@@ -1,0 +1,796 @@
+[
+  {
+    "Type": "InputMappingContext",
+    "Name": "IMC_Menu_Keyboard",
+    "Flags": "RF_Public | RF_Standalone | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputMappingContext'",
+    "Package": "/Game/Game/Input/Menu/IMC_Menu_Keyboard",
+    "Properties": {
+      "DefaultKeyMappings": {
+        "Mappings": [
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerHold'IMC_Menu_Keyboard:InputTriggerHold_0'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.1"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Select'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Select.0"
+            },
+            "Key": {
+              "KeyName": "Enter"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_1'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.4"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Back'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Back.0"
+            },
+            "Key": {
+              "KeyName": "Escape"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_4'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.21"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Any'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Any.0"
+            },
+            "Key": {
+              "KeyName": "SpaceBar"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_5'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.22"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Any'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Any.0"
+            },
+            "Key": {
+              "KeyName": "Enter"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_6'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.23"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Any'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Any.0"
+            },
+            "Key": {
+              "KeyName": "LeftMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_7'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.24"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Down'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Down.0"
+            },
+            "Key": {
+              "KeyName": "Down"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_8'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.25"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Up'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Up.0"
+            },
+            "Key": {
+              "KeyName": "Up"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_9'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.26"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Left'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Left.0"
+            },
+            "Key": {
+              "KeyName": "Left"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_10'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.5"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Right'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Right.0"
+            },
+            "Key": {
+              "KeyName": "Right"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_12'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.7"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Special_1'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Special_1.0"
+            },
+            "Key": {
+              "KeyName": "E"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_11'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.6"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Special_2'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Special_2.0"
+            },
+            "Key": {
+              "KeyName": "F"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_13'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.8"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Special_3'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Special_3.0"
+            },
+            "Key": {
+              "KeyName": "G"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_15'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.10"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Next'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Next.0"
+            },
+            "Key": {
+              "KeyName": "PageUp"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_14'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.9"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Prev'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Prev.0"
+            },
+            "Key": {
+              "KeyName": "PageDown"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_17'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.11"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Down'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Down.0"
+            },
+            "Key": {
+              "KeyName": "S"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_18'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.12"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Up'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Up.0"
+            },
+            "Key": {
+              "KeyName": "W"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_19'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.13"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Left'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Left.0"
+            },
+            "Key": {
+              "KeyName": "A"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_20'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.15"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Right'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Right.0"
+            },
+            "Key": {
+              "KeyName": "D"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_2'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.14"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Action_1'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Action_1.0"
+            },
+            "Key": {
+              "KeyName": "Q"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_3'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.20"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Action_2'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Action_2.0"
+            },
+            "Key": {
+              "KeyName": "R"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_21'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.16"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Action_3'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Action_3.0"
+            },
+            "Key": {
+              "KeyName": "T"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_PrimaryAction'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_PrimaryAction.0"
+            },
+            "Key": {
+              "KeyName": "LeftMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::IgnoreSettings",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_SecondaryAction'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_SecondaryAction.0"
+            },
+            "Key": {
+              "KeyName": "RightMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::IgnoreSettings",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_24'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.19"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Back'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Back.0"
+            },
+            "Key": {
+              "KeyName": "BackSpace"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerHold'IMC_Menu_Keyboard:InputTriggerHold_1'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.2"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Select'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Select.0"
+            },
+            "Key": {
+              "KeyName": "SpaceBar"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_22'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.17"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Special_4'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Special_4.0"
+            },
+            "Key": {
+              "KeyName": "H"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_23'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.18"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Special_5'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Special_5.0"
+            },
+            "Key": {
+              "KeyName": "J"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Menu_Keyboard:InputTriggerPressed_0'",
+                "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.3"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Special_6'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Special_6.0"
+            },
+            "Key": {
+              "KeyName": "Y"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Menu_Scroll'",
+              "ObjectPath": "/Game/Game/Input/Menu/IA_Menu_Scroll.0"
+            },
+            "Key": {
+              "KeyName": "MouseWheelAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          }
+        ]
+      },
+      "ContextDescription": {
+        "Namespace": "",
+        "Key": "ED9B631743E72D7F04ABB8839F9EA770",
+        "SourceString": "Menu keyboard",
+        "LocalizedString": "Menu keyboard"
+      }
+    }
+  },
+  {
+    "Type": "InputTriggerHold",
+    "Name": "InputTriggerHold_0",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerHold'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    },
+    "Properties": {
+      "HoldTimeThreshold": 600.0,
+      "bIsOneShot": true
+    }
+  },
+  {
+    "Type": "InputTriggerHold",
+    "Name": "InputTriggerHold_1",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerHold'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    },
+    "Properties": {
+      "HoldTimeThreshold": 600.0,
+      "bIsOneShot": true
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_0",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_1",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_10",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_11",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_12",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_13",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_14",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_15",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_17",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_18",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_19",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_2",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_20",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_21",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_22",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_23",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_24",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_3",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_4",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_5",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_6",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_7",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_8",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_9",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Menu_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Menu/IMC_Menu_Keyboard.0"
+    }
+  }
+]

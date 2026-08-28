@@ -1,0 +1,261 @@
+[
+  {
+    "Type": "InputMappingContext",
+    "Name": "IMC_Forklift_Keyboard",
+    "Flags": "RF_Public | RF_Standalone | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputMappingContext'",
+    "Package": "/Game/Game/Input/Vehicle/IMC_Forklift_Keyboard",
+    "Properties": {
+      "DefaultKeyMappings": {
+        "Mappings": [
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_VehicleForward'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_VehicleForward.0"
+            },
+            "Key": {
+              "KeyName": "W"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_VehicleBackward'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_VehicleBackward.0"
+            },
+            "Key": {
+              "KeyName": "S"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_VehicleRight'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_VehicleRight.0"
+            },
+            "Key": {
+              "KeyName": "D"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_VehicleLeft'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_VehicleLeft.0"
+            },
+            "Key": {
+              "KeyName": "A"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Forklift_Keyboard:InputModifierNegate_4'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Keyboard.1"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookUp'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookUp.0"
+            },
+            "Key": {
+              "KeyName": "MouseY"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookRight'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookRight.0"
+            },
+            "Key": {
+              "KeyName": "MouseX"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Zoom'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Zoom.0"
+            },
+            "Key": {
+              "KeyName": "MouseWheelAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Forklift_Keyboard:InputTriggerPressed_0'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Keyboard.2"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleExit'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleExit.1"
+            },
+            "Key": {
+              "KeyName": "E"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Forklift_Keyboard:InputTriggerPressed_2'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Keyboard.3"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleSwitchCamera'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleSwitchCamera.2"
+            },
+            "Key": {
+              "KeyName": "T"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Forklift_ForkUp'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkUp.1"
+            },
+            "Key": {
+              "KeyName": "LeftMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Forklift_ForkDown'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkDown.1"
+            },
+            "Key": {
+              "KeyName": "RightMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleHorn'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleHorn.1"
+            },
+            "Key": {
+              "KeyName": "H"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleHandbrake'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleHandbrake.1"
+            },
+            "Key": {
+              "KeyName": "SpaceBar"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Forklift_ForkTiltUp'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkTiltUp.1"
+            },
+            "Key": {
+              "KeyName": "R"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Forklift_ForkTiltDown'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkTiltDown.1"
+            },
+            "Key": {
+              "KeyName": "F"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          }
+        ]
+      },
+      "ContextDescription": {
+        "Namespace": "",
+        "Key": "4B8473C049D81E7B8F61868D0837A62F",
+        "SourceString": "Vehicle keyboard",
+        "LocalizedString": "Vehicle keyboard"
+      }
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_4",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Forklift_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_0",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Forklift_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_2",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Forklift_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Keyboard.0"
+    }
+  }
+]

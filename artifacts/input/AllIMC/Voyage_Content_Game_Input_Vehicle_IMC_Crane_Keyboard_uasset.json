@@ -1,0 +1,276 @@
+[
+  {
+    "Type": "InputMappingContext",
+    "Name": "IMC_Crane_Keyboard",
+    "Flags": "RF_Public | RF_Standalone | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputMappingContext'",
+    "Package": "/Game/Game/Input/Vehicle/IMC_Crane_Keyboard",
+    "Properties": {
+      "DefaultKeyMappings": {
+        "Mappings": [
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveForward'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveForward.0"
+            },
+            "Key": {
+              "KeyName": "W"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveBackward'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveBackward.0"
+            },
+            "Key": {
+              "KeyName": "S"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Crane_Keyboard:InputModifierNegate_4'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Crane_Keyboard.1"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookUp'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookUp.0"
+            },
+            "Key": {
+              "KeyName": "MouseY"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookRight'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookRight.0"
+            },
+            "Key": {
+              "KeyName": "MouseX"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveRight'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveRight.0"
+            },
+            "Key": {
+              "KeyName": "D"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveLeft'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveLeft.0"
+            },
+            "Key": {
+              "KeyName": "A"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ZoomIn'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ZoomIn.0"
+            },
+            "Key": {
+              "KeyName": "PageUp"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ZoomIn'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ZoomIn.0"
+            },
+            "Key": {
+              "KeyName": "MouseScrollUp"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ZoomOut'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ZoomOut.0"
+            },
+            "Key": {
+              "KeyName": "PageDown"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ZoomOut'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ZoomOut.0"
+            },
+            "Key": {
+              "KeyName": "MouseScrollDown"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Zoom'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Zoom.0"
+            },
+            "Key": {
+              "KeyName": "MouseWheelAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Crane_Keyboard:InputTriggerPressed_0'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Crane_Keyboard.3"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleExit'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleExit.1"
+            },
+            "Key": {
+              "KeyName": "E"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveUpDown'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveUpDown.0"
+            },
+            "Key": {
+              "KeyName": "Q"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Crane_Keyboard:InputModifierNegate_6'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Crane_Keyboard.2"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveUpDown'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveUpDown.0"
+            },
+            "Key": {
+              "KeyName": "Z"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Crane_Keyboard:InputTriggerPressed_1'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Crane_Keyboard.4"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_CraneGrab'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_CraneGrab.0"
+            },
+            "Key": {
+              "KeyName": "SpaceBar"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          }
+        ]
+      },
+      "ContextDescription": {
+        "Namespace": "",
+        "Key": "54F6EE5542812E662BA89E9F8C70BBBC",
+        "SourceString": "Crane keyboard",
+        "LocalizedString": "Crane keyboard"
+      }
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_4",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Crane_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Crane_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_6",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Crane_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Crane_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_0",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Crane_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Crane_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_1",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Crane_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Crane_Keyboard.0"
+    }
+  }
+]

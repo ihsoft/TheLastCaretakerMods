@@ -1,0 +1,20 @@
+TYPE VoyageButtonInfoContainerWidget : VoyageBaseUserWidget (18 own properties)
+  [0] ObjectProperty RootPanel array=1
+  [1] ObjectProperty ContextAsset array=1
+  [2] ArrayProperty<ObjectProperty> InputActions array=1
+  [3] ObjectProperty ButtonInfoWidgetClass array=1
+  [4] MapProperty<EnumProperty<ByteProperty>, ObjectProperty> PlatformConfigurations array=1
+  [5] EnumProperty<ByteProperty> ButtonHorizontalAlightment array=1
+  [6] EnumProperty<ByteProperty> ButtonVerticalAlightment array=1
+  [7] MapProperty<ObjectProperty, TextProperty> ChordActionPrefix array=1
+  [8] ObjectProperty ErrorIcon array=1
+  [9] ObjectProperty EmptyIcon array=1
+  [10] MapProperty<ObjectProperty, TextProperty> InputActionTextOverride array=1
+  [11] MapProperty<ObjectProperty, TextProperty> InputActionSuffixTextOverride array=1
+  [12] EnumProperty<ByteProperty> ShowPrimaryKey array=1
+  [13] EnumProperty<ByteProperty> ShowSecondaryKey array=1
+  [14] BoolProperty bShowActionTexts array=1
+  [15] BoolProperty bShowBackground array=1
+  [16] StructProperty<Margin> Spacing array=1
+  [17] BoolProperty bAutoUpdateKeyRebindings array=1
+

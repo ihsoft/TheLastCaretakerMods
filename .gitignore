@@ -1,0 +1,16 @@
+# Local tool checkouts and build output
+tools/CUE4Parse/
+**/bin/
+**/obj/
+
+# Extracted game data can be very large and is reproducible
+artifacts/raw/
+artifacts/extracted/
+
+# Runtime logs and temporary files
+*.log
+*.tmp
+
+# Distribution archives are generated artifacts
+dist/*.zip
+

@@ -1,0 +1,635 @@
+[
+  {
+    "Type": "InputMappingContext",
+    "Name": "IMC_Character_Gamepad",
+    "Flags": "RF_Public | RF_Standalone | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputMappingContext'",
+    "Package": "/Game/Game/Input/Character/IMC_Character_Gamepad",
+    "Properties": {
+      "DefaultKeyMappings": {
+        "Mappings": [
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierDeadZone'IMC_Character_Gamepad:InputModifierDeadZone_2'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.3"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveForward'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveForward.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftY"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierDeadZone'IMC_Character_Gamepad:InputModifierDeadZone_1'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.2"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveRight'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveRight.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftX"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerTap'IMC_Character_Gamepad:InputTriggerTap_8'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.16"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Jump'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Jump.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_FaceButton_Bottom"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Interact'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Interact.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_FaceButton_Left"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_InteractTwo'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_InteractTwo.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_FaceButton_Top"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_InteractThree'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_InteractThree.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftThumbstick"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierDeadZone'IMC_Character_Gamepad:InputModifierDeadZone_0'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.1"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookRight'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookRight.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightX"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierDeadZone'IMC_Character_Gamepad:InputModifierDeadZone_3'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.4"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookUp'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookUp.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightY"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_PrimaryAction'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_PrimaryAction.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightTriggerAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Stance'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Stance.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftThumbstick"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Sprint'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Sprint.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftTriggerAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Drop'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Drop.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_FaceButton_Right"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Melee'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Melee.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftShoulder"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerTap'IMC_Character_Gamepad:InputTriggerTap_3'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.12"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Throw'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Throw.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftTriggerAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerHold'IMC_Character_Gamepad:InputTriggerHold_4'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.8"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Inspect'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Inspect.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightThumbstick"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerTap'IMC_Character_Gamepad:InputTriggerTap_5'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.13"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_ADS'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_ADS.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightThumbstick"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_SecondaryAction'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_SecondaryAction.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftTriggerAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerTap'IMC_Character_Gamepad:InputTriggerTap_1'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.10"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_HolsterBar0'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_HolsterBar0.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_DPad_Up"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerTap'IMC_Character_Gamepad:InputTriggerTap_2'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.11"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_HolsterBar1'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_HolsterBar1.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_DPad_Right"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerTap'IMC_Character_Gamepad:InputTriggerTap_6'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.14"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_HolsterBar2'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_HolsterBar2.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_DPad_Down"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerTap'IMC_Character_Gamepad:InputTriggerTap_7'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.15"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_HolsterBar3'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_HolsterBar3.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_DPad_Left"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerHold'IMC_Character_Gamepad:InputTriggerHold_1'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.5"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ActionBar1'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ActionBar1.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_DPad_Up"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerHold'IMC_Character_Gamepad:InputTriggerHold_2'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.6"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ActionBar2'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ActionBar2.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_DPad_Down"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerHold'IMC_Character_Gamepad:InputTriggerHold_3'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.7"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ActionBar3'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ActionBar3.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_DPad_Left"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerHold'IMC_Character_Gamepad:InputTriggerHold_5'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.9"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ActionBar4'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ActionBar4.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_DPad_Right"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Reload'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Reload.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_FaceButton_Left"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          }
+        ]
+      },
+      "ContextDescription": {
+        "Namespace": "",
+        "Key": "74AC4001447EC2D6F485849410373A8C",
+        "SourceString": "Character gamepad",
+        "LocalizedString": "Character gamepad"
+      }
+    }
+  },
+  {
+    "Type": "InputModifierDeadZone",
+    "Name": "InputModifierDeadZone_0",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierDeadZone'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    },
+    "Properties": {
+      "LowerThreshold": 0.25,
+      "Type": "EDeadZoneType::Axial"
+    }
+  },
+  {
+    "Type": "InputModifierDeadZone",
+    "Name": "InputModifierDeadZone_1",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierDeadZone'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    },
+    "Properties": {
+      "LowerThreshold": 0.25,
+      "Type": "EDeadZoneType::Axial"
+    }
+  },
+  {
+    "Type": "InputModifierDeadZone",
+    "Name": "InputModifierDeadZone_2",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierDeadZone'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    },
+    "Properties": {
+      "LowerThreshold": 0.25,
+      "Type": "EDeadZoneType::Axial"
+    }
+  },
+  {
+    "Type": "InputModifierDeadZone",
+    "Name": "InputModifierDeadZone_3",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierDeadZone'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    },
+    "Properties": {
+      "LowerThreshold": 0.25,
+      "Type": "EDeadZoneType::Axial"
+    }
+  },
+  {
+    "Type": "InputTriggerHold",
+    "Name": "InputTriggerHold_1",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerHold'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    },
+    "Properties": {
+      "HoldTimeThreshold": 0.75,
+      "bIsOneShot": true
+    }
+  },
+  {
+    "Type": "InputTriggerHold",
+    "Name": "InputTriggerHold_2",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerHold'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    },
+    "Properties": {
+      "HoldTimeThreshold": 0.75,
+      "bIsOneShot": true
+    }
+  },
+  {
+    "Type": "InputTriggerHold",
+    "Name": "InputTriggerHold_3",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerHold'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    },
+    "Properties": {
+      "HoldTimeThreshold": 0.75,
+      "bIsOneShot": true
+    }
+  },
+  {
+    "Type": "InputTriggerHold",
+    "Name": "InputTriggerHold_4",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerHold'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    },
+    "Properties": {
+      "HoldTimeThreshold": 0.5,
+      "bIsOneShot": true
+    }
+  },
+  {
+    "Type": "InputTriggerHold",
+    "Name": "InputTriggerHold_5",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerHold'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    },
+    "Properties": {
+      "HoldTimeThreshold": 0.75,
+      "bIsOneShot": true
+    }
+  },
+  {
+    "Type": "InputTriggerTap",
+    "Name": "InputTriggerTap_1",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerTap'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    }
+  },
+  {
+    "Type": "InputTriggerTap",
+    "Name": "InputTriggerTap_2",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerTap'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    }
+  },
+  {
+    "Type": "InputTriggerTap",
+    "Name": "InputTriggerTap_3",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerTap'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    }
+  },
+  {
+    "Type": "InputTriggerTap",
+    "Name": "InputTriggerTap_5",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerTap'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    }
+  },
+  {
+    "Type": "InputTriggerTap",
+    "Name": "InputTriggerTap_6",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerTap'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    }
+  },
+  {
+    "Type": "InputTriggerTap",
+    "Name": "InputTriggerTap_7",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerTap'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    }
+  },
+  {
+    "Type": "InputTriggerTap",
+    "Name": "InputTriggerTap_8",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerTap'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Gamepad.0"
+    }
+  }
+]

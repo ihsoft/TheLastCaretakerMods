@@ -1,0 +1,1356 @@
+[
+  {
+    "Type": "BP_ButtonInfo_C",
+    "Name": "Default__BP_ButtonInfo_C",
+    "Flags": "RF_Public | RF_ClassDefaultObject | RF_ArchetypeObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "WidgetBlueprintGeneratedClass'/Game/UI/Game/Inputs/BP_ButtonInfo.BP_ButtonInfo_C'",
+    "Package": "/Game/UI/Game/Inputs/BP_ButtonInfo",
+    "Properties": {
+      "bHasScriptImplementedTick": false,
+      "bHasScriptImplementedPaint": false
+    }
+  },
+  {
+    "Type": "HorizontalBox",
+    "Name": "HorizontalBox_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'HorizontalBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_ButtonInfo_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.24"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "HorizontalBoxSlot'BP_ButtonInfo_C:WidgetTree.HorizontalBox_1.HorizontalBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.2"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_ButtonInfo_C:WidgetTree.Overlay_28.OverlaySlot_1'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.17"
+      }
+    }
+  },
+  {
+    "Type": "HorizontalBoxSlot",
+    "Name": "HorizontalBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'HorizontalBoxSlot'",
+    "Outer": {
+      "ObjectName": "HorizontalBox'BP_ButtonInfo_C:WidgetTree.HorizontalBox_1'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.1"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "HorizontalBox'BP_ButtonInfo_C:WidgetTree.HorizontalBox_1'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.1"
+      },
+      "Content": {
+        "ObjectName": "TextBlock'BP_ButtonInfo_C:WidgetTree.PrimaryKeyTB'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.21"
+      }
+    }
+  },
+  {
+    "Type": "Image",
+    "Name": "BackgroundImage",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Image'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_ButtonInfo_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.24"
+    },
+    "Properties": {
+      "Brush": {
+        "DrawAs": "ESlateBrushDrawType::Box",
+        "Margin": {
+          "Left": 0.6,
+          "Top": 0.6,
+          "Right": 0.6,
+          "Bottom": 0.6
+        },
+        "ResourceObject": {
+          "ObjectName": "MaterialInstanceConstant'MI_UI_Slice_9_Base_Panel_3_B'",
+          "ObjectPath": "/Game/Materials/UI/Focusable/SDFs/MI_UI_Slice_9_Base_Panel_3_B.0"
+        }
+      },
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_ButtonInfo_C:WidgetTree.Overlay_28.OverlaySlot_3'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.18"
+      },
+      "Visibility": "ESlateVisibility::Hidden"
+    }
+  },
+  {
+    "Type": "Image",
+    "Name": "ButtonImage",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Image'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_ButtonInfo_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.24"
+    },
+    "Properties": {
+      "Brush": {
+        "ImageType": "ESlateBrushImageType::FullColor",
+        "ResourceObject": {
+          "ObjectName": "Texture2D'T_PC_Light_128x128'",
+          "ObjectPath": "/Game/External/ControllerIconPack/Platform-PC/Light/T_PC_Light_128x128.0"
+        }
+      },
+      "Slot": {
+        "ObjectName": "OverlaySlot'BP_ButtonInfo_C:WidgetTree.Overlay_28.OverlaySlot_0'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.16"
+      }
+    }
+  },
+  {
+    "Type": "MovieScene",
+    "Name": "HoverAnim",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieScene'",
+    "Outer": {
+      "ObjectName": "WidgetAnimation'BP_ButtonInfo_C:HoverAnim_INST'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.22"
+    },
+    "Properties": {
+      "Possessables": [
+        {
+          "Tags": [],
+          "Guid": "45EFDC6D-42B759DA-F1FD3B8A-1B9740B3",
+          "Name": "Overlay_28",
+          "ParentGuid": "00000000-00000000-00000000-00000000",
+          "SpawnableObjectBindingID": {
+            "Guid": "00000000-00000000-00000000-00000000",
+            "SequenceID": 0,
+            "ResolveParentIndex": -1
+          }
+        },
+        {
+          "Tags": [],
+          "Guid": "A5F722C1-4F1F64A9-F22B809B-90DD5E03",
+          "Name": "ButtonImage",
+          "ParentGuid": "00000000-00000000-00000000-00000000",
+          "SpawnableObjectBindingID": {
+            "Guid": "00000000-00000000-00000000-00000000",
+            "SequenceID": 0,
+            "ResolveParentIndex": -1
+          }
+        }
+      ],
+      "ObjectBindings": [
+        {
+          "ObjectGuid": "45EFDC6D-42B759DA-F1FD3B8A-1B9740B3",
+          "Tracks": [
+            {
+              "ObjectName": "MovieScene2DTransformTrack'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieScene2DTransformTrack_0'",
+              "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.7"
+            }
+          ],
+          "Decorations": []
+        },
+        {
+          "ObjectGuid": "A5F722C1-4F1F64A9-F22B809B-90DD5E03",
+          "Tracks": [
+            {
+              "ObjectName": "MovieSceneColorTrack'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieSceneColorTrack_1'",
+              "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.13"
+            }
+          ],
+          "Decorations": []
+        }
+      ],
+      "PlaybackRange": {
+        "Value": {
+          "LowerBound": {
+            "Type": 1,
+            "Value": {
+              "Value": 0
+            }
+          },
+          "UpperBound": {
+            "Type": 0,
+            "Value": {
+              "Value": 15001
+            }
+          }
+        }
+      },
+      "DisplayRate": {
+        "Numerator": 20
+      },
+      "Signature": "F0FA7D47-45B593EF-5DB74E87-0EA15C27"
+    }
+  },
+  {
+    "Type": "MovieScene2DTransformSection",
+    "Name": "MovieScene2DTransformSection_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieScene2DTransformSection'",
+    "Outer": {
+      "ObjectName": "MovieScene2DTransformTrack'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieScene2DTransformTrack_0'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.7"
+    },
+    "Properties": {
+      "Translation": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "Translation[1]": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": -2.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "Rotation": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "Scale": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "Scale[1]": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "Shear": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "Shear[1]": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 0.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "Easing": {
+        "EaseIn": {
+          "ObjectName": "MovieSceneBuiltInEasingFunction'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieScene2DTransformTrack_0.MovieScene2DTransformSection_0.EaseInFunction'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.8"
+        },
+        "EaseOut": {
+          "ObjectName": "MovieSceneBuiltInEasingFunction'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieScene2DTransformTrack_0.MovieScene2DTransformSection_0.EaseOutFunction'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.9"
+        }
+      },
+      "SectionRange": {
+        "Value": {
+          "LowerBound": {
+            "Type": 1,
+            "Value": {
+              "Value": 0
+            }
+          },
+          "UpperBound": {
+            "Type": 1,
+            "Value": {
+              "Value": 15000
+            }
+          }
+        }
+      },
+      "Signature": "1EFEB66F-4F4AA854-3B6AF8B9-F4F97D33"
+    }
+  },
+  {
+    "Type": "MovieScene2DTransformTrack",
+    "Name": "MovieScene2DTransformTrack_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieScene2DTransformTrack'",
+    "Outer": {
+      "ObjectName": "MovieScene'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.5"
+    },
+    "Properties": {
+      "PropertyBinding": {
+        "PropertyName": "RenderTransform",
+        "PropertyPath": "RenderTransform",
+        "bCanUseClassLookup": true
+      },
+      "Sections": [
+        {
+          "ObjectName": "MovieScene2DTransformSection'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieScene2DTransformTrack_0.MovieScene2DTransformSection_0'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.6"
+        }
+      ],
+      "EvaluationFieldGuid": "218DDB1A-49F58F56-9D509EBB-7DDF170E",
+      "EvaluationField": {
+        "Entries": [
+          {
+            "Section": {
+              "ObjectName": "MovieScene2DTransformSection'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieScene2DTransformTrack_0.MovieScene2DTransformSection_0'",
+              "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.6"
+            },
+            "Range": {
+              "LowerBound": {
+                "Type": "ERangeBoundTypes::Inclusive",
+                "Value": {
+                  "Value": 0
+                }
+              },
+              "UpperBound": {
+                "Type": "ERangeBoundTypes::Inclusive",
+                "Value": {
+                  "Value": 15000
+                }
+              }
+            },
+            "ForcedTime": {
+              "Value": -2147483648
+            },
+            "Flags": "ESectionEvaluationFlags::None",
+            "LegacySortOrder": 0
+          }
+        ]
+      },
+      "Signature": "218DDB1A-49F58F56-9D509EBB-7DDF170E"
+    }
+  },
+  {
+    "Type": "MovieSceneBuiltInEasingFunction",
+    "Name": "EaseInFunction",
+    "Flags": "RF_Public | RF_Transactional | RF_DefaultSubObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneBuiltInEasingFunction'",
+    "Outer": {
+      "ObjectName": "MovieScene2DTransformSection'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieScene2DTransformTrack_0.MovieScene2DTransformSection_0'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.6"
+    }
+  },
+  {
+    "Type": "MovieSceneBuiltInEasingFunction",
+    "Name": "EaseOutFunction",
+    "Flags": "RF_Public | RF_Transactional | RF_DefaultSubObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneBuiltInEasingFunction'",
+    "Outer": {
+      "ObjectName": "MovieScene2DTransformSection'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieScene2DTransformTrack_0.MovieScene2DTransformSection_0'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.6"
+    }
+  },
+  {
+    "Type": "MovieSceneBuiltInEasingFunction",
+    "Name": "EaseInFunction",
+    "Flags": "RF_Public | RF_Transactional | RF_DefaultSubObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneBuiltInEasingFunction'",
+    "Outer": {
+      "ObjectName": "MovieSceneColorSection'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieSceneColorTrack_1.MovieSceneColorSection_0'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.12"
+    }
+  },
+  {
+    "Type": "MovieSceneBuiltInEasingFunction",
+    "Name": "EaseOutFunction",
+    "Flags": "RF_Public | RF_Transactional | RF_DefaultSubObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneBuiltInEasingFunction'",
+    "Outer": {
+      "ObjectName": "MovieSceneColorSection'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieSceneColorTrack_1.MovieSceneColorSection_0'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.12"
+    }
+  },
+  {
+    "Type": "MovieSceneColorSection",
+    "Name": "MovieSceneColorSection_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneColorSection'",
+    "Outer": {
+      "ObjectName": "MovieSceneColorTrack'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieSceneColorTrack_1'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.13"
+    },
+    "Properties": {
+      "RedCurve": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 0.6,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "GreenCurve": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 0.6,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "BlueCurve": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 0.6,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "AlphaCurve": {
+        "PreInfinityExtrap": "RCCE_Constant",
+        "PostInfinityExtrap": "RCCE_Constant",
+        "Times": [
+          {
+            "Value": 0
+          },
+          {
+            "Value": 15000
+          }
+        ],
+        "Values": [
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          },
+          {
+            "Value": 1.0,
+            "Tangent": {
+              "ArriveTangent": 0.0,
+              "LeaveTangent": 0.0,
+              "ArriveTangentWeight": 0.0,
+              "LeaveTangentWeight": 0.0,
+              "TangentWeightMode": 0
+            },
+            "InterpMode": 2,
+            "TangentMode": 0
+          }
+        ],
+        "DefaultValue": 0.0,
+        "bHasDefaultValue": false,
+        "TickResolution": {
+          "Numerator": 60000,
+          "Denominator": 1
+        },
+        "bShowCurve": false,
+        "StructFallback": null
+      },
+      "Easing": {
+        "EaseIn": {
+          "ObjectName": "MovieSceneBuiltInEasingFunction'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieSceneColorTrack_1.MovieSceneColorSection_0.EaseInFunction'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.10"
+        },
+        "EaseOut": {
+          "ObjectName": "MovieSceneBuiltInEasingFunction'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieSceneColorTrack_1.MovieSceneColorSection_0.EaseOutFunction'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.11"
+        }
+      },
+      "SectionRange": {
+        "Value": {
+          "LowerBound": {
+            "Type": 1,
+            "Value": {
+              "Value": 0
+            }
+          },
+          "UpperBound": {
+            "Type": 1,
+            "Value": {
+              "Value": 15000
+            }
+          }
+        }
+      },
+      "Signature": "5A45481C-403ADB2C-DA743584-F4CD0AC8"
+    }
+  },
+  {
+    "Type": "MovieSceneColorTrack",
+    "Name": "MovieSceneColorTrack_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneColorTrack'",
+    "Outer": {
+      "ObjectName": "MovieScene'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.5"
+    },
+    "Properties": {
+      "PropertyBinding": {
+        "PropertyName": "ColorAndOpacity",
+        "PropertyPath": "ColorAndOpacity",
+        "bCanUseClassLookup": true
+      },
+      "Sections": [
+        {
+          "ObjectName": "MovieSceneColorSection'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieSceneColorTrack_1.MovieSceneColorSection_0'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.12"
+        }
+      ],
+      "EvaluationFieldGuid": "040F6E63-47A0BF17-9CF5FC83-8EF9902C",
+      "EvaluationField": {
+        "Entries": [
+          {
+            "Section": {
+              "ObjectName": "MovieSceneColorSection'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieSceneColorTrack_1.MovieSceneColorSection_0'",
+              "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.12"
+            },
+            "Range": {
+              "LowerBound": {
+                "Type": "ERangeBoundTypes::Inclusive",
+                "Value": {
+                  "Value": 0
+                }
+              },
+              "UpperBound": {
+                "Type": "ERangeBoundTypes::Inclusive",
+                "Value": {
+                  "Value": 15000
+                }
+              }
+            },
+            "ForcedTime": {
+              "Value": -2147483648
+            },
+            "Flags": "ESectionEvaluationFlags::None",
+            "LegacySortOrder": 0
+          }
+        ]
+      },
+      "Signature": "040F6E63-47A0BF17-9CF5FC83-8EF9902C"
+    }
+  },
+  {
+    "Type": "MovieSceneCompiledData",
+    "Name": "CompiledData",
+    "Flags": "RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'MovieSceneCompiledData'",
+    "Outer": {
+      "ObjectName": "WidgetAnimation'BP_ButtonInfo_C:HoverAnim_INST'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.22"
+    },
+    "Properties": {
+      "EntityComponentField": {
+        "PersistentEntityTree": {
+          "SerializedData": {
+            "Data": {
+              "Entries": [
+                {
+                  "StartIndex": 0,
+                  "Size": 2,
+                  "Capacity": 2
+                }
+              ],
+              "Items": [
+                {
+                  "EntityIndex": 0,
+                  "MetaDataIndex": -1
+                },
+                {
+                  "EntityIndex": 1,
+                  "MetaDataIndex": -1
+                }
+              ]
+            },
+            "RootNode": {
+              "Range": {
+                "LowerBound": {
+                  "Type": 2,
+                  "Value": {
+                    "Value": 0
+                  }
+                },
+                "UpperBound": {
+                  "Type": 2,
+                  "Value": {
+                    "Value": 0
+                  }
+                }
+              },
+              "Parent": {
+                "ChildrenHandle": {
+                  "EntryIndex": -1
+                },
+                "Index": -1
+              },
+              "ChildrenID": {
+                "EntryIndex": 0
+              },
+              "DataID": {
+                "EntryIndex": -1
+              }
+            },
+            "ChildNodes": {
+              "Entries": [
+                {
+                  "StartIndex": 0,
+                  "Size": 1,
+                  "Capacity": 1
+                }
+              ],
+              "Items": [
+                {
+                  "Range": {
+                    "LowerBound": {
+                      "Type": 1,
+                      "Value": {
+                        "Value": 0
+                      }
+                    },
+                    "UpperBound": {
+                      "Type": 1,
+                      "Value": {
+                        "Value": 15000
+                      }
+                    }
+                  },
+                  "Parent": {
+                    "ChildrenHandle": {
+                      "EntryIndex": -1
+                    },
+                    "Index": 0
+                  },
+                  "ChildrenID": {
+                    "EntryIndex": -1
+                  },
+                  "DataID": {
+                    "EntryIndex": 0
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "Entities": [
+          {
+            "Key": {
+              "EntityOwner": {
+                "ObjectName": "MovieScene2DTransformSection'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieScene2DTransformTrack_0.MovieScene2DTransformSection_0'",
+                "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.6"
+              },
+              "EntityID": 0
+            },
+            "SharedMetaDataIndex": 0
+          },
+          {
+            "Key": {
+              "EntityOwner": {
+                "ObjectName": "MovieSceneColorSection'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim.MovieSceneColorTrack_1.MovieSceneColorSection_0'",
+                "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.12"
+              },
+              "EntityID": 0
+            },
+            "SharedMetaDataIndex": 1
+          }
+        ],
+        "SharedMetaData": [
+          {
+            "ObjectBindingID": "45EFDC6D-42B759DA-F1FD3B8A-1B9740B3"
+          },
+          {
+            "ObjectBindingID": "A5F722C1-4F1F64A9-F22B809B-90DD5E03"
+          }
+        ]
+      },
+      "DeterminismFences": [
+        {
+          "FrameNumber": {
+            "Value": 15000
+          },
+          "bInclusive": false
+        }
+      ],
+      "CompiledSignature": "F524857F-430D7CE5-D2E4BF8A-31963AA2",
+      "CompilerVersion": "7D4B9809-2FAC4A6B-964ECF72-D8279EF8",
+      "AccumulatedMask": "EMovieSceneSequenceCompilerMask::EntityComponentField",
+      "AllocatedMask": "EMovieSceneSequenceCompilerMask::EntityComponentField"
+    }
+  },
+  {
+    "Type": "Overlay",
+    "Name": "Overlay_28",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'Overlay'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_ButtonInfo_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.24"
+    },
+    "Properties": {
+      "Slots": [
+        {
+          "ObjectName": "OverlaySlot'BP_ButtonInfo_C:WidgetTree.Overlay_28.OverlaySlot_3'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.18"
+        },
+        {
+          "ObjectName": "OverlaySlot'BP_ButtonInfo_C:WidgetTree.Overlay_28.OverlaySlot_0'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.16"
+        },
+        {
+          "ObjectName": "OverlaySlot'BP_ButtonInfo_C:WidgetTree.Overlay_28.OverlaySlot_1'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.17"
+        }
+      ],
+      "Slot": {
+        "ObjectName": "SizeBoxSlot'BP_ButtonInfo_C:WidgetTree.SizeBox_0.SizeBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.20"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_ButtonInfo_C:WidgetTree.Overlay_28'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.15"
+    },
+    "Properties": {
+      "Padding": {
+        "Left": 2.0,
+        "Top": 2.0,
+        "Right": 2.0,
+        "Bottom": 2.0
+      },
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Fill",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Fill",
+      "Parent": {
+        "ObjectName": "Overlay'BP_ButtonInfo_C:WidgetTree.Overlay_28'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.15"
+      },
+      "Content": {
+        "ObjectName": "Image'BP_ButtonInfo_C:WidgetTree.ButtonImage'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.4"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_1",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_ButtonInfo_C:WidgetTree.Overlay_28'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.15"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Center",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Center",
+      "Parent": {
+        "ObjectName": "Overlay'BP_ButtonInfo_C:WidgetTree.Overlay_28'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.15"
+      },
+      "Content": {
+        "ObjectName": "HorizontalBox'BP_ButtonInfo_C:WidgetTree.HorizontalBox_1'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.1"
+      }
+    }
+  },
+  {
+    "Type": "OverlaySlot",
+    "Name": "OverlaySlot_3",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'OverlaySlot'",
+    "Outer": {
+      "ObjectName": "Overlay'BP_ButtonInfo_C:WidgetTree.Overlay_28'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.15"
+    },
+    "Properties": {
+      "HorizontalAlignment": "EHorizontalAlignment::HAlign_Fill",
+      "VerticalAlignment": "EVerticalAlignment::VAlign_Fill",
+      "Parent": {
+        "ObjectName": "Overlay'BP_ButtonInfo_C:WidgetTree.Overlay_28'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.15"
+      },
+      "Content": {
+        "ObjectName": "Image'BP_ButtonInfo_C:WidgetTree.BackgroundImage'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.3"
+      }
+    }
+  },
+  {
+    "Type": "SizeBox",
+    "Name": "SizeBox_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBox'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_ButtonInfo_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.24"
+    },
+    "Properties": {
+      "MinDesiredWidth": 40.0,
+      "MinDesiredHeight": 40.0,
+      "MaxDesiredWidth": 128.0,
+      "MaxDesiredHeight": 128.0,
+      "bOverride_MinDesiredWidth": true,
+      "bOverride_MinDesiredHeight": true,
+      "bOverride_MaxDesiredWidth": true,
+      "bOverride_MaxDesiredHeight": true,
+      "Slots": [
+        {
+          "ObjectName": "SizeBoxSlot'BP_ButtonInfo_C:WidgetTree.SizeBox_0.SizeBoxSlot_0'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.20"
+        }
+      ]
+    }
+  },
+  {
+    "Type": "SizeBoxSlot",
+    "Name": "SizeBoxSlot_0",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'SizeBoxSlot'",
+    "Outer": {
+      "ObjectName": "SizeBox'BP_ButtonInfo_C:WidgetTree.SizeBox_0'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.19"
+    },
+    "Properties": {
+      "Parent": {
+        "ObjectName": "SizeBox'BP_ButtonInfo_C:WidgetTree.SizeBox_0'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.19"
+      },
+      "Content": {
+        "ObjectName": "Overlay'BP_ButtonInfo_C:WidgetTree.Overlay_28'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.15"
+      }
+    }
+  },
+  {
+    "Type": "TextBlock",
+    "Name": "PrimaryKeyTB",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'TextBlock'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_ButtonInfo_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.24"
+    },
+    "Properties": {
+      "Text": {
+        "Namespace": "",
+        "Key": "8519C5D541838C9630C764A0A3B0C86B",
+        "SourceString": "F1",
+        "LocalizedString": "F1"
+      },
+      "ColorAndOpacity": {
+        "SpecifiedColor": {
+          "R": 0.01,
+          "G": 0.01,
+          "B": 0.01,
+          "A": 1.0,
+          "Hex": "191919"
+        }
+      },
+      "Font": {
+        "FontObject": {
+          "ObjectName": "Font'VoyageRoboto'",
+          "ObjectPath": "/Game/UI/VoyageRoboto.0"
+        },
+        "Size": 12.0
+      },
+      "TextTransformPolicy": "ETextTransformPolicy::ToUpper",
+      "Justification": "ETextJustify::Center",
+      "Slot": {
+        "ObjectName": "HorizontalBoxSlot'BP_ButtonInfo_C:WidgetTree.HorizontalBox_1.HorizontalBoxSlot_0'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.2"
+      }
+    }
+  },
+  {
+    "Type": "WidgetAnimation",
+    "Name": "HoverAnim_INST",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'WidgetAnimation'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_ButtonInfo_C'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.23"
+    },
+    "Properties": {
+      "MovieScene": {
+        "ObjectName": "MovieScene'BP_ButtonInfo_C:HoverAnim_INST.HoverAnim'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.5"
+      },
+      "AnimationBindings": [
+        {
+          "WidgetName": "ButtonImage",
+          "SlotWidgetName": "None",
+          "AnimationGuid": "A5F722C1-4F1F64A9-F22B809B-90DD5E03",
+          "bIsRootWidget": false,
+          "DynamicBinding": {
+            "Function": null,
+            "ResolveParamsProperty": {
+              "Path": [],
+              "ResolvedOwner": null
+            }
+          }
+        },
+        {
+          "WidgetName": "Overlay_28",
+          "SlotWidgetName": "None",
+          "AnimationGuid": "45EFDC6D-42B759DA-F1FD3B8A-1B9740B3",
+          "bIsRootWidget": false,
+          "DynamicBinding": {
+            "Function": null,
+            "ResolveParamsProperty": {
+              "Path": [],
+              "ResolvedOwner": null
+            }
+          }
+        }
+      ],
+      "DisplayLabel": "HoverAnim",
+      "CompiledData": {
+        "ObjectName": "MovieSceneCompiledData'BP_ButtonInfo_C:HoverAnim_INST.CompiledData'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.14"
+      },
+      "Signature": "F524857F-430D7CE5-D2E4BF8A-31963AA2"
+    }
+  },
+  {
+    "Type": "WidgetBlueprintGeneratedClass",
+    "Name": "BP_ButtonInfo_C",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'WidgetBlueprintGeneratedClass'",
+    "Package": "/Game/UI/Game/Inputs/BP_ButtonInfo",
+    "Properties": {
+      "WidgetTree": {
+        "ObjectName": "WidgetTree'BP_ButtonInfo_C:WidgetTree'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.24"
+      },
+      "bClassRequiresNativeTick": true,
+      "Animations": [
+        {
+          "ObjectName": "WidgetAnimation'BP_ButtonInfo_C:HoverAnim_INST'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.22"
+        }
+      ]
+    },
+    "SuperStruct": {
+      "ObjectName": "Class'VoyageButtonInfoWidget'",
+      "ObjectPath": "/Script/Voyage"
+    },
+    "ClassFlags": "CLASS_EditInlineNew | CLASS_CompiledFromBlueprint | CLASS_DefaultToInstanced | CLASS_HasInstancedReference",
+    "ClassWithin": {
+      "ObjectName": "Class'Object'",
+      "ObjectPath": "/Script/CoreUObject"
+    },
+    "ClassConfigName": "Engine",
+    "bCooked": true,
+    "ClassDefaultObject": {
+      "ObjectName": "BP_ButtonInfo_C'Default__BP_ButtonInfo_C'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.0"
+    },
+    "EditorTags": {
+      "BlueprintType": "BPTYPE_Normal"
+    }
+  },
+  {
+    "Type": "WidgetTree",
+    "Name": "WidgetTree",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'WidgetTree'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_ButtonInfo_C'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.23"
+    },
+    "Properties": {
+      "RootWidget": {
+        "ObjectName": "SizeBox'BP_ButtonInfo_C:WidgetTree.SizeBox_0'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo.19"
+      }
+    }
+  }
+]

@@ -1,0 +1,324 @@
+[
+  {
+    "Type": "InputMappingContext",
+    "Name": "IMC_Forklift_Gamepad",
+    "Flags": "RF_Public | RF_Standalone | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputMappingContext'",
+    "Package": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad",
+    "Properties": {
+      "DefaultKeyMappings": {
+        "Mappings": [
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Forklift_Gamepad:InputTriggerPressed_0'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.6"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleExit'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleExit.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_FaceButton_Left"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierDeadZone'IMC_Forklift_Gamepad:InputModifierDeadZone_4'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.4"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_VehicleForward'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_VehicleForward.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftY"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierDeadZone'IMC_Forklift_Gamepad:InputModifierDeadZone_1'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.1"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_VehicleRight'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IA_VehicleRight.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftX"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierDeadZone'IMC_Forklift_Gamepad:InputModifierDeadZone_2'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.2"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookUp'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookUp.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightY"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierDeadZone'IMC_Forklift_Gamepad:InputModifierDeadZone_3'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.3"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookRight'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookRight.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightX"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Forklift_Gamepad:InputModifierNegate_5'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.5"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_Zoom'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Zoom.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftShoulder"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Zoom'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Zoom.0"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightShoulder"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Forklift_Gamepad:InputTriggerPressed_2'",
+                "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.7"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleSwitchCamera'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleSwitchCamera.2"
+            },
+            "Key": {
+              "KeyName": "Gamepad_FaceButton_Right"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Forklift_ForkUp'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkUp.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightTriggerAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Forklift_ForkDown'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkDown.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftTriggerAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleHorn'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleHorn.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftThumbstick"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_VehicleHandbrake'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/IAV_VehicleHandbrake.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightThumbstick"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Forklift_ForkTiltUp'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkTiltUp.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_RightShoulder"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Forklift_ForkTiltDown'",
+              "ObjectPath": "/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkTiltDown.1"
+            },
+            "Key": {
+              "KeyName": "Gamepad_LeftShoulder"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          }
+        ]
+      },
+      "ContextDescription": {
+        "Namespace": "",
+        "Key": "807B7B65494CE8CD30FE07A0A5931940",
+        "SourceString": "Vehicle gamepad",
+        "LocalizedString": "Vehicle gamepad"
+      }
+    }
+  },
+  {
+    "Type": "InputModifierDeadZone",
+    "Name": "InputModifierDeadZone_1",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierDeadZone'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Forklift_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.0"
+    },
+    "Properties": {
+      "LowerThreshold": 0.25,
+      "Type": "EDeadZoneType::Axial"
+    }
+  },
+  {
+    "Type": "InputModifierDeadZone",
+    "Name": "InputModifierDeadZone_2",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierDeadZone'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Forklift_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.0"
+    },
+    "Properties": {
+      "LowerThreshold": 0.25,
+      "Type": "EDeadZoneType::Axial"
+    }
+  },
+  {
+    "Type": "InputModifierDeadZone",
+    "Name": "InputModifierDeadZone_3",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierDeadZone'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Forklift_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.0"
+    },
+    "Properties": {
+      "LowerThreshold": 0.25,
+      "Type": "EDeadZoneType::Axial"
+    }
+  },
+  {
+    "Type": "InputModifierDeadZone",
+    "Name": "InputModifierDeadZone_4",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierDeadZone'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Forklift_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.0"
+    },
+    "Properties": {
+      "LowerThreshold": 0.25,
+      "Type": "EDeadZoneType::Axial"
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_5",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Forklift_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_0",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Forklift_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_2",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Forklift_Gamepad'",
+      "ObjectPath": "/Game/Game/Input/Vehicle/IMC_Forklift_Gamepad.0"
+    }
+  }
+]

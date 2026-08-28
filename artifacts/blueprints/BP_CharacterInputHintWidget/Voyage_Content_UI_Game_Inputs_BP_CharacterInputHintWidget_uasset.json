@@ -1,0 +1,97 @@
+[
+  {
+    "Type": "BP_ButtonInfo_Vertical_Container_C",
+    "Name": "BP_ButtonInfoContainer",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "WidgetBlueprintGeneratedClass'/Game/UI/Game/Inputs/BP_ButtonInfo_Vertical_Container.BP_ButtonInfo_Vertical_Container_C'",
+    "Outer": {
+      "ObjectName": "WidgetTree'BP_CharacterInputHintWidget_C:WidgetTree'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_CharacterInputHintWidget.3"
+    },
+    "Template": {
+      "ObjectName": "BP_ButtonInfo_Vertical_Container_C'Default__BP_ButtonInfo_Vertical_Container_C'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo_Vertical_Container.1"
+    },
+    "Properties": {
+      "ContextAsset": {
+        "ObjectName": "VoyageInputContextAsset'DA_Input_Context_Character'",
+        "ObjectPath": "/Game/Game/Input/Character/DA_Input_Context_Character.0"
+      },
+      "ButtonInfoWidgetClass": {
+        "ObjectName": "WidgetBlueprintGeneratedClass'BP_ButtonInfoDetailed_C'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfoDetailed.41"
+      }
+    }
+  },
+  {
+    "Type": "BP_CharacterInputHintWidget_C",
+    "Name": "Default__BP_CharacterInputHintWidget_C",
+    "Flags": "RF_Public | RF_ClassDefaultObject | RF_ArchetypeObject | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "WidgetBlueprintGeneratedClass'/Game/UI/Game/Inputs/BP_CharacterInputHintWidget.BP_CharacterInputHintWidget_C'",
+    "Package": "/Game/UI/Game/Inputs/BP_CharacterInputHintWidget",
+    "Properties": {
+      "bHasScriptImplementedTick": false,
+      "bHasScriptImplementedPaint": false
+    }
+  },
+  {
+    "Type": "WidgetBlueprintGeneratedClass",
+    "Name": "BP_CharacterInputHintWidget_C",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'WidgetBlueprintGeneratedClass'",
+    "Package": "/Game/UI/Game/Inputs/BP_CharacterInputHintWidget",
+    "Properties": {
+      "WidgetTree": {
+        "ObjectName": "WidgetTree'BP_CharacterInputHintWidget_C:WidgetTree'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_CharacterInputHintWidget.3"
+      }
+    },
+    "SuperStruct": {
+      "ObjectName": "Class'UserWidget'",
+      "ObjectPath": "/Script/UMG"
+    },
+    "ChildProperties": [
+      {
+        "Type": "ObjectProperty",
+        "Name": "BP_ButtonInfoContainer",
+        "Flags": "RF_Public | RF_LoadCompleted",
+        "ElementSize": 8,
+        "PropertyFlags": "BlueprintVisible | ExportObject | BlueprintReadOnly | DisableEditOnInstance | InstancedReference | RepSkip | PersistentInstance",
+        "PropertyClass": {
+          "ObjectName": "WidgetBlueprintGeneratedClass'BP_ButtonInfo_Vertical_Container_C'",
+          "ObjectPath": "/Game/UI/Game/Inputs/BP_ButtonInfo_Vertical_Container.4"
+        }
+      }
+    ],
+    "ClassFlags": "CLASS_EditInlineNew | CLASS_CompiledFromBlueprint | CLASS_DefaultToInstanced | CLASS_HasInstancedReference",
+    "ClassWithin": {
+      "ObjectName": "Class'Object'",
+      "ObjectPath": "/Script/CoreUObject"
+    },
+    "ClassConfigName": "Engine",
+    "bCooked": true,
+    "ClassDefaultObject": {
+      "ObjectName": "BP_CharacterInputHintWidget_C'Default__BP_CharacterInputHintWidget_C'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_CharacterInputHintWidget.1"
+    },
+    "EditorTags": {
+      "BlueprintType": "BPTYPE_Normal"
+    }
+  },
+  {
+    "Type": "WidgetTree",
+    "Name": "WidgetTree",
+    "Flags": "RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'WidgetTree'",
+    "Outer": {
+      "ObjectName": "WidgetBlueprintGeneratedClass'BP_CharacterInputHintWidget_C'",
+      "ObjectPath": "/Game/UI/Game/Inputs/BP_CharacterInputHintWidget.2"
+    },
+    "Properties": {
+      "RootWidget": {
+        "ObjectName": "BP_ButtonInfo_Vertical_Container_C'BP_CharacterInputHintWidget_C:WidgetTree.BP_ButtonInfoContainer'",
+        "ObjectPath": "/Game/UI/Game/Inputs/BP_CharacterInputHintWidget.0"
+      }
+    }
+  }
+]

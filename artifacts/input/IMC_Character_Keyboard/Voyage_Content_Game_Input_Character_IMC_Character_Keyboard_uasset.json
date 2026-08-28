@@ -1,0 +1,745 @@
+[
+  {
+    "Type": "InputMappingContext",
+    "Name": "IMC_Character_Keyboard",
+    "Flags": "RF_Public | RF_Standalone | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputMappingContext'",
+    "Package": "/Game/Game/Input/Character/IMC_Character_Keyboard",
+    "Properties": {
+      "DefaultKeyMappings": {
+        "Mappings": [
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveForward'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveForward.0"
+            },
+            "Key": {
+              "KeyName": "W"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveBackward'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveBackward.0"
+            },
+            "Key": {
+              "KeyName": "S"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveRight'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveRight.0"
+            },
+            "Key": {
+              "KeyName": "D"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_MoveLeft'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_MoveLeft.0"
+            },
+            "Key": {
+              "KeyName": "A"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [
+              {
+                "ObjectName": "InputModifierNegate'IMC_Character_Keyboard:InputModifierNegate_4'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.1"
+              }
+            ],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookUp'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookUp.0"
+            },
+            "Key": {
+              "KeyName": "MouseY"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_LookRight'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_LookRight.0"
+            },
+            "Key": {
+              "KeyName": "MouseX"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerTap'IMC_Character_Keyboard:InputTriggerTap_0'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.15"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Jump'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Jump.1"
+            },
+            "Key": {
+              "KeyName": "SpaceBar"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Stance'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Stance.0"
+            },
+            "Key": {
+              "KeyName": "LeftControl"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Sprint'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Sprint.0"
+            },
+            "Key": {
+              "KeyName": "LeftShift"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Interact'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Interact.1"
+            },
+            "Key": {
+              "KeyName": "E"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_InteractTwo'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_InteractTwo.1"
+            },
+            "Key": {
+              "KeyName": "F"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_InteractThree'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_InteractThree.1"
+            },
+            "Key": {
+              "KeyName": "V"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_PrimaryAction'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_PrimaryAction.0"
+            },
+            "Key": {
+              "KeyName": "LeftMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Zoom'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Zoom.0"
+            },
+            "Key": {
+              "KeyName": "MouseWheelAxis"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Drop'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Drop.1"
+            },
+            "Key": {
+              "KeyName": "Q"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_10'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.4"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ActionBar1'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ActionBar1.0"
+            },
+            "Key": {
+              "KeyName": "Five"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_15'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.5"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ActionBar2'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ActionBar2.0"
+            },
+            "Key": {
+              "KeyName": "Six"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_16'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.6"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ActionBar3'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ActionBar3.0"
+            },
+            "Key": {
+              "KeyName": "Seven"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_17'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.7"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_ActionBar4'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_ActionBar4.0"
+            },
+            "Key": {
+              "KeyName": "Eight"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_1'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.3"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_HolsterNext'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_HolsterNext.1"
+            },
+            "Key": {
+              "KeyName": "Period"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_0'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.2"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_HolsterPrev'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_HolsterPrev.1"
+            },
+            "Key": {
+              "KeyName": "Comma"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Keyboard_Modifier_Shift'",
+              "ObjectPath": "/Game/Game/Input/Modifiers/IAV_Keyboard_Modifier_Shift.0"
+            },
+            "Key": {
+              "KeyName": "LeftShift"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Keyboard_Modifier_Shift'",
+              "ObjectPath": "/Game/Game/Input/Modifiers/IAV_Keyboard_Modifier_Shift.0"
+            },
+            "Key": {
+              "KeyName": "RightShift"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_28'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.8"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_HolsterBar0'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_HolsterBar0.1"
+            },
+            "Key": {
+              "KeyName": "One"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_29'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.9"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_HolsterBar1'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_HolsterBar1.1"
+            },
+            "Key": {
+              "KeyName": "Two"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_30'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.11"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_HolsterBar2'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_HolsterBar2.1"
+            },
+            "Key": {
+              "KeyName": "Three"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_31'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.12"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_HolsterBar3'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_HolsterBar3.1"
+            },
+            "Key": {
+              "KeyName": "Four"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Melee'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Melee.1"
+            },
+            "Key": {
+              "KeyName": "C"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_33'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.13"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Throw'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Throw.0"
+            },
+            "Key": {
+              "KeyName": "RightMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerTap'IMC_Character_Keyboard:InputTriggerTap_3'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.16"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_ADS'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_ADS.1"
+            },
+            "Key": {
+              "KeyName": "RightMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_5'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.14"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Inspect'",
+              "ObjectPath": "/Game/Game/Input/Character/IAV_Inspect.1"
+            },
+            "Key": {
+              "KeyName": "G"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_SecondaryAction'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_SecondaryAction.0"
+            },
+            "Key": {
+              "KeyName": "RightMouseButton"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [
+              {
+                "ObjectName": "InputTriggerPressed'IMC_Character_Keyboard:InputTriggerPressed_3'",
+                "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.10"
+              }
+            ],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "InputAction'IA_Reload'",
+              "ObjectPath": "/Game/Game/Input/Character/IA_Reload.0"
+            },
+            "Key": {
+              "KeyName": "R"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Keyboard_Modifier_Ctrl'",
+              "ObjectPath": "/Game/Game/Input/Modifiers/IAV_Keyboard_Modifier_Ctrl.0"
+            },
+            "Key": {
+              "KeyName": "LeftControl"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Keyboard_Modifier_Ctrl'",
+              "ObjectPath": "/Game/Game/Input/Modifiers/IAV_Keyboard_Modifier_Ctrl.0"
+            },
+            "Key": {
+              "KeyName": "RightControl"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Keyboard_Modifier_Alt'",
+              "ObjectPath": "/Game/Game/Input/Modifiers/IAV_Keyboard_Modifier_Alt.0"
+            },
+            "Key": {
+              "KeyName": "LeftAlt"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          },
+          {
+            "Triggers": [],
+            "Modifiers": [],
+            "Action": {
+              "ObjectName": "VoyageInputAction'IAV_Keyboard_Modifier_Alt'",
+              "ObjectPath": "/Game/Game/Input/Modifiers/IAV_Keyboard_Modifier_Alt.0"
+            },
+            "Key": {
+              "KeyName": "RightAlt"
+            },
+            "SettingBehavior": "EPlayerMappableKeySettingBehaviors::InheritSettingsFromAction",
+            "PlayerMappableKeySettings": null
+          }
+        ]
+      },
+      "ContextDescription": {
+        "Namespace": "",
+        "Key": "6BA187C846A3CE1988D3FE91258C6EC2",
+        "SourceString": "Character keyboard",
+        "LocalizedString": "Character keyboard"
+      }
+    }
+  },
+  {
+    "Type": "InputModifierNegate",
+    "Name": "InputModifierNegate_4",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputModifierNegate'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_0",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_1",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_10",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_15",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_16",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_17",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_28",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_29",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_3",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_30",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_31",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_33",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerPressed",
+    "Name": "InputTriggerPressed_5",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerPressed'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerTap",
+    "Name": "InputTriggerTap_0",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerTap'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    }
+  },
+  {
+    "Type": "InputTriggerTap",
+    "Name": "InputTriggerTap_3",
+    "Flags": "RF_Public | RF_Transactional | RF_WasLoaded | RF_LoadCompleted",
+    "Class": "UScriptClass'InputTriggerTap'",
+    "Outer": {
+      "ObjectName": "InputMappingContext'IMC_Character_Keyboard'",
+      "ObjectPath": "/Game/Game/Input/Character/IMC_Character_Keyboard.0"
+    },
+    "Properties": {
+      "TapReleaseTimeThreshold": 0.5
+    }
+  }
+]

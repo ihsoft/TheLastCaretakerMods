@@ -1,0 +1,1 @@
+Voyage/Content/Blueprints/Vehicles/BP_Forklift_Possesable.uasset
