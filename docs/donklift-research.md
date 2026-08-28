@@ -25,17 +25,36 @@
 ## Verified behavior
 
 - Keyboard axes are digital: throttle `-1/0/1`, steering `-1/0/1`.
-- Writing smoothed values to Blueprint properties `Acceleration` and `Steering`
-  produces the desired persistent physical control.
-- The visible HUD continues to show the original digital values.
-- Direct `USlider:SetValue`, direct `Value` writes, and clearing
-  `ValueDelegate` did not change the visible indicators.
-- Any Lua path that marshals a new `FText` crashes this UE4SS Compact build with
-  `FText(FString&&) not found. FText::construct_with_string failed.`
+- Pre-hooks on `GetThrottleInput` and `GetSteeringInput` are the reliable input
+  interception points. The production control mod integrates its own values on
+  a fixed clock and writes them before the native getters read the fields.
+- Mod-produced active values are limited to `+/-0.9999`; exact `-1/0/1` remain
+  unambiguous game commands. The active neutral sentinel is `0.0001`, while
+  exact zero is reserved for release and vehicle exit.
+- The same getter path drives both vehicle behavior and the native percentage
+  indicators. No separate slider writes are required.
+- `X` resets throttle and `C` resets steering immediately. Throttle resets on
+  exit; visually turned wheels may remain turned until the next acquisition.
+
+## Verified hotkey HUD
+
+- Visible lower-left vehicle hints live under
+  `BP_DynamicPlayerInputHorizontalWidget_Bottom.ContextInputActionsRoot`.
+- `KeybindRoot` is not the visible `E/H` host and is empty at runtime.
+- `DonkLiftHotkeyHints` creates two native `WBP_InteractIndicator_C` copies and
+  configures them after their widget trees become available.
+- The custom `FText_Constructor.lua` resolves `FText(FString&&)` to a unique
+  match in the validated Voyage executable. Without it, marshaling a new
+  `FText` fails and may crash. Revalidate the signature after game updates.
+- Voyage's active menu language comes from
+  `VoyageGameUserSettings.CustomSettings.LanguageType`, not from
+  `KismetInternationalizationLibrary.GetCurrentLanguage`.
+- English and Russian labels are validated. Language is read once per forklift
+  HUD lifecycle, allowing a menu language change to take effect after the next
+  game load without continuous polling.
 
 ## Research rule
 
-Do not make further HUD changes from widget names alone. First extract and
-decompile the HUD Blueprint and trace the exact data flow that renders the two
-visible indicators.
-
+Keep physical control and HUD work in separate modules. Revalidate both the
+runtime widget hierarchy and the version-pinned `FText` signature after a game
+update before changing or redistributing the HUD mod.

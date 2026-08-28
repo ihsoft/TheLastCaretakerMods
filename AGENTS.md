@@ -6,6 +6,9 @@ These rules apply to the entire `TheLastCaretakerMods` repository.
 
 - Treat `mods/DonkLiftKeyboardControl/Scripts/main.lua` and the latest
   game-validated Git checkpoint as the control implementation of record.
+- Treat `mods/DonkLiftHotkeyHints/Scripts/main.lua` together with
+  `ue4ss/UE4SS_Signatures/FText_Constructor.lua` as the game-validated hotkey
+  HUD implementation of record.
 - Treat older control/HUD designs in `docs/` as historical research when they
   disagree with the current source. In particular, do not restore the old
   `ReceiveTick`, setter-hook, `Acceleration`/`Steering`, or direct HUD-widget
@@ -42,6 +45,34 @@ These rules apply to the entire `TheLastCaretakerMods` repository.
   The forklift appears to retain wheel position elsewhere. Do not broaden the
   control mod to chase this unless the user explicitly requests it.
 
+## Verified DonkLift hotkey HUD contract
+
+- The visible lower-left `E/H` hints are children of
+  `BP_DynamicPlayerInputHorizontalWidget_Bottom.ContextInputActionsRoot`.
+  `BP_VoyageIngameForklift_C.KeybindRoot` is real but its nested action
+  container is empty at runtime; do not use it as the visible hint host.
+- Create display-only hints by copying the native `WBP_InteractIndicator_C`
+  class through `WidgetBlueprintLibrary:Create`, adding it to the bottom
+  `ContextInputActionsRoot`, then configuring its nested text blocks on a later
+  poll. The named child widgets are not ready immediately after `Create`.
+- Set `ButtonInfoContainer.bAutoUpdateKeyRebindings = false` on copied hints or
+  a later native refresh may restore the template's `E / Interact` content.
+- Creating new `FText` requires the version-pinned custom signature at
+  `ue4ss/UE4SS_Signatures/FText_Constructor.lua`. Its pattern is unique for the
+  validated Voyage executable. Revalidate uniqueness and constructor semantics
+  after every executable update; never install an approximate or multi-match
+  signature.
+- Voyage does not keep its menu language synchronized with Unreal's
+  `KismetInternationalizationLibrary.GetCurrentLanguage`. Read the live
+  `VoyageGameUserSettings.CustomSettings.LanguageType` enum instead. Cache it
+  only while a valid forklift HUD exists, clear the cache when that HUD is
+  destroyed, and read it again after the next game load.
+- `EVoyageLanguageType` values verified for the current labels are `English=1`
+  and `Russian=11`. The production hint labels are `Brake / Center` and
+  `Тормоз / Выровнять`; unsupported languages fall back to English.
+- Keep `DonkLiftHotkeyHints` separate from `DonkLiftKeyboardControl`. The HUD
+  module must never write throttle or steering state.
+
 ## Performance rules
 
 - Lua is interpreted and both native getter hooks may run several times per
@@ -60,6 +91,9 @@ These rules apply to the entire `TheLastCaretakerMods` repository.
 
 - Confirm that the game process is closed before replacing the installed Lua
   file. Never hot-copy this mod into a running game.
+- Before testing `DonkLiftHotkeyHints`, ensure its repository and installed Lua
+  hashes match and the installed `FText_Constructor.lua` matches the repository
+  signature file.
 - Keep control-path and HUD experiments separate. Do not change both in one
   experiment because feedback between them previously caused autonomous
   throttle/steering and crashes.
