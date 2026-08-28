@@ -1,11 +1,15 @@
 local PREFIX = "[DonkLiftKeyboardControl]"
 
 local FIXED_INTERVAL_MS = 50
-local FULL_RANGE_TIME_MS = 3000
-local THROTTLE_STEP = FIXED_INTERVAL_MS / FULL_RANGE_TIME_MS
+local MIN_THROTTLE_RATE = 0.45
+local MAX_THROTTLE_RATE = 0.80
+local STEP_RAMP_TIME_MS = 2000
 
 local throttle_direction = 0
 local current_throttle = 0
+local current_throttle_step = MIN_THROTTLE_RATE * FIXED_INTERVAL_MS / 1000
+local active_step_direction = 0
+local active_direction_time_ms = 0
 local last_reported_direction = nil
 
 local function log(message)
@@ -60,12 +64,26 @@ end
 
 
 LoopAsync(FIXED_INTERVAL_MS, function()
-    if throttle_direction ~= 0 then
+    if throttle_direction == 0 then
+        active_step_direction = 0
+        active_direction_time_ms = 0
+        current_throttle_step = MIN_THROTTLE_RATE * FIXED_INTERVAL_MS / 1000
+    else
+        if throttle_direction ~= active_step_direction then
+            active_step_direction = throttle_direction
+            active_direction_time_ms = 0
+        end
+
+        local ramp = clamp(active_direction_time_ms / STEP_RAMP_TIME_MS, 0, 1)
+        local rate = MIN_THROTTLE_RATE
+            + (MAX_THROTTLE_RATE - MIN_THROTTLE_RATE) * ramp
+        current_throttle_step = rate * FIXED_INTERVAL_MS / 1000
         current_throttle = clamp(
-            current_throttle + throttle_direction * THROTTLE_STEP,
+            current_throttle + throttle_direction * current_throttle_step,
             -1,
             1
         )
+        active_direction_time_ms = active_direction_time_ms + FIXED_INTERVAL_MS
     end
     return false
 end)
