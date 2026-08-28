@@ -4,13 +4,17 @@ local FIXED_INTERVAL_MS = 50
 local MIN_THROTTLE_RATE = 0.45
 local MAX_THROTTLE_RATE = 0.80
 local STEP_RAMP_TIME_MS = 2000
+local MAX_ABS_THROTTLE = 0.9999
+local ZERO_OUTPUT_SENTINEL = 0.0001
 
 local throttle_direction = 0
-local current_throttle = 0
+local current_throttle = ZERO_OUTPUT_SENTINEL
 local current_throttle_step = MIN_THROTTLE_RATE * FIXED_INTERVAL_MS / 1000
 local active_step_direction = 0
 local active_direction_time_ms = 0
 local last_reported_direction = nil
+local active_actor_name = nil
+local active_actor = nil
 
 local function log(message)
     print(string.format("%s %s\n", PREFIX, message))
@@ -27,15 +31,67 @@ local function valid(object)
     return ok and result
 end
 
+local function full_name(object)
+    local ok, result = pcall(function() return object:GetFullName() end)
+    return ok and result or ""
+end
+
+local function is_player_controlled(actor)
+    local ok, result = pcall(function() return actor:IsPlayerControlled() end)
+    return ok and result
+end
+
 local function clamp(value, minimum, maximum)
     if value < minimum then return minimum end
     if value > maximum then return maximum end
     return value
 end
 
+local function reset_throttle_state(throttle_value)
+    throttle_direction = 0
+    current_throttle = throttle_value
+    if current_throttle == nil then
+        current_throttle = ZERO_OUTPUT_SENTINEL
+    end
+    current_throttle_step = MIN_THROTTLE_RATE * FIXED_INTERVAL_MS / 1000
+    active_step_direction = 0
+    active_direction_time_ms = 0
+    last_reported_direction = nil
+end
+
+RegisterKeyBind(Key.X, function()
+    if active_actor_name == nil then return end
+    reset_throttle_state()
+    if valid(active_actor) then
+        pcall(function() active_actor.ThrottleInput = current_throttle end)
+    end
+    log("throttle reset to zero")
+end)
+
 local function before_throttle_input_read(context)
     local actor = unwrap(context)
     if not valid(actor) then return end
+
+    local actor_name = full_name(actor)
+    if not is_player_controlled(actor) then
+        if active_actor_name == actor_name then
+            reset_throttle_state(0)
+            active_actor_name = nil
+            active_actor = nil
+            actor.ThrottleInput = 0
+            log("forklift left; throttle reset to zero")
+        end
+        return
+    end
+
+    if active_actor_name ~= actor_name then
+        reset_throttle_state()
+        active_actor_name = actor_name
+        active_actor = actor
+        log("player-controlled forklift acquired; throttle initialized at zero")
+    else
+        active_actor = actor
+    end
 
     local ok, written_value = pcall(function() return actor.ThrottleInput end)
     if not ok or type(written_value) ~= "number" then
@@ -80,8 +136,8 @@ LoopAsync(FIXED_INTERVAL_MS, function()
         current_throttle_step = rate * FIXED_INTERVAL_MS / 1000
         current_throttle = clamp(
             current_throttle + throttle_direction * current_throttle_step,
-            -1,
-            1
+            -MAX_ABS_THROTTLE,
+            MAX_ABS_THROTTLE
         )
         active_direction_time_ms = active_direction_time_ms + FIXED_INTERVAL_MS
     end
