@@ -1,5 +1,12 @@
 local PREFIX = "[DonkLiftKeyboardControl]"
-local last_observed_value = nil
+
+local FIXED_INTERVAL_MS = 50
+local FULL_RANGE_TIME_MS = 3000
+local THROTTLE_STEP = FIXED_INTERVAL_MS / FULL_RANGE_TIME_MS
+
+local throttle_direction = 0
+local current_throttle = 0
+local last_reported_direction = nil
 
 local function log(message)
     print(string.format("%s %s\n", PREFIX, message))
@@ -16,6 +23,12 @@ local function valid(object)
     return ok and result
 end
 
+local function clamp(value, minimum, maximum)
+    if value < minimum then return minimum end
+    if value > maximum then return maximum end
+    return value
+end
+
 local function before_throttle_input_read(context)
     local actor = unwrap(context)
     if not valid(actor) then return end
@@ -26,17 +39,36 @@ local function before_throttle_input_read(context)
         return
     end
 
-    if written_value ~= last_observed_value then
-        last_observed_value = written_value
-        log(string.format("ThrottleInput before game read: %.3f", written_value))
+    if written_value == -1 then
+        throttle_direction = -1
+    elseif written_value == 1 then
+        throttle_direction = 1
+    elseif written_value == 0 then
+        throttle_direction = 0
     end
 
-    if written_value == -1 then
-        actor.ThrottleInput = -0.3
-    elseif written_value == 1 then
-        actor.ThrottleInput = 0.5
+    if throttle_direction ~= last_reported_direction then
+        last_reported_direction = throttle_direction
+        log(string.format(
+            "throttle direction=%d current=%.3f raw=%.3f",
+            throttle_direction, current_throttle, written_value
+        ))
     end
+
+    actor.ThrottleInput = current_throttle
 end
+
+
+LoopAsync(FIXED_INTERVAL_MS, function()
+    if throttle_direction ~= 0 then
+        current_throttle = clamp(
+            current_throttle + throttle_direction * THROTTLE_STEP,
+            -1,
+            1
+        )
+    end
+    return false
+end)
 
 local function register_hook()
     local ok, pre_id, post_id = pcall(
