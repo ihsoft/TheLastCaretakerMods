@@ -29,6 +29,7 @@ var provider = new DefaultFileProvider(
     SearchOption.TopDirectoryOnly,
     true,
     new VersionContainer(EGame.GAME_UE5_7));
+provider.ReadScriptData = true;
 
 if (mappingsPath is not null)
 {
