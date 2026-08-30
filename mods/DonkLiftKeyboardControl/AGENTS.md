@@ -151,8 +151,14 @@ contract and workflow detail.
   which follows editor dependencies into global shaders and unrelated
   Engine/OpenWorld assets.
 - Use `Build-InheritancePackage.ps1` with fresh original forklift/HUD
-  directories and current `scriptobjects.bin`. Require `retoc verify` and
-  inspect the staged package set before installation.
+  directories and current `scriptobjects.bin`. Each path must remain under its
+  canonical `Extract-VoyagePackage.ps1` root and manifest; never copy an asset
+  into a manifest-less convenience directory. Require the manifest fingerprint
+  and shadowing checks, relocation self-parent guard, exact packaged inventory,
+  and `retoc verify` before installation.
+- Prefer `Prepare-DonkLiftOriginals.ps1` over manually disabling the installed
+  override and running two extractions. It owns the closed-process check,
+  exact-container allowlist, canonical filters, and guaranteed UTOC restore.
 
 ## Installation and real-game validation
 

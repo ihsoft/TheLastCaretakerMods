@@ -87,6 +87,19 @@ production packages into a new staging root:
 
 Then build the single container from that staging root:
 
+First prepare both originals in one new artifact root. The preparer requires a
+closed game, refuses unknown additional IoStore containers, temporarily
+disables only an installed DonkLift override, uses the canonical filters, and
+restores the installed `.utoc` even if extraction fails:
+
+```powershell
+.\Prepare-DonkLiftOriginals.ps1 `
+  -OutputRoot <new-extraction-root>
+```
+
+Then pass the asset directories and `scriptobjects.bin` from those exact
+extraction roots:
+
 ```powershell
 .\Build-InheritancePackage.ps1 `
   -CookedRoot <new-cooked-staging-directory> `
@@ -96,11 +109,15 @@ Then build the single container from that staging root:
   -OutputRoot <new-output-directory>
 ```
 
-The two original directories and `scriptobjects.bin` must be freshly extracted
-from the current game build. The builder rejects unexpected embedded package
-path counts, relocates both originals by equal-length package-name
-substitution, stages only the required cooked assets, creates
-`DonkLiftKeyboardControl_P.{pak,ucas,utoc}`, and runs `retoc verify`.
+The builder locates each `extraction-manifest.json` and rejects inputs produced
+with additional containers, noncanonical filters, different fingerprints, or
+unrelated `scriptobjects.bin`. It also rejects a supposed original that already
+references the mod's relocated-parent path, which would create a self-parent
+cycle. After equal-length relocation it stages only the required cooked
+assets, creates `DonkLiftKeyboardControl_P.{pak,ucas,utoc}`, runs
+`retoc verify`, and verifies the exact eight-asset production inventory. It
+also writes a sorted `.inventory.txt` sidecar for semantic build comparison;
+the sidecar is evidence, not part of the three-file installed payload.
 
 Generated `Content`, `Binaries`, `Intermediate`, `Saved`, cooked files,
 extracted game assets, and package output are intentionally ignored by Git.

@@ -27,12 +27,12 @@ if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
 # retoc resolves duplicate package paths across every container in the input
 # directory. An installed mod can therefore silently shadow the game asset we
 # intended to refresh. Refuse that ambiguous input unless the caller explicitly
-# wants to inspect additional containers.
+# wants to inspect additional containers, and record that choice in provenance.
+$additionalContainers = @(
+    Get-ChildItem -LiteralPath $paks -File -Filter '*.utoc' |
+        Where-Object { $_.Name -ne 'global.utoc' -and $_.Name -notlike 'pakchunk*.utoc' }
+)
 if (-not $AllowAdditionalContainers) {
-    $additionalContainers = @(
-        Get-ChildItem -LiteralPath $paks -File -Filter '*.utoc' |
-            Where-Object { $_.Name -ne 'global.utoc' -and $_.Name -notlike 'pakchunk*.utoc' }
-    )
     if ($additionalContainers.Count -gt 0) {
         $names = ($additionalContainers.Name | Sort-Object) -join ', '
         throw "Additional IoStore containers can shadow game assets: $names. " +
@@ -67,6 +67,10 @@ if (Test-Path -LiteralPath $output) {
 if ($LASTEXITCODE -ne 0) {
     throw "retoc to-legacy failed with exit code $LASTEXITCODE"
 }
+$extractedAssets = @(Get-ChildItem -LiteralPath $output -File -Recurse -Filter '*.uasset')
+if ($extractedAssets.Count -eq 0) {
+    throw "Filter extracted no assets: $Filter"
+}
 
 $manifest = [ordered]@{
     steamAppId = '1783560'
@@ -74,6 +78,8 @@ $manifest = [ordered]@{
     gameVersion = $version
     executableSha256 = $exeHash
     filter = $Filter
+    allowAdditionalContainers = [bool]$AllowAdditionalContainers
+    additionalContainers = @($additionalContainers.Name | Sort-Object)
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
 [IO.File]::WriteAllText(
