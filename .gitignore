@@ -3,9 +3,11 @@ tools/CUE4Parse/
 **/bin/
 **/obj/
 
-# Extracted game data can be very large and is reproducible
-artifacts/raw/
-artifacts/extracted/
+# All game-derived artifacts are local, version-specific, and reproducible.
+# Keep only the policy README in Git; promote useful conclusions to docs/ and
+# repeatable extraction logic to tools/.
+artifacts/*
+!artifacts/README.md
 
 # Runtime logs and temporary files
 *.log
@@ -13,4 +15,3 @@ artifacts/extracted/
 
 # Distribution archives are generated artifacts
 dist/*.zip
-

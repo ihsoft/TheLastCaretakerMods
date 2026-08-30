@@ -1,7 +1,0 @@
-Voyage/Content/UI/Game/HUD/BP_VoyageIngameForklift.uasset
-CUE4Parse.UE4.Exceptions.MappingException: Package has unversioned properties but mapping file is missing, can't serialize
-   at CUE4Parse.UE4.Assets.AbstractUePackage.get_CanDeserialize() in R:\Codex\TheLastCaretakerMods\tools\CUE4Parse\CUE4Parse\UE4\Assets\AbstractUePackage.cs:line 33
-   at CUE4Parse.UE4.Assets.IoPackage..ctor(FArchive uasset, FIoContainerHeader containerHeader, Func`2 ubulk, Func`2 uptnl, IVfsFileProvider provider) in R:\Codex\TheLastCaretakerMods\tools\CUE4Parse\CUE4Parse\UE4\Assets\IoPackage.cs:line 226
-   at CUE4Parse.FileProvider.AbstractFileProvider.LoadPackage(GameFile file) in R:\Codex\TheLastCaretakerMods\tools\CUE4Parse\CUE4Parse\FileProvider\AbstractFileProvider.cs:line 609
-   at Program.<Main>$(String[] args) in R:\Codex\TheLastCaretakerMods\tools\VoyageAssetInspector\Program.cs:line 61
-

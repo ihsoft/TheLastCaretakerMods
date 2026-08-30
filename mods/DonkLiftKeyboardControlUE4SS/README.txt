@@ -1,5 +1,5 @@
-DonkLift Keyboard Control
-=========================
+DonkLift Keyboard Control (UE4SS)
+=================================
 
 Improves keyboard control of the DonkLift-320 forklift while keeping the
 native vehicle behavior and HUD.
@@ -22,21 +22,25 @@ Unsupported languages currently fall back to English.
 Installation
 ------------
 
-Copy `DonkLiftKeyboardControl_P.pak`, `.ucas`, and `.utoc` into:
+1. Install a compatible UE4SS Compact build for The Last Caretaker.
+2. Copy the DonkLiftKeyboardControlUE4SS directory into ue4ss/Mods.
+3. Copy UE4SS_Signatures/FText_Constructor.lua into
+   ue4ss/UE4SS_Signatures.
+4. Add or enable this line in ue4ss/Mods/mods.txt:
 
-`<Game>\Voyage\Content\Paks\`
+   DonkLiftKeyboardControlUE4SS : 1
 
-The mod is self-contained and requires neither UE4SS nor DML. All three files
-belong to one container and must be installed or removed together.
+The supplied FText signature is version-specific. Revalidate or update it after
+The Last Caretaker updates its executable.
 
 Configuration
 -------------
 
-The current package has no external configuration file. Its validated defaults
-are:
+Acceleration and steering constants are grouped at the top of Scripts/main.lua.
+The validated defaults are:
 
-- throttle rate: one third of the full range per second;
-- steering maximum speed: 1.20 per second;
+- throttle rate: 0.45 to 0.80 per second, ramped over 2 seconds;
+- steering maximum speed: 1.60 per second;
 - steering acceleration: 2.50 per second squared;
 - steering reversal braking: 5.00 per second squared.
 
