@@ -48,6 +48,9 @@ those details here.
 - Commit the method, not the snapshot. Reusable fingerprinting, extraction,
   inspection, patching, and disassembly logic belongs under `tools/`, with
   exact usage documented.
+- Treat `tools/README.md` as the tool-routing index. Read it before surveying
+  tool implementations, and update it whenever a reusable tool is added,
+  renamed, or its interface, prerequisites, outputs, or safety contract change.
 - Before reusing any game-derived input, obtain the installed game's Steam
   build ID and executable hash with `tools/Get-VoyageBuildFingerprint.ps1` and
   compare them with the owning mod's provenance registry.

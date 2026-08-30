@@ -52,7 +52,8 @@ update.
 ## Layout
 
 - `mods/` — source code and mod-local build rules for installable mods.
-- `tools/` — reproducible extraction, inspection, and patching utilities.
+- [`tools/`](tools/README.md) — catalog and usage guide for reproducible
+  extraction, inspection, and patching utilities.
 - `docs/` — durable architecture findings, workflow, and research pitfalls.
 - `artifacts/` — ignored local scratch space for extracted assets, mappings,
   generated Blueprints, cooked files, packages, and backups; it is never part
