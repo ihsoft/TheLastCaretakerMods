@@ -73,8 +73,11 @@ contract and workflow detail.
 
 ## Verified input contract
 
-- The helper runs only after `GetPlayerPawn(0)` casts to the shipping
-  `VoyageVehicleForkliftPawn`.
+- Each helper targets only its exact owning forklift through the child actor's
+  `GetParentActor()`. Integrate input only while that pawn reports
+  `IsPlayerControlled()`; never return to the old global `GetPlayerPawn(0)`
+  target, which loses the exited forklift and lets helpers from multiple
+  instances write to the same active pawn.
 - The game writes exact digital commands `-1`, `0`, and `1` to `ThrottleInput`
   and `SteeringInput`. The helper integrates analogue state using
   `DeltaSeconds` and writes it back to the same fields, driving both physics
@@ -88,6 +91,10 @@ contract and workflow detail.
   steering and clears steering velocity. Do not add duplicate action-event
   handlers or diagnostic state for these keys; the helper's player-controller
   key checks are the behavior path.
+- While the owning forklift is not player-controlled, write honest `0` to its
+  native throttle and steering fields and clear integrated throttle,
+  integrated steering, and steering velocity. This is the verified exit and
+  parked-instance reset path.
 - Accepted limitation: leaving the forklift stops active steering input but
   does not visually recenter wheels already turned. Do not broaden the mod to
   chase retained wheel pose unless the user explicitly requests it.

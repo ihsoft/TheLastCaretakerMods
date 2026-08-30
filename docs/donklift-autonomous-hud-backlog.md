@@ -2,15 +2,15 @@
 
 There is no active DonkLift research experiment.
 
-The autonomous single-container `DonkLiftKeyboardControl` result was fully
-validated in the game on 2026-08-29: throttle and steering in both directions,
-limits, native percentages, immediate X/C, localized standard `E H X C`
-hints, pause behavior, exit, and re-entry. Clean editor regeneration, six
-narrow cooks, single-container assembly, and `retoc verify` also succeeded
-after the final source/module cleanup.
+The exit-input regression fix was validated in the game on 2026-08-29. Each
+helper now targets its exact parent forklift, integrates only while that pawn
+is player-controlled, and clears native input plus internal state otherwise.
+Throttle stops when the player exits. The known visual wheel-pose limitation
+remains accepted: clearing steering input does not physically recenter wheels
+that were already turned.
 
-Keep the branch `experiment/donklift-iostore-throttle` until the user
-separately authorizes its deletion. Durable findings are in
+The original autonomous experiment branch and the exit-reset fix branch must
+remain until the user separately authorizes deletion. Durable findings are in
 `game-architecture-observations.md`; failed and deceptive approaches are in
 `research-pitfalls.md`; reproducible extraction/build rules are in
 `research-workflow.md` and the mod-local documentation.
