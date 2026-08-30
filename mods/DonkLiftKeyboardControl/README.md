@@ -49,10 +49,13 @@ package replacements:
    original address identifies the X/C widgets by their exact input-action
    objects and appends them after the native E/H block.
 
-The helper integrates digital throttle and steering at a fixed interval and
-writes the resulting analogue values to the native input fields. X resets
-throttle immediately; C resets steering immediately. The native vehicle and
-HUD continue to consume those values.
+Each helper addresses only its owning forklift. While that pawn is
+player-controlled it integrates digital throttle and steering and writes the
+resulting analogue values to the native input fields. When control is lost it
+clears both native inputs and all internal integration state, so an exited or
+parked forklift cannot inherit another instance's input. X resets throttle
+immediately; C resets steering immediately. The native vehicle and HUD
+continue to consume those values.
 
 ## Generate
 

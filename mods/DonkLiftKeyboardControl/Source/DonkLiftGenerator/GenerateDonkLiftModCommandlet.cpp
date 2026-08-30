@@ -16,8 +16,10 @@
 #include "K2Node_CallFunction.h"
 #include "K2Node_DynamicCast.h"
 #include "K2Node_Event.h"
+#include "K2Node_IfThenElse.h"
 #include "K2Node_VariableGet.h"
 #include "K2Node_VariableSet.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -409,18 +411,27 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
     Tick->bOverrideFunction = true;
     FinishNode(Tick, Graph, 0, 0);
 
-    UK2Node_CallFunction* GetPawn = AddCall(
+    UK2Node_CallFunction* GetParentActor = AddCall(
         Graph,
-        UGameplayStatics::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UGameplayStatics, GetPlayerPawn)),
+        AActor::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(AActor, GetParentActor)),
         220,
         180);
-    SetDefault(GetPawn, FName(TEXT("PlayerIndex")), TEXT("0"));
 
     UK2Node_DynamicCast* CastPawn = NewObject<UK2Node_DynamicCast>(Graph);
     CastPawn->TargetType = AVoyageVehicleForkliftPawn::StaticClass();
     FinishNode(CastPawn, Graph, 450, 0);
     CastPawn->SetPurity(false);
+
+    UK2Node_CallFunction* IsPlayerControlled = AddCall(
+        Graph,
+        APawn::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled)),
+        700,
+        20);
+
+    UK2Node_IfThenElse* ControlledBranch = NewObject<UK2Node_IfThenElse>(Graph);
+    FinishNode(ControlledBranch, Graph, 940, 0);
 
     UK2Node_VariableGet* RawThrottle = AddVariableGet(
         Graph,
@@ -579,19 +590,70 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
         3620,
         0);
 
+    // Every forklift owns its helper through a ChildActorComponent. When the
+    // pawn is no longer player-controlled, clear both our integrators and the
+    // native input fields on that exact parent instead of losing the reference
+    // through GetPlayerPawn and leaving a parked forklift under throttle.
+    UK2Node_VariableSet* ClearIntegratedThrottle = AddVariableSet(
+        Graph,
+        FName(TEXT("IntegratedThrottle")),
+        nullptr,
+        1180,
+        -420);
+    SetDefault(ClearIntegratedThrottle, FName(TEXT("IntegratedThrottle")), TEXT("0.0"));
+    UK2Node_VariableSet* ClearThrottleInput = AddVariableSet(
+        Graph,
+        FName(TEXT("ThrottleInput")),
+        AVoyageVehicleForkliftPawn::StaticClass(),
+        1420,
+        -420);
+    SetDefault(ClearThrottleInput, FName(TEXT("ThrottleInput")), TEXT("0.0"));
+    UK2Node_VariableSet* ClearSteeringVelocity = AddVariableSet(
+        Graph,
+        FName(TEXT("SteeringVelocity")),
+        nullptr,
+        1660,
+        -420);
+    SetDefault(ClearSteeringVelocity, FName(TEXT("SteeringVelocity")), TEXT("0.0"));
+    UK2Node_VariableSet* ClearIntegratedSteering = AddVariableSet(
+        Graph,
+        FName(TEXT("IntegratedSteering")),
+        nullptr,
+        1900,
+        -420);
+    SetDefault(ClearIntegratedSteering, FName(TEXT("IntegratedSteering")), TEXT("0.0"));
+    UK2Node_VariableSet* ClearSteeringInput = AddVariableSet(
+        Graph,
+        FName(TEXT("SteeringInput")),
+        AVoyageVehicleForkliftPawn::StaticClass(),
+        2140,
+        -420);
+    SetDefault(ClearSteeringInput, FName(TEXT("SteeringInput")), TEXT("0.0"));
+
     bool Ok = true;
     Ok &= Connect(Schema, RequirePin(Tick, UEdGraphSchema_K2::PN_Then), RequirePin(CastPawn, UEdGraphSchema_K2::PN_Execute));
-    Ok &= Connect(Schema, GetPawn->GetReturnValuePin(), CastPawn->GetCastSourcePin());
-    Ok &= Connect(Schema, CastPawn->GetValidCastPin(), RequirePin(SetIntegrated, UEdGraphSchema_K2::PN_Execute));
+    Ok &= Connect(Schema, GetParentActor->GetReturnValuePin(), CastPawn->GetCastSourcePin());
+    Ok &= Connect(Schema, CastPawn->GetValidCastPin(), RequirePin(ControlledBranch, UEdGraphSchema_K2::PN_Execute));
+    Ok &= Connect(Schema, CastPawn->GetCastResultPin(), RequirePin(IsPlayerControlled, UEdGraphSchema_K2::PN_Self));
+    Ok &= Connect(Schema, IsPlayerControlled->GetReturnValuePin(), RequirePin(ControlledBranch, UEdGraphSchema_K2::PN_Condition));
+    Ok &= Connect(Schema, RequirePin(ControlledBranch, UEdGraphSchema_K2::PN_Then), RequirePin(SetIntegrated, UEdGraphSchema_K2::PN_Execute));
     Ok &= Connect(Schema, RequirePin(SetIntegrated, UEdGraphSchema_K2::PN_Then), RequirePin(SetThrottle, UEdGraphSchema_K2::PN_Execute));
     Ok &= Connect(Schema, RequirePin(SetThrottle, UEdGraphSchema_K2::PN_Then), RequirePin(SetSteeringVelocity, UEdGraphSchema_K2::PN_Execute));
     Ok &= Connect(Schema, RequirePin(SetSteeringVelocity, UEdGraphSchema_K2::PN_Then), RequirePin(SetIntegratedSteering, UEdGraphSchema_K2::PN_Execute));
     Ok &= Connect(Schema, RequirePin(SetIntegratedSteering, UEdGraphSchema_K2::PN_Then), RequirePin(SetSteering, UEdGraphSchema_K2::PN_Execute));
 
+    Ok &= Connect(Schema, RequirePin(ControlledBranch, UEdGraphSchema_K2::PN_Else), RequirePin(ClearIntegratedThrottle, UEdGraphSchema_K2::PN_Execute));
+    Ok &= Connect(Schema, RequirePin(ClearIntegratedThrottle, UEdGraphSchema_K2::PN_Then), RequirePin(ClearThrottleInput, UEdGraphSchema_K2::PN_Execute));
+    Ok &= Connect(Schema, RequirePin(ClearThrottleInput, UEdGraphSchema_K2::PN_Then), RequirePin(ClearSteeringVelocity, UEdGraphSchema_K2::PN_Execute));
+    Ok &= Connect(Schema, RequirePin(ClearSteeringVelocity, UEdGraphSchema_K2::PN_Then), RequirePin(ClearIntegratedSteering, UEdGraphSchema_K2::PN_Execute));
+    Ok &= Connect(Schema, RequirePin(ClearIntegratedSteering, UEdGraphSchema_K2::PN_Then), RequirePin(ClearSteeringInput, UEdGraphSchema_K2::PN_Execute));
+
     Ok &= Connect(Schema, CastPawn->GetCastResultPin(), RequirePin(RawThrottle, UEdGraphSchema_K2::PN_Self));
     Ok &= Connect(Schema, CastPawn->GetCastResultPin(), RequirePin(SetThrottle, UEdGraphSchema_K2::PN_Self));
     Ok &= Connect(Schema, CastPawn->GetCastResultPin(), RequirePin(RawSteering, UEdGraphSchema_K2::PN_Self));
     Ok &= Connect(Schema, CastPawn->GetCastResultPin(), RequirePin(SetSteering, UEdGraphSchema_K2::PN_Self));
+    Ok &= Connect(Schema, CastPawn->GetCastResultPin(), RequirePin(ClearThrottleInput, UEdGraphSchema_K2::PN_Self));
+    Ok &= Connect(Schema, CastPawn->GetCastResultPin(), RequirePin(ClearSteeringInput, UEdGraphSchema_K2::PN_Self));
     Ok &= Connect(Schema, GetController->GetReturnValuePin(), RequirePin(WasXPressed, UEdGraphSchema_K2::PN_Self));
     Ok &= Connect(Schema, GetController->GetReturnValuePin(), RequirePin(WasCPressed, UEdGraphSchema_K2::PN_Self));
     Ok &= Connect(Schema, RawThrottle->GetValuePin(), RequirePin(IsForward, FName(TEXT("A"))));
