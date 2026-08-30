@@ -4,10 +4,8 @@ tools/CUE4Parse/
 **/obj/
 
 # All game-derived artifacts are local, version-specific, and reproducible.
-# Keep only the policy README in Git; promote useful conclusions to docs/ and
-# repeatable extraction logic to tools/.
-artifacts/*
-!artifacts/README.md
+# Promote useful conclusions to docs/ and repeatable extraction logic to tools/.
+artifacts/
 
 # Runtime logs and temporary files
 *.log
