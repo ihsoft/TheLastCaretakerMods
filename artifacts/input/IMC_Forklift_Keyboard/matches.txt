@@ -1,1 +1,0 @@
-Voyage/Content/Game/Input/Vehicle/IMC_Forklift_Keyboard.uasset

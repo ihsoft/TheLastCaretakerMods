@@ -102,8 +102,8 @@ Enhanced Input, этот путь нельзя считать безопасны
 
 ## Рабочая модель клавиатурного мода
 
-Проверенный baseline хранится в
-`mods/DonkLiftKeyboardControl/Scripts/main.lua`.
+Проверенный исторический UE4SS baseline хранится в
+`mods/DonkLiftKeyboardControlUE4SS/Scripts/main.lua`.
 
 Архитектура baseline:
 
@@ -213,8 +213,8 @@ Blueprint-варианты `BP_ButtonInfo*`.
 - Причиной прежнего падения был не UMG, а отсутствующий адрес
   `FText(FString&&)` в UE4SS. Для Voyage 5.7.4 найдена и статически проверена
   уникальная сигнатура; она хранится в
-  `ue4ss/UE4SS_Signatures/FText_Constructor.lua` и требует повторной проверки
-  после обновления exe.
+  `mods/DonkLiftKeyboardControlUE4SS/UE4SS_Signatures/FText_Constructor.lua` и
+  требует повторной проверки после обновления exe.
 - Реализованы и проверены подсказки `X / Brake` и `C / Center`.
 - Стандартный `GetCurrentLanguage()` возвращал `en` даже при русском интерфейсе.
   Источник истины игры — живой
@@ -232,6 +232,132 @@ Blueprint-варианты `BP_ButtonInfo*`.
   эксперимента. Повторно создавать их следует только во временной ветке;
   переиспользуемые инструменты исследования хранятся в `tools/`.
 
+## Автономный IoStore-мод
+
+Текущий исходник мода находится в `mods/DonkLiftKeyboardControl`. Это
+editor-only Unreal Engine 5.7.4 project: C++-классы внутри него являются
+минимальными зеркалами `/Script/Voyage`, необходимыми только для компиляции
+Blueprint. Они не входят в поставляемый контейнер; runtime использует нативные
+классы игры.
+
+Один `DonkLiftKeyboardControl_P` содержит две прозрачные подмены package path:
+
+1. Полный оригинальный `BP_Forklift_Possesable` перемещается из
+   `/Game/Blueprints/Vehicles/BP_Forklift_Possesable` в равнодлинный
+   `/Game/Mods/DonkLiftKeyboard/BP_Forklift_Original`. На исходном пути лежит
+   child Blueprint: он сохраняет штатное поведение, устанавливает helper actor
+   и расширяет список стандартных действий.
+2. Полный оригинальный `BP_VoyageIngameForklift` перемещается из
+   `/Game/UI/Game/HUD/BP_VoyageIngameForklift` в равнодлинный
+   `/Game/Mods/DonkLift/HUD_Forklift_Original`. На исходном пути лежит child
+   Widget Blueprint, который упорядочивает уже созданные штатные action widgets.
+
+Равная длина нужна потому, что builder делает проверенную замену package name
+в cooked bytes без изменения таблиц размеров. Оба перемещённых оригинала —
+снимки установленной версии игры. Они не коммитятся и перед каждой сборкой
+должны заново извлекаться из текущего IoStore; следовательно, обновления
+оригинального погрузчика или HUD не попадут в старый собранный мод автоматически.
+
+Генераторы создают ровно шесть собственных packages: helper actor, два
+`VoyageInputAction`, замену `IMC_Forklift_Keyboard`, child погрузчика и child
+HUD. Builder объединяет их, два свежих оригинала и `scriptobjects.bin` в один
+контейнер. UE4SS и DML на runtime не нужны.
+
+### Управление автономного helper
+
+- Helper активен только когда `GetPlayerPawn(0)` успешно приводится к
+  `VoyageVehicleForkliftPawn`.
+- Игра пишет точные цифровые команды `-1`, `0`, `1` в `ThrottleInput` и
+  `SteeringInput`. Helper интегрирует собственное аналоговое состояние по
+  `DeltaSeconds` и записывает результат обратно в те же поля; поэтому одно
+  значение одновременно управляет физикой и штатной процентной индикацией.
+- Собственное активное значение ограничено `±0.9999`, чтобы не совпадать с
+  цифровыми маркерами; HUD округляет его до `100%`. В Blueprint-варианте
+  исторический Lua-sentinel `0.0001` не требуется.
+- Газ меняется на треть полного диапазона в секунду. Для руля подтверждены
+  maximum speed `1.20`, acceleration `2.50`, reversal braking `5.00`.
+- `X` немедленно обнуляет газ. `C` немедленно обнуляет руль и скорость его
+  изменения. При выходе активный ввод очищается; уже повёрнутые колёса могут
+  визуально остаться повёрнутыми до следующей посадки.
+
+### Нативный producer стандартных действий
+
+`VoyagePlayerInputInterfaces.GetProvidedActions()` возвращает общий массив
+`FPlayerInputInterfaceAction`. Нативный vehicle producer добавляет штатные
+действия, затем вызывает BlueprintNativeEvent
+`VoyageVehiclePawn.GetProvidedActionsBP()`. Точный owner функции — базовый
+`VoyageVehiclePawn`, а не `VoyageVehicleForkliftPawn`: same-name функция на
+неверном stand-in компилируется, но не является override. После исправления
+editor-only иерархии call-marker завершил игру, а следующий override успешно
+добавил `X / Brake` и `C / Center` в штатную нижнюю панель.
+
+Shipping enum `EPlayerInputInterfaceActionType` содержит ровно `Central=0`,
+`Context=1`, `Hidden=2`. Нижняя E/H-панель фильтрует `Central`, центральная
+F/R-панель — `Context`. Прямой тест с отключением фильтра нижней панели вывел
+в ней обе группы, подтвердив общий upstream-массив и независимую фильтрацию.
+
+В оригинальном HUD обе панели используют зарегистрированный
+`VoyageDynamicPlayerInputComponent`, а не owner-ветку:
+`bRegisterFromWidgetOwner=false`. Его `InputComp` —
+`EnhancedInputComponent` по смещению `0x250` текущего executable;
+`VoyageLocatorSubsystem` хранит weak-массив таких компонентов.
+
+`InteractiveInterface.GetInteractiveProvidedActions(Character, Component)`
+отвечает за внешнее взаимодействие персонажа с объектом и не является
+producer-ом водительской панели.
+
+### Рендеринг и порядок подсказок
+
+`BP_DynamicPlayerInputHorizontalWidget_Bottom.ContextInputActionsRoot` —
+подтверждённый live host нижнего ряда. Native update дедуплицирует полные
+`FPlayerInputInterfaceAction` через `TSet`, после чего контейнер обходит sparse
+slots. Поэтому порядок returned array и одинаковый `Priority` не задают
+визуальный порядок; первоначально X/C появились как `C E H X`.
+
+Child HUD ждёт заполнения ряда, обходит всех детей и идентифицирует только
+собственные widgets по цепочке
+`InteractIndicator.ButtonInfoContainer.InputActions` и точной UObject identity
+`IAV_DonkLiftBrake`/`IAV_DonkLiftCenterSteering`. Затем он удаляет найденные
+widgets и добавляет их в конец как Brake, Center. Относительный порядок любых
+штатных или сторонних действий сохраняется; итог `E H X C` подтверждён в игре.
+
+Локализация берётся из
+`VoyageGameUserSettings.CustomSettings.LanguageType`, а не из
+`KismetInternationalizationLibrary.GetCurrentLanguage`. Подтверждены
+`English=1` и `Russian=11`; строки — `Brake / Center` и
+`Тормоз / Выровнять`, остальные языки используют английский fallback.
+
+### Версионные нативные данные
+
+Для Steam build `23962331`, executable SHA-256
+`6A9AE86E5CE5D7D1B6555F579091AAB1E0E67FF7A96276FA2570052F99102E8D`:
+
+- forklift action producer начинается по VA `0x1451C2830`, вызывает base
+  producer `0x1451C5C10`; generated-event thunk `GetProvidedActionsBP` —
+  `0x1450A7BE0`;
+- `FPlayerInputInterfaceAction` занимает `0x230` bytes;
+- offsets action-полей: Horn `0x3E0`, ForkTiltUp `0x4C0`, ForkTiltDown
+  `0x4C8`, ForkUp `0x4D0`, ForkDown `0x4D8`, ThrottleForward `0x4E0`,
+  ThrottleBackward `0x4E8`, SteeringRight `0x4F0`, SteeringLeft `0x4F8`,
+  Exit `0x500`.
+
+Эти адреса, offsets и editor-only зеркала нужно считать недействительными
+после изменения fingerprint executable до повторного анализа.
+
+### Сборка
+
+Шесть production assets готовятся отдельными
+`-CookSinglePackageNoRefs`-запусками через
+`mods/DonkLiftKeyboardControl/Cook-DonkLiftAssets.ps1`. Broad `CookDir` для
+этого проекта непригоден: он следует editor dependencies, начинает готовить
+глобальные shaders и посторонние Engine/OpenWorld assets. Builder
+`Build-InheritancePackage.ps1` проверяет обе равнодлинные подмены, собирает один
+IoStore-контейнер и запускает `retoc verify`.
+
+В этой среде UnrealBuildTool запускается с `-NoUBA`, а commandlets — с
+`-ddc=NoZenLocalFallback` и workspace-local `-LocalDataCachePath`, иначе Zen
+пытается стартовать с недоступным data directory.
+
 ## Ограничения Lua/UE4SS, найденные экспериментально
 
 - `pcall` ловит Lua-ошибки, но не защищает от падения внутри нативного marshaling
@@ -247,18 +373,22 @@ Blueprint-варианты `BP_ButtonInfo*`.
 - Любые изменения одновременно в физическом input path и HUD path затрудняют
   диагностику и могут создать обратную связь. Их следует испытывать раздельно.
 
-## Извлеченные материалы
+## Воспроизведение наблюдений
 
-В `artifacts/` сохранены:
+Снимки ресурсов игры не являются частью репозитория. Для текущей установленной
+версии они заново создаются в игнорируемом `artifacts/`:
 
-- `.usmap` для текущей сборки;
-- JSON и псевдокод Blueprint'ов погрузчика, HUD и input hints;
-- JSON всех найденных `InputMappingContext`;
-- reflection-списки свойств нативных классов;
-- отчеты инвентаризации пакетов и совпадений.
+- `tools/Get-VoyageBuildFingerprint.ps1` фиксирует версию и SHA-256;
+- `tools/Extract-VoyagePackage.ps1` извлекает узкий package filter через
+  `retoc`;
+- `tools/Inspect-VoyageAsset.ps1` получает JSON, псевдокод и reflection через
+  `VoyageAssetInspector`/CUE4Parse;
+- `tools/VoyageMappingsDumper` создаёт свежий mapping при временно подключённом
+  UE4SS.
 
-Крупные воспроизводимые промежуточные каталоги `artifacts/raw/` и
-`artifacts/extracted/` исключены из Git.
+Точный порядок описан в `docs/research-workflow.md`. После обновления игры
+старые локальные результаты нельзя использовать как подтверждение без нового
+fingerprint и повторного извлечения.
 
 ## Правила следующих экспериментов
 
@@ -268,6 +398,8 @@ Blueprint-варианты `BP_ButtonInfo*`.
 4. После теста фиксировать три результата отдельно: физика, HUD, стабильность.
 5. При самопроизвольном газе/руле или падении сразу возвращаться на baseline по
    Git, не пытаться чинить поверх неизвестного состояния.
-6. Для нового HUD предпочтителен отдельный overlay/UserWidget, читающий только
-   `current_hud_throttle` и `current_hud_steering`; штатный HUD сначала не
-   удалять, а лишь скрывать после успешной проверки копии.
+6. Отдельный overlay допустим как сильный call-marker, но не как финальная
+   реализация стандартных подсказок. Финальный путь должен входить в native
+   dynamic-input lifecycle и скрываться вместе со штатным HUD.
+7. После одного-двух no-op не менять очередные поля вслепую: усилить маркер или
+   пересмотреть producer/consumer/owner chain.

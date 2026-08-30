@@ -1,114 +1,107 @@
 # Repository rules
 
-These rules apply to the entire `TheLastCaretakerMods` repository.
+These rules apply to the entire `TheLastCaretakerMods` repository. A closer
+`AGENTS.md` owns the exact contracts and workflow of its mod; do not duplicate
+those details here.
 
-## Sources of truth
+## Rule and knowledge ownership
 
-- Treat `mods/DonkLiftKeyboardControl/Scripts/main.lua` and the latest
-  game-validated Git checkpoint as the control implementation of record.
-- Treat the HUD section of `mods/DonkLiftKeyboardControl/Scripts/main.lua`
-  together with `ue4ss/UE4SS_Signatures/FText_Constructor.lua` as the
-  game-validated hotkey HUD implementation of record.
-- Treat older control/HUD designs in `docs/` as historical research when they
-  disagree with the current source. In particular, do not restore the old
-  `ReceiveTick`, setter-hook, `Acceleration`/`Steering`, or direct HUD-widget
-  architecture without a new, isolated experiment.
-- The installed test copy is
-  `P:\SteamLibrary\steamapps\common\Voyage\Voyage\Binaries\Win64\ue4ss\Mods\DonkLiftKeyboardControl\Scripts\main.lua`.
-  The repository copy and installed copy must have matching hashes before a
-  test is handed to the user.
+- Autonomous DonkLift rules live in
+  `mods/DonkLiftKeyboardControl/AGENTS.md`.
+- The preserved UE4SS/Lua DonkLift implementation is a separate alternative
+  under `mods/DonkLiftKeyboardControlUE4SS`; it is not a dependency of the
+  autonomous mod.
+- Shared Voyage vehicle/HUD patterns belong in
+  `docs/vehicle-and-hud-modding-patterns.md`. Evidence and object-specific
+  findings remain in the architecture and research documents.
+- Current source, the closest rules, durable documentation, and the latest
+  game-validated Git checkpoint are sources of truth. Chat history and local
+  extracted artifacts are not.
 
-## Verified DonkLift input contract
+## Research and knowledge protocol
 
-- The reliable interception points are the pre-hooks for
-  `/Script/Voyage.VoyageVehicleForkliftPawn:GetThrottleInput` and
-  `/Script/Voyage.VoyageVehicleForkliftPawn:GetSteeringInput`.
-- The game writes exact digital commands `-1`, `0`, and `1` into
-  `ThrottleInput` and `SteeringInput`. The mod reads those exact values as
-  direction events, integrates its own state on a fixed 50 ms clock, and
-  writes the integrated value back before the native getter reads it. This
-  path drives both the vehicle and the native HUD.
-- Never let a mod-produced active input equal an exact command marker.
-  `0.9999` is the positive/negative limit and renders as `100%`; `0.0001` is
-  the active neutral sentinel and renders as `0%`. Exact `0` is reserved for
-  the game's release command and for shutting down an exited vehicle.
-- `X` resets throttle immediately and `C` resets steering immediately. Both
-  reset their direction/ramp or velocity state as well as the input field.
-- On acquisition, initialize both mod states to `0.0001`. On exit, write an
-  honest `0` to both input fields and clear the cached state.
-- UE4SS may return different Lua wrappers for the same UObject on consecutive
-  `context:get()` calls. Never use Lua wrapper identity (`==`) as persistent
-  actor identity. A direct `IsPlayerControlled()` check is the verified hot
-  path filter; `GetFullName()` may be used only on cold acquire/release paths.
-- Known accepted limitation: writing `SteeringInput = 0` on exit stops the
-  mod's steering input but does not visually recenter already turned wheels.
-  The forklift appears to retain wheel position elsewhere. Do not broaden the
-  control mod to chase this unless the user explicitly requests it.
+- Optimize research for understanding the producer, consumer, owner,
+  lifecycle, identity, and data contract—not merely for one patch that appears
+  to work.
+- Promote useful findings immediately: stable conclusions go to architecture
+  or shared-pattern docs; failed/deceptive approaches go to research pitfalls;
+  active hypotheses, package hashes, and pending test results go to the owning
+  backlog.
+- After context compaction, reread the active backlog and the relevant durable
+  architecture/pitfall documents before acting.
+- Before a visibly heavy investigation (large binary analysis, broad asset
+  extraction/cook, long brute-force scan, or uncertain reverse engineering),
+  tell the user why it is costly and offer a lighter discriminating experiment.
+- Experiments must discriminate between hypotheses. After one or two no-op
+  results, strengthen the marker or revisit the architecture instead of
+  changing more fields blindly.
+- A controlled crash or visibly wrong result is acceptable when it proves the
+  intended path is live, the game process is disposable, and a recoverable
+  baseline exists.
 
-## Verified DonkLift hotkey HUD contract
+## Game-derived data and version gates
 
-- The visible lower-left `E/H` hints are children of
-  `BP_DynamicPlayerInputHorizontalWidget_Bottom.ContextInputActionsRoot`.
-  `BP_VoyageIngameForklift_C.KeybindRoot` is real but its nested action
-  container is empty at runtime; do not use it as the visible hint host.
-- Create display-only hints by copying the native `WBP_InteractIndicator_C`
-  class through `WidgetBlueprintLibrary:Create`, adding it to the bottom
-  `ContextInputActionsRoot`, then configuring its nested text blocks on a later
-  poll. The named child widgets are not ready immediately after `Create`.
-- Set `ButtonInfoContainer.bAutoUpdateKeyRebindings = false` on copied hints or
-  a later native refresh may restore the template's `E / Interact` content.
-- Creating new `FText` requires the version-pinned custom signature at
-  `ue4ss/UE4SS_Signatures/FText_Constructor.lua`. Its pattern is unique for the
-  validated Voyage executable. Revalidate uniqueness and constructor semantics
-  after every executable update; never install an approximate or multi-match
-  signature.
-- Voyage does not keep its menu language synchronized with Unreal's
-  `KismetInternationalizationLibrary.GetCurrentLanguage`. Read the live
-  `VoyageGameUserSettings.CustomSettings.LanguageType` enum instead. Cache it
-  only while a valid forklift HUD exists, clear the cache when that HUD is
-  destroyed, and read it again after the next game load.
-- `EVoyageLanguageType` values verified for the current labels are `English=1`
-  and `Russian=11`. The production hint labels are `Brake / Center` and
-  `Тормоз / Выровнять`; unsupported languages fall back to English.
-- Ship control and its `X/C` hints as the single `DonkLiftKeyboardControl` mod.
-  Keep their internal loops and state independent: the HUD section must never
-  write throttle or steering state.
-- Separate temporary mods are acceptable while isolating a risky experiment,
-  but merge a validated feature back into the owning user-facing mod when it
-  has no standalone purpose. Do not leave probe/diagnostic mods in `mods/` or
-  in the installed game after the experiment ends; keep reusable inspectors
-  under `tools/` instead.
+- Do not commit anything reproducible from the installed game: extracted
+  assets, `.usmap`/`.jmap`, JSON, pseudocode, raw reports, disassembly dumps,
+  cooked packages, container inventories, or installed-file backups. Keep
+  version-specific output below ignored `artifacts/` paths.
+- Commit the method, not the snapshot. Reusable fingerprinting, extraction,
+  inspection, patching, and disassembly logic belongs under `tools/`, with
+  exact usage documented.
+- Before reusing any game-derived input, obtain the installed game's Steam
+  build ID and executable hash with `tools/Get-VoyageBuildFingerprint.ps1` and
+  compare them with the owning mod's provenance registry.
+- A changed fingerprint invalidates extracted snapshots and reconstructed
+  contracts alike. Re-extract or revalidate every affected item before build,
+  cook, packaging, or compatibility claims.
+- Any generated or reconstructed game-derived file that must remain in Git as
+  a source input needs a provenance header naming its game fingerprint, engine
+  version, reconstruction method/tools, and revalidation condition. If the
+  format cannot contain comments, record the same metadata in its owning
+  README or registry.
 
-## Performance rules
+## Shared Voyage vehicle and HUD principles
 
-- Lua is interpreted and both native getter hooks may run several times per
-  frame. Keep their steady-state paths free of `pcall`, closures, logging,
-  object searches, string construction, `GetFullName()`, and redundant helper
-  calls.
-- Put integration, ramping, clamping, lifecycle validation, and other work that
-  does not require getter timing in the fixed 50 ms loop.
-- Optimize measured or structurally hot work, but do not assume UObject wrapper
-  identity or remove a defensive boundary without a real-game test. Preserve a
-  known-good Git checkpoint before every optimization experiment.
-- Production logging should be limited to one-time initialization failures.
-  Temporary diagnostic logging must be removed after the experiment.
+- Treat input mapping, vehicle state, physical movement, provided actions, and
+  HUD rendering as separate layers until evidence proves a direct connection.
+- Enhanced Input mappings or action events alone do not imply that Voyage's
+  standard hint UI will display an action. Locate the live action provider,
+  registration path, filter, and rendered widget identity.
+- Blueprint overrides bind to the exact declaring UFunction owner. A same-name
+  function compiled against the wrong stand-in class is a different function,
+  even when the graph compiles successfully.
+- Editor-only mirrors must reproduce exact `/Script` module/class/function,
+  property, struct, and enum identities needed by cooked assets. Convenient
+  invented members are unsafe.
+- A relocated original Blueprint is a snapshot of one game version. Never keep
+  it in Git or assume a previously built replacement inherits later game
+  changes automatically.
+- Identify UI elements by stable UObject/action identity where possible, not
+  child index, rendered key text, or localized label.
+- Treat the shared-pattern document as a starting model for another vehicle,
+  not proof that every Voyage vehicle uses the same fields or lifecycle.
 
-## Change and validation workflow
+## Experiment and validation workflow
 
-- Confirm that the game process is closed before replacing the installed Lua
-  file. Never hot-copy this mod into a running game.
-- Before testing the HUD section, ensure the repository and installed
-  `DonkLiftKeyboardControl` Lua hashes match and the installed
-  `FText_Constructor.lua` matches the repository signature file.
-- Keep control-path and HUD experiments separate. Do not change both in one
-  experiment because feedback between them previously caused autonomous
-  throttle/steering and crashes.
-- Before committing gameplay behavior, require real-game validation of:
-  throttle, steering, both directions, limits, immediate `X`, immediate `C`,
-  native HUD values, exit, and re-entry. A successful load or clean log is not
-  sufficient.
-- Commit each validated checkpoint before starting the next experiment. If an
-  experiment removes control, causes autonomous movement, or crashes, return
-  to the latest checkpoint instead of layering speculative fixes on it.
+- Never replace installed mod or game files while the game is running. The
+  user may play while repository-only work continues; do not interrupt or
+  alter his current game session.
+- Before a risky test, preserve an exact known-good package, change one
+  architectural variable, state the expected outcomes, and record the actual
+  game result immediately.
+- A successful compile, cook, container verification, clean log, or load is
+  not gameplay/UI validation. Require a real-game test proportional to the
+  changed behavior.
+- If an experiment removes control, causes autonomous behavior, corrupts UI,
+  or crashes, restore the last checkpoint instead of layering speculative
+  fixes on the unknown state.
+
+## Repository hygiene
+
 - Preserve unrelated worktree changes and stage only the exact files belonging
   to the validated change.
+- Keep toolchain-specific ignore rules in the owning mod. The repository root
+  should contain only genuinely repository-wide ignore patterns.
+- Temporary probe mods/containers are allowed while isolating risk, but remove
+  them from user-facing mod folders and the installed game after the result is
+  understood. Keep reusable standalone inspectors under `tools/`.

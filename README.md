@@ -15,10 +15,11 @@ Workspace for researching and developing mods for **The Last Caretaker**
 ## Current focus
 
 `DonkLiftKeyboardControl` implements persistent, smoothed keyboard throttle and
-steering for the DonkLift-320 forklift and adds native-style `X` (brake/reset
-throttle) and `C` (center steering) hints to its HUD. The hints use English or
-Russian labels selected from Voyage's own language setting.
+steering for the DonkLift-320 forklift and adds standard `X` (brake/reset
+throttle) and `C` (center steering) actions to its native HUD. The hints use
+English or Russian labels selected from Voyage's own language setting.
 
-The HUD portion requires the version-pinned UE4SS signature in
-`ue4ss/UE4SS_Signatures/FText_Constructor.lua`. Revalidate that signature after
-every game executable update before enabling the HUD mod.
+The current implementation is the self-contained IoStore project at
+`mods/DonkLiftKeyboardControl`. It requires neither UE4SS nor DML. The older,
+separately maintained Lua implementation remains available for reference and
+manual UE4SS installation at `mods/DonkLiftKeyboardControlUE4SS`.

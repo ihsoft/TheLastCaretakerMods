@@ -36,6 +36,41 @@ if (mappingsPath is not null)
     provider.MappingsContainer = new FileUsmapTypeMappingsProvider(mappingsPath);
 }
 
+if (fragment.StartsWith("mappings-property:", StringComparison.OrdinalIgnoreCase))
+{
+    var propertyFragment = fragment["mappings-property:".Length..];
+    var mappings = provider.MappingsForGame
+        ?? throw new InvalidOperationException("A mappings file is required for mappings-property: mode.");
+    var mappingMatches = mappings.Types.Values
+        .Select(type => new
+        {
+            Type = type,
+            Properties = type.Properties
+                .Where(pair => pair.Value.Name.Contains(propertyFragment, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(pair => pair.Key)
+                .ToArray()
+        })
+        .Where(item => item.Properties.Length > 0)
+        .OrderBy(item => item.Type.Name, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+    var lines = new List<string>();
+    foreach (var item in mappingMatches)
+    {
+        lines.Add($"TYPE {item.Type.Name} : {item.Type.SuperType ?? "<none>"} ({item.Type.PropertyCount} own properties)");
+        foreach (var pair in item.Properties)
+        {
+            var property = pair.Value;
+            lines.Add($"  [{pair.Key}] {Describe(property.MappingType)} {property.Name} array={property.ArraySize?.ToString() ?? "?"}");
+        }
+        lines.Add(string.Empty);
+    }
+    var resultPath = Path.Combine(outputDirectory, "mapping-property-types.txt");
+    File.WriteAllLines(resultPath, lines);
+    Console.WriteLine($"Found {mappingMatches.Length} mapped type(s) containing property '{propertyFragment}'.");
+    Console.WriteLine(resultPath);
+    return mappingMatches.Length == 0 ? 1 : 0;
+}
+
 if (fragment.StartsWith("mappings:", StringComparison.OrdinalIgnoreCase))
 {
     var typeFragment = fragment["mappings:".Length..];

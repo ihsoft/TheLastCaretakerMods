@@ -3,25 +3,11 @@ tools/CUE4Parse/
 **/bin/
 **/obj/
 
-# Unreal Engine generated output
-**/Binaries/
-**/DerivedDataCache/
-**/Intermediate/
-**/Saved/
-.vs/
-*.sln
-
-# Commandlet/Python-generated experiment assets; their generators are source
-experiments/DonkLiftBlueprint/Content/Mods/DonkLiftKeyboardControl/ModActor.uasset
-experiments/DonkLiftBlueprint/Content/Mods/DonkLiftKeyboardControl/Bootstrap.umap
-experiments/DonkLiftBlueprint/Content/Mods/DonkLiftKeyboardControl/StreamingShell.umap
-experiments/DonkLiftBlueprint/Content/Mods/DonkLiftKeyboard/BP_Forklift_Original.uasset
-experiments/DonkLiftBlueprint/Content/Blueprints/Vehicles/BP_Forklift_Possesable.uasset
-
-# Extracted game data can be very large and is reproducible
-artifacts/raw/
-artifacts/extracted/
-artifacts/installed-backups/
+# All game-derived artifacts are local, version-specific, and reproducible.
+# Keep only the policy README in Git; promote useful conclusions to docs/ and
+# repeatable extraction logic to tools/.
+artifacts/*
+!artifacts/README.md
 
 # Runtime logs and temporary files
 *.log
