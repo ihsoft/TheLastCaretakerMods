@@ -1,5 +1,5 @@
-# HAND-WRITTEN BUILD TOOL: extracts the two base-game assets required by the
-# DonkLift package without allowing the installed override to shadow them.
+# HAND-WRITTEN BUILD TOOL: extracts the base-game asset required by the
+# DonkLift package without allowing the installed override to shadow it.
 
 param(
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
@@ -60,11 +60,6 @@ try {
         -GameRoot $root `
         -Retoc $Retoc `
         -OutputRoot $output
-    & $extractor `
-        -Filter 'HUD/BP_VoyageIngameForklift' `
-        -GameRoot $root `
-        -Retoc $Retoc `
-        -OutputRoot $output
 }
 finally {
     if (Test-Path -LiteralPath $disabledUtoc -PathType Leaf) {
@@ -83,8 +78,8 @@ if ($installedHash) {
 }
 
 $manifests = @(Get-ChildItem -LiteralPath $output -File -Recurse -Filter 'extraction-manifest.json')
-if ($manifests.Count -ne 2) {
-    throw "Expected exactly two extraction manifests; found $($manifests.Count)."
+if ($manifests.Count -ne 1) {
+    throw "Expected exactly one extraction manifest; found $($manifests.Count)."
 }
 
 Write-Host 'Prepared fresh DonkLift base-game inputs:'

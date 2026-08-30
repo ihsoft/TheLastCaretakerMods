@@ -25,10 +25,6 @@ The following hand-reconstructed mirror headers carry their own provenance:
 - `Source/Voyage/VoyageVehicleForkliftPawn.h`
 - `Source/Voyage/VoyageInputAction.h`
 - `Source/Voyage/VoyageGameUserSettings.h`
-- `Source/Voyage/VoyageIngameForkliftWidget.h`
-- `Source/Voyage/VoyageDynamicPlayerInputWidget.h`
-- `Source/Voyage/VoyageButtonInfoContainerWidget.h`
-- `Source/Voyage/InteractIndicator.h`
 
 The generator and builder implementations are ours, but their contracts must
 also be reviewed after an update:
@@ -37,8 +33,6 @@ also be reviewed after an update:
   forklift keyboard mappings, action paths, native input-field behavior.
 - `Source/DonkLiftGenerator/GenerateDonkLiftInheritanceCommandlet.cpp`:
   Blueprint parent/function identity, language enum, action struct fields.
-- `Source/DonkLiftGenerator/GenerateDonkLiftHudCommandlet.cpp`: HUD parent,
-  widget field names, action-widget identity chain and lifecycle timing.
 - `Build-InheritancePackage.ps1`: package paths, equal-length relocation
   assumptions, staging layout, and IoStore packaging contract.
 
@@ -47,7 +41,6 @@ also be reviewed after an update:
 Recreate these below ignored `artifacts/` paths for every game build:
 
 - original `/Game/Blueprints/Vehicles/BP_Forklift_Possesable` package;
-- original `/Game/UI/Game/HUD/BP_VoyageIngameForklift` package;
 - current `scriptobjects.bin`;
 - reflection mappings (`.usmap`/`.jmap`), extracted assets, JSON, pseudocode,
   disassembly reports, cooked assets, staging trees, package inventories,

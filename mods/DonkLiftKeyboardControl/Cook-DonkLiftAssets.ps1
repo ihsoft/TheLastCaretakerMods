@@ -1,4 +1,4 @@
-# HAND-WRITTEN BUILD TOOL: performs the six narrow Unreal cooks for this mod.
+# HAND-WRITTEN BUILD TOOL: performs the five narrow Unreal cooks for this mod.
 # It contains no extracted game data; its output is generated and not committed.
 
 param(
@@ -32,8 +32,7 @@ $packages = @(
     '/Game/Mods/DonkLiftKeyboardControl/IAV_DonkLiftBrake',
     '/Game/Mods/DonkLiftKeyboardControl/IAV_DonkLiftCenterSteering',
     '/Game/Game/Input/Vehicle/IMC_Forklift_Keyboard',
-    '/Game/Blueprints/Vehicles/BP_Forklift_Possesable',
-    '/Game/UI/Game/HUD/BP_VoyageIngameForklift'
+    '/Game/Blueprints/Vehicles/BP_Forklift_Possesable'
 )
 
 foreach ($package in $packages) {
@@ -77,7 +76,7 @@ foreach ($package in $packages) {
 
 $files = @(Get-ChildItem -LiteralPath $outputContent -Recurse -File)
 if ($files.Count -ne $packages.Count * 2) {
-    throw "Expected 12 staged cooked files; found $($files.Count)."
+    throw "Expected 10 staged cooked files; found $($files.Count)."
 }
 
 Write-Host "Cooked DonkLift production assets: $output"

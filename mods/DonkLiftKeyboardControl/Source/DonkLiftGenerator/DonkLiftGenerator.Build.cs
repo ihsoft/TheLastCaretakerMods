@@ -10,8 +10,6 @@ public class DonkLiftGenerator : ModuleRules
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PrivateIncludePaths.Add(
-            Path.Combine(EngineDirectory, "Source", "Editor", "UMGEditor", "Private"));
         PrivateIncludePaths.Add(Path.GetFullPath(Path.Combine(
             ModuleDirectory,
             "..", "..", "..", "..",
@@ -26,9 +24,6 @@ public class DonkLiftGenerator : ModuleRules
             "EnhancedInput",
             "InputCore",
             "KismetCompiler",
-            "SlateCore",
-            "UMG",
-            "UMGEditor",
             "UnrealEd",
             "Voyage"
         });

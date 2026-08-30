@@ -18,7 +18,7 @@ tools in its file header. Revalidate every mirror after the game executable
 changes.
 
 Commandlet-generated `Content` is deliberately ignored and must be recreated
-from the generators. Relocated original forklift/HUD assets, mappings,
+from the generators. The relocated original forklift, mappings,
 `scriptobjects.bin`, cooked output, and final containers are current-game
 artifacts and must stay under ignored `artifacts/` paths rather than Git.
 
@@ -26,7 +26,7 @@ The code is split by role:
 
 - `Source/Voyage` is the minimal, version-bound game-API mirror;
 - `Source/DonkLiftGenerator` is our hand-written editor-tools module containing
-  the three Unreal commandlets.
+  the two Unreal commandlets.
 
 See `GAME_DERIVED_SOURCES.md` before generation after any game update. A
 changed executable fingerprint is a hard stop until the listed headers,
@@ -35,19 +35,13 @@ re-extracted or revalidated.
 
 ## Runtime architecture
 
-The single `DonkLiftKeyboardControl_P` container contains two transparent
-package replacements:
-
-1. The complete original forklift is relocated from
-   `/Game/Blueprints/Vehicles/BP_Forklift_Possesable` to
-   `/Game/Mods/DonkLiftKeyboard/BP_Forklift_Original`. A child Blueprint at the
-   original address installs `ModActor_C` and extends the native provided-action
-   list with localized X/C entries.
-2. The complete original forklift HUD is relocated from
-   `/Game/UI/Game/HUD/BP_VoyageIngameForklift` to
-   `/Game/Mods/DonkLift/HUD_Forklift_Original`. A child Widget Blueprint at the
-   original address identifies the X/C widgets by their exact input-action
-   objects and appends them after the native E/H block.
+The single `DonkLiftKeyboardControl_P` container contains one transparent
+package replacement. The complete original forklift is relocated from
+`/Game/Blueprints/Vehicles/BP_Forklift_Possesable` to
+`/Game/Mods/DonkLiftKeyboard/BP_Forklift_Original`. A child Blueprint at the
+original address installs `ModActor_C` and extends the native provided-action
+list with localized X/C entries. The native HUD owns their display and order;
+the mod does not replace any HUD package.
 
 Each helper addresses only its owning forklift. While that pawn is
 player-controlled it integrates digital throttle and steering and writes the
@@ -65,18 +59,16 @@ this order:
 ```powershell
 UnrealEditor-Cmd.exe Voyage.uproject -run=GenerateDonkLiftMod -unattended -nop4 -nosplash -nullrhi
 UnrealEditor-Cmd.exe Voyage.uproject -run=GenerateDonkLiftInheritance -unattended -nop4 -nosplash -nullrhi
-UnrealEditor-Cmd.exe Voyage.uproject -run=GenerateDonkLiftHud -unattended -nop4 -nosplash -nullrhi
 ```
 
 `GenerateDonkLiftMod` creates the helper, X/C input actions, and the complete
 forklift keyboard mapping context. `GenerateDonkLiftInheritance` creates the
-temporary forklift parent and child. `GenerateDonkLiftHud` creates the
-temporary HUD parent and child.
+temporary forklift parent and child.
 
 ## Cook and package
 
 Do not use a broad `CookDir` cook: Unreal follows editor dependencies and may
-compile global shaders and unrelated Engine template maps. Cook exactly the six
+compile global shaders and unrelated Engine template maps. Cook exactly the five
 production packages into a new staging root:
 
 ```powershell
@@ -87,7 +79,7 @@ production packages into a new staging root:
 
 Then build the single container from that staging root:
 
-First prepare both originals in one new artifact root. The preparer requires a
+First prepare the original forklift in one new artifact root. The preparer requires a
 closed game, refuses unknown additional IoStore containers, temporarily
 disables only an installed DonkLift override, uses the canonical filters, and
 restores the installed `.utoc` even if extraction fails:
@@ -104,7 +96,6 @@ extraction roots:
 .\Build-InheritancePackage.ps1 `
   -CookedRoot <new-cooked-staging-directory> `
   -OriginalForkliftDirectory <current-game-original-forklift-directory> `
-  -OriginalHudDirectory <current-game-original-forklift-hud-directory> `
   -ScriptObjects <current-game-scriptobjects.bin> `
   -OutputRoot <new-output-directory>
 ```
@@ -115,7 +106,7 @@ unrelated `scriptobjects.bin`. It also rejects a supposed original that already
 references the mod's relocated-parent path, which would create a self-parent
 cycle. After equal-length relocation it stages only the required cooked
 assets, creates `DonkLiftKeyboardControl_P.{pak,ucas,utoc}`, runs
-`retoc verify`, and verifies the exact eight-asset production inventory. It
+`retoc verify`, and verifies the exact six-asset production inventory. It
 also writes a sorted `.inventory.txt` sidecar for semantic build comparison;
 the sidecar is evidence, not part of the three-file installed payload.
 

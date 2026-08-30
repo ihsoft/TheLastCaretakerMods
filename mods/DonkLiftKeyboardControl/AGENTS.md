@@ -15,7 +15,7 @@ contract and workflow detail.
   user-facing mod README.
 - Detailed evidence and historical failures live in
   `../../docs/game-architecture-observations.md` and
-  `../../docs/research-pitfalls.md`. Do not restore an older control/HUD design
+  `../../docs/research-pitfalls.md`. Do not restore an older control or HUD design
   when it disagrees with the current source without a new isolated experiment.
 - `../DonkLiftKeyboardControlUE4SS` is a preserved historical alternative, not
   a runtime dependency, source component, or release payload of this mod.
@@ -42,14 +42,12 @@ contract and workflow detail.
   It exists only so cooked Blueprints bind to the game's native identities.
   Never stage its DLL or other native output into the mod container.
 - `Source/DonkLiftGenerator` is our hand-written editor-only tools module. Its
-  three `UCommandlet` classes must remain in an Unreal `Source` module so UHT
+  two `UCommandlet` classes must remain in an Unreal `Source` module so UHT
   and UnrealEditor can discover them; their native output is never shipped.
 - `GenerateDonkLiftMod` creates the helper, X/C actions, and replacement
   forklift keyboard mapping context.
 - `GenerateDonkLiftInheritance` creates the forklift placeholder/child,
   installs the helper, and supplies localized standard actions.
-- `GenerateDonkLiftHud` creates the HUD placeholder/child and action-identity
-  reorder logic.
 - Generated `Content`, `Binaries`, `Intermediate`, `Saved`, caches, and IDE
   files are owned by this directory's `.gitignore`.
 
@@ -61,15 +59,11 @@ contract and workflow detail.
   `/Game/Blueprints/Vehicles/BP_Forklift_Possesable` to the equal-length
   `/Game/Mods/DonkLiftKeyboard/BP_Forklift_Original`. The generated child at
   the original path installs the helper and extends standard actions.
-- Freshly extract the complete original forklift HUD and relocate it from
-  `/Game/UI/Game/HUD/BP_VoyageIngameForklift` to the equal-length
-  `/Game/Mods/DonkLift/HUD_Forklift_Original`. The generated child at the
-  original path reorders only the mod's standard action widgets.
 - Equal-length substitution and the expected package-name occurrence counts
   are safety assertions. Never weaken them to accept an updated or approximate
   binary layout.
-- Both relocated originals are snapshots. A previously built mod does not
-  inherit later developer changes to the forklift or its HUD.
+- The relocated original is a snapshot. A previously built mod does not
+  inherit later developer changes to the forklift.
 
 ## Verified input contract
 
@@ -111,19 +105,14 @@ contract and workflow detail.
   `VoyageVehicleForkliftPawn`. The child must override the real base-owned
   UFunction and return enabled `Central` structs for the X/C actions.
 - The native path deduplicates complete actions through a `TSet`; returned
-  array order and equal priorities do not determine visual order.
-- After native population, scan every row child through
-  `InteractIndicator.ButtonInfoContainer.InputActions`. Remove only widgets
-  whose exact action objects are `IAV_DonkLiftBrake` or
-  `IAV_DonkLiftCenterSteering`, then append Brake followed by Center. Never
-  identify them by index, key text, or localized label; preserve all unknown
-  native and third-party children.
+  array order and equal priorities do not determine visual order. The game may
+  repopulate the row after ESC/resume and choose a different `TSet` order.
+- Accept the native action order. Do not replace the forklift HUD, poll its
+  children, or reorder widgets solely for presentation.
 - Read language from `VoyageGameUserSettings.CustomSettings.LanguageType`, not
   `KismetInternationalizationLibrary.GetCurrentLanguage`. Verified values are
   `English=1` and `Russian=11`; labels are `Brake / Center` and
   `Тормоз / Выровнять`, with English fallback.
-- Control and HUD graphs share one user-facing mod but remain behaviorally
-  independent. HUD logic must never write throttle or steering state.
 
 ## Performance and production hygiene
 
@@ -131,8 +120,8 @@ contract and workflow detail.
   decoding, integration, clamping, X/C checks, and native-field writes. No
   logging, string work, object searches, or display logic belongs in the hot
   path.
-- The provided-action override and one-shot delayed HUD reorder are cold paths;
-  keep them independent from input integration.
+- The provided-action override is a cold path; keep it independent from input
+  integration.
 - Production graphs must contain no `PrintString`, `QuitGame`, probe marker,
   diagnostic opacity, positional reorder, or unused event-observation state.
 - Removing apparently unused Blueprint nodes can change cooked bindings. Keep
@@ -145,20 +134,20 @@ contract and workflow detail.
 - Run commandlets with `-ddc=NoZenLocalFallback` and a workspace-local
   `-LocalDataCachePath`; otherwise Zen can loop on an inaccessible data path.
 - Generate from an empty ignored `Content` tree in this order:
-  `GenerateDonkLiftMod`, `GenerateDonkLiftInheritance`, `GenerateDonkLiftHud`.
-- Use `Cook-DonkLiftAssets.ps1`. It performs six narrow
+  `GenerateDonkLiftMod`, `GenerateDonkLiftInheritance`.
+- Use `Cook-DonkLiftAssets.ps1`. It performs five narrow
   `-CookSinglePackageNoRefs` cooks. Do not replace this with broad `CookDir`,
   which follows editor dependencies into global shaders and unrelated
   Engine/OpenWorld assets.
-- Use `Build-InheritancePackage.ps1` with fresh original forklift/HUD
-  directories and current `scriptobjects.bin`. Each path must remain under its
+- Use `Build-InheritancePackage.ps1` with a fresh original forklift directory
+  and current `scriptobjects.bin`. Each path must remain under its
   canonical `Extract-VoyagePackage.ps1` root and manifest; never copy an asset
   into a manifest-less convenience directory. Require the manifest fingerprint
   and shadowing checks, relocation self-parent guard, exact packaged inventory,
   and `retoc verify` before installation.
 - Prefer `Prepare-DonkLiftOriginals.ps1` over manually disabling the installed
-  override and running two extractions. It owns the closed-process check,
-  exact-container allowlist, canonical filters, and guaranteed UTOC restore.
+  override and extracting the forklift. It owns the closed-process check,
+  exact-container allowlist, canonical filter, and guaranteed UTOC restore.
 
 ## Installation and real-game validation
 
@@ -170,12 +159,9 @@ contract and workflow detail.
 - Back up the exact installed container and record hashes before every risky
   replacement. Repository and prepared artifact hashes must match installed
   hashes before handing off a test.
-- Keep control-path and HUD experiments separate until each result is known.
-  Temporary split containers are allowed for isolation but must not remain in
-  the production installation.
 - Before committing gameplay behavior, validate in the real game: throttle and
   steering in both directions, limits, native percentages, immediate X,
-  immediate C, localized `E H X C`, pause-menu hiding, exit, and re-entry.
+  immediate C, localized X/C hints before and after pause, exit, and re-entry.
 - A successful editor build, commandlet run, cook, `retoc verify`, clean log,
   load, or entry into the vehicle is not sufficient validation.
 - Commit each validated checkpoint before the next experiment. On autonomous

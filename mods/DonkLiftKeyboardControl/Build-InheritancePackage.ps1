@@ -10,9 +10,6 @@ param(
     [string]$OriginalForkliftDirectory,
 
     [Parameter(Mandatory = $true)]
-    [string]$OriginalHudDirectory,
-
-    [Parameter(Mandatory = $true)]
     [string]$ScriptObjects,
 
     [string]$Retoc = "R:\Codex\ToolCache\rust-retoc-master\source\target\release\retoc.exe",
@@ -28,22 +25,14 @@ $ErrorActionPreference = 'Stop'
 $expectedSteamBuildId = '23962331'
 $expectedExecutableSha256 = '6A9AE86E5CE5D7D1B6555F579091AAB1E0E67FF7A96276FA2570052F99102E8D'
 $expectedForkliftFilter = 'Vehicles/BP_Forklift_Possesable'
-$expectedHudFilter = 'HUD/BP_VoyageIngameForklift'
 
 $originalPackage = '/Game/Blueprints/Vehicles/BP_Forklift_Possesable'
 $renamedPackage = '/Game/Mods/DonkLiftKeyboard/BP_Forklift_Original'
 if ($originalPackage.Length -ne $renamedPackage.Length) {
     throw 'The original and renamed package paths must have identical byte lengths.'
 }
-$originalHudPackage = '/Game/UI/Game/HUD/BP_VoyageIngameForklift'
-$renamedHudPackage = '/Game/Mods/DonkLift/HUD_Forklift_Original'
-if ($originalHudPackage.Length -ne $renamedHudPackage.Length) {
-    throw 'The original and renamed HUD package paths must have identical byte lengths.'
-}
-
 $cooked = (Resolve-Path -LiteralPath $CookedRoot).Path
 $originalDirectory = (Resolve-Path -LiteralPath $OriginalForkliftDirectory).Path
-$originalHud = (Resolve-Path -LiteralPath $OriginalHudDirectory).Path
 $scriptObjectsPath = (Resolve-Path -LiteralPath $ScriptObjects).Path
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
 $output = [IO.Path]::GetFullPath($OutputRoot)
@@ -105,24 +94,12 @@ $forkliftEvidence = Get-ExtractionEvidence `
     -InputPath $originalDirectory `
     -ExpectedFilter $expectedForkliftFilter `
     -Label 'Forklift original'
-$hudEvidence = Get-ExtractionEvidence `
-    -InputPath $originalHud `
-    -ExpectedFilter $expectedHudFilter `
-    -Label 'Forklift HUD original'
 $scriptObjectsEvidence = Get-ExtractionEvidence `
     -InputPath $scriptObjectsPath `
     -ExpectedFilter $expectedForkliftFilter `
     -Label 'scriptobjects.bin'
 if ($scriptObjectsEvidence.ManifestPath -cne $forkliftEvidence.ManifestPath) {
     throw 'scriptobjects.bin must come from the same extraction root as the forklift original.'
-}
-$hudScriptObjects = Join-Path $hudEvidence.Root 'scriptobjects.bin'
-if (-not (Test-Path -LiteralPath $hudScriptObjects -PathType Leaf)) {
-    throw "HUD extraction is missing scriptobjects.bin: $hudScriptObjects"
-}
-if ((Get-FileHash -Algorithm SHA256 -LiteralPath $scriptObjectsPath).Hash -cne
-    (Get-FileHash -Algorithm SHA256 -LiteralPath $hudScriptObjects).Hash) {
-    throw 'Forklift and HUD extractions contain different scriptobjects.bin files.'
 }
 
 $stage = Join-Path $output 'stage'
@@ -131,9 +108,7 @@ $childStage = Join-Path $stage 'Voyage\Content\Blueprints\Vehicles'
 $parentStage = Join-Path $stage 'Voyage\Content\Mods\DonkLiftKeyboard'
 $helperStage = Join-Path $stage 'Voyage\Content\Mods\DonkLiftKeyboardControl'
 $contextStage = Join-Path $stage 'Voyage\Content\Game\Input\Vehicle'
-$hudChildStage = Join-Path $stage 'Voyage\Content\UI\Game\HUD'
-$hudParentStage = Join-Path $stage 'Voyage\Content\Mods\DonkLift'
-New-Item -ItemType Directory -Path $childStage, $parentStage, $helperStage, $contextStage, $hudChildStage, $hudParentStage, $package -Force | Out-Null
+New-Item -ItemType Directory -Path $childStage, $parentStage, $helperStage, $contextStage, $package -Force | Out-Null
 
 $childSource = Join-Path $cooked 'Content\Blueprints\Vehicles'
 $helperSource = Join-Path $cooked 'Content\Mods\DonkLiftKeyboardControl'
@@ -153,10 +128,6 @@ foreach ($assetName in @(
 foreach ($assetName in @('IMC_Forklift_Keyboard.uasset', 'IMC_Forklift_Keyboard.uexp')) {
     Copy-Item -LiteralPath (Join-Path $cooked 'Content\Game\Input\Vehicle' $assetName) -Destination $contextStage
 }
-foreach ($assetName in @('BP_VoyageIngameForklift.uasset', 'BP_VoyageIngameForklift.uexp')) {
-    Copy-Item -LiteralPath (Join-Path $cooked 'Content\UI\Game\HUD' $assetName) -Destination $hudChildStage
-}
-
 function Find-ByteSequenceOffsets {
     param(
         [Parameter(Mandatory = $true)] [byte[]]$Bytes,
@@ -232,13 +203,6 @@ Copy-RelocatedAsset `
     -DestinationAssetName 'BP_Forklift_Original' `
     -SourcePackageName $originalPackage `
     -DestinationPackageName $renamedPackage
-Copy-RelocatedAsset `
-    -SourceDirectory $originalHud `
-    -SourceAssetName 'BP_VoyageIngameForklift' `
-    -DestinationDirectory $hudParentStage `
-    -DestinationAssetName 'HUD_Forklift_Original' `
-    -SourcePackageName $originalHudPackage `
-    -DestinationPackageName $renamedHudPackage
 Copy-Item -LiteralPath $scriptObjectsPath -Destination (Join-Path $stage 'scriptobjects.bin')
 
 $utoc = Join-Path $package ($ContainerName + '.utoc')
@@ -253,12 +217,10 @@ if ($LASTEXITCODE -ne 0) {
 $expectedAssetPaths = @(
     '../../../Voyage/Content/Blueprints/Vehicles/BP_Forklift_Possesable.uasset'
     '../../../Voyage/Content/Game/Input/Vehicle/IMC_Forklift_Keyboard.uasset'
-    '../../../Voyage/Content/Mods/DonkLift/HUD_Forklift_Original.uasset'
     '../../../Voyage/Content/Mods/DonkLiftKeyboard/BP_Forklift_Original.uasset'
     '../../../Voyage/Content/Mods/DonkLiftKeyboardControl/IAV_DonkLiftBrake.uasset'
     '../../../Voyage/Content/Mods/DonkLiftKeyboardControl/IAV_DonkLiftCenterSteering.uasset'
     '../../../Voyage/Content/Mods/DonkLiftKeyboardControl/ModActor.uasset'
-    '../../../Voyage/Content/UI/Game/HUD/BP_VoyageIngameForklift.uasset'
 )
 $inventory = @(& $retocPath list --path --size --hash --package $utoc)
 if ($LASTEXITCODE -ne 0) {
@@ -304,7 +266,7 @@ foreach ($path in $outputs) {
     }
 }
 
-Write-Host 'Autonomous DonkLift control and HUD package built successfully.'
+Write-Host 'Autonomous DonkLift control package built successfully.'
 Get-FileHash -Algorithm SHA256 -LiteralPath $outputs |
     Select-Object Path, Hash |
     Format-Table -AutoSize

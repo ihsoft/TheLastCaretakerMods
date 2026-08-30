@@ -240,28 +240,23 @@ editor-only Unreal Engine 5.7.4 project: C++-классы внутри него 
 Blueprint. Они не входят в поставляемый контейнер; runtime использует нативные
 классы игры.
 
-Один `DonkLiftKeyboardControl_P` содержит две прозрачные подмены package path:
+Один `DonkLiftKeyboardControl_P` содержит одну прозрачную подмену package path:
 
 1. Полный оригинальный `BP_Forklift_Possesable` перемещается из
    `/Game/Blueprints/Vehicles/BP_Forklift_Possesable` в равнодлинный
    `/Game/Mods/DonkLiftKeyboard/BP_Forklift_Original`. На исходном пути лежит
    child Blueprint: он сохраняет штатное поведение, устанавливает helper actor
    и расширяет список стандартных действий.
-2. Полный оригинальный `BP_VoyageIngameForklift` перемещается из
-   `/Game/UI/Game/HUD/BP_VoyageIngameForklift` в равнодлинный
-   `/Game/Mods/DonkLift/HUD_Forklift_Original`. На исходном пути лежит child
-   Widget Blueprint, который упорядочивает уже созданные штатные action widgets.
-
 Равная длина нужна потому, что builder делает проверенную замену package name
-в cooked bytes без изменения таблиц размеров. Оба перемещённых оригинала —
-снимки установленной версии игры. Они не коммитятся и перед каждой сборкой
-должны заново извлекаться из текущего IoStore; следовательно, обновления
-оригинального погрузчика или HUD не попадут в старый собранный мод автоматически.
+в cooked bytes без изменения таблиц размеров. Перемещённый оригинал — снимок
+установленной версии игры. Он не коммитится и перед каждой сборкой должен
+заново извлекаться из текущего IoStore; следовательно, обновления оригинального
+погрузчика не попадут в старый собранный мод автоматически.
 
-Генераторы создают ровно шесть собственных packages: helper actor, два
-`VoyageInputAction`, замену `IMC_Forklift_Keyboard`, child погрузчика и child
-HUD. Builder объединяет их, два свежих оригинала и `scriptobjects.bin` в один
-контейнер. UE4SS и DML на runtime не нужны.
+Генераторы создают ровно пять собственных packages: helper actor, два
+`VoyageInputAction`, замену `IMC_Forklift_Keyboard` и child погрузчика. Builder
+объединяет их, свежий оригинал погрузчика и `scriptobjects.bin` в один
+шести-asset контейнер. UE4SS и DML на runtime не нужны.
 
 ### Управление автономного helper
 
@@ -319,12 +314,12 @@ producer-ом водительской панели.
 slots. Поэтому порядок returned array и одинаковый `Priority` не задают
 визуальный порядок; первоначально X/C появились как `C E H X`.
 
-Child HUD ждёт заполнения ряда, обходит всех детей и идентифицирует только
-собственные widgets по цепочке
-`InteractIndicator.ButtonInfoContainer.InputActions` и точной UObject identity
-`IAV_DonkLiftBrake`/`IAV_DonkLiftCenterSteering`. Затем он удаляет найденные
-widgets и добавляет их в конец как Brake, Center. Относительный порядок любых
-штатных или сторонних действий сохраняется; итог `E H X C` подтверждён в игре.
+Экспериментальный child HUD мог найти собственные widgets по точной UObject
+identity и переставить их в конец. Однако ESC/resume повторно заполняет тот же
+ряд без реконструкции owning HUD: при входе получалось `E H X C`, после меню —
+нативное `C E H X`. Периодический опрос ради косметического порядка признан
+неоправданным. Production-мод не подменяет HUD и принимает порядок, который
+выбирает игра; стандартные actions и их lifecycle при этом остаются нативными.
 
 Локализация берётся из
 `VoyageGameUserSettings.CustomSettings.LanguageType`, а не из
