@@ -6,6 +6,11 @@ compile their `UCommandlet` classes inside an Unreal `Source` module. Moving
 these files to the repository-level `tools/` directory would make the
 commandlets unavailable to UnrealEditor.
 
+Engine-level header-only names shared with future generator modules live in
+`../../../../tools/UnrealEditorGeneratorCommon/Public`. The module adds that
+directory as a private include path; game- and DonkLift-specific identities
+remain beside these commandlets.
+
 The module provides three commands:
 
 - `GenerateDonkLiftMod` creates the helper actor, X/C input actions, and the

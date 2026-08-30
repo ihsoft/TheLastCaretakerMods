@@ -8,6 +8,8 @@
 
 #if WITH_EDITOR
 
+#include "BlueprintGraphNames.h"
+#include "DonkLiftAssetNames.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "InputModifiers.h"
@@ -25,6 +27,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Containers/UnrealString.h"
 #include "Misc/PackageName.h"
 #include "PlayerMappableKeySettings.h"
 #include "UObject/SavePackage.h"
@@ -36,8 +39,80 @@ namespace
 constexpr TCHAR PackageName[] = TEXT("/Game/Mods/DonkLiftKeyboardControl/ModActor");
 constexpr TCHAR AssetName[] = TEXT("ModActor");
 constexpr TCHAR ForkliftContextPackageName[] = TEXT("/Game/Game/Input/Vehicle/IMC_Forklift_Keyboard");
-constexpr TCHAR BrakeActionPackageName[] = TEXT("/Game/Mods/DonkLiftKeyboardControl/IAV_DonkLiftBrake");
-constexpr TCHAR CenterActionPackageName[] = TEXT("/Game/Mods/DonkLiftKeyboardControl/IAV_DonkLiftCenterSteering");
+constexpr TCHAR ForkliftContextAssetName[] = TEXT("IMC_Forklift_Keyboard");
+constexpr TCHAR ForkliftContextDescription[] = TEXT("Vehicle keyboard");
+constexpr TCHAR GeneratorBlueprintName[] = TEXT("GenerateDonkLiftMod");
+
+struct InputActionContract
+{
+    const TCHAR* PackageName;
+    const TCHAR* AssetName;
+    bool IsVoyageAction;
+    EInputActionValueType ValueType;
+};
+
+namespace ForkliftInputAssets
+{
+constexpr InputActionContract Forward{
+    TEXT("/Game/Game/Input/Vehicle/IA_VehicleForward"), TEXT("IA_VehicleForward"), false, EInputActionValueType::Axis1D};
+constexpr InputActionContract Backward{
+    TEXT("/Game/Game/Input/Vehicle/IA_VehicleBackward"), TEXT("IA_VehicleBackward"), false, EInputActionValueType::Axis1D};
+constexpr InputActionContract Right{
+    TEXT("/Game/Game/Input/Vehicle/IA_VehicleRight"), TEXT("IA_VehicleRight"), false, EInputActionValueType::Axis1D};
+constexpr InputActionContract Left{
+    TEXT("/Game/Game/Input/Vehicle/IA_VehicleLeft"), TEXT("IA_VehicleLeft"), false, EInputActionValueType::Axis1D};
+constexpr InputActionContract LookUp{
+    TEXT("/Game/Game/Input/Character/IA_LookUp"), TEXT("IA_LookUp"), false, EInputActionValueType::Axis1D};
+constexpr InputActionContract LookRight{
+    TEXT("/Game/Game/Input/Character/IA_LookRight"), TEXT("IA_LookRight"), false, EInputActionValueType::Axis1D};
+constexpr InputActionContract Zoom{
+    TEXT("/Game/Game/Input/Character/IA_Zoom"), TEXT("IA_Zoom"), false, EInputActionValueType::Axis1D};
+constexpr InputActionContract Exit{
+    TEXT("/Game/Game/Input/Vehicle/IAV_VehicleExit"), TEXT("IAV_VehicleExit"), true, EInputActionValueType::Boolean};
+constexpr InputActionContract SwitchCamera{
+    TEXT("/Game/Game/Input/Vehicle/IAV_VehicleSwitchCamera"), TEXT("IAV_VehicleSwitchCamera"), true, EInputActionValueType::Boolean};
+constexpr InputActionContract ForkUp{
+    TEXT("/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkUp"), TEXT("IAV_Forklift_ForkUp"), true, EInputActionValueType::Axis1D};
+constexpr InputActionContract ForkDown{
+    TEXT("/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkDown"), TEXT("IAV_Forklift_ForkDown"), true, EInputActionValueType::Axis1D};
+constexpr InputActionContract Horn{
+    TEXT("/Game/Game/Input/Vehicle/IAV_VehicleHorn"), TEXT("IAV_VehicleHorn"), true, EInputActionValueType::Boolean};
+constexpr InputActionContract Handbrake{
+    TEXT("/Game/Game/Input/Vehicle/IAV_VehicleHandbrake"), TEXT("IAV_VehicleHandbrake"), true, EInputActionValueType::Boolean};
+constexpr InputActionContract ForkTiltUp{
+    TEXT("/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkTiltUp"), TEXT("IAV_Forklift_ForkTiltUp"), true, EInputActionValueType::Axis1D};
+constexpr InputActionContract ForkTiltDown{
+    TEXT("/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkTiltDown"), TEXT("IAV_Forklift_ForkTiltDown"), true, EInputActionValueType::Axis1D};
+}
+namespace PinNames = BlueprintGraphNames::Pins;
+namespace BinaryPins = BlueprintGraphNames::Pins::Binary;
+namespace SelectPins = BlueprintGraphNames::Pins::Select;
+
+namespace VariableNames
+{
+const FName IntegratedThrottle(TEXT("IntegratedThrottle"));
+const FName IntegratedSteering(TEXT("IntegratedSteering"));
+const FName SteeringVelocity(TEXT("SteeringVelocity"));
+const FName ThrottleInput(TEXT("ThrottleInput"));
+const FName SteeringInput(TEXT("SteeringInput"));
+}
+
+namespace InputDefaults
+{
+constexpr double Neutral = 0.0;
+constexpr double DigitalPositive = 1.0;
+constexpr double DigitalNegative = -1.0;
+constexpr double ThrottleRate = 1.0 / 3.0;
+constexpr double SteeringMaximumSpeed = 1.20;
+constexpr double SteeringAcceleration = 2.50;
+constexpr double SteeringReversalBraking = 5.00;
+// The game's exact -1/+1 values are commands, so our integrated state stops short.
+constexpr double IntegratedInputMinimum = -0.9999;
+constexpr double IntegratedInputMaximum = 0.9999;
+constexpr int32 PlayerIndex = 0;
+constexpr TCHAR BrakeKey[] = TEXT("X");
+constexpr TCHAR CenterSteeringKey[] = TEXT("C");
+}
 
 template <typename NodeType>
 NodeType* FinishNode(NodeType* Node, UEdGraph* Graph, int32 X, int32 Y)
@@ -109,6 +184,16 @@ void SetDefault(UEdGraphNode* Node, const FName Name, const TCHAR* Value)
     RequirePin(Node, Name)->DefaultValue = Value;
 }
 
+void SetDefault(UEdGraphNode* Node, const FName Name, const double Value)
+{
+    RequirePin(Node, Name)->DefaultValue = LexToString(Value);
+}
+
+void SetDefault(UEdGraphNode* Node, const FName Name, const int32 Value)
+{
+    RequirePin(Node, Name)->DefaultValue = LexToString(Value);
+}
+
 bool Connect(const UEdGraphSchema_K2* Schema, UEdGraphPin* A, UEdGraphPin* B)
 {
     if (!Schema->TryCreateConnection(A, B))
@@ -121,9 +206,9 @@ bool Connect(const UEdGraphSchema_K2* Schema, UEdGraphPin* A, UEdGraphPin* B)
     return true;
 }
 
-UFunction* MathFunction(const TCHAR* Name)
+UFunction* MathFunction(const FName Name)
 {
-    return UKismetMathLibrary::StaticClass()->FindFunctionByName(FName(Name));
+    return UKismetMathLibrary::StaticClass()->FindFunctionByName(Name);
 }
 
 bool SaveAssetPackage(UPackage* Package, UObject* Asset, const TCHAR* LongPackageName)
@@ -167,7 +252,7 @@ UVoyageInputAction* CreateVoyageInputAction(
         RF_Public | RF_Transactional);
     Settings->Name = FName(MappingName);
     Settings->DisplayName = LabelText;
-    Settings->DisplayCategory = FText::FromString(TEXT("Vehicle"));
+    Settings->DisplayCategory = FText::FromString(DonkLiftAssetNames::VehicleInputCategory);
     Action->SetPlayerMappableKeySettings(Settings);
 
     if (!SaveAssetPackage(Package, Action, LongPackageName))
@@ -177,29 +262,25 @@ UVoyageInputAction* CreateVoyageInputAction(
     return Action;
 }
 
-UInputAction* CreateInputActionPlaceholder(
-    const TCHAR* LongPackageName,
-    const TCHAR* InputActionAssetName,
-    const bool bVoyageAction,
-    const EInputActionValueType ValueType)
+UInputAction* CreateInputActionPlaceholder(const InputActionContract& Contract)
 {
-    UPackage* Package = CreatePackage(LongPackageName);
-    UInputAction* Action = bVoyageAction
+    UPackage* Package = CreatePackage(Contract.PackageName);
+    UInputAction* Action = Contract.IsVoyageAction
         ? static_cast<UInputAction*>(NewObject<UVoyageInputAction>(
             Package,
-            FName(InputActionAssetName),
+            FName(Contract.AssetName),
             RF_Public | RF_Standalone | RF_Transactional))
         : NewObject<UInputAction>(
             Package,
-            FName(InputActionAssetName),
+            FName(Contract.AssetName),
             RF_Public | RF_Standalone | RF_Transactional);
     if (!Action)
     {
         return nullptr;
     }
 
-    Action->ValueType = ValueType;
-    if (!SaveAssetPackage(Package, Action, LongPackageName))
+    Action->ValueType = Contract.ValueType;
+    if (!SaveAssetPackage(Package, Action, Contract.PackageName))
     {
         return nullptr;
     }
@@ -230,51 +311,21 @@ UInputMappingContext* CreateForkliftKeyboardContext(
     UVoyageInputAction* BrakeAction,
     UVoyageInputAction* CenterAction)
 {
-    UInputAction* Forward = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/IA_VehicleForward"),
-        TEXT("IA_VehicleForward"), false, EInputActionValueType::Axis1D);
-    UInputAction* Backward = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/IA_VehicleBackward"),
-        TEXT("IA_VehicleBackward"), false, EInputActionValueType::Axis1D);
-    UInputAction* Right = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/IA_VehicleRight"),
-        TEXT("IA_VehicleRight"), false, EInputActionValueType::Axis1D);
-    UInputAction* Left = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/IA_VehicleLeft"),
-        TEXT("IA_VehicleLeft"), false, EInputActionValueType::Axis1D);
-    UInputAction* LookUp = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Character/IA_LookUp"),
-        TEXT("IA_LookUp"), false, EInputActionValueType::Axis1D);
-    UInputAction* LookRight = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Character/IA_LookRight"),
-        TEXT("IA_LookRight"), false, EInputActionValueType::Axis1D);
-    UInputAction* Zoom = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Character/IA_Zoom"),
-        TEXT("IA_Zoom"), false, EInputActionValueType::Axis1D);
-    UInputAction* Exit = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/IAV_VehicleExit"),
-        TEXT("IAV_VehicleExit"), true, EInputActionValueType::Boolean);
-    UInputAction* SwitchCamera = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/IAV_VehicleSwitchCamera"),
-        TEXT("IAV_VehicleSwitchCamera"), true, EInputActionValueType::Boolean);
-    UInputAction* ForkUp = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkUp"),
-        TEXT("IAV_Forklift_ForkUp"), true, EInputActionValueType::Axis1D);
-    UInputAction* ForkDown = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkDown"),
-        TEXT("IAV_Forklift_ForkDown"), true, EInputActionValueType::Axis1D);
-    UInputAction* Horn = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/IAV_VehicleHorn"),
-        TEXT("IAV_VehicleHorn"), true, EInputActionValueType::Boolean);
-    UInputAction* Handbrake = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/IAV_VehicleHandbrake"),
-        TEXT("IAV_VehicleHandbrake"), true, EInputActionValueType::Boolean);
-    UInputAction* ForkTiltUp = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkTiltUp"),
-        TEXT("IAV_Forklift_ForkTiltUp"), true, EInputActionValueType::Axis1D);
-    UInputAction* ForkTiltDown = CreateInputActionPlaceholder(
-        TEXT("/Game/Game/Input/Vehicle/Forklift/IAV_Forklift_ForkTiltDown"),
-        TEXT("IAV_Forklift_ForkTiltDown"), true, EInputActionValueType::Axis1D);
+    UInputAction* Forward = CreateInputActionPlaceholder(ForkliftInputAssets::Forward);
+    UInputAction* Backward = CreateInputActionPlaceholder(ForkliftInputAssets::Backward);
+    UInputAction* Right = CreateInputActionPlaceholder(ForkliftInputAssets::Right);
+    UInputAction* Left = CreateInputActionPlaceholder(ForkliftInputAssets::Left);
+    UInputAction* LookUp = CreateInputActionPlaceholder(ForkliftInputAssets::LookUp);
+    UInputAction* LookRight = CreateInputActionPlaceholder(ForkliftInputAssets::LookRight);
+    UInputAction* Zoom = CreateInputActionPlaceholder(ForkliftInputAssets::Zoom);
+    UInputAction* Exit = CreateInputActionPlaceholder(ForkliftInputAssets::Exit);
+    UInputAction* SwitchCamera = CreateInputActionPlaceholder(ForkliftInputAssets::SwitchCamera);
+    UInputAction* ForkUp = CreateInputActionPlaceholder(ForkliftInputAssets::ForkUp);
+    UInputAction* ForkDown = CreateInputActionPlaceholder(ForkliftInputAssets::ForkDown);
+    UInputAction* Horn = CreateInputActionPlaceholder(ForkliftInputAssets::Horn);
+    UInputAction* Handbrake = CreateInputActionPlaceholder(ForkliftInputAssets::Handbrake);
+    UInputAction* ForkTiltUp = CreateInputActionPlaceholder(ForkliftInputAssets::ForkTiltUp);
+    UInputAction* ForkTiltDown = CreateInputActionPlaceholder(ForkliftInputAssets::ForkTiltDown);
 
     if (!Forward || !Backward || !Right || !Left || !LookUp || !LookRight || !Zoom ||
         !Exit || !SwitchCamera || !ForkUp || !ForkDown || !Horn || !Handbrake ||
@@ -286,7 +337,7 @@ UInputMappingContext* CreateForkliftKeyboardContext(
     UPackage* Package = CreatePackage(ForkliftContextPackageName);
     UInputMappingContext* Context = NewObject<UInputMappingContext>(
         Package,
-        FName(TEXT("IMC_Forklift_Keyboard")),
+        FName(ForkliftContextAssetName),
         RF_Public | RF_Standalone | RF_Transactional);
     if (!Context)
     {
@@ -310,7 +361,7 @@ UInputMappingContext* CreateForkliftKeyboardContext(
     AddContextMapping(Context, ForkTiltDown, EKeys::F);
     AddContextMapping(Context, BrakeAction, EKeys::X);
     AddContextMapping(Context, CenterAction, EKeys::C);
-    Context->ContextDescription = FText::FromString(TEXT("Vehicle keyboard"));
+    Context->ContextDescription = FText::FromString(ForkliftContextDescription);
 
     if (!SaveAssetPackage(Package, Context, ForkliftContextPackageName))
     {
@@ -337,15 +388,15 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
     }
 
     UVoyageInputAction* BrakeAction = CreateVoyageInputAction(
-        BrakeActionPackageName,
-        TEXT("IAV_DonkLiftBrake"),
-        TEXT("DonkLiftBrake"),
-        TEXT("Brake"));
+        DonkLiftAssetNames::BrakeActionPackageName,
+        DonkLiftAssetNames::BrakeActionAssetName,
+        DonkLiftAssetNames::BrakeMappingName,
+        DonkLiftAssetNames::BrakeDisplayLabel);
     UVoyageInputAction* CenterAction = CreateVoyageInputAction(
-        CenterActionPackageName,
-        TEXT("IAV_DonkLiftCenterSteering"),
-        TEXT("DonkLiftCenterSteering"),
-        TEXT("Center"));
+        DonkLiftAssetNames::CenterActionPackageName,
+        DonkLiftAssetNames::CenterActionAssetName,
+        DonkLiftAssetNames::CenterMappingName,
+        DonkLiftAssetNames::CenterDisplayLabel);
     UInputMappingContext* ForkliftContext = CreateForkliftKeyboardContext(BrakeAction, CenterAction);
     if (!BrakeAction || !CenterAction || !ForkliftContext)
     {
@@ -361,7 +412,7 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
         BPTYPE_Normal,
         UBlueprint::StaticClass(),
         UBlueprintGeneratedClass::StaticClass(),
-        FName(TEXT("GenerateDonkLiftMod")));
+        FName(GeneratorBlueprintName));
 
     if (!Blueprint)
     {
@@ -374,9 +425,9 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
     DoubleType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
     if (!FBlueprintEditorUtils::AddMemberVariable(
             Blueprint,
-            FName(TEXT("IntegratedThrottle")),
+            VariableNames::IntegratedThrottle,
             DoubleType,
-            TEXT("0.0")))
+            LexToString(InputDefaults::Neutral)))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to add IntegratedThrottle"));
         return 1;
@@ -384,14 +435,14 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
 
     if (!FBlueprintEditorUtils::AddMemberVariable(
             Blueprint,
-            FName(TEXT("IntegratedSteering")),
+            VariableNames::IntegratedSteering,
             DoubleType,
-            TEXT("0.0")) ||
+            LexToString(InputDefaults::Neutral)) ||
         !FBlueprintEditorUtils::AddMemberVariable(
             Blueprint,
-            FName(TEXT("SteeringVelocity")),
+            VariableNames::SteeringVelocity,
             DoubleType,
-            TEXT("0.0")))
+            LexToString(InputDefaults::Neutral)))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to add steering state"));
         return 1;
@@ -407,7 +458,7 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
     const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
 
     UK2Node_Event* Tick = NewObject<UK2Node_Event>(Graph);
-    Tick->EventReference.SetExternalMember(FName(TEXT("ReceiveTick")), AActor::StaticClass());
+    Tick->EventReference.SetExternalMember(BlueprintGraphNames::Events::ActorReceiveTick, AActor::StaticClass());
     Tick->bOverrideFunction = true;
     FinishNode(Tick, Graph, 0, 0);
 
@@ -435,31 +486,31 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
 
     UK2Node_VariableGet* RawThrottle = AddVariableGet(
         Graph,
-        FName(TEXT("ThrottleInput")),
+        VariableNames::ThrottleInput,
         AVoyageVehicleForkliftPawn::StaticClass(),
         700,
         220);
     UK2Node_VariableGet* CurrentThrottle = AddVariableGet(
         Graph,
-        FName(TEXT("IntegratedThrottle")),
+        VariableNames::IntegratedThrottle,
         nullptr,
         1180,
         500);
     UK2Node_VariableGet* RawSteering = AddVariableGet(
         Graph,
-        FName(TEXT("SteeringInput")),
+        VariableNames::SteeringInput,
         AVoyageVehicleForkliftPawn::StaticClass(),
         700,
         720);
     UK2Node_VariableGet* CurrentSteering = AddVariableGet(
         Graph,
-        FName(TEXT("IntegratedSteering")),
+        VariableNames::IntegratedSteering,
         nullptr,
         1180,
         1080);
     UK2Node_VariableGet* CurrentSteeringVelocity = AddVariableGet(
         Graph,
-        FName(TEXT("SteeringVelocity")),
+        VariableNames::SteeringVelocity,
         nullptr,
         1180,
         1260);
@@ -470,122 +521,122 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
             GET_FUNCTION_NAME_CHECKED(UGameplayStatics, GetPlayerController)),
         700,
         -180);
-    SetDefault(GetController, FName(TEXT("PlayerIndex")), TEXT("0"));
+    SetDefault(GetController, PinNames::PlayerIndex, InputDefaults::PlayerIndex);
 
     UFunction* WasInputKeyJustPressed = APlayerController::StaticClass()->FindFunctionByName(
         GET_FUNCTION_NAME_CHECKED(APlayerController, WasInputKeyJustPressed));
     UK2Node_CallFunction* WasXPressed = AddCall(Graph, WasInputKeyJustPressed, 940, -180);
-    SetDefault(WasXPressed, FName(TEXT("Key")), TEXT("X"));
+    SetDefault(WasXPressed, PinNames::Key, InputDefaults::BrakeKey);
     UK2Node_CallFunction* WasCPressed = AddCall(Graph, WasInputKeyJustPressed, 3940, 1080);
-    SetDefault(WasCPressed, FName(TEXT("Key")), TEXT("C"));
+    SetDefault(WasCPressed, PinNames::Key, InputDefaults::CenterSteeringKey);
 
-    UK2Node_CallFunction* IsForward = AddCall(Graph, MathFunction(TEXT("EqualEqual_DoubleDouble")), 940, 120);
-    UK2Node_CallFunction* IsReverse = AddCall(Graph, MathFunction(TEXT("EqualEqual_DoubleDouble")), 940, 300);
-    SetDefault(IsForward, FName(TEXT("B")), TEXT("1.0"));
-    SetDefault(IsReverse, FName(TEXT("B")), TEXT("-1.0"));
+    UK2Node_CallFunction* IsForward = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::EqualDouble), 940, 120);
+    UK2Node_CallFunction* IsReverse = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::EqualDouble), 940, 300);
+    SetDefault(IsForward, BinaryPins::RightOperand, InputDefaults::DigitalPositive);
+    SetDefault(IsReverse, BinaryPins::RightOperand, InputDefaults::DigitalNegative);
 
-    UK2Node_CallFunction* ForwardDirection = AddCall(Graph, MathFunction(TEXT("SelectFloat")), 1190, 80);
-    UK2Node_CallFunction* ReverseDirection = AddCall(Graph, MathFunction(TEXT("SelectFloat")), 1190, 260);
-    SetDefault(ForwardDirection, FName(TEXT("A")), TEXT("1.0"));
-    SetDefault(ForwardDirection, FName(TEXT("B")), TEXT("0.0"));
-    SetDefault(ReverseDirection, FName(TEXT("A")), TEXT("-1.0"));
-    SetDefault(ReverseDirection, FName(TEXT("B")), TEXT("0.0"));
+    UK2Node_CallFunction* ForwardDirection = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::SelectFloat), 1190, 80);
+    UK2Node_CallFunction* ReverseDirection = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::SelectFloat), 1190, 260);
+    SetDefault(ForwardDirection, SelectPins::WhenTrue, InputDefaults::DigitalPositive);
+    SetDefault(ForwardDirection, SelectPins::WhenFalse, InputDefaults::Neutral);
+    SetDefault(ReverseDirection, SelectPins::WhenTrue, InputDefaults::DigitalNegative);
+    SetDefault(ReverseDirection, SelectPins::WhenFalse, InputDefaults::Neutral);
 
-    UK2Node_CallFunction* AddDirection = AddCall(Graph, MathFunction(TEXT("Add_DoubleDouble")), 1450, 170);
-    UK2Node_CallFunction* ScaleRate = AddCall(Graph, MathFunction(TEXT("Multiply_DoubleDouble")), 1680, 170);
-    UK2Node_CallFunction* ScaleTime = AddCall(Graph, MathFunction(TEXT("Multiply_DoubleDouble")), 1900, 170);
-    UK2Node_CallFunction* AddCurrent = AddCall(Graph, MathFunction(TEXT("Add_DoubleDouble")), 2130, 280);
-    UK2Node_CallFunction* Clamp = AddCall(Graph, MathFunction(TEXT("FClamp")), 2360, 280);
-    UK2Node_CallFunction* ResetThrottle = AddCall(Graph, MathFunction(TEXT("SelectFloat")), 2500, 500);
-    SetDefault(ScaleRate, FName(TEXT("B")), TEXT("0.3333333333333333"));
-    SetDefault(Clamp, FName(TEXT("Min")), TEXT("-0.9999"));
-    SetDefault(Clamp, FName(TEXT("Max")), TEXT("0.9999"));
-    SetDefault(ResetThrottle, FName(TEXT("A")), TEXT("0.0"));
+    UK2Node_CallFunction* AddDirection = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::AddDouble), 1450, 170);
+    UK2Node_CallFunction* ScaleRate = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::MultiplyDouble), 1680, 170);
+    UK2Node_CallFunction* ScaleTime = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::MultiplyDouble), 1900, 170);
+    UK2Node_CallFunction* AddCurrent = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::AddDouble), 2130, 280);
+    UK2Node_CallFunction* ClampThrottle = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::ClampFloat), 2360, 280);
+    UK2Node_CallFunction* ResetThrottle = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::SelectFloat), 2500, 500);
+    SetDefault(ScaleRate, BinaryPins::RightOperand, InputDefaults::ThrottleRate);
+    SetDefault(ClampThrottle, PinNames::Min, InputDefaults::IntegratedInputMinimum);
+    SetDefault(ClampThrottle, PinNames::Max, InputDefaults::IntegratedInputMaximum);
+    SetDefault(ResetThrottle, SelectPins::WhenTrue, InputDefaults::Neutral);
 
     UK2Node_VariableSet* SetIntegrated = AddVariableSet(
         Graph,
-        FName(TEXT("IntegratedThrottle")),
+        VariableNames::IntegratedThrottle,
         nullptr,
         2620,
         0);
     UK2Node_VariableSet* SetThrottle = AddVariableSet(
         Graph,
-        FName(TEXT("ThrottleInput")),
+        VariableNames::ThrottleInput,
         AVoyageVehicleForkliftPawn::StaticClass(),
         2870,
         0);
 
-    UK2Node_CallFunction* IsSteeringPositive = AddCall(Graph, MathFunction(TEXT("EqualEqual_DoubleDouble")), 940, 700);
-    UK2Node_CallFunction* IsSteeringNegative = AddCall(Graph, MathFunction(TEXT("EqualEqual_DoubleDouble")), 940, 880);
-    SetDefault(IsSteeringPositive, FName(TEXT("B")), TEXT("1.0"));
-    SetDefault(IsSteeringNegative, FName(TEXT("B")), TEXT("-1.0"));
+    UK2Node_CallFunction* IsSteeringPositive = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::EqualDouble), 940, 700);
+    UK2Node_CallFunction* IsSteeringNegative = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::EqualDouble), 940, 880);
+    SetDefault(IsSteeringPositive, BinaryPins::RightOperand, InputDefaults::DigitalPositive);
+    SetDefault(IsSteeringNegative, BinaryPins::RightOperand, InputDefaults::DigitalNegative);
 
-    UK2Node_CallFunction* PositiveSteeringDirection = AddCall(Graph, MathFunction(TEXT("SelectFloat")), 1190, 660);
-    UK2Node_CallFunction* NegativeSteeringDirection = AddCall(Graph, MathFunction(TEXT("SelectFloat")), 1190, 840);
-    SetDefault(PositiveSteeringDirection, FName(TEXT("A")), TEXT("1.0"));
-    SetDefault(PositiveSteeringDirection, FName(TEXT("B")), TEXT("0.0"));
-    SetDefault(NegativeSteeringDirection, FName(TEXT("A")), TEXT("-1.0"));
-    SetDefault(NegativeSteeringDirection, FName(TEXT("B")), TEXT("0.0"));
+    UK2Node_CallFunction* PositiveSteeringDirection = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::SelectFloat), 1190, 660);
+    UK2Node_CallFunction* NegativeSteeringDirection = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::SelectFloat), 1190, 840);
+    SetDefault(PositiveSteeringDirection, SelectPins::WhenTrue, InputDefaults::DigitalPositive);
+    SetDefault(PositiveSteeringDirection, SelectPins::WhenFalse, InputDefaults::Neutral);
+    SetDefault(NegativeSteeringDirection, SelectPins::WhenTrue, InputDefaults::DigitalNegative);
+    SetDefault(NegativeSteeringDirection, SelectPins::WhenFalse, InputDefaults::Neutral);
 
-    UK2Node_CallFunction* AddSteeringDirection = AddCall(Graph, MathFunction(TEXT("Add_DoubleDouble")), 1450, 750);
-    UK2Node_CallFunction* TargetSteeringVelocity = AddCall(Graph, MathFunction(TEXT("Multiply_DoubleDouble")), 1680, 650);
-    UK2Node_CallFunction* SteeringVelocityDirection = AddCall(Graph, MathFunction(TEXT("Multiply_DoubleDouble")), 1680, 840);
-    SetDefault(TargetSteeringVelocity, FName(TEXT("B")), TEXT("1.20"));
+    UK2Node_CallFunction* AddSteeringDirection = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::AddDouble), 1450, 750);
+    UK2Node_CallFunction* TargetSteeringVelocity = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::MultiplyDouble), 1680, 650);
+    UK2Node_CallFunction* SteeringVelocityDirection = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::MultiplyDouble), 1680, 840);
+    SetDefault(TargetSteeringVelocity, BinaryPins::RightOperand, InputDefaults::SteeringMaximumSpeed);
 
-    UK2Node_CallFunction* IsReversingSteering = AddCall(Graph, MathFunction(TEXT("Less_DoubleDouble")), 1900, 840);
-    SetDefault(IsReversingSteering, FName(TEXT("B")), TEXT("0.0"));
-    UK2Node_CallFunction* SelectSteeringAcceleration = AddCall(Graph, MathFunction(TEXT("SelectFloat")), 2130, 840);
-    SetDefault(SelectSteeringAcceleration, FName(TEXT("A")), TEXT("5.00"));
-    SetDefault(SelectSteeringAcceleration, FName(TEXT("B")), TEXT("2.50"));
-    UK2Node_CallFunction* ScaleSteeringAccelerationTime = AddCall(Graph, MathFunction(TEXT("Multiply_DoubleDouble")), 2360, 840);
-    UK2Node_CallFunction* NegateSteeringMaximumChange = AddCall(Graph, MathFunction(TEXT("Multiply_DoubleDouble")), 2580, 980);
-    SetDefault(NegateSteeringMaximumChange, FName(TEXT("B")), TEXT("-1.0"));
+    UK2Node_CallFunction* IsReversingSteering = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::LessDouble), 1900, 840);
+    SetDefault(IsReversingSteering, BinaryPins::RightOperand, InputDefaults::Neutral);
+    UK2Node_CallFunction* SelectSteeringAcceleration = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::SelectFloat), 2130, 840);
+    SetDefault(SelectSteeringAcceleration, SelectPins::WhenTrue, InputDefaults::SteeringReversalBraking);
+    SetDefault(SelectSteeringAcceleration, SelectPins::WhenFalse, InputDefaults::SteeringAcceleration);
+    UK2Node_CallFunction* ScaleSteeringAccelerationTime = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::MultiplyDouble), 2360, 840);
+    UK2Node_CallFunction* NegateSteeringMaximumChange = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::MultiplyDouble), 2580, 980);
+    SetDefault(NegateSteeringMaximumChange, BinaryPins::RightOperand, InputDefaults::DigitalNegative);
 
-    UK2Node_CallFunction* SteeringVelocityDifference = AddCall(Graph, MathFunction(TEXT("Subtract_DoubleDouble")), 2130, 650);
-    UK2Node_CallFunction* ClampSteeringVelocityChange = AddCall(Graph, MathFunction(TEXT("FClamp")), 2800, 760);
-    UK2Node_CallFunction* AddSteeringVelocity = AddCall(Graph, MathFunction(TEXT("Add_DoubleDouble")), 3030, 760);
-    UK2Node_CallFunction* IsSteeringReleased = AddCall(Graph, MathFunction(TEXT("EqualEqual_DoubleDouble")), 1900, 1080);
-    SetDefault(IsSteeringReleased, FName(TEXT("B")), TEXT("0.0"));
-    UK2Node_CallFunction* StopReleasedSteering = AddCall(Graph, MathFunction(TEXT("SelectFloat")), 3260, 760);
-    SetDefault(StopReleasedSteering, FName(TEXT("A")), TEXT("0.0"));
+    UK2Node_CallFunction* SteeringVelocityDifference = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::SubtractDouble), 2130, 650);
+    UK2Node_CallFunction* ClampSteeringVelocityChange = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::ClampFloat), 2800, 760);
+    UK2Node_CallFunction* AddSteeringVelocity = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::AddDouble), 3030, 760);
+    UK2Node_CallFunction* IsSteeringReleased = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::EqualDouble), 1900, 1080);
+    SetDefault(IsSteeringReleased, BinaryPins::RightOperand, InputDefaults::Neutral);
+    UK2Node_CallFunction* StopReleasedSteering = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::SelectFloat), 3260, 760);
+    SetDefault(StopReleasedSteering, SelectPins::WhenTrue, InputDefaults::Neutral);
 
-    UK2Node_CallFunction* ResetSteeringVelocity = AddCall(Graph, MathFunction(TEXT("SelectFloat")), 3490, 1080);
-    SetDefault(ResetSteeringVelocity, FName(TEXT("A")), TEXT("0.0"));
-    UK2Node_CallFunction* ScaleSteeringTime = AddCall(Graph, MathFunction(TEXT("Multiply_DoubleDouble")), 3490, 760);
-    UK2Node_CallFunction* AddCurrentSteering = AddCall(Graph, MathFunction(TEXT("Add_DoubleDouble")), 3710, 860);
-    UK2Node_CallFunction* ClampSteering = AddCall(Graph, MathFunction(TEXT("FClamp")), 3940, 860);
-    SetDefault(ClampSteering, FName(TEXT("Min")), TEXT("-0.9999"));
-    SetDefault(ClampSteering, FName(TEXT("Max")), TEXT("0.9999"));
-    UK2Node_CallFunction* ResetSteering = AddCall(Graph, MathFunction(TEXT("SelectFloat")), 4170, 860);
-    SetDefault(ResetSteering, FName(TEXT("A")), TEXT("0.0"));
+    UK2Node_CallFunction* ResetSteeringVelocity = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::SelectFloat), 3490, 1080);
+    SetDefault(ResetSteeringVelocity, SelectPins::WhenTrue, InputDefaults::Neutral);
+    UK2Node_CallFunction* ScaleSteeringTime = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::MultiplyDouble), 3490, 760);
+    UK2Node_CallFunction* AddCurrentSteering = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::AddDouble), 3710, 860);
+    UK2Node_CallFunction* ClampSteering = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::ClampFloat), 3940, 860);
+    SetDefault(ClampSteering, PinNames::Min, InputDefaults::IntegratedInputMinimum);
+    SetDefault(ClampSteering, PinNames::Max, InputDefaults::IntegratedInputMaximum);
+    UK2Node_CallFunction* ResetSteering = AddCall(Graph, MathFunction(BlueprintGraphNames::MathFunctions::SelectFloat), 4170, 860);
+    SetDefault(ResetSteering, SelectPins::WhenTrue, InputDefaults::Neutral);
 
     UK2Node_VariableSet* SetSteeringVelocity = AddVariableSet(
         Graph,
-        FName(TEXT("SteeringVelocity")),
+        VariableNames::SteeringVelocity,
         nullptr,
         3120,
         0);
     UK2Node_VariableGet* UpdatedSteeringVelocity = AddVariableGet(
         Graph,
-        FName(TEXT("SteeringVelocity")),
+        VariableNames::SteeringVelocity,
         nullptr,
         3370,
         620);
     UK2Node_VariableSet* SetIntegratedSteering = AddVariableSet(
         Graph,
-        FName(TEXT("IntegratedSteering")),
+        VariableNames::IntegratedSteering,
         nullptr,
         3370,
         0);
     UK2Node_VariableGet* UpdatedSteering = AddVariableGet(
         Graph,
-        FName(TEXT("IntegratedSteering")),
+        VariableNames::IntegratedSteering,
         nullptr,
         4170,
         620);
     UK2Node_VariableSet* SetSteering = AddVariableSet(
         Graph,
-        FName(TEXT("SteeringInput")),
+        VariableNames::SteeringInput,
         AVoyageVehicleForkliftPawn::StaticClass(),
         3620,
         0);
@@ -596,39 +647,39 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
     // through GetPlayerPawn and leaving a parked forklift under throttle.
     UK2Node_VariableSet* ClearIntegratedThrottle = AddVariableSet(
         Graph,
-        FName(TEXT("IntegratedThrottle")),
+        VariableNames::IntegratedThrottle,
         nullptr,
         1180,
         -420);
-    SetDefault(ClearIntegratedThrottle, FName(TEXT("IntegratedThrottle")), TEXT("0.0"));
+    SetDefault(ClearIntegratedThrottle, VariableNames::IntegratedThrottle, InputDefaults::Neutral);
     UK2Node_VariableSet* ClearThrottleInput = AddVariableSet(
         Graph,
-        FName(TEXT("ThrottleInput")),
+        VariableNames::ThrottleInput,
         AVoyageVehicleForkliftPawn::StaticClass(),
         1420,
         -420);
-    SetDefault(ClearThrottleInput, FName(TEXT("ThrottleInput")), TEXT("0.0"));
+    SetDefault(ClearThrottleInput, VariableNames::ThrottleInput, InputDefaults::Neutral);
     UK2Node_VariableSet* ClearSteeringVelocity = AddVariableSet(
         Graph,
-        FName(TEXT("SteeringVelocity")),
+        VariableNames::SteeringVelocity,
         nullptr,
         1660,
         -420);
-    SetDefault(ClearSteeringVelocity, FName(TEXT("SteeringVelocity")), TEXT("0.0"));
+    SetDefault(ClearSteeringVelocity, VariableNames::SteeringVelocity, InputDefaults::Neutral);
     UK2Node_VariableSet* ClearIntegratedSteering = AddVariableSet(
         Graph,
-        FName(TEXT("IntegratedSteering")),
+        VariableNames::IntegratedSteering,
         nullptr,
         1900,
         -420);
-    SetDefault(ClearIntegratedSteering, FName(TEXT("IntegratedSteering")), TEXT("0.0"));
+    SetDefault(ClearIntegratedSteering, VariableNames::IntegratedSteering, InputDefaults::Neutral);
     UK2Node_VariableSet* ClearSteeringInput = AddVariableSet(
         Graph,
-        FName(TEXT("SteeringInput")),
+        VariableNames::SteeringInput,
         AVoyageVehicleForkliftPawn::StaticClass(),
         2140,
         -420);
-    SetDefault(ClearSteeringInput, FName(TEXT("SteeringInput")), TEXT("0.0"));
+    SetDefault(ClearSteeringInput, VariableNames::SteeringInput, InputDefaults::Neutral);
 
     bool Ok = true;
     Ok &= Connect(Schema, RequirePin(Tick, UEdGraphSchema_K2::PN_Then), RequirePin(CastPawn, UEdGraphSchema_K2::PN_Execute));
@@ -656,59 +707,59 @@ int32 UGenerateDonkLiftModCommandlet::Main(const FString& Params)
     Ok &= Connect(Schema, CastPawn->GetCastResultPin(), RequirePin(ClearSteeringInput, UEdGraphSchema_K2::PN_Self));
     Ok &= Connect(Schema, GetController->GetReturnValuePin(), RequirePin(WasXPressed, UEdGraphSchema_K2::PN_Self));
     Ok &= Connect(Schema, GetController->GetReturnValuePin(), RequirePin(WasCPressed, UEdGraphSchema_K2::PN_Self));
-    Ok &= Connect(Schema, RawThrottle->GetValuePin(), RequirePin(IsForward, FName(TEXT("A"))));
-    Ok &= Connect(Schema, RawThrottle->GetValuePin(), RequirePin(IsReverse, FName(TEXT("A"))));
-    Ok &= Connect(Schema, IsForward->GetReturnValuePin(), RequirePin(ForwardDirection, FName(TEXT("bPickA"))));
-    Ok &= Connect(Schema, IsReverse->GetReturnValuePin(), RequirePin(ReverseDirection, FName(TEXT("bPickA"))));
-    Ok &= Connect(Schema, ForwardDirection->GetReturnValuePin(), RequirePin(AddDirection, FName(TEXT("A"))));
-    Ok &= Connect(Schema, ReverseDirection->GetReturnValuePin(), RequirePin(AddDirection, FName(TEXT("B"))));
-    Ok &= Connect(Schema, AddDirection->GetReturnValuePin(), RequirePin(ScaleRate, FName(TEXT("A"))));
-    Ok &= Connect(Schema, ScaleRate->GetReturnValuePin(), RequirePin(ScaleTime, FName(TEXT("A"))));
-    Ok &= Connect(Schema, RequirePin(Tick, FName(TEXT("DeltaSeconds"))), RequirePin(ScaleTime, FName(TEXT("B"))));
-    Ok &= Connect(Schema, ScaleTime->GetReturnValuePin(), RequirePin(AddCurrent, FName(TEXT("B"))));
-    Ok &= Connect(Schema, CurrentThrottle->GetValuePin(), RequirePin(AddCurrent, FName(TEXT("A"))));
-    Ok &= Connect(Schema, AddCurrent->GetReturnValuePin(), RequirePin(Clamp, FName(TEXT("Value"))));
-    Ok &= Connect(Schema, Clamp->GetReturnValuePin(), RequirePin(ResetThrottle, FName(TEXT("B"))));
-    Ok &= Connect(Schema, WasXPressed->GetReturnValuePin(), RequirePin(ResetThrottle, FName(TEXT("bPickA"))));
-    Ok &= Connect(Schema, ResetThrottle->GetReturnValuePin(), RequirePin(SetIntegrated, FName(TEXT("IntegratedThrottle"))));
-    Ok &= Connect(Schema, ResetThrottle->GetReturnValuePin(), RequirePin(SetThrottle, FName(TEXT("ThrottleInput"))));
+    Ok &= Connect(Schema, RawThrottle->GetValuePin(), RequirePin(IsForward, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, RawThrottle->GetValuePin(), RequirePin(IsReverse, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, IsForward->GetReturnValuePin(), RequirePin(ForwardDirection, SelectPins::Condition));
+    Ok &= Connect(Schema, IsReverse->GetReturnValuePin(), RequirePin(ReverseDirection, SelectPins::Condition));
+    Ok &= Connect(Schema, ForwardDirection->GetReturnValuePin(), RequirePin(AddDirection, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, ReverseDirection->GetReturnValuePin(), RequirePin(AddDirection, BinaryPins::RightOperand));
+    Ok &= Connect(Schema, AddDirection->GetReturnValuePin(), RequirePin(ScaleRate, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, ScaleRate->GetReturnValuePin(), RequirePin(ScaleTime, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, RequirePin(Tick, PinNames::DeltaSeconds), RequirePin(ScaleTime, BinaryPins::RightOperand));
+    Ok &= Connect(Schema, ScaleTime->GetReturnValuePin(), RequirePin(AddCurrent, BinaryPins::RightOperand));
+    Ok &= Connect(Schema, CurrentThrottle->GetValuePin(), RequirePin(AddCurrent, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, AddCurrent->GetReturnValuePin(), RequirePin(ClampThrottle, PinNames::Value));
+    Ok &= Connect(Schema, ClampThrottle->GetReturnValuePin(), RequirePin(ResetThrottle, SelectPins::WhenFalse));
+    Ok &= Connect(Schema, WasXPressed->GetReturnValuePin(), RequirePin(ResetThrottle, SelectPins::Condition));
+    Ok &= Connect(Schema, ResetThrottle->GetReturnValuePin(), RequirePin(SetIntegrated, VariableNames::IntegratedThrottle));
+    Ok &= Connect(Schema, ResetThrottle->GetReturnValuePin(), RequirePin(SetThrottle, VariableNames::ThrottleInput));
 
-    Ok &= Connect(Schema, RawSteering->GetValuePin(), RequirePin(IsSteeringPositive, FName(TEXT("A"))));
-    Ok &= Connect(Schema, RawSteering->GetValuePin(), RequirePin(IsSteeringNegative, FName(TEXT("A"))));
-    Ok &= Connect(Schema, IsSteeringPositive->GetReturnValuePin(), RequirePin(PositiveSteeringDirection, FName(TEXT("bPickA"))));
-    Ok &= Connect(Schema, IsSteeringNegative->GetReturnValuePin(), RequirePin(NegativeSteeringDirection, FName(TEXT("bPickA"))));
-    Ok &= Connect(Schema, PositiveSteeringDirection->GetReturnValuePin(), RequirePin(AddSteeringDirection, FName(TEXT("A"))));
-    Ok &= Connect(Schema, NegativeSteeringDirection->GetReturnValuePin(), RequirePin(AddSteeringDirection, FName(TEXT("B"))));
-    Ok &= Connect(Schema, AddSteeringDirection->GetReturnValuePin(), RequirePin(TargetSteeringVelocity, FName(TEXT("A"))));
-    Ok &= Connect(Schema, CurrentSteeringVelocity->GetValuePin(), RequirePin(SteeringVelocityDirection, FName(TEXT("A"))));
-    Ok &= Connect(Schema, AddSteeringDirection->GetReturnValuePin(), RequirePin(SteeringVelocityDirection, FName(TEXT("B"))));
-    Ok &= Connect(Schema, SteeringVelocityDirection->GetReturnValuePin(), RequirePin(IsReversingSteering, FName(TEXT("A"))));
-    Ok &= Connect(Schema, IsReversingSteering->GetReturnValuePin(), RequirePin(SelectSteeringAcceleration, FName(TEXT("bPickA"))));
-    Ok &= Connect(Schema, SelectSteeringAcceleration->GetReturnValuePin(), RequirePin(ScaleSteeringAccelerationTime, FName(TEXT("A"))));
-    Ok &= Connect(Schema, RequirePin(Tick, FName(TEXT("DeltaSeconds"))), RequirePin(ScaleSteeringAccelerationTime, FName(TEXT("B"))));
-    Ok &= Connect(Schema, ScaleSteeringAccelerationTime->GetReturnValuePin(), RequirePin(NegateSteeringMaximumChange, FName(TEXT("A"))));
-    Ok &= Connect(Schema, TargetSteeringVelocity->GetReturnValuePin(), RequirePin(SteeringVelocityDifference, FName(TEXT("A"))));
-    Ok &= Connect(Schema, CurrentSteeringVelocity->GetValuePin(), RequirePin(SteeringVelocityDifference, FName(TEXT("B"))));
-    Ok &= Connect(Schema, SteeringVelocityDifference->GetReturnValuePin(), RequirePin(ClampSteeringVelocityChange, FName(TEXT("Value"))));
-    Ok &= Connect(Schema, NegateSteeringMaximumChange->GetReturnValuePin(), RequirePin(ClampSteeringVelocityChange, FName(TEXT("Min"))));
-    Ok &= Connect(Schema, ScaleSteeringAccelerationTime->GetReturnValuePin(), RequirePin(ClampSteeringVelocityChange, FName(TEXT("Max"))));
-    Ok &= Connect(Schema, CurrentSteeringVelocity->GetValuePin(), RequirePin(AddSteeringVelocity, FName(TEXT("A"))));
-    Ok &= Connect(Schema, ClampSteeringVelocityChange->GetReturnValuePin(), RequirePin(AddSteeringVelocity, FName(TEXT("B"))));
-    Ok &= Connect(Schema, AddSteeringDirection->GetReturnValuePin(), RequirePin(IsSteeringReleased, FName(TEXT("A"))));
-    Ok &= Connect(Schema, IsSteeringReleased->GetReturnValuePin(), RequirePin(StopReleasedSteering, FName(TEXT("bPickA"))));
-    Ok &= Connect(Schema, AddSteeringVelocity->GetReturnValuePin(), RequirePin(StopReleasedSteering, FName(TEXT("B"))));
-    Ok &= Connect(Schema, StopReleasedSteering->GetReturnValuePin(), RequirePin(ResetSteeringVelocity, FName(TEXT("B"))));
-    Ok &= Connect(Schema, WasCPressed->GetReturnValuePin(), RequirePin(ResetSteeringVelocity, FName(TEXT("bPickA"))));
-    Ok &= Connect(Schema, ResetSteeringVelocity->GetReturnValuePin(), RequirePin(SetSteeringVelocity, FName(TEXT("SteeringVelocity"))));
-    Ok &= Connect(Schema, UpdatedSteeringVelocity->GetValuePin(), RequirePin(ScaleSteeringTime, FName(TEXT("A"))));
-    Ok &= Connect(Schema, RequirePin(Tick, FName(TEXT("DeltaSeconds"))), RequirePin(ScaleSteeringTime, FName(TEXT("B"))));
-    Ok &= Connect(Schema, CurrentSteering->GetValuePin(), RequirePin(AddCurrentSteering, FName(TEXT("A"))));
-    Ok &= Connect(Schema, ScaleSteeringTime->GetReturnValuePin(), RequirePin(AddCurrentSteering, FName(TEXT("B"))));
-    Ok &= Connect(Schema, AddCurrentSteering->GetReturnValuePin(), RequirePin(ClampSteering, FName(TEXT("Value"))));
-    Ok &= Connect(Schema, ClampSteering->GetReturnValuePin(), RequirePin(ResetSteering, FName(TEXT("B"))));
-    Ok &= Connect(Schema, WasCPressed->GetReturnValuePin(), RequirePin(ResetSteering, FName(TEXT("bPickA"))));
-    Ok &= Connect(Schema, ResetSteering->GetReturnValuePin(), RequirePin(SetIntegratedSteering, FName(TEXT("IntegratedSteering"))));
-    Ok &= Connect(Schema, UpdatedSteering->GetValuePin(), RequirePin(SetSteering, FName(TEXT("SteeringInput"))));
+    Ok &= Connect(Schema, RawSteering->GetValuePin(), RequirePin(IsSteeringPositive, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, RawSteering->GetValuePin(), RequirePin(IsSteeringNegative, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, IsSteeringPositive->GetReturnValuePin(), RequirePin(PositiveSteeringDirection, SelectPins::Condition));
+    Ok &= Connect(Schema, IsSteeringNegative->GetReturnValuePin(), RequirePin(NegativeSteeringDirection, SelectPins::Condition));
+    Ok &= Connect(Schema, PositiveSteeringDirection->GetReturnValuePin(), RequirePin(AddSteeringDirection, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, NegativeSteeringDirection->GetReturnValuePin(), RequirePin(AddSteeringDirection, BinaryPins::RightOperand));
+    Ok &= Connect(Schema, AddSteeringDirection->GetReturnValuePin(), RequirePin(TargetSteeringVelocity, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, CurrentSteeringVelocity->GetValuePin(), RequirePin(SteeringVelocityDirection, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, AddSteeringDirection->GetReturnValuePin(), RequirePin(SteeringVelocityDirection, BinaryPins::RightOperand));
+    Ok &= Connect(Schema, SteeringVelocityDirection->GetReturnValuePin(), RequirePin(IsReversingSteering, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, IsReversingSteering->GetReturnValuePin(), RequirePin(SelectSteeringAcceleration, SelectPins::Condition));
+    Ok &= Connect(Schema, SelectSteeringAcceleration->GetReturnValuePin(), RequirePin(ScaleSteeringAccelerationTime, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, RequirePin(Tick, PinNames::DeltaSeconds), RequirePin(ScaleSteeringAccelerationTime, BinaryPins::RightOperand));
+    Ok &= Connect(Schema, ScaleSteeringAccelerationTime->GetReturnValuePin(), RequirePin(NegateSteeringMaximumChange, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, TargetSteeringVelocity->GetReturnValuePin(), RequirePin(SteeringVelocityDifference, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, CurrentSteeringVelocity->GetValuePin(), RequirePin(SteeringVelocityDifference, BinaryPins::RightOperand));
+    Ok &= Connect(Schema, SteeringVelocityDifference->GetReturnValuePin(), RequirePin(ClampSteeringVelocityChange, PinNames::Value));
+    Ok &= Connect(Schema, NegateSteeringMaximumChange->GetReturnValuePin(), RequirePin(ClampSteeringVelocityChange, PinNames::Min));
+    Ok &= Connect(Schema, ScaleSteeringAccelerationTime->GetReturnValuePin(), RequirePin(ClampSteeringVelocityChange, PinNames::Max));
+    Ok &= Connect(Schema, CurrentSteeringVelocity->GetValuePin(), RequirePin(AddSteeringVelocity, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, ClampSteeringVelocityChange->GetReturnValuePin(), RequirePin(AddSteeringVelocity, BinaryPins::RightOperand));
+    Ok &= Connect(Schema, AddSteeringDirection->GetReturnValuePin(), RequirePin(IsSteeringReleased, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, IsSteeringReleased->GetReturnValuePin(), RequirePin(StopReleasedSteering, SelectPins::Condition));
+    Ok &= Connect(Schema, AddSteeringVelocity->GetReturnValuePin(), RequirePin(StopReleasedSteering, SelectPins::WhenFalse));
+    Ok &= Connect(Schema, StopReleasedSteering->GetReturnValuePin(), RequirePin(ResetSteeringVelocity, SelectPins::WhenFalse));
+    Ok &= Connect(Schema, WasCPressed->GetReturnValuePin(), RequirePin(ResetSteeringVelocity, SelectPins::Condition));
+    Ok &= Connect(Schema, ResetSteeringVelocity->GetReturnValuePin(), RequirePin(SetSteeringVelocity, VariableNames::SteeringVelocity));
+    Ok &= Connect(Schema, UpdatedSteeringVelocity->GetValuePin(), RequirePin(ScaleSteeringTime, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, RequirePin(Tick, PinNames::DeltaSeconds), RequirePin(ScaleSteeringTime, BinaryPins::RightOperand));
+    Ok &= Connect(Schema, CurrentSteering->GetValuePin(), RequirePin(AddCurrentSteering, BinaryPins::LeftOperand));
+    Ok &= Connect(Schema, ScaleSteeringTime->GetReturnValuePin(), RequirePin(AddCurrentSteering, BinaryPins::RightOperand));
+    Ok &= Connect(Schema, AddCurrentSteering->GetReturnValuePin(), RequirePin(ClampSteering, PinNames::Value));
+    Ok &= Connect(Schema, ClampSteering->GetReturnValuePin(), RequirePin(ResetSteering, SelectPins::WhenFalse));
+    Ok &= Connect(Schema, WasCPressed->GetReturnValuePin(), RequirePin(ResetSteering, SelectPins::Condition));
+    Ok &= Connect(Schema, ResetSteering->GetReturnValuePin(), RequirePin(SetIntegratedSteering, VariableNames::IntegratedSteering));
+    Ok &= Connect(Schema, UpdatedSteering->GetValuePin(), RequirePin(SetSteering, VariableNames::SteeringInput));
 
     if (!Ok)
     {

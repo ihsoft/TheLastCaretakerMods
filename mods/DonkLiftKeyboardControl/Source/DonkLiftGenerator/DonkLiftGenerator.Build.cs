@@ -12,6 +12,10 @@ public class DonkLiftGenerator : ModuleRules
 
         PrivateIncludePaths.Add(
             Path.Combine(EngineDirectory, "Source", "Editor", "UMGEditor", "Private"));
+        PrivateIncludePaths.Add(Path.GetFullPath(Path.Combine(
+            ModuleDirectory,
+            "..", "..", "..", "..",
+            "tools", "UnrealEditorGeneratorCommon", "Public")));
 
         PrivateDependencyModuleNames.AddRange(new[]
         {

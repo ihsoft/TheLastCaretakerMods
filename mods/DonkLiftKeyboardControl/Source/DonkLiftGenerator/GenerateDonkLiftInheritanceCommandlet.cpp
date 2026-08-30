@@ -8,6 +8,8 @@
 
 #if WITH_EDITOR
 
+#include "BlueprintGraphNames.h"
+#include "DonkLiftAssetNames.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "Components/ChildActorComponent.h"
@@ -40,8 +42,34 @@ constexpr TCHAR BasePackageName[] = TEXT("/Game/Mods/DonkLiftKeyboard/BP_Forklif
 constexpr TCHAR ChildPackageName[] = TEXT("/Game/Blueprints/Vehicles/BP_Forklift_Possesable");
 constexpr TCHAR ForkliftAssetName[] = TEXT("BP_Forklift_Possesable");
 constexpr TCHAR HelperObjectPath[] = TEXT("/Game/Mods/DonkLiftKeyboardControl/ModActor.ModActor");
-constexpr TCHAR BrakeActionObjectPath[] = TEXT("/Game/Mods/DonkLiftKeyboardControl/IAV_DonkLiftBrake.IAV_DonkLiftBrake");
-constexpr TCHAR CenterActionObjectPath[] = TEXT("/Game/Mods/DonkLiftKeyboardControl/IAV_DonkLiftCenterSteering.IAV_DonkLiftCenterSteering");
+const FName BaseBlueprintName(TEXT("GenerateDonkLiftInheritanceBase"));
+const FName ChildBlueprintName(TEXT("GenerateDonkLiftInheritanceChild"));
+const FName HelperComponentName(TEXT("DonkLiftKeyboardHelper"));
+const FName ProvidedActionsFunctionName(TEXT("GetProvidedActionsBP"));
+
+namespace PinNames
+{
+using BlueprintGraphNames::Pins::FirstArrayElement;
+using BlueprintGraphNames::Pins::ReturnValue;
+using BlueprintGraphNames::Pins::SecondArrayElement;
+const FName InputAction(TEXT("InputAction"));
+const FName Name(TEXT("Name"));
+const FName Category(TEXT("Category"));
+const FName Text(TEXT("Text"));
+const FName Enabled(TEXT("bEnabled"));
+const FName Priority(TEXT("Priority"));
+const FName Type(TEXT("Type"));
+const FName LanguageType(TEXT("LanguageType"));
+}
+namespace SelectPins = BlueprintGraphNames::Pins::Select;
+
+namespace ProvidedActionDefaults
+{
+constexpr TCHAR Enabled[] = TEXT("true");
+constexpr TCHAR Priority[] = TEXT("10");
+constexpr TCHAR Type[] = TEXT("EPlayerInputInterfaceActionType::Central");
+constexpr TCHAR RussianLanguage[] = TEXT("EVoyageLanguageType::Russian");
+}
 
 template <typename NodeType>
 NodeType* FinishNode(NodeType* Node, UEdGraph* Graph, int32 X, int32 Y)
@@ -100,15 +128,15 @@ UK2Node_MakeStruct* AddProvidedAction(
     FinishNode(Node, Graph, 300, Y);
 
     const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
-    Schema->TrySetDefaultObject(*RequirePin(Node, FName(TEXT("InputAction"))), Action);
-    Schema->TrySetDefaultValue(*RequirePin(Node, FName(TEXT("Name"))), Name);
-    Schema->TrySetDefaultValue(*RequirePin(Node, FName(TEXT("Category"))), TEXT("Vehicle"));
-    Schema->TrySetDefaultText(*RequirePin(Node, FName(TEXT("Text"))), FText::FromString(Label));
-    Schema->TrySetDefaultValue(*RequirePin(Node, FName(TEXT("bEnabled"))), TEXT("true"));
-    Schema->TrySetDefaultValue(*RequirePin(Node, FName(TEXT("Priority"))), TEXT("10"));
+    Schema->TrySetDefaultObject(*RequirePin(Node, PinNames::InputAction), Action);
+    Schema->TrySetDefaultValue(*RequirePin(Node, PinNames::Name), Name);
+    Schema->TrySetDefaultValue(*RequirePin(Node, PinNames::Category), DonkLiftAssetNames::VehicleInputCategory);
+    Schema->TrySetDefaultText(*RequirePin(Node, PinNames::Text), FText::FromString(Label));
+    Schema->TrySetDefaultValue(*RequirePin(Node, PinNames::Enabled), ProvidedActionDefaults::Enabled);
+    Schema->TrySetDefaultValue(*RequirePin(Node, PinNames::Priority), ProvidedActionDefaults::Priority);
     Schema->TrySetDefaultValue(
-        *RequirePin(Node, FName(TEXT("Type"))),
-        TEXT("EPlayerInputInterfaceActionType::Central"));
+        *RequirePin(Node, PinNames::Type),
+        ProvidedActionDefaults::Type);
     return Node;
 }
 
@@ -119,7 +147,7 @@ bool AddProvidedActionsBpOverride(
 {
     UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(
         Blueprint,
-        FName(TEXT("GetProvidedActionsBP")),
+        ProvidedActionsFunctionName,
         UEdGraph::StaticClass(),
         UEdGraphSchema_K2::StaticClass());
     FBlueprintEditorUtils::AddFunctionGraph(
@@ -193,48 +221,48 @@ bool AddProvidedActionsBpOverride(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectText)));
     FinishNode(SelectBrakeText, Graph, 260, -120);
     Schema->TrySetDefaultText(
-        *RequirePin(SelectBrakeText, FName(TEXT("A"))),
-        FText::FromString(TEXT("Тормоз")));
+        *RequirePin(SelectBrakeText, SelectPins::WhenTrue),
+        FText::FromString(DonkLiftAssetNames::BrakeRussianLabel));
     Schema->TrySetDefaultText(
-        *RequirePin(SelectBrakeText, FName(TEXT("B"))),
-        FText::FromString(TEXT("Brake")));
+        *RequirePin(SelectBrakeText, SelectPins::WhenFalse),
+        FText::FromString(DonkLiftAssetNames::BrakeDisplayLabel));
 
     UK2Node_CallFunction* SelectCenterText = NewObject<UK2Node_CallFunction>(Graph);
     SelectCenterText->SetFromFunction(UKismetMathLibrary::StaticClass()->FindFunctionByName(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectText)));
     FinishNode(SelectCenterText, Graph, 260, 500);
     Schema->TrySetDefaultText(
-        *RequirePin(SelectCenterText, FName(TEXT("A"))),
-        FText::FromString(TEXT("Выровнять")));
+        *RequirePin(SelectCenterText, SelectPins::WhenTrue),
+        FText::FromString(DonkLiftAssetNames::CenterRussianLabel));
     Schema->TrySetDefaultText(
-        *RequirePin(SelectCenterText, FName(TEXT("B"))),
-        FText::FromString(TEXT("Center")));
+        *RequirePin(SelectCenterText, SelectPins::WhenFalse),
+        FText::FromString(DonkLiftAssetNames::CenterDisplayLabel));
 
     UK2Node_MakeStruct* Brake = AddProvidedAction(
         Graph,
         BrakeAction,
-        TEXT("DonkLiftBrake"),
-        TEXT("Brake"),
+        DonkLiftAssetNames::BrakeMappingName,
+        DonkLiftAssetNames::BrakeDisplayLabel,
         0);
     UK2Node_MakeStruct* Center = AddProvidedAction(
         Graph,
         CenterAction,
-        TEXT("DonkLiftCenterSteering"),
-        TEXT("Center"),
+        DonkLiftAssetNames::CenterMappingName,
+        DonkLiftAssetNames::CenterDisplayLabel,
         360);
 
     UK2Node_MakeArray* Actions = NewObject<UK2Node_MakeArray>(Graph);
     FinishNode(Actions, Graph, 720, 180);
     Actions->AddInputPin();
 
-    UEdGraphPin* ReturnValue = RequirePin(Result, FName(TEXT("ReturnValue")));
+    UEdGraphPin* ReturnValue = RequirePin(Result, PinNames::ReturnValue);
     ReturnValue->BreakAllPinLinks();
 
     UEdGraphPin* BrakeOutput = FindOutputPin(Brake);
     UEdGraphPin* CenterOutput = FindOutputPin(Center);
     UEdGraphPin* BreakSettingsInput = FindInputPin(BreakSettings);
     if (!Schema->TryCreateConnection(
-            RequirePin(BreakSettings, FName(TEXT("LanguageType"))),
+            RequirePin(BreakSettings, PinNames::LanguageType),
             IsRussian->GetInput1Pin()))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to connect the Voyage language enum"));
@@ -242,11 +270,11 @@ bool AddProvidedActionsBpOverride(
     }
     Schema->TrySetDefaultValue(
         *IsRussian->GetInput2Pin(),
-        TEXT("EVoyageLanguageType::Russian"));
+        ProvidedActionDefaults::RussianLanguage);
 
     if (!BrakeOutput || !CenterOutput || !BreakSettingsInput ||
         !Schema->TryCreateConnection(
-            RequirePin(GetSettings, FName(TEXT("ReturnValue"))),
+            RequirePin(GetSettings, PinNames::ReturnValue),
             CastSettings->GetCastSourcePin()) ||
         !Schema->TryCreateConnection(
             CastSettings->GetCastResultPin(),
@@ -256,18 +284,18 @@ bool AddProvidedActionsBpOverride(
             BreakSettingsInput) ||
         !Schema->TryCreateConnection(
             IsRussian->GetReturnValuePin(),
-            RequirePin(SelectBrakeText, FName(TEXT("bPickA")))) ||
+            RequirePin(SelectBrakeText, SelectPins::Condition)) ||
         !Schema->TryCreateConnection(
             IsRussian->GetReturnValuePin(),
-            RequirePin(SelectCenterText, FName(TEXT("bPickA")))) ||
+            RequirePin(SelectCenterText, SelectPins::Condition)) ||
         !Schema->TryCreateConnection(
-            RequirePin(SelectBrakeText, FName(TEXT("ReturnValue"))),
-            RequirePin(Brake, FName(TEXT("Text")))) ||
+            RequirePin(SelectBrakeText, PinNames::ReturnValue),
+            RequirePin(Brake, PinNames::Text)) ||
         !Schema->TryCreateConnection(
-            RequirePin(SelectCenterText, FName(TEXT("ReturnValue"))),
-            RequirePin(Center, FName(TEXT("Text")))) ||
-        !Schema->TryCreateConnection(BrakeOutput, RequirePin(Actions, FName(TEXT("[0]")))) ||
-        !Schema->TryCreateConnection(CenterOutput, RequirePin(Actions, FName(TEXT("[1]")))) ||
+            RequirePin(SelectCenterText, PinNames::ReturnValue),
+            RequirePin(Center, PinNames::Text)) ||
+        !Schema->TryCreateConnection(BrakeOutput, RequirePin(Actions, PinNames::FirstArrayElement)) ||
+        !Schema->TryCreateConnection(CenterOutput, RequirePin(Actions, PinNames::SecondArrayElement)) ||
         !Schema->TryCreateConnection(Actions->GetOutputPin(), ReturnValue))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to connect GetProvidedActionsBP data pins"));
@@ -323,8 +351,8 @@ int32 UGenerateDonkLiftInheritanceCommandlet::Main(const FString& Params)
         return 1;
     }
 
-    UVoyageInputAction* BrakeAction = LoadObject<UVoyageInputAction>(nullptr, BrakeActionObjectPath);
-    UVoyageInputAction* CenterAction = LoadObject<UVoyageInputAction>(nullptr, CenterActionObjectPath);
+    UVoyageInputAction* BrakeAction = LoadObject<UVoyageInputAction>(nullptr, DonkLiftAssetNames::BrakeActionObjectPath);
+    UVoyageInputAction* CenterAction = LoadObject<UVoyageInputAction>(nullptr, DonkLiftAssetNames::CenterActionObjectPath);
     if (!BrakeAction || !CenterAction)
     {
         UE_LOG(LogTemp, Error, TEXT("DonkLift input actions were not found"));
@@ -339,7 +367,7 @@ int32 UGenerateDonkLiftInheritanceCommandlet::Main(const FString& Params)
         BPTYPE_Normal,
         UBlueprint::StaticClass(),
         UBlueprintGeneratedClass::StaticClass(),
-        FName(TEXT("GenerateDonkLiftInheritanceBase")));
+        BaseBlueprintName);
     if (!BaseBlueprint || !SaveBlueprint(BasePackage, BaseBlueprint))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to create the temporary parent Blueprint"));
@@ -354,7 +382,7 @@ int32 UGenerateDonkLiftInheritanceCommandlet::Main(const FString& Params)
         BPTYPE_Normal,
         UBlueprint::StaticClass(),
         UBlueprintGeneratedClass::StaticClass(),
-        FName(TEXT("GenerateDonkLiftInheritanceChild")));
+        ChildBlueprintName);
     if (!ChildBlueprint || !ChildBlueprint->SimpleConstructionScript)
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to create the child Blueprint"));
@@ -363,7 +391,7 @@ int32 UGenerateDonkLiftInheritanceCommandlet::Main(const FString& Params)
 
     USCS_Node* HelperNode = ChildBlueprint->SimpleConstructionScript->CreateNode(
         UChildActorComponent::StaticClass(),
-        FName(TEXT("DonkLiftKeyboardHelper")));
+        HelperComponentName);
     UChildActorComponent* HelperTemplate = Cast<UChildActorComponent>(HelperNode->ComponentTemplate);
     if (!HelperTemplate)
     {

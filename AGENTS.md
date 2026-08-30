@@ -100,6 +100,18 @@ those details here.
 
 - Preserve unrelated worktree changes and stage only the exact files belonging
   to the validated change.
+- In C++ generator code, replace every repeated `TEXT("...")` literal with a
+  named constant. Also name a single-use literal when it represents a logical
+  contract, tuning value, asset identity, or naturally belongs to an existing
+  constant group. Keep engine-level names reusable by multiple mods in a
+  shared header under `tools/`; keep game- and mod-specific values with their
+  owning mod. Keep diagnostic and assertion format strings inline even when
+  the same wording appears in multiple files; they are messages, not shared
+  identities or contracts.
+- Do not expose opaque reflected pin names such as `A`, `B`, or `bPickA` at
+  generator call sites. Shared helpers may store those raw names internally,
+  but consuming code must use the node's semantic role, such as binary left
+  and right operands or select condition/true/false values.
 - Keep toolchain-specific ignore rules in the owning mod. The repository root
   should contain only genuinely repository-wide ignore patterns.
 - Temporary probe mods/containers are allowed while isolating risk, but remove

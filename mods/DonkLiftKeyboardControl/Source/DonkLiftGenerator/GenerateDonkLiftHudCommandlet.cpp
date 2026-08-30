@@ -8,10 +8,13 @@
 
 #if WITH_EDITOR
 
+#include "BlueprintGraphNames.h"
+#include "DonkLiftAssetNames.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintGeneratedClass.h"
 #include "Components/PanelWidget.h"
 #include "Components/Widget.h"
+#include "Containers/UnrealString.h"
 #include "Engine/Blueprint.h"
 #include "EdGraphSchema_K2.h"
 #include "InteractIndicator.h"
@@ -43,8 +46,17 @@ constexpr TCHAR AssetName[] = TEXT("BP_VoyageIngameForklift");
 constexpr TCHAR BottomWidgetName[] = TEXT("BP_DynamicPlayerInputHorizontalWidget_Bottom");
 constexpr TCHAR BrakeWidgetName[] = TEXT("DonkLiftBrakeWidget");
 constexpr TCHAR CenterWidgetName[] = TEXT("DonkLiftCenterWidget");
-constexpr TCHAR BrakeActionObjectPath[] = TEXT("/Game/Mods/DonkLiftKeyboardControl/IAV_DonkLiftBrake.IAV_DonkLiftBrake");
-constexpr TCHAR CenterActionObjectPath[] = TEXT("/Game/Mods/DonkLiftKeyboardControl/IAV_DonkLiftCenterSteering.IAV_DonkLiftCenterSteering");
+constexpr TCHAR ParentBlueprintName[] = TEXT("GenerateDonkLiftHudParent");
+constexpr TCHAR ChildBlueprintName[] = TEXT("GenerateDonkLiftHudChild");
+namespace PinNames = BlueprintGraphNames::Pins;
+namespace BinaryPins = BlueprintGraphNames::Pins::Binary;
+
+namespace HudDefaults
+{
+constexpr double ReorderDelaySeconds = 0.25;
+constexpr int32 LastIndexOffset = 1;
+constexpr int32 FirstIndex = 0;
+}
 
 template <typename NodeType>
 NodeType* FinishNode(NodeType* Node, UEdGraph* Graph, int32 X, int32 Y)
@@ -115,7 +127,7 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
             BPTYPE_Normal,
             UWidgetBlueprint::StaticClass(),
             UWidgetBlueprintGeneratedClass::StaticClass(),
-            FName(TEXT("GenerateDonkLiftHudParent"))));
+            FName(ParentBlueprintName)));
 
     FEdGraphPinType BottomWidgetType;
     BottomWidgetType.PinCategory = UEdGraphSchema_K2::PC_Object;
@@ -144,7 +156,7 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
             BPTYPE_Normal,
             UWidgetBlueprint::StaticClass(),
             UWidgetBlueprintGeneratedClass::StaticClass(),
-            FName(TEXT("GenerateDonkLiftHudChild"))));
+            FName(ChildBlueprintName)));
 
     FEdGraphPinType ActionWidgetType;
     ActionWidgetType.PinCategory = UEdGraphSchema_K2::PC_Object;
@@ -162,8 +174,8 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
         return 1;
     }
 
-    UInputAction* BrakeAction = LoadObject<UInputAction>(nullptr, BrakeActionObjectPath);
-    UInputAction* CenterAction = LoadObject<UInputAction>(nullptr, CenterActionObjectPath);
+    UInputAction* BrakeAction = LoadObject<UInputAction>(nullptr, DonkLiftAssetNames::BrakeActionObjectPath);
+    UInputAction* CenterAction = LoadObject<UInputAction>(nullptr, DonkLiftAssetNames::CenterActionObjectPath);
     if (!BrakeAction || !CenterAction)
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to load DonkLift input actions"));
@@ -178,7 +190,7 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
     }
 
     UK2Node_Event* Construct = NewObject<UK2Node_Event>(Graph);
-    Construct->EventReference.SetExternalMember(FName(TEXT("Construct")), UUserWidget::StaticClass());
+    Construct->EventReference.SetExternalMember(BlueprintGraphNames::Events::WidgetConstruct, UUserWidget::StaticClass());
     Construct->bOverrideFunction = true;
     FinishNode(Construct, Graph, 0, 0);
 
@@ -186,7 +198,7 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
     Delay->SetFromFunction(UKismetSystemLibrary::StaticClass()->FindFunctionByName(
         GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, Delay)));
     FinishNode(Delay, Graph, 240, 0);
-    RequirePin(Delay, FName(TEXT("Duration")))->DefaultValue = TEXT("0.25");
+    RequirePin(Delay, PinNames::Duration)->DefaultValue = LexToString(HudDefaults::ReorderDelaySeconds);
 
     UK2Node_VariableGet* GetBottom = NewObject<UK2Node_VariableGet>(Graph);
     GetBottom->VariableReference.SetSelfMember(FName(BottomWidgetName));
@@ -207,17 +219,17 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
     LastIndex->SetFromFunction(UKismetMathLibrary::StaticClass()->FindFunctionByName(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_IntInt)));
     FinishNode(LastIndex, Graph, 1260, 180);
-    RequirePin(LastIndex, FName(TEXT("B")))->DefaultValue = TEXT("1");
+    RequirePin(LastIndex, BinaryPins::RightOperand)->DefaultValue = LexToString(HudDefaults::LastIndexOffset);
 
     UBlueprint* StandardMacros = LoadObject<UBlueprint>(
         nullptr,
-        TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros"));
+        BlueprintGraphNames::EngineAssets::StandardMacrosObjectPath);
     UEdGraph* ForLoopGraph = nullptr;
     if (StandardMacros)
     {
         const TObjectPtr<UEdGraph>* Match = StandardMacros->MacroGraphs.FindByPredicate([](const UEdGraph* Candidate)
         {
-            return Candidate && Candidate->GetFName() == FName(TEXT("ForLoop"));
+            return Candidate && Candidate->GetFName() == BlueprintGraphNames::Macros::ForLoop;
         });
         ForLoopGraph = Match ? *Match : nullptr;
     }
@@ -230,7 +242,7 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
     UK2Node_MacroInstance* ForLoop = NewObject<UK2Node_MacroInstance>(Graph);
     ForLoop->SetMacroGraph(ForLoopGraph);
     FinishNode(ForLoop, Graph, 1500, 0);
-    RequirePin(ForLoop, FName(TEXT("FirstIndex")))->DefaultValue = TEXT("0");
+    RequirePin(ForLoop, PinNames::FirstIndex)->DefaultValue = LexToString(HudDefaults::FirstIndex);
 
     UK2Node_CallFunction* GetChild = NewObject<UK2Node_CallFunction>(Graph);
     GetChild->SetFromFunction(UPanelWidget::StaticClass()->FindFunctionByName(
@@ -292,7 +304,7 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
 
     UK2Node_CallFunction* AppendBrake = NewObject<UK2Node_CallFunction>(Graph);
     AppendBrake->SetFromFunction(UPanelWidget::StaticClass()->FindFunctionByName(
-        FName(TEXT("AddChild"))));
+        BlueprintGraphNames::WidgetFunctions::AddChild));
     FinishNode(AppendBrake, Graph, 2500, 520);
 
     UK2Node_VariableGet* GetCenter = NewObject<UK2Node_VariableGet>(Graph);
@@ -309,7 +321,7 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
 
     UK2Node_CallFunction* AppendCenter = NewObject<UK2Node_CallFunction>(Graph);
     AppendCenter->SetFromFunction(UPanelWidget::StaticClass()->FindFunctionByName(
-        FName(TEXT("AddChild"))));
+        BlueprintGraphNames::WidgetFunctions::AddChild));
     FinishNode(AppendCenter, Graph, 3220, 600);
 
     const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
@@ -327,22 +339,22 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
         GetActionsRoot->GetValuePin(),
         RequirePin(GetChildrenCount, UEdGraphSchema_K2::PN_Self));
     Connected &= Schema->TryCreateConnection(
-        RequirePin(GetChildrenCount, FName(TEXT("ReturnValue"))),
-        RequirePin(LastIndex, FName(TEXT("A"))));
+        RequirePin(GetChildrenCount, PinNames::ReturnValue),
+        RequirePin(LastIndex, BinaryPins::LeftOperand));
     Connected &= Schema->TryCreateConnection(
-        RequirePin(LastIndex, FName(TEXT("ReturnValue"))),
-        RequirePin(ForLoop, FName(TEXT("LastIndex"))));
+        RequirePin(LastIndex, PinNames::ReturnValue),
+        RequirePin(ForLoop, PinNames::LastIndex));
     Connected &= Schema->TryCreateConnection(
         GetActionsRoot->GetValuePin(),
         RequirePin(GetChild, UEdGraphSchema_K2::PN_Self));
     Connected &= Schema->TryCreateConnection(
-        RequirePin(ForLoop, FName(TEXT("Index"))),
-        RequirePin(GetChild, FName(TEXT("Index"))));
+        RequirePin(ForLoop, PinNames::Index),
+        RequirePin(GetChild, PinNames::Index));
     Connected &= Schema->TryCreateConnection(
-        RequirePin(ForLoop, FName(TEXT("LoopBody"))),
+        RequirePin(ForLoop, PinNames::LoopBody),
         CastIndicator->GetExecPin());
     Connected &= Schema->TryCreateConnection(
-        RequirePin(GetChild, FName(TEXT("ReturnValue"))),
+        RequirePin(GetChild, PinNames::ReturnValue),
         CastIndicator->GetCastSourcePin());
     Connected &= Schema->TryCreateConnection(
         CastIndicator->GetCastResultPin(),
@@ -352,48 +364,48 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
         RequirePin(GetInputActions, UEdGraphSchema_K2::PN_Self));
     Connected &= Schema->TryCreateConnection(
         GetInputActions->GetValuePin(),
-        RequirePin(ContainsBrake, FName(TEXT("TargetArray"))));
+        RequirePin(ContainsBrake, PinNames::TargetArray));
     Connected &= Schema->TryCreateConnection(
         GetInputActions->GetValuePin(),
-        RequirePin(ContainsCenter, FName(TEXT("TargetArray"))));
-    Schema->TrySetDefaultObject(*RequirePin(ContainsBrake, FName(TEXT("ItemToFind"))), BrakeAction);
-    Schema->TrySetDefaultObject(*RequirePin(ContainsCenter, FName(TEXT("ItemToFind"))), CenterAction);
+        RequirePin(ContainsCenter, PinNames::TargetArray));
+    Schema->TrySetDefaultObject(*RequirePin(ContainsBrake, PinNames::ItemToFind), BrakeAction);
+    Schema->TrySetDefaultObject(*RequirePin(ContainsCenter, PinNames::ItemToFind), CenterAction);
     Connected &= Schema->TryCreateConnection(
         CastIndicator->GetValidCastPin(),
         RequirePin(IsBrake, UEdGraphSchema_K2::PN_Execute));
     Connected &= Schema->TryCreateConnection(
-        RequirePin(ContainsBrake, FName(TEXT("ReturnValue"))),
+        RequirePin(ContainsBrake, PinNames::ReturnValue),
         RequirePin(IsBrake, UEdGraphSchema_K2::PN_Condition));
     Connected &= Schema->TryCreateConnection(
         RequirePin(IsBrake, UEdGraphSchema_K2::PN_Then),
         RequirePin(SaveBrake, UEdGraphSchema_K2::PN_Execute));
     Connected &= Schema->TryCreateConnection(
-        RequirePin(GetChild, FName(TEXT("ReturnValue"))),
+        RequirePin(GetChild, PinNames::ReturnValue),
         RequirePin(SaveBrake, FName(BrakeWidgetName)));
     Connected &= Schema->TryCreateConnection(
         RequirePin(IsBrake, UEdGraphSchema_K2::PN_Else),
         RequirePin(IsCenter, UEdGraphSchema_K2::PN_Execute));
     Connected &= Schema->TryCreateConnection(
-        RequirePin(ContainsCenter, FName(TEXT("ReturnValue"))),
+        RequirePin(ContainsCenter, PinNames::ReturnValue),
         RequirePin(IsCenter, UEdGraphSchema_K2::PN_Condition));
     Connected &= Schema->TryCreateConnection(
         RequirePin(IsCenter, UEdGraphSchema_K2::PN_Then),
         RequirePin(SaveCenter, UEdGraphSchema_K2::PN_Execute));
     Connected &= Schema->TryCreateConnection(
-        RequirePin(GetChild, FName(TEXT("ReturnValue"))),
+        RequirePin(GetChild, PinNames::ReturnValue),
         RequirePin(SaveCenter, FName(CenterWidgetName)));
 
     Connected &= Schema->TryCreateConnection(
-        RequirePin(ForLoop, FName(TEXT("Completed"))),
+        RequirePin(ForLoop, PinNames::Completed),
         RequirePin(RemoveBrake, UEdGraphSchema_K2::PN_Execute));
     Connected &= Schema->TryCreateConnection(
         GetActionsRoot->GetValuePin(),
         RequirePin(RemoveBrake, UEdGraphSchema_K2::PN_Self));
     Connected &= Schema->TryCreateConnection(
         GetBrake->GetValuePin(),
-        RequirePin(RemoveBrake, FName(TEXT("Content"))));
+        RequirePin(RemoveBrake, PinNames::Content));
     Connected &= Schema->TryCreateConnection(
-        RequirePin(RemoveBrake, FName(TEXT("ReturnValue"))),
+        RequirePin(RemoveBrake, PinNames::ReturnValue),
         RequirePin(BrakeRemoved, UEdGraphSchema_K2::PN_Condition));
     Connected &= Schema->TryCreateConnection(
         RequirePin(RemoveBrake, UEdGraphSchema_K2::PN_Then),
@@ -406,7 +418,7 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
         RequirePin(AppendBrake, UEdGraphSchema_K2::PN_Self));
     Connected &= Schema->TryCreateConnection(
         GetBrake->GetValuePin(),
-        RequirePin(AppendBrake, FName(TEXT("Content"))));
+        RequirePin(AppendBrake, PinNames::Content));
     Connected &= Schema->TryCreateConnection(
         RequirePin(AppendBrake, UEdGraphSchema_K2::PN_Then),
         RequirePin(RemoveCenter, UEdGraphSchema_K2::PN_Execute));
@@ -418,9 +430,9 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
         RequirePin(RemoveCenter, UEdGraphSchema_K2::PN_Self));
     Connected &= Schema->TryCreateConnection(
         GetCenter->GetValuePin(),
-        RequirePin(RemoveCenter, FName(TEXT("Content"))));
+        RequirePin(RemoveCenter, PinNames::Content));
     Connected &= Schema->TryCreateConnection(
-        RequirePin(RemoveCenter, FName(TEXT("ReturnValue"))),
+        RequirePin(RemoveCenter, PinNames::ReturnValue),
         RequirePin(CenterRemoved, UEdGraphSchema_K2::PN_Condition));
     Connected &= Schema->TryCreateConnection(
         RequirePin(RemoveCenter, UEdGraphSchema_K2::PN_Then),
@@ -433,7 +445,7 @@ int32 UGenerateDonkLiftHudCommandlet::Main(const FString& Params)
         RequirePin(AppendCenter, UEdGraphSchema_K2::PN_Self));
     Connected &= Schema->TryCreateConnection(
         GetCenter->GetValuePin(),
-        RequirePin(AppendCenter, FName(TEXT("Content"))));
+        RequirePin(AppendCenter, PinNames::Content));
 
     if (!Connected)
     {
