@@ -130,15 +130,27 @@ contract and workflow detail.
 
 ## Build and package workflow
 
+- Prefer `Build-DonkLiftRelease.ps1 -Version <version>` for a complete local
+  release. It owns the early gates, incremental editor build, generation, cook,
+  clean-original selection, packaging, ZIP, evidence manifest, and optional
+  backed-up installation. It never publishes externally.
+- A real release requires clean tracked and untracked DonkLift source;
+  `-AllowDirtySource` is only for development artifacts and must remain visible
+  in `release-manifest.json`. Publication screenshots under `Slideshow` are not
+  runtime source and are excluded from this gate.
+- `-OriginalsRoot` may reuse only an explicit clean extraction whose manifest
+  matches the current build/hash, canonical filter, and
+  `allowAdditionalContainers=false`. The package builder repeats these checks.
 - Build `VoyageEditor` with Unreal Engine 5.7.4 and `-NoUBA`.
 - Run commandlets with `-ddc=NoZenLocalFallback` and a workspace-local
   `-LocalDataCachePath`; otherwise Zen can loop on an inaccessible data path.
 - Generate from an empty ignored `Content` tree in this order:
   `GenerateDonkLiftMod`, `GenerateDonkLiftInheritance`.
-- Use `Cook-DonkLiftAssets.ps1`. It performs five narrow
-  `-CookSinglePackageNoRefs` cooks. Do not replace this with broad `CookDir`,
-  which follows editor dependencies into global shaders and unrelated
-  Engine/OpenWorld assets.
+- Use `Cook-DonkLiftAssets.ps1`. It sends five explicit package names to one
+  Unreal process under `-CookSinglePackageNoRefs`. Unreal 5.7 accepts a
+  `+`-separated `-Package` list and applies the narrow skip-reference options to
+  the complete request. Do not replace this with broad `CookDir`, which follows
+  editor dependencies into global shaders and unrelated Engine/OpenWorld assets.
 - Use `Build-InheritancePackage.ps1` with a fresh original forklift directory
   and current `scriptobjects.bin`. Each path must remain under its
   canonical `Extract-VoyagePackage.ps1` root and manifest; never copy an asset
@@ -146,8 +158,9 @@ contract and workflow detail.
   and shadowing checks, relocation self-parent guard, exact packaged inventory,
   and `retoc verify` before installation.
 - Prefer `Prepare-DonkLiftOriginals.ps1` over manually disabling the installed
-  override and extracting the forklift. It owns the closed-process check,
-  exact-container allowlist, canonical filter, and guaranteed UTOC restore.
+  overrides and extracting the forklift. It owns the closed-process check,
+  temporary disable of every non-base UTOC, canonical filter, and guaranteed
+  name/hash restore. An interrupted leftover is a hard stop requiring recovery.
 
 ## Installation and real-game validation
 

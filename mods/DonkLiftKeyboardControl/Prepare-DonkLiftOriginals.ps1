@@ -1,5 +1,6 @@
 # HAND-WRITTEN BUILD TOOL: extracts the base-game asset required by the
-# DonkLift package without allowing the installed override to shadow it.
+# DonkLift package while temporarily disabling and hash-restoring every
+# additional IoStore container that could shadow the original.
 
 param(
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
@@ -29,30 +30,32 @@ $additionalContainers = @(
     Get-ChildItem -LiteralPath $paks -File -Filter '*.utoc' |
         Where-Object { $_.Name -ne 'global.utoc' -and $_.Name -notlike 'pakchunk*.utoc' }
 )
-$unexpectedContainers = @(
-    $additionalContainers |
-        Where-Object { $_.Name -ne 'DonkLiftKeyboardControl_P.utoc' }
-)
-if ($unexpectedContainers.Count -gt 0) {
-    $names = ($unexpectedContainers.Name | Sort-Object) -join ', '
-    throw "Unexpected additional IoStore containers must be handled explicitly: $names"
+$leftovers = @(Get-ChildItem -LiteralPath $paks -File -Filter '*.utoc.disabled-for-donklift-extraction-*')
+if ($leftovers.Count -gt 0) {
+    $names = ($leftovers.Name | Sort-Object) -join ', '
+    throw "Unrestored UTOC files from an earlier interrupted extraction require manual recovery: $names"
 }
 
-$installedUtoc = Join-Path $paks 'DonkLiftKeyboardControl_P.utoc'
-$disabledUtoc = Join-Path $paks 'DonkLiftKeyboardControl_P.utoc.disabled-for-extraction'
-if (Test-Path -LiteralPath $disabledUtoc) {
-    throw "Temporary UTOC path already exists: $disabledUtoc"
-}
-$installedHash = if (Test-Path -LiteralPath $installedUtoc -PathType Leaf) {
-    (Get-FileHash -Algorithm SHA256 -LiteralPath $installedUtoc).Hash
-} else {
-    $null
-}
+$token = [Guid]::NewGuid().ToString('N')
+$containerMoves = @(
+    $additionalContainers | ForEach-Object {
+        [pscustomobject]@{
+            Original = $_.FullName
+            Disabled = $_.FullName + ".disabled-for-donklift-extraction-$token"
+            Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
+            Moved = $false
+        }
+    }
+)
 
 $extractor = Join-Path $PSScriptRoot '..\..\tools\Extract-VoyagePackage.ps1'
 try {
-    if ($installedHash) {
-        Move-Item -LiteralPath $installedUtoc -Destination $disabledUtoc
+    foreach ($entry in $containerMoves) {
+        if (Test-Path -LiteralPath $entry.Disabled) {
+            throw "Temporary UTOC path already exists: $($entry.Disabled)"
+        }
+        Move-Item -LiteralPath $entry.Original -Destination $entry.Disabled
+        $entry.Moved = $true
     }
 
     & $extractor `
@@ -62,18 +65,32 @@ try {
         -OutputRoot $output
 }
 finally {
-    if (Test-Path -LiteralPath $disabledUtoc -PathType Leaf) {
-        Move-Item -LiteralPath $disabledUtoc -Destination $installedUtoc
+    $restoreErrors = @()
+    foreach ($entry in $containerMoves) {
+        if (-not $entry.Moved) {
+            continue
+        }
+        if (-not (Test-Path -LiteralPath $entry.Disabled -PathType Leaf)) {
+            $restoreErrors += "Temporary file is missing: $($entry.Disabled)"
+            continue
+        }
+        if (Test-Path -LiteralPath $entry.Original) {
+            $restoreErrors += "Restore target already exists: $($entry.Original)"
+            continue
+        }
+        try {
+            Move-Item -LiteralPath $entry.Disabled -Destination $entry.Original
+            $restoredHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $entry.Original).Hash
+            if ($restoredHash -cne $entry.Hash) {
+                $restoreErrors += "Restored hash mismatch: $($entry.Original)"
+            }
+        }
+        catch {
+            $restoreErrors += "Failed to restore $($entry.Original): $($_.Exception.Message)"
+        }
     }
-}
-
-if ($installedHash) {
-    if (-not (Test-Path -LiteralPath $installedUtoc -PathType Leaf)) {
-        throw 'The installed DonkLift UTOC was not restored after extraction.'
-    }
-    $restoredHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installedUtoc).Hash
-    if ($restoredHash -cne $installedHash) {
-        throw 'The restored DonkLift UTOC does not match the installed file.'
+    if ($restoreErrors.Count -gt 0) {
+        throw "One or more additional UTOCs were not restored correctly:`n$($restoreErrors -join "`n")"
     }
 }
 
@@ -84,3 +101,6 @@ if ($manifests.Count -ne 1) {
 
 Write-Host 'Prepared fresh DonkLift base-game inputs:'
 $manifests | Sort-Object FullName | Select-Object -ExpandProperty DirectoryName
+if ($containerMoves.Count -gt 0) {
+    Write-Host "Restored $($containerMoves.Count) additional IoStore container(s) with matching hashes."
+}

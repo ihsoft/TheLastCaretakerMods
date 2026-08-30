@@ -1,5 +1,6 @@
-# HAND-WRITTEN BUILD TOOL: performs the five narrow Unreal cooks for this mod.
-# It contains no extracted game data; its output is generated and not committed.
+# HAND-WRITTEN BUILD TOOL: cooks the five production packages in one narrow
+# Unreal invocation. It contains no extracted game data; its output is generated
+# and not committed.
 
 param(
     [Parameter(Mandatory = $true)]
@@ -8,6 +9,8 @@ param(
     [string]$Project = "$PSScriptRoot\Voyage.uproject",
 
     [string]$LocalDataCachePath = "$PSScriptRoot\DerivedDataCache",
+
+    [string]$LogPath,
 
     [Parameter(Mandatory = $true)]
     [string]$OutputRoot
@@ -36,31 +39,47 @@ $packages = @(
 )
 
 foreach ($package in $packages) {
-    Write-Host "Cooking $package"
-    $arguments = @(
-        ('"{0}"' -f $projectPath),
-        '-run=cook',
-        '-targetplatform=Windows',
-        '-unversioned',
-        "-Package=$package",
-        '-CookSinglePackageNoRefs',
-        '-unattended',
-        '-nop4',
-        '-nosplash',
-        '-nullrhi',
-        '-ddc=NoZenLocalFallback',
-        ('-LocalDataCachePath="{0}"' -f $ddc)
-    )
-    $process = Start-Process `
-        -FilePath $editor `
-        -ArgumentList $arguments `
-        -Wait `
-        -PassThru `
-        -WindowStyle Hidden
-    if ($process.ExitCode -ne 0) {
-        throw "Cook failed for $package with exit code $($process.ExitCode)."
+    $relativeAsset = $package.Substring('/Game/'.Length)
+    $sourceBase = Join-Path $cookedContent $relativeAsset
+    foreach ($extension in @('.uasset', '.uexp')) {
+        $staleSource = $sourceBase + $extension
+        if (Test-Path -LiteralPath $staleSource -PathType Leaf) {
+            Remove-Item -LiteralPath $staleSource -Force
+        }
     }
+}
 
+Write-Host "Cooking $($packages.Count) DonkLift packages in one Unreal process"
+$arguments = @(
+    ('"{0}"' -f $projectPath),
+    '-run=cook',
+    '-targetplatform=Windows',
+    '-unversioned',
+    ('-Package={0}' -f ($packages -join '+')),
+    '-CookSinglePackageNoRefs',
+    '-unattended',
+    '-nop4',
+    '-nosplash',
+    '-nullrhi',
+    '-ddc=NoZenLocalFallback',
+    ('-LocalDataCachePath="{0}"' -f $ddc)
+)
+if (-not [string]::IsNullOrWhiteSpace($LogPath)) {
+    $log = [IO.Path]::GetFullPath($LogPath)
+    New-Item -ItemType Directory -Path (Split-Path $log -Parent) -Force | Out-Null
+    $arguments += ('-abslog="{0}"' -f $log)
+}
+$process = Start-Process `
+    -FilePath $editor `
+    -ArgumentList $arguments `
+    -Wait `
+    -PassThru `
+    -WindowStyle Hidden
+if ($process.ExitCode -ne 0) {
+    throw "Cook failed with exit code $($process.ExitCode)."
+}
+
+foreach ($package in $packages) {
     $relativeAsset = $package.Substring('/Game/'.Length)
     $sourceBase = Join-Path $cookedContent $relativeAsset
     $destinationBase = Join-Path $outputContent $relativeAsset
@@ -75,8 +94,9 @@ foreach ($package in $packages) {
 }
 
 $files = @(Get-ChildItem -LiteralPath $outputContent -Recurse -File)
-if ($files.Count -ne $packages.Count * 2) {
-    throw "Expected 10 staged cooked files; found $($files.Count)."
+$expectedFileCount = $packages.Count * 2
+if ($files.Count -ne $expectedFileCount) {
+    throw "Expected $expectedFileCount staged cooked files; found $($files.Count)."
 }
 
 Write-Host "Cooked DonkLift production assets: $output"

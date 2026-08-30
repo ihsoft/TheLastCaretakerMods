@@ -51,7 +51,38 @@ parked forklift cannot inherit another instance's input. X resets throttle
 immediately; C resets steering immediately. The native vehicle and HUD
 continue to consume those values.
 
-## Generate
+## One-command release
+
+For a normal release, use the orchestrator instead of invoking the individual
+stages manually:
+
+```powershell
+.\Build-DonkLiftRelease.ps1 -Version 1.0.0
+```
+
+It validates the game/engine fingerprint and clean Git source, builds the
+editor modules incrementally, regenerates assets, cooks, extracts the original
+forklift, builds and verifies the IoStore container, and creates a player-facing
+ZIP plus `release-manifest.json` below ignored `artifacts/releases/`.
+
+Useful explicit options:
+
+- `-Install` backs up and installs the resulting three-file container after
+  confirming that Voyage is closed, then reads every installed hash back;
+- `-OriginalsRoot <path>` reuses an explicitly selected clean extraction only
+  when its manifest proves the current build/hash, canonical filter, and no
+  additional containers;
+- `-AllowDirtySource` permits a development artifact from uncommitted DonkLift
+  source and records that fact in the manifest. Omit it for a real release.
+
+The script never uploads or publishes anything. The ZIP contains the three
+container files and the player-facing `README.txt`; detailed logs, fingerprint,
+inventory, backup, and hashes stay beside it as local evidence.
+
+The remaining commands describe the internal stages and are useful for
+diagnosis.
+
+## Generate manually
 
 Start from an empty generated `Content` directory and run the commandlets in
 this order:
@@ -68,8 +99,11 @@ temporary forklift parent and child.
 ## Cook and package
 
 Do not use a broad `CookDir` cook: Unreal follows editor dependencies and may
-compile global shaders and unrelated Engine template maps. Cook exactly the five
-production packages into a new staging root:
+compile global shaders and unrelated Engine template maps. Cook exactly the
+five production packages into a new staging root. The cook script passes the
+five explicit `-Package` values to one Unreal process with
+`-CookSinglePackageNoRefs`, avoiding four redundant editor startups without
+broadening the cook:
 
 ```powershell
 .\Cook-DonkLiftAssets.ps1 `
@@ -79,10 +113,10 @@ production packages into a new staging root:
 
 Then build the single container from that staging root:
 
-First prepare the original forklift in one new artifact root. The preparer requires a
-closed game, refuses unknown additional IoStore containers, temporarily
-disables only an installed DonkLift override, uses the canonical filters, and
-restores the installed `.utoc` even if extraction fails:
+First prepare the original forklift in one new artifact root. The preparer
+requires a closed game, temporarily disables every non-base `.utoc` that could
+shadow the original, uses the canonical filter, and restores every container
+by original name and SHA-256 even if extraction fails:
 
 ```powershell
 .\Prepare-DonkLiftOriginals.ps1 `
