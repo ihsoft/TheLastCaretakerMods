@@ -4,6 +4,9 @@ param(
 
     [string]$MappingsPath,
 
+    [ValidateSet('UE5_7', 'UE5_8')]
+    [string]$EngineVersion = 'UE5_7',
+
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
     [string]$OutputRoot = "$PSScriptRoot\..\artifacts\inspection"
@@ -57,6 +60,10 @@ $arguments = @(
 if ($MappingsPath) {
     $arguments += (Resolve-Path -LiteralPath $MappingsPath).Path
 }
+else {
+    $arguments += ''
+}
+$arguments += $EngineVersion
 
 & dotnet @arguments
 if ($LASTEXITCODE -ne 0) {
@@ -70,6 +77,7 @@ $manifest = [ordered]@{
     executableSha256 = $exeHash
     query = $Query
     mappingsPath = if ($MappingsPath) { (Resolve-Path -LiteralPath $MappingsPath).Path } else { $null }
+    engineVersion = $EngineVersion
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
 [IO.File]::WriteAllText(

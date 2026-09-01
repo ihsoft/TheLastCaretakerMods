@@ -8,14 +8,17 @@ using Serilog;
 
 if (args.Length < 3)
 {
-    Console.Error.WriteLine("Usage: VoyageAssetInspector <PaksDir> <asset-name-fragment> <output-dir> [mappings.usmap]");
+    Console.Error.WriteLine("Usage: VoyageAssetInspector <PaksDir> <asset-name-fragment> <output-dir> [mappings.usmap] [UE5_7|UE5_8]");
     return 2;
 }
 
 var paksDirectory = Path.GetFullPath(args[0]);
 var fragment = args[1];
 var outputDirectory = Path.GetFullPath(args[2]);
-var mappingsPath = args.Length >= 4 ? Path.GetFullPath(args[3]) : null;
+var mappingsPath = args.Length >= 4 && !string.IsNullOrWhiteSpace(args[3])
+    ? Path.GetFullPath(args[3])
+    : null;
+var gameVersion = args.Length >= 5 ? ParseGameVersion(args[4]) : EGame.GAME_UE5_7;
 
 Directory.CreateDirectory(outputDirectory);
 Log.Logger = new LoggerConfiguration()
@@ -28,12 +31,38 @@ var provider = new DefaultFileProvider(
     paksDirectory,
     SearchOption.TopDirectoryOnly,
     true,
-    new VersionContainer(EGame.GAME_UE5_7));
+    new VersionContainer(gameVersion));
 provider.ReadScriptData = true;
 
 if (mappingsPath is not null)
 {
     provider.MappingsContainer = new FileUsmapTypeMappingsProvider(mappingsPath);
+}
+
+if (fragment.StartsWith("mappings-enum:", StringComparison.OrdinalIgnoreCase))
+{
+    var enumFragment = fragment["mappings-enum:".Length..];
+    var mappings = provider.MappingsForGame
+        ?? throw new InvalidOperationException("A mappings file is required for mappings-enum: mode.");
+    var enumMatches = mappings.Enums
+        .Where(pair => pair.Key.Contains(enumFragment, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+    var lines = new List<string>();
+    foreach (var pair in enumMatches)
+    {
+        lines.Add($"ENUM {pair.Key}");
+        foreach (var value in pair.Value.OrderBy(value => value.Key))
+        {
+            lines.Add($"  [{value.Key}] {value.Value}");
+        }
+        lines.Add(string.Empty);
+    }
+    var resultPath = Path.Combine(outputDirectory, "mapping-enums.txt");
+    File.WriteAllLines(resultPath, lines);
+    Console.WriteLine($"Found {enumMatches.Length} mapped enum(s) matching '{enumFragment}'.");
+    Console.WriteLine(resultPath);
+    return enumMatches.Length == 0 ? 1 : 0;
 }
 
 if (fragment.StartsWith("mappings-property:", StringComparison.OrdinalIgnoreCase))
@@ -166,3 +195,10 @@ static string Describe(CUE4Parse.MappingsProvider.PropertyType type)
     }
     return detail is null ? type.Type : $"{type.Type}<{detail}>";
 }
+
+static EGame ParseGameVersion(string value) => value switch
+{
+    "UE5_7" => EGame.GAME_UE5_7,
+    "UE5_8" => EGame.GAME_UE5_8,
+    _ => throw new ArgumentException($"Unsupported engine version '{value}'. Expected UE5_7 or UE5_8.")
+};

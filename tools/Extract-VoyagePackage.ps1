@@ -6,6 +6,8 @@ param(
 
     [string]$Retoc = 'R:\Codex\ToolCache\rust-retoc-master\source\target\release\retoc.exe',
 
+    [string]$RetocEngineVersion = 'UE5_7',
+
     [string]$OutputRoot = "$PSScriptRoot\..\artifacts\extracted",
 
     [switch]$AllowAdditionalContainers
@@ -15,6 +17,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
+$retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $retocPath).Hash
 $paks = Join-Path $root 'Voyage\Content\Paks'
 $exe = Join-Path $root 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe'
 if (-not (Test-Path -LiteralPath $paks -PathType Container)) {
@@ -63,7 +66,7 @@ if (Test-Path -LiteralPath $output) {
 }
 [IO.Directory]::CreateDirectory($output) | Out-Null
 
-& $retocPath to-legacy --version UE5_7 --filter $Filter $paks $output
+& $retocPath to-legacy --version $RetocEngineVersion --filter $Filter $paks $output
 if ($LASTEXITCODE -ne 0) {
     throw "retoc to-legacy failed with exit code $LASTEXITCODE"
 }
@@ -77,6 +80,9 @@ $manifest = [ordered]@{
     steamBuildId = $steamBuildId
     gameVersion = $version
     executableSha256 = $exeHash
+    retocEngineVersion = $RetocEngineVersion
+    retocPath = $retocPath
+    retocSha256 = $retocSha256
     filter = $Filter
     allowAdditionalContainers = [bool]$AllowAdditionalContainers
     additionalContainers = @($additionalContainers.Name | Sort-Object)

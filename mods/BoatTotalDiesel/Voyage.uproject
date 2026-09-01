@@ -1,0 +1,18 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Modding",
+  "Description": "Editor-only project for generating the BoatTotalDiesel mod assets.",
+  "Modules": [
+    {
+      "Name": "Voyage",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "BoatTotalDieselGenerator",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ]
+}

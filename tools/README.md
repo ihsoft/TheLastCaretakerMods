@@ -15,6 +15,7 @@ documented interface is insufficient.
 | Identify the installed game build | `Get-VoyageBuildFingerprint.ps1` | Steam build ID, executable hash, and container metadata/hashes |
 | Find, list, or structurally inspect cooked assets | `Inspect-VoyageAsset.ps1` | Paths, JSON exports, Blueprint pseudocode, or mapping reports |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
+| Build the reviewed retoc compatibility binary for UE 5.8 | `Build-RetocUe58Compatibility.ps1` | Patched ignored retoc source/binary plus compatibility manifest |
 | Generate a fresh `.usmap` | `VoyageMappingsDumper` | Version-bound `Mappings.usmap` through a temporary UE4SS session |
 | Locate native names, references, or correlated member offsets | `VoyageExecutableInspector` | Read-only executable report with version-specific offsets |
 | Reproduce one of the existing surgical cooked-asset probes | `VoyageAssetPatcher` | Assertion-checked diagnostic asset written to a new path |
@@ -32,6 +33,9 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   Pass `-GameRoot '<your Steam Voyage directory>'` on another machine.
 - `Extract-VoyagePackage.ps1` requires a compatible `retoc` executable. Pass
   `-Retoc '<path to retoc.exe>'` when the built-in local default does not exist.
+- Current UE 5.8 cooked legacy packages require the reviewed retoc
+  `FObjectImport.PackageName` compatibility build. See
+  [`RetocUe58Compatibility/README.md`](RetocUe58Compatibility/README.md).
 - C# tools currently target .NET 10. `Inspect-VoyageAsset.ps1` additionally
   expects a local CUE4Parse checkout at `tools/CUE4Parse`; that dependency is
   intentionally ignored by Git.
@@ -76,6 +80,7 @@ available:
 .\tools\Inspect-VoyageAsset.ps1 `
   -Query 'BP_Forklift_Possesable' `
   -MappingsPath '.\artifacts\mappings\current\Mappings.usmap' `
+  -EngineVersion UE5_8 `
   -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage'
 ```
 
@@ -89,7 +94,16 @@ Query reflection mappings rather than package contents:
 .\tools\Inspect-VoyageAsset.ps1 `
   -Query 'mappings-property:ThrottleInput' `
   -MappingsPath '.\artifacts\mappings\current\Mappings.usmap'
+
+.\tools\Inspect-VoyageAsset.ps1 `
+  -Query 'mappings-enum:EModuleResourceType' `
+  -MappingsPath '.\artifacts\mappings\current\Mappings.usmap' `
+  -EngineVersion UE5_8
 ```
+
+`-EngineVersion` selects the CUE4Parse serialization rules. It defaults to
+`UE5_7` for existing version-bound workflows; pass `UE5_8` for current Voyage
+builds based on Unreal Engine 5.8.
 
 Every query writes to a new fingerprinted directory and refuses to overwrite a
 previous result. Choose a new `-OutputRoot` for a repeated investigation.
@@ -104,13 +118,19 @@ a structural report:
   -Filter 'Vehicles/BP_Forklift_Possesable' `
   -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage' `
   -Retoc 'D:\Tools\retoc.exe' `
+  -RetocEngineVersion UE5_7 `
   -OutputRoot '.\artifacts\extracted\forklift-refresh'
 ```
 
+`-RetocEngineVersion` records and passes the exact engine profile supported by
+the selected retoc build. Do not silently substitute it across game updates;
+first compare the live IoStore header and package versions and prove extraction
+against a fresh fingerprint.
+
 `-Filter` matches the IoStore directory-index path. A successful run must
 produce at least one `.uasset`; zero matches are an error. The output includes
-`extraction-manifest.json`, which records the filter, fingerprint, and whether
-additional containers were permitted.
+`extraction-manifest.json`, which records the filter, fingerprint, retoc
+path/hash/profile, and whether additional containers were permitted.
 
 ## Specialized tools
 

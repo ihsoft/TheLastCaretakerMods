@@ -26,6 +26,7 @@ namespace BlueprintGraphNames::Events
 {
 inline const FName ActorReceiveTick(TEXT("ReceiveTick"));
 inline const FName WidgetConstruct(TEXT("Construct"));
+inline const FName WidgetTick(TEXT("Tick"));
 }
 
 namespace BlueprintGraphNames::EngineAssets
