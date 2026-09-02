@@ -16,7 +16,7 @@ documented interface is insufficient.
 | Find, list, or structurally inspect cooked assets | `Inspect-VoyageAsset.ps1` | Paths, JSON exports, Blueprint pseudocode, or mapping reports |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Build the reviewed retoc compatibility binary for UE 5.8 | `Build-RetocUe58Compatibility.ps1` | Patched ignored retoc source/binary plus compatibility manifest |
-| Generate a fresh `.usmap` | `VoyageMappingsDumper` | Version-bound `Mappings.usmap` through a temporary UE4SS session |
+| Generate a fresh `.usmap` | `New-VoyageMappings.ps1` | One-shot running-game readiness wait, jmap dump, manifest, and validation |
 | Build the reviewed standalone mapping dumper | `Build-JmapVoyageMappingsDumper.ps1` | Exact jmap fork commit with the UE 5.8 layout and nullable-metadata fixes |
 | Locate the live `GUObjectArray` when signatures fail | `Find-VoyageUObjectArray.ps1` | Read-only structural scan of the shipping executable's `.data` section |
 | Reject an empty, stale, or misrouted `.usmap` | `Test-VoyageMappings.ps1` | Header, payload, manifest, fingerprint, hash, and required-schema checks |
@@ -201,10 +201,35 @@ path/hash/profile, and whether additional containers were permitted.
 
 ## Specialized tools
 
+### `New-VoyageMappings.ps1`
+
+This is the normal happy path for refreshing Voyage mappings:
+
+```powershell
+.\tools\New-VoyageMappings.ps1
+```
+
+Start Voyage first; exactly one running shipping process is a precondition.
+The script never starts or stops the game. It fingerprints the installation,
+verifies or builds the reviewed jmap fork, waits for the process to be at least
+60 seconds old and for three identical structural `GUObjectArray` samples,
+then creates a complete `--all` UE 5.8 USMAP with concurrency `128`, writes
+logs and provenance, and runs `Test-VoyageMappings.ps1`. It returns only after
+the new mapping passes every gate. Each attempt uses a new fingerprinted
+directory below `artifacts/mappings/`, so a previous known-good mapping is
+never overwritten.
+
+Use `-InstallForUAssetGUI` to copy the validated result to
+`%LOCALAPPDATA%\UAssetGUI\Mappings\Voyage-<build>.usmap`; a different existing
+file is backed up first. Reflection readiness and the dumper both have bounded
+timeouts. A partial run and its logs remain under `artifacts/` for
+diagnosis instead of being promoted.
+
 ### `VoyageMappingsDumper`
 
-Use only when a current `.usmap` is required. It is a temporary UE4SS mod, not
-a runtime dependency of the shipped autonomous mods.
+This temporary UE4SS mod is the fallback when the standalone jmap path itself
+is under investigation. It is not a runtime dependency of the shipped
+autonomous mods.
 
 1. Install a Voyage-compatible UE4SS build.
 2. Copy `tools/VoyageMappingsDumper` to

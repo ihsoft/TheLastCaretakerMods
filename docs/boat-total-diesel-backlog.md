@@ -594,6 +594,27 @@ Audit results:
    `tools/README.md`. `VoyageAssetPatcher` now defaults to the reviewed
    `.tools/UAssetAPI` fork instead of the stale `ToolCache` checkout.
 
+   Mapping generation is now orchestrated by `tools/New-VoyageMappings.ps1`.
+   Its happy path owns fingerprinting, cached reviewed-jmap verification/build,
+   a strict already-running-game precondition, minimum process age plus stable
+   structural reflection samples, explicit `GUObjectArray`, `--all` dumping at
+   concurrency `128`, unique output, manifest/log creation, and final
+   `Test-VoyageMappings.ps1` validation. It never starts or stops the game and
+   never overwrites the previous artifact; UAssetGUI installation is explicit
+   and preserves a different existing mapping before replacement.
+
+   The first integrated run proved that a single structurally valid candidate
+   is not a sufficient readiness gate. At roughly 19 seconds of process age,
+   jmap attempted a `231116636160`-byte allocation and terminated with Windows
+   status `0xC0000409`; the wrapper preserved both logs and did not promote an
+   output. The same live game process later held a stable `76,944`-object
+   candidate, and both the control rerun and the final wrapper completed with
+   the established `2,374,096`-byte mapping and SHA-256
+   `5118549ACD3F34A03E790C307BCDB108632D5E1D87BCA72D7EE5B5EF081538BF`.
+   The final contract therefore requires an already running game, at least 60
+   seconds of process age, and three identical structural samples before jmap
+   starts.
+
    The Options canary also caught a deceptive tool-selection failure. The old
    default retoc under `R:\Codex\ToolCache\rust-retoc-master` has SHA-256
    `DF2B6F5D5087E5A49015E60EC88E41A76D4670A64F4BB31547A20BBCC0B5BD72`
