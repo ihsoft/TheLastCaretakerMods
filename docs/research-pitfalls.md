@@ -191,10 +191,19 @@ no-op или неверную архитектуру. Цель — не повт
 - В UE 5.8 Voyage `FObjectImport.PackageName` сериализуется и для filtered
   cooked packages. UAssetAPI, как и исходный retoc 0.1.5, ошибочно пропускал
   это поле при `IsFilterEditorOnly`, после чего import-map выглядел
-  правдоподобно, но был сдвинут. Для чтения и записи текущих legacy packages
-  убрать дополнительное исключение `IsFilterEditorOnly` с обеих сторон и
-  потребовать побайтно идентичный unchanged roundtrip. У нового import также
-  `PackageName` должен совпадать с его `ObjectName`.
+  правдоподобно, но был сдвинут. Однако глобальное снятие этого ограничения
+  тоже неверно: filtered fixtures UE4 и UE 5.3--5.7 используют старый layout
+  без `PackageName`. Чтение и запись должны включать поле только при явно
+  выбранном `VER_UE5_8`; unchanged roundtrip обязан быть побайтно идентичным
+  как для текущего Voyage, так и для более старых regression fixtures. У
+  нового import также `PackageName` должен совпадать с его `ObjectName`.
+- Нельзя объявлять существующие падения тестов допустимым baseline, сравнив
+  только два наших последовательных коммита. Коммит `48b6096` уже содержал
+  слишком широкий filtered-import patch и сам внёс десять binary-roundtrip
+  регрессий, поэтому сравнение более поздних изменений с `48b6096` или
+  `b5c47b7` их скрывало. Для изменения общей сериализации нужно отдельно
+  прогнать тот же набор на настоящем upstream merge-base; текущий контрольный
+  результат до и после корректного UE 5.8 gate -- `27/27`.
 - Имя `.uasset` package не обязано совпадать с внутренним именем Blueprint
   asset. У marker package `WBP_InteractIndicator_M` внутренний asset оставлен
   `WBP_InteractIndicator`, поэтому generated class называется

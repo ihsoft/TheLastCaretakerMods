@@ -7,13 +7,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$expectedSourceCommit = '2943aa117aa805a0e3203a8befa5a89e2daaa6e3'
-$expectedSourceDescribe = 'v1.1.0-84-g2943aa1'
+$expectedSourceCommit = '6b5ead37f213adc79d814689040a519be4e04a74'
+$expectedSourceDescribe = 'v1.1.0-85-g6b5ead3'
 $upstreamBaseCommit = '3228c1e86261aa08131f7ec0ff1a395f5d0b2a84'
 $criticalSources = [ordered]@{
     'UAssetAPI\FieldTypes\FField.cs' = '2805C719525B62613C3A11166CAE56A62D5925FC9EE4AB4C0B8F41DA37F8E074'
-    'UAssetAPI\Import.cs' = '36B0C55E02B7FDF8162FEDD7727226959CA77A0143AF2BCC2E6A9FD52E181052'
-    'UAssetAPI\UAsset.cs' = '971C9CEBC0B034401045BE354A7CE29AC1423399F2DCB7DD4A07CEE040883E26'
+    'UAssetAPI\Import.cs' = 'B28BD311ED3BA1E81CE1ED7B8EACB11EC5810D1744FA114705A0F1E7359CBCCC'
+    'UAssetAPI\UAsset.cs' = '642B2F3E46A23DE5241DF466D4EC9EC907539FA861CD114E28F129AFEE97EF01'
     'UAssetAPI\MainSerializer.cs' = '6CF3BE1FC6AA80513CB4323D01FDB6873FB0CCF20C69F23991407CDBDC0AB4BE'
     'UAssetAPI\Unversioned\Usmap.cs' = '3CFCCC2A1CFAA2AB93B27316E79AA0191D2401DDAEEAB5545E6EA2BF4F8DDC27'
     'UAssetAPI\PropertyTypes\Objects\EnumPropertyData.cs' = 'DF7E1FBA2E0B26271CBEC4B9C0A3C9E3D6DAE8E31DDDD51173795F8214E23A36'
@@ -65,7 +65,7 @@ $manifest = [ordered]@{
     upstreamBaseCommit = $upstreamBaseCommit
     officialSupportThrough = 'UE 5.7'
     compatibilityChanges = @(
-        'Always serialize FObjectImport.PackageName for the applicable object version'
+        'Serialize filtered FObjectImport.PackageName only for explicitly selected UE 5.8 assets'
         'Handle filtered cooked FField layout'
         'Preserve the requested engine version while loading dependency schemas'
         'Load complete Blueprint parent schema chains and retry incomplete dependency walks'

@@ -21,7 +21,7 @@ documented interface is insufficient.
 | Build the reviewed standalone mapping dumper | `Build-JmapVoyageMappingsDumper.ps1` | Exact jmap fork commit with the UE 5.8 layout and nullable-metadata fixes |
 | Locate the live `GUObjectArray` when signatures fail | `Find-VoyageUObjectArray.ps1` | Read-only structural scan of the shipping executable's `.data` section |
 | Reject an empty, stale, or misrouted `.usmap` | `Test-VoyageMappings.ps1` | Header, payload, manifest, fingerprint, hash, and required-schema checks |
-| Prepare the reviewed UAssetAPI source | `Prepare-UAssetApiVoyageUe58.ps1` | Exact UAssetAPI fork commit with the three Voyage UE 5.8 compatibility fixes |
+| Prepare the reviewed UAssetAPI source | `Prepare-UAssetApiVoyageUe58.ps1` | Exact UAssetAPI fork commit with the reviewed Voyage UE 5.8 compatibility fixes |
 | Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/UAssetGUI` `stress-open` command | Incremental per-asset JSONL plus parse/binary-equality summary |
 | Install/remove one unchanged package canary | `Install-VoyageUnchangedProbe.ps1`, `Remove-VoyageUnchangedProbe.ps1` | Current-fingerprint and exact-hash guarded runtime roundtrip test |
 | Locate native names, references, or correlated member offsets | `VoyageExecutableInspector` | Read-only executable report with version-specific offsets |
@@ -37,8 +37,8 @@ game fingerprint, a versioned output directory, and an inspection manifest.
 
 - Run commands from the repository root in PowerShell.
 - Patched third-party checkouts live under ignored `.tools/`: `ihsoft/retoc`
-  at `234f4e5`, `ihsoft/jmap` at `4f88d8a`, `ihsoft/UAssetAPI` at `2943aa1`,
-  and `ihsoft/UAssetGUI` at `5e6dcab`. The GUI checkout contains the same
+  at `234f4e5`, `ihsoft/jmap` at `4f88d8a`, `ihsoft/UAssetAPI` at `6b5ead3`,
+  and `ihsoft/UAssetGUI` at `e362030`. The GUI checkout contains the same
   UAssetAPI commit as its submodule. Clone/fetch those exact commits before
   using a builder; the scripts reject a different or dirty source tree.
 - The unmodified CUE4Parse dependency also lives under `.tools/CUE4Parse`, at
@@ -336,16 +336,20 @@ names rather than at the canonical path.
 ### `Prepare-UAssetApiVoyageUe58.ps1`
 
 The reviewed UAssetAPI fork commit
-`2943aa117aa805a0e3203a8befa5a89e2daaa6e3` contains the filtered import,
+`6b5ead37f213adc79d814689040a519be4e04a74` contains the scoped filtered import,
 filtered `FField`, dependency-schema engine-version/parent-chain fixes, native
 custom-export preservation, empty `InstancedPropertyBag` support, and missing
 native-enum fallback used by the GUI and command-line asset tools. The
 preparation script accepts only its configured clean checkpoint and copies
-tracked source files to a new ignored output directory.
+tracked source files to a new ignored output directory. The filtered import
+rule retains the legacy layout through UE 5.7 and enables the additional
+`FObjectImport.PackageName` only for an explicitly selected UE 5.8 asset; this
+restores UAssetAPI's complete upstream suite to `27/27` while retaining the
+accepted `1,067`-asset Voyage stress result.
 
 ```powershell
 .\tools\Prepare-UAssetApiVoyageUe58.ps1 `
-  -OutputRoot '.\artifacts\tools\uassetapi-2943aa1'
+  -OutputRoot '.\artifacts\tools\uassetapi-6b5ead3'
 ```
 
 ### Patched UAssetGUI `stress-open`
@@ -384,7 +388,7 @@ because the embedded retoc reads that complete set.
 
 Outputs are game-derived diagnostics and remain below ignored `artifacts/`.
 The headless command was introduced by UAssetGUI fork commit `b95587b`. The
-reviewed compatibility checkpoint is `5e6dcab`, which pins UAssetAPI `2943aa1`
+reviewed compatibility checkpoint is `e362030`, which pins UAssetAPI `6b5ead3`
 and records the additional structured diagnostics in the stress report.
 
 ### `VoyageExecutableInspector`

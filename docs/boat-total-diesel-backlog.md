@@ -481,9 +481,12 @@ Audit results:
    from UE 5.7. This scoped rule yields `26/26` parsed exports and passes binary
    equality on the corrected-retoc extraction.
 
-   The two A/B-sensitive legacy tests pass with the scoped rule. The complete
-   upstream suite returns its unchanged baseline (`17` passed, `10` failed),
-   with no failures added relative to corrected-API commit `48b6096`.
+   The two A/B-sensitive legacy tests pass with the scoped rule. At this stage
+   the complete suite still returned `17` passed and `10` failed, and the result
+   was mistakenly accepted because it added no failures relative to
+   `48b6096`. A later audit against the real upstream merge-base showed that
+   `48b6096` itself introduced all ten failures by applying the filtered-import
+   layout globally; this was not a valid upstream baseline.
 
    The old UAssetGUI embedded retoc remains independently invalid: even with
    the explicit fallback version and corrected FField layout, its extraction
@@ -526,9 +529,10 @@ Audit results:
    internal dependency asset changes the original package from `31/32` to
    `32/32` parsed exports while retaining binary equality. The dependency
    itself remains `6/6`; the earlier FootStep (`26/26`) and CableUpdater
-   (`5/5`) controls also retain binary equality. The complete upstream suite
-   remains at its exact pre-existing baseline (`17` passed, `10` failed), so
-   this probe adds no test regression. After the pre-fix GUI closed, the
+   (`5/5`) controls also retain binary equality. The complete suite remained
+   at the already-regressed local `17/10` result, so this probe added no further
+   failures, but that comparison did not clear the inherited filtered-import
+   regression. After the pre-fix GUI closed, the
    default Release output rebuilt in place with zero warnings and zero errors;
    direct GUI validation is still pending and the new API change is not
    committed.
@@ -690,15 +694,26 @@ Audit results:
    the baseline is expected: complete parent-chain discovery now exposes
    transitive dependencies that the prematurely cached schema load skipped.
    The user then manually opened the formerly failing examples in the rebuilt
-   GUI and confirmed that they work. The parser repairs are committed in the
-   UAssetAPI fork as `2943aa1`; the UAssetGUI diagnostic integration and
-   submodule checkpoint are committed as `5e6dcab`.
+   GUI and confirmed that they work. The parser repairs were first committed
+   in the UAssetAPI fork as `2943aa1`; the UAssetGUI diagnostic integration and
+   submodule checkpoint were committed as `5e6dcab`.
 
-   UAssetAPI's own test project currently reports `17` passed and `10` failed.
-   The same exact `10` tests fail at the clean fork baseline `b5c47b7` in an
-   isolated worktree, so this is pre-existing upstream fixture/baseline debt,
-   not a regression introduced by the candidate parser fixes. The Voyage-wide
-   hierarchy stress result is the relevant new coverage for these changes.
+   A follow-up audit corrected an important false conclusion about UAssetAPI's
+   own tests. The earlier comparison used `b5c47b7` as a "clean baseline", but
+   that commit descends from our first filtered-import change `48b6096`.
+   Actual upstream `3228c1e` passes all `27/27`; `48b6096` immediately changes
+   the result to the same `17/27` and accounts for all ten failures. Every
+   failure occurs at the unchanged binary-roundtrip assertion because older
+   filtered packages do not serialize `FObjectImport.PackageName`.
+
+   The corrected rule serializes that field only when the object version
+   supports it and either the package is not filtered or the caller explicitly
+   selected `VER_UE5_8`. The complete UAssetAPI suite then returns to `27/27`.
+   A fresh UAssetGUI stress pass over the same build-`25056839` mapping and all
+   `1,067` `\Voyage\Content\Blueprints` packages exactly reproduces the
+   accepted result: `1,057` clean, `10` notices, `0` failures, with binary
+   equality for every package. The scoped fix is committed in UAssetAPI as
+   `6b5ead3`; UAssetGUI pins it at `e362030`.
 5. UE4SS main gained explicit UE 5.8 support on 2026-08-28 in commit
    `5e755b6d55ee1cb06fc8105f165a7e29c3b9509d`, after the earlier public UE 5.8
    PatternSleuth failure report. Current main also adds
