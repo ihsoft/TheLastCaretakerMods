@@ -74,9 +74,11 @@
   -MappingsPath .\artifacts\mappings\current\Mappings.usmap
 ```
 
-Локальный checkout CUE4Parse должен находиться в `tools/CUE4Parse`; он намеренно
-игнорируется Git. Для инвентаризации без выгрузки содержимого используется
-префикс `list:`, для reflection-типов — `mappings:`.
+Чистый upstream checkout CUE4Parse commit
+`ec6595e46448a817ac21ea9bde01caa48f80a420` должен находиться в
+`.tools/CUE4Parse`; он намеренно игнорируется Git. Для инвентаризации без
+выгрузки содержимого используется префикс `list:`, для reflection-типов —
+`mappings:`.
 
 Свежий `.usmap` создаётся временно подключаемым
 `tools/VoyageMappingsDumper`. Сам mapping в Git не сохраняется: после

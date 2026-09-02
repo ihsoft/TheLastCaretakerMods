@@ -18,9 +18,9 @@ $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $paks = Join-Path $root 'Voyage\Content\Paks'
 $exe = Join-Path $root 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe'
 $project = Join-Path $PSScriptRoot 'VoyageAssetInspector\VoyageAssetInspector.csproj'
-$cue4ParseProject = Join-Path $PSScriptRoot 'CUE4Parse\CUE4Parse\CUE4Parse.csproj'
+$cue4ParseProject = Join-Path $PSScriptRoot '..\.tools\CUE4Parse\CUE4Parse\CUE4Parse.csproj'
 if (-not (Test-Path -LiteralPath $cue4ParseProject -PathType Leaf)) {
-    throw 'CUE4Parse checkout is missing. Place it at tools\CUE4Parse; that local dependency is intentionally ignored by Git.'
+    throw 'CUE4Parse checkout is missing. Place upstream commit ec6595e46448a817ac21ea9bde01caa48f80a420 at .tools\CUE4Parse.'
 }
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
     throw "Voyage executable not found: $exe"

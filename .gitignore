@@ -1,6 +1,5 @@
 # Local tool checkouts and build output
 .tools/
-tools/CUE4Parse/
 **/bin/
 **/obj/
 

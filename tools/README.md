@@ -13,6 +13,7 @@ documented interface is insufficient.
 | Goal | Start with | Result |
 | --- | --- | --- |
 | Identify the installed game build | `Get-VoyageBuildFingerprint.ps1` | Steam build ID, executable hash, and container metadata/hashes |
+| Get one cooked asset or Blueprint as reusable JSON | `Get-VoyageAssetJson.ps1` | Fingerprinted cache entry at the asset's mirrored virtual path |
 | Find, list, or structurally inspect cooked assets | `Inspect-VoyageAsset.ps1` | Paths, JSON exports, Blueprint pseudocode, or mapping reports |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Build the reviewed retoc compatibility binary for UE 5.8 | `Build-RetocUe58Compatibility.ps1` | Patched ignored retoc source/binary plus compatibility manifest |
@@ -39,6 +40,10 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   and `ihsoft/UAssetGUI` at `1ee090c`. The GUI checkout contains the same
   UAssetAPI commit as its submodule. Clone/fetch those exact commits before
   using a builder; the scripts reject a different or dirty source tree.
+- The unmodified CUE4Parse dependency also lives under `.tools/CUE4Parse`, at
+  upstream `FabianFG/CUE4Parse` commit
+  `ec6595e46448a817ac21ea9bde01caa48f80a420`. It has no Voyage patch and does
+  not require a fork.
 - Most scripts default to the original developer's game path on drive `P:`.
   Pass `-GameRoot '<your Steam Voyage directory>'` on another machine.
 - `Extract-VoyagePackage.ps1` requires a compatible `retoc` executable. Its
@@ -49,7 +54,7 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   `FObjectImport.PackageName` compatibility build. See
   [`RetocUe58Compatibility/README.md`](RetocUe58Compatibility/README.md).
 - C# tools currently target .NET 10. `Inspect-VoyageAsset.ps1` additionally
-  expects a local CUE4Parse checkout at `tools/CUE4Parse`; that dependency is
+  expects a local CUE4Parse checkout at `.tools/CUE4Parse`; that dependency is
   intentionally ignored by Git.
 - `VoyageAssetInspector` pins `Microsoft.Bcl.Memory` `10.0.11` to override the
   vulnerable `9.0.0` transitive dependency in the current CUE4Parse checkout.
@@ -168,6 +173,56 @@ package paths and per-package errors. Keep the path filter narrow.
 
 Every query writes to a new fingerprinted directory and refuses to overwrite a
 previous result. Choose a new `-OutputRoot` for a repeated investigation.
+
+### Stable JSON cache for individual assets
+
+Use `Get-VoyageAssetJson.ps1` when later work needs the same complete asset
+export more than once. Unlike the query-oriented inspector above, this wrapper
+maintains one package index per game/container view and promotes one JSON file
+to a stable, mirrored virtual path:
+
+```powershell
+.\tools\Get-VoyageAssetJson.ps1 `
+  'Voyage/Content/Blueprints/BP_VoyageCableUpdater.uasset'
+```
+
+`/Game/Blueprints/BP_VoyageCableUpdater` is accepted as the equivalent Unreal
+package identity. A short fragment is also accepted only when it identifies
+exactly one package; an ambiguous fragment fails and lists exact candidates.
+
+The cache layout is:
+
+```text
+artifacts/asset-cache/
+  steam-<build-id>-<exe-sha-prefix>-base-<container-sha-prefix>/
+    <container-view>/
+      _catalog/packages.txt
+      Voyage/Content/.../<Asset>.json
+      Voyage/Content/.../<Asset>.asset-manifest.json
+```
+
+The first request for a game/container view builds `_catalog/packages.txt`.
+The first exact asset request then parses and stores the JSON; later requests
+return `cacheStatus = hit` without rewriting it. The sidecar binds the JSON to
+the executable and base-container fingerprint, exact virtual path, mappings
+hash, mounted container view, content hash, and inspector source hash. The
+wrapper discovers the newest current-fingerprint mapping below
+`artifacts/mappings/` and runs `Test-VoyageMappings.ps1` before using it.
+
+Additional installed containers can shadow stock packages, so the default
+call refuses them. Remove those containers to populate the `base` view, or use
+the explicit opt-in below when the combined installed view is the intended
+subject:
+
+```powershell
+.\tools\Get-VoyageAssetJson.ps1 `
+  'Voyage/Content/Blueprints/BP_VoyageCableUpdater.uasset' `
+  -AllowAdditionalContainers
+```
+
+The opt-in result goes into a separate `with-additional-<hash>` view; it never
+masquerades as a base-game export. Cache contents and indexes remain ignored,
+game-derived artifacts. Commit this wrapper and conclusions, not its output.
 
 ### 3. Extract an exact package
 

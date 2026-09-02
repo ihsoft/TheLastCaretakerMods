@@ -715,6 +715,26 @@ produced no obvious visual marker. The intentional bad-SuperIndex probe then
 caused an immediate startup crash and was removed, proving the stock-path
 package is live.
 
+Reusable asset inspection now has a stable game-versioned JSON cache through
+`tools/Get-VoyageAssetJson.ps1`. It maintains one complete package index per
+installed container view, resolves short names only when unique, mirrors the
+exact virtual package tree below
+`artifacts/asset-cache/steam-<build>-<exe>-base-<containers>/`, and verifies
+the game fingerprint, mapping hash, JSON hash, and sidecar before returning a
+hit. Additional containers are rejected by default and receive a separate
+hash-named mounted-view cache only with explicit opt-in.
+
+The first UE 5.8 validation used the intentionally modded installed view and
+created
+`Voyage/Content/Blueprints/BP_VoyageCableUpdater.json`. The catalog contained
+23,982 packages; the JSON contained five exports and had SHA-256
+`05A514C348F9907A4FAA202FE90B214E6DB011E261BE8A1401DBD2D1E691D86B`.
+A second lookup through the equivalent `/Game/...` identity returned a cache
+hit without changing the file timestamp. An ambiguous `BP_Boat` control was
+rejected with all eight exact candidates instead of caching an arbitrary
+match. These values are validation evidence only; the generated catalog,
+JSON, and manifests remain ignored game-derived artifacts.
+
 ## Current UE 5.8 candidate
 
 The final default-path build used the fresh hash-linked extraction, UE 5.8.2,
