@@ -17,6 +17,11 @@ documented interface is insufficient.
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Build the reviewed retoc compatibility binary for UE 5.8 | `Build-RetocUe58Compatibility.ps1` | Patched ignored retoc source/binary plus compatibility manifest |
 | Generate a fresh `.usmap` | `VoyageMappingsDumper` | Version-bound `Mappings.usmap` through a temporary UE4SS session |
+| Build the reviewed standalone mapping dumper | `Build-JmapVoyageMappingsDumper.ps1` | Exact current jmap commit with the post-0.2.0 UE 5.6+ alignment fix |
+| Locate the live `GUObjectArray` when signatures fail | `Find-VoyageUObjectArray.ps1` | Read-only structural scan of the shipping executable's `.data` section |
+| Reject an empty, stale, or misrouted `.usmap` | `Test-VoyageMappings.ps1` | Header, payload, manifest, fingerprint, hash, and required-schema checks |
+| Prepare the reviewed UAssetAPI source | `Prepare-UAssetApiVoyageUe58.ps1` | Current upstream plus the Voyage filtered-import layout correction |
+| Install/remove one unchanged package canary | `Install-VoyageUnchangedProbe.ps1`, `Remove-VoyageUnchangedProbe.ps1` | Current-fingerprint and exact-hash guarded runtime roundtrip test |
 | Locate native names, references, or correlated member offsets | `VoyageExecutableInspector` | Read-only executable report with version-specific offsets |
 | Reproduce one of the existing surgical cooked-asset probes | `VoyageAssetPatcher` | Assertion-checked diagnostic asset written to a new path |
 | Discover which Blueprint editor APIs Unreal Python exposes | `Inspect-UnrealBlueprintApi.py` | `Saved/BlueprintApi.txt` in an Unreal project |
@@ -31,14 +36,23 @@ game fingerprint, a versioned output directory, and an inspection manifest.
 - Run commands from the repository root in PowerShell.
 - Most scripts default to the original developer's game path on drive `P:`.
   Pass `-GameRoot '<your Steam Voyage directory>'` on another machine.
-- `Extract-VoyagePackage.ps1` requires a compatible `retoc` executable. Pass
-  `-Retoc '<path to retoc.exe>'` when the built-in local default does not exist.
+- `Extract-VoyagePackage.ps1` requires a compatible `retoc` executable. Its
+  local default is the reviewed fork build at
+  `.tools/retoc/target/release/retoc.exe`; pass `-Retoc '<path to retoc.exe>'`
+  when using another provenance-checked build.
 - Current UE 5.8 cooked legacy packages require the reviewed retoc
   `FObjectImport.PackageName` compatibility build. See
   [`RetocUe58Compatibility/README.md`](RetocUe58Compatibility/README.md).
 - C# tools currently target .NET 10. `Inspect-VoyageAsset.ps1` additionally
   expects a local CUE4Parse checkout at `tools/CUE4Parse`; that dependency is
   intentionally ignored by Git.
+- `VoyageAssetInspector` pins `Microsoft.Bcl.Memory` `10.0.11` to override the
+  vulnerable `9.0.0` transitive dependency in the current CUE4Parse checkout.
+  The dependency project can still emit its own audit warning while building;
+  verify the final Inspector `.deps.json` resolves only `10.0.11`.
+- Without `cmake`, CUE4Parse reports that its optional native backend was not
+  built and continues with the managed implementation. Record that limitation
+  rather than treating a managed-only inspection as native-backend coverage.
 - Start every version-bound investigation with a fresh fingerprint. Do not use
   an old artifact merely because its path or asset name still looks correct.
 - Installed override containers can shadow base-game assets during extraction.
@@ -84,6 +98,21 @@ available:
   -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage'
 ```
 
+For a non-installed container that must be resolved together with stock game
+dependencies, call the underlying inspector with the game Paks directory as
+the primary input and the test package directory as the optional sixth
+argument. Both directories remain read-only:
+
+```powershell
+dotnet run --project .\tools\VoyageAssetInspector -c Release -- `
+  'P:\SteamLibrary\steamapps\common\Voyage\Voyage\Content\Paks' `
+  'BP_VoyageIngameHud' `
+  '.\artifacts\inspection\probe-hud' `
+  '.\artifacts\mappings\current\Mappings.usmap' `
+  'UE5_8' `
+  '.\artifacts\builds\probe\package'
+```
+
 Query reflection mappings rather than package contents:
 
 ```powershell
@@ -104,6 +133,33 @@ Query reflection mappings rather than package contents:
 `-EngineVersion` selects the CUE4Parse serialization rules. It defaults to
 `UE5_7` for existing version-bound workflows; pass `UE5_8` for current Voyage
 builds based on Unreal Engine 5.8.
+
+Find Blueprint-generated classes by their exact direct parent while limiting
+the package scan to a relevant content subtree:
+
+```powershell
+.\tools\Inspect-VoyageAsset.ps1 `
+  -Query 'parent:VoyageModuleResourceWidget|Voyage/Content/UI/' `
+  -MappingsPath '.\artifacts\mappings\current\Mappings.usmap' `
+  -EngineVersion UE5_8
+```
+
+The separator after the parent fragment is a literal `|`. Keep the path filter
+narrow: this mode loads every matching package to inspect its exported classes.
+
+Find packages whose serialized exports reference a class, function, property,
+or asset identity while limiting the scan to a relevant content subtree:
+
+```powershell
+.\tools\Inspect-VoyageAsset.ps1 `
+  -Query 'references:AddModuleWidget|Voyage/Content/UI/' `
+  -MappingsPath '.\artifacts\mappings\current\Mappings.usmap' `
+  -EngineVersion UE5_8
+```
+
+The separator after the reference fragment is a literal `|`. This mode loads
+and serializes every matching package in memory but writes only the matching
+package paths and per-package errors. Keep the path filter narrow.
 
 Every query writes to a new fingerprinted directory and refuses to overwrite a
 previous result. Choose a new `-OutputRoot` for a repeated investigation.
@@ -126,6 +182,12 @@ a structural report:
 the selected retoc build. Do not silently substitute it across game updates;
 first compare the live IoStore header and package versions and prove extraction
 against a fresh fingerprint.
+
+The retoc executable path and SHA-256 in `extraction-manifest.json` are part of
+the test identity. Do not compare parser results from assets produced by
+different retoc binaries merely because their `.uexp` payloads match: the
+legacy `.uasset` import/header conversion can differ and invalidate every
+downstream mapping result.
 
 `-Filter` matches the IoStore directory-index path. A successful run must
 produce at least one `.uasset`; zero matches are an error. The output includes
@@ -152,6 +214,31 @@ a runtime dependency of the shipped autonomous mods.
 
 The mapping is a snapshot of one executable and is never committed.
 
+Standalone `jmap_dumper` release `0.2.0` predates upstream commit `805cd7a`,
+which fixes the serialized width of `UStruct::MinAlignment` for UE 5.6+.
+For Voyage UE 5.8, build reviewed commit
+`3f189715f08a646a8c341bf80c2fe06e44177ac3` with
+`Build-JmapVoyageMappingsDumper.ps1`, pass the explicitly validated
+`GUObjectArray` when automatic resolution fails, and regenerate the mapping.
+The CLI still prints version `0.2.0`, so the build manifest and executable hash
+are the version authority.
+
+`Find-VoyageUObjectArray.ps1` performs the fallback address discovery without
+injecting code or writing process memory. It reads only the shipping module's
+PE `.data` section and requires exactly one candidate matching the chunk count,
+capacity, pointer, and first-object invariants. Use its `guObjectArray` result
+only for the same live process invocation; ASLR changes the absolute address on
+the next launch.
+
+Do not promote a dumper output merely because a file named `Mappings.usmap`
+exists. The UE 5.8 automatic `GUObjectArray` resolver can emit a structurally
+valid but empty 28-byte map. Store the selected output with an ignored
+`mapping-manifest.json`, then gate every parser use through
+`Test-VoyageMappings.ps1`. The validator checks the USMAP header and payload,
+the exact mapping hash and length, the owning game fingerprint, and a small set
+of required Voyage schemas. Keep failed automatic outputs under diagnostic
+names rather than at the canonical path.
+
 ### `VoyageExecutableInspector`
 
 This is a read-only PE inspector, not a decompiler and not an injector. It can
@@ -173,11 +260,20 @@ conclusion based on an offset.
 
 ### `VoyageAssetPatcher`
 
-This is not a general-purpose asset editor. It preserves two assertion-heavy,
-version-bound diagnostic transformations:
+This is not a general-purpose asset editor. It preserves assertion-heavy,
+version-bound diagnostic transformations, including:
 
 - `break-bottom-action-filter` proves ownership of the native bottom HUD row;
-- `swap-forklift-horn-to-exit` probes the standard-action producer path.
+- `swap-forklift-horn-to-exit` probes the standard-action producer path;
+- `swap-hud-indicator-subclass` appends a distinct marker-class import and
+  changes only the original HUD CDO's indicator class reference/dependency;
+- `roundtrip-unchanged` separates writer normalization from a requested patch;
+- `set-cable-updater-tick-interval` extends only the exact current
+  `BP_VoyageCableUpdater` CDO with a one-second TickInterval marker;
+- `break-cable-updater-super-index` creates an intentional bad-export-index
+  crash marker for proving that exact stock package is loaded;
+- `swap-hud-indicator-existing-control` is a non-installable field-identity
+  control using an already imported widget class.
 
 ```powershell
 dotnet run --project .\tools\VoyageAssetPatcher\VoyageAssetPatcher.csproj `
@@ -191,7 +287,9 @@ dotnet run --project .\tools\VoyageAssetPatcher\VoyageAssetPatcher.csproj `
 The input and its companion files must come from the matching game build, and
 the output must be a different path. See
 [`VoyageAssetPatcher/README.md`](VoyageAssetPatcher/README.md) for the required
-UAssetAPI source checkout and the exact assertions of both probes.
+UAssetAPI source checkout and the exact assertions of each operation. Voyage
+UE 5.8 additionally requires the documented filtered-package
+`FObjectImport.PackageName` read/write compatibility change.
 
 ### `Inspect-UnrealBlueprintApi.py`
 

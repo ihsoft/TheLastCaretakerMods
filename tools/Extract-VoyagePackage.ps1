@@ -4,7 +4,7 @@ param(
 
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
-    [string]$Retoc = 'R:\Codex\ToolCache\rust-retoc-master\source\target\release\retoc.exe',
+    [string]$Retoc = (Join-Path $PSScriptRoot '..\.tools\retoc\target\release\retoc.exe'),
 
     [string]$RetocEngineVersion = 'UE5_7',
 
