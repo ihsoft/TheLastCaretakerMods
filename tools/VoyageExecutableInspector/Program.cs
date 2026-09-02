@@ -102,6 +102,14 @@ foreach (var match in matches)
         writer.WriteLine($"  FILE=0x{reference:X}\tRVA=0x{pe.FileOffsetToRva(reference):X}");
         WriteHexWindow(writer, image, reference, 0x20);
     }
+
+    var relativeBranches = FindRelativeBranches(image, pe, matchRva).ToArray();
+    writer.WriteLine($"RELATIVE_CALLS_OR_JUMPS\t{relativeBranches.Length}");
+    foreach (var reference in relativeBranches.Take(64))
+    {
+        writer.WriteLine($"  FILE=0x{reference:X}\tRVA=0x{pe.FileOffsetToRva(reference):X}\tOPCODE=0x{image[reference]:X2}");
+        WriteHexWindow(writer, image, reference, 0x20);
+    }
 }
 
 foreach (var virtualAddress in targetVirtualAddresses)
@@ -126,6 +134,14 @@ foreach (var virtualAddress in targetVirtualAddresses)
     foreach (var reference in ripReferences.Take(128))
     {
         writer.WriteLine($"  FILE=0x{reference:X}\tRVA=0x{pe.FileOffsetToRva(reference):X}");
+        WriteHexWindow(writer, image, reference, 0x20);
+    }
+
+    var relativeBranches = FindRelativeBranches(image, pe, targetRva).ToArray();
+    writer.WriteLine($"RELATIVE_CALLS_OR_JUMPS\t{relativeBranches.Length}");
+    foreach (var reference in relativeBranches.Take(128))
+    {
+        writer.WriteLine($"  FILE=0x{reference:X}\tRVA=0x{pe.FileOffsetToRva(reference):X}\tOPCODE=0x{image[reference]:X2}");
         WriteHexWindow(writer, image, reference, 0x20);
     }
 }
@@ -231,6 +247,27 @@ static IEnumerable<int> FindRipRelativeReferences(byte[] image, PeImage pe, uint
             var displacement = BinaryPrimitives.ReadInt32LittleEndian(image.AsSpan(offset + 3, 4));
             var instructionRva = pe.FileOffsetToRva(offset);
             var referencedRva = unchecked((uint)(instructionRva + 7 + displacement));
+            if (referencedRva == targetRva) yield return offset;
+        }
+    }
+}
+
+static IEnumerable<int> FindRelativeBranches(byte[] image, PeImage pe, uint targetRva)
+{
+    foreach (var section in pe.Sections.Where(section => section.IsExecutable))
+    {
+        var start = checked((int)section.RawOffset);
+        var end = checked((int)Math.Min((long)image.Length, section.RawOffset + section.RawSize));
+        for (var offset = start; offset + 5 <= end; offset++)
+        {
+            if (image[offset] is not (0xE8 or 0xE9))
+            {
+                continue;
+            }
+
+            var displacement = BinaryPrimitives.ReadInt32LittleEndian(image.AsSpan(offset + 1, 4));
+            var instructionRva = pe.FileOffsetToRva(offset);
+            var referencedRva = unchecked((uint)(instructionRva + 5 + displacement));
             if (referencedRva == targetRva) yield return offset;
         }
     }

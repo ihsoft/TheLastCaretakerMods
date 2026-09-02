@@ -17,10 +17,10 @@ documented interface is insufficient.
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Build the reviewed retoc compatibility binary for UE 5.8 | `Build-RetocUe58Compatibility.ps1` | Patched ignored retoc source/binary plus compatibility manifest |
 | Generate a fresh `.usmap` | `VoyageMappingsDumper` | Version-bound `Mappings.usmap` through a temporary UE4SS session |
-| Build the reviewed standalone mapping dumper | `Build-JmapVoyageMappingsDumper.ps1` | Exact current jmap commit with the post-0.2.0 UE 5.6+ alignment fix |
+| Build the reviewed standalone mapping dumper | `Build-JmapVoyageMappingsDumper.ps1` | Exact jmap fork commit with the UE 5.8 layout and nullable-metadata fixes |
 | Locate the live `GUObjectArray` when signatures fail | `Find-VoyageUObjectArray.ps1` | Read-only structural scan of the shipping executable's `.data` section |
 | Reject an empty, stale, or misrouted `.usmap` | `Test-VoyageMappings.ps1` | Header, payload, manifest, fingerprint, hash, and required-schema checks |
-| Prepare the reviewed UAssetAPI source | `Prepare-UAssetApiVoyageUe58.ps1` | Current upstream plus the Voyage filtered-import layout correction |
+| Prepare the reviewed UAssetAPI source | `Prepare-UAssetApiVoyageUe58.ps1` | Exact UAssetAPI fork commit with the three Voyage UE 5.8 compatibility fixes |
 | Install/remove one unchanged package canary | `Install-VoyageUnchangedProbe.ps1`, `Remove-VoyageUnchangedProbe.ps1` | Current-fingerprint and exact-hash guarded runtime roundtrip test |
 | Locate native names, references, or correlated member offsets | `VoyageExecutableInspector` | Read-only executable report with version-specific offsets |
 | Reproduce one of the existing surgical cooked-asset probes | `VoyageAssetPatcher` | Assertion-checked diagnostic asset written to a new path |
@@ -34,6 +34,11 @@ game fingerprint, a versioned output directory, and an inspection manifest.
 ## Common setup and safety
 
 - Run commands from the repository root in PowerShell.
+- Patched third-party checkouts live under ignored `.tools/`: `ihsoft/retoc`
+  at `234f4e5`, `ihsoft/jmap` at `4f88d8a`, `ihsoft/UAssetAPI` at `b5c47b7`,
+  and `ihsoft/UAssetGUI` at `1ee090c`. The GUI checkout contains the same
+  UAssetAPI commit as its submodule. Clone/fetch those exact commits before
+  using a builder; the scripts reject a different or dirty source tree.
 - Most scripts default to the original developer's game path on drive `P:`.
   Pass `-GameRoot '<your Steam Voyage directory>'` on another machine.
 - `Extract-VoyagePackage.ps1` requires a compatible `retoc` executable. Its
@@ -216,12 +221,20 @@ The mapping is a snapshot of one executable and is never committed.
 
 Standalone `jmap_dumper` release `0.2.0` predates upstream commit `805cd7a`,
 which fixes the serialized width of `UStruct::MinAlignment` for UE 5.6+.
-For Voyage UE 5.8, build reviewed commit
-`3f189715f08a646a8c341bf80c2fe06e44177ac3` with
+For Voyage UE 5.8, build reviewed fork commit
+`4f88d8af758712839529f9eeeb02b82c9469e271` with
 `Build-JmapVoyageMappingsDumper.ps1`, pass the explicitly validated
 `GUObjectArray` when automatic resolution fails, and regenerate the mapping.
-The CLI still prints version `0.2.0`, so the build manifest and executable hash
-are the version authority.
+This commit is based on upstream `3f189715f08a646a8c341bf80c2fe06e44177ac3`
+and additionally handles nullable transient Blueprint enum, interface, and
+object metadata. The CLI still prints version `0.2.0`, so the source commit,
+build manifest, and executable hash are the version authority.
+
+```powershell
+.\tools\Build-JmapVoyageMappingsDumper.ps1 `
+  -SourceRoot '.\.tools\jmap' `
+  -OutputRoot '.\artifacts\tools\jmap-4f88d8a'
+```
 
 `Find-VoyageUObjectArray.ps1` performs the fallback address discovery without
 injecting code or writing process memory. It reads only the shipping module's
@@ -238,6 +251,19 @@ valid but empty 28-byte map. Store the selected output with an ignored
 the exact mapping hash and length, the owning game fingerprint, and a small set
 of required Voyage schemas. Keep failed automatic outputs under diagnostic
 names rather than at the canonical path.
+
+### `Prepare-UAssetApiVoyageUe58.ps1`
+
+The reviewed UAssetAPI fork commit
+`b5c47b735076585513fe31b50e81cddf353341ed` contains the filtered import,
+filtered `FField`, and dependency-schema engine-version fixes used by the GUI
+and command-line asset tools. The preparation script accepts only that clean
+commit and copies tracked source files to a new ignored output directory.
+
+```powershell
+.\tools\Prepare-UAssetApiVoyageUe58.ps1 `
+  -OutputRoot '.\artifacts\tools\uassetapi-b5c47b7'
+```
 
 ### `VoyageExecutableInspector`
 
@@ -288,8 +314,8 @@ The input and its companion files must come from the matching game build, and
 the output must be a different path. See
 [`VoyageAssetPatcher/README.md`](VoyageAssetPatcher/README.md) for the required
 UAssetAPI source checkout and the exact assertions of each operation. Voyage
-UE 5.8 additionally requires the documented filtered-package
-`FObjectImport.PackageName` read/write compatibility change.
+UE 5.8 requires all three compatibility changes pinned by
+`Prepare-UAssetApiVoyageUe58.ps1`.
 
 ### `Inspect-UnrealBlueprintApi.py`
 

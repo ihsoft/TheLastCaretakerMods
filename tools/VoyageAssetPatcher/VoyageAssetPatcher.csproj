@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <UAssetApiProject Condition="'$(UAssetApiProject)' == ''">$(MSBuildThisFileDirectory)..\..\..\ToolCache\UAssetAPI-source\UAssetAPI\UAssetAPI.csproj</UAssetApiProject>
+    <UAssetApiProject Condition="'$(UAssetApiProject)' == ''">$(MSBuildThisFileDirectory)..\..\.tools\UAssetAPI\UAssetAPI\UAssetAPI.csproj</UAssetApiProject>
   </PropertyGroup>
 
   <ItemGroup>

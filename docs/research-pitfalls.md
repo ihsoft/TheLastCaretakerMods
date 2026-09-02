@@ -22,6 +22,15 @@ no-op или неверную архитектуру. Цель — не повт
 
 - Разные Lua-wrapper-объекты могут представлять один UObject. Сравнение wrapper
   identity не является стабильной идентичностью актора.
+- Для child Blueprint с unversioned properties недостаточно отразить в
+  editor-mirror только поле, к которому обращается новый граф. Cook сериализует
+  унаследованный CDO по индексам схемы editor-класса, а runtime читает его по
+  полной shipping-схеме. Неполный mirror может успешно скомпилироваться,
+  приготовиться и пройти `retoc verify`, но упасть ещё при async loading с
+  `Bad export index` до вызова любого графа. Так был отклонён Boat HUD child:
+  `BP_VoyageIngameBoatHud.Default__BP_VoyageIngameBoatHud_C`, индекс
+  `66559/5`. Перед runtime-тестом нужен exact native property prefix и
+  отдельная проверка cooked CDO против shipping mapping.
 - Запись нового UObject в поле виджета не гарантирует, что скомпилированный
   Blueprint или `WidgetTree` начнёт использовать эту ссылку.
 - Копия оригинального Blueprint под новым package path сохраняет поведение, но
@@ -157,6 +166,85 @@ no-op или неверную архитектуру. Цель — не повт
 - Успешный `retoc verify` доказывает целостность контейнера, но не runtime
   совместимость Blueprint, input и HUD. После cleanup/consolidation всё равно
   нужна полная проверка в игре.
+- Relocation-проб `WBP_InteractIndicator` для build `24990438` прошёл cook,
+  `retoc verify` и независимый разбор bytecode/CDO, но упал при старте на
+  `FAsyncLoadingThread` с null read до выполнения `PreConstruct`. Чистый
+  двухassetный inventory и правдоподобный child CDO не доказывают, что
+  reconstructed-native-parent совместим с конкретным Widget Blueprint.
+  Считать отклонённой всю эту конкретную архитектуру, а не менять следующий
+  граф поверх неё.
+- Нельзя перенаправлять package import только потому, что искомый путь
+  встречается в `.uasset` один раз. В `BP_VoyageIngameHud` единственный import
+  `WBP_InteractIndicator` одновременно обслуживает CDO-свойство
+  `IndicatorSubClass` и встроенный экземпляр в widget tree. Equal-length
+  замена пути меняет обоих потребителей; такой probe был отклонён статически и
+  не устанавливался. Для точечной замены нужен отдельный CDO delta либо
+  структурное добавление нового import, а не глобальная подмена существующего.
+- Нельзя считать inherited CDO property безопасной только потому, что
+  reconstructed native prefix имеет ожидаемый размер и generated Blueprint
+  успешно cook-ится. В probe3 для `BP_VoyageIngameHud` значение, заданное как
+  `IndicatorSubClass`, при независимом разборе вместе с оригинальным parent
+  декодировалось как `ButtonInfoContainer_Action_1`. Это несовпадение
+  unversioned-property индекса было найдено до установки. Для такого изменения
+  нужен структурный CDO patch с проверкой точного имени свойства, а не ещё один
+  mirror/child вариант.
+- В UE 5.8 Voyage `FObjectImport.PackageName` сериализуется и для filtered
+  cooked packages. UAssetAPI, как и исходный retoc 0.1.5, ошибочно пропускал
+  это поле при `IsFilterEditorOnly`, после чего import-map выглядел
+  правдоподобно, но был сдвинут. Для чтения и записи текущих legacy packages
+  убрать дополнительное исключение `IsFilterEditorOnly` с обеих сторон и
+  потребовать побайтно идентичный unchanged roundtrip. У нового import также
+  `PackageName` должен совпадать с его `ObjectName`.
+- Имя `.uasset` package не обязано совпадать с внутренним именем Blueprint
+  asset. У marker package `WBP_InteractIndicator_M` внутренний asset оставлен
+  `WBP_InteractIndicator`, поэтому generated class называется
+  `WBP_InteractIndicator_C`. Конструировать имя класса из имени package suffix
+  нельзя; сравнивать с reference import от реально cooked child.
+- `AddFunctionGraph` для override `BlueprintNativeEvent` автоматически может
+  создать вызов родительской реализации и связать его return со служебным
+  result pin. Установка default value без разрыва этой связи ничего не меняет:
+  такой первый `GetDescriptionFooter` probe статически декомпилировался обратно
+  в вызов parent. Перед константным marker override нужно разорвать exec- и
+  value-связи auto-parent узла и проверить итоговый cooked bytecode.
+- Нельзя по одному actor-child probe решить, что сломано именно наследование,
+  если одновременно добавлен BlueprintNativeEvent override. Footer-probe для
+  `BP_Module_Diesel_Container` прошёл загрузку package, но через 22 секунды упал
+  на GameThread с записью по адресу `0xe0`. Это не прежний async-load/CDO crash,
+  однако опыт смешал подмену класса и `GetDescriptionFooter`. Следующий контроль
+  обязан сохранить relocation/child и убрать только override; до него отклонён
+  конкретный комбинированный пакет, а не паттерн наследования вообще.
+- Такой no-override контроль для `BP_Module_Diesel_Container` повторил через 24
+  секунды точный GameThread crash: запись по `0xe0`, тот же stack hash и стек.
+  Значит, для этого package отклонена сама stock-path actor-child/SCS подмена,
+  независимо от `GetDescriptionFooter`. В cooked child обнаружен второй
+  `DefaultSceneRoot_GEN_VARIABLE`, templated от одноимённого компонента
+  relocated parent; это ведущий механизм archetype collision. Рабочий child
+  другого Actor, например DonkLift, не доказывает безопасность этого package:
+  сравнивать нужно также SCS/component template identity и lifecycle.
+- Подмена native component import на Blueprint-child может сохранить исходный
+  Actor, его CDO, SCS owner и byte-identical `.uexp`, пройти cook и
+  `retoc verify`, но всё равно нарушить более широкий runtime-контракт класса.
+  Для двух Diesel socket templates такая подмена не уронила игру, зато
+  приклеила персонажа к кораблю и визуально оторвала часть кабелей. Поэтому
+  `VoyageModuleSocketViewComponent` нельзя считать только producer-ом текста:
+  его точная native identity участвует также в attachment/cable/interaction
+  поведении.
+- Наличие свежего файла с именем `Mappings.usmap` не доказывает наличие схем.
+  Ложный automatic `GUObjectArray` resolver для Voyage UE 5.8 создал корректный
+  по заголовку 28-байтовый USMAP с нулевым payload, тогда как полный manual dump
+  имел размер 2,141,952 байта. Любой parser workflow обязан проверять manifest,
+  fingerprint, hash, payload size и несколько обязательных schema names до
+  чтения asset. Даже текущий jmap с исправленным UE 5.6+ `MinAlignment`
+  повторил ложный automatic result; только structural `.data` scan и явный
+  `GUObjectArray` дали полный dump, байт-в-байт совпавший с прежним.
+- Windows exit code `0xE0434352` сам по себе означает необработанное managed
+  exception, а не поломку CLR. Для наших повторявшихся диалогов журнал
+  `.NET Runtime` показал ожидаемые `InvalidDataException`,
+  `DirectoryNotFoundException` и LINQ assertion failures из
+  `VoyageAssetPatcher`/`VoyageAssetInspector`, а не runtime fault. CLI tools
+  должны перехватывать верхнеуровневое exception, печатать краткую ошибку и
+  возвращать exit code `1`, чтобы диагностический отказ не выглядел как crash
+  самого `.NET`.
 - Два вызова `retoc to-zen` на идентичном staging tree могут записать chunks в
   разном физическом порядке. Тогда SHA-256 целых `.ucas/.utoc` различаются,
   хотя chunk ID, asset path, размер и content hash полностью совпадают. Для

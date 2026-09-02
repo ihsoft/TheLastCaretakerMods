@@ -584,7 +584,15 @@ Audit results:
    filesystem view and did not materialize in the user's Explorer. The
    validated file is therefore staged for an explicit host-side copy at
    `artifacts/mappings/Voyage-25056839.usmap`; the older installed mapping is
-   unchanged. No jmap changes are committed.
+   unchanged. The three nullable-metadata fixes are committed in the jmap fork
+   as `4f88d8af758712839529f9eeeb02b82c9469e271`.
+
+   The reusable repository side is now explicit rather than existing only in
+   the working tree: fork-pinned retoc, jmap, and UAssetAPI preparation/build
+   scripts, the structural `GUObjectArray` scanner, the USMAP validator, and
+   the unchanged-canary install/remove scripts are all routed from
+   `tools/README.md`. `VoyageAssetPatcher` now defaults to the reviewed
+   `.tools/UAssetAPI` fork instead of the stale `ToolCache` checkout.
 
    The Options canary also caught a deceptive tool-selection failure. The old
    default retoc under `R:\Codex\ToolCache\rust-retoc-master` has SHA-256

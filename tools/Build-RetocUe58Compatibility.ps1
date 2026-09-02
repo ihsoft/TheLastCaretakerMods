@@ -1,5 +1,5 @@
 param(
-    [string]$SourceRoot = 'R:\Codex\ToolCache\rust-retoc-master\source',
+    [string]$SourceRoot = (Join-Path $PSScriptRoot '..\.tools\retoc'),
 
     [string]$CargoHome = 'R:\Codex\ToolCache\rust-retoc-master\cargo',
 
@@ -11,7 +11,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$expectedLegacyAssetSha256 = '25E9859096C656CE36D35DF87599302EF0CE0847881FD5D64EDEBBE096D9BAAE'
+$expectedSourceCommit = '234f4e5dcc7b9c2d7a0c8d3a79586a4168266723'
+$expectedSourceDescribe = 'v0.1.5-3-g234f4e5'
+$upstreamBaseCommit = '885a8dae740cb1ce1e41ff2e74f67f9f0c118237'
+$upstreamLegacyAssetSha256 = '25E9859096C656CE36D35DF87599302EF0CE0847881FD5D64EDEBBE096D9BAAE'
+$expectedLegacyAssetSha256 = '4573876D2EA3EBFA43906B519A206018A1C67879E532E56480441F918C544761'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $cargo = (Resolve-Path -LiteralPath (Join-Path $CargoHome 'bin\cargo.exe')).Path
 $rustup = (Resolve-Path -LiteralPath $RustupHome).Path
@@ -19,13 +23,28 @@ $output = [IO.Path]::GetFullPath($OutputRoot)
 if (Test-Path -LiteralPath $output) {
     throw "OutputRoot already exists: $output"
 }
-[IO.Directory]::CreateDirectory($output) | Out-Null
+
+$sourceGitPath = $source.Replace('\', '/')
+$actualSourceCommit = (& git -c "safe.directory=$sourceGitPath" -C $source rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0 -or $actualSourceCommit -cne $expectedSourceCommit) {
+    throw "The retoc source is not the reviewed fork commit $expectedSourceCommit."
+}
+$actualSourceDescribe = (& git -c "safe.directory=$sourceGitPath" -C $source describe --tags --always).Trim()
+if ($LASTEXITCODE -ne 0 -or $actualSourceDescribe -cne $expectedSourceDescribe) {
+    throw "Unexpected retoc source description: $actualSourceDescribe"
+}
+$sourceChanges = @(& git -c "safe.directory=$sourceGitPath" -C $source status --porcelain --untracked-files=no)
+if ($LASTEXITCODE -ne 0 -or $sourceChanges.Count -ne 0) {
+    throw 'The reviewed retoc source has tracked working-tree changes.'
+}
 
 $sourceLegacyAsset = Join-Path $source 'retoc\src\legacy_asset.rs'
 $actualLegacyAssetSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $sourceLegacyAsset).Hash
 if ($actualLegacyAssetSha256 -cne $expectedLegacyAssetSha256) {
-    throw 'The retoc legacy_asset.rs source does not match the reviewed 0.1.5 input.'
+    throw 'The retoc legacy_asset.rs source does not match the reviewed fork commit.'
 }
+
+[IO.Directory]::CreateDirectory($output) | Out-Null
 
 Copy-Item -LiteralPath `
     (Join-Path $source 'Cargo.toml'), `
@@ -38,44 +57,6 @@ Copy-Item -LiteralPath `
     (Join-Path $source 'load_logger') `
     -Destination $output `
     -Recurse
-
-$legacyAsset = Join-Path $output 'retoc\src\legacy_asset.rs'
-$text = [IO.File]::ReadAllText($legacyAsset).Replace("`r`n", "`n")
-$oldReadBlock = @'
-        // Used to support imports that live in their own packages for One File Per Actor in UE5
-        // Such imports cannot exist in cooked data, and as such, we should never encounter them
-        if !summary.is_filter_editor_only() {
-            let _package_name: FMinimalName = s.de()?;
-        }
-'@
-$newReadBlock = @'
-        // FObjectImport::PackageName is serialized for every supported package
-        // version. Filtered cooked packages write ObjectName as a placeholder
-        // when PackageName is None; filtering changes the value, not the layout.
-        let _package_name: FMinimalName = s.de()?;
-'@
-$oldWriteBlock = @'
-        // We should never be serializing uncooked packages, might be worth to assert here instead of writing an empty name
-        if !summary.is_filter_editor_only() {
-            let package_name: FMinimalName = FMinimalName::default();
-            s.ser(&package_name)?;
-        }
-'@
-$newWriteBlock = @'
-        // Match UE's filtered-cook placeholder: PackageName is still present
-        // and uses ObjectName when no external package name is available.
-        s.ser(&self.object_name)?;
-'@
-foreach ($oldBlock in @($oldReadBlock, $oldWriteBlock)) {
-    if (-not $text.Contains($oldBlock)) {
-        throw 'Reviewed retoc compatibility block was not found exactly once.'
-    }
-    if ($text.IndexOf($oldBlock) -ne $text.LastIndexOf($oldBlock)) {
-        throw 'Reviewed retoc compatibility block occurs more than once.'
-    }
-}
-$text = $text.Replace($oldReadBlock, $newReadBlock).Replace($oldWriteBlock, $newWriteBlock)
-[IO.File]::WriteAllText($legacyAsset, $text)
 
 $previousCargoHome = $env:CARGO_HOME
 $previousRustupHome = $env:RUSTUP_HOME
@@ -104,9 +85,12 @@ if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
 }
 $manifest = [ordered]@{
     kind = 'retoc UE 5.8 FObjectImport compatibility build'
-    upstreamVersion = '0.1.5'
-    upstreamLegacyAssetSha256 = $actualLegacyAssetSha256
-    patchedLegacyAssetSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $legacyAsset).Hash
+    upstreamTag = 'v0.1.5'
+    sourceDescribe = $actualSourceDescribe
+    sourceCommit = $actualSourceCommit
+    upstreamBaseCommit = $upstreamBaseCommit
+    upstreamLegacyAssetSha256 = $upstreamLegacyAssetSha256
+    patchedLegacyAssetSha256 = $actualLegacyAssetSha256
     executableSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $executable).Hash
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }

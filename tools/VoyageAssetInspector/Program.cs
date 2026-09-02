@@ -6,9 +6,11 @@ using CUE4Parse.UE4.Versions;
 using Newtonsoft.Json;
 using Serilog;
 
+try
+{
 if (args.Length < 3)
 {
-    Console.Error.WriteLine("Usage: VoyageAssetInspector <PaksDir> <asset-name-fragment> <output-dir> [mappings.usmap] [UE5_7|UE5_8]");
+    Console.Error.WriteLine("Usage: VoyageAssetInspector <PaksDir> <asset-name-fragment> <output-dir> [mappings.usmap] [UE5_7|UE5_8] [extra-paks-dir]");
     return 2;
 }
 
@@ -19,6 +21,9 @@ var mappingsPath = args.Length >= 4 && !string.IsNullOrWhiteSpace(args[3])
     ? Path.GetFullPath(args[3])
     : null;
 var gameVersion = args.Length >= 5 ? ParseGameVersion(args[4]) : EGame.GAME_UE5_7;
+var extraPaksDirectories = args.Length >= 6 && !string.IsNullOrWhiteSpace(args[5])
+    ? new[] { new DirectoryInfo(Path.GetFullPath(args[5])) }
+    : Array.Empty<DirectoryInfo>();
 
 Directory.CreateDirectory(outputDirectory);
 Log.Logger = new LoggerConfiguration()
@@ -28,10 +33,11 @@ Log.Logger = new LoggerConfiguration()
 CUE4ParseLog.UseLogger(Log.Logger);
 
 var provider = new DefaultFileProvider(
-    paksDirectory,
+    new DirectoryInfo(paksDirectory),
+    extraPaksDirectories,
     SearchOption.TopDirectoryOnly,
-    true,
-    new VersionContainer(gameVersion));
+    new VersionContainer(gameVersion),
+    StringComparer.OrdinalIgnoreCase);
 provider.ReadScriptData = true;
 
 if (mappingsPath is not null)
@@ -135,6 +141,97 @@ provider.LoadVirtualPaths();
 
 Console.WriteLine($"Indexed {provider.Files.Count} virtual file(s).");
 
+if (fragment.StartsWith("parent:", StringComparison.OrdinalIgnoreCase))
+{
+    var query = fragment["parent:".Length..];
+    var separatorIndex = query.IndexOf('|');
+    var parentFragment = separatorIndex >= 0 ? query[..separatorIndex] : query;
+    var pathFragment = separatorIndex >= 0 ? query[(separatorIndex + 1)..] : string.Empty;
+    if (string.IsNullOrWhiteSpace(parentFragment))
+    {
+        throw new ArgumentException("parent: mode requires a direct-parent name fragment.");
+    }
+
+    var candidates = provider.Files.Values
+        .Where(file => file.IsUePackage &&
+            file.Path.Contains(pathFragment, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+    var parentMatches = new List<string>();
+    foreach (var file in candidates)
+    {
+        try
+        {
+            var package = provider.LoadPackage(file.Path);
+            foreach (var unrealClass in package.GetExports().OfType<UClass>())
+            {
+                var directParent = unrealClass.SuperStruct.Load<UStruct>();
+                if (directParent?.Name.Contains(parentFragment, StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    parentMatches.Add($"{file.Path} | {unrealClass.Name} : {directParent.Name}");
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            File.AppendAllText(
+                Path.Combine(outputDirectory, "parent-search-errors.txt"),
+                $"{file.Path}{Environment.NewLine}{exception.Message}{Environment.NewLine}{Environment.NewLine}");
+        }
+    }
+    var resultPath = Path.Combine(outputDirectory, "parent-matches.txt");
+    File.WriteAllLines(resultPath, parentMatches);
+    Console.WriteLine(
+        $"Found {parentMatches.Count} class(es) with direct parent matching '{parentFragment}' " +
+        $"among {candidates.Length} package(s) matching '{pathFragment}'.");
+    foreach (var match in parentMatches) Console.WriteLine(match);
+    return parentMatches.Count == 0 ? 1 : 0;
+}
+
+if (fragment.StartsWith("references:", StringComparison.OrdinalIgnoreCase))
+{
+    var query = fragment["references:".Length..];
+    var separatorIndex = query.IndexOf('|');
+    var referenceFragment = separatorIndex >= 0 ? query[..separatorIndex] : query;
+    var pathFragment = separatorIndex >= 0 ? query[(separatorIndex + 1)..] : string.Empty;
+    if (string.IsNullOrWhiteSpace(referenceFragment))
+    {
+        throw new ArgumentException("references: mode requires a serialized-reference fragment.");
+    }
+
+    var candidates = provider.Files.Values
+        .Where(file => file.IsUePackage &&
+            file.Path.Contains(pathFragment, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+    var referenceMatches = new List<string>();
+    foreach (var file in candidates)
+    {
+        try
+        {
+            var package = provider.LoadPackage(file.Path);
+            var serializedExports = JsonConvert.SerializeObject(package.GetExports(), Formatting.None);
+            if (serializedExports.Contains(referenceFragment, StringComparison.OrdinalIgnoreCase))
+            {
+                referenceMatches.Add(file.Path);
+            }
+        }
+        catch (Exception exception)
+        {
+            File.AppendAllText(
+                Path.Combine(outputDirectory, "reference-search-errors.txt"),
+                $"{file.Path}{Environment.NewLine}{exception.Message}{Environment.NewLine}{Environment.NewLine}");
+        }
+    }
+    var resultPath = Path.Combine(outputDirectory, "reference-matches.txt");
+    File.WriteAllLines(resultPath, referenceMatches);
+    Console.WriteLine(
+        $"Found {referenceMatches.Count} package(s) whose serialized exports reference '{referenceFragment}' " +
+        $"among {candidates.Length} package(s) matching '{pathFragment}'.");
+    foreach (var match in referenceMatches) Console.WriteLine(match);
+    return referenceMatches.Count == 0 ? 1 : 0;
+}
+
 var listOnly = fragment.StartsWith("list:", StringComparison.OrdinalIgnoreCase);
 var assetFragment = listOnly ? fragment["list:".Length..] : fragment;
 var matches = provider.Files.Values
@@ -181,6 +278,12 @@ foreach (var file in matches)
 }
 
 return matches.Length == 0 ? 1 : 0;
+}
+catch (Exception exception)
+{
+    Console.Error.WriteLine($"{exception.GetType().FullName}: {exception.Message}");
+    return 1;
+}
 
 static string Describe(CUE4Parse.MappingsProvider.PropertyType type)
 {

@@ -2,8 +2,8 @@
 
 Read-only helper for locating reflected Voyage class/function names in the
 current shipping executable. It records nearby ASCII strings, absolute image
-pointers, and common RIP-relative code references without modifying or
-injecting into the running game.
+pointers, common RIP-relative code references, and direct relative calls or
+jumps without modifying or injecting into the running game.
 
 Queries match both ASCII and UTF-16LE strings. The latter are important for
 generated Unreal class-registration records, whose class names are commonly
@@ -21,8 +21,8 @@ Treat offsets as version-specific. Always record the executable hash beside
 any stable conclusion derived from this output.
 
 Use `--target-va` to find absolute pointers and common RIP-relative code reads
-of an already-known image address without copying the executable or loading it
-into the game process:
+and direct calls or jumps to an already-known image address without copying the
+executable or loading it into the game process:
 
 ```powershell
 dotnet run --project tools\VoyageExecutableInspector -c Release -- `
