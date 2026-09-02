@@ -625,6 +625,80 @@ Audit results:
    from its local `Libraries\retoc.exe`; re-extraction with that exact binary
    restored `32/32`. Treat the retoc path and hash in every extraction manifest
    as a test input, not incidental provenance.
+
+   A headless `stress-open` path has now been added to the same local UAssetGUI
+   fork to replace impractical manual clicking. It follows the actual
+   hierarchy-selection path, including embedded-retoc extraction, dependency
+   preload, GUI table construction, and the existing
+   `VerifyBinaryEquality()` serialization check. Results are written after
+   every asset and the run can resume only when its container set, prefix,
+   engine version, mapping, limit, and hashes still match.
+
+   The build-`25056839` full pass over `\Voyage\Content\Blueprints` discovered
+   and attempted all `1,067` packages (`1,064` `.uasset`, `3` `.umap`) in
+   `304.7` seconds. It produced `1,039` clean results, `5` notices, and `23`
+   failures, with no per-asset exception and no duplicate or omitted result
+   path after resume. Twenty-two failed packages contained `61` `RawExport`
+   instances even though their unchanged serialization remained binary-equal.
+   One different package,
+   `/Game/Blueprints/Buildings/Eden/BP_Eden_Frame_Small`, parsed all `76`
+   exports without raw fallbacks but failed binary equality. The five notices
+   were otherwise clean, binary-equal packages with unresolved dependencies.
+   This proves that neither parse count nor equality can replace the other;
+   the stress gate must require both.
+
+   The full run was resumed once after the report writer itself encountered a
+   transient Windows `UnauthorizedAccessException` while the summary was being
+   inspected. No asset was implicated. Summary replacement now uses a unique
+   temporary name and bounded retry; a final-code three-asset canary and a
+   no-op resume both passed. The canary also records all four currently mounted
+   IoStore containers, including `BoatTotalDiesel_P.utoc`, so the test identity
+   reflects the same directory-wide overlay resolution used by UAssetGUI.
+
+   The headless command itself is now committed in the UAssetGUI fork as
+   `b95587b`. The first ordered repair pass reduced all `23` failures to zero
+   without weakening either gate. The failures had three independent roots:
+
+   - `8` packages needed Blueprint dependency schemas to include the complete
+     parent chain. An incomplete first preload had also poisoned the shared
+     processed-path cache, so the newly extracted transitive parent was never
+     retried. Recursive parent loading plus eviction of incomplete cache
+     entries fixed Eden, Solar Rotator, two doors, Chain Light, Rocket Reward,
+     and both Abyss/Depth Glow weapons.
+   - `13` packages shared one absent native enum. `BP_Object_Filter_Pawns`
+     references `EComparisonMethod` from `/Script/FunctionalTesting`, but the
+     fresh jmap output contains no mapping for it; twelve MovingPlatform assets
+     then failed because that Blueprint schema was unavailable. A candidate
+     numeric fallback preserves the serialized value and reports the missing
+     enum as a notice instead of inventing member names.
+   - `ABP_HologramPedestal` contains native custom serialization for an empty
+     `InstancedPropertyBag`; treating it as an ordinary reflected struct read
+     into unrelated bytes. A deliberately narrow candidate recognizes the
+     empty four-byte form and rejects non-empty bags until their versioned
+     descriptor/payload format is implemented.
+
+   `BallRobot_ControlRig_ProcWalk` was separately reclassified rather than
+   falsely parsed: `RigHierarchy` and `RigVM` own native serializers, so their
+   exact export bytes are preserved as explicitly opaque custom-serialized
+   exports and surfaced as a notice.
+
+   The final current-code pass over the same `1,067` Blueprint packages took
+   `303.9` seconds and produced `1,057` clean results, `10` notices, and `0`
+   failures. Every package remained binary-equal. Notices consist of the two
+   honest limited-parsing cases above and eight packages with unresolved
+   external/plugin dependencies. The increase from five dependency notices in
+   the baseline is expected: complete parent-chain discovery now exposes
+   transitive dependencies that the prematurely cached schema load skipped.
+   The user then manually opened the formerly failing examples in the rebuilt
+   GUI and confirmed that they work. The parser repairs are committed in the
+   UAssetAPI fork as `2943aa1`; the UAssetGUI diagnostic integration and
+   submodule checkpoint are committed as `5e6dcab`.
+
+   UAssetAPI's own test project currently reports `17` passed and `10` failed.
+   The same exact `10` tests fail at the clean fork baseline `b5c47b7` in an
+   isolated worktree, so this is pre-existing upstream fixture/baseline debt,
+   not a regression introduced by the candidate parser fixes. The Voyage-wide
+   hierarchy stress result is the relevant new coverage for these changes.
 5. UE4SS main gained explicit UE 5.8 support on 2026-08-28 in commit
    `5e755b6d55ee1cb06fc8105f165a7e29c3b9509d`, after the earlier public UE 5.8
    PatternSleuth failure report. Current main also adds

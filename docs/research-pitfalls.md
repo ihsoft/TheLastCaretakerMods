@@ -257,6 +257,35 @@ no-op или неверную архитектуру. Цель — не повт
   сравнения независимых сборок использовать отсортированный semantic inventory;
   целые файловые хеши остаются обязательными только между конкретным
   подготовленным пакетом и его установленной копией.
+- Успешный `UAsset.VerifyBinaryEquality()` не доказывает, что UAssetGUI разобрал
+  каждый export. `RawExport` сохраняет неизвестные байты и поэтому может дать
+  побайтно идентичную unchanged-сериализацию одновременно с диалогом
+  `Failed to parse N exports`. Обратная комбинация тоже возможна: asset может
+  не иметь raw fallback и всё же изменить байты при записи. Массовая проверка
+  открытия обязана независимо требовать ноль `RawExport` и положительное
+  binary equality; исключения и неприменённые mappings являются отдельными
+  отказами.
+- При динамическом построении schema из Blueprint нельзя загружать только
+  непосредственный dependency asset. Индексы unversioned properties включают
+  всю цепочку родителей. Кроме того, нельзя навсегда оставлять путь в
+  `PathsAlreadyProcessedForSchemas`, если preload завершился с отсутствующими
+  зависимостями: после извлечения нового transitive parent следующий проход
+  обязан повторить этот asset.
+- Native custom serialization не становится обычной отражённой структурой от
+  наличия свежего USMAP. `InstancedPropertyBag` в
+  `ABP_HologramPedestal` начинался собственным четырёхбайтовым `bHasData`; попытка
+  разобрать его как mapped `InstancedPropertyBag.Value` сдвинула поток до
+  ложного `FPackageIndex`. Поддерживать только доказанный вариант формата и
+  явно отвергать неизвестный, а не читать соседние bytes как свойства.
+- Отсутствующий в mappings импортированный native enum не требует выдумывать
+  его members. Для unchanged roundtrip допустим явно помеченный numeric
+  fallback (`UASSETAPI_INVALID_ENUM_IDX_<n>`), если ширина underlying property
+  известна, байты сохраняются, а stress report остаётся `notice`. В текущем
+  Voyage таким случаем является `/Script/FunctionalTesting.EComparisonMethod`.
+- `RigHierarchy` и `RigVM` имеют собственные native serializers. Их нельзя
+  считать обычными `NormalExport` и нельзя объявлять полностью разобранными.
+  Точное opaque-сохранение может пройти unchanged binary equality, но должно
+  оставаться отдельным `notice` и не разрешает структурное редактирование.
 
 ## UE4SS HUD
 

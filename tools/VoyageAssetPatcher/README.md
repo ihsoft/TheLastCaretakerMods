@@ -6,7 +6,7 @@ contains only the reproducible transformation.
 
 Official UAssetAPI support currently stops at Unreal Engine 5.7. The default
 project reference uses reviewed fork commit
-`b5c47b735076585513fe31b50e81cddf353341ed` under `.tools/UAssetAPI`.
+`2943aa117aa805a0e3203a8befa5a89e2daaa6e3` under `.tools/UAssetAPI`.
 `tools/Prepare-UAssetApiVoyageUe58.ps1` can copy the exact tracked source to an
 ignored directory; override the project path only when deliberately testing
 that prepared copy:

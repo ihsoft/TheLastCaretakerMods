@@ -7,13 +7,18 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$expectedSourceCommit = 'b5c47b735076585513fe31b50e81cddf353341ed'
-$expectedSourceDescribe = 'v1.1.0-83-gb5c47b7'
+$expectedSourceCommit = '2943aa117aa805a0e3203a8befa5a89e2daaa6e3'
+$expectedSourceDescribe = 'v1.1.0-84-g2943aa1'
 $upstreamBaseCommit = '3228c1e86261aa08131f7ec0ff1a395f5d0b2a84'
 $criticalSources = [ordered]@{
     'UAssetAPI\FieldTypes\FField.cs' = '2805C719525B62613C3A11166CAE56A62D5925FC9EE4AB4C0B8F41DA37F8E074'
     'UAssetAPI\Import.cs' = '36B0C55E02B7FDF8162FEDD7727226959CA77A0143AF2BCC2E6A9FD52E181052'
-    'UAssetAPI\UAsset.cs' = '67E31053FF1450E7BCF62D56B47BF29DEEBDDB2648621CD9C64F25F8297BDDE9'
+    'UAssetAPI\UAsset.cs' = '971C9CEBC0B034401045BE354A7CE29AC1423399F2DCB7DD4A07CEE040883E26'
+    'UAssetAPI\MainSerializer.cs' = '6CF3BE1FC6AA80513CB4323D01FDB6873FB0CCF20C69F23991407CDBDC0AB4BE'
+    'UAssetAPI\Unversioned\Usmap.cs' = '3CFCCC2A1CFAA2AB93B27316E79AA0191D2401DDAEEAB5545E6EA2BF4F8DDC27'
+    'UAssetAPI\PropertyTypes\Objects\EnumPropertyData.cs' = 'DF7E1FBA2E0B26271CBEC4B9C0A3C9E3D6DAE8E31DDDD51173795F8214E23A36'
+    'UAssetAPI\ExportTypes\CustomSerializedExport.cs' = '63E2B474D4759DB690F12CEDD8A48435E454887E43B3D8E6B8DFC1F5407EB5EA'
+    'UAssetAPI\PropertyTypes\Structs\Core\InstancedPropertyBagPropertyData.cs' = '66696F635CBEBF507933560A6945DC17F0F3402F54F3A1EDC3C9E75A28A9A450'
 }
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $output = [IO.Path]::GetFullPath($OutputRoot)
@@ -63,6 +68,10 @@ $manifest = [ordered]@{
         'Always serialize FObjectImport.PackageName for the applicable object version'
         'Handle filtered cooked FField layout'
         'Preserve the requested engine version while loading dependency schemas'
+        'Load complete Blueprint parent schema chains and retry incomplete dependency walks'
+        'Preserve RigHierarchy and RigVM exports through explicit native-serialization passthrough'
+        'Read and write the proven empty InstancedPropertyBag native representation'
+        'Preserve numeric values for imported native enums absent from mappings'
     )
     criticalSourceSha256 = $criticalSources
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
