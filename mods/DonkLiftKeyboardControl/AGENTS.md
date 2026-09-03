@@ -22,6 +22,17 @@ contract and workflow detail.
 
 ## Game-version gate
 
+- `VERSION.json` owns the current player-facing mod version and compatibility
+  history. Mod versions (`v1`, `v2`, ...) are independent from game versions.
+- Treat a tested game version as evidence, not a runtime allowlist. A changed
+  game version triggers review but does not alone prove incompatibility or
+  require a mod-version bump. Record actual compatible and incompatible results.
+- Keep the exact fingerprint gate below for build provenance: reconstructed
+  mirrors, extracted originals, and cooked packages cannot be rebuilt from an
+  unreviewed fingerprint even when an older installed package might still run.
+- A new compatibility claim requires proportional real-game validation. Bump
+  the mod version only for a mod release boundary chosen by the user, not merely
+  because Steam published a new game build.
 - `GAME_DERIVED_SOURCES.md` is a hard build gate. Before generation, cook, or
   packaging, run `../../tools/Get-VoyageBuildFingerprint.ps1` and compare the
   Steam build ID and executable SHA-256.
@@ -130,10 +141,12 @@ contract and workflow detail.
 
 ## Build and package workflow
 
-- Prefer `Build-DonkLiftRelease.ps1 -Version <version>` for a complete local
+- Prefer `Build-DonkLiftRelease.ps1` for a complete local
   release. It owns the early gates, incremental editor build, generation, cook,
   clean-original selection, packaging, ZIP, evidence manifest, and optional
-  backed-up installation. It never publishes externally.
+  backed-up installation. It defaults the artifact label from `VERSION.json`;
+  an explicit `-Version` labels a development artifact without changing the
+  separately recorded mod version. It never publishes externally.
 - A real release requires clean tracked and untracked DonkLift source;
   `-AllowDirtySource` is only for development artifacts and must remain visible
   in `release-manifest.json`. Publication screenshots under `Slideshow` are not
@@ -141,16 +154,18 @@ contract and workflow detail.
 - `-OriginalsRoot` may reuse only an explicit clean extraction whose manifest
   matches the current build/hash, canonical filter, and
   `allowAdditionalContainers=false`. The package builder repeats these checks.
-- Build `VoyageEditor` with Unreal Engine 5.7.4 and `-NoUBA`.
+- Build `VoyageEditor` with Unreal Engine 5.8.2 and `-NoUBA`.
 - Run commandlets with `-ddc=NoZenLocalFallback` and a workspace-local
   `-LocalDataCachePath`; otherwise Zen can loop on an inaccessible data path.
 - Generate from an empty ignored `Content` tree in this order:
   `GenerateDonkLiftMod`, `GenerateDonkLiftInheritance`.
 - Use `Cook-DonkLiftAssets.ps1`. It sends five explicit package names to one
-  Unreal process under `-CookSinglePackageNoRefs`. Unreal 5.7 accepts a
-  `+`-separated `-Package` list and applies the narrow skip-reference options to
-  the complete request. Do not replace this with broad `CookDir`, which follows
-  editor dependencies into global shaders and unrelated Engine/OpenWorld assets.
+  Unreal process under `-CookSinglePackageNoRefs -SkipZenStore`. Unreal 5.8
+  accepts a `+`-separated `-Package` list and applies the narrow skip-reference
+  options to the complete request. `-SkipZenStore` is required because the
+  relocation pipeline consumes loose `.uasset/.uexp` pairs. Do not replace this
+  with broad `CookDir`, which follows editor dependencies into global shaders
+  and unrelated Engine/OpenWorld assets.
 - Use `Build-InheritancePackage.ps1` with a fresh original forklift directory
   and current `scriptobjects.bin`. Each path must remain under its
   canonical `Extract-VoyagePackage.ps1` root and manifest; never copy an asset

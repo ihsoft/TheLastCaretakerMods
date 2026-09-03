@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "compatibilityPolicy": "Tested game versions are compatibility evidence, not a runtime allowlist. A game update requires review, but does not by itself prove incompatibility or require a new mod version.",
+  "current": {
+    "modVersion": "v2",
+    "testedGame": {
+      "gameVersion": "5.5",
+      "steamBuildId": "25056839",
+      "unrealEngineVersion": "5.8.1",
+      "status": "game-validated",
+      "validatedAt": "2026-09-03"
+    }
+  },
+  "history": [
+    {
+      "modVersion": "v1",
+      "testedGame": {
+        "gameVersion": null,
+        "steamBuildId": "23962331",
+        "unrealEngineVersion": "5.7.4"
+      },
+      "knownIncompatibleWith": [
+        {
+          "gameVersion": "5.5",
+          "steamBuildId": "25056839",
+          "unrealEngineVersion": "5.8.1",
+          "reason": "The cooked package and editor mirrors target the previous Unreal Engine generation; the UE change is the primary incompatibility boundary."
+        }
+      ]
+    }
+  ]
+}

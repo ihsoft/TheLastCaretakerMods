@@ -1,6 +1,6 @@
 # HAND-WRITTEN BUILD TOOL with game-derived relocation contracts validated for
-# Steam build 23962331, VoyageSteam-Win64-Shipping.exe SHA-256
-# 6A9AE86E5CE5D7D1B6555F579091AAB1E0E67FF7A96276FA2570052F99102E8D.
+# Steam build 25056839, VoyageSteam-Win64-Shipping.exe SHA-256
+# CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933.
 # Revalidate per GAME_DERIVED_SOURCES.md after every game update.
 
 param(
@@ -12,7 +12,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ScriptObjects,
 
-    [string]$Retoc = "R:\Codex\ToolCache\rust-retoc-master\source\target\release\retoc.exe",
+    [string]$Retoc,
 
     [Parameter(Mandatory = $true)]
     [string]$OutputRoot,
@@ -22,9 +22,15 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$expectedSteamBuildId = '23962331'
-$expectedExecutableSha256 = '6A9AE86E5CE5D7D1B6555F579091AAB1E0E67FF7A96276FA2570052F99102E8D'
+$expectedSteamBuildId = '25056839'
+$expectedExecutableSha256 = 'CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933'
+$retocCompatibilityVersion = 'UE5_7'
 $expectedForkliftFilter = 'Vehicles/BP_Forklift_Possesable'
+$modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
+$repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
+if ([string]::IsNullOrWhiteSpace($Retoc)) {
+    $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
+}
 
 $originalPackage = '/Game/Blueprints/Vehicles/BP_Forklift_Possesable'
 $renamedPackage = '/Game/Mods/DonkLiftKeyboard/BP_Forklift_Original'
@@ -35,6 +41,7 @@ $cooked = (Resolve-Path -LiteralPath $CookedRoot).Path
 $originalDirectory = (Resolve-Path -LiteralPath $OriginalForkliftDirectory).Path
 $scriptObjectsPath = (Resolve-Path -LiteralPath $ScriptObjects).Path
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
+$retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $retocPath).Hash
 $output = [IO.Path]::GetFullPath($OutputRoot)
 if (Test-Path -LiteralPath $output) {
     throw "OutputRoot already exists: $output"
@@ -77,6 +84,10 @@ function Get-ExtractionEvidence {
     }
     if ([string]$manifest.filter -cne $ExpectedFilter) {
         throw "$Label extraction used filter '$($manifest.filter)'; expected '$ExpectedFilter'."
+    }
+    if ([string]$manifest.retocEngineVersion -cne $retocCompatibilityVersion -or
+        [string]$manifest.retocSha256 -cne $retocSha256) {
+        throw "$Label extraction does not match the selected retoc compatibility contract."
     }
     if ([string]$manifest.steamBuildId -cne $expectedSteamBuildId -or
         [string]$manifest.executableSha256 -cne $expectedExecutableSha256) {
@@ -126,7 +137,8 @@ foreach ($assetName in @(
     Copy-Item -LiteralPath (Join-Path $helperSource $assetName) -Destination $helperStage
 }
 foreach ($assetName in @('IMC_Forklift_Keyboard.uasset', 'IMC_Forklift_Keyboard.uexp')) {
-    Copy-Item -LiteralPath (Join-Path $cooked 'Content\Game\Input\Vehicle' $assetName) -Destination $contextStage
+    $contextSource = Join-Path (Join-Path $cooked 'Content\Game\Input\Vehicle') $assetName
+    Copy-Item -LiteralPath $contextSource -Destination $contextStage
 }
 function Find-ByteSequenceOffsets {
     param(
@@ -206,7 +218,7 @@ Copy-RelocatedAsset `
 Copy-Item -LiteralPath $scriptObjectsPath -Destination (Join-Path $stage 'scriptobjects.bin')
 
 $utoc = Join-Path $package ($ContainerName + '.utoc')
-& $retocPath to-zen --version UE5_7 $stage $utoc
+& $retocPath to-zen --version $retocCompatibilityVersion $stage $utoc
 if ($LASTEXITCODE -ne 0) {
     throw "retoc to-zen failed with exit code $LASTEXITCODE"
 }

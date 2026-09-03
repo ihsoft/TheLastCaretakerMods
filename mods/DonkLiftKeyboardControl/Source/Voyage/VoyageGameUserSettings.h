@@ -1,6 +1,6 @@
-// HAND-RECONSTRUCTED GAME API MIRROR: The Last Caretaker Steam build 23962331
-// (Unreal Engine 5.7.4; VoyageSteam-Win64-Shipping.exe SHA-256
-// 6A9AE86E5CE5D7D1B6555F579091AAB1E0E67FF7A96276FA2570052F99102E8D).
+// HAND-RECONSTRUCTED GAME API MIRROR: The Last Caretaker Steam build 25056839
+// (Unreal Engine 5.8.1; VoyageSteam-Win64-Shipping.exe SHA-256
+// CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933).
 // Recreate/revalidate with tools/Get-VoyageBuildFingerprint.ps1,
 // tools/Inspect-VoyageAsset.ps1, and tools/VoyageExecutableInspector after a
 // game update. Editor-only: never package this native definition.

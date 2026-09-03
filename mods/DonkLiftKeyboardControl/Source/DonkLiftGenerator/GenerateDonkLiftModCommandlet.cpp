@@ -1,7 +1,7 @@
 // HAND-WRITTEN BUILD TOOL SOURCE: generates helper/input Blueprint assets from
 // version-bound Voyage contracts. The C++ tool itself is never shipped.
-// Contracts validated against Steam build 23962331, exe SHA-256
-// 6A9AE86E5CE5D7D1B6555F579091AAB1E0E67FF7A96276FA2570052F99102E8D.
+// Contracts validated against Steam build 25056839, exe SHA-256
+// CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933.
 // Revalidate per ../../GAME_DERIVED_SOURCES.md after a game update.
 
 #include "GenerateDonkLiftModCommandlet.h"

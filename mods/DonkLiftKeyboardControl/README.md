@@ -1,6 +1,6 @@
 # DonkLiftKeyboardControl Unreal project
 
-This editor-only Unreal Engine 5.7 project generates the assets for the
+This editor-only Unreal Engine 5.8 project generates the assets for the
 self-contained `DonkLiftKeyboardControl` IoStore mod. The shipped mod does not
 require UE4SS, DML, or any other loader.
 
@@ -11,11 +11,26 @@ the shipped container; the running game supplies the real native classes.
 ## Provenance
 
 The project scaffold (`Voyage.uproject`, `Config`, targets, and module setup)
-was created for Unreal Engine 5.7.4 and is maintained as ordinary source. The
+is maintained for the installed Unreal Engine 5.8.2 editor. The
 game-API mirror headers are reconstructed inputs, not copied engine headers;
 each carries the Steam build, executable SHA-256, and current reproduction
 tools in its file header. Revalidate every mirror after the game executable
 changes.
+
+## Versioning and compatibility
+
+`VERSION.json` is the source of truth for the player-facing mod version and
+tested game versions. `v1` and `v2` identify releases of this mod; they are not
+aliases for game versions. The current release is `v2`, game-validated on The
+Last Caretaker `5.5`, Steam build `25056839`, running game UE `5.8.1`.
+
+A tested game version is evidence, not an allowlist or a hard runtime check. A
+future game update may remain compatible and does not automatically require a
+new mod version. The exact Steam build, executable hash, and UE version remain
+hard build-time provenance gates for reconstructed headers, extracted assets,
+and cooked-package production. `v1` is known to be incompatible with game
+`5.5`, primarily because it was cooked and mirrored for the earlier UE `5.7.4`
+generation.
 
 Commandlet-generated `Content` is deliberately ignored and must be recreated
 from the generators. The relocated original forklift, mappings,
@@ -57,8 +72,12 @@ For a normal release, use the orchestrator instead of invoking the individual
 stages manually:
 
 ```powershell
-.\Build-DonkLiftRelease.ps1 -Version 1.0.0
+.\Build-DonkLiftRelease.ps1
 ```
+
+The default artifact label is the current mod version from `VERSION.json`.
+`-Version v2-test` may be used for a development artifact without changing the
+underlying mod version recorded separately in the release manifest.
 
 It validates the game/engine fingerprint and clean Git source, builds the
 editor modules incrementally, regenerates assets, cooks, extracts the original
@@ -102,12 +121,13 @@ Do not use a broad `CookDir` cook: Unreal follows editor dependencies and may
 compile global shaders and unrelated Engine template maps. Cook exactly the
 five production packages into a new staging root. The cook script passes the
 five explicit `-Package` values to one Unreal process with
-`-CookSinglePackageNoRefs`, avoiding four redundant editor startups without
-broadening the cook:
+`-CookSinglePackageNoRefs -SkipZenStore`, avoiding four redundant editor
+startups without broadening the cook. `-SkipZenStore` preserves the loose
+`.uasset/.uexp` output consumed by the checked relocation pipeline:
 
 ```powershell
 .\Cook-DonkLiftAssets.ps1 `
-  -UnrealEditor <UE-5.7>/Engine/Binaries/Win64/UnrealEditor-Cmd.exe `
+  -UnrealEditor <UE-5.8>/Engine/Binaries/Win64/UnrealEditor-Cmd.exe `
   -OutputRoot <new-cooked-staging-directory>
 ```
 

@@ -4,6 +4,17 @@ DonkLift Keyboard Control
 Improves keyboard control of the DonkLift-320 forklift while keeping the
 native vehicle behavior and HUD.
 
+Version
+-------
+
+Mod version: v2
+Game-validated on The Last Caretaker 5.5 (Steam build 25056839, UE 5.8.1).
+
+The game version is a tested compatibility record, not a hard requirement.
+Future game updates may remain compatible. The previous v1 package is known to
+be incompatible with game 5.5, primarily because it targets the earlier Unreal
+Engine generation.
+
 Controls
 --------
 

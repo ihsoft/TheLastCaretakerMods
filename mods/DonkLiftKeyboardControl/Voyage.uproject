@@ -1,6 +1,6 @@
 {
   "FileVersion": 3,
-  "EngineAssociation": "5.7",
+  "EngineAssociation": "5.8",
   "Category": "Modding",
   "Description": "Editor-only project for generating the DonkLift Keyboard Control IoStore assets.",
   "Modules": [

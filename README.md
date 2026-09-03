@@ -45,9 +45,10 @@ game, and only then commit the durable source and knowledge.
 
 ## About this repository
 
-The current DonkLift source is validated against Unreal Engine 5.7.4 and Steam
-build `23962331`; its game-derived contracts must be revalidated after a game
-update.
+DonkLift `v2` is game-validated on The Last Caretaker `5.5`, Steam build
+`25056839`, and game Unreal Engine `5.8.1`. Tested game versions are
+compatibility evidence rather than a hard runtime allowlist; game-derived build
+inputs are still fingerprint-gated and must be reviewed after an update.
 
 ## Layout
 

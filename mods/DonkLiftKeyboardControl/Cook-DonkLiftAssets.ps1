@@ -55,6 +55,7 @@ $arguments = @(
     '-run=cook',
     '-targetplatform=Windows',
     '-unversioned',
+    '-SkipZenStore',
     ('-Package={0}' -f ($packages -join '+')),
     '-CookSinglePackageNoRefs',
     '-unattended',

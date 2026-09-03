@@ -234,8 +234,42 @@ Blueprint-варианты `BP_ButtonInfo*`.
 
 ## Автономный IoStore-мод
 
+### Повторная проверка для build 25056839
+
+Для Steam build `25056839`, game UE `5.8.1`, executable SHA-256
+`CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`
+актуальные mappings и stock exports подтверждают прежнюю иерархию
+`VoyageVehicleForkliftPawn : VoyageVehiclePawn`, поля `SteeringInput` и
+`ThrottleInput`, native action identities и все пятнадцать записей
+`IMC_Forklift_Keyboard`. Значения HUD enum и `Russian = 11` также не
+изменились. В `FPlayerInputInterfaceAction` появились шесть delegate-полей в
+хвосте; первые семнадцать полей, используемые сгенерированным графом, сохранили
+имена, типы и порядок.
+
+Для новой версии мод генерируется установленным UE Editor `5.8.2`. Cook обязан
+использовать `-SkipZenStore`, а упаковка — канонический patched retoc с его
+явным compatibility profile `UE5_7`.
+
+Тестовый контейнер для build `25056839` прошёл свежую extraction исходного
+погрузчика и `scriptobjects.bin`, точные relocation assertions, генерацию,
+loose cook, шестипакетный inventory, `retoc verify`, установку и сверку хэшей.
+Независимый разбор уже упакованной подмены подтвердил parent
+`/Game/Mods/DonkLiftKeyboard/BP_Forklift_Original`, helper
+`/Game/Mods/DonkLiftKeyboardControl/ModActor`, native owner
+`VoyageVehiclePawn:GetProvidedActionsBP`, размер action struct `160`,
+`Russian = 11` и HUD type `Central = 0`. Это подтверждение контейнера, но не
+замена runtime-проверке управления и HUD. Пользователь затем подтвердил в игре
+`5.5`, что управление, native percentage, подсказки X/C, пауза, выход и
+повторная посадка работают; этот пакет стал checkpoint мода `v2`.
+
+Версия мода не повторяет версию игры. `v1` известна как несовместимая с игрой
+`5.5` преимущественно из-за перехода с UE `5.7.4` на `5.8.1`, однако будущая
+смена версии игры сама по себе не доказывает несовместимость. Версия игры,
+Steam build и UE сохраняются как проверенная матрица совместимости и provenance,
+а не как runtime allowlist.
+
 Текущий исходник мода находится в `mods/DonkLiftKeyboardControl`. Это
-editor-only Unreal Engine 5.7.4 project: C++-классы внутри него являются
+editor-only Unreal Engine 5.8.2 project: C++-классы внутри него являются
 минимальными зеркалами `/Script/Voyage`, необходимыми только для компиляции
 Blueprint. Они не входят в поставляемый контейнер; runtime использует нативные
 классы игры.

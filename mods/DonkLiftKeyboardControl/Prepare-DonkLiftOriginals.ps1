@@ -5,13 +5,19 @@
 param(
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
-    [string]$Retoc = 'R:\Codex\ToolCache\rust-retoc-master\source\target\release\retoc.exe',
+    [string]$Retoc,
 
     [Parameter(Mandatory = $true)]
     [string]$OutputRoot
 )
 
 $ErrorActionPreference = 'Stop'
+$retocCompatibilityVersion = 'UE5_7'
+$modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
+$repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
+if ([string]::IsNullOrWhiteSpace($Retoc)) {
+    $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
+}
 
 $running = @(Get-Process -Name 'VoyageSteam-Win64-Shipping', 'Voyage' -ErrorAction SilentlyContinue)
 if ($running.Count -gt 0) {
@@ -62,6 +68,7 @@ try {
         -Filter 'Vehicles/BP_Forklift_Possesable' `
         -GameRoot $root `
         -Retoc $Retoc `
+        -RetocEngineVersion $retocCompatibilityVersion `
         -OutputRoot $output
 }
 finally {

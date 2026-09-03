@@ -3,15 +3,14 @@
 # never publishes externally.
 
 param(
-    [Parameter(Mandatory = $true)]
     [ValidatePattern('^[0-9A-Za-z][0-9A-Za-z._-]*$')]
     [string]$Version,
 
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
-    [string]$EngineRoot = 'K:\Epic Games\UE_5.7',
+    [string]$EngineRoot = 'K:\Epic Games\UE_5.8',
 
-    [string]$Retoc = 'R:\Codex\ToolCache\rust-retoc-master\source\target\release\retoc.exe',
+    [string]$Retoc,
 
     [string]$OutputRoot,
 
@@ -23,9 +22,29 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$expectedGameEngineVersion = '5.8.1'
+$expectedEditorEngineVersion = '5.8.2'
+$retocCompatibilityVersion = 'UE5_7'
+$cookStorage = 'LooseCookedPackageWriter'
 
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
+$versionMetadataPath = Join-Path $modRoot 'VERSION.json'
+if (-not (Test-Path -LiteralPath $versionMetadataPath -PathType Leaf)) {
+    throw "DonkLift version metadata was not found: $versionMetadataPath"
+}
+$versionMetadata = Get-Content -LiteralPath $versionMetadataPath -Raw | ConvertFrom-Json
+$modVersion = [string]$versionMetadata.current.modVersion
+$testedGameVersion = [string]$versionMetadata.current.testedGame.gameVersion
+if ($modVersion -notmatch '^v[1-9][0-9]*$' -or [string]::IsNullOrWhiteSpace($testedGameVersion)) {
+    throw "DonkLift version metadata is invalid: $versionMetadataPath"
+}
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = $modVersion
+}
+if ([string]::IsNullOrWhiteSpace($Retoc)) {
+    $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
+}
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'artifacts'))
 $project = Join-Path $modRoot 'Voyage.uproject'
 $provenancePath = Join-Path $modRoot 'GAME_DERIVED_SOURCES.md'
@@ -109,7 +128,9 @@ function Get-CleanOriginalInputs {
     param(
         [Parameter(Mandatory = $true)] [string]$Root,
         [Parameter(Mandatory = $true)] [string]$ExpectedBuild,
-        [Parameter(Mandatory = $true)] [string]$ExpectedExecutableHash
+        [Parameter(Mandatory = $true)] [string]$ExpectedExecutableHash,
+        [Parameter(Mandatory = $true)] [string]$ExpectedRetocCompatibilityVersion,
+        [Parameter(Mandatory = $true)] [string]$ExpectedRetocHash
     )
 
     $resolvedRoot = Resolve-RequiredPath -Path $Root -Label 'Originals root'
@@ -122,6 +143,8 @@ function Get-CleanOriginalInputs {
     if ([string]$manifest.filter -cne 'Vehicles/BP_Forklift_Possesable' -or
         [string]$manifest.steamBuildId -cne $ExpectedBuild -or
         [string]$manifest.executableSha256 -cne $ExpectedExecutableHash -or
+        [string]$manifest.retocEngineVersion -cne $ExpectedRetocCompatibilityVersion -or
+        [string]$manifest.retocSha256 -cne $ExpectedRetocHash -or
         $manifest.allowAdditionalContainers -ne $false) {
         throw "Originals manifest is not a clean extraction for the current validated game: $($manifests[0].FullName)"
     }
@@ -154,12 +177,13 @@ $cookScript = Resolve-RequiredPath -Path $cookScript -Label 'DonkLift cook scrip
 $prepareScript = Resolve-RequiredPath -Path $prepareScript -Label 'DonkLift original preparer'
 $packageScript = Resolve-RequiredPath -Path $packageScript -Label 'DonkLift package builder'
 $Retoc = Resolve-RequiredPath -Path $Retoc -Label 'retoc'
+$retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Retoc).Hash
 $GameRoot = Resolve-RequiredPath -Path $GameRoot -Label 'Voyage game root'
 
 $engineVersion = Get-Content -LiteralPath $engineVersionPath -Raw | ConvertFrom-Json
 $actualEngineVersion = "$($engineVersion.MajorVersion).$($engineVersion.MinorVersion).$($engineVersion.PatchVersion)"
-if ($actualEngineVersion -cne '5.7.4') {
-    throw "DonkLift requires Unreal Engine 5.7.4; selected engine is $actualEngineVersion."
+if ($actualEngineVersion -cne $expectedEditorEngineVersion) {
+    throw "DonkLift requires Unreal Engine $expectedEditorEngineVersion; selected engine is $actualEngineVersion."
 }
 
 $sourceStatus = @(& git -C $repoRoot status --porcelain -- `
@@ -266,19 +290,26 @@ if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
 $originalInputs = Get-CleanOriginalInputs `
     -Root $OriginalsRoot `
     -ExpectedBuild $expectedBuild `
-    -ExpectedExecutableHash $expectedExecutableHash
+    -ExpectedExecutableHash $expectedExecutableHash `
+    -ExpectedRetocCompatibilityVersion $retocCompatibilityVersion `
+    -ExpectedRetocHash $retocSha256
 $phase.Stop()
 $timings.Originals = $phase.Elapsed.TotalSeconds
 
 Write-Host '6/7 Building and verifying the six-asset IoStore container'
 $phase.Restart()
 $containerRoot = Join-Path $releaseRoot 'container'
-& $packageScript `
-    -CookedRoot $cookedRoot `
-    -OriginalForkliftDirectory $originalInputs.ForkliftDirectory `
-    -ScriptObjects $originalInputs.ScriptObjects `
-    -Retoc $Retoc `
-    -OutputRoot $containerRoot
+if (@($originalInputs).Count -ne 1) {
+    throw "Expected one clean-original input record; found $(@($originalInputs).Count)."
+}
+$packageArguments = @{
+    CookedRoot = [string]$cookedRoot
+    OriginalForkliftDirectory = [string]$originalInputs.ForkliftDirectory
+    ScriptObjects = [string]$originalInputs.ScriptObjects
+    Retoc = [string]$Retoc
+    OutputRoot = [string]$containerRoot
+}
+& $packageScript @packageArguments
 $phase.Stop()
 $timings.Package = $phase.Elapsed.TotalSeconds
 
@@ -332,14 +363,21 @@ $payloadEvidence = @(
         }
 )
 $manifest = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     mod = 'DonkLiftKeyboardControl'
     version = $Version
+    modVersion = $modVersion
     createdAtUtc = [DateTime]::UtcNow.ToString('o')
     sourceCommit = $sourceCommit
     dirtySource = ($sourceStatus.Count -gt 0)
     sourceStatus = $sourceStatus
-    engineVersion = $actualEngineVersion
+    gameEngineVersion = $expectedGameEngineVersion
+    testedGameVersion = $testedGameVersion
+    compatibilityPolicy = 'tested-evidence-not-runtime-allowlist'
+    editorEngineVersion = $actualEngineVersion
+    retocCompatibilityVersion = $retocCompatibilityVersion
+    retocSha256 = $retocSha256
+    cookStorage = $cookStorage
     gameFingerprint = [ordered]@{
         steamBuildId = [string]$fingerprint.steam.buildId
         executableSha256 = [string]$fingerprint.executable.sha256
