@@ -1,0 +1,27 @@
+{
+  "kind": "Voyage reflection mappings",
+  "game": "The Last Caretaker",
+  "internalProjectName": "Voyage",
+  "steamAppId": "1783560",
+  "steamBuildId": "25056839",
+  "executableName": "VoyageSteam-Win64-Shipping.exe",
+  "executableLength": 198655048,
+  "executableSha256": "CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933",
+  "gameEngineVersion": "5.8.1",
+  "engineVersion": "5.8",
+  "uassetApiEngineVersion": "VER_UE5_8",
+  "generator": "ihsoft/jmap Voyage UE 5.8 compatibility fork",
+  "generatorCommit": "4f88d8af758712839529f9eeeb02b82c9469e271",
+  "generationWorkflow": "tools/New-VoyageMappings.ps1",
+  "resolver": "tools/Find-VoyageUObjectArray.ps1 structural .data scan plus explicit GUObjectArray",
+  "mappingFile": "Voyage-25056839.usmap",
+  "mappingLength": 2374096,
+  "mappingSha256": "5118549ACD3F34A03E790C307BCDB108632D5E1D87BCA72D7EE5B5EF081538BF",
+  "generatedAtUtc": "2026-09-02T20:17:15.7970435Z",
+  "validation": {
+    "mappingGate": "tools/Test-VoyageMappings.ps1 passed header, payload, fingerprint, hash, and required-name checks",
+    "uassetGuiStress": "1067 attempted; 1057 clean, 10 reviewed notices, 0 failures; every package binary-equal",
+    "changedSaveCanary": "/Game/Blueprints/Equipment/ToolAbilities/BP_ToolAbility_Maintenance_Dismantle loaded in Voyage and applied Duration = 1"
+  },
+  "revalidateWhen": "Steam build ID or VoyageSteam-Win64-Shipping.exe SHA-256 changes"
+}

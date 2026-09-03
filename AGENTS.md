@@ -42,12 +42,18 @@ those details here.
 ## Game-derived data and version gates
 
 - Do not commit anything reproducible from the installed game: extracted
-  assets, `.usmap`/`.jmap`, JSON, pseudocode, raw reports, disassembly dumps,
-  cooked packages, container inventories, or installed-file backups. Keep
-  version-specific output below ignored `artifacts/` paths.
-- Commit the method, not the snapshot. Reusable fingerprinting, extraction,
-  inspection, patching, and disassembly logic belongs under `tools/`, with
-  exact usage documented.
+  assets, `.jmap`, JSON, pseudocode, raw reports, disassembly dumps, cooked
+  packages, container inventories, or installed-file backups. Keep
+  version-specific output below ignored `artifacts/` paths. The sole exception
+  is the explicitly reviewed `.usmap` registry under `mappings/Voyage/`.
+- Every tracked `.usmap` must live in its own Steam-build/engine-version
+  directory and have a sibling manifest containing the executable fingerprint,
+  exact engine/parser version, generator commit, file hash, validation evidence,
+  and revalidation condition. Never overwrite an older mapping for a new game
+  build, and keep raw dumper output/logs under ignored `artifacts/`.
+- Except for the reviewed mapping registry, commit the method, not the snapshot.
+  Reusable fingerprinting, extraction, inspection, patching, and disassembly
+  logic belongs under `tools/`, with exact usage documented.
 - Treat `tools/README.md` as the tool-routing index. Read it before surveying
   tool implementations, and update it whenever a reusable tool is added,
   renamed, or its interface, prerequisites, outputs, or safety contract change.

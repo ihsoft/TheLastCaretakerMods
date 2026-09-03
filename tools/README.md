@@ -55,6 +55,10 @@ game fingerprint, a versioned output directory, and an inspection manifest.
 - Current UE 5.8 cooked legacy packages require the reviewed retoc
   `FObjectImport.PackageName` compatibility build. See
   [`RetocUe58Compatibility/README.md`](RetocUe58Compatibility/README.md).
+- The reviewed mapping for Steam build `25056839` / game UE `5.8.1` is tracked
+  at `mappings/Voyage/steam-25056839-ue5.8.1/`. Generate candidates under
+  ignored `artifacts/mappings/`; promote only a fully validated mapping as a
+  new immutable versioned registry entry.
 - C# tools currently target .NET 10. `Inspect-VoyageAsset.ps1` additionally
   expects a local CUE4Parse checkout at `.tools/CUE4Parse`; that dependency is
   intentionally ignored by Git.
@@ -368,7 +372,7 @@ builds the GUI property table, and invokes UAssetGUI's unchanged-save
   '\Voyage\Content\Blueprints' `
   '.\artifacts\uassetgui-stress\blueprints' `
   UE5_8 `
-  '.\artifacts\mappings\<fingerprinted-mapping>\Mappings.usmap'
+  '.\mappings\Voyage\steam-25056839-ue5.8.1\Voyage-25056839.usmap'
 ```
 
 The report directory must not already contain output unless `--resume` is
