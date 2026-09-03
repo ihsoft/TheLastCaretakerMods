@@ -5,20 +5,26 @@ param(
     [string]$MappingsPath,
 
     [ValidateSet('UE5_7', 'UE5_8')]
-    [string]$EngineVersion = 'UE5_7',
+    [string]$EngineVersion = 'UE5_8',
 
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
-    [string]$OutputRoot = "$PSScriptRoot\..\artifacts\inspection"
+    [string]$OutputRoot
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Join-Path $PSScriptRoot '..\artifacts\inspection'
+}
 
 $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $paks = Join-Path $root 'Voyage\Content\Paks'
 $exe = Join-Path $root 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe'
 $project = Join-Path $PSScriptRoot 'VoyageAssetInspector\VoyageAssetInspector.csproj'
 $cue4ParseBinary = Join-Path $PSScriptRoot '..\.tools\bin\CUE4Parse\CUE4Parse.dll'
+$getMappingsScript = Join-Path $PSScriptRoot 'Get-VoyageMappings.ps1'
+$testMappingsScript = Join-Path $PSScriptRoot 'Test-VoyageMappings.ps1'
 if (-not (Test-Path -LiteralPath $cue4ParseBinary -PathType Leaf)) {
     throw 'Canonical CUE4Parse bundle is missing. Run tools\Publish-Cue4ParseBinary.ps1.'
 }
@@ -36,6 +42,24 @@ if (Test-Path -LiteralPath $steamManifest -PathType Leaf) {
     if ($buildMatch.Success) {
         $steamBuildId = $buildMatch.Groups['id'].Value
     }
+}
+$mappingsManifestPath = $null
+if ($MappingsPath) {
+    $MappingsPath = (Resolve-Path -LiteralPath $MappingsPath).Path
+    $mappingsManifestPath = Join-Path (Split-Path -Parent $MappingsPath) 'mapping-manifest.json'
+    if (-not (Test-Path -LiteralPath $mappingsManifestPath -PathType Leaf)) {
+        throw "Mappings manifest not found beside the explicit mapping: $mappingsManifestPath"
+    }
+    & $testMappingsScript `
+        -MappingsPath $MappingsPath `
+        -ManifestPath $mappingsManifestPath `
+        -ExpectedSteamBuildId $steamBuildId `
+        -ExpectedExecutableSha256 $exeHash | Out-Null
+}
+elseif (-not $Query.StartsWith('list:', [StringComparison]::OrdinalIgnoreCase)) {
+    $resolvedMappings = & $getMappingsScript -GameRoot $GameRoot
+    $MappingsPath = [string]$resolvedMappings.mappingsPath
+    $mappingsManifestPath = [string]$resolvedMappings.manifestPath
 }
 $buildId = "steam-$steamBuildId-$($exeHash.Substring(0, 12))"
 $querySafe = ($Query -replace '[^A-Za-z0-9._-]', '_').Trim('_')
@@ -76,7 +100,8 @@ $manifest = [ordered]@{
     gameVersion = $version
     executableSha256 = $exeHash
     query = $Query
-    mappingsPath = if ($MappingsPath) { (Resolve-Path -LiteralPath $MappingsPath).Path } else { $null }
+    mappingsPath = $MappingsPath
+    mappingsManifestPath = $mappingsManifestPath
     cue4ParseBinaryPath = (Resolve-Path -LiteralPath $cue4ParseBinary).Path
     cue4ParseBinarySha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $cue4ParseBinary).Hash
     engineVersion = $EngineVersion

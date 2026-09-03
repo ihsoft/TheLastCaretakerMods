@@ -51,6 +51,12 @@ those details here.
   exact engine/parser version, generator commit, file hash, validation evidence,
   and revalidation condition. Never overwrite an older mapping for a new game
   build, and keep raw dumper output/logs under ignored `artifacts/`.
+- Never generate mappings merely because a task needs them. Call
+  `tools/Get-VoyageMappings.ps1`; it fingerprints the installed game, selects
+  the matching reviewed entry from `mappings/Voyage/`, validates it, and returns
+  the path. Run `New-VoyageMappings.ps1` only after that resolver reports that
+  no reviewed mapping matches a genuinely new fingerprint, and ask the user to
+  start the game before generation.
 - Except for the reviewed mapping registry, commit the method, not the snapshot.
   Reusable fingerprinting, extraction, inspection, patching, and disassembly
   logic belongs under `tools/`, with exact usage documented.
@@ -63,6 +69,17 @@ those details here.
   or tracing third-party internals. Inspect implementation only when the tool
   fails, hangs, rejects valid-looking inputs, produces an unexpected result,
   or the documented contract is insufficient for the task.
+- Normal asset analysis calls `Get-VoyageAssetJson.ps1` with the asset identity
+  and consumes only the returned `jsonPath`. Its default `Game` source mounts
+  and caches only stock game containers; use explicit `Mod` source with one
+  exact mod container only for exceptional debugging, and never cache or
+  promote that output. Request the complete inventory through `-ListPackages`
+  and consume only its returned `packageListPath`; do not discover `_catalog`
+  manually. The central game store, its layout, indexing, provenance sidecars,
+  reuse, and invalidation are private to the tool: do not inspect them to locate
+  an asset, choose or override a store root, or manually copy, move, merge,
+  promote, rewrite, or delete entries. If the tool fails or returns an unexpected
+  result, stop normal research and diagnose the tool before touching its store.
 - Durable cooked-asset toolchain contracts, accepted fork checkpoints, and the
   validation ladder live in `docs/voyage-cooked-asset-toolchain.md`.
 - Active cross-cutting tool and pipeline work lives in

@@ -45,6 +45,17 @@ publish manifests.
 - [x] Record hashes and update tool routing documentation.
 - [x] Add the same stable publisher boundary for jmap and make mappings
   generation consume only the canonical dumper.
+- [x] Make the asset JSON store a private implementation detail: remove the
+  public root override and require callers to consume only the returned path.
+- [x] Split asset retrieval into default cached `Game` and explicit uncached
+  `Mod` sources; mount only selected containers and key the cache solely from
+  the installed game fingerprint and stock tool inputs.
+- [x] Expose the already useful complete package inventory through
+  `Get-VoyageAssetJson.ps1 -ListPackages` for both sources instead of requiring
+  callers to discover or read the private `_catalog` layout.
+- [x] Make reviewed mapping reuse the default black-box path through
+  `Get-VoyageMappings.ps1`; consumers resolve it automatically, while jmap
+  generation is reserved for a confirmed unmatched game fingerprint.
 
 Acceptance evidence:
 
@@ -68,6 +79,26 @@ Acceptance evidence:
   one explicit engine version through every reopen, and Inspector wrappers use
   `-` rather than a Windows-PowerShell-elided empty argument when mappings are
   absent.
+
+Store-integrity and source-isolation follow-up:
+
+- the earlier `with-additional-*` design was removed because any mod change
+  made that cache disposable and allowed unrelated mods to affect research;
+- game mode now registers only stock `global` and `pakchunk*` containers even
+  when mods remain installed, while mod mode requires one exact `.utoc`, proves
+  package ownership from that container alone, and writes an uncached run;
+- `-ListPackages` returns a validated list path, count, and hash without
+  requiring mappings; game lists reuse the game cache and mod lists remain
+  one-off diagnostics;
+- the public wrapper now rejects `-CacheRoot`, returns only the asset identity,
+  validated JSON path, and content hash, and produces the same game identity
+  under Windows PowerShell 5.1 and PowerShell 7;
+- a Windows PowerShell `-File` generate-then-repeat test reused one path after
+  normalizing `Get-Content` results to plain strings; its diagnostic view was
+  removed after validation;
+- cache schema 2 invalidates and rebuilds pre-isolation indexes and entries,
+  because the older inspector silently mounted every installed container even
+  for paths labeled as base-game data.
 
 ## Later pipeline work
 

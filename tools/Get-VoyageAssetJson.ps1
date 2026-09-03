@@ -1,13 +1,12 @@
-[CmdletBinding()]
+[CmdletBinding(DefaultParameterSetName = 'Asset')]
 param(
-    [Parameter(Mandatory = $true, Position = 0)]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'Asset')]
     [string]$Query,
 
+    [Parameter(Mandatory = $true, ParameterSetName = 'List')]
+    [switch]$ListPackages,
+
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
-
-    [string]$CacheRoot = (Join-Path $PSScriptRoot '..\artifacts\asset-cache'),
-
-    [string]$MappingsRoot = (Join-Path $PSScriptRoot '..\artifacts\mappings'),
 
     [string]$MappingsPath,
 
@@ -16,17 +15,31 @@ param(
     [ValidateSet('UE5_7', 'UE5_8')]
     [string]$EngineVersion = 'UE5_8',
 
-    [switch]$AllowAdditionalContainers
+    [ValidateSet('Game', 'Mod')]
+    [string]$Source = 'Game',
+
+    [string]$ModContainer
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+if ($Source -eq 'Game' -and -not [string]::IsNullOrWhiteSpace($ModContainer)) {
+    throw '-ModContainer is valid only with -Source Mod.'
+}
+if ($Source -eq 'Mod' -and [string]::IsNullOrWhiteSpace($ModContainer)) {
+    throw '-Source Mod requires -ModContainer with one exact mod .utoc file.'
+}
+
 $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'
+$getMappingsScript = Join-Path $PSScriptRoot 'Get-VoyageMappings.ps1'
 $testMappingsScript = Join-Path $PSScriptRoot 'Test-VoyageMappings.ps1'
 $inspectorProject = Join-Path $PSScriptRoot 'VoyageAssetInspector\VoyageAssetInspector.csproj'
 $inspectorSource = Join-Path $PSScriptRoot 'VoyageAssetInspector\Program.cs'
 $cue4ParseBinary = Join-Path $PSScriptRoot '..\.tools\bin\CUE4Parse\CUE4Parse.dll'
+$cacheRoot = Join-Path $PSScriptRoot '..\artifacts\asset-cache'
+$inspectionRoot = Join-Path $PSScriptRoot '..\artifacts\asset-inspections'
+$cacheSchemaVersion = 2
 $sha256Pattern = '^[0-9A-F]{64}$'
 
 function Get-TextSha256 {
@@ -36,8 +49,74 @@ function Get-TextSha256 {
     )
 
     $bytes = [Text.Encoding]::UTF8.GetBytes($Text)
-    $hash = [Security.Cryptography.SHA256]::HashData($bytes)
-    [Convert]::ToHexString($hash)
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    try {
+        $hash = $hasher.ComputeHash($bytes)
+    }
+    finally {
+        $hasher.Dispose()
+    }
+    [BitConverter]::ToString($hash).Replace('-', '')
+}
+
+function Get-ContainerDescriptor {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object[]]$Records
+    )
+
+    $items = @($Records | ForEach-Object {
+        $name = [Convert]::ToString($_['name'], [Globalization.CultureInfo]::InvariantCulture)
+        $length = [Convert]::ToInt64($_['length'], [Globalization.CultureInfo]::InvariantCulture)
+        $sha256 = [Convert]::ToString($_['sha256'], [Globalization.CultureInfo]::InvariantCulture)
+        '{"name":"' + $name + '","length":' +
+            $length.ToString([Globalization.CultureInfo]::InvariantCulture) +
+            ',"sha256":"' + $sha256 + '"}'
+    })
+    '[' + ($items -join ',') + ']'
+}
+
+function Get-FilesInOrdinalNameOrder {
+    param(
+        [Parameter(Mandatory = $true)]
+        [IO.FileInfo[]]$Files
+    )
+
+    $filesByName = @{}
+    foreach ($file in $Files) {
+        $filesByName[$file.Name] = $file
+    }
+    $names = [string[]]@($filesByName.Keys)
+    [Array]::Sort($names, [StringComparer]::Ordinal)
+    foreach ($name in $names) {
+        $filesByName[$name]
+    }
+}
+
+function Get-OptionalPropertyValue {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Object,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        return $null
+    }
+    $property.Value
+}
+
+function Test-IsGameContainerName {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $Name.Equals('global.utoc', [StringComparison]::OrdinalIgnoreCase) -or
+        $Name -match '^(?i:pakchunk\d+(?:optional)?-Windows\.utoc)$'
 }
 
 function Invoke-Inspector {
@@ -53,6 +132,11 @@ function Invoke-Inspector {
 
         [string]$MappingFile,
 
+        [ValidateSet('Game', 'Mod', 'ModOnly')]
+        [string]$ContainerSelection = 'Game',
+
+        [string]$SelectedModContainer,
+
         [Parameter(Mandatory = $true)]
         [string]$LogPath
     )
@@ -66,7 +150,10 @@ function Invoke-Inspector {
         $AssetQuery,
         $OutputDirectory,
         $(if ($MappingFile) { $MappingFile } else { '-' }),
-        $EngineVersion
+        $EngineVersion,
+        '-',
+        $ContainerSelection,
+        $(if ($SelectedModContainer) { $SelectedModContainer } else { '-' })
     )
     & dotnet @arguments *> $LogPath
     if ($LASTEXITCODE -ne 0) {
@@ -110,119 +197,77 @@ function Resolve-ValidatedMappings {
         }
     }
 
-    $root = (Resolve-Path -LiteralPath $MappingsRoot).Path
-    $records = [Collections.Generic.List[object]]::new()
-    foreach ($manifestFile in Get-ChildItem -LiteralPath $root -Filter 'mapping-manifest.json' -File -Recurse) {
-        try {
-            $manifest = Get-Content -Raw -LiteralPath $manifestFile.FullName | ConvertFrom-Json
-            if ([string]$manifest.kind -cne 'Voyage reflection mappings' -or
-                [string]$manifest.steamBuildId -cne $SteamBuildId -or
-                [string]$manifest.executableSha256 -cne $ExecutableSha256) {
-                continue
-            }
-            $mappingName = if ([string]::IsNullOrWhiteSpace([string]$manifest.mappingFile)) {
-                'Mappings.usmap'
-            }
-            else {
-                [string]$manifest.mappingFile
-            }
-            $mapping = Join-Path $manifestFile.DirectoryName $mappingName
-            if (-not (Test-Path -LiteralPath $mapping -PathType Leaf)) {
-                continue
-            }
-            $generated = [DateTime]::MinValue
-            [void][DateTime]::TryParse([string]$manifest.generatedAtUtc, [ref]$generated)
-            $records.Add([pscustomobject]@{
-                mappingsPath = $mapping
-                manifestPath = $manifestFile.FullName
-                generatedAtUtc = $generated.ToUniversalTime()
-            })
-        }
-        catch {
-            continue
-        }
+    $resolved = & $getMappingsScript -GameRoot $GameRoot
+    if ([string]$resolved.steamBuildId -cne $SteamBuildId -or
+        [string]$resolved.executableSha256 -cne $ExecutableSha256) {
+        throw 'The reviewed mapping resolver returned a mismatched game fingerprint.'
     }
-
-    foreach ($record in $records | Sort-Object generatedAtUtc -Descending) {
-        try {
-            & $testMappingsScript `
-                -MappingsPath $record.mappingsPath `
-                -ManifestPath $record.manifestPath `
-                -ExpectedSteamBuildId $SteamBuildId `
-                -ExpectedExecutableSha256 $ExecutableSha256 | Out-Null
-            return [pscustomobject]@{
-                mappingsPath = (Resolve-Path -LiteralPath $record.mappingsPath).Path
-                manifestPath = (Resolve-Path -LiteralPath $record.manifestPath).Path
-                sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $record.mappingsPath).Hash
-            }
-        }
-        catch {
-            continue
-        }
+    [pscustomobject]@{
+        mappingsPath = [string]$resolved.mappingsPath
+        manifestPath = [string]$resolved.manifestPath
+        sha256 = [string]$resolved.sha256
     }
-
-    throw "No validated mappings were found for Steam build $SteamBuildId. Run tools\New-VoyageMappings.ps1 first."
 }
 
-function Get-ContainerView {
+function Get-GameContainerSet {
     param(
         [Parameter(Mandatory = $true)]
         [string]$PaksDirectory
     )
 
-    $allContainers = @(
-        Get-ChildItem -LiteralPath $PaksDirectory -Filter '*.utoc' -File |
-            Sort-Object Name
-    )
-    $baseContainers = @(
+    $allContainers = @(Get-FilesInOrdinalNameOrder -Files @(
+        Get-ChildItem -LiteralPath $PaksDirectory -Filter '*.utoc' -File
+    ))
+    $gameContainers = @(
         $allContainers |
-            Where-Object { $_.Name -eq 'global.utoc' -or $_.Name -like 'pakchunk*.utoc' }
+            Where-Object { Test-IsGameContainerName -Name $_.Name }
     )
-    if ($baseContainers.Count -eq 0) {
-        throw "No base Voyage IoStore containers were found in: $PaksDirectory"
+    if ($gameContainers.Count -eq 0) {
+        throw "No stock Voyage IoStore containers were found in: $PaksDirectory"
     }
-    $additional = @(
-        $allContainers |
-            Where-Object { $_.Name -ne 'global.utoc' -and $_.Name -notlike 'pakchunk*.utoc' } |
-            Sort-Object Name
-    )
-    if ($additional.Count -gt 0 -and -not $AllowAdditionalContainers) {
-        $names = $additional.Name -join ', '
-        throw "Additional containers can shadow stock assets: $names. Remove them for the base cache or pass -AllowAdditionalContainers for an isolated mounted-view cache."
-    }
-
-    $baseRecords = @($baseContainers | ForEach-Object {
+    $gameRecords = @($gameContainers | ForEach-Object {
         [ordered]@{
             name = $_.Name
             length = $_.Length
             sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
         }
     })
-    $baseDescriptor = $baseRecords | ConvertTo-Json -Depth 3 -Compress
-    $baseHash = Get-TextSha256 -Text $baseDescriptor
-    $additionalRecords = @($additional | ForEach-Object {
-        [ordered]@{
-            name = $_.Name
-            length = $_.Length
-            sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
-        }
-    })
-    if ($additionalRecords.Count -eq 0) {
-        return [pscustomobject]@{
-            name = 'base'
-            baseContainers = $baseRecords
-            baseContainersSha256 = $baseHash
-            additionalContainers = @()
-        }
-    }
-
-    $descriptor = $additionalRecords | ConvertTo-Json -Depth 3 -Compress
-    $viewHash = Get-TextSha256 -Text $descriptor
+    $gameDescriptor = Get-ContainerDescriptor -Records $gameRecords
+    $gameHash = Get-TextSha256 -Text $gameDescriptor
     [pscustomobject]@{
-        name = "with-additional-$($viewHash.Substring(0, 12))"
-        baseContainers = $baseRecords
-        baseContainersSha256 = $baseHash
-        additionalContainers = $additionalRecords
+        gameContainers = $gameRecords
+        gameContainersSha256 = $gameHash
+    }
+}
+
+function Resolve-ModContainer {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PaksDirectory,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Container
+    )
+
+    $candidate = if ([IO.Path]::IsPathRooted($Container)) {
+        $Container
+    }
+    else {
+        Join-Path $PaksDirectory $Container
+    }
+    if (-not $candidate.EndsWith('.utoc', [StringComparison]::OrdinalIgnoreCase)) {
+        $candidate += '.utoc'
+    }
+    $resolved = (Resolve-Path -LiteralPath $candidate).Path
+    $name = [IO.Path]::GetFileName($resolved)
+    if (Test-IsGameContainerName -Name $name) {
+        throw "The selected container is a stock game container, not a mod: $resolved"
+    }
+    [pscustomobject]@{
+        path = $resolved
+        name = $name
+        length = (Get-Item -LiteralPath $resolved).Length
+        sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $resolved).Hash
     }
 }
 
@@ -232,7 +277,7 @@ function Get-PackageIndex {
         [string]$PaksDirectory,
 
         [Parameter(Mandatory = $true)]
-        [string]$ViewRoot,
+        [string]$CacheVersionRoot,
 
         [Parameter(Mandatory = $true)]
         [string]$SteamBuildId,
@@ -244,32 +289,36 @@ function Get-PackageIndex {
         [string]$Cue4ParseBinarySha256,
 
         [Parameter(Mandatory = $true)]
-        [object]$ContainerView
+        [object]$GameContainerSet
     )
 
-    $catalogRoot = Join-Path $ViewRoot '_catalog'
+    $catalogRoot = Join-Path $CacheVersionRoot '_catalog'
     $indexPath = Join-Path $catalogRoot 'packages.txt'
     $manifestPath = Join-Path $catalogRoot 'package-index-manifest.json'
     if ((Test-Path -LiteralPath $indexPath -PathType Leaf) -and
         (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
         $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
         $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $indexPath).Hash
-        if ([string]$manifest.kind -cne 'Voyage asset package index' -or
-            [string]$manifest.steamBuildId -cne $SteamBuildId -or
-            [string]$manifest.executableSha256 -cne $ExecutableSha256 -or
-            [string]$manifest.cue4ParseBinarySha256 -cne $Cue4ParseBinarySha256 -or
-            [string]$manifest.baseContainersSha256 -cne [string]$ContainerView.baseContainersSha256 -or
-            [string]$manifest.containerView -cne [string]$ContainerView.name -or
-            [string]$manifest.packageIndexSha256 -cne $actualHash) {
-            throw "The cached package index failed its provenance check: $catalogRoot"
+        if ([int](Get-OptionalPropertyValue -Object $manifest -Name 'cacheSchemaVersion') -eq $cacheSchemaVersion -and
+            [string](Get-OptionalPropertyValue -Object $manifest -Name 'source') -ceq 'Game' -and
+            [string]$manifest.kind -ceq 'Voyage asset package index' -and
+            [string]$manifest.steamBuildId -ceq $SteamBuildId -and
+            [string]$manifest.executableSha256 -ceq $ExecutableSha256 -and
+            [string]$manifest.cue4ParseBinarySha256 -ceq $Cue4ParseBinarySha256 -and
+            [string]$manifest.inspectorSourceSha256 -ceq (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash -and
+            [string]$manifest.gameContainersSha256 -ceq [string]$GameContainerSet.gameContainersSha256 -and
+            [string]$manifest.packageIndexSha256 -ceq $actualHash) {
+            return (Resolve-Path -LiteralPath $indexPath).Path
         }
-        return (Resolve-Path -LiteralPath $indexPath).Path
+        Write-Warning "Discarding a stale game package index: $catalogRoot"
+        [IO.Directory]::Delete($catalogRoot, $true)
     }
-    if ((Test-Path -LiteralPath $indexPath) -or (Test-Path -LiteralPath $manifestPath)) {
-        throw "The cached package index is incomplete: $catalogRoot"
+    elseif ((Test-Path -LiteralPath $indexPath) -or (Test-Path -LiteralPath $manifestPath)) {
+        Write-Warning "Discarding an incomplete game package index: $catalogRoot"
+        [IO.Directory]::Delete($catalogRoot, $true)
     }
 
-    $stagingRoot = Join-Path $ViewRoot '_staging'
+    $stagingRoot = Join-Path $CacheVersionRoot '_staging'
     $staging = Join-Path $stagingRoot ('catalog-' + [guid]::NewGuid().ToString('N'))
     [IO.Directory]::CreateDirectory($staging) | Out-Null
     $logPath = Join-Path $staging 'inspector.log'
@@ -297,15 +346,15 @@ function Get-PackageIndex {
     [IO.File]::WriteAllLines($indexPath, $packages)
     Copy-Item -LiteralPath $logPath -Destination (Join-Path $catalogRoot 'generation.log')
     $indexManifest = [ordered]@{
+        cacheSchemaVersion = $cacheSchemaVersion
         kind = 'Voyage asset package index'
+        source = 'Game'
         steamBuildId = $SteamBuildId
         executableSha256 = $ExecutableSha256
         cue4ParseBinarySha256 = $Cue4ParseBinarySha256
         engineVersion = $EngineVersion
-        baseContainers = @($ContainerView.baseContainers)
-        baseContainersSha256 = [string]$ContainerView.baseContainersSha256
-        containerView = [string]$ContainerView.name
-        additionalContainers = @($ContainerView.additionalContainers)
+        gameContainers = @($GameContainerSet.gameContainers)
+        gameContainersSha256 = [string]$GameContainerSet.gameContainersSha256
         packageCount = $packages.Count
         packageIndexSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $indexPath).Hash
         inspectorSourceSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash
@@ -324,7 +373,7 @@ function Resolve-AssetVirtualPath {
         [string]$PackageIndexPath
     )
 
-    $packages = @(Get-Content -LiteralPath $PackageIndexPath)
+    $packages = @(Get-Content -LiteralPath $PackageIndexPath | ForEach-Object { [string]$_ })
     $normalized = $Query.Trim().Replace('\', '/').TrimStart('/')
     if ([string]::IsNullOrWhiteSpace($normalized)) {
         throw 'Asset query cannot be empty.'
@@ -350,7 +399,7 @@ function Resolve-AssetVirtualPath {
     })
     if ($matches.Count -eq 0) {
         $matches = @($packages | Where-Object {
-            $_.Contains($normalized, [StringComparison]::OrdinalIgnoreCase)
+            ([string]$_).IndexOf($normalized, [StringComparison]::OrdinalIgnoreCase) -ge 0
         })
     }
     if ($matches.Count -eq 0) {
@@ -360,7 +409,30 @@ function Resolve-AssetVirtualPath {
         $shown = @($matches | Select-Object -First 20) -join [Environment]::NewLine
         throw "Asset query '$Query' is ambiguous ($($matches.Count) matches). Use one exact virtual path:`n$shown"
     }
-    $matches[0]
+    [string]$matches[0]
+}
+
+function New-PackageListResult {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Game', 'Mod')]
+        [string]$ResultSource,
+
+        [Parameter(Mandatory = $true)]
+        [string]$PackageIndexPath
+    )
+
+    $resolvedPath = (Resolve-Path -LiteralPath $PackageIndexPath).Path
+    $packageCount = @(
+        Get-Content -LiteralPath $resolvedPath |
+            Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+    ).Count
+    [pscustomobject]@{
+        source = $ResultSource
+        packageListPath = $resolvedPath
+        packageCount = $packageCount
+        packageListSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $resolvedPath).Hash
+    }
 }
 
 if (-not (Test-Path -LiteralPath $cue4ParseBinary -PathType Leaf)) {
@@ -370,7 +442,6 @@ $cue4ParseBinarySha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $cue4Parse
 if (-not (Test-Path -LiteralPath $inspectorProject -PathType Leaf)) {
     throw "VoyageAssetInspector project is missing: $inspectorProject"
 }
-
 $fingerprintText = (& $fingerprintScript -GameRoot $GameRoot) -join [Environment]::NewLine
 $fingerprint = $fingerprintText | ConvertFrom-Json
 $steamBuildId = [string]$fingerprint.steam.buildId
@@ -381,25 +452,136 @@ if ($steamBuildId -notmatch '^\d+$' -or $executableSha256 -notmatch $sha256Patte
 
 $resolvedGameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
 $paksDirectory = Join-Path $resolvedGameRoot 'Voyage\Content\Paks'
-$containerView = Get-ContainerView -PaksDirectory $paksDirectory
-$versionName = "steam-$steamBuildId-$($executableSha256.Substring(0, 12))-base-$($containerView.baseContainersSha256.Substring(0, 12))"
-$viewRoot = Join-Path (Join-Path ([IO.Path]::GetFullPath($CacheRoot)) $versionName) $containerView.name
-$mapping = Resolve-ValidatedMappings `
-    -SteamBuildId $steamBuildId `
-    -ExecutableSha256 $executableSha256
+$gameContainerSet = Get-GameContainerSet -PaksDirectory $paksDirectory
+$versionName = "steam-$steamBuildId-$($executableSha256.Substring(0, 12))-game-$($gameContainerSet.gameContainersSha256.Substring(0, 12))"
+$cacheVersionRoot = Join-Path ([IO.Path]::GetFullPath($cacheRoot)) $versionName
+
+if ($Source -eq 'Mod') {
+    $selectedMod = Resolve-ModContainer -PaksDirectory $paksDirectory -Container $ModContainer
+    $runName = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
+    $runRoot = Join-Path ([IO.Path]::GetFullPath($inspectionRoot)) $runName
+    $catalogRoot = Join-Path $runRoot 'catalog'
+    [IO.Directory]::CreateDirectory($catalogRoot) | Out-Null
+    $catalogLog = Join-Path $catalogRoot 'inspector.log'
+    Write-Host "Indexing assets from mod container $($selectedMod.name)..."
+    Invoke-Inspector `
+        -PaksDirectory $paksDirectory `
+        -AssetQuery 'list:' `
+        -OutputDirectory $catalogRoot `
+        -ContainerSelection 'ModOnly' `
+        -SelectedModContainer $selectedMod.path `
+        -LogPath $catalogLog
+
+    $packageIndexPath = Join-Path $catalogRoot 'matches.txt'
+    if (-not (Test-Path -LiteralPath $packageIndexPath -PathType Leaf)) {
+        throw "VoyageAssetInspector did not produce a mod package index. Inspection: $runRoot"
+    }
+    if ($ListPackages) {
+        $listResult = New-PackageListResult -ResultSource 'Mod' -PackageIndexPath $packageIndexPath
+        $inspectionManifest = [ordered]@{
+            kind = 'Voyage one-off mod package listing'
+            source = 'Mod'
+            steamBuildId = $steamBuildId
+            executableSha256 = $executableSha256
+            engineVersion = $EngineVersion
+            modContainer = $selectedMod
+            packageListPath = $listResult.packageListPath
+            packageCount = $listResult.packageCount
+            packageListSha256 = $listResult.packageListSha256
+            cue4ParseBinarySha256 = $cue4ParseBinarySha256
+            inspectorSourceSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash
+            generatedAtUtc = [DateTime]::UtcNow.ToString('o')
+        }
+        [IO.File]::WriteAllText(
+            (Join-Path $runRoot 'inspection-manifest.json'),
+            (($inspectionManifest | ConvertTo-Json -Depth 6) + [Environment]::NewLine))
+        $listResult
+        return
+    }
+
+    $mapping = Resolve-ValidatedMappings `
+        -SteamBuildId $steamBuildId `
+        -ExecutableSha256 $executableSha256
+    $virtualPath = Resolve-AssetVirtualPath -PackageIndexPath $packageIndexPath
+    $exportRoot = Join-Path $runRoot 'export'
+    [IO.Directory]::CreateDirectory($exportRoot) | Out-Null
+    $exportLog = Join-Path $exportRoot 'inspector.log'
+    Write-Host "Exporting $virtualPath from $($selectedMod.name)..."
+    Invoke-Inspector `
+        -PaksDirectory $paksDirectory `
+        -AssetQuery $virtualPath `
+        -OutputDirectory $exportRoot `
+        -MappingFile $mapping.mappingsPath `
+        -ContainerSelection 'Mod' `
+        -SelectedModContainer $selectedMod.path `
+        -LogPath $exportLog
+
+    $matches = @(Get-Content -LiteralPath (Join-Path $exportRoot 'matches.txt'))
+    if ($matches.Count -ne 1 -or $matches[0] -cne $virtualPath) {
+        throw "Exact mod asset export resolved unexpectedly. Inspection: $runRoot"
+    }
+    $errorPath = Join-Path $exportRoot 'errors.txt'
+    if ((Test-Path -LiteralPath $errorPath -PathType Leaf) -and
+        (Get-Item -LiteralPath $errorPath).Length -gt 0) {
+        throw "VoyageAssetInspector could not parse the exact mod asset. Inspection: $runRoot"
+    }
+    $safeName = $virtualPath.Replace('/', '_').Replace('\', '_').Replace('.', '_') + '.json'
+    $jsonPath = Join-Path $exportRoot $safeName
+    if (-not (Test-Path -LiteralPath $jsonPath -PathType Leaf) -or
+        (Get-Item -LiteralPath $jsonPath).Length -eq 0) {
+        throw "VoyageAssetInspector did not produce the expected mod JSON. Inspection: $runRoot"
+    }
+    $jsonSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $jsonPath).Hash
+    $inspectionManifest = [ordered]@{
+        kind = 'Voyage one-off mod asset inspection'
+        source = 'Mod'
+        steamBuildId = $steamBuildId
+        executableSha256 = $executableSha256
+        engineVersion = $EngineVersion
+        modContainer = $selectedMod
+        virtualPath = $virtualPath
+        mappingsPath = [string]$mapping.mappingsPath
+        mappingsManifestPath = [string]$mapping.manifestPath
+        mappingsSha256 = [string]$mapping.sha256
+        cue4ParseBinarySha256 = $cue4ParseBinarySha256
+        inspectorSourceSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash
+        jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
+        jsonLength = (Get-Item -LiteralPath $jsonPath).Length
+        jsonSha256 = $jsonSha256
+        generatedAtUtc = [DateTime]::UtcNow.ToString('o')
+    }
+    [IO.File]::WriteAllText(
+        (Join-Path $runRoot 'inspection-manifest.json'),
+        (($inspectionManifest | ConvertTo-Json -Depth 6) + [Environment]::NewLine))
+    [pscustomobject]@{
+        virtualPath = $virtualPath
+        jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
+        jsonSha256 = $jsonSha256
+    }
+    return
+}
+
 $packageIndexPath = Get-PackageIndex `
     -PaksDirectory $paksDirectory `
-    -ViewRoot $viewRoot `
+    -CacheVersionRoot $cacheVersionRoot `
     -SteamBuildId $steamBuildId `
     -ExecutableSha256 $executableSha256 `
     -Cue4ParseBinarySha256 $cue4ParseBinarySha256 `
-    -ContainerView $containerView
+    -GameContainerSet $gameContainerSet
+if ($ListPackages) {
+    New-PackageListResult -ResultSource 'Game' -PackageIndexPath $packageIndexPath
+    return
+}
+
+$mapping = Resolve-ValidatedMappings `
+    -SteamBuildId $steamBuildId `
+    -ExecutableSha256 $executableSha256
 $virtualPath = Resolve-AssetVirtualPath -PackageIndexPath $packageIndexPath
 
 $relativeJsonPath = [IO.Path]::ChangeExtension($virtualPath, '.json').Replace('/', [IO.Path]::DirectorySeparatorChar)
-$viewRootFull = [IO.Path]::GetFullPath($viewRoot)
-$jsonPath = [IO.Path]::GetFullPath((Join-Path $viewRootFull $relativeJsonPath))
-$requiredPrefix = $viewRootFull.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+$cacheVersionRootFull = [IO.Path]::GetFullPath($cacheVersionRoot)
+$jsonPath = [IO.Path]::GetFullPath((Join-Path $cacheVersionRootFull $relativeJsonPath))
+$requiredPrefix = $cacheVersionRootFull.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 if (-not $jsonPath.StartsWith($requiredPrefix, [StringComparison]::OrdinalIgnoreCase)) {
     throw "Resolved asset path escapes the cache root: $virtualPath"
 }
@@ -409,34 +591,40 @@ if ((Test-Path -LiteralPath $jsonPath -PathType Leaf) -and
     (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
     $actualJsonHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $jsonPath).Hash
-    if ([string]$manifest.kind -cne 'Voyage cached asset JSON' -or
-        [string]$manifest.steamBuildId -cne $steamBuildId -or
-        [string]$manifest.executableSha256 -cne $executableSha256 -or
-        [string]$manifest.baseContainersSha256 -cne [string]$containerView.baseContainersSha256 -or
-        [string]$manifest.containerView -cne [string]$containerView.name -or
-        [string]$manifest.virtualPath -cne $virtualPath -or
-        [string]$manifest.mappingsSha256 -cne [string]$mapping.sha256 -or
-        [string]$manifest.cue4ParseBinarySha256 -cne $cue4ParseBinarySha256 -or
-        [string]$manifest.jsonSha256 -cne $actualJsonHash -or
-        [long]$manifest.jsonLength -ne (Get-Item -LiteralPath $jsonPath).Length) {
-        throw "The cached asset JSON failed its provenance check: $jsonPath"
+    $provenanceFailures = [Collections.Generic.List[string]]::new()
+    if ([int](Get-OptionalPropertyValue -Object $manifest -Name 'cacheSchemaVersion') -ne $cacheSchemaVersion) { $provenanceFailures.Add('cacheSchemaVersion') }
+    if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'source') -cne 'Game') { $provenanceFailures.Add('source') }
+    if ([string]$manifest.kind -cne 'Voyage cached asset JSON') { $provenanceFailures.Add('kind') }
+    if ([string]$manifest.steamBuildId -cne $steamBuildId) { $provenanceFailures.Add('steamBuildId') }
+    if ([string]$manifest.executableSha256 -cne $executableSha256) { $provenanceFailures.Add('executableSha256') }
+    if ([string]$manifest.gameContainersSha256 -cne [string]$gameContainerSet.gameContainersSha256) { $provenanceFailures.Add('gameContainersSha256') }
+    if ([string]$manifest.virtualPath -cne $virtualPath) { $provenanceFailures.Add('virtualPath') }
+    if ([string]$manifest.mappingsSha256 -cne [string]$mapping.sha256) { $provenanceFailures.Add('mappingsSha256') }
+    if ([string]$manifest.cue4ParseBinarySha256 -cne $cue4ParseBinarySha256) { $provenanceFailures.Add('cue4ParseBinarySha256') }
+    if ([string]$manifest.inspectorSourceSha256 -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash) { $provenanceFailures.Add('inspectorSourceSha256') }
+    if ([string]$manifest.jsonSha256 -cne $actualJsonHash) { $provenanceFailures.Add('jsonSha256') }
+    if ([long]$manifest.jsonLength -ne (Get-Item -LiteralPath $jsonPath).Length) { $provenanceFailures.Add('jsonLength') }
+    if ($provenanceFailures.Count -gt 0) {
+        Write-Warning "Discarding stale game asset JSON ($($provenanceFailures -join ', ')): $jsonPath"
+        [IO.File]::Delete($jsonPath)
+        [IO.File]::Delete($manifestPath)
     }
-    [pscustomobject]@{
-        cacheStatus = 'hit'
-        steamBuildId = $steamBuildId
-        containerView = [string]$containerView.name
-        virtualPath = $virtualPath
-        jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
-        manifestPath = (Resolve-Path -LiteralPath $manifestPath).Path
-        jsonSha256 = $actualJsonHash
+    else {
+        [pscustomobject]@{
+            virtualPath = $virtualPath
+            jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
+            jsonSha256 = $actualJsonHash
+        }
+        return
     }
-    return
 }
-if ((Test-Path -LiteralPath $jsonPath) -or (Test-Path -LiteralPath $manifestPath)) {
-    throw "The cached asset entry is incomplete: $jsonPath"
+elseif ((Test-Path -LiteralPath $jsonPath) -or (Test-Path -LiteralPath $manifestPath)) {
+    Write-Warning "Discarding an incomplete game asset cache entry: $jsonPath"
+    [IO.File]::Delete($jsonPath)
+    [IO.File]::Delete($manifestPath)
 }
 
-$stagingRoot = Join-Path $viewRoot '_staging'
+$stagingRoot = Join-Path $cacheVersionRoot '_staging'
 $staging = Join-Path $stagingRoot ('asset-' + [guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($staging) | Out-Null
 $logPath = Join-Path $staging 'inspector.log'
@@ -471,14 +659,14 @@ Copy-Item -LiteralPath $stagedJson -Destination $temporaryJson
 $jsonItem = Get-Item -LiteralPath $temporaryJson
 $jsonSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $temporaryJson).Hash
 $assetManifest = [ordered]@{
+    cacheSchemaVersion = $cacheSchemaVersion
     kind = 'Voyage cached asset JSON'
+    source = 'Game'
     steamBuildId = $steamBuildId
     executableSha256 = $executableSha256
     engineVersion = $EngineVersion
-    baseContainers = @($containerView.baseContainers)
-    baseContainersSha256 = [string]$containerView.baseContainersSha256
-    containerView = [string]$containerView.name
-    additionalContainers = @($containerView.additionalContainers)
+    gameContainers = @($gameContainerSet.gameContainers)
+    gameContainersSha256 = [string]$gameContainerSet.gameContainersSha256
     virtualPath = $virtualPath
     packageIndexSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $packageIndexPath).Hash
     mappingsPath = [string]$mapping.mappingsPath
@@ -499,11 +687,7 @@ Move-Item -LiteralPath $temporaryManifest -Destination $manifestPath
 [IO.Directory]::Delete($staging, $true)
 
 [pscustomobject]@{
-    cacheStatus = 'miss-generated'
-    steamBuildId = $steamBuildId
-    containerView = [string]$containerView.name
     virtualPath = $virtualPath
     jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
-    manifestPath = (Resolve-Path -LiteralPath $manifestPath).Path
     jsonSha256 = $jsonSha256
 }

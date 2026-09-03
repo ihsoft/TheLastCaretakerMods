@@ -16,6 +16,12 @@ new mapping below ignored `artifacts/mappings/`, then add a new versioned
 directory with its own manifest. Dumper logs, reflection scans, process
 addresses, `.jmap`, and other reproducible diagnostics remain ignored.
 
+Normal consumers must not browse this registry or regenerate mappings. Run
+`tools/Get-VoyageMappings.ps1`; it fingerprints the installed game, selects and
+validates the matching reviewed entry, and returns its exact path. Generate a
+candidate only when that resolver proves no reviewed entry matches a confirmed
+new game fingerprint.
+
 ## Current mapping
 
 The current reviewed entry is:

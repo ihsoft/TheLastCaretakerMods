@@ -26,11 +26,12 @@ in [`../docs/voyage-cooked-asset-toolchain.md`](../docs/voyage-cooked-asset-tool
 | Goal | Start with | Result |
 | --- | --- | --- |
 | Identify the installed game build | `Get-VoyageBuildFingerprint.ps1` | Steam build ID, executable hash, and container metadata/hashes |
-| Get one cooked asset or Blueprint as reusable JSON | `Get-VoyageAssetJson.ps1` | Fingerprinted cache entry at the asset's mirrored virtual path |
+| Get one cooked asset as JSON or list every package | `Get-VoyageAssetJson.ps1` | Validated JSON or package-list path; game storage and reuse are automatic |
 | Find, list, or structurally inspect cooked assets | `Inspect-VoyageAsset.ps1` | Paths, JSON exports, Blueprint pseudocode, or mapping reports |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Publish or reuse canonical retoc | `Publish-RetocBinary.ps1` | Stable `.tools/bin/retoc.exe` plus hash/provenance manifest |
-| Generate a fresh `.usmap` | `New-VoyageMappings.ps1` | One-shot running-game readiness wait, jmap dump, manifest, and validation |
+| Get mappings for the installed game | `Get-VoyageMappings.ps1` | Path to the matching reviewed and validated tracked `.usmap` |
+| Generate mappings after a confirmed game update | `New-VoyageMappings.ps1` | One-shot running-game readiness wait, jmap dump, manifest, and validation |
 | Publish or reuse canonical jmap | `Publish-JmapBinary.ps1` | Stable `.tools/bin/jmap_dumper.exe` plus hash/provenance manifest |
 | Build the reviewed standalone mapping dumper for development | `Build-JmapVoyageMappingsDumper.ps1` | Lower-level source build used by the jmap publisher |
 | Locate the live `GUObjectArray` when signatures fail | `Find-VoyageUObjectArray.ps1` | Read-only structural scan of the shipping executable's `.data` section |
@@ -81,6 +82,9 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   at `mappings/Voyage/steam-25056839-ue5.8.1/`. Generate candidates under
   ignored `artifacts/mappings/`; promote only a fully validated mapping as a
   new immutable versioned registry entry.
+- Do not inspect the registry or run jmap during normal work. Call
+  `Get-VoyageMappings.ps1`; regenerate only when it reports that the installed
+  fingerprint has no matching reviewed entry.
 - C# tools currently target .NET 10. `VoyageAssetPatcher` and
   `VoyageAssetInspector` reference the canonical UAssetAPI and CUE4Parse
   bundles by default. Their source-project override properties exist only for
@@ -95,9 +99,10 @@ game fingerprint, a versioned output directory, and an inspection manifest.
 - Start every version-bound investigation with a fresh fingerprint. Do not use
   an old artifact merely because its path or asset name still looks correct.
 - Installed override containers can shadow base-game assets during extraction.
-  The extractor refuses additional containers by default. Use
-  `-AllowAdditionalContainers` only when the combined, modded view is the
-  explicit subject of the investigation.
+  `Extract-VoyagePackage.ps1` refuses additional containers by default; use
+  its `-AllowAdditionalContainers` switch only when the combined installed
+  view is explicitly required. `Get-VoyageAssetJson.ps1` instead selects its
+  source and never mixes unrelated installed mods into a game-asset result.
 - Never overwrite an extracted source asset. Write transformed output to a new
   ignored directory, preserve a known-good installed package, and do not
   replace installed files while the game is running.
@@ -132,7 +137,6 @@ available:
 ```powershell
 .\tools\Inspect-VoyageAsset.ps1 `
   -Query 'BP_Forklift_Possesable' `
-  -MappingsPath '.\artifacts\mappings\current\Mappings.usmap' `
   -EngineVersion UE5_8 `
   -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage'
 ```
@@ -147,7 +151,7 @@ dotnet run --project .\tools\VoyageAssetInspector -c Release -- `
   'P:\SteamLibrary\steamapps\common\Voyage\Voyage\Content\Paks' `
   'BP_VoyageIngameHud' `
   '.\artifacts\inspection\probe-hud' `
-  '.\artifacts\mappings\current\Mappings.usmap' `
+  '.\mappings\Voyage\steam-25056839-ue5.8.1\Voyage-25056839.usmap' `
   'UE5_8' `
   '.\artifacts\builds\probe\package'
 ```
@@ -156,16 +160,13 @@ Query reflection mappings rather than package contents:
 
 ```powershell
 .\tools\Inspect-VoyageAsset.ps1 `
-  -Query 'mappings:VoyageVehicleForkliftPawn' `
-  -MappingsPath '.\artifacts\mappings\current\Mappings.usmap'
+  -Query 'mappings:VoyageVehicleForkliftPawn'
 
 .\tools\Inspect-VoyageAsset.ps1 `
-  -Query 'mappings-property:ThrottleInput' `
-  -MappingsPath '.\artifacts\mappings\current\Mappings.usmap'
+  -Query 'mappings-property:ThrottleInput'
 
 .\tools\Inspect-VoyageAsset.ps1 `
   -Query 'mappings-enum:EModuleResourceType' `
-  -MappingsPath '.\artifacts\mappings\current\Mappings.usmap' `
   -EngineVersion UE5_8
 ```
 
@@ -179,7 +180,6 @@ the package scan to a relevant content subtree:
 ```powershell
 .\tools\Inspect-VoyageAsset.ps1 `
   -Query 'parent:VoyageModuleResourceWidget|Voyage/Content/UI/' `
-  -MappingsPath '.\artifacts\mappings\current\Mappings.usmap' `
   -EngineVersion UE5_8
 ```
 
@@ -192,7 +192,6 @@ or asset identity while limiting the scan to a relevant content subtree:
 ```powershell
 .\tools\Inspect-VoyageAsset.ps1 `
   -Query 'references:AddModuleWidget|Voyage/Content/UI/' `
-  -MappingsPath '.\artifacts\mappings\current\Mappings.usmap' `
   -EngineVersion UE5_8
 ```
 
@@ -203,56 +202,68 @@ package paths and per-package errors. Keep the path filter narrow.
 Every query writes to a new fingerprinted directory and refuses to overwrite a
 previous result. Choose a new `-OutputRoot` for a repeated investigation.
 
-### Stable JSON cache for individual assets
+### Stable JSON retrieval for individual assets
 
-Use `Get-VoyageAssetJson.ps1` when later work needs the same complete asset
-export more than once. Unlike the query-oriented inspector above, this wrapper
-maintains one package index per game/container view and promotes one JSON file
-to a stable, mirrored virtual path:
+Use `Get-VoyageAssetJson.ps1` when work needs the complete JSON for one asset.
+Unlike the query-oriented inspector above, this wrapper owns persistence,
+fingerprinting, indexing, and reuse and returns the one validated path callers
+should consume:
 
 ```powershell
 .\tools\Get-VoyageAssetJson.ps1 `
   'Voyage/Content/Blueprints/BP_VoyageCableUpdater.uasset'
 ```
 
+Return the complete stock-game package inventory from the same validated cache:
+
+```powershell
+.\tools\Get-VoyageAssetJson.ps1 -ListPackages
+```
+
+This returns `packageListPath`, `packageCount`, and `packageListSha256`. Package
+listing does not parse exports and does not require reflection mappings.
+
+`-Source Game` is the default. It mounts only the stock `global` and
+`pakchunk*` containers even when mods are installed, and it is the only mode
+that uses the reusable cache. The cache identity is derived solely from the
+game fingerprint, stock containers, mappings, and parser—not from installed
+mods. Pass the asset identity, plus `-GameRoot` only when the installation is
+not at the configured default.
+
+Treat the returned `jsonPath` as the entire storage interface. Do not locate
+assets by walking the internal store, invent a task-specific output root, or
+copy, merge, promote, rewrite, and delete its JSON or sidecars. If this command
+fails, investigate the tool as a failed black box instead of manufacturing
+another store.
+
 `/Game/Blueprints/BP_VoyageCableUpdater` is accepted as the equivalent Unreal
 package identity. A short fragment is also accepted only when it identifies
 exactly one package; an ambiguous fragment fails and lists exact candidates.
 
-The cache layout is:
+The first game request may build its internal package index and parse the
+asset. Later calls with the same identity reuse the result after validating
+the game, mappings, parser, content hash, and provenance. These mechanics are
+deliberately not part of the calling contract.
 
-```text
-artifacts/asset-cache/
-  steam-<build-id>-<exe-sha-prefix>-base-<container-sha-prefix>/
-    <container-view>/
-      _catalog/packages.txt
-      Voyage/Content/.../<Asset>.json
-      Voyage/Content/.../<Asset>.asset-manifest.json
-```
-
-The first request for a game/container view builds `_catalog/packages.txt`.
-The first exact asset request then parses and stores the JSON; later requests
-return `cacheStatus = hit` without rewriting it. The sidecar binds the JSON to
-the executable and base-container fingerprint, exact virtual path, mappings
-hash, mounted container view, content hash, inspector source hash, and the
-canonical CUE4Parse binary hash. The wrapper discovers the newest
-current-fingerprint mapping below
-`artifacts/mappings/` and runs `Test-VoyageMappings.ps1` before using it.
-
-Additional installed containers can shadow stock packages, so the default
-call refuses them. Remove those containers to populate the `base` view, or use
-the explicit opt-in below when the combined installed view is the intended
-subject:
+To inspect an asset that is physically supplied by one mod, opt in explicitly
+and identify that exact mod container:
 
 ```powershell
 .\tools\Get-VoyageAssetJson.ps1 `
   'Voyage/Content/Blueprints/BP_VoyageCableUpdater.uasset' `
-  -AllowAdditionalContainers
+  -Source Mod `
+  -ModContainer 'P:\SteamLibrary\steamapps\common\Voyage\Voyage\Content\Paks\ExampleMod_P.utoc'
 ```
 
-The opt-in result goes into a separate `with-additional-<hash>` view; it never
-masquerades as a base-game export. Cache contents and indexes remain ignored,
-game-derived artifacts. Commit this wrapper and conclusions, not its output.
+Mod mode first proves that the requested package belongs to that container,
+then mounts the stock dependencies plus only that mod for parsing. Its JSON,
+index, logs, and manifest go to a unique ignored diagnostic run under
+`artifacts/asset-inspections/`; they are never read from or promoted into the
+game cache. Commit this wrapper and conclusions, not generated output.
+
+Use `-ListPackages -Source Mod -ModContainer <container.utoc>` to return the
+full inventory of that one mod container. This is also an uncached diagnostic
+run and does not require mappings.
 
 ### 3. Extract an exact package
 
@@ -321,9 +332,29 @@ bundle manifest and DLL metadata must resolve `10.0.11`.
 builders used by their publishers. `Prepare-UAssetApiVoyageUe58.ps1` remains
 a source-development tool; none is a normal runtime path.
 
+### `Get-VoyageMappings.ps1`
+
+This is the only normal entry point for obtaining mappings:
+
+```powershell
+.\tools\Get-VoyageMappings.ps1
+```
+
+It fingerprints the installed game, searches only the reviewed tracked
+registry under `mappings/Voyage/`, runs `Test-VoyageMappings.ps1`, and returns
+the exact mapping and manifest paths plus their identity. Consumers such as
+`Get-VoyageAssetJson.ps1` and non-list `Inspect-VoyageAsset.ps1` call it
+automatically when no explicit mapping is supplied. A new agent should neither
+walk mapping directories nor inspect generation scripts on this successful
+path.
+
+If no reviewed entry matches, the resolver exits non-zero and explicitly says
+not to regenerate automatically. Confirm that the fingerprint is genuinely
+new, ask the user to start Voyage, and only then use the generator below.
+
 ### `New-VoyageMappings.ps1`
 
-This is the normal happy path for refreshing Voyage mappings:
+This is the exceptional refresh path after a confirmed game update:
 
 ```powershell
 .\tools\New-VoyageMappings.ps1
@@ -364,7 +395,9 @@ autonomous mods.
    directory.
 6. Disable or remove the dumper and UE4SS before testing a loader-free setup.
 
-The mapping is a snapshot of one executable and is never committed.
+The dumper output is a candidate and remains ignored until it passes the full
+review and promotion gate. Only the resulting immutable registry entry under
+`mappings/Voyage/` is committed.
 
 Standalone `jmap_dumper` release `0.2.0` predates upstream commit `805cd7a`,
 which fixes the serialized width of `UStruct::MinAlignment` for UE 5.6+.

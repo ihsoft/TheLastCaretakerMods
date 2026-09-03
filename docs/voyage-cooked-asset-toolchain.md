@@ -57,8 +57,9 @@ these identities explicitly.
 Use the wrappers listed in `tools/README.md`:
 
 - fingerprint the installation with `Get-VoyageBuildFingerprint.ps1`;
-- create and validate mappings with `New-VoyageMappings.ps1` and
-  `Test-VoyageMappings.ps1`;
+- resolve the existing reviewed mapping with `Get-VoyageMappings.ps1`; create a
+  new candidate with `New-VoyageMappings.ps1` only after a confirmed unmatched
+  game fingerprint, then validate it with `Test-VoyageMappings.ps1`;
 - cache an asset as versioned JSON with `Get-VoyageAssetJson.ps1`;
 - extract an exact loose package with `Extract-VoyagePackage.ps1`;
 - inspect packages and reflection with `Inspect-VoyageAsset.ps1`;

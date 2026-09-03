@@ -5,12 +5,13 @@ using CUE4Parse.UE4.Objects.UObject;
 using CUE4Parse.UE4.Versions;
 using Newtonsoft.Json;
 using Serilog;
+using System.Text.RegularExpressions;
 
 try
 {
 if (args.Length < 3)
 {
-    Console.Error.WriteLine("Usage: VoyageAssetInspector <PaksDir> <asset-name-fragment> <output-dir> [-|mappings.usmap] [UE5_7|UE5_8] [extra-paks-dir]");
+    Console.Error.WriteLine("Usage: VoyageAssetInspector <PaksDir> <asset-name-fragment> <output-dir> [-|mappings.usmap] [UE5_7|UE5_8] [-|extra-paks-dir] [All|Game|Mod|ModOnly] [-|mod-container.utoc]");
     return 2;
 }
 
@@ -24,8 +25,22 @@ var mappingsPath = args.Length >= 4 &&
     : null;
 var gameVersion = args.Length >= 5 ? ParseGameVersion(args[4]) : EGame.GAME_UE5_7;
 var extraPaksDirectories = args.Length >= 6 && !string.IsNullOrWhiteSpace(args[5])
+    && args[5] != "-"
     ? new[] { new DirectoryInfo(Path.GetFullPath(args[5])) }
     : Array.Empty<DirectoryInfo>();
+var containerSelection = args.Length >= 7 ? ParseContainerSelection(args[6]) : ContainerSelection.All;
+var modContainerPath = args.Length >= 8 && !string.IsNullOrWhiteSpace(args[7]) && args[7] != "-"
+    ? ResolveModContainerPath(paksDirectory, args[7])
+    : null;
+
+if (containerSelection is ContainerSelection.Mod or ContainerSelection.ModOnly && modContainerPath is null)
+{
+    throw new ArgumentException($"Container selection {containerSelection} requires a mod-container .utoc path.");
+}
+if (containerSelection is not (ContainerSelection.Mod or ContainerSelection.ModOnly) && modContainerPath is not null)
+{
+    throw new ArgumentException($"A mod-container path is not valid with container selection {containerSelection}.");
+}
 
 Directory.CreateDirectory(outputDirectory);
 Log.Logger = new LoggerConfiguration()
@@ -34,12 +49,12 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 CUE4ParseLog.UseLogger(Log.Logger);
 
-var provider = new DefaultFileProvider(
-    new DirectoryInfo(paksDirectory),
+var provider = CreateProvider(
+    paksDirectory,
     extraPaksDirectories,
-    SearchOption.TopDirectoryOnly,
-    new VersionContainer(gameVersion),
-    StringComparer.OrdinalIgnoreCase);
+    gameVersion,
+    containerSelection,
+    modContainerPath);
 provider.ReadScriptData = true;
 
 if (mappingsPath is not null)
@@ -307,3 +322,125 @@ static EGame ParseGameVersion(string value) => value switch
     "UE5_8" => EGame.GAME_UE5_8,
     _ => throw new ArgumentException($"Unsupported engine version '{value}'. Expected UE5_7 or UE5_8.")
 };
+
+static ContainerSelection ParseContainerSelection(string value) => value switch
+{
+    "All" => ContainerSelection.All,
+    "Game" => ContainerSelection.Game,
+    "Mod" => ContainerSelection.Mod,
+    "ModOnly" => ContainerSelection.ModOnly,
+    _ => throw new ArgumentException(
+        $"Unsupported container selection '{value}'. Expected All, Game, Mod, or ModOnly.")
+};
+
+static string ResolveModContainerPath(string paksDirectory, string value)
+{
+    var candidate = Path.IsPathRooted(value)
+        ? Path.GetFullPath(value)
+        : Path.GetFullPath(Path.Combine(paksDirectory, value));
+    if (!candidate.EndsWith(".utoc", StringComparison.OrdinalIgnoreCase))
+    {
+        candidate += ".utoc";
+    }
+    if (!File.Exists(candidate))
+    {
+        throw new FileNotFoundException("The selected mod container was not found.", candidate);
+    }
+    if (IsGameContainer(new FileInfo(candidate)))
+    {
+        throw new ArgumentException($"'{candidate}' is a stock game container, not a mod container.");
+    }
+    return candidate;
+}
+
+static DefaultFileProvider CreateProvider(
+    string paksDirectory,
+    DirectoryInfo[] extraPaksDirectories,
+    EGame gameVersion,
+    ContainerSelection selection,
+    string? modContainerPath)
+{
+    var versions = new VersionContainer(gameVersion);
+    if (selection == ContainerSelection.All)
+    {
+        return new DefaultFileProvider(
+            new DirectoryInfo(paksDirectory),
+            extraPaksDirectories,
+            SearchOption.TopDirectoryOnly,
+            versions,
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    if (extraPaksDirectories.Length > 0)
+    {
+        throw new ArgumentException("Extra Paks directories are supported only with All container selection.");
+    }
+
+    var gameContainers = new DirectoryInfo(paksDirectory)
+        .EnumerateFiles("*.utoc", SearchOption.TopDirectoryOnly)
+        .Where(IsGameContainer)
+        .OrderBy(file => file.Name, StringComparer.Ordinal)
+        .ToList();
+    if (gameContainers.Count == 0)
+    {
+        throw new FileNotFoundException($"No stock game containers were found in '{paksDirectory}'.");
+    }
+
+    var selectedContainers = selection == ContainerSelection.ModOnly
+        ? new List<FileInfo>()
+        : gameContainers;
+    if (modContainerPath is not null)
+    {
+        selectedContainers.Add(new FileInfo(modContainerPath));
+    }
+    return new SelectedContainerFileProvider(
+        new DirectoryInfo(paksDirectory),
+        selectedContainers,
+        versions,
+        StringComparer.OrdinalIgnoreCase);
+}
+
+static bool IsGameContainer(FileInfo file) =>
+    file.Name.Equals("global.utoc", StringComparison.OrdinalIgnoreCase) ||
+    Regex.IsMatch(
+        file.Name,
+        "^pakchunk\\d+(?:optional)?-Windows\\.utoc$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+enum ContainerSelection
+{
+    All,
+    Game,
+    Mod,
+    ModOnly
+}
+
+sealed class SelectedContainerFileProvider : DefaultFileProvider
+{
+    private readonly DirectoryInfo _selectedWorkingDirectory;
+    private readonly IReadOnlyList<FileInfo> _containers;
+
+    public SelectedContainerFileProvider(
+        DirectoryInfo workingDirectory,
+        IReadOnlyList<FileInfo> containers,
+        VersionContainer versions,
+        StringComparer pathComparer)
+        : base(workingDirectory, SearchOption.TopDirectoryOnly, versions, pathComparer)
+    {
+        _selectedWorkingDirectory = workingDirectory;
+        _containers = containers;
+    }
+
+    public override void Initialize()
+    {
+        if (!_selectedWorkingDirectory.Exists)
+        {
+            throw new DirectoryNotFoundException(
+                $"The Paks directory was not found: {_selectedWorkingDirectory.FullName}");
+        }
+        foreach (var container in _containers)
+        {
+            RegisterVfs(container);
+        }
+    }
+}
