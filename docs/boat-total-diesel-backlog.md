@@ -762,6 +762,62 @@ Audit results:
    so the result proves that the stock-path override wins and this Blueprint is
    read during startup. The crash marker was removed immediately through its
    exact manifest; no `VoyageCableUpdater*` containers remain installed.
+10. A separate changed-save canary now targets
+    `/Game/Blueprints/Equipment/ToolAbilities/`
+    `BP_ToolAbility_Maintenance_Dismantle`. The reported broken pair failed in
+    Voyage with `Bad name index -33/224`. Current UAssetAPI interpreted that
+    pair with shifted imports and raw function exports, while the pre-scoped
+    API at `2943aa1` parsed it fully only when told `VER_UE5_7`. Its header has
+    the filtered-package `FObjectImport.PackageName` layout required by the
+    current game, but its export data has the older `FField.Flags` layout. It
+    is therefore a hybrid UE 5.8/UE 5.7 serialization, not evidence that the
+    semantic bytecode edit itself is invalid.
+
+    The current patched GUI was then used normally with UE 5.8 selected. An
+    unchanged Save was byte-identical to the extracted build-`25056839`
+    source. A changed Save replaced only the final assignment in
+    `GetActionDuration`: the source local-variable expression became
+    `EX_DoubleConst(1.0)`. The `.uexp` shrank by the expected eight bytes
+    (`29,975 -> 29,967`); all `18` exports retained their prior structured/raw
+    classifications (`1` class, `15` functions, and the same `2` raw exports).
+    `VerifyBinaryEquality()` passed, and a second API write in explicit UE 5.8
+    mode was byte-identical to the GUI output. The exact-path IoStore candidate
+    passed `retoc verify`; independent CUE4Parse UE5_8 decoding recovered the
+    intended `Duration = 1` statement. The separately named
+    `MaintenanceDismantleDuration1_P` canary was installed while Voyage was
+    closed; installed hash readback and a second `retoc verify` passed. Runtime
+    validation then passed in the real game: Voyage started, the save loaded,
+    and the one-second dismantle behavior worked. The user accepted this exact
+    UAssetGUI/UAssetAPI/retoc state as the working checkpoint. This validates
+    the tested changed-save path for this Blueprint; it does not prove that an
+    arbitrary asset or edit is safe. After validation, the game was closed and
+    all three `MaintenanceDismantleDuration1_P` files were removed through
+    exact installed-hash gates.
+
+    The GUI `fromjson` CLI is not an equivalent roundtrip gate: it accepts no
+    explicit engine-version argument. Rebuilding this JSON through that path
+    produced a `20,809`-byte header and a `30,927`-byte `.uexp`; the latter is
+    byte-identical to the reported broken export file. Do not use `fromjson`
+    for Voyage production output until its engine-version contract is fixed
+    and covered by a regression test.
+
+    A framework-dependent single-file `win-x64` build of UAssetGUI `e362030`
+    with UAssetAPI `6b5ead3` was also produced as an ignored tool artifact. Its
+    only distributable file is a `12,704,947`-byte `UAssetGUI.exe` with SHA-256
+    `EABEDAF875A743E9B02E3381A07031559088EA9F352023A4D549A27FAF830C01`;
+    the matching .NET Desktop Runtime remains a machine prerequisite. An
+    isolated portable smoke run started from that EXE alone, extracted an
+    embedded retoc byte-identical to the reviewed `415074...` build, and passed
+    one real IoStore hierarchy open with binary equality and no notices or
+    failures. The initial `80,643,947`-byte self-contained build bundled the
+    runtime unnecessarily and was discarded. Mappings remain external,
+    fingerprinted game-derived input. The canonical executable now lives at
+    ignored `.tools/bin/UAssetGUI.exe`; interactive use and future headless
+    stress tests should exercise that same published binary. The reproducible,
+    checkpoint-gated publisher is `tools/Publish-UAssetGuiBinary.ps1`. A direct
+    smoke invocation through the canonical EXE passed `1/1` ToolAbilities
+    package with binary equality and no notices or failures after the runtime
+    canary had been removed.
 
 Remaining gates before another feature experiment:
 

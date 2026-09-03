@@ -22,7 +22,8 @@ documented interface is insufficient.
 | Locate the live `GUObjectArray` when signatures fail | `Find-VoyageUObjectArray.ps1` | Read-only structural scan of the shipping executable's `.data` section |
 | Reject an empty, stale, or misrouted `.usmap` | `Test-VoyageMappings.ps1` | Header, payload, manifest, fingerprint, hash, and required-schema checks |
 | Prepare the reviewed UAssetAPI source | `Prepare-UAssetApiVoyageUe58.ps1` | Exact UAssetAPI fork commit with the reviewed Voyage UE 5.8 compatibility fixes |
-| Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/UAssetGUI` `stress-open` command | Incremental per-asset JSONL plus parse/binary-equality summary |
+| Publish the validated compact UAssetGUI executable | `Publish-UAssetGuiBinary.ps1` | Stable ignored `.tools/bin/UAssetGUI.exe` |
+| Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/bin/UAssetGUI.exe stress-open` | Incremental per-asset JSONL plus parse/binary-equality summary |
 | Install/remove one unchanged package canary | `Install-VoyageUnchangedProbe.ps1`, `Remove-VoyageUnchangedProbe.ps1` | Current-fingerprint and exact-hash guarded runtime roundtrip test |
 | Locate native names, references, or correlated member offsets | `VoyageExecutableInspector` | Read-only executable report with version-specific offsets |
 | Reproduce one of the existing surgical cooked-asset probes | `VoyageAssetPatcher` | Assertion-checked diagnostic asset written to a new path |
@@ -362,8 +363,7 @@ builds the GUI property table, and invokes UAssetGUI's unchanged-save
 `VerifyBinaryEquality` check.
 
 ```powershell
-dotnet run --project .\.tools\UAssetGUI\UAssetGUI\UAssetGUI.csproj `
-  -c Release --no-build -- --portable stress-open `
+.\.tools\bin\UAssetGUI.exe --portable stress-open `
   'P:\SteamLibrary\steamapps\common\Voyage\Voyage\Content\Paks\pakchunk0-Windows.utoc' `
   '\Voyage\Content\Blueprints' `
   '.\artifacts\uassetgui-stress\blueprints' `
@@ -390,6 +390,36 @@ Outputs are game-derived diagnostics and remain below ignored `artifacts/`.
 The headless command was introduced by UAssetGUI fork commit `b95587b`. The
 reviewed compatibility checkpoint is `e362030`, which pins UAssetAPI `6b5ead3`
 and records the additional structured diagnostics in the stress report.
+
+The canonical executable path for both interactive use and automated tests is
+`.tools\bin\UAssetGUI.exe`. Rebuild it only through the checkpoint-gated
+publisher:
+
+```powershell
+.\tools\Publish-UAssetGuiBinary.ps1
+```
+
+The script verifies the validated UAssetGUI and UAssetAPI commits, refuses
+tracked source changes, publishes to a temporary ignored directory, verifies
+the candidate hash, atomically replaces the canonical EXE, and cleans the
+temporary output. Its compact framework-dependent publish is equivalent to:
+
+```powershell
+dotnet publish .\.tools\UAssetGUI\UAssetGUI\UAssetGUI.csproj `
+  -c Release -r win-x64 --self-contained false `
+  -p:PublishSingleFile=true
+```
+
+Only the resulting `UAssetGUI.exe` is needed for distribution. On first run it
+still creates normal working data: `%LOCALAPPDATA%\UAssetGUI` by default or a
+`Data` directory beside the executable with `--portable`. Voyage mappings stay
+external and build-specific; do not embed or commit the generated `.usmap`.
+The target machine must have the matching .NET Desktop Runtime. Use
+`--self-contained true` only when that prerequisite cannot be imposed; it
+packages the runtime too and makes the executable substantially larger.
+Validate a supposedly standalone build from an otherwise empty directory with
+`stress-open`, so an older extracted retoc or adjacent DLL cannot mask a
+missing bundled resource.
 
 ### `VoyageExecutableInspector`
 
