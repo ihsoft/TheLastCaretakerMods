@@ -100,9 +100,28 @@ Store-integrity and source-isolation follow-up:
   because the older inspector silently mounted every installed container even
   for paths labeled as base-game data.
 
+Windows PowerShell and Inspector-launch follow-up:
+
+- public build/release/extraction/package scripts now have an explicit Windows
+  PowerShell 5.1 contract: repository-relative defaults are resolved after
+  parameter binding, multi-segment paths use nested `Join-Path`, and the real
+  `powershell.exe -File` entry point is part of verification;
+- a restricted `dotnet run` can fail before Inspector startup when NuGet cannot
+  read `%APPDATA%\NuGet\NuGet.Config`; this is a launch-environment failure and
+  must not be interpreted as asset, mapping, or parser evidence;
+- duplicate identical `matches.txt` rows are accepted for a selected mod only
+  after `ModOnly` proves exact ownership and every combined-view row is the
+  requested virtual path. That gate does not prove provider precedence.
+
 ## Later pipeline work
 
-- Decide whether the tracked inspector and patcher themselves should also have
-  canonical published executables instead of being built through `dotnet run`.
+- Publish `VoyageAssetInspector` as a manifest-validated canonical executable,
+  move both public Inspector wrappers off `dotnet run`, and verify that normal
+  inspection performs no restore or NuGet user-configuration access.
+- Make mod override resolution emit the winning provider/container and read
+  order, then assert that an exact stock replacement resolves from the selected
+  mod rather than merely accepting duplicate identical virtual paths.
+- Decide whether the tracked patcher should also have a canonical published
+  executable instead of being built through `dotnet run`.
 - Add a single read-only health check for every canonical binary and publish
   manifest if repeated manual verification becomes error-prone.

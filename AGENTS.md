@@ -69,6 +69,19 @@ those details here.
   or tracing third-party internals. Inspect implementation only when the tool
   fails, hangs, rejects valid-looking inputs, produces an unexpected result,
   or the documented contract is insufficient for the task.
+- Public build, release, extraction, and packaging scripts must support Windows
+  PowerShell 5.1 unless their documented interface explicitly says otherwise.
+  A PowerShell 7 success is not compatibility evidence: parse and smoke-test
+  the public `-File` entry point with `powershell.exe`. Do not derive a default
+  from `$PSScriptRoot` in a `param(...)` expression; accept an empty parameter
+  and resolve the repository-relative value in the script body. Use nested
+  two-argument `Join-Path` calls instead of PowerShell 7-only additional child
+  segments.
+- A tracked wrapper's normal path must not restore/build a .NET project through
+  `dotnet run`. Consume a manifest-validated published binary from
+  `.tools/bin/`; reserve source-project execution for explicit tool development.
+  If a legacy wrapper still invokes `dotnet`, failure to read the user's NuGet
+  configuration is an environment/permission failure, not asset evidence.
 - Normal asset analysis calls `Get-VoyageAssetJson.ps1` with the asset identity
   and consumes only the returned `jsonPath`. Its default `Game` source mounts
   and caches only stock game containers; use explicit `Mod` source with one

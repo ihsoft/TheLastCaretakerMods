@@ -517,7 +517,8 @@ if ($Source -eq 'Mod') {
         -LogPath $exportLog
 
     $matches = @(Get-Content -LiteralPath (Join-Path $exportRoot 'matches.txt'))
-    if ($matches.Count -ne 1 -or $matches[0] -cne $virtualPath) {
+    $unexpectedMatches = @($matches | Where-Object { $_ -cne $virtualPath })
+    if ($matches.Count -lt 1 -or $unexpectedMatches.Count -ne 0) {
         throw "Exact mod asset export resolved unexpectedly. Inspection: $runRoot"
     }
     $errorPath = Join-Path $exportRoot 'errors.txt'

@@ -54,6 +54,22 @@ game fingerprint, a versioned output directory, and an inspection manifest.
 ## Common setup and safety
 
 - Run commands from the repository root in PowerShell.
+- Public build, release, extraction, and packaging entry points are Windows
+  PowerShell 5.1-compatible unless the command is explicitly documented as
+  PowerShell 7-only. Verify them through `powershell.exe -NoProfile
+  -ExecutionPolicy Bypass -File ...`; a successful `pwsh` run is insufficient.
+  In those scripts, leave repository-relative parameters empty in `param(...)`
+  and resolve them from `$PSScriptRoot` after parameter binding. Build paths
+  with nested two-argument `Join-Path` calls because the additional-child-path
+  positional form is unavailable in Windows PowerShell 5.1.
+- UnrealBuildTool-based mod builds must be launched with permission to write
+  and rotate `%LOCALAPPDATA%\UnrealBuildTool\Trace*.uba`, even when `-Log`
+  targets an ignored repository artifact. In a restricted sandbox, denial at
+  that path produces a `dotnet.exe` dialog and managed exit `-532462766`
+  (`0xE0434352`) before UBT loads the project. Read the redirected UBT output;
+  treat an `UnauthorizedAccessException` for `Trace-backup-*.uba` as a launch
+  permission failure, then rerun once with that narrow access. It is not a
+  reason to change the project, SDK, Blueprint generator, or .NET installation.
 - Patched third-party checkouts live under ignored `.tools/`: `ihsoft/retoc`
   at `234f4e5`, `ihsoft/jmap` at `4f88d8a`, `ihsoft/UAssetAPI` at `6b5ead3`,
   and `ihsoft/UAssetGUI` at `e362030`. The GUI checkout contains the same
@@ -89,6 +105,15 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   `VoyageAssetInspector` reference the canonical UAssetAPI and CUE4Parse
   bundles by default. Their source-project override properties exist only for
   deliberate tool development.
+- `Get-VoyageAssetJson.ps1` and `Inspect-VoyageAsset.ps1` still launch the
+  tracked Inspector project through `dotnet run`. This is a known transitional
+  exception to the stable-binary model: restore may read the user's NuGet
+  configuration, and a restricted process can therefore report a false tool
+  failure before asset inspection starts. Run these wrappers with access to
+  the normal .NET/NuGet user configuration. Do not diagnose the asset or change
+  mappings when the log reports access denial for `NuGet.Config`. Publishing a
+  canonical Inspector executable and moving both wrappers to it is tracked in
+  the toolchain backlog.
 - `VoyageAssetInspector` pins `Microsoft.Bcl.Memory` `10.0.11` to override the
   vulnerable `9.0.0` transitive dependency in the current CUE4Parse checkout.
   The dependency project can still emit its own audit warning while building;
@@ -259,7 +284,14 @@ Mod mode first proves that the requested package belongs to that container,
 then mounts the stock dependencies plus only that mod for parsing. Its JSON,
 index, logs, and manifest go to a unique ignored diagnostic run under
 `artifacts/asset-inspections/`; they are never read from or promoted into the
-game cache. Commit this wrapper and conclusions, not generated output.
+game cache. An intentional stock-package replacement can be reported once for
+the stock container and once for the selected mod; after the ownership proof,
+the wrapper accepts those duplicate identical virtual paths but still rejects
+any different match. This gate proves exact identity and exclusive ownership,
+but does not yet prove which duplicate provider won CUE4Parse resolution; do
+not treat it as general override-priority evidence. Provider identity/read
+order must be emitted and asserted before this becomes a reusable precedence
+contract. Commit this wrapper and conclusions, not generated output.
 
 Use `-ListPackages -Source Mod -ModContainer <container.utoc>` to return the
 full inventory of that one mod container. This is also an uncached diagnostic
