@@ -62,6 +62,12 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   and resolve them from `$PSScriptRoot` after parameter binding. Build paths
   with nested two-argument `Join-Path` calls because the additional-child-path
   positional form is unavailable in Windows PowerShell 5.1.
+- Prefer a tracked `-File` entry point over a large inline `-Command`. If a
+  diagnostic command must cross one PowerShell process boundary, quote the
+  script block so the caller cannot expand its `$variables`; keep it short and
+  shell-aware. For Windows PowerShell 5.1, materialize statement results first
+  (`$rows = @(foreach (...) { ... })`) and pipe `$rows` separately instead of
+  piping directly from a `foreach` statement.
 - UnrealBuildTool-based mod builds must be launched with permission to write
   and rotate `%LOCALAPPDATA%\UnrealBuildTool\Trace*.uba`, even when `-Log`
   targets an ignored repository artifact. In a restricted sandbox, denial at
@@ -131,6 +137,23 @@ game fingerprint, a versioned output directory, and an inspection manifest.
 - Never overwrite an extracted source asset. Write transformed output to a new
   ignored directory, preserve a known-good installed package, and do not
   replace installed files while the game is running.
+
+### Release installation
+
+There is not yet a common install-only wrapper for an already built Voyage mod
+release. Do not emulate one with an unverified copy. Until the backlog item is
+implemented, an owning mod's installer must prove the release manifest and
+source identity, confirm the game is closed immediately before mutation,
+preserve an exact recoverable backup, copy only the manifest-owned files, read
+back their hashes, and update installation evidence only after success.
+
+For standalone IoStore mods whose tested installation contract allows a ZIP in
+the Paks directory, retaining the exact release ZIP beside the installed
+container is accepted provenance: Voyage ignores the archive while it remains
+available to identify and recover the installed release. The ZIP name and
+installation manifest must carry the artifact version, not merely the mod
+version. This is a provenance copy of a validated release artifact, not a ZIP
+that should be regenerated during installation.
 
 ## Typical workflow
 

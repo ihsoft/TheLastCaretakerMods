@@ -107,6 +107,23 @@ those details here.
 - A changed fingerprint invalidates extracted snapshots and reconstructed
   contracts alike. Re-extract or revalidate every affected item before build,
   cook, packaging, or compatibility claims.
+- Keep mod version, artifact version, user-facing game version, Steam build ID,
+  executable hash, and Unreal Engine version as separate identities. A game
+  update neither proves incompatibility nor requires a mod-version bump; it
+  invalidates version-bound build inputs and requires new evidence before a new
+  compatibility claim. Record whether a display/marketing version came from a
+  machine-readable source or from the user, and never infer it from an
+  executable version such as `UE5-CL-0`.
+- Compatibility metadata may say `game-validated` only after the user tests the
+  requested runtime behavior in the real game. Compile, cook, container verify,
+  semantic comparison, clean load, and save load remain lower gates.
+- An installer that replaces a Voyage mod container must check the game process
+  immediately before mutation, preserve an exact recoverable backup, install
+  from a validated release manifest, read back every installed hash, and record
+  installation time and source-artifact identity. When a release ZIP is kept
+  beside standalone IoStore containers as installed provenance, its filename
+  and manifest identity must use the artifact version, so distinct candidates
+  such as `v2` and `v2-test` cannot masquerade as the same source.
 - Any generated or reconstructed game-derived file that must remain in Git as
   a source input needs a provenance header naming its game fingerprint, engine
   version, reconstruction method/tools, and revalidation condition. If the

@@ -8,6 +8,9 @@ owning mod backlog.
 
 ## Operating model
 
+- This backlog is the active queue for the cross-cutting Voyage tool pipeline,
+  not for any mod feature. Keep feature implementation and gameplay hypotheses
+  in their owning mod documents.
 - Normal work consumes published binaries from `.tools/bin/` as black boxes.
 - Fork source trees under `.tools/` are inspected or rebuilt only after a tool
   fails, returns an unexpected result, or an intentional fork change has been
@@ -17,6 +20,10 @@ owning mod backlog.
   untouched.
 - Tracked wrappers and manifests are the method. Published binaries remain
   ignored local artifacts.
+- Periodically promote settled results into `AGENTS.md`,
+  `docs/voyage-cooked-asset-toolchain.md`, or another owning durable document,
+  then remove the completed narrative from this file. Keep only active gaps,
+  pending decisions, and evidence still awaiting validation.
 
 ## Stable binary registry
 
@@ -115,6 +122,28 @@ Windows PowerShell and Inspector-launch follow-up:
 
 ## Later pipeline work
 
+- Add a common manifest-driven install-only path for an already built release
+  (or a reusable helper consumed by owning mods). It must not rebuild; it must
+  validate source/artifact identity and game fingerprint, check the process
+  immediately before mutation, make a recoverable exact backup, install only
+  manifest-owned files, read back hashes, preserve an artifact-versioned source
+  ZIP where supported, and write `installedAtUtc` plus installation evidence
+  only after success.
+- Define and automate semantic equivalence for independent Unreal rebuilds:
+  identify volatile SavePackage/GUID metadata, normalize only proven volatile
+  fields, compare package identity/ID and structural JSON or Blueprint
+  pseudocode, and state which differences force another real-game canary.
+  Separately investigate why identical DonkLift gameplay source changed all five
+  generated cooked asset hashes while package sizes, IDs, relocated original,
+  and key Blueprint pseudocode remained stable.
+- Investigate a reliable local source for Voyage's user-facing display version
+  and, if found, add it to `Get-VoyageBuildFingerprint.ps1` with explicit
+  provenance. Until then, keep user-reported display version nullable and
+  distinct from machine-verified Steam build, executable hash, and UE version.
+- Define a small reusable compatibility/version metadata schema that separates
+  mod version, artifact version, tested game identities, evidence status, and
+  provenance of a user-facing game version. Decide migration scope with the
+  owners of existing mods rather than rewriting all metadata opportunistically.
 - Publish `VoyageAssetInspector` as a manifest-validated canonical executable,
   move both public Inspector wrappers off `dotnet run`, and verify that normal
   inspection performs no restore or NuGet user-configuration access.

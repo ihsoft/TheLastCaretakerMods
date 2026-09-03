@@ -86,9 +86,11 @@ Passing a lower level never implies a higher one:
 4. unchanged save is binary-equal and reopens;
 5. independent CUE4Parse inspection agrees with the intended structure;
 6. retoc converts, verifies, and reports the exact semantic inventory;
-7. a separately named unchanged or deliberately changed canary loads in the
+7. an independent rebuild has equivalent reviewed package structure and
+   Blueprint behavior, when byte equality is not expected;
+8. a separately named unchanged or deliberately changed canary loads in the
    game;
-8. the requested runtime behavior is tested in the real game.
+9. the requested runtime behavior is tested in the real game.
 
 The accepted GUI/API checkpoint passed all `27/27` upstream binary-roundtrip
 tests. A stress run over `Voyage/Content/Blueprints` attempted `1067` assets:
@@ -123,6 +125,13 @@ arbitrary structural edits to every asset.
   verified to resolve `10.0.11`.
 - A `.NET` dialog with exit code `0xE0434352` means an unhandled managed
   exception; inspect the application error and logs before blaming the CLR.
-- Two valid retoc builds can differ in physical chunk order. Compare sorted
-  semantic inventory between independent builds; reserve whole-container hashes
-  for a prepared package versus its installed copy.
+- Two valid retoc builds can differ in physical chunk order, and repeated Unreal
+  cook/SavePackage runs can change cooked package bytes even with the same
+  gameplay source. Whole-build byte equality is therefore not a reproducibility
+  requirement. Compare the same source/tool/game provenance, package identities
+  and IDs, exported imports/exports/references and properties, Blueprint
+  pseudocode, and sorted retoc semantic inventory. Do not discard a differing
+  field as volatile until the normalization contract proves it. Reserve exact
+  hashes for a prepared release artifact versus its installed or archived copy.
+  Any unexplained semantic difference or new compatibility claim still requires
+  a real-game canary; the normalization contract itself remains active research.
