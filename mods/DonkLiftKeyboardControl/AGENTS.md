@@ -181,12 +181,17 @@ contract and workflow detail.
 
 - Installed test files are
   `P:\SteamLibrary\steamapps\common\Voyage\Voyage\Content\Paks\DonkLiftKeyboardControl_P.{pak,ucas,utoc}`.
+  Keep the exact source release archive beside them as
+  `DonkLiftKeyboardControl_<artifact-version>.zip` (for example,
+  `DonkLiftKeyboardControl_v2.zip`). Voyage ignores the ZIP; it is provenance
+  showing which distributable supplied the installed container.
 - Confirm `VoyageSteam-Win64-Shipping.exe` is closed before replacing them.
   The user often continues playing while repository work happens; never alter
   the installed files until he explicitly reports that he exited.
 - Back up the exact installed container and record hashes before every risky
-  replacement. Repository and prepared artifact hashes must match installed
-  hashes before handing off a test.
+  replacement. Back up an existing same-name installed archive as well.
+  Repository and prepared artifact hashes must match installed hashes before
+  handing off a test.
 - Before committing gameplay behavior, validate in the real game: throttle and
   steering in both directions, limits, native percentages, immediate X,
   immediate C, localized X/C hints before and after pause, exit, and re-entry.

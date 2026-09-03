@@ -87,7 +87,9 @@ ZIP plus `release-manifest.json` below ignored `artifacts/releases/`.
 Useful explicit options:
 
 - `-Install` backs up and installs the resulting three-file container after
-  confirming that Voyage is closed, then reads every installed hash back;
+  confirming that Voyage is closed, then reads every installed hash back. It
+  also keeps the exact release archive in the Paks directory as
+  `DonkLiftKeyboardControl_<artifact-version>.zip` and verifies its hash;
 - `-OriginalsRoot <path>` reuses an explicitly selected clean extraction only
   when its manifest proves the current build/hash, canonical filter, and no
   additional containers;

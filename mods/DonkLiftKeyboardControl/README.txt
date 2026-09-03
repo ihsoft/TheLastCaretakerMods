@@ -37,6 +37,10 @@ Copy `DonkLiftKeyboardControl_P.pak`, `.ucas`, and `.utoc` into:
 
 `<Game>\Voyage\Content\Paks\`
 
+Keep this release ZIP in the same directory as
+`DonkLiftKeyboardControl_v2.zip`. The game ignores ZIP files; the archive makes
+the installed mod version and its exact source package visible.
+
 The mod is self-contained and requires neither UE4SS nor DML. All three files
 belong to one container and must be installed or removed together.
 

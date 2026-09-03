@@ -323,12 +323,14 @@ foreach ($name in $payloadNames) {
 }
 Copy-Item -LiteralPath (Join-Path $modRoot 'README.txt') -Destination (Join-Path $payloadRoot 'README.txt')
 $archivePath = Join-Path $releaseRoot "DonkLiftKeyboardControl-$Version.zip"
+$installedArchiveName = "DonkLiftKeyboardControl_$Version.zip"
 $payloadFiles = @(Get-ChildItem -LiteralPath $payloadRoot -File | Select-Object -ExpandProperty FullName)
 Compress-Archive -LiteralPath $payloadFiles -DestinationPath $archivePath -CompressionLevel Optimal
 $phase.Stop()
 $timings.Archive = $phase.Elapsed.TotalSeconds
 
 $installed = $false
+$installedArchive = $null
 if ($Install) {
     Assert-GameClosed
     $paks = Resolve-RequiredPath -Path (Join-Path $GameRoot 'Voyage\Content\Paks') -Label 'Voyage Paks directory'
@@ -346,6 +348,21 @@ if ($Install) {
         if ($sourceHash -cne $targetHash) {
             throw "Installed file hash mismatch: $name"
         }
+    }
+    $archiveTarget = Join-Path $paks $installedArchiveName
+    if (Test-Path -LiteralPath $archiveTarget -PathType Leaf) {
+        Copy-Item -LiteralPath $archiveTarget -Destination (Join-Path $backup $installedArchiveName)
+    }
+    Copy-Item -LiteralPath $archivePath -Destination $archiveTarget -Force
+    $archiveSourceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath).Hash
+    $archiveTargetHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archiveTarget).Hash
+    if ($archiveSourceHash -cne $archiveTargetHash) {
+        throw "Installed archive hash mismatch: $installedArchiveName"
+    }
+    $installedArchive = [ordered]@{
+        name = $installedArchiveName
+        size = (Get-Item -LiteralPath $archiveTarget).Length
+        sha256 = $archiveTargetHash
     }
     $installed = $true
 }
@@ -384,6 +401,7 @@ $manifest = [ordered]@{
     }
     originalsManifest = $originalInputs.Manifest
     installed = $installed
+    installedArchive = $installedArchive
     payload = $payloadEvidence
     archive = [ordered]@{
         name = (Split-Path -Leaf $archivePath)
