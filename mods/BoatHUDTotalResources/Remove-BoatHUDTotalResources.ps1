@@ -1,5 +1,5 @@
 # HAND-WRITTEN INSTALL TOOL: hash-guarded removal/restoration counterpart to the
-# BoatTotalDiesel installer. It refuses to remove files changed after installation.
+# BoatHUDTotalResources installer. It refuses to remove files changed after installation.
 
 param(
     [Parameter(Mandatory = $true)]
@@ -11,7 +11,7 @@ $ErrorActionPreference = 'Stop'
 $running = @(Get-Process -Name 'VoyageSteam-Win64-Shipping', 'Voyage' -ErrorAction SilentlyContinue)
 if ($running.Count -gt 0) {
     $processes = ($running | ForEach-Object { "$($_.ProcessName):$($_.Id)" }) -join ', '
-    throw "Voyage must be closed before removing BoatTotalDiesel: $processes"
+    throw "Voyage must be closed before removing BoatHUDTotalResources: $processes"
 }
 
 $manifestPath = (Resolve-Path -LiteralPath $InstallManifest).Path
@@ -21,7 +21,7 @@ $paks = (Resolve-Path -LiteralPath $manifest.paksDirectory).Path
 foreach ($record in $manifest.files) {
     $installed = Join-Path $paks ([string]$record.name)
     if (-not (Test-Path -LiteralPath $installed -PathType Leaf)) {
-        throw "Installed BoatTotalDiesel file is missing: $installed"
+        throw "Installed BoatHUDTotalResources file is missing: $installed"
     }
     $currentHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installed).Hash
     if ($currentHash -cne [string]$record.installedSha256) {
@@ -42,4 +42,4 @@ foreach ($record in $manifest.files) {
     }
 }
 
-Write-Host 'BoatTotalDiesel removed; any previous container was restored.'
+Write-Host 'BoatHUDTotalResources removed; any previous container was restored.'

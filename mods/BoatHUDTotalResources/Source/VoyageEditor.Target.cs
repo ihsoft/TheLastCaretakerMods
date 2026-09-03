@@ -9,6 +9,6 @@ public class VoyageEditorTarget : TargetRules
         Type = TargetType.Editor;
         DefaultBuildSettings = BuildSettingsVersion.Latest;
         ExtraModuleNames.Add("Voyage");
-        ExtraModuleNames.Add("BoatTotalDieselGenerator");
+        ExtraModuleNames.Add("BoatHUDTotalResourcesGenerator");
     }
 }

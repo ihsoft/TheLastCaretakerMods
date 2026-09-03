@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class BoatTotalDieselGenerator : ModuleRules
+public class BoatHUDTotalResourcesGenerator : ModuleRules
 {
-    public BoatTotalDieselGenerator(ReadOnlyTargetRules Target) : base(Target)
+    public BoatHUDTotalResourcesGenerator(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 

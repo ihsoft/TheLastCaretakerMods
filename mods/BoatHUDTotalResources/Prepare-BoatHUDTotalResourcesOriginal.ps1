@@ -4,7 +4,7 @@
 param(
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
-    [string]$Retoc = "$PSScriptRoot\..\..\artifacts\tools\retoc-ue58-compatibility\target\release\retoc.exe",
+    [string]$Retoc = "$PSScriptRoot\..\..\.tools\bin\retoc.exe",
 
     [Parameter(Mandatory = $true)]
     [string]$OutputRoot

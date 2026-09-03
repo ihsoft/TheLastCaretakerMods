@@ -1,9 +1,9 @@
-// HAND-WRITTEN BUILD TOOL SOURCE: BoatTotalDiesel Blueprint generator validated for
-// Steam build 24990438 (UE 5.8.1), VoyageSteam-Win64-Shipping.exe SHA-256
-// D9BF4C9624C60615198E62C87DA7792A9888AB02F7905AAAF1C9B02C7A9E524F.
+// HAND-WRITTEN BUILD TOOL SOURCE: BoatHUDTotalResources Blueprint generator validated for
+// Steam build 25056839 (UE 5.8.1), VoyageSteam-Win64-Shipping.exe SHA-256
+// CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933.
 // The C++ tool is never shipped. Revalidate after every game update.
 
-#include "GenerateBoatTotalDieselCommandlet.h"
+#include "GenerateBoatHUDTotalResourcesCommandlet.h"
 
 #if WITH_EDITOR
 
@@ -41,17 +41,16 @@ namespace
 {
 constexpr TCHAR RelocatedParentPackageName[] = TEXT("/Game/Mods/Boat/BP_VoyageIngameBoatHud_O");
 constexpr TCHAR ChildPackageName[] = TEXT("/Game/UI/Game/HUD/BP_VoyageIngameBoatHud");
-constexpr TCHAR ReplacementPackageName[] = TEXT("/Game/Mods/BoatTotalDiesel/WBP_BoatTotalDieselValue");
+constexpr TCHAR DieselReplacementPackageName[] = TEXT("/Game/Mods/BoatHUDTotalResources/WBP_BoatHUDTotalDieselValue");
+constexpr TCHAR ElectricityReplacementPackageName[] = TEXT("/Game/Mods/BoatHUDTotalResources/WBP_BoatHUDTotalElectricityValue");
 constexpr TCHAR BoatHudAssetName[] = TEXT("BP_VoyageIngameBoatHud");
-constexpr TCHAR ReplacementAssetName[] = TEXT("WBP_BoatTotalDieselValue");
-constexpr TCHAR InitialText[] = TEXT("-- L");
-constexpr TCHAR LitreSuffix[] = TEXT(" L");
-constexpr int32 DieselFontSize = 10;
-constexpr double EmptyDieselTotal = 0.0;
-const FName BaseBlueprintName(TEXT("GenerateBoatTotalDieselBase"));
-const FName ChildBlueprintName(TEXT("GenerateBoatTotalDieselChild"));
-const FName ReplacementBlueprintName(TEXT("GenerateBoatTotalDieselValue"));
-const FName ReplacementTextName(TEXT("DieselValueText"));
+constexpr TCHAR DieselReplacementAssetName[] = TEXT("WBP_BoatHUDTotalDieselValue");
+constexpr TCHAR ElectricityReplacementAssetName[] = TEXT("WBP_BoatHUDTotalElectricityValue");
+constexpr int32 StockResourceFontSize = 10;
+constexpr float StockResourceColor = 0.5f;
+constexpr double EmptyResourceTotal = 0.0;
+const FName BaseBlueprintName(TEXT("GenerateBoatHUDTotalResourcesBase"));
+const FName ChildBlueprintName(TEXT("GenerateBoatHUDTotalResourcesChild"));
 const FName EventGraphName(TEXT("EventGraph"));
 const FName VisibilityInputPinName(TEXT("InVisibility"));
 const FName WorldContextInputPinName(TEXT("WorldContextObject"));
@@ -62,17 +61,21 @@ const FName AddChildFunctionName(TEXT("AddChild"));
 const FName GetOwningPlayerPawnFunctionName(TEXT("GetOwningPlayerPawn"));
 const FName GetComponentByClassFunctionName(TEXT("GetComponentByClass"));
 const FName GetOwningPlayerFunctionName(TEXT("GetOwningPlayer"));
-const FName DieselTotalVariableName(TEXT("DieselTotal"));
 const FName ComponentClassInputPinName(TEXT("ComponentClass"));
 const FName ContextObjectInputPinName(TEXT("ContextObject"));
 const FName SubsystemClassInputPinName(TEXT("Class"));
 const FName ModuleInputPinName(TEXT("Module"));
 const FName OutModulesOutputPinName(TEXT("OutModules"));
 const FName ResourceTypeInputPinName(TEXT("Type"));
-const FName IntegerInputPinName(TEXT("InInt"));
 const FName StringInputPinName(TEXT("InString"));
 const FName TextInputPinName(TEXT("InText"));
-const FName NumberInputPinName(TEXT("A"));
+const FName FontInfoInputPinName(TEXT("InFontInfo"));
+const FName ColorAndOpacityInputPinName(TEXT("InColorAndOpacity"));
+const FName TextTransformPolicyInputPinName(TEXT("InTransformPolicy"));
+const FName NumberValueInputPinName(TEXT("Value"));
+const FName UseGroupingInputPinName(TEXT("bUseGrouping"));
+const FName MinimumFractionalDigitsInputPinName(TEXT("MinimumFractionalDigits"));
+const FName MaximumFractionalDigitsInputPinName(TEXT("MaximumFractionalDigits"));
 const FName ForEachLoopMacroName(TEXT("ForEachLoop"));
 const FName ForEachExecInputPinName(TEXT("Exec"));
 const FName ForEachArrayInputPinName(TEXT("Array"));
@@ -80,9 +83,57 @@ const FName ForEachLoopBodyPinName(TEXT("LoopBody"));
 const FName ForEachArrayElementPinName(TEXT("Array Element"));
 const FName ForEachCompletedPinName(TEXT("Completed"));
 const FString CollapsedVisibilityValue(TEXT("Collapsed"));
-const FString DieselResourceValue(TEXT("EModuleResourceType::Diesel"));
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+const FName TextFontPropertyName = GET_MEMBER_NAME_CHECKED(UTextBlock, Font);
+const FName TextColorPropertyName = GET_MEMBER_NAME_CHECKED(UTextBlock, ColorAndOpacity);
+const FName TextTransformPolicyPropertyName =
+    GET_MEMBER_NAME_CHECKED(UTextBlock, TextTransformPolicy);
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
 namespace PinNames = BlueprintGraphNames::Pins;
 namespace BinaryPins = BlueprintGraphNames::Pins::Binary;
+
+struct FResourceDisplaySpec
+{
+    const TCHAR* PackageName;
+    const TCHAR* AssetName;
+    FName BlueprintName;
+    FName TextName;
+    FName TotalVariableName;
+    FName StockTextName;
+    FString InitialText;
+    FString UnitSuffix;
+    FString ResourceEnumValue;
+    double UnitDivisor;
+    int32 FractionalDigits;
+};
+
+const FResourceDisplaySpec DieselDisplay {
+    DieselReplacementPackageName,
+    DieselReplacementAssetName,
+    FName(TEXT("GenerateBoatHUDTotalResourcesValue")),
+    FName(TEXT("DieselValueText")),
+    FName(TEXT("DieselTotal")),
+    GET_MEMBER_NAME_CHECKED(UVoyageInGameBoatWidget, PetrolTB),
+    TEXT("-- L"),
+    TEXT(" L"),
+    TEXT("EModuleResourceType::Diesel"),
+    1.0,
+    0
+};
+
+const FResourceDisplaySpec ElectricityDisplay {
+    ElectricityReplacementPackageName,
+    ElectricityReplacementAssetName,
+    FName(TEXT("GenerateBoatTotalElectricityValue")),
+    FName(TEXT("ElectricityValueText")),
+    FName(TEXT("ElectricityTotal")),
+    GET_MEMBER_NAME_CHECKED(UVoyageInGameBoatWidget, BatteryTB),
+    TEXT("--.- KWH"),
+    TEXT(" KWH"),
+    TEXT("EModuleResourceType::Electricity"),
+    1000.0,
+    1
+};
 
 template <typename NodeType>
 NodeType* FinishNode(NodeType* Node, UEdGraph* Graph, int32 X, int32 Y)
@@ -187,7 +238,7 @@ bool SaveBlueprint(UPackage* Package, UBlueprint* Blueprint)
     return UPackage::SavePackage(Package, Blueprint, *Filename, SaveArgs);
 }
 
-bool AddDieselTick(UWidgetBlueprint* Blueprint)
+bool AddResourceTick(UWidgetBlueprint* Blueprint, const FResourceDisplaySpec& Display)
 {
     UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(
         Blueprint,
@@ -211,8 +262,8 @@ bool AddDieselTick(UWidgetBlueprint* Blueprint)
     FinishNode(TickEvent, Graph, -1300, 0);
 
     UK2Node_VariableSet* ResetTotal = AddVariableSet(
-        Graph, DieselTotalVariableName, -1060, 0);
-    RequirePin(ResetTotal, DieselTotalVariableName)->DefaultValue = LexToString(EmptyDieselTotal);
+        Graph, Display.TotalVariableName, -1060, 0);
+    RequirePin(ResetTotal, Display.TotalVariableName)->DefaultValue = LexToString(EmptyResourceTotal);
 
     UK2Node_CallFunction* GetPawn = AddCall(
         Graph,
@@ -261,14 +312,14 @@ bool AddDieselTick(UWidgetBlueprint* Blueprint)
     FinishNode(ForEachModule, Graph, 500, 0);
 
     UK2Node_VariableGet* CurrentTotal = AddVariableGet(
-        Graph, DieselTotalVariableName, 760, 240);
+        Graph, Display.TotalVariableName, 760, 240);
     UK2Node_CallFunction* GetResourceAmount = AddCall(
         Graph,
         UVoyageModuleComponent::StaticClass()->FindFunctionByName(
             GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, GetResourceAmount)),
         760,
         80);
-    RequirePin(GetResourceAmount, ResourceTypeInputPinName)->DefaultValue = DieselResourceValue;
+    RequirePin(GetResourceAmount, ResourceTypeInputPinName)->DefaultValue = Display.ResourceEnumValue;
 
     UK2Node_CallFunction* AddAmount = AddCall(
         Graph,
@@ -277,42 +328,54 @@ bool AddDieselTick(UWidgetBlueprint* Blueprint)
         1020,
         160);
     UK2Node_VariableSet* StoreTotal = AddVariableSet(
-        Graph, DieselTotalVariableName, 1280, 80);
+        Graph, Display.TotalVariableName, 1280, 80);
 
     UK2Node_VariableGet* FinalTotal = AddVariableGet(
-        Graph, DieselTotalVariableName, 760, 500);
-    UK2Node_CallFunction* RoundTotal = AddCall(
+        Graph, Display.TotalVariableName, 760, 500);
+    UK2Node_CallFunction* ScaleTotal = AddCall(
         Graph,
         UKismetMathLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Round)),
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble)),
         1020,
         500);
+    RequirePin(ScaleTotal, BinaryPins::RightOperand)->DefaultValue = LexToString(Display.UnitDivisor);
+    UK2Node_CallFunction* TotalToText = AddCall(
+        Graph,
+        UKismetTextLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_DoubleToText)),
+        1260,
+        500);
+    RequirePin(TotalToText, UseGroupingInputPinName)->DefaultValue = TEXT("false");
+    RequirePin(TotalToText, MinimumFractionalDigitsInputPinName)->DefaultValue =
+        LexToString(Display.FractionalDigits);
+    RequirePin(TotalToText, MaximumFractionalDigitsInputPinName)->DefaultValue =
+        LexToString(Display.FractionalDigits);
     UK2Node_CallFunction* TotalToString = AddCall(
         Graph,
-        UKismetStringLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Conv_IntToString)),
-        1260,
+        UKismetTextLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_TextToString)),
+        1500,
         500);
     UK2Node_CallFunction* AddUnit = AddCall(
         Graph,
         UKismetStringLibrary::StaticClass()->FindFunctionByName(
             GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Concat_StrStr)),
-        1500,
+        1740,
         500);
-    RequirePin(AddUnit, BinaryPins::RightOperand)->DefaultValue = LitreSuffix;
+    RequirePin(AddUnit, BinaryPins::RightOperand)->DefaultValue = Display.UnitSuffix;
     UK2Node_CallFunction* StringToText = AddCall(
         Graph,
         UKismetTextLibrary::StaticClass()->FindFunctionByName(
             GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText)),
-        1740,
+        1980,
         500);
-    UK2Node_VariableGet* GetDieselText = AddVariableGet(
-        Graph, ReplacementTextName, 1740, 680);
+    UK2Node_VariableGet* GetResourceText = AddVariableGet(
+        Graph, Display.TextName, 1980, 680);
     UK2Node_CallFunction* SetText = AddCall(
         Graph,
         UTextBlock::StaticClass()->FindFunctionByName(
             GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText)),
-        1980,
+        2220,
         500);
 
     const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
@@ -367,16 +430,19 @@ bool AddDieselTick(UWidgetBlueprint* Blueprint)
             RequirePin(AddAmount, BinaryPins::RightOperand)) &&
         Connect(Schema,
             RequirePin(AddAmount, UEdGraphSchema_K2::PN_ReturnValue),
-            RequirePin(StoreTotal, DieselTotalVariableName)) &&
+            RequirePin(StoreTotal, Display.TotalVariableName)) &&
         Connect(Schema,
             RequirePin(ForEachModule, ForEachCompletedPinName),
             RequirePin(SetText, UEdGraphSchema_K2::PN_Execute)) &&
         Connect(Schema,
             FinalTotal->GetValuePin(),
-            RequirePin(RoundTotal, NumberInputPinName)) &&
+            RequirePin(ScaleTotal, BinaryPins::LeftOperand)) &&
         Connect(Schema,
-            RequirePin(RoundTotal, UEdGraphSchema_K2::PN_ReturnValue),
-            RequirePin(TotalToString, IntegerInputPinName)) &&
+            RequirePin(ScaleTotal, UEdGraphSchema_K2::PN_ReturnValue),
+            RequirePin(TotalToText, NumberValueInputPinName)) &&
+        Connect(Schema,
+            RequirePin(TotalToText, UEdGraphSchema_K2::PN_ReturnValue),
+            RequirePin(TotalToString, TextInputPinName)) &&
         Connect(Schema,
             RequirePin(TotalToString, UEdGraphSchema_K2::PN_ReturnValue),
             RequirePin(AddUnit, BinaryPins::LeftOperand)) &&
@@ -387,74 +453,84 @@ bool AddDieselTick(UWidgetBlueprint* Blueprint)
             RequirePin(StringToText, UEdGraphSchema_K2::PN_ReturnValue),
             RequirePin(SetText, TextInputPinName)) &&
         Connect(Schema,
-            GetDieselText->GetValuePin(),
+            GetResourceText->GetValuePin(),
             RequirePin(SetText, UEdGraphSchema_K2::PN_Self));
     if (!Connected)
     {
-        UE_LOG(LogTemp, Error, TEXT("Failed to connect diesel aggregation Tick graph"));
+        UE_LOG(LogTemp, Error, TEXT("Failed to connect resource aggregation Tick graph"));
     }
     return Connected;
 }
 
-UWidgetBlueprint* CreateReplacementWidget()
+UWidgetBlueprint* CreateReplacementWidget(const FResourceDisplaySpec& Display)
 {
-    UPackage* Package = CreatePackage(ReplacementPackageName);
+    UPackage* Package = CreatePackage(Display.PackageName);
     UWidgetBlueprint* Blueprint = Cast<UWidgetBlueprint>(
         FKismetEditorUtilities::CreateBlueprint(
             UUserWidget::StaticClass(),
             Package,
-            FName(ReplacementAssetName),
+            FName(Display.AssetName),
             BPTYPE_Normal,
             UWidgetBlueprint::StaticClass(),
             UWidgetBlueprintGeneratedClass::StaticClass(),
-            ReplacementBlueprintName));
+            Display.BlueprintName));
     if (!Blueprint || !Blueprint->WidgetTree)
     {
-        UE_LOG(LogTemp, Error, TEXT("Failed to create the replacement diesel-value widget"));
+        UE_LOG(LogTemp, Error, TEXT("Failed to create a replacement resource-value widget"));
         return nullptr;
     }
 
     UTextBlock* ReplacementText = Blueprint->WidgetTree->ConstructWidget<UTextBlock>(
         UTextBlock::StaticClass(),
-        ReplacementTextName);
-    ReplacementText->SetText(FText::FromString(InitialText));
+        Display.TextName);
+    ReplacementText->SetText(FText::FromString(Display.InitialText));
     ReplacementText->bIsVariable = true;
     FSlateFontInfo Font = ReplacementText->GetFont();
-    Font.Size = DieselFontSize;
+    Font.Size = StockResourceFontSize;
+    Font.TypefaceFontName = FName(TEXT("Regular"));
     ReplacementText->SetFont(Font);
+    ReplacementText->SetColorAndOpacity(FSlateColor(FLinearColor(
+        StockResourceColor,
+        StockResourceColor,
+        StockResourceColor,
+        1.0f)));
+    ReplacementText->SetTextTransformPolicy(ETextTransformPolicy::ToUpper);
     ReplacementText->SetJustification(ETextJustify::Center);
     Blueprint->WidgetTree->RootWidget = ReplacementText;
 
-    FEdGraphPinType DieselTotalType;
-    DieselTotalType.PinCategory = UEdGraphSchema_K2::PC_Real;
-    DieselTotalType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
+    FEdGraphPinType ResourceTotalType;
+    ResourceTotalType.PinCategory = UEdGraphSchema_K2::PC_Real;
+    ResourceTotalType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
     if (!FBlueprintEditorUtils::AddMemberVariable(
             Blueprint,
-            DieselTotalVariableName,
-            DieselTotalType,
-            LexToString(EmptyDieselTotal)))
+            Display.TotalVariableName,
+            ResourceTotalType,
+            LexToString(EmptyResourceTotal)))
     {
-        UE_LOG(LogTemp, Error, TEXT("Failed to add diesel total state"));
+        UE_LOG(LogTemp, Error, TEXT("Failed to add resource total state"));
         return nullptr;
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     FKismetEditorUtilities::CompileBlueprint(Blueprint);
-    if (Blueprint->Status == BS_Error || !AddDieselTick(Blueprint))
+    if (Blueprint->Status == BS_Error || !AddResourceTick(Blueprint, Display))
     {
-        UE_LOG(LogTemp, Error, TEXT("Failed to prepare the diesel aggregation widget"));
+        UE_LOG(LogTemp, Error, TEXT("Failed to prepare a resource aggregation widget"));
         return nullptr;
     }
 
     if (!SaveBlueprint(Package, Blueprint))
     {
-        UE_LOG(LogTemp, Error, TEXT("Failed to save the replacement diesel-value widget"));
+        UE_LOG(LogTemp, Error, TEXT("Failed to save a replacement resource-value widget"));
         return nullptr;
     }
     return Blueprint;
 }
 
-bool AddReplacementPreConstruct(UWidgetBlueprint* Blueprint, UClass* ReplacementClass)
+bool AddReplacementPreConstruct(
+    UWidgetBlueprint* Blueprint,
+    UClass* DieselReplacementClass,
+    UClass* ElectricityReplacementClass)
 {
     UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(
         Blueprint,
@@ -470,11 +546,6 @@ bool AddReplacementPreConstruct(UWidgetBlueprint* Blueprint, UClass* Replacement
     PreConstructEvent->bOverrideFunction = true;
     FinishNode(PreConstructEvent, Graph, -500, 0);
 
-    UK2Node_VariableGet* GetPetrolText = NewObject<UK2Node_VariableGet>(Graph);
-    GetPetrolText->VariableReference.SetSelfMember(
-        GET_MEMBER_NAME_CHECKED(UVoyageInGameBoatWidget, PetrolTB));
-    FinishNode(GetPetrolText, Graph, -260, 180);
-
     UFunction* SetVisibilityFunction = UWidget::StaticClass()->FindFunctionByName(
         GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
     UFunction* GetParentFunction = UWidget::StaticClass()->FindFunctionByName(
@@ -483,77 +554,169 @@ bool AddReplacementPreConstruct(UWidgetBlueprint* Blueprint, UClass* Replacement
         GET_FUNCTION_NAME_CHECKED(UWidgetBlueprintLibrary, Create));
     UFunction* AddChildFunction = UPanelWidget::StaticClass()->FindFunctionByName(
         AddChildFunctionName);
-    if (!SetVisibilityFunction || !GetParentFunction || !CreateWidgetFunction || !AddChildFunction)
+    UFunction* SetFontFunction = UTextBlock::StaticClass()->FindFunctionByName(
+        GET_FUNCTION_NAME_CHECKED(UTextBlock, SetFont));
+    UFunction* SetColorFunction = UTextBlock::StaticClass()->FindFunctionByName(
+        GET_FUNCTION_NAME_CHECKED(UTextBlock, SetColorAndOpacity));
+    UFunction* SetTransformPolicyFunction = UTextBlock::StaticClass()->FindFunctionByName(
+        GET_FUNCTION_NAME_CHECKED(UTextBlock, SetTextTransformPolicy));
+    if (!SetVisibilityFunction || !GetParentFunction || !CreateWidgetFunction ||
+        !AddChildFunction || !SetFontFunction || !SetColorFunction ||
+        !SetTransformPolicyFunction)
     {
         UE_LOG(LogTemp, Error, TEXT("One or more required UMG functions were not found"));
         return false;
     }
 
-    UK2Node_CallFunction* SetVisibility = NewObject<UK2Node_CallFunction>(Graph);
-    SetVisibility->SetFromFunction(SetVisibilityFunction);
-    FinishNode(SetVisibility, Graph, 20, 0);
-
-    UK2Node_CallFunction* GetParent = NewObject<UK2Node_CallFunction>(Graph);
-    GetParent->SetFromFunction(GetParentFunction);
-    FinishNode(GetParent, Graph, 20, 220);
-
-    UK2Node_CallFunction* GetOwningPlayer = AddCall(
-        Graph,
-        UWidget::StaticClass()->FindFunctionByName(
-            GetOwningPlayerFunctionName),
-        280,
-        180);
-
-    UK2Node_CallFunction* CreateWidget = NewObject<UK2Node_CallFunction>(Graph);
-    CreateWidget->SetFromFunction(CreateWidgetFunction);
-    FinishNode(CreateWidget, Graph, 520, 0);
-
-    UK2Node_CallFunction* AddChild = NewObject<UK2Node_CallFunction>(Graph);
-    AddChild->SetFromFunction(AddChildFunction);
-    FinishNode(AddChild, Graph, 800, 0);
-
     const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
-    Schema->TrySetDefaultValue(
-        *RequirePin(SetVisibility, VisibilityInputPinName),
-        CollapsedVisibilityValue);
-    RequirePin(CreateWidget, WidgetTypeInputPinName)->DefaultObject = ReplacementClass;
-
-    if (!Schema->TryCreateConnection(
-            RequirePin(PreConstructEvent, UEdGraphSchema_K2::PN_Then),
-            RequirePin(SetVisibility, UEdGraphSchema_K2::PN_Execute)) ||
-        !Schema->TryCreateConnection(
-            RequirePin(SetVisibility, UEdGraphSchema_K2::PN_Then),
-            RequirePin(CreateWidget, UEdGraphSchema_K2::PN_Execute)) ||
-        !Schema->TryCreateConnection(
-            GetPetrolText->GetValuePin(),
-            RequirePin(SetVisibility, UEdGraphSchema_K2::PN_Self)) ||
-        !Schema->TryCreateConnection(
-            GetPetrolText->GetValuePin(),
-            RequirePin(GetParent, UEdGraphSchema_K2::PN_Self)) ||
-        !Schema->TryCreateConnection(
-            GetPetrolText->GetValuePin(),
-            RequirePin(CreateWidget, WorldContextInputPinName)) ||
-        !Schema->TryCreateConnection(
-            RequirePin(GetOwningPlayer, UEdGraphSchema_K2::PN_ReturnValue),
-            RequirePin(CreateWidget, OwningPlayerInputPinName)) ||
-        !Schema->TryCreateConnection(
-            RequirePin(CreateWidget, UEdGraphSchema_K2::PN_Then),
-            RequirePin(AddChild, UEdGraphSchema_K2::PN_Execute)) ||
-        !Schema->TryCreateConnection(
-            RequirePin(GetParent, UEdGraphSchema_K2::PN_ReturnValue),
-            RequirePin(AddChild, UEdGraphSchema_K2::PN_Self)) ||
-        !Schema->TryCreateConnection(
-            RequirePin(CreateWidget, UEdGraphSchema_K2::PN_ReturnValue),
-            RequirePin(AddChild, ChildContentInputPinName)))
+    struct FReplacementBinding
     {
-        UE_LOG(LogTemp, Error, TEXT("Failed to connect replacement-widget PreConstruct graph"));
-        return false;
+        const FResourceDisplaySpec* Display;
+        UClass* ReplacementClass;
+    };
+    const FReplacementBinding Bindings[] = {
+        { &DieselDisplay, DieselReplacementClass },
+        { &ElectricityDisplay, ElectricityReplacementClass }
+    };
+
+    UEdGraphPin* PreviousThen = RequirePin(PreConstructEvent, UEdGraphSchema_K2::PN_Then);
+    for (int32 BindingIndex = 0; BindingIndex < UE_ARRAY_COUNT(Bindings); ++BindingIndex)
+    {
+        const FReplacementBinding& Binding = Bindings[BindingIndex];
+        const int32 Y = BindingIndex * 520;
+
+        UK2Node_VariableGet* GetStockText = NewObject<UK2Node_VariableGet>(Graph);
+        GetStockText->VariableReference.SetSelfMember(Binding.Display->StockTextName);
+        FinishNode(GetStockText, Graph, -260, Y + 180);
+
+        UK2Node_CallFunction* SetVisibility = AddCall(
+            Graph, SetVisibilityFunction, 20, Y);
+        Schema->TrySetDefaultValue(
+            *RequirePin(SetVisibility, VisibilityInputPinName),
+            CollapsedVisibilityValue);
+
+        UK2Node_CallFunction* GetParent = AddCall(
+            Graph, GetParentFunction, 20, Y + 220);
+        UK2Node_CallFunction* GetOwningPlayer = AddCall(
+            Graph,
+            UWidget::StaticClass()->FindFunctionByName(GetOwningPlayerFunctionName),
+            280,
+            Y + 180);
+        UK2Node_CallFunction* CreateWidget = AddCall(
+            Graph, CreateWidgetFunction, 520, Y);
+        RequirePin(CreateWidget, WidgetTypeInputPinName)->DefaultObject =
+            Binding.ReplacementClass;
+
+        UK2Node_DynamicCast* CastReplacement = NewObject<UK2Node_DynamicCast>(Graph);
+        CastReplacement->TargetType = Binding.ReplacementClass;
+        FinishNode(CastReplacement, Graph, 780, Y);
+        CastReplacement->SetPurity(false);
+
+        UK2Node_VariableGet* GetReplacementText = NewObject<UK2Node_VariableGet>(Graph);
+        GetReplacementText->VariableReference.SetExternalMember(
+            Binding.Display->TextName,
+            Binding.ReplacementClass);
+        FinishNode(GetReplacementText, Graph, 1020, Y + 260);
+
+        UK2Node_VariableGet* GetStockFont = NewObject<UK2Node_VariableGet>(Graph);
+        GetStockFont->VariableReference.SetExternalMember(
+            TextFontPropertyName,
+            UTextBlock::StaticClass());
+        FinishNode(GetStockFont, Graph, 1020, Y + 360);
+
+        UK2Node_VariableGet* GetStockColor = NewObject<UK2Node_VariableGet>(Graph);
+        GetStockColor->VariableReference.SetExternalMember(
+            TextColorPropertyName,
+            UTextBlock::StaticClass());
+        FinishNode(GetStockColor, Graph, 1260, Y + 360);
+
+        UK2Node_VariableGet* GetStockTransform = NewObject<UK2Node_VariableGet>(Graph);
+        GetStockTransform->VariableReference.SetExternalMember(
+            TextTransformPolicyPropertyName,
+            UTextBlock::StaticClass());
+        FinishNode(GetStockTransform, Graph, 1500, Y + 360);
+
+        UK2Node_CallFunction* SetFont = AddCall(
+            Graph, SetFontFunction, 1020, Y);
+        UK2Node_CallFunction* SetColor = AddCall(
+            Graph, SetColorFunction, 1260, Y);
+        UK2Node_CallFunction* SetTransformPolicy = AddCall(
+            Graph, SetTransformPolicyFunction, 1500, Y);
+        UK2Node_CallFunction* AddChild = AddCall(
+            Graph, AddChildFunction, 1740, Y);
+
+        const bool Connected =
+            Connect(Schema, PreviousThen,
+                RequirePin(SetVisibility, UEdGraphSchema_K2::PN_Execute)) &&
+            Connect(Schema,
+                RequirePin(SetVisibility, UEdGraphSchema_K2::PN_Then),
+                RequirePin(CreateWidget, UEdGraphSchema_K2::PN_Execute)) &&
+            Connect(Schema, GetStockText->GetValuePin(),
+                RequirePin(SetVisibility, UEdGraphSchema_K2::PN_Self)) &&
+            Connect(Schema, GetStockText->GetValuePin(),
+                RequirePin(GetParent, UEdGraphSchema_K2::PN_Self)) &&
+            Connect(Schema, GetStockText->GetValuePin(),
+                RequirePin(CreateWidget, WorldContextInputPinName)) &&
+            Connect(Schema,
+                RequirePin(GetOwningPlayer, UEdGraphSchema_K2::PN_ReturnValue),
+                RequirePin(CreateWidget, OwningPlayerInputPinName)) &&
+            Connect(Schema,
+                RequirePin(CreateWidget, UEdGraphSchema_K2::PN_Then),
+                RequirePin(CastReplacement, UEdGraphSchema_K2::PN_Execute)) &&
+            Connect(Schema,
+                RequirePin(CreateWidget, UEdGraphSchema_K2::PN_ReturnValue),
+                CastReplacement->GetCastSourcePin()) &&
+            Connect(Schema,
+                CastReplacement->GetValidCastPin(),
+                RequirePin(SetFont, UEdGraphSchema_K2::PN_Execute)) &&
+            Connect(Schema,
+                CastReplacement->GetCastResultPin(),
+                RequirePin(GetReplacementText, UEdGraphSchema_K2::PN_Self)) &&
+            Connect(Schema, GetStockText->GetValuePin(),
+                RequirePin(GetStockFont, UEdGraphSchema_K2::PN_Self)) &&
+            Connect(Schema, GetStockText->GetValuePin(),
+                RequirePin(GetStockColor, UEdGraphSchema_K2::PN_Self)) &&
+            Connect(Schema, GetStockText->GetValuePin(),
+                RequirePin(GetStockTransform, UEdGraphSchema_K2::PN_Self)) &&
+            Connect(Schema, GetReplacementText->GetValuePin(),
+                RequirePin(SetFont, UEdGraphSchema_K2::PN_Self)) &&
+            Connect(Schema, GetStockFont->GetValuePin(),
+                RequirePin(SetFont, FontInfoInputPinName)) &&
+            Connect(Schema,
+                RequirePin(SetFont, UEdGraphSchema_K2::PN_Then),
+                RequirePin(SetColor, UEdGraphSchema_K2::PN_Execute)) &&
+            Connect(Schema, GetReplacementText->GetValuePin(),
+                RequirePin(SetColor, UEdGraphSchema_K2::PN_Self)) &&
+            Connect(Schema, GetStockColor->GetValuePin(),
+                RequirePin(SetColor, ColorAndOpacityInputPinName)) &&
+            Connect(Schema,
+                RequirePin(SetColor, UEdGraphSchema_K2::PN_Then),
+                RequirePin(SetTransformPolicy, UEdGraphSchema_K2::PN_Execute)) &&
+            Connect(Schema, GetReplacementText->GetValuePin(),
+                RequirePin(SetTransformPolicy, UEdGraphSchema_K2::PN_Self)) &&
+            Connect(Schema, GetStockTransform->GetValuePin(),
+                RequirePin(SetTransformPolicy, TextTransformPolicyInputPinName)) &&
+            Connect(Schema,
+                RequirePin(SetTransformPolicy, UEdGraphSchema_K2::PN_Then),
+                RequirePin(AddChild, UEdGraphSchema_K2::PN_Execute)) &&
+            Connect(Schema,
+                RequirePin(GetParent, UEdGraphSchema_K2::PN_ReturnValue),
+                RequirePin(AddChild, UEdGraphSchema_K2::PN_Self)) &&
+            Connect(Schema,
+                RequirePin(CreateWidget, UEdGraphSchema_K2::PN_ReturnValue),
+                RequirePin(AddChild, ChildContentInputPinName));
+        if (!Connected)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Failed to connect replacement-widget PreConstruct graph"));
+            return false;
+        }
+        PreviousThen = RequirePin(AddChild, UEdGraphSchema_K2::PN_Then);
     }
     return true;
 }
 }
 
-UGenerateBoatTotalDieselCommandlet::UGenerateBoatTotalDieselCommandlet()
+UGenerateBoatHUDTotalResourcesCommandlet::UGenerateBoatHUDTotalResourcesCommandlet()
 {
     IsClient = false;
     IsEditor = true;
@@ -561,13 +724,14 @@ UGenerateBoatTotalDieselCommandlet::UGenerateBoatTotalDieselCommandlet()
     ShowErrorCount = true;
 }
 
-int32 UGenerateBoatTotalDieselCommandlet::Main(const FString& Params)
+int32 UGenerateBoatHUDTotalResourcesCommandlet::Main(const FString& Params)
 {
     if (FPackageName::DoesPackageExist(RelocatedParentPackageName) ||
         FPackageName::DoesPackageExist(ChildPackageName) ||
-        FPackageName::DoesPackageExist(ReplacementPackageName))
+        FPackageName::DoesPackageExist(DieselReplacementPackageName) ||
+        FPackageName::DoesPackageExist(ElectricityReplacementPackageName))
     {
-        UE_LOG(LogTemp, Error, TEXT("BoatTotalDiesel assets already exist; start from an empty Content directory"));
+        UE_LOG(LogTemp, Error, TEXT("BoatHUDTotalResources assets already exist; start from an empty Content directory"));
         return 1;
     }
 
@@ -587,8 +751,12 @@ int32 UGenerateBoatTotalDieselCommandlet::Main(const FString& Params)
         return 1;
     }
 
-    UWidgetBlueprint* ReplacementBlueprint = CreateReplacementWidget();
-    if (!ReplacementBlueprint || !ReplacementBlueprint->GeneratedClass)
+    UWidgetBlueprint* DieselReplacementBlueprint = CreateReplacementWidget(DieselDisplay);
+    UWidgetBlueprint* ElectricityReplacementBlueprint =
+        CreateReplacementWidget(ElectricityDisplay);
+    if (!DieselReplacementBlueprint || !DieselReplacementBlueprint->GeneratedClass ||
+        !ElectricityReplacementBlueprint ||
+        !ElectricityReplacementBlueprint->GeneratedClass)
     {
         return 1;
     }
@@ -604,7 +772,10 @@ int32 UGenerateBoatTotalDieselCommandlet::Main(const FString& Params)
             UWidgetBlueprintGeneratedClass::StaticClass(),
             ChildBlueprintName));
     if (!ChildBlueprint ||
-        !AddReplacementPreConstruct(ChildBlueprint, ReplacementBlueprint->GeneratedClass) ||
+        !AddReplacementPreConstruct(
+            ChildBlueprint,
+            DieselReplacementBlueprint->GeneratedClass,
+            ElectricityReplacementBlueprint->GeneratedClass) ||
         !SaveBlueprint(ChildPackage, ChildBlueprint))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to create the Boat HUD replacement-slot child"));
@@ -615,9 +786,10 @@ int32 UGenerateBoatTotalDieselCommandlet::Main(const FString& Params)
         RelocatedParentPackageName, BoatHudAssetName);
     UE_LOG(LogTemp, Display, TEXT("Generated child override: %s.%s"),
         ChildPackageName, BoatHudAssetName);
-    UE_LOG(LogTemp, Display, TEXT("Replacement widget: %s.%s"),
-        ReplacementPackageName, ReplacementAssetName);
-    UE_LOG(LogTemp, Display, TEXT("Replacement initial text: %s"), InitialText);
+    UE_LOG(LogTemp, Display, TEXT("Diesel replacement widget: %s.%s"),
+        DieselDisplay.PackageName, DieselDisplay.AssetName);
+    UE_LOG(LogTemp, Display, TEXT("Electricity replacement widget: %s.%s"),
+        ElectricityDisplay.PackageName, ElectricityDisplay.AssetName);
     return 0;
 }
 

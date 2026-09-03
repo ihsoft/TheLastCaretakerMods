@@ -2,7 +2,7 @@
   "FileVersion": 3,
   "EngineAssociation": "5.8",
   "Category": "Modding",
-  "Description": "Editor-only project for generating the BoatTotalDiesel mod assets.",
+  "Description": "Editor-only project for generating the BoatHUDTotalResources mod assets.",
   "Modules": [
     {
       "Name": "Voyage",
@@ -10,7 +10,7 @@
       "LoadingPhase": "Default"
     },
     {
-      "Name": "BoatTotalDieselGenerator",
+      "Name": "BoatHUDTotalResourcesGenerator",
       "Type": "Editor",
       "LoadingPhase": "Default"
     }
