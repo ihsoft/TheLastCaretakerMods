@@ -24,6 +24,7 @@ owning mod backlog.
 | --- | --- | --- | --- |
 | UAssetGUI | `.tools/bin/UAssetGUI.exe` | UAssetGUI `e362030`, UAssetAPI `6b5ead3` | accepted |
 | retoc | `.tools/bin/retoc.exe` | retoc `234f4e5` | accepted |
+| jmap | `.tools/bin/jmap_dumper.exe` | jmap `4f88d8a` | accepted |
 | UAssetAPI | `.tools/bin/UAssetAPI/UAssetAPI.dll` | UAssetAPI `6b5ead3` | accepted |
 | CUE4Parse | `.tools/bin/CUE4Parse/CUE4Parse.dll` | CUE4Parse `ec6595e` | accepted, managed-only |
 
@@ -42,11 +43,19 @@ publish manifests.
   overrides only for tool development.
 - [x] Smoke-test retoc, both managed bundles, and the two consuming projects.
 - [x] Record hashes and update tool routing documentation.
+- [x] Add the same stable publisher boundary for jmap and make mappings
+  generation consume only the canonical dumper.
 
 Acceptance evidence:
 
 - a second invocation of every publisher returned `Rebuilt = False`;
 - canonical retoc reported `retoc_cli 0.1.5`;
+- canonical jmap reported `jmap_dumper 0.2.0` and a second publication returned
+  `Rebuilt = False`;
+- `New-VoyageMappings.ps1` resolves repository-relative defaults after parameter
+  binding, so its documented Windows PowerShell `-File` invocation reaches the
+  intended running-game precondition instead of failing on an empty
+  `$PSScriptRoot`;
 - both managed consumers rebuilt successfully from the canonical bundles;
 - the canonical CUE4Parse bundle itself contains `Microsoft.Bcl.Memory 10.0.11`
   despite the unchanged upstream project declaring vulnerable `9.0.0`;

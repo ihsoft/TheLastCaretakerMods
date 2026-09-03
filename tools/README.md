@@ -31,7 +31,8 @@ in [`../docs/voyage-cooked-asset-toolchain.md`](../docs/voyage-cooked-asset-tool
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Publish or reuse canonical retoc | `Publish-RetocBinary.ps1` | Stable `.tools/bin/retoc.exe` plus hash/provenance manifest |
 | Generate a fresh `.usmap` | `New-VoyageMappings.ps1` | One-shot running-game readiness wait, jmap dump, manifest, and validation |
-| Build the reviewed standalone mapping dumper | `Build-JmapVoyageMappingsDumper.ps1` | Exact jmap fork commit with the UE 5.8 layout and nullable-metadata fixes |
+| Publish or reuse canonical jmap | `Publish-JmapBinary.ps1` | Stable `.tools/bin/jmap_dumper.exe` plus hash/provenance manifest |
+| Build the reviewed standalone mapping dumper for development | `Build-JmapVoyageMappingsDumper.ps1` | Lower-level source build used by the jmap publisher |
 | Locate the live `GUObjectArray` when signatures fail | `Find-VoyageUObjectArray.ps1` | Read-only structural scan of the shipping executable's `.data` section |
 | Reject an empty, stale, or misrouted `.usmap` | `Test-VoyageMappings.ps1` | Header, payload, manifest, fingerprint, hash, and required-schema checks |
 | Publish or reuse canonical UAssetAPI | `Publish-UAssetApiBinary.ps1` | Stable `.tools/bin/UAssetAPI/` managed library bundle |
@@ -62,11 +63,12 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   `ec6595e46448a817ac21ea9bde01caa48f80a420`. It has no Voyage patch and does
   not require a fork.
 - Normal work uses only canonical published artifacts under `.tools/bin/`:
-  `UAssetGUI.exe`, `retoc.exe`, `UAssetAPI/UAssetAPI.dll`, and
-  `CUE4Parse/CUE4Parse.dll`. The fork/source checkouts above are build inputs,
-  not normal invocation paths. Run a publisher only after its accepted source
-  checkpoint changes or when its canonical artifact fails manifest/hash checks;
-  otherwise the publisher returns the existing binary with `Rebuilt = False`.
+  `UAssetGUI.exe`, `retoc.exe`, `jmap_dumper.exe`,
+  `UAssetAPI/UAssetAPI.dll`, and `CUE4Parse/CUE4Parse.dll`. The fork/source
+  checkouts above are build inputs, not normal invocation paths. Run a
+  publisher only after its accepted source checkpoint changes or when its
+  canonical artifact fails manifest/hash checks; otherwise the publisher
+  returns the existing binary with `Rebuilt = False`.
 - Most scripts default to the original developer's game path on drive `P:`.
   Pass `-GameRoot '<your Steam Voyage directory>'` on another machine.
 - `Extract-VoyagePackage.ps1` requires a compatible `retoc` executable. Its
@@ -283,12 +285,13 @@ path/hash/profile, and whether additional containers were permitted.
 
 ## Specialized tools
 
-### Canonical retoc, UAssetAPI, and CUE4Parse binaries
+### Canonical retoc, jmap, UAssetAPI, and CUE4Parse binaries
 
 Publish the reviewed source checkpoints once:
 
 ```powershell
 .\tools\Publish-RetocBinary.ps1
+.\tools\Publish-JmapBinary.ps1
 .\tools\Publish-UAssetApiBinary.ps1
 .\tools\Publish-Cue4ParseBinary.ps1
 ```
@@ -300,6 +303,7 @@ The canonical paths are:
 
 ```text
 .tools/bin/retoc.exe
+.tools/bin/jmap_dumper.exe
 .tools/bin/UAssetAPI/UAssetAPI.dll
 .tools/bin/CUE4Parse/CUE4Parse.dll
 ```
@@ -312,9 +316,10 @@ is intentionally managed-only. Its temporary publish host pins
 may still print the upstream project warning while building, but the canonical
 bundle manifest and DLL metadata must resolve `10.0.11`.
 
-`Build-RetocUe58Compatibility.ps1` remains the lower-level reproducible retoc
-builder used by the publisher. `Prepare-UAssetApiVoyageUe58.ps1` remains a
-source-development tool; neither is a normal runtime path.
+`Build-RetocUe58Compatibility.ps1` and
+`Build-JmapVoyageMappingsDumper.ps1` remain the lower-level reproducible
+builders used by their publishers. `Prepare-UAssetApiVoyageUe58.ps1` remains
+a source-development tool; none is a normal runtime path.
 
 ### `New-VoyageMappings.ps1`
 
@@ -326,13 +331,15 @@ This is the normal happy path for refreshing Voyage mappings:
 
 Start Voyage first; exactly one running shipping process is a precondition.
 The script never starts or stops the game. It fingerprints the installation,
-verifies or builds the reviewed jmap fork, waits for the process to be at least
-60 seconds old and for three identical structural `GUObjectArray` samples,
-then creates a complete `--all` UE 5.8 USMAP with concurrency `128`, writes
-logs and provenance, and runs `Test-VoyageMappings.ps1`. It returns only after
-the new mapping passes every gate. Each attempt uses a new fingerprinted
+verifies the canonical `.tools/bin/jmap_dumper.exe`, waits for the process to
+be at least 60 seconds old and for three identical structural `GUObjectArray`
+samples, then creates a complete `--all` UE 5.8 USMAP with concurrency `128`,
+writes logs and provenance, and runs `Test-VoyageMappings.ps1`. It returns only
+after the new mapping passes every gate. Each attempt uses a new fingerprinted
 directory below `artifacts/mappings/`, so a previous known-good mapping is
-never overwritten.
+never overwritten. A missing or invalid canonical dumper is a hard stop; run
+`Publish-JmapBinary.ps1` separately rather than rebuilding source during a
+mapping job.
 
 Use `-InstallForUAssetGUI` to copy the validated result to
 `%LOCALAPPDATA%\UAssetGUI\Mappings\Voyage-<build>.usmap`; a different existing
@@ -362,19 +369,21 @@ The mapping is a snapshot of one executable and is never committed.
 Standalone `jmap_dumper` release `0.2.0` predates upstream commit `805cd7a`,
 which fixes the serialized width of `UStruct::MinAlignment` for UE 5.6+.
 For Voyage UE 5.8, build reviewed fork commit
-`4f88d8af758712839529f9eeeb02b82c9469e271` with
-`Build-JmapVoyageMappingsDumper.ps1`, pass the explicitly validated
-`GUObjectArray` when automatic resolution fails, and regenerate the mapping.
+`4f88d8af758712839529f9eeeb02b82c9469e271` once with
+`Publish-JmapBinary.ps1`, pass the explicitly validated `GUObjectArray` when
+automatic resolution fails, and regenerate the mapping through
+`New-VoyageMappings.ps1`.
 This commit is based on upstream `3f189715f08a646a8c341bf80c2fe06e44177ac3`
 and additionally handles nullable transient Blueprint enum, interface, and
 object metadata. The CLI still prints version `0.2.0`, so the source commit,
 build manifest, and executable hash are the version authority.
 
 ```powershell
-.\tools\Build-JmapVoyageMappingsDumper.ps1 `
-  -SourceRoot '.\.tools\jmap' `
-  -OutputRoot '.\artifacts\tools\jmap-4f88d8a'
+.\tools\Publish-JmapBinary.ps1
 ```
+
+Use `Build-JmapVoyageMappingsDumper.ps1` directly only while developing or
+diagnosing the fork itself. Its output is not the canonical runtime path.
 
 `Find-VoyageUObjectArray.ps1` performs the fallback address discovery without
 injecting code or writing process memory. It reads only the shipping module's

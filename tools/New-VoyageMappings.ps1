@@ -2,11 +2,9 @@
 param(
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
-    [string]$JmapSourceRoot = (Join-Path $PSScriptRoot '..\.tools\jmap'),
+    [string]$DumperPath,
 
-    [string]$DumperBuildRoot = (Join-Path $PSScriptRoot '..\artifacts\tools\jmap-4f88d8a'),
-
-    [string]$OutputRoot = (Join-Path $PSScriptRoot '..\artifacts\mappings'),
+    [string]$OutputRoot,
 
     [ValidateRange(1, 4096)]
     [int]$Concurrency = 128,
@@ -32,11 +30,17 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+if ([string]::IsNullOrWhiteSpace($DumperPath)) {
+    $DumperPath = Join-Path $PSScriptRoot '..\.tools\bin\jmap_dumper.exe'
+}
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Join-Path $PSScriptRoot '..\artifacts\mappings'
+}
+
 $expectedDumperCommit = '4f88d8af758712839529f9eeeb02b82c9469e271'
 $gameProcessName = 'VoyageSteam-Win64-Shipping'
 $engineVersion = '5.8'
 $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'
-$buildDumperScript = Join-Path $PSScriptRoot 'Build-JmapVoyageMappingsDumper.ps1'
 $findObjectArrayScript = Join-Path $PSScriptRoot 'Find-VoyageUObjectArray.ps1'
 $testMappingsScript = Join-Path $PSScriptRoot 'Test-VoyageMappings.ps1'
 
@@ -52,25 +56,19 @@ function Get-SingleVoyageProcess {
 }
 
 function Get-ReviewedDumper {
-    $buildRoot = [IO.Path]::GetFullPath($DumperBuildRoot)
-    if (-not (Test-Path -LiteralPath $buildRoot)) {
-        Write-Host 'Reviewed jmap build is absent; building it once...'
-        & $buildDumperScript -SourceRoot $JmapSourceRoot -OutputRoot $buildRoot
-    }
-
-    $manifestPath = Join-Path $buildRoot 'build-manifest.json'
-    $executablePath = Join-Path $buildRoot 'target\release\jmap_dumper.exe'
+    $executablePath = [IO.Path]::GetFullPath($DumperPath)
+    $manifestPath = [IO.Path]::ChangeExtension($executablePath, '.manifest.json')
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf) -or
         -not (Test-Path -LiteralPath $executablePath -PathType Leaf)) {
-        throw "The reviewed jmap build is incomplete: $buildRoot"
+        throw "The canonical jmap binary is absent or incomplete. Run tools\Publish-JmapBinary.ps1: $executablePath"
     }
 
     $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
     $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $executablePath).Hash
-    if ([string]$manifest.kind -cne 'Voyage jmap mappings dumper build' -or
+    if ([string]$manifest.kind -cne 'Voyage canonical jmap mappings dumper' -or
         [string]$manifest.sourceCommit -cne $expectedDumperCommit -or
         [string]$manifest.executableSha256 -cne $actualHash) {
-        throw "The cached jmap build failed its provenance check: $buildRoot"
+        throw "The canonical jmap binary failed its provenance check: $executablePath"
     }
 
     [pscustomobject]@{

@@ -31,6 +31,9 @@ The accepted UE 5.8 checkpoint is:
   `EABEDAF875A743E9B02E3381A07031559088EA9F352023A4D549A27FAF830C01`;
 - canonical retoc at `.tools/bin/retoc.exe`, size `6,643,200` bytes and SHA-256
   `CF6E0A47F343A169413BE46EB750F3441F174D334AC0CAA14962F3F47BA93C1E`;
+- canonical jmap dumper at `.tools/bin/jmap_dumper.exe`, size `9,472,000` bytes
+  and SHA-256
+  `75E693C2ACD22BB63671EF368C8608931CEF59E8F6F441AFFA3F7A72A3D11543`;
 - canonical UAssetAPI at `.tools/bin/UAssetAPI/UAssetAPI.dll`, size `4,209,664`
   bytes and SHA-256
   `637500ACEE5565B1C2F4B026B87F3C37E71CDCF92ABCA2D21DDF85615F0798FE`;
@@ -61,8 +64,8 @@ Use the wrappers listed in `tools/README.md`:
 - inspect packages and reflection with `Inspect-VoyageAsset.ps1`;
 - publish and stress the exact GUI with `Publish-UAssetGuiBinary.ps1` and
   `.tools/bin/UAssetGUI.exe stress-open`;
-- publish retoc, UAssetAPI, and CUE4Parse through their dedicated `Publish-*`
-  wrappers, then consume only `.tools/bin/` on the normal path;
+- publish retoc, jmap, UAssetAPI, and CUE4Parse through their dedicated
+  `Publish-*` wrappers, then consume only `.tools/bin/` on the normal path;
 - build or prepare fork source only while deliberately changing a dependency
   checkpoint or diagnosing an unexpected publisher/tool result;
 - install and remove unchanged runtime canaries only through the hash- and
