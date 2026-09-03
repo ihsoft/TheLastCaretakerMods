@@ -18,9 +18,9 @@ $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $paks = Join-Path $root 'Voyage\Content\Paks'
 $exe = Join-Path $root 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe'
 $project = Join-Path $PSScriptRoot 'VoyageAssetInspector\VoyageAssetInspector.csproj'
-$cue4ParseProject = Join-Path $PSScriptRoot '..\.tools\CUE4Parse\CUE4Parse\CUE4Parse.csproj'
-if (-not (Test-Path -LiteralPath $cue4ParseProject -PathType Leaf)) {
-    throw 'CUE4Parse checkout is missing. Place upstream commit ec6595e46448a817ac21ea9bde01caa48f80a420 at .tools\CUE4Parse.'
+$cue4ParseBinary = Join-Path $PSScriptRoot '..\.tools\bin\CUE4Parse\CUE4Parse.dll'
+if (-not (Test-Path -LiteralPath $cue4ParseBinary -PathType Leaf)) {
+    throw 'Canonical CUE4Parse bundle is missing. Run tools\Publish-Cue4ParseBinary.ps1.'
 }
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
     throw "Voyage executable not found: $exe"
@@ -61,7 +61,7 @@ if ($MappingsPath) {
     $arguments += (Resolve-Path -LiteralPath $MappingsPath).Path
 }
 else {
-    $arguments += ''
+    $arguments += '-'
 }
 $arguments += $EngineVersion
 
@@ -77,6 +77,8 @@ $manifest = [ordered]@{
     executableSha256 = $exeHash
     query = $Query
     mappingsPath = if ($MappingsPath) { (Resolve-Path -LiteralPath $MappingsPath).Path } else { $null }
+    cue4ParseBinaryPath = (Resolve-Path -LiteralPath $cue4ParseBinary).Path
+    cue4ParseBinarySha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $cue4ParseBinary).Hash
     engineVersion = $EngineVersion
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }

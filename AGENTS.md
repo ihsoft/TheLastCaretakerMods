@@ -65,6 +65,9 @@ those details here.
   or the documented contract is insufficient for the task.
 - Durable cooked-asset toolchain contracts, accepted fork checkpoints, and the
   validation ladder live in `docs/voyage-cooked-asset-toolchain.md`.
+- Active cross-cutting tool and pipeline work lives in
+  `docs/voyage-toolchain-backlog.md`; mod backlogs must not absorb general
+  toolchain investigations.
 - Durable findings about the Boat's Diesel socket hover card live in
   `docs/boat-diesel-socket-architecture.md`; active feature work alone belongs
   in `docs/boat-total-diesel-backlog.md`.

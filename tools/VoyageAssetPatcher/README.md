@@ -4,25 +4,31 @@ Small, assertion-heavy patches for isolated cooked-asset experiments. Game
 assets and generated outputs remain under ignored `artifacts/`; this directory
 contains only the reproducible transformation.
 
-Official UAssetAPI support currently stops at Unreal Engine 5.7. The default
-project reference uses reviewed fork commit
-`6b5ead37f213adc79d814689040a519be4e04a74` under `.tools/UAssetAPI`.
-`tools/Prepare-UAssetApiVoyageUe58.ps1` can copy the exact tracked source to an
-ignored directory; override the project path only when deliberately testing
-that prepared copy:
+Official UAssetAPI support currently stops at Unreal Engine 5.7. Normal builds
+reference the canonical managed bundle at `.tools/bin/UAssetAPI/`, published
+from reviewed fork commit
+`6b5ead37f213adc79d814689040a519be4e04a74` by
+`tools/Publish-UAssetApiBinary.ps1`.
+
+Override the project path only when deliberately developing and testing a new
+UAssetAPI source checkpoint:
 
 ```powershell
 dotnet build .\tools\VoyageAssetPatcher\VoyageAssetPatcher.csproj `
   -p:UAssetApiProject=D:\src\UAssetAPI\UAssetAPI\UAssetAPI.csproj
 ```
 
+The command accepts an optional final `UE5_7` or `UE5_8` engine selector.
+Omission preserves the old `UE5_7` behavior for historical probes. Current
+Voyage packages must pass `UE5_8`; the same selected value is used for the
+initial read and every verification reopen.
+
 Voyage's UE 5.8 packages require all three fork fixes: filtered
 `FObjectImport.PackageName` layout, filtered cooked `FField` layout, and
-propagating the selected engine version to dependency schemas. The preparation
-script verifies and records those exact sources without altering them. A
-prepared source tree is still not certified for arbitrary UE 5.8 assets: an
-unchanged roundtrip, binary comparison, `retoc` conversion, and real-game
-canary remain mandatory.
+propagating the selected engine version to dependency schemas. The canonical
+binary is still not certified for arbitrary UE 5.8 assets: an unchanged
+roundtrip, binary comparison, `retoc` conversion, and real-game canary remain
+mandatory.
 
 The `break-bottom-action-filter` operation locates the exact
 `BP_DynamicPlayerInputHorizontalWidget_Bottom` export, asserts that its

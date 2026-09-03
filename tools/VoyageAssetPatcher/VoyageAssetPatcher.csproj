@@ -4,10 +4,32 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <UAssetApiProject Condition="'$(UAssetApiProject)' == ''">$(MSBuildThisFileDirectory)..\..\.tools\UAssetAPI\UAssetAPI\UAssetAPI.csproj</UAssetApiProject>
+    <UAssetApiBundle Condition="'$(UAssetApiBundle)' == ''">$(MSBuildThisFileDirectory)..\..\.tools\bin\UAssetAPI</UAssetApiBundle>
+    <UAssetApiBinary Condition="'$(UAssetApiBinary)' == ''">$(UAssetApiBundle)\UAssetAPI.dll</UAssetApiBinary>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(UAssetApiProject)' != ''">
     <ProjectReference Include="$(UAssetApiProject)" />
   </ItemGroup>
+
+  <ItemGroup Condition="'$(UAssetApiProject)' == ''">
+    <Reference Include="UAssetAPI">
+      <HintPath>$(UAssetApiBinary)</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(UAssetApiBundle)\Newtonsoft.Json.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="ZstdSharp">
+      <HintPath>$(UAssetApiBundle)\ZstdSharp.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="RequireCanonicalUAssetApi" BeforeTargets="ResolveReferences" Condition="'$(UAssetApiProject)' == ''">
+    <Error Condition="!Exists('$(UAssetApiBinary)')" Text="Canonical UAssetAPI bundle is missing. Run tools\Publish-UAssetApiBinary.ps1." />
+    <Error Condition="!Exists('$(UAssetApiBundle)\Newtonsoft.Json.dll')" Text="Canonical UAssetAPI bundle is incomplete: Newtonsoft.Json.dll is missing." />
+    <Error Condition="!Exists('$(UAssetApiBundle)\ZstdSharp.dll')" Text="Canonical UAssetAPI bundle is incomplete: ZstdSharp.dll is missing." />
+  </Target>
 </Project>

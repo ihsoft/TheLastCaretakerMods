@@ -28,7 +28,15 @@ The accepted UE 5.8 checkpoint is:
   `ec6595e46448a817ac21ea9bde01caa48f80a420`;
 - canonical compact GUI executable at `.tools/bin/UAssetGUI.exe`, published by
   `tools/Publish-UAssetGuiBinary.ps1`, size `12,704,947` bytes and SHA-256
-  `EABEDAF875A743E9B02E3381A07031559088EA9F352023A4D549A27FAF830C01`.
+  `EABEDAF875A743E9B02E3381A07031559088EA9F352023A4D549A27FAF830C01`;
+- canonical retoc at `.tools/bin/retoc.exe`, size `6,643,200` bytes and SHA-256
+  `CF6E0A47F343A169413BE46EB750F3441F174D334AC0CAA14962F3F47BA93C1E`;
+- canonical UAssetAPI at `.tools/bin/UAssetAPI/UAssetAPI.dll`, size `4,209,664`
+  bytes and SHA-256
+  `637500ACEE5565B1C2F4B026B87F3C37E71CDCF92ABCA2D21DDF85615F0798FE`;
+- canonical managed CUE4Parse at `.tools/bin/CUE4Parse/CUE4Parse.dll`, size
+  `4,025,344` bytes and SHA-256
+  `F304981BAD4C53D209DFDABA9EB65A01D825572E543A04914BEBFD3538DCF4FD`.
 
 For Steam build `25056839`, game UE `5.8.1`, executable SHA-256
 `CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`,
@@ -53,8 +61,10 @@ Use the wrappers listed in `tools/README.md`:
 - inspect packages and reflection with `Inspect-VoyageAsset.ps1`;
 - publish and stress the exact GUI with `Publish-UAssetGuiBinary.ps1` and
   `.tools/bin/UAssetGUI.exe stress-open`;
-- build pinned retoc, jmap, or UAssetAPI dependencies only through their
-  dedicated `Build-*` or `Prepare-*` wrappers;
+- publish retoc, UAssetAPI, and CUE4Parse through their dedicated `Publish-*`
+  wrappers, then consume only `.tools/bin/` on the normal path;
+- build or prepare fork source only while deliberately changing a dependency
+  checkpoint or diagnosing an unexpected publisher/tool result;
 - install and remove unchanged runtime canaries only through the hash- and
   fingerprint-gated probe scripts.
 
@@ -101,6 +111,12 @@ arbitrary structural edits to every asset.
 - The compatible retoc path may internally select its UE 5.7 profile for the
   matching IoStore format. Use the wrapper and manifest rather than choosing a
   profile from the game's marketing version.
+- The canonical CUE4Parse bundle is managed-only. Its publisher uses a
+  temporary host to replace upstream `Microsoft.Bcl.Memory 9.0.0` with
+  `10.0.11` without modifying the upstream checkout. NuGet can still print the
+  dependency project's upstream audit warning during compilation; the
+  published manifest, DLL metadata, and `VoyageAssetInspector` output were
+  verified to resolve `10.0.11`.
 - A `.NET` dialog with exit code `0xE0434352` means an unhandled managed
   exception; inspect the application error and logs before blaming the CLR.
 - Two valid retoc builds can differ in physical chunk order. Compare sorted

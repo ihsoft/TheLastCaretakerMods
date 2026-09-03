@@ -10,14 +10,16 @@ try
 {
 if (args.Length < 3)
 {
-    Console.Error.WriteLine("Usage: VoyageAssetInspector <PaksDir> <asset-name-fragment> <output-dir> [mappings.usmap] [UE5_7|UE5_8] [extra-paks-dir]");
+    Console.Error.WriteLine("Usage: VoyageAssetInspector <PaksDir> <asset-name-fragment> <output-dir> [-|mappings.usmap] [UE5_7|UE5_8] [extra-paks-dir]");
     return 2;
 }
 
 var paksDirectory = Path.GetFullPath(args[0]);
 var fragment = args[1];
 var outputDirectory = Path.GetFullPath(args[2]);
-var mappingsPath = args.Length >= 4 && !string.IsNullOrWhiteSpace(args[3])
+var mappingsPath = args.Length >= 4 &&
+    !string.IsNullOrWhiteSpace(args[3]) &&
+    args[3] != "-"
     ? Path.GetFullPath(args[3])
     : null;
 var gameVersion = args.Length >= 5 ? ParseGameVersion(args[4]) : EGame.GAME_UE5_7;

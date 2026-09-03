@@ -26,7 +26,7 @@ $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'
 $testMappingsScript = Join-Path $PSScriptRoot 'Test-VoyageMappings.ps1'
 $inspectorProject = Join-Path $PSScriptRoot 'VoyageAssetInspector\VoyageAssetInspector.csproj'
 $inspectorSource = Join-Path $PSScriptRoot 'VoyageAssetInspector\Program.cs'
-$cue4ParseProject = Join-Path $PSScriptRoot '..\.tools\CUE4Parse\CUE4Parse\CUE4Parse.csproj'
+$cue4ParseBinary = Join-Path $PSScriptRoot '..\.tools\bin\CUE4Parse\CUE4Parse.dll'
 $sha256Pattern = '^[0-9A-F]{64}$'
 
 function Get-TextSha256 {
@@ -65,7 +65,7 @@ function Invoke-Inspector {
         $PaksDirectory,
         $AssetQuery,
         $OutputDirectory,
-        $(if ($MappingFile) { $MappingFile } else { '' }),
+        $(if ($MappingFile) { $MappingFile } else { '-' }),
         $EngineVersion
     )
     & dotnet @arguments *> $LogPath
@@ -241,6 +241,9 @@ function Get-PackageIndex {
         [string]$ExecutableSha256,
 
         [Parameter(Mandatory = $true)]
+        [string]$Cue4ParseBinarySha256,
+
+        [Parameter(Mandatory = $true)]
         [object]$ContainerView
     )
 
@@ -254,6 +257,7 @@ function Get-PackageIndex {
         if ([string]$manifest.kind -cne 'Voyage asset package index' -or
             [string]$manifest.steamBuildId -cne $SteamBuildId -or
             [string]$manifest.executableSha256 -cne $ExecutableSha256 -or
+            [string]$manifest.cue4ParseBinarySha256 -cne $Cue4ParseBinarySha256 -or
             [string]$manifest.baseContainersSha256 -cne [string]$ContainerView.baseContainersSha256 -or
             [string]$manifest.containerView -cne [string]$ContainerView.name -or
             [string]$manifest.packageIndexSha256 -cne $actualHash) {
@@ -296,6 +300,7 @@ function Get-PackageIndex {
         kind = 'Voyage asset package index'
         steamBuildId = $SteamBuildId
         executableSha256 = $ExecutableSha256
+        cue4ParseBinarySha256 = $Cue4ParseBinarySha256
         engineVersion = $EngineVersion
         baseContainers = @($ContainerView.baseContainers)
         baseContainersSha256 = [string]$ContainerView.baseContainersSha256
@@ -358,9 +363,10 @@ function Resolve-AssetVirtualPath {
     $matches[0]
 }
 
-if (-not (Test-Path -LiteralPath $cue4ParseProject -PathType Leaf)) {
-    throw 'CUE4Parse checkout is missing. Place upstream commit ec6595e46448a817ac21ea9bde01caa48f80a420 at .tools\CUE4Parse.'
+if (-not (Test-Path -LiteralPath $cue4ParseBinary -PathType Leaf)) {
+    throw 'Canonical CUE4Parse bundle is missing. Run tools\Publish-Cue4ParseBinary.ps1.'
 }
+$cue4ParseBinarySha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $cue4ParseBinary).Hash
 if (-not (Test-Path -LiteralPath $inspectorProject -PathType Leaf)) {
     throw "VoyageAssetInspector project is missing: $inspectorProject"
 }
@@ -386,6 +392,7 @@ $packageIndexPath = Get-PackageIndex `
     -ViewRoot $viewRoot `
     -SteamBuildId $steamBuildId `
     -ExecutableSha256 $executableSha256 `
+    -Cue4ParseBinarySha256 $cue4ParseBinarySha256 `
     -ContainerView $containerView
 $virtualPath = Resolve-AssetVirtualPath -PackageIndexPath $packageIndexPath
 
@@ -409,6 +416,7 @@ if ((Test-Path -LiteralPath $jsonPath -PathType Leaf) -and
         [string]$manifest.containerView -cne [string]$containerView.name -or
         [string]$manifest.virtualPath -cne $virtualPath -or
         [string]$manifest.mappingsSha256 -cne [string]$mapping.sha256 -or
+        [string]$manifest.cue4ParseBinarySha256 -cne $cue4ParseBinarySha256 -or
         [string]$manifest.jsonSha256 -cne $actualJsonHash -or
         [long]$manifest.jsonLength -ne (Get-Item -LiteralPath $jsonPath).Length) {
         throw "The cached asset JSON failed its provenance check: $jsonPath"
@@ -476,6 +484,7 @@ $assetManifest = [ordered]@{
     mappingsPath = [string]$mapping.mappingsPath
     mappingsManifestPath = [string]$mapping.manifestPath
     mappingsSha256 = [string]$mapping.sha256
+    cue4ParseBinarySha256 = $cue4ParseBinarySha256
     inspectorSourceSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash
     jsonFile = [IO.Path]::GetFileName($jsonPath)
     jsonLength = $jsonItem.Length

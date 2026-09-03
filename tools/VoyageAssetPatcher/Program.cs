@@ -60,7 +60,7 @@ string[] DieselSocketTemplateNames =
 
 try
 {
-if (args.Length != 4 ||
+if ((args.Length != 4 && args.Length != 5) ||
     args[0] is not (
         BreakBottomFilter or SwapHornToExit or SwapHudIndicatorSubclass or
         RoundtripUnchanged or ExportJson or SetCableUpdaterTickInterval or
@@ -68,7 +68,8 @@ if (args.Length != 4 ||
         SwapDieselSocketComponentClass))
 {
     Console.Error.WriteLine(
-        "Usage: VoyageAssetPatcher <operation> <input.uasset> <mappings.usmap> <output.uasset>");
+        "Usage: VoyageAssetPatcher <operation> <input.uasset> <mappings.usmap> " +
+        "<output.uasset> [UE5_7|UE5_8]");
     Console.Error.WriteLine(
         $"Operations: {BreakBottomFilter}, {SwapHornToExit}, " +
         $"{SwapHudIndicatorSubclass}, {RoundtripUnchanged}, {ExportJson}, " +
@@ -82,6 +83,14 @@ string operation = args[0];
 string inputPath = Path.GetFullPath(args[1]);
 string mappingsPath = Path.GetFullPath(args[2]);
 string outputPath = Path.GetFullPath(args[3]);
+EngineVersion engineVersion = args.Length == 5
+    ? args[4] switch
+    {
+        "UE5_7" => EngineVersion.VER_UE5_7,
+        "UE5_8" => EngineVersion.VER_UE5_8,
+        _ => throw new ArgumentException("Engine version must be UE5_7 or UE5_8.")
+    }
+    : EngineVersion.VER_UE5_7;
 
 if (!File.Exists(inputPath))
 {
@@ -99,7 +108,7 @@ if (StringComparer.OrdinalIgnoreCase.Equals(inputPath, outputPath))
 Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
 var mappings = new Usmap(mappingsPath);
-var asset = new UAsset(inputPath, EngineVersion.VER_UE5_7, mappings);
+var asset = new UAsset(inputPath, engineVersion, mappings);
 
 if (operation == ExportJson)
 {
@@ -115,14 +124,14 @@ if (operation == ExportJson)
 
 if (operation == SwapHornToExit)
 {
-    WriteSurgicalForkliftHornSwap(asset, inputPath, outputPath, mappings);
+    WriteSurgicalForkliftHornSwap(asset, inputPath, outputPath, mappings, engineVersion);
     Console.WriteLine($"Patched: {ForkliftCdoName}.HornInputAction=ExitAction");
     Console.WriteLine($"Output: {outputPath}");
     return 0;
 }
 if (operation == SwapHudIndicatorSubclass)
 {
-    WriteHudIndicatorSubclassSwap(asset, outputPath, mappings);
+    WriteHudIndicatorSubclassSwap(asset, outputPath, mappings, engineVersion);
     Console.WriteLine(
         $"Patched: {VoyageHudCdoName}.{IndicatorSubclassPropertyName}=" +
         $"{MarkerIndicatorPackageName}.{MarkerIndicatorClassName}");
@@ -132,14 +141,14 @@ if (operation == SwapHudIndicatorSubclass)
 if (operation == RoundtripUnchanged)
 {
     asset.Write(outputPath);
-    _ = new UAsset(outputPath, EngineVersion.VER_UE5_7, mappings);
+    _ = new UAsset(outputPath, engineVersion, mappings);
     Console.WriteLine("Reopened unchanged UAssetAPI roundtrip output.");
     Console.WriteLine($"Output: {outputPath}");
     return 0;
 }
 if (operation == SetCableUpdaterTickInterval)
 {
-    WriteCableUpdaterTickIntervalProbe(asset, inputPath, outputPath, mappings);
+    WriteCableUpdaterTickIntervalProbe(asset, inputPath, outputPath, mappings, engineVersion);
     Console.WriteLine(
         $"Patched: {CableUpdaterCdoName}.PrimaryActorTick.TickInterval=" +
         $"{CableUpdaterProbeTickIntervalSeconds:F1}s");
@@ -148,7 +157,7 @@ if (operation == SetCableUpdaterTickInterval)
 }
 if (operation == BreakCableUpdaterSuperIndex)
 {
-    WriteCableUpdaterBadSuperIndexProbe(asset, inputPath, outputPath, mappings);
+    WriteCableUpdaterBadSuperIndexProbe(asset, inputPath, outputPath, mappings, engineVersion);
     Console.WriteLine(
         $"Broken intentionally: {CableUpdaterGeneratedClassName}.SuperIndex=" +
         $"{FPackageIndex.FromExport(CableUpdaterCrashMarkerInvalidSuperExportIndex).Index}");
@@ -157,7 +166,7 @@ if (operation == BreakCableUpdaterSuperIndex)
 }
 if (operation == SwapHudIndicatorExistingControl)
 {
-    WriteHudIndicatorExistingControl(asset, outputPath, mappings);
+    WriteHudIndicatorExistingControl(asset, outputPath, mappings, engineVersion);
     Console.WriteLine(
         $"Control patched: {VoyageHudCdoName}.{IndicatorSubclassPropertyName}=" +
         $"{ControlWidgetPackageName}.{ControlWidgetClassName}");
@@ -166,7 +175,7 @@ if (operation == SwapHudIndicatorExistingControl)
 }
 if (operation == SwapDieselSocketComponentClass)
 {
-    WriteDieselSocketComponentClassSwap(asset, outputPath, mappings);
+    WriteDieselSocketComponentClassSwap(asset, outputPath, mappings, engineVersion);
     Console.WriteLine(
         $"Patched: {StockSocketComponentPackageName}.{StockSocketComponentClassName}=" +
         $"{MarkerSocketComponentPackageName}.{MarkerSocketComponentClassName}");
@@ -183,7 +192,7 @@ switch (operation)
 
 asset.Write(outputPath);
 
-var written = new UAsset(outputPath, EngineVersion.VER_UE5_7, mappings);
+var written = new UAsset(outputPath, engineVersion, mappings);
 switch (operation)
 {
     case BreakBottomFilter:
@@ -266,7 +275,8 @@ void WriteSurgicalForkliftHornSwap(
     UAsset target,
     string sourceUasset,
     string destinationUasset,
-    Usmap targetMappings)
+    Usmap targetMappings,
+    EngineVersion targetEngineVersion)
 {
     NormalExport cdo = target.Exports
         .OfType<NormalExport>()
@@ -345,7 +355,7 @@ void WriteSurgicalForkliftHornSwap(
         Array.Copy(exitBytes, 0, exactOriginalData, replacementOffset, sizeof(int));
         File.WriteAllBytes(destinationUexp, exactOriginalData);
 
-        var written = new UAsset(destinationUasset, EngineVersion.VER_UE5_7, targetMappings);
+        var written = new UAsset(destinationUasset, targetEngineVersion, targetMappings);
         VerifyForkliftHornMatchesExit(written);
         Console.WriteLine(
             $"Surgical .uexp replacement: offset=0x{replacementOffset:X}, " +
@@ -374,7 +384,8 @@ void VerifyForkliftHornMatchesExit(UAsset target)
 void WriteHudIndicatorSubclassSwap(
     UAsset target,
     string destinationUasset,
-    Usmap targetMappings)
+    Usmap targetMappings,
+    EngineVersion targetEngineVersion)
 {
     Export cdoExport = target.Exports
         .Single(export => export.ObjectName.ToString() == VoyageHudCdoName);
@@ -520,7 +531,7 @@ void WriteHudIndicatorSubclassSwap(
 
     target.Write(destinationUasset);
 
-    var written = new UAsset(destinationUasset, EngineVersion.VER_UE5_7, targetMappings);
+    var written = new UAsset(destinationUasset, targetEngineVersion, targetMappings);
     Import writtenMarkerClass = written.Imports
         .Where(import => import.ObjectName.ToString() == MarkerIndicatorClassName)
         .Where(import => import.OuterIndex.IsImport())
@@ -593,7 +604,8 @@ void WriteHudIndicatorSubclassSwap(
 void WriteHudIndicatorExistingControl(
     UAsset target,
     string destinationUasset,
-    Usmap targetMappings)
+    Usmap targetMappings,
+    EngineVersion targetEngineVersion)
 {
     Export cdo = target.Exports
         .Single(export => export.ObjectName.ToString() == VoyageHudCdoName);
@@ -634,7 +646,7 @@ void WriteHudIndicatorExistingControl(
         .ToList();
     target.Write(destinationUasset);
 
-    var written = new UAsset(destinationUasset, EngineVersion.VER_UE5_7, targetMappings);
+    var written = new UAsset(destinationUasset, targetEngineVersion, targetMappings);
     RawExport writtenCdo = written.Exports
         .OfType<RawExport>()
         .Single(export => export.ObjectName.ToString() == VoyageHudCdoName);
@@ -663,7 +675,8 @@ void WriteHudIndicatorExistingControl(
 void WriteDieselSocketComponentClassSwap(
     UAsset target,
     string destinationUasset,
-    Usmap targetMappings)
+    Usmap targetMappings,
+    EngineVersion targetEngineVersion)
 {
     var stockCandidates = target.Imports
         .Select((import, index) => (Import: import, Index: FPackageIndex.FromImport(index)))
@@ -728,7 +741,7 @@ void WriteDieselSocketComponentClassSwap(
 
     target.Write(destinationUasset);
 
-    var written = new UAsset(destinationUasset, EngineVersion.VER_UE5_7, targetMappings);
+    var written = new UAsset(destinationUasset, targetEngineVersion, targetMappings);
     var writtenMarkerClasses = written.Imports
         .Where(import => import.ObjectName.ToString() == MarkerSocketComponentClassName)
         .Where(import => import.OuterIndex.IsImport())
@@ -773,7 +786,8 @@ void WriteCableUpdaterTickIntervalProbe(
     UAsset target,
     string sourceUasset,
     string destinationUasset,
-    Usmap targetMappings)
+    Usmap targetMappings,
+    EngineVersion targetEngineVersion)
 {
     RawExport cdo = target.Exports
         .OfType<RawExport>()
@@ -831,7 +845,7 @@ void WriteCableUpdaterTickIntervalProbe(
             "The written companion file contains changes outside the exact CDO splice.");
     }
 
-    var written = new UAsset(destinationUasset, EngineVersion.VER_UE5_7, targetMappings);
+    var written = new UAsset(destinationUasset, targetEngineVersion, targetMappings);
     RawExport writtenCdo = written.Exports
         .OfType<RawExport>()
         .Single(export => export.ObjectName.ToString() == CableUpdaterCdoName);
@@ -857,7 +871,8 @@ void WriteCableUpdaterBadSuperIndexProbe(
     UAsset target,
     string sourceUasset,
     string destinationUasset,
-    Usmap targetMappings)
+    Usmap targetMappings,
+    EngineVersion targetEngineVersion)
 {
     Export generatedClass = target.Exports.Single(
         export => export.ObjectName.ToString() == CableUpdaterGeneratedClassName);
@@ -919,7 +934,7 @@ void WriteCableUpdaterBadSuperIndexProbe(
             "The bad-superclass marker changed bytes outside the one package index.");
     }
 
-    var written = new UAsset(destinationUasset, EngineVersion.VER_UE5_7, targetMappings);
+    var written = new UAsset(destinationUasset, targetEngineVersion, targetMappings);
     Export writtenClass = written.Exports.Single(
         export => export.ObjectName.ToString() == CableUpdaterGeneratedClassName);
     if (writtenClass.SuperIndex.Index != invalidSuperIndex.Index ||

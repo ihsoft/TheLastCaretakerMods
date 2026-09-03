@@ -29,12 +29,14 @@ in [`../docs/voyage-cooked-asset-toolchain.md`](../docs/voyage-cooked-asset-tool
 | Get one cooked asset or Blueprint as reusable JSON | `Get-VoyageAssetJson.ps1` | Fingerprinted cache entry at the asset's mirrored virtual path |
 | Find, list, or structurally inspect cooked assets | `Inspect-VoyageAsset.ps1` | Paths, JSON exports, Blueprint pseudocode, or mapping reports |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
-| Build the reviewed retoc compatibility binary for UE 5.8 | `Build-RetocUe58Compatibility.ps1` | Patched ignored retoc source/binary plus compatibility manifest |
+| Publish or reuse canonical retoc | `Publish-RetocBinary.ps1` | Stable `.tools/bin/retoc.exe` plus hash/provenance manifest |
 | Generate a fresh `.usmap` | `New-VoyageMappings.ps1` | One-shot running-game readiness wait, jmap dump, manifest, and validation |
 | Build the reviewed standalone mapping dumper | `Build-JmapVoyageMappingsDumper.ps1` | Exact jmap fork commit with the UE 5.8 layout and nullable-metadata fixes |
 | Locate the live `GUObjectArray` when signatures fail | `Find-VoyageUObjectArray.ps1` | Read-only structural scan of the shipping executable's `.data` section |
 | Reject an empty, stale, or misrouted `.usmap` | `Test-VoyageMappings.ps1` | Header, payload, manifest, fingerprint, hash, and required-schema checks |
-| Prepare the reviewed UAssetAPI source | `Prepare-UAssetApiVoyageUe58.ps1` | Exact UAssetAPI fork commit with the reviewed Voyage UE 5.8 compatibility fixes |
+| Publish or reuse canonical UAssetAPI | `Publish-UAssetApiBinary.ps1` | Stable `.tools/bin/UAssetAPI/` managed library bundle |
+| Publish or reuse canonical CUE4Parse | `Publish-Cue4ParseBinary.ps1` | Stable managed `.tools/bin/CUE4Parse/` library bundle |
+| Prepare reviewed UAssetAPI source for development | `Prepare-UAssetApiVoyageUe58.ps1` | Exact source snapshot for deliberate fork/API investigation |
 | Publish the validated compact UAssetGUI executable | `Publish-UAssetGuiBinary.ps1` | Stable ignored `.tools/bin/UAssetGUI.exe` |
 | Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/bin/UAssetGUI.exe stress-open` | Incremental per-asset JSONL plus parse/binary-equality summary |
 | Install/remove one unchanged package canary | `Install-VoyageUnchangedProbe.ps1`, `Remove-VoyageUnchangedProbe.ps1` | Current-fingerprint and exact-hash guarded runtime roundtrip test |
@@ -59,12 +61,17 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   upstream `FabianFG/CUE4Parse` commit
   `ec6595e46448a817ac21ea9bde01caa48f80a420`. It has no Voyage patch and does
   not require a fork.
+- Normal work uses only canonical published artifacts under `.tools/bin/`:
+  `UAssetGUI.exe`, `retoc.exe`, `UAssetAPI/UAssetAPI.dll`, and
+  `CUE4Parse/CUE4Parse.dll`. The fork/source checkouts above are build inputs,
+  not normal invocation paths. Run a publisher only after its accepted source
+  checkpoint changes or when its canonical artifact fails manifest/hash checks;
+  otherwise the publisher returns the existing binary with `Rebuilt = False`.
 - Most scripts default to the original developer's game path on drive `P:`.
   Pass `-GameRoot '<your Steam Voyage directory>'` on another machine.
 - `Extract-VoyagePackage.ps1` requires a compatible `retoc` executable. Its
-  local default is the reviewed fork build at
-  `.tools/retoc/target/release/retoc.exe`; pass `-Retoc '<path to retoc.exe>'`
-  when using another provenance-checked build.
+  default is canonical `.tools/bin/retoc.exe`; pass `-Retoc '<path to
+  retoc.exe>'` only for an explicit provenance-checked comparison.
 - Current UE 5.8 cooked legacy packages require the reviewed retoc
   `FObjectImport.PackageName` compatibility build. See
   [`RetocUe58Compatibility/README.md`](RetocUe58Compatibility/README.md).
@@ -72,9 +79,10 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   at `mappings/Voyage/steam-25056839-ue5.8.1/`. Generate candidates under
   ignored `artifacts/mappings/`; promote only a fully validated mapping as a
   new immutable versioned registry entry.
-- C# tools currently target .NET 10. `Inspect-VoyageAsset.ps1` additionally
-  expects a local CUE4Parse checkout at `.tools/CUE4Parse`; that dependency is
-  intentionally ignored by Git.
+- C# tools currently target .NET 10. `VoyageAssetPatcher` and
+  `VoyageAssetInspector` reference the canonical UAssetAPI and CUE4Parse
+  bundles by default. Their source-project override properties exist only for
+  deliberate tool development.
 - `VoyageAssetInspector` pins `Microsoft.Bcl.Memory` `10.0.11` to override the
   vulnerable `9.0.0` transitive dependency in the current CUE4Parse checkout.
   The dependency project can still emit its own audit warning while building;
@@ -224,8 +232,9 @@ The first request for a game/container view builds `_catalog/packages.txt`.
 The first exact asset request then parses and stores the JSON; later requests
 return `cacheStatus = hit` without rewriting it. The sidecar binds the JSON to
 the executable and base-container fingerprint, exact virtual path, mappings
-hash, mounted container view, content hash, and inspector source hash. The
-wrapper discovers the newest current-fingerprint mapping below
+hash, mounted container view, content hash, inspector source hash, and the
+canonical CUE4Parse binary hash. The wrapper discovers the newest
+current-fingerprint mapping below
 `artifacts/mappings/` and runs `Test-VoyageMappings.ps1` before using it.
 
 Additional installed containers can shadow stock packages, so the default
@@ -252,7 +261,6 @@ a structural report:
 .\tools\Extract-VoyagePackage.ps1 `
   -Filter 'Vehicles/BP_Forklift_Possesable' `
   -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage' `
-  -Retoc 'D:\Tools\retoc.exe' `
   -RetocEngineVersion UE5_7 `
   -OutputRoot '.\artifacts\extracted\forklift-refresh'
 ```
@@ -274,6 +282,39 @@ produce at least one `.uasset`; zero matches are an error. The output includes
 path/hash/profile, and whether additional containers were permitted.
 
 ## Specialized tools
+
+### Canonical retoc, UAssetAPI, and CUE4Parse binaries
+
+Publish the reviewed source checkpoints once:
+
+```powershell
+.\tools\Publish-RetocBinary.ps1
+.\tools\Publish-UAssetApiBinary.ps1
+.\tools\Publish-Cue4ParseBinary.ps1
+```
+
+Each publisher rejects a different commit or tracked source changes, writes a
+hash/provenance manifest beside its ignored canonical output, and returns
+without rebuilding when that output already matches the current checkpoint.
+The canonical paths are:
+
+```text
+.tools/bin/retoc.exe
+.tools/bin/UAssetAPI/UAssetAPI.dll
+.tools/bin/CUE4Parse/CUE4Parse.dll
+```
+
+UAssetAPI and CUE4Parse are managed libraries, so their canonical directories
+also contain the runtime dependencies emitted by `dotnet publish`. Consumers
+must reference the bundle, not copy only the primary DLL. The CUE4Parse bundle
+is intentionally managed-only. Its temporary publish host pins
+`Microsoft.Bcl.Memory` `10.0.11` over the upstream `9.0.0` dependency; NuGet
+may still print the upstream project warning while building, but the canonical
+bundle manifest and DLL metadata must resolve `10.0.11`.
+
+`Build-RetocUe58Compatibility.ps1` remains the lower-level reproducible retoc
+builder used by the publisher. `Prepare-UAssetApiVoyageUe58.ps1` remains a
+source-development tool; neither is a normal runtime path.
 
 ### `New-VoyageMappings.ps1`
 
@@ -480,15 +521,21 @@ dotnet run --project .\tools\VoyageAssetPatcher\VoyageAssetPatcher.csproj `
   break-bottom-action-filter `
   '<input.uasset>' `
   '<Mappings.usmap>' `
-  '<new-output.uasset>'
+  '<new-output.uasset>' `
+  UE5_8
 ```
 
 The input and its companion files must come from the matching game build, and
 the output must be a different path. See
 [`VoyageAssetPatcher/README.md`](VoyageAssetPatcher/README.md) for the required
-UAssetAPI source checkout and the exact assertions of each operation. Voyage
-UE 5.8 requires all three compatibility changes pinned by
-`Prepare-UAssetApiVoyageUe58.ps1`.
+UAssetAPI checkpoint and the exact assertions of each operation. Normal builds
+use canonical `.tools/bin/UAssetAPI/`. Pass
+`-p:UAssetApiProject=<path>` only while deliberately developing and validating
+a replacement UAssetAPI checkpoint.
+
+The optional final engine selector defaults to `UE5_7` only for preserved
+legacy operations. Current Voyage assets must pass `UE5_8`; the patcher uses
+that one explicit value for the initial read and every verification reopen.
 
 ### `Inspect-UnrealBlueprintApi.py`
 
