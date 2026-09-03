@@ -57,6 +57,17 @@ those details here.
 - Treat `tools/README.md` as the tool-routing index. Read it before surveying
   tool implementations, and update it whenever a reusable tool is added,
   renamed, or its interface, prerequisites, outputs, or safety contract change.
+- Treat the documented scripts as black boxes on their supported path. Select
+  the tool by intent in `tools/README.md`, run its documented interface, and
+  evaluate its exit code, manifest, summary, and output before reading source
+  or tracing third-party internals. Inspect implementation only when the tool
+  fails, hangs, rejects valid-looking inputs, produces an unexpected result,
+  or the documented contract is insufficient for the task.
+- Durable cooked-asset toolchain contracts, accepted fork checkpoints, and the
+  validation ladder live in `docs/voyage-cooked-asset-toolchain.md`.
+- Durable findings about the Boat's Diesel socket hover card live in
+  `docs/boat-diesel-socket-architecture.md`; active feature work alone belongs
+  in `docs/boat-total-diesel-backlog.md`.
 - Before reusing any game-derived input, obtain the installed game's Steam
   build ID and executable hash with `tools/Get-VoyageBuildFingerprint.ps1` and
   compare them with the owning mod's provenance registry.

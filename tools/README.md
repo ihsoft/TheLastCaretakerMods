@@ -4,9 +4,22 @@ This directory contains reproducible methods for inspecting **The Last
 Caretaker** (`Voyage`). Game-derived outputs belong under ignored `artifacts/`
 directories; the tools and the conclusions derived from them belong in Git.
 
-Agents should start here instead of reading every implementation file. Read a
-tool's own README or source only when its row below points there or when the
-documented interface is insufficient.
+Agents should start here instead of reading every implementation file.
+
+## Black-box first
+
+The table and documented commands are the public interface of this toolset.
+On the normal path, choose a tool by intent, run it unchanged, and judge the
+result from its exit code, manifest, summary, and produced files. Do not first
+survey the script, re-derive its dependencies, or manually reproduce its
+steps.
+
+Open the implementation or a third-party fork only after a non-zero exit, a
+crash/dialog, a hang, an unexpected output, or a case the documented interface
+does not cover. Before changing code, inspect the tool's own diagnostics and
+verify its fingerprinted inputs, paths, mapping gate, and dependency commit.
+The accepted compatibility checkpoints and validation boundaries are recorded
+in [`../docs/voyage-cooked-asset-toolchain.md`](../docs/voyage-cooked-asset-toolchain.md).
 
 ## Choose a tool
 

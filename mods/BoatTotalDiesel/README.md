@@ -19,9 +19,10 @@ modules in the same grid through `VoyageModuleSubsystem`, and sums only
 `GetResourceAmount(EModuleResourceType::Diesel)`.
 
 This composition avoids adding Tick state to the unversioned inherited Voyage
-HUD child. The detailed evidence, rejected experiments, and pending lifecycle
-tests are recorded in
-[`../../docs/boat-total-diesel-backlog.md`](../../docs/boat-total-diesel-backlog.md).
+HUD child. The remaining feature gates are recorded in
+[`../../docs/boat-total-diesel-backlog.md`](../../docs/boat-total-diesel-backlog.md);
+completed cooked-asset work is documented separately in
+[`../../docs/voyage-cooked-asset-toolchain.md`](../../docs/voyage-cooked-asset-toolchain.md).
 
 ## Validation status
 
@@ -36,11 +37,15 @@ Diesel enum value, and both aggregation functions are unchanged. The available
 editor is UE 5.8.2. Its output for the UE 5.8.1 game passed the static
 container gates and loaded successfully in the game.
 
-On 2026-08-31 the user confirmed that the installed current build works in the
-real game and shows the intended total-Diesel HUD value. Petrol stored in tanks
-on the ship was also confirmed not to enter the displayed sum. Explicit Boat
-leave/re-enter validation remains pending if it is required for a release
-checkpoint.
+On 2026-08-31 the user confirmed that the installed build `24990438` works in
+the real game and shows the intended total-Diesel HUD value. Petrol stored in
+tanks on the ship was also confirmed not to enter the displayed sum.
+
+The repository's current game fingerprint is Steam build `25056839`, still on
+game UE `5.8.1`. Toolchain and changed-save canaries are validated for that
+fingerprint, but the mod's total-Diesel behavior and Boat leave/re-enter
+lifecycle still require an explicit current-build game check before a new
+release claim.
 
 ## Build
 
