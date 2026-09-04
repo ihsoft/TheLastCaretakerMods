@@ -1,5 +1,10 @@
 # Voyage research tools
 
+Current [JSON save and engine-selection checkpoint](../docs/voyage-json-save-checkpoint.md)
+records canonical publishers, manifests, API/GUI version semantics and the
+public Test-UAssetGuiJsonRoundtrip / Invoke-VoyageBoundedTool interfaces.
+Normal Voyage extraction uses UE5_8; UE5_7 is an explicit legacy profile.
+
 This directory contains reproducible methods for inspecting **The Last
 Caretaker** (`Voyage`). Game-derived outputs belong under ignored `artifacts/`
 directories; the tools and the conclusions derived from them belong in Git.
@@ -77,8 +82,8 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   permission failure, then rerun once with that narrow access. It is not a
   reason to change the project, SDK, Blueprint generator, or .NET installation.
 - Patched third-party checkouts live under ignored `.tools/`: `ihsoft/retoc`
-  at `234f4e5`, `ihsoft/jmap` at `4f88d8a`, `ihsoft/UAssetAPI` at `6b5ead3`,
-  and `ihsoft/UAssetGUI` at `e362030`. The GUI checkout contains the same
+  at `49b7721`, `ihsoft/jmap` at `4f88d8a`, `ihsoft/UAssetAPI` at `21c982f`,
+  and `ihsoft/UAssetGUI` at `df18b5f`. The GUI checkout contains the same
   UAssetAPI commit as its submodule. Clone/fetch those exact commits before
   using a builder; the scripts reject a different or dirty source tree.
 - The unmodified CUE4Parse dependency also lives under `.tools/CUE4Parse`, at
@@ -329,7 +334,7 @@ a structural report:
 .\tools\Extract-VoyagePackage.ps1 `
   -Filter 'Vehicles/BP_Forklift_Possesable' `
   -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage' `
-  -RetocEngineVersion UE5_7 `
+  -RetocEngineVersion UE5_8 `
   -OutputRoot '.\artifacts\extracted\forklift-refresh'
 ```
 
@@ -492,7 +497,7 @@ names rather than at the canonical path.
 ### `Prepare-UAssetApiVoyageUe58.ps1`
 
 The reviewed UAssetAPI fork commit
-`6b5ead37f213adc79d814689040a519be4e04a74` contains the scoped filtered import,
+`21c982fa8f04e12d5d216fdf330a2f206e81156f` contains the scoped filtered import,
 filtered `FField`, dependency-schema engine-version/parent-chain fixes, native
 custom-export preservation, empty `InstancedPropertyBag` support, and missing
 native-enum fallback used by the GUI and command-line asset tools. The
@@ -505,7 +510,7 @@ accepted `1,067`-asset Voyage stress result.
 
 ```powershell
 .\tools\Prepare-UAssetApiVoyageUe58.ps1 `
-  -OutputRoot '.\artifacts\tools\uassetapi-6b5ead3'
+  -OutputRoot '.\artifacts\tools\uassetapi-21c982f'
 ```
 
 ### Patched UAssetGUI `stress-open`
@@ -543,7 +548,7 @@ because the embedded retoc reads that complete set.
 
 Outputs are game-derived diagnostics and remain below ignored `artifacts/`.
 The headless command was introduced by UAssetGUI fork commit `b95587b`. The
-reviewed compatibility checkpoint is `e362030`, which pins UAssetAPI `6b5ead3`
+reviewed compatibility checkpoint is `df18b5f`, which pins UAssetAPI `21c982f`
 and records the additional structured diagnostics in the stress report.
 
 The canonical executable path for both interactive use and automated tests is

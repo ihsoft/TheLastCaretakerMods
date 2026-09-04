@@ -20,23 +20,23 @@ tool log/manifest, minimal reproducer, then source.
 
 The accepted UE 5.8 checkpoint is:
 
-- retoc fork `ihsoft/retoc` at `234f4e5`;
+- retoc fork `ihsoft/retoc` at `49b7721`;
 - jmap fork `ihsoft/jmap` at `4f88d8a`;
-- UAssetAPI fork `ihsoft/UAssetAPI` at `6b5ead3`;
-- UAssetGUI fork `ihsoft/UAssetGUI` at `e362030`, using that UAssetAPI commit;
+- UAssetAPI fork `ihsoft/UAssetAPI` at `21c982f`;
+- UAssetGUI fork `ihsoft/UAssetGUI` at `df18b5f`, using that UAssetAPI commit;
 - unmodified CUE4Parse upstream at
   `ec6595e46448a817ac21ea9bde01caa48f80a420`;
 - canonical compact GUI executable at `.tools/bin/UAssetGUI.exe`, published by
-  `tools/Publish-UAssetGuiBinary.ps1`, size `12,704,947` bytes and SHA-256
-  `EABEDAF875A743E9B02E3381A07031559088EA9F352023A4D549A27FAF830C01`;
-- canonical retoc at `.tools/bin/retoc.exe`, size `6,643,200` bytes and SHA-256
-  `CF6E0A47F343A169413BE46EB750F3441F174D334AC0CAA14962F3F47BA93C1E`;
+  `tools/Publish-UAssetGuiBinary.ps1`, size `12,762,803` bytes and SHA-256
+  `42837CD279A78DF57B537020A0169C5D2259A4570D3B62F4B96852F0F5C27F96`;
+- canonical retoc at `.tools/bin/retoc.exe`, size `6,833,664` bytes and SHA-256
+  `6F8F86AE3FD747A3B785E787A33C24F9A11735D03664948D6B619F18861650F5`;
 - canonical jmap dumper at `.tools/bin/jmap_dumper.exe`, size `9,472,000` bytes
   and SHA-256
   `75E693C2ACD22BB63671EF368C8608931CEF59E8F6F441AFFA3F7A72A3D11543`;
-- canonical UAssetAPI at `.tools/bin/UAssetAPI/UAssetAPI.dll`, size `4,209,664`
+- canonical UAssetAPI at `.tools/bin/UAssetAPI/UAssetAPI.dll`, size `4,210,176`
   bytes and SHA-256
-  `637500ACEE5565B1C2F4B026B87F3C37E71CDCF92ABCA2D21DDF85615F0798FE`;
+  `6DF2606BBA89987AEB4BF1EFBD3C64AC565DBC5D6113A0A7A5062C7CD8B249FD`;
 - canonical managed CUE4Parse at `.tools/bin/CUE4Parse/CUE4Parse.dll`, size
   `4,025,344` bytes and SHA-256
   `F304981BAD4C53D209DFDABA9EB65A01D825572E543A04914BEBFD3538DCF4FD`.
@@ -51,6 +51,9 @@ evidence, and invalidation condition.
 Do not infer that a newer fork checkout, similarly named binary, or mapping at
 another path has the same guarantees. Builders and tests should use or verify
 these identities explicitly.
+
+Promotion, runtime-only JSON version handling, validation and exact manifests
+are recorded in [the JSON save checkpoint](voyage-json-save-checkpoint.md).
 
 ## Operations
 
@@ -92,7 +95,7 @@ Passing a lower level never implies a higher one:
    game;
 9. the requested runtime behavior is tested in the real game.
 
-The accepted GUI/API checkpoint passed all `27/27` upstream binary-roundtrip
+The preceding e362030 / 6b5ead3 checkpoint passed all `27/27` upstream binary-roundtrip
 tests. A stress run over `Voyage/Content/Blueprints` attempted `1067` assets:
 `1057` were clean, `10` were reviewed opaque/numeric notices, `0` failed, and
 all were binary-equal. The changed-save canary for
@@ -106,17 +109,17 @@ arbitrary structural edits to every asset.
   validation.
 - `VerifyBinaryEquality()` and fully parsed exports are independent gates:
   `RawExport` can preserve unknown bytes while hiding a parse failure.
-- UAssetGUI `fromjson` does not carry the explicit engine-version contract used
-  by normal GUI Save and previously produced a mixed-layout Voyage package.
-  Use the canonical GUI save path for changed assets until that CLI contract is
-  corrected and regression-tested.
+- UAssetGUI `fromjson` accepts an optional final engine version; supply 5.8
+  for Voyage. JSON itself omits the runtime engine hint. GUI applies its
+  dropdown immediately before binary Save. Original object/custom versions
+  remain unchanged; this is not general cross-engine schema migration.
 - UE 5.8 filtered imports serialize `FObjectImport.PackageName`; older filtered
   fixtures do not. The API fix is deliberately gated on `VER_UE5_8`.
 - The game is UE `5.8.1`, while the available editor is UE `5.8.2`; loose
   `.uasset/.uexp` cooking requires the documented `-SkipZenStore` path.
-- The compatible retoc path may internally select its UE 5.7 profile for the
-  matching IoStore format. Use the wrapper and manifest rather than choosing a
-  profile from the game's marketing version.
+- Retoc's explicit UE5_8 selector enables the expanded Voyage import writer.
+  UE5_7 preserves upstream legacy output even where container/object version
+  values are shared. Use the wrapper and manifest for the tested profile.
 - The canonical CUE4Parse bundle is managed-only. Its publisher uses a
   temporary host to replace upstream `Microsoft.Bcl.Memory 9.0.0` with
   `10.0.11` without modifying the upstream checkout. NuGet can still print the

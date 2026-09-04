@@ -4,16 +4,22 @@ param(
 
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
-    [string]$Retoc = (Join-Path $PSScriptRoot '..\.tools\bin\retoc.exe'),
+    [string]$Retoc,
 
-    [string]$RetocEngineVersion = 'UE5_7',
+    [string]$RetocEngineVersion = 'UE5_8',
 
-    [string]$OutputRoot = "$PSScriptRoot\..\artifacts\extracted",
+    [string]$OutputRoot,
 
     [switch]$AllowAdditionalContainers
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($Retoc)) {
+    $Retoc = Join-Path $PSScriptRoot '..\.tools\bin\retoc.exe'
+}
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Join-Path $PSScriptRoot '..\artifacts\extracted'
+}
 
 $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path

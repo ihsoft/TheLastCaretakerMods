@@ -1,13 +1,15 @@
 param(
-    [string]$SourceRoot = (Join-Path $PSScriptRoot '..\.tools\UAssetGUI'),
+    [string]$SourceRoot,
 
-    [string]$OutputPath = (Join-Path $PSScriptRoot '..\.tools\bin\UAssetGUI.exe')
+    [string]$OutputPath
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScriptRoot '..\.tools\UAssetGUI' }
+if ([string]::IsNullOrWhiteSpace($OutputPath)) { $OutputPath = Join-Path $PSScriptRoot '..\.tools\bin\UAssetGUI.exe' }
 
-$expectedGuiCommit = 'e362030349ae7ed02a65d197114d518bc67a9081'
-$expectedApiCommit = '6b5ead37f213adc79d814689040a519be4e04a74'
+$expectedGuiCommit = 'df18b5fd0d263d78fdb0cd5f49de1ee5cf6a9520'
+$expectedApiCommit = '21c982fa8f04e12d5d216fdf330a2f206e81156f'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $apiSource = (Resolve-Path -LiteralPath (Join-Path $source 'UAssetAPI')).Path
 $project = (Resolve-Path -LiteralPath (
@@ -67,6 +69,18 @@ try {
         throw 'Stable UAssetGUI binary failed post-install hash verification.'
     }
 
+    $manifestPath = [IO.Path]::ChangeExtension($destination, '.manifest.json')
+    $manifest = [ordered]@{
+        kind = 'Voyage canonical UAssetGUI binary'
+        guiCommit = $actualGuiCommit
+        apiCommit = $actualApiCommit
+        retocResourceSha256 = (Get-FileHash -LiteralPath (Join-Path $source 'UAssetGUI\retoc.exe.gz') -Algorithm SHA256).Hash
+        executableSha256 = $installedHash
+        executableLength = (Get-Item -LiteralPath $destination).Length
+        publishedAtUtc = [DateTime]::UtcNow.ToString('o')
+    }
+    [IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json))
+
     [pscustomobject]@{
         Path = $destination
         Length = (Get-Item -LiteralPath $destination).Length
@@ -75,6 +89,7 @@ try {
         UAssetApiCommit = $actualApiCommit
         SelfContained = $false
         RuntimeIdentifier = 'win-x64'
+        ManifestPath = $manifestPath
     }
 }
 finally {

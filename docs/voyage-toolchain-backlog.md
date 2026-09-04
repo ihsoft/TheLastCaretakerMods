@@ -29,10 +29,10 @@ owning mod backlog.
 
 | Tool | Canonical path | Source checkpoint | State |
 | --- | --- | --- | --- |
-| UAssetGUI | `.tools/bin/UAssetGUI.exe` | UAssetGUI `e362030`, UAssetAPI `6b5ead3` | accepted |
-| retoc | `.tools/bin/retoc.exe` | retoc `234f4e5` | accepted |
+| UAssetGUI | `.tools/bin/UAssetGUI.exe` | UAssetGUI `df18b5f`, UAssetAPI `21c982f` | accepted |
+| retoc | `.tools/bin/retoc.exe` | retoc `49b7721` | accepted |
 | jmap | `.tools/bin/jmap_dumper.exe` | jmap `4f88d8a` | accepted |
-| UAssetAPI | `.tools/bin/UAssetAPI/UAssetAPI.dll` | UAssetAPI `6b5ead3` | accepted |
+| UAssetAPI | `.tools/bin/UAssetAPI/UAssetAPI.dll` | UAssetAPI `21c982f` | accepted |
 | CUE4Parse | `.tools/bin/CUE4Parse/CUE4Parse.dll` | CUE4Parse `ec6595e` | accepted, managed-only |
 
 Exact binary hashes and bundle contents are recorded after successful local
@@ -154,3 +154,11 @@ Windows PowerShell and Inspector-launch follow-up:
   executable instead of being built through `dotnet run`.
 - Add a single read-only health check for every canonical binary and publish
   manifest if repeated manual verification becomes error-prone.
+
+## JSON save promotion completed: 2026-09-04 UTC
+
+User-confirmed GUI behavior and canonical API/GUI/retoc publication are complete.
+See [the accepted checkpoint](voyage-json-save-checkpoint.md) for commits,
+hashes, current serialization contract and post-publication evidence.
+Earlier pending promotion statements describe the historical candidate stage.
+The candidate-build wrapper gap and broader real-game validation remain separate.

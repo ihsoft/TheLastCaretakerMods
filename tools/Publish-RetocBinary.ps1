@@ -1,13 +1,15 @@
 param(
-    [string]$SourceRoot = (Join-Path $PSScriptRoot '..\.tools\retoc'),
+    [string]$SourceRoot,
 
-    [string]$OutputPath = (Join-Path $PSScriptRoot '..\.tools\bin\retoc.exe')
+    [string]$OutputPath
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScriptRoot '..\.tools\retoc' }
+if ([string]::IsNullOrWhiteSpace($OutputPath)) { $OutputPath = Join-Path $PSScriptRoot '..\.tools\bin\retoc.exe' }
 Set-StrictMode -Version Latest
 
-$expectedSourceCommit = '234f4e5dcc7b9c2d7a0c8d3a79586a4168266723'
+$expectedSourceCommit = '49b772135ddb967dc56795d311bd88fe81929f63'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $sourceGitPath = $source.Replace('\', '/')
 $destination = [IO.Path]::GetFullPath($OutputPath)

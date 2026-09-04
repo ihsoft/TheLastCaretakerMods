@@ -1,19 +1,20 @@
 param(
-    [string]$SourceRoot = (Join-Path $PSScriptRoot '..\.tools\UAssetAPI'),
+    [string]$SourceRoot,
 
     [Parameter(Mandatory = $true)]
     [string]$OutputRoot
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScriptRoot '..\.tools\UAssetAPI' }
 
-$expectedSourceCommit = '6b5ead37f213adc79d814689040a519be4e04a74'
-$expectedSourceDescribe = 'v1.1.0-85-g6b5ead3'
+$expectedSourceCommit = '21c982fa8f04e12d5d216fdf330a2f206e81156f'
+$expectedSourceDescribe = 'v1.1.0-86-g21c982f'
 $upstreamBaseCommit = '3228c1e86261aa08131f7ec0ff1a395f5d0b2a84'
 $criticalSources = [ordered]@{
     'UAssetAPI\FieldTypes\FField.cs' = '2805C719525B62613C3A11166CAE56A62D5925FC9EE4AB4C0B8F41DA37F8E074'
     'UAssetAPI\Import.cs' = 'B28BD311ED3BA1E81CE1ED7B8EACB11EC5810D1744FA114705A0F1E7359CBCCC'
-    'UAssetAPI\UAsset.cs' = '642B2F3E46A23DE5241DF466D4EC9EC907539FA861CD114E28F129AFEE97EF01'
+    'UAssetAPI\UAsset.cs' = 'FF2040A55A95146D51F563BC8C9D6040A0963243C2626B554F26CA9A4103E22D'
     'UAssetAPI\MainSerializer.cs' = '6CF3BE1FC6AA80513CB4323D01FDB6873FB0CCF20C69F23991407CDBDC0AB4BE'
     'UAssetAPI\Unversioned\Usmap.cs' = '3CFCCC2A1CFAA2AB93B27316E79AA0191D2401DDAEEAB5545E6EA2BF4F8DDC27'
     'UAssetAPI\PropertyTypes\Objects\EnumPropertyData.cs' = 'DF7E1FBA2E0B26271CBEC4B9C0A3C9E3D6DAE8E31DDDD51173795F8214E23A36'

@@ -1,13 +1,15 @@
 param(
-    [string]$SourceRoot = (Join-Path $PSScriptRoot '..\.tools\UAssetAPI'),
+    [string]$SourceRoot,
 
-    [string]$OutputRoot = (Join-Path $PSScriptRoot '..\.tools\bin\UAssetAPI')
+    [string]$OutputRoot
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScriptRoot '..\.tools\UAssetAPI' }
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) { $OutputRoot = Join-Path $PSScriptRoot '..\.tools\bin\UAssetAPI' }
 Set-StrictMode -Version Latest
 
-$expectedSourceCommit = '6b5ead37f213adc79d814689040a519be4e04a74'
+$expectedSourceCommit = '21c982fa8f04e12d5d216fdf330a2f206e81156f'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $sourceGitPath = $source.Replace('\', '/')
 $project = (Resolve-Path -LiteralPath (Join-Path $source 'UAssetAPI\UAssetAPI.csproj')).Path

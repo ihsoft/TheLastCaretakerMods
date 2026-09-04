@@ -1,5 +1,5 @@
 param(
-    [string]$SourceRoot = (Join-Path $PSScriptRoot '..\.tools\retoc'),
+    [string]$SourceRoot,
 
     [string]$CargoHome = 'R:\Codex\ToolCache\rust-retoc-master\cargo',
 
@@ -10,12 +10,13 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScriptRoot '..\.tools\retoc' }
 
-$expectedSourceCommit = '234f4e5dcc7b9c2d7a0c8d3a79586a4168266723'
-$expectedSourceDescribe = 'v0.1.5-3-g234f4e5'
+$expectedSourceCommit = '49b772135ddb967dc56795d311bd88fe81929f63'
+$expectedSourceDescribe = 'v0.1.5-rc2-1-g49b7721'
 $upstreamBaseCommit = '885a8dae740cb1ce1e41ff2e74f67f9f0c118237'
 $upstreamLegacyAssetSha256 = '25E9859096C656CE36D35DF87599302EF0CE0847881FD5D64EDEBBE096D9BAAE'
-$expectedLegacyAssetSha256 = '4573876D2EA3EBFA43906B519A206018A1C67879E532E56480441F918C544761'
+$expectedLegacyAssetSha256 = 'AC4D4C7EE4C55914BD428D4C76232334570833F5E81BBF2F9972FBDF848D71EC'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $cargo = (Resolve-Path -LiteralPath (Join-Path $CargoHome 'bin\cargo.exe')).Path
 $rustup = (Resolve-Path -LiteralPath $RustupHome).Path
