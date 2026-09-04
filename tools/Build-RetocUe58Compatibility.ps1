@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScriptRoot '..\.tools\retoc' }
 
 $expectedSourceCommit = '49b772135ddb967dc56795d311bd88fe81929f63'
-$expectedSourceDescribe = 'v0.1.5-rc2-1-g49b7721'
+$expectedSourceDescriptions = @('v0.1.5-rc2-1-g49b7721', 'v0.1.5-rc3')
 $upstreamBaseCommit = '885a8dae740cb1ce1e41ff2e74f67f9f0c118237'
 $upstreamLegacyAssetSha256 = '25E9859096C656CE36D35DF87599302EF0CE0847881FD5D64EDEBBE096D9BAAE'
 $expectedLegacyAssetSha256 = 'AC4D4C7EE4C55914BD428D4C76232334570833F5E81BBF2F9972FBDF848D71EC'
@@ -31,7 +31,7 @@ if ($LASTEXITCODE -ne 0 -or $actualSourceCommit -cne $expectedSourceCommit) {
     throw "The retoc source is not the reviewed fork commit $expectedSourceCommit."
 }
 $actualSourceDescribe = (& git -c "safe.directory=$sourceGitPath" -C $source describe --tags --always).Trim()
-if ($LASTEXITCODE -ne 0 -or $actualSourceDescribe -cne $expectedSourceDescribe) {
+if ($LASTEXITCODE -ne 0 -or $expectedSourceDescriptions -cnotcontains $actualSourceDescribe) {
     throw "Unexpected retoc source description: $actualSourceDescribe"
 }
 $sourceChanges = @(& git -c "safe.directory=$sourceGitPath" -C $source status --porcelain --untracked-files=no)

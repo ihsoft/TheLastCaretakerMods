@@ -672,3 +672,11 @@ When adding, renaming, or materially changing a reusable tool:
 4. document generated outputs and ensure they remain ignored;
 5. promote stable findings to `docs/` rather than expanding the tool README
    into an architecture snapshot.
+
+### Fork RC3 source tags
+
+The pinned API preparation and retoc build scripts accept either the recorded
+pre-tag git description or the corresponding RC3 tag for the same required
+commit. Commit and critical-source-hash gates remain unchanged. Published
+GitHub assets and verification are recorded in
+[the RC3 checkpoint](../docs/voyage-json-save-checkpoint.md#github-rc3-publication).

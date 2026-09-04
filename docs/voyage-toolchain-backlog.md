@@ -162,3 +162,11 @@ See [the accepted checkpoint](voyage-json-save-checkpoint.md) for commits,
 hashes, current serialization contract and post-publication evidence.
 Earlier pending promotion statements describe the historical candidate stage.
 The candidate-build wrapper gap and broader real-game validation remain separate.
+
+## Fork binary GitHub release handoff
+
+RC3 releases are published and verified; identities and the compact tool report
+live in [the checkpoint](voyage-json-save-checkpoint.md#github-rc3-publication).
+Reusable gap: fork binary ZIP assembly and GitHub publication currently use
+local staging plus gh; no repository release entry point covers them. Deferred
+until recurring user demand warrants it; do not implement solely for coverage.

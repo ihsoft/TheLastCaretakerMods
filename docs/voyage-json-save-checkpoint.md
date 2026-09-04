@@ -102,3 +102,40 @@ new tests in this promotion. Source inspection was limited to publisher and
 checkpoint development; the preparation hash was corrected for the canonical
 checkout's line endings and its public entry point then passed. The existing
 candidate-build entry-point gap remains; canonical publication is covered.
+
+## GitHub RC3 publication
+
+Published prereleases on 2026-09-04 UTC, after explicit user authorization:
+
+- [UAssetGUI v1.1.1-rc3](https://github.com/ihsoft/UAssetGUI/releases/tag/v1.1.1-rc3)
+- [UAssetAPI v1.1.0-rc3](https://github.com/ihsoft/UAssetAPI/releases/tag/v1.1.0-rc3)
+- [retoc v0.1.5-rc3](https://github.com/ihsoft/retoc/releases/tag/v0.1.5-rc3)
+
+API had no preceding fork release; its base follows the existing v1.1.0 source
+tag. RC3 coordinates the bundle with GUI/retoc. All remote annotated tags
+resolve to the exact source commits above. Canonical binaries were packaged
+without rebuilding; the ZIPs include provenance manifests and license notices.
+
+| ZIP | SHA-256 |
+| --- | --- |
+| UAssetGUI-Voyage-UE58-df18b5f-21c982f-win-x64-rc3.zip | 249ED59CD568B5B3E6A43DE19B6BBB213EABCFE628C09F51F3445F796239BC3D |
+| UAssetAPI-Voyage-UE58-21c982f-net10.0-rc3.zip | 28A3C0FF1B6C951F27CD3F9709CB03C3F473F095B1F4597C214BCBF527A70577 |
+| retoc-v0.1.5-rc3.zip | 313D3A3BC636372536D3B9E7ADC130A4201EFC9E61A9C6CFC3084E0EAE546C9F |
+
+GitHub readback verified public prerelease state, tag commits, asset names,
+sizes and server SHA-256 digests. Local evidence is retained in
+`artifacts/releases/toolchain-rc3/verification.json` with exact release and
+asset IDs. Drafts required listing releases: the tag lookup returned 404 until
+publication. No mutation was repeated after that read-only failure.
+
+New RC3 tags change git describe without changing commits. The two source
+preparation/build scripts now accept the exact pre-tag description or RC3
+tag while retaining the same required commit and source hashes. API source
+preparation and a separate retoc build both passed via powershell.exe -File.
+The smoke build did not replace the canonical or uploaded binary.
+
+Release-iteration tool report: existing canonical binaries were hash-checked,
+packaged with a local PowerShell 5.1 staging script, uploaded using gh, and
+verified against GitHub digests and remote tags. No new game-asset tests were
+run. Public repository automation does not yet cover third-party GitHub ZIP
+assembly/publication; that gap is deferred, not authorization for a new tool.

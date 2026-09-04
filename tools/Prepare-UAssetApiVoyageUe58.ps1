@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScriptRoot '..\.tools\UAssetAPI' }
 
 $expectedSourceCommit = '21c982fa8f04e12d5d216fdf330a2f206e81156f'
-$expectedSourceDescribe = 'v1.1.0-86-g21c982f'
+$expectedSourceDescriptions = @('v1.1.0-86-g21c982f', 'v1.1.0-rc3')
 $upstreamBaseCommit = '3228c1e86261aa08131f7ec0ff1a395f5d0b2a84'
 $criticalSources = [ordered]@{
     'UAssetAPI\FieldTypes\FField.cs' = '2805C719525B62613C3A11166CAE56A62D5925FC9EE4AB4C0B8F41DA37F8E074'
@@ -33,7 +33,7 @@ if ($LASTEXITCODE -ne 0 -or $actualCommit -cne $expectedSourceCommit) {
     throw "The UAssetAPI source is not the reviewed fork commit $expectedSourceCommit."
 }
 $actualDescribe = (& git -c "safe.directory=$sourceGitPath" -C $source describe --tags --always).Trim()
-if ($LASTEXITCODE -ne 0 -or $actualDescribe -cne $expectedSourceDescribe) {
+if ($LASTEXITCODE -ne 0 -or $expectedSourceDescriptions -cnotcontains $actualDescribe) {
     throw "Unexpected UAssetAPI source description: $actualDescribe"
 }
 $sourceChanges = @(& git -c "safe.directory=$sourceGitPath" -C $source status --porcelain --untracked-files=no)
