@@ -1,0 +1,18 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Modding",
+  "Description": "Editor-only generator for the asset-only Voyage Auto Loader candidate.",
+  "Modules": [
+    {
+      "Name": "Voyage",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "VoyageAutoLoaderGenerator",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ]
+}

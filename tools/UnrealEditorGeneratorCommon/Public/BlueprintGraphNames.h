@@ -57,10 +57,13 @@ inline const FName& Condition = Detail::PinPickA;
 
 namespace BlueprintGraphNames::Pins
 {
+inline const FName Actor(TEXT("Actor"));
 inline const FName Completed(TEXT("Completed"));
+inline const FName Condition(TEXT("Condition"));
 inline const FName Content(TEXT("Content"));
 inline const FName DeltaSeconds(TEXT("DeltaSeconds"));
 inline const FName Duration(TEXT("Duration"));
+inline const FName Else(TEXT("Else"));
 inline const FName FirstArrayElement(TEXT("[0]"));
 inline const FName FirstIndex(TEXT("FirstIndex"));
 inline const FName Index(TEXT("Index"));
@@ -70,9 +73,11 @@ inline const FName LastIndex(TEXT("LastIndex"));
 inline const FName LoopBody(TEXT("LoopBody"));
 inline const FName Max(TEXT("Max"));
 inline const FName Min(TEXT("Min"));
+inline const FName Object(TEXT("Object"));
 inline const FName PlayerIndex(TEXT("PlayerIndex"));
 inline const FName ReturnValue(TEXT("ReturnValue"));
 inline const FName SecondArrayElement(TEXT("[1]"));
+inline const FName SpawnTransform(TEXT("SpawnTransform"));
 inline const FName TargetArray(TEXT("TargetArray"));
 inline const FName Value(TEXT("Value"));
 }
