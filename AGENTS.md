@@ -33,8 +33,14 @@ those details here.
   or shared-pattern docs; failed/deceptive approaches go to research pitfalls;
   active hypotheses, package hashes, and pending test results go to the owning
   backlog.
-- After context compaction, reread the active backlog and the relevant durable
-  architecture/pitfall documents before acting.
+- After context compaction, recover from repository state rather than chat, but
+  do not automatically read every large document in full. First read the active
+  backlog's restart/current-state/next-action sections, then use `rg` and bounded
+  ranges for the relevant architecture or pitfall evidence. Read a complete
+  large backlog only when those sections and targeted references are
+  insufficient. Active backlogs must keep a compact restart section containing
+  the current checkpoint, pending gates, next action, and owning references so
+  this staged recovery does not discard compaction-critical context.
 - Before a visibly heavy investigation (large binary analysis, broad asset
   extraction/cook, long brute-force scan, or uncertain reverse engineering),
   tell the user why it is costly and offer a lighter discriminating experiment.

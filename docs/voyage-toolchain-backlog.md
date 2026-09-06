@@ -17,7 +17,9 @@ reliable mutations, and at least 80% coverage in real coding-agent reports.
 
 Resume in this order:
 
-1. Read root `AGENTS.md`, then this file. Do not reconstruct state from chat.
+1. Read root `AGENTS.md`, then this restart section, Current state, and the
+   relevant queue row. Use targeted searches for older evidence; do not
+   reconstruct state from chat or dump every large linked document.
 2. Route the requested intent through `tools/README.md`; do not survey scripts or
    `.tools/` source checkouts first.
 3. Resolve mappings and canonical binaries through their public resolvers. Do
@@ -144,7 +146,11 @@ or a correctness, safety, or provenance risk.
 - Shared-index/ref race: Git mutation semaphore and exact-path commit wrapper in
   `42e49871`; concurrency, occupied-index rejection, and real Harpoon recovery
   commit were validated.
-- Current adoption ledger through HC02: `21529521`.
+- Current adoption ledger through DonkLift R16: `2e269181`.
+- Compaction restart now uses compact status/next-action sections followed by
+  targeted searches. HC03, HC04, and the pipeline owner each reproduced costly
+  broad reads; the pipeline instance alone returned about 14k tokens before a
+  narrow search supplied the needed evidence.
 
 When a triggered item is completed, promote its stable contract to the owning
 document and remove it from this file. Preserve detailed history in Git and the
