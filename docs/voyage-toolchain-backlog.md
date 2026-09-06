@@ -72,6 +72,15 @@ include compact summary `f8451a04`, exact external candidate inspection
   production, manifest, installation and status used public routes; restoring
   the previous v2 plus removing the experimental sidecar was manual because the
   mod-owned producer retained only a local backup, not a common install manifest.
+- Harpoon HC04 has a complete pre-runtime owner report at 9/9 with zero pipeline
+  implementation reads, but its installed candidate and report remain
+  uncommitted pending the user's game result. Record it only after the owning
+  checkpoint becomes authoritative; do not request the report again.
+- The model owner supplied its latest report: source-only blockout/render work
+  was 0/0, N/A, with no game import/cook/package/install operation. The old
+  untracked pipeline-owned `VoyageModel` export/render/test prototypes had no
+  real-task adoption and were removed after source modeling left the coverage
+  scope. Do not recreate them to improve this metric.
 - Coding-agent reports remain mandatory. Measure intended recurring operations,
   public calls, implementation/dependency reads, retries caused by the interface,
   oversized output, validation, and reusable gaps.
