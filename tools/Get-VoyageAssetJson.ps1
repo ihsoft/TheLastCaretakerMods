@@ -18,7 +18,9 @@ param(
     [ValidateSet('Game', 'Mod')]
     [string]$Source = 'Game',
 
-    [string]$ModContainer
+    [string]$ModContainer,
+
+    [switch]$AsJson
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,6 +41,23 @@ $cacheRoot = Join-Path $PSScriptRoot '..\artifacts\asset-cache'
 $inspectionRoot = Join-Path $PSScriptRoot '..\artifacts\asset-inspections'
 $cacheSchemaVersion = 3
 $sha256Pattern = '^[0-9A-F]{64}$'
+
+function Write-PublicResult {
+    param([Parameter(Mandatory = $true)][object]$Result)
+    if ($AsJson) {
+        Write-Output ($Result | ConvertTo-Json -Depth 6 -Compress)
+    }
+    else {
+        Write-Output $Result
+    }
+}
+
+function Write-ProgressMessage {
+    param([Parameter(Mandatory = $true)][string]$Message)
+    if (-not $AsJson) {
+        Write-Host $Message
+    }
+}
 
 function Get-TextSha256 {
     param(
@@ -107,6 +126,40 @@ function Get-OptionalPropertyValue {
     $property.Value
 }
 
+function Get-ExactAssetExportStatus {
+    param(
+        [Parameter(Mandatory = $true)][string]$ErrorPath,
+        [Parameter(Mandatory = $true)][string]$JsonPath,
+        [Parameter(Mandatory = $true)][string]$VirtualPath,
+        [Parameter(Mandatory = $true)][string]$FailureMessage
+    )
+
+    if (-not (Test-Path -LiteralPath $ErrorPath -PathType Leaf) -or
+        (Get-Item -LiteralPath $ErrorPath).Length -eq 0) {
+        return [pscustomobject]@{ pseudocodeStatus = 'not-failed'; pseudocodeError = $null }
+    }
+
+    $errorText = [IO.File]::ReadAllText($ErrorPath)
+    $isFormatterOnly = $errorText.StartsWith($VirtualPath, [StringComparison]::Ordinal) -and
+        $errorText.Contains('DecompileBlueprintToPseudo')
+    if ($isFormatterOnly) {
+        try {
+            Get-Content -LiteralPath $JsonPath -Raw | ConvertFrom-Json | Out-Null
+        }
+        catch {
+            $isFormatterOnly = $false
+        }
+    }
+    if (-not $isFormatterOnly) {
+        throw $FailureMessage
+    }
+
+    [pscustomobject]@{
+        pseudocodeStatus = 'unavailable'
+        pseudocodeError = 'CUE4Parse Blueprint pseudocode formatting failed after valid JSON serialization.'
+    }
+}
+
 function Test-IsGameContainerName {
     param(
         [Parameter(Mandatory = $true)]
@@ -149,9 +202,20 @@ function Invoke-Inspector {
         $ContainerSelection,
         $(if ($SelectedModContainer) { $SelectedModContainer } else { '-' })
     )
-    & $inspector.Path @arguments *> $LogPath
-    if ($LASTEXITCODE -ne 0) {
-        throw "VoyageAssetInspector failed with exit code $LASTEXITCODE. Log: $LogPath"
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        # Windows PowerShell 5.1 wraps native stderr as a non-terminating
+        # NativeCommandError. Capture it in the tool log and decide from the
+        # process exit code plus Inspector result files below.
+        $ErrorActionPreference = 'Continue'
+        & $inspector.Path @arguments *> $LogPath
+        $inspectorExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($inspectorExitCode -ne 0) {
+        throw "VoyageAssetInspector failed with exit code $inspectorExitCode. Log: $LogPath"
     }
 }
 
@@ -317,7 +381,7 @@ function Get-PackageIndex {
     $staging = Join-Path $stagingRoot ('catalog-' + [guid]::NewGuid().ToString('N'))
     [IO.Directory]::CreateDirectory($staging) | Out-Null
     $logPath = Join-Path $staging 'inspector.log'
-    Write-Host "Building the package index for $SteamBuildId..."
+    Write-ProgressMessage "Building the package index for $SteamBuildId..."
     Invoke-Inspector `
         -PaksDirectory $PaksDirectory `
         -AssetQuery 'list:' `
@@ -454,7 +518,7 @@ if ($Source -eq 'Mod') {
     $catalogRoot = Join-Path $runRoot 'catalog'
     [IO.Directory]::CreateDirectory($catalogRoot) | Out-Null
     $catalogLog = Join-Path $catalogRoot 'inspector.log'
-    Write-Host "Indexing assets from mod container $($selectedMod.name)..."
+    Write-ProgressMessage "Indexing assets from mod container $($selectedMod.name)..."
     Invoke-Inspector `
         -PaksDirectory $paksDirectory `
         -AssetQuery 'list:' `
@@ -487,7 +551,7 @@ if ($Source -eq 'Mod') {
         [IO.File]::WriteAllText(
             (Join-Path $runRoot 'inspection-manifest.json'),
             (($inspectionManifest | ConvertTo-Json -Depth 6) + [Environment]::NewLine))
-        $listResult
+        Write-PublicResult -Result $listResult
         return
     }
 
@@ -498,7 +562,7 @@ if ($Source -eq 'Mod') {
     $exportRoot = Join-Path $runRoot 'export'
     [IO.Directory]::CreateDirectory($exportRoot) | Out-Null
     $exportLog = Join-Path $exportRoot 'inspector.log'
-    Write-Host "Exporting $virtualPath from $($selectedMod.name)..."
+    Write-ProgressMessage "Exporting $virtualPath from $($selectedMod.name)..."
     Invoke-Inspector `
         -PaksDirectory $paksDirectory `
         -AssetQuery $virtualPath `
@@ -513,17 +577,16 @@ if ($Source -eq 'Mod') {
     if ($matches.Count -lt 1 -or $unexpectedMatches.Count -ne 0) {
         throw "Exact mod asset export resolved unexpectedly. Inspection: $runRoot"
     }
-    $errorPath = Join-Path $exportRoot 'errors.txt'
-    if ((Test-Path -LiteralPath $errorPath -PathType Leaf) -and
-        (Get-Item -LiteralPath $errorPath).Length -gt 0) {
-        throw "VoyageAssetInspector could not parse the exact mod asset. Inspection: $runRoot"
-    }
     $safeName = $virtualPath.Replace('/', '_').Replace('\', '_').Replace('.', '_') + '.json'
     $jsonPath = Join-Path $exportRoot $safeName
     if (-not (Test-Path -LiteralPath $jsonPath -PathType Leaf) -or
         (Get-Item -LiteralPath $jsonPath).Length -eq 0) {
         throw "VoyageAssetInspector did not produce the expected mod JSON. Inspection: $runRoot"
     }
+    $errorPath = Join-Path $exportRoot 'errors.txt'
+    $exportStatus = Get-ExactAssetExportStatus -ErrorPath $errorPath -JsonPath $jsonPath `
+        -VirtualPath $virtualPath `
+        -FailureMessage "VoyageAssetInspector could not parse the exact mod asset. Inspection: $runRoot"
     $jsonSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $jsonPath).Hash
     $inspectionManifest = [ordered]@{
         kind = 'Voyage one-off mod asset inspection'
@@ -542,16 +605,21 @@ if ($Source -eq 'Mod') {
         jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
         jsonLength = (Get-Item -LiteralPath $jsonPath).Length
         jsonSha256 = $jsonSha256
+        pseudocodeStatus = $exportStatus.pseudocodeStatus
+        pseudocodeError = $exportStatus.pseudocodeError
         generatedAtUtc = [DateTime]::UtcNow.ToString('o')
     }
     [IO.File]::WriteAllText(
         (Join-Path $runRoot 'inspection-manifest.json'),
         (($inspectionManifest | ConvertTo-Json -Depth 6) + [Environment]::NewLine))
-    [pscustomobject]@{
+    $result = [pscustomobject]@{
         virtualPath = $virtualPath
         jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
         jsonSha256 = $jsonSha256
+        pseudocodeStatus = $exportStatus.pseudocodeStatus
+        pseudocodeError = $exportStatus.pseudocodeError
     }
+    Write-PublicResult -Result $result
     return
 }
 
@@ -563,7 +631,8 @@ $packageIndexPath = Get-PackageIndex `
     -Cue4ParseBinarySha256 $cue4ParseBinarySha256 `
     -GameContainerSet $gameContainerSet
 if ($ListPackages) {
-    New-PackageListResult -ResultSource 'Game' -PackageIndexPath $packageIndexPath
+    $listResult = New-PackageListResult -ResultSource 'Game' -PackageIndexPath $packageIndexPath
+    Write-PublicResult -Result $listResult
     return
 }
 
@@ -605,11 +674,24 @@ if ((Test-Path -LiteralPath $jsonPath -PathType Leaf) -and
         [IO.File]::Delete($manifestPath)
     }
     else {
-        [pscustomobject]@{
+        $cachedPseudocodeStatus = [string](Get-OptionalPropertyValue -Object $manifest -Name 'pseudocodeStatus')
+        if ([string]::IsNullOrWhiteSpace($cachedPseudocodeStatus)) {
+            $cachedPseudocodeStatus = 'unknown'
+        }
+        $cachedPseudocodeErrorValue = Get-OptionalPropertyValue -Object $manifest -Name 'pseudocodeError'
+        $result = [pscustomobject]@{
             virtualPath = $virtualPath
             jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
             jsonSha256 = $actualJsonHash
+            pseudocodeStatus = $cachedPseudocodeStatus
+            pseudocodeError = if ($null -eq $cachedPseudocodeErrorValue) {
+                $null
+            }
+            else {
+                [string]$cachedPseudocodeErrorValue
+            }
         }
+        Write-PublicResult -Result $result
         return
     }
 }
@@ -623,7 +705,7 @@ $stagingRoot = Join-Path $cacheVersionRoot '_staging'
 $staging = Join-Path $stagingRoot ('asset-' + [guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($staging) | Out-Null
 $logPath = Join-Path $staging 'inspector.log'
-Write-Host "Exporting $virtualPath..."
+Write-ProgressMessage "Exporting $virtualPath..."
 Invoke-Inspector `
     -PaksDirectory $paksDirectory `
     -AssetQuery $virtualPath `
@@ -635,17 +717,16 @@ $matches = @(Get-Content -LiteralPath (Join-Path $staging 'matches.txt'))
 if ($matches.Count -ne 1 -or $matches[0] -cne $virtualPath) {
     throw "Exact asset export resolved unexpectedly. Staging: $staging"
 }
-$errorPath = Join-Path $staging 'errors.txt'
-if ((Test-Path -LiteralPath $errorPath -PathType Leaf) -and
-    (Get-Item -LiteralPath $errorPath).Length -gt 0) {
-    throw "VoyageAssetInspector could not parse the exact asset. Staging: $staging"
-}
 $safeName = $virtualPath.Replace('/', '_').Replace('\', '_').Replace('.', '_') + '.json'
 $stagedJson = Join-Path $staging $safeName
 if (-not (Test-Path -LiteralPath $stagedJson -PathType Leaf) -or
     (Get-Item -LiteralPath $stagedJson).Length -eq 0) {
     throw "VoyageAssetInspector did not produce the expected JSON. Staging: $staging"
 }
+$errorPath = Join-Path $staging 'errors.txt'
+$exportStatus = Get-ExactAssetExportStatus -ErrorPath $errorPath -JsonPath $stagedJson `
+    -VirtualPath $virtualPath `
+    -FailureMessage "VoyageAssetInspector could not parse the exact asset. Staging: $staging"
 
 [IO.Directory]::CreateDirectory((Split-Path -Parent $jsonPath)) | Out-Null
 $temporaryJson = $jsonPath + '.new-' + [guid]::NewGuid().ToString('N')
@@ -673,6 +754,8 @@ $assetManifest = [ordered]@{
     jsonFile = [IO.Path]::GetFileName($jsonPath)
     jsonLength = $jsonItem.Length
     jsonSha256 = $jsonSha256
+    pseudocodeStatus = $exportStatus.pseudocodeStatus
+    pseudocodeError = $exportStatus.pseudocodeError
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
 [IO.File]::WriteAllText(
@@ -682,8 +765,11 @@ Move-Item -LiteralPath $temporaryJson -Destination $jsonPath
 Move-Item -LiteralPath $temporaryManifest -Destination $manifestPath
 [IO.Directory]::Delete($staging, $true)
 
-[pscustomobject]@{
+$result = [pscustomobject]@{
     virtualPath = $virtualPath
     jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
     jsonSha256 = $jsonSha256
+    pseudocodeStatus = $exportStatus.pseudocodeStatus
+    pseudocodeError = $exportStatus.pseudocodeError
 }
+Write-PublicResult -Result $result

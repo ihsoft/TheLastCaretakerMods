@@ -11,13 +11,23 @@ directories; the tools and the conclusions derived from them belong in Git.
 
 Agents should start here instead of reading every implementation file.
 
-## Black-box first
+## Low-cost normal path
 
 The table and documented commands are the public interface of this toolset.
 On the normal path, choose a tool by intent, run it unchanged, and judge the
 result from its exit code, manifest, summary, and produced files. Do not first
 survey the script, re-derive its dependencies, or manually reproduce its
 steps.
+
+The goal is not to maximize wrappers. It is to minimize agent work and context
+consumption for predictable operations. A good normal path usually means one
+intent-level call, a small structured result, and links/paths to complete local
+evidence. A tool that prints a large asset or log into the conversation, forces
+manual searching of its output, or requires callers to understand its internals
+has not met that goal merely because it is called a black box. Detailed logs,
+full JSON and inventories should be written under ignored artifacts and opened
+only as narrowly as the task or a failure requires. Never trade away validation,
+provenance, fail-closed behavior, or recoverability merely to reduce tokens.
 
 Open the implementation or a third-party fork only after a non-zero exit, a
 crash/dialog, a hang, an unexpected output, or a case the documented interface
@@ -37,6 +47,7 @@ Failed/unexpected: <symptom, diagnostic path, and classification>
 Fallback/internal inspection: <what was opened and which allowed trigger fired>
 Validation: <tests, package checks, or real-game status>
 Coverage: <public-tool operations>/<eligible recurring operations> = <percent>
+Routine cost: <public calls; implementation/dependency files opened; repeated or oversized output>
 Reusable gap: <missing or insufficient interface, or none>
 ```
 
@@ -62,6 +73,13 @@ scope; recompute the scoped sample explicitly, not as an apparent improvement.
 Read the routing table and the selected tool's contract; unrelated recipes and
 implementation files are not mandatory reading on a successful supported path.
 
+Use `Routine cost` to expose avoidable effort, not to reward under-validation.
+On a supported path, the expected implementation/dependency-file count is zero.
+Count intent-level public calls rather than hidden subprocesses. Note repeated
+calls caused by an unclear interface and any large output that had to be read
+or filtered manually. Exact model-token accounting is neither required nor
+reliably reconstructable; these observable proxies guide improvements.
+
 Count each requested operation once, not every command, retry, internal phase,
 or test assertion. A documented tool retry that completes the operation remains
 tool-covered; an operation completed by an ad-hoc replacement is uncovered.
@@ -82,6 +100,7 @@ PowerShell wrappers. Keep real-task samples and their limits in
 | Identify the installed game build | `Get-VoyageBuildFingerprint.ps1` | Steam build ID, executable hash, and container metadata/hashes |
 | Inspect installed containers and running game processes without mutation | `Get-VoyageInstallationStatus.ps1` | JSON inventory, process snapshot, optional installed-manifest hash comparison |
 | Get one cooked asset as JSON or list every package | `Get-VoyageAssetJson.ps1` | Validated JSON or package-list path; game storage and reuse are automatic |
+| Summarize one Blueprint without reading its full JSON | `Get-VoyageAssetSummary.ps1` | Compact focused structure plus a complete summary path |
 | Find, list, or structurally inspect cooked assets | `Inspect-VoyageAsset.ps1` | Paths, JSON exports, Blueprint pseudocode, or mapping reports |
 | Publish or validate the Inspector executable | `Publish-VoyageAssetInspectorBinary.ps1`, `Get-VoyageAssetInspectorBinary.ps1` | Stable single-file EXE; validated source/dependency/binary identity |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
@@ -203,6 +222,7 @@ afterward. Use a provenance-validated input appropriate for the test.
 
 ```powershell
 & .\tools\Get-VoyageInstallationStatus.ps1
+& .\tools\Get-VoyageInstallationStatus.ps1 -Summary
 & .\tools\Get-VoyageInstallationStatus.ps1 -HashModFiles
 & .\tools\Get-VoyageInstallationStatus.ps1 -InstallManifest '<returned installManifestPath>'
 ```
@@ -215,6 +235,13 @@ identity, observed Voyage process IDs/paths, and top-level Paks `.pak`, `.utoc`,
 `additional` does not prove the file is mounted. Subdirectories are explicitly
 returned as `unscannedSubdirectories`: this is not a recursive mod-loader or
 runtime mount inventory. Use asset inventory/extraction tools for package ownership.
+
+Use `-Summary` for the ordinary readiness/readback question. It emits one
+compact JSON object containing build identity, process/file counts, additional
+top-level files, and condensed installation match verdicts without the full
+stock-file, process, or per-manifest-file arrays. Rerun without `-Summary` only
+when those details are actually needed. This tool already returns JSON; unlike
+`Get-VoyageAssetJson.ps1`, it does not need `-AsJson`.
 
 `-HashModFiles` adds SHA-256 for additional top-level files. An optional completed
 common installation manifest (schema 1, returned by `Install-VoyageRelease.ps1`)
@@ -432,6 +459,16 @@ available:
   -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage'
 ```
 
+`-Source Game` is the default and mounts only stock `global` and `pakchunk*`
+containers, regardless of installed mods. This is the normal research mode.
+For exceptional debugging against one installed mod, use `-Source Mod
+-ModContainer <exact.utoc>`; it mounts stock dependencies plus only that exact
+additional container and records its path, size and hash in the inspection
+manifest. The selected `.utoc` must be directly inside the game's Paks folder.
+Use `Get-VoyageAssetJson.ps1 -Source Mod` when ownership of one exact returned
+asset must first be proven; a broad inspection query does not itself establish
+which duplicate provider owns an identity.
+
 For a non-installed container that must be resolved together with stock game
 dependencies, call the underlying inspector with the game Paks directory as
 the primary input and the test package directory as the optional sixth
@@ -490,8 +527,50 @@ The separator after the reference fragment is a literal `|`. This mode loads
 and serializes every matching package in memory but writes only the matching
 package paths and per-package errors. Keep the path filter narrow.
 
+A reference search with zero matches is a successful negative result. The
+wrapper returns `status = no-match`, `matchCount = 0`, and paths to the empty
+result plus its manifest; it does not disguise absence as an Inspector failure.
+Use `-RequireMatch` when absence is itself a failed assertion. Per-package parse
+errors remain failures in both modes, so `no-match` never means "nothing could
+be parsed".
+
 Every query writes to a new fingerprinted directory and refuses to overwrite a
 previous result. Choose a new `-OutputRoot` for a repeated investigation.
+
+### Compact Blueprint structure
+
+Use `Get-VoyageAssetSummary.ps1` before opening or searching a full asset JSON
+when the question is about a Blueprint's class, functions, calls, externally
+owned members, soft-object constants, or SCS components:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  tools\Get-VoyageAssetSummary.ps1 `
+  -Query '/Game/Blueprints/Modules/Utility/Weapons/BP_Module_Turret' `
+  -Focus Overview -AsJson
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  tools\Get-VoyageAssetSummary.ps1 `
+  -Query '/Game/Blueprints/Modules/Utility/Weapons/BP_Module_Turret' `
+  -Focus Calls -FunctionName GetInteractiveProvidedActions -AsJson
+```
+
+`Overview` is the low-cost default. Other focuses are `Functions`, `Calls`,
+`Members`, `SoftObjects`, `Components`, and explicit `All`. With `Functions`,
+`Calls`, `Members`, or `SoftObjects`, optional `-FunctionName` selects one exact
+serialized function and fails clearly when it does not exist. The compact
+result carries the generated-class overview or selected records, total counts,
+`resultCount`, and a hash-verified `summaryPath`; the complete summary contains
+all focus families and their source-function correlations. Normal repeated
+game calls reuse a content-addressed derived summary. Explicit `-Source Mod
+-ModContainer <exact.utoc>` remains a one-off uncached diagnostic, matching the
+underlying asset-retrieval contract.
+
+This is a cooked-bytecode summary, not a native runtime call graph, ownership/
+lifecycle proof, or provider-precedence model. It reports serialized function
+and property flags only when present and uses `unknown` for missing member
+access flags. Do not infer writability or runtime dispatch from absence. Use
+`Get-VoyageAssetJson.ps1` only when the complete serialized export is necessary.
 
 ### Stable JSON retrieval for individual assets
 
@@ -513,6 +592,10 @@ Return the complete stock-game package inventory from the same validated cache:
 
 This returns `packageListPath`, `packageCount`, and `packageListSha256`. Package
 listing does not parse exports and does not require reflection mappings.
+For a compact machine-readable result from a direct PowerShell `-File` call,
+add `-AsJson`; this writes one compact JSON object with the complete paths and
+hashes, avoiding console table truncation or a second `ConvertTo-Json` pipeline.
+The option applies to both package-list and individual-asset results.
 
 `-Source Game` is the default. It mounts only the stock `global` and
 `pakchunk*` containers even when mods are installed, and it is the only mode
@@ -535,6 +618,16 @@ The first game request may build its internal package index and parse the
 asset. Later calls with the same identity reuse the result after validating
 the game, mappings, parser, content hash, and provenance. These mechanics are
 deliberately not part of the calling contract.
+
+JSON retrieval and optional Blueprint pseudocode formatting are separate
+outcomes. If the Inspector has already serialized one exact, structurally valid
+JSON file and only `DecompileBlueprintToPseudo` fails, the wrapper returns the
+JSON with `pseudocodeStatus = unavailable` and a short `pseudocodeError` instead
+of failing the requested operation. Any load, export, JSON-validation, ambiguous
+match, or differently classified Inspector error remains fatal. Call
+`Inspect-VoyageAsset.ps1` when pseudocode itself is the required result.
+Older otherwise-valid cache entries without that optional field return
+`pseudocodeStatus = unknown`, never an ambiguous empty string.
 
 To inspect an asset that is physically supplied by one mod, opt in explicitly
 and identify that exact mod container:
@@ -759,9 +852,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 ```
 
 The test intercepts `dotnet`/`dotnet.exe` and fails if a supported runtime path
-tries to invoke them. It checks publisher reuse, a narrow legacy query, public
-stock inventory, JSON retrieval and reuse. Diagnostic output is retained under
-ignored `artifacts/tests/`; game files and mapping registry are never changed.
+tries to invoke them. It checks publisher reuse, a narrow legacy query, both
+reference-search absence contracts, public stock inventory and compact JSON
+output, formatter-independent asset JSON, compact Blueprint overview/exact-
+function focus, plus normal JSON retrieval and reuse.
+Diagnostic output is retained under ignored `artifacts/tests/`; game files and
+mapping registry are never changed.
 This is tool validation, not new coding-agent adoption evidence.
 
 ### Canonical retoc, jmap, UAssetAPI, and CUE4Parse binaries

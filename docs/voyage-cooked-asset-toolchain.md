@@ -64,6 +64,9 @@ Use the wrappers listed in `tools/README.md`:
   new candidate with `New-VoyageMappings.ps1` only after a confirmed unmatched
   game fingerprint, then validate it with `Test-VoyageMappings.ps1`;
 - cache an asset as versioned JSON with `Get-VoyageAssetJson.ps1`;
+- answer ordinary Blueprint structure questions with
+  `Get-VoyageAssetSummary.ps1`, selecting only the needed focus and opening the
+  full returned summary only when the compact records are insufficient;
 - extract an exact loose package with `Extract-VoyagePackage.ps1`;
 - inspect packages and reflection with `Inspect-VoyageAsset.ps1`;
 - publish and stress the exact GUI with `Publish-UAssetGuiBinary.ps1` and

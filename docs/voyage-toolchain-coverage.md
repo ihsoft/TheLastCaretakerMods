@@ -34,6 +34,18 @@ coverage. The active improvement queue lives in `voyage-toolchain-backlog.md`.
 
 ## Current scoped baseline
 
+Fresh separate sample, 2026-09-05 Pacific / 2026-09-06 UTC:
+Harpoon task `01a0507c-01d0-71e0-a8a0-09348bb3c406`, repository restart through
+current-stock research, completed 13/14 intended operations through public
+tools (92.9%). Four identity/inventory/status operations plus nine successful
+exact-asset inspections; the tenth asset (turret) is blocked by optional
+pseudocode generation. Retries/variants counted once per asset, no ad-hoc
+replacement and no runtime test. This is not an update of the historical
+baseline below. See [full consumer report](harpoon-cannon-tool-report-2026-09-05.md).
+Later tool repair now returns valid turret JSON despite that optional formatter
+failure, but synthetic verification does not rewrite this completed adoption
+sample.
+
 Under the user's narrowed scope, R1 + R2 + R4 give **9/15 = 60%**. R3 contains
 no game-asset/release operations, so its current scoped coverage is N/A (0/0).
 This is a recalculation of the same historical reports, NOT measured improvement
@@ -212,6 +224,70 @@ runtime-only engine-hint contract supersedes intermediate R5 candidate behavior;
 do not implement from the historical candidate description. This is still not
 a broad feature/release sample or a new gameplay validation claim.
 
+## R7: dynamic DonkLift asset and release workflow
+
+Task `01a06fe3-b779-7da2-8650-f2fe9213cfa0`, reported 2026-09-05 UTC,
+covered the real `v2-dynamic-prototype2` investigation, release production and
+installation on Steam build `25056839`. The owning agent supplied the required
+success, failure, fallback, validation and reusable-gap evidence. Source/code
+editing and the unresolved gameplay hypothesis are not mechanical operations.
+
+| Intended recurring operation | Actual interface | Coverage |
+| --- | --- | --- |
+| Installed-game fingerprint | `Get-VoyageBuildFingerprint.ps1` | Covered |
+| Stock package inventory | `Get-VoyageAssetJson.ps1 -ListPackages` | Covered; 23,980 packages |
+| Stock relationship and Blueprint structure inspection | `Inspect-VoyageAsset.ps1` references, mappings-property and pseudocode queries | Covered; repeated queries count once |
+| Build, generation, narrow cook, package and release manifest | mod-owned `Build-DonkLiftRelease.ps1` producer | Covered after the producer itself was adapted; source editing is not another operation |
+| Built-mod structural inspection | `Get-VoyageAssetJson.ps1 -Source Mod -ModContainer` | Covered |
+| Manifest-gated installation | `Install-VoyageRelease.ps1` ValidateOnly then install | Covered; retry is not another operation |
+| Installed state and fingerprint readback | `Get-VoyageInstallationStatus.ps1` | Covered |
+| Determine Blueprint write accessibility of a reflected external property | Mapping report, then mirror compilation and cooked-bytecode inspection | Uncovered; public mapping output does not carry the needed access contract |
+| Determine native type/function/call relation for persistence ownership | `VoyageExecutableInspector`, then manual architectural correlation | Uncovered; reported output was general engine noise and did not answer the relation query |
+
+Reported and pipeline-reviewed coverage: **7/9 = 77.8% for R7**. A zero-match
+`references` query returning exit 1 is a public-interface defect encountered
+inside the covered inspection operation, not a tenth denominator item.
+Likewise, an initial unsupported `-AssetPath` argument and PowerShell wildcard
+mistakes are caller errors, not tool gaps. Static evidence that `DroppedActor`
+controls newly fabricated forklifts did not prove behavior of an existing saved
+actor. The later user test confirmed the distinction: a newly fabricated
+forklift used the dynamic child, while an actor restored from the save retained
+stock behavior through its separately serialized `PersistentWorldActor.ActorClass`.
+That runtime result validates the reported static-analysis boundary; it does not
+retroactively turn either uncovered R7 operation into public-tool coverage.
+The later `Get-VoyageAssetSummary.ps1` implementation replaces the noisy full-
+JSON search for generated class, functions, calls, external members, soft-object
+constants and SCS components with focused compact output. Its regression is tool
+evidence only; R7 remains 7/9 until a new real consumer adopts the interface.
+
+The installed candidate and evidence identity reported by the owner is
+`artifacts/installations/DonkLiftKeyboardControl/20260906-013217-v2-dynamic-prototype2-b6428129/install-manifest.json`.
+This ledger records the report, not a fresh readback of ignored installation
+evidence. The owning DonkLift backlog retains the feature conclusion.
+
+## R8: rejected dynamic-child rollback
+
+Task `01a06fe3-b779-7da2-8650-f2fe9213cfa0`, reported 2026-09-05 UTC.
+After runtime validation rejected a mod-owned persistent child as uninstall-
+unsafe, the owner restored two installation generations in reverse order and
+verified the original `v2` replacement. Gameplay architecture belongs to the
+DonkLift backlog; this ledger counts only the asset/release operations.
+
+| Intended recurring operation | Actual interface | Coverage |
+| --- | --- | --- |
+| Inspect current installation state | `Get-VoyageInstallationStatus.ps1` | Covered; output was unnecessarily large |
+| Restore validated predecessors | two `Restore-VoyageReleaseInstallation.ps1` calls | Covered; one intended operation across two manifests |
+| Inspect restored mod asset structure | `Get-VoyageAssetJson.ps1 -Source Mod -ModContainer` | Covered |
+
+Reported and pipeline-reviewed coverage: **3/3 = 100% for R8**. Routine cost:
+four public calls, zero implementation/dependency files opened, and one
+oversized status result. The mistaken attempt to use asset-specific `-AsJson`
+on the status command was interface inconsistency, not an uncovered operation.
+The pipeline owner subsequently added the semantically correct `-Summary`
+contract to the already-JSON status tool; that synthetic validation does not
+enter R8. The rejected architecture and user runtime result are not tool
+operations and do not enlarge the denominator.
+
 ## Current conclusion
 
 Post-publication audit on 2026-09-04 UTC: all four known coding owners were
@@ -228,8 +304,10 @@ as R5 above. The pipeline owner's earlier synthetic tests remain excluded.
 
 The repair iteration reached 80%, followed by the separately bounded promotion
 iteration R6 at 100%. Canonical binaries are now promoted after interactive GUI
-confirmation. Broad current game-asset/release coverage remains unproven; do not
-pool these different samples to imply repository-wide acceptance. Six bounded
-reports from four requested owners are retained; this is not a complete activity
-census. Continue gathering reports
+confirmation. The next real asset/release workflow, R7, reached 77.8%, followed
+by R8 at 100%. This sequence shows useful adoption and a remaining static-
+analysis gap, but does **not** by itself prove repository-wide 80% coverage. Do
+not pool different samples to imply acceptance. Eight bounded reports from five
+requested owners are retained; this is not a complete activity census.
+Continue gathering reports
 from actual in-scope work, not synthetic chores or repeated idle-task requests.

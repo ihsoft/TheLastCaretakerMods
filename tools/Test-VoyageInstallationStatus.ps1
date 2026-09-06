@@ -23,9 +23,10 @@ function Assert($Condition, [string]$Message) {
 function Save-Manifest {
     [IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 8))
 }
-function Read-Status([switch]$Manifest) {
+function Read-Status([switch]$Manifest, [switch]$Summary) {
     $argsForTool = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $tool, '-GameRoot', $game)
     if ($Manifest) { $argsForTool += @('-InstallManifest', $manifestPath) }
+    if ($Summary) { $argsForTool += '-Summary' }
     $output = & powershell.exe @argsForTool
     if ($LASTEXITCODE -ne 0) { throw 'Status subprocess failed.' }
     $output | ConvertFrom-Json
@@ -44,6 +45,12 @@ Assert ($null -eq $status.installation -and $status.files.Count -eq 2) 'Inventor
 Assert ($status.unscannedSubdirectories.Count -eq 1) 'Nested directory must be disclosed.'
 Assert (@($status.files | Where-Object category -eq 'stock-name').Count -eq 1) 'Stock classification.'
 $checks.Add('inventory-and-explicit-scope')
+$summaryStatus = Read-Status -Summary
+Assert ($summaryStatus.topLevelFileCount -eq 2 -and $summaryStatus.additionalFileCount -eq 1 -and
+    $summaryStatus.additionalFiles.Count -eq 1 -and $summaryStatus.additionalFiles[0].name -ceq 'Probe_P.utoc' -and
+    $null -eq $summaryStatus.installation -and $summaryStatus.PSObject.Properties['files'] -eq $null) `
+    'Compact status summary contract.'
+$checks.Add('compact-summary')
 $manifest = [ordered]@{
     schemaVersion = 1; kind = 'Voyage release installation'; status = 'installed'
     gameRoot = $game; paksDirectory = $paks; mod = 'Probe'; artifactVersion = 'test'
@@ -58,6 +65,11 @@ Save-Manifest
 $status = Read-Status -Manifest
 Assert ($status.installation.filesMatch -and $status.installation.gameFingerprintMatches) 'Matching installation.'
 $checks.Add('manifest-hash-match')
+$summaryStatus = Read-Status -Manifest -Summary
+Assert ($summaryStatus.installation.filesMatch -and $summaryStatus.installation.gameFingerprintMatches -and
+    $summaryStatus.installation.fileCount -eq 1 -and $summaryStatus.installation.mismatchCount -eq 0 -and
+    $summaryStatus.installation.PSObject.Properties['files'] -eq $null) 'Compact manifest summary contract.'
+$checks.Add('compact-manifest-summary')
 $after = @(Get-ChildItem -LiteralPath $game -Recurse -File | ForEach-Object {
     "$($_.FullName):$($_.LastWriteTimeUtc.Ticks):$((Get-FileHash -LiteralPath $_.FullName).Hash)"
 }) -join '|'

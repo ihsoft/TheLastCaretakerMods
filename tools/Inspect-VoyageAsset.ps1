@@ -9,7 +9,14 @@ param(
 
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
-    [string]$OutputRoot
+    [string]$OutputRoot,
+
+    [ValidateSet('Game', 'Mod')]
+    [string]$Source = 'Game',
+
+    [string]$ModContainer,
+
+    [switch]$RequireMatch
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,6 +32,12 @@ $inspector = & (Join-Path $PSScriptRoot 'Get-VoyageAssetInspectorBinary.ps1')
 $cue4ParseBinary = Join-Path $PSScriptRoot '..\.tools\bin\CUE4Parse\CUE4Parse.dll'
 $getMappingsScript = Join-Path $PSScriptRoot 'Get-VoyageMappings.ps1'
 $testMappingsScript = Join-Path $PSScriptRoot 'Test-VoyageMappings.ps1'
+if ($Source -eq 'Game' -and -not [string]::IsNullOrWhiteSpace($ModContainer)) {
+    throw '-ModContainer is valid only with -Source Mod.'
+}
+if ($Source -eq 'Mod' -and [string]::IsNullOrWhiteSpace($ModContainer)) {
+    throw '-Source Mod requires -ModContainer with one exact installed mod .utoc file.'
+}
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
     throw "Voyage executable not found: $exe"
 }
@@ -58,7 +71,27 @@ elseif (-not $Query.StartsWith('list:', [StringComparison]::OrdinalIgnoreCase)) 
     $MappingsPath = [string]$resolvedMappings.mappingsPath
     $mappingsManifestPath = [string]$resolvedMappings.manifestPath
 }
-$buildId = "steam-$steamBuildId-$($exeHash.Substring(0, 12))"
+$selectedMod = $null
+$sourceIdentity = 'game'
+if ($Source -eq 'Mod') {
+    $selectedModPath = (Resolve-Path -LiteralPath $ModContainer).Path
+    $selectedModItem = Get-Item -LiteralPath $selectedModPath
+    if ($selectedModItem.PSIsContainer -or $selectedModItem.Extension -ine '.utoc' -or
+        (Split-Path -Parent $selectedModPath) -ine $paks) {
+        throw "-ModContainer must be one exact .utoc directly inside the installed Paks directory: $paks"
+    }
+    if ($selectedModItem.Name -match '^(?i:global|pakchunk\d+(?:optional)?-Windows)\.utoc$') {
+        throw "-ModContainer must identify an additional mod container, not stock: $selectedModPath"
+    }
+    $selectedMod = [pscustomobject]@{
+        name = $selectedModItem.Name
+        path = $selectedModPath
+        length = $selectedModItem.Length
+        sha256 = (Get-FileHash -LiteralPath $selectedModPath -Algorithm SHA256).Hash
+    }
+    $sourceIdentity = 'mod-' + $selectedModItem.BaseName + '-' + $selectedMod.sha256.Substring(0, 12)
+}
+$buildId = "steam-$steamBuildId-$($exeHash.Substring(0, 12))-$sourceIdentity"
 $querySafe = ($Query -replace '[^A-Za-z0-9._-]', '_').Trim('_')
 if (-not $querySafe) {
     $querySafe = 'query'
@@ -81,10 +114,55 @@ else {
     $arguments += '-'
 }
 $arguments += $EngineVersion
+$arguments += '-'
+$arguments += $Source
+$arguments += $(if ($null -ne $selectedMod) { $selectedMod.path } else { '-' })
 
-& $inspector.Path @arguments
-if ($LASTEXITCODE -ne 0) {
-    throw "VoyageAssetInspector failed with exit code $LASTEXITCODE"
+$isReferenceQuery = $Query.StartsWith('references:', [StringComparison]::OrdinalIgnoreCase)
+if ($isReferenceQuery) {
+    $nativeOutput = @(& $inspector.Path @arguments 2>&1)
+    $inspectorExitCode = $LASTEXITCODE
+    foreach ($line in $nativeOutput) {
+        Write-Host ([string]$line)
+    }
+}
+else {
+    & $inspector.Path @arguments
+    $inspectorExitCode = $LASTEXITCODE
+}
+
+$queryStatus = 'completed'
+$matchCount = $null
+$resultPath = $null
+$errorCount = 0
+if ($isReferenceQuery) {
+    $resultPath = Join-Path $output 'reference-matches.txt'
+    $errorPath = Join-Path $output 'reference-search-errors.txt'
+    if (-not (Test-Path -LiteralPath $resultPath -PathType Leaf)) {
+        throw "VoyageAssetInspector did not produce its reference result: $resultPath"
+    }
+    $matches = @(Get-Content -LiteralPath $resultPath | Where-Object {
+        -not [string]::IsNullOrWhiteSpace($_)
+    })
+    $matchCount = $matches.Count
+    if (Test-Path -LiteralPath $errorPath -PathType Leaf) {
+        $errors = @(Get-Content -LiteralPath $errorPath | Where-Object {
+            -not [string]::IsNullOrWhiteSpace($_)
+        })
+        $errorCount = $errors.Count
+    }
+
+    $isCleanNoMatch = $inspectorExitCode -eq 1 -and $matchCount -eq 0 -and $errorCount -eq 0
+    if ($inspectorExitCode -ne 0 -and -not $isCleanNoMatch) {
+        throw "VoyageAssetInspector reference search failed with exit code $inspectorExitCode; inspect $output"
+    }
+    if ($errorCount -ne 0) {
+        throw "VoyageAssetInspector reference search reported $errorCount error line(s); inspect $errorPath"
+    }
+    $queryStatus = if ($matchCount -eq 0) { 'no-match' } else { 'matched' }
+}
+elseif ($inspectorExitCode -ne 0) {
+    throw "VoyageAssetInspector failed with exit code $inspectorExitCode"
 }
 
 $manifest = [ordered]@{
@@ -101,10 +179,29 @@ $manifest = [ordered]@{
     inspectorBinarySha256 = $inspector.Sha256
     inspectorInputFingerprint = $inspector.InputFingerprint
     engineVersion = $EngineVersion
+    source = $Source
+    modContainer = $selectedMod
+    queryStatus = $queryStatus
+    matchCount = $matchCount
+    errorCount = $errorCount
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
+$manifestPath = Join-Path $output 'inspection-manifest.json'
 [IO.File]::WriteAllText(
-    (Join-Path $output 'inspection-manifest.json'),
+    $manifestPath,
     (($manifest | ConvertTo-Json -Depth 3) + [Environment]::NewLine))
 
 Write-Host "Inspected current-game assets into: $output"
+if ($isReferenceQuery) {
+    $result = [pscustomobject]@{
+        status = $queryStatus
+        matchCount = $matchCount
+        resultPath = $resultPath
+        manifestPath = $manifestPath
+        query = $Query
+    }
+    if ($RequireMatch -and $matchCount -eq 0) {
+        throw "Reference search completed successfully but found no matches: $Query"
+    }
+    Write-Output $result
+}

@@ -102,9 +102,15 @@ preserved, not an instruction to extend it or integrate models.
 
 ## Success metrics
 
+- Routine effort: ordinary predictable work should require one intent-level
+  public call where practical, zero implementation/dependency files opened, and
+  only a compact structured result in active context. Detailed evidence remains
+  available by returned path. Track calls, source files opened, retries caused
+  by interface ambiguity, and oversized output in coding-agent reports; do not
+  substitute guessed token counts for observable evidence.
 - Tool-first use: agents select the documented public entry point from
   `tools/README.md` and do not inspect implementations on a successful supported
-  path.
+  path. This is a means to lower routine effort, not the end metric by itself.
 - Coverage: public tools complete at least 80% of eligible recurring mechanical
   game-asset/release-preparation operations reported by coding agents. The
   numerator is successful operations
@@ -118,6 +124,8 @@ preserved, not an instruction to extend it or integrate models.
 - Improvement loop: every recurring fallback is either turned into a public
   tool/contract or remains here with an ownerable next experiment; completed
   entries are promoted and removed rather than accumulating indefinitely.
+- Safety floor: effort reduction never weakens fingerprint, provenance,
+  validation, mutation, backup, restore, or real-game evidence gates.
 
 ## Stable binary registry
 
@@ -155,6 +163,9 @@ publish manifests.
 - [x] Expose the already useful complete package inventory through
   `Get-VoyageAssetJson.ps1 -ListPackages` for both sources instead of requiring
   callers to discover or read the private `_catalog` layout.
+- [x] Add `Get-VoyageAssetSummary.ps1` so routine Blueprint class/function/call/
+  member/soft-object/SCS questions return a focused compact result and complete
+  summary path without reading or searching the full export JSON.
 - [x] Make reviewed mapping reuse the default black-box path through
   `Get-VoyageMappings.ps1`; consumers resolve it automatically, while jmap
   generation is reserved for a confirmed unmatched game fingerprint.
@@ -345,9 +356,10 @@ Windows PowerShell and Inspector-launch follow-up:
   contracts and retained local test evidence live in `tools/model-artifacts.md`;
   do not resume rendering/video or scene integration from this backlog.
 - Read-only installed-container/process status is now available through
-  `Get-VoyageInstallationStatus.ps1` (contract in `tools/README.md`). All nine
-  Windows PowerShell 5.1 synthetic checks passed; evidence:
-  `artifacts/tests/installation-status-1eece5c4ede14a49ad289f16d9a359a9/summary.json`.
+  `Get-VoyageInstallationStatus.ps1` (contract in `tools/README.md`). Its
+  ordinary `-Summary` result avoids returning full stock/process arrays. All
+  eleven Windows PowerShell 5.1 synthetic checks passed; evidence:
+  `artifacts/tests/installation-status-a334543c54d24385ac4e4d61f5ea12ff/summary.json`.
   A read-only installed-game smoke on build `25056839` also passed. No game
   files changed. R2's ad-hoc status gap now has a public entry point; fresh
   feature-agent adoption remains pending. Top-level inventory explicitly
@@ -428,6 +440,52 @@ See [the accepted checkpoint](voyage-json-save-checkpoint.md) for commits,
 hashes, current serialization contract and post-publication evidence.
 Earlier pending promotion statements describe the historical candidate stage.
 The candidate-build wrapper gap and broader real-game validation remain separate.
+
+## R7 minimum follow-up: asset query contracts
+
+The dynamic DonkLift report is recorded as R7 in
+`voyage-toolchain-coverage.md`: 7/9 = 77.8%. Prioritize these narrowly scoped
+changes only when the affected public tool is next changed or the operation
+recurs; the report is evidence, not blanket authorization for a new analyzer.
+
+Remaining deferred item:
+
+1. Document `VoyageExecutableInspector`'s present boundary before extending it:
+   name/string/reference correlation is not proof of a reflected owner, call
+   relation, or persistence lifecycle. A structured reflected-type/function/call
+   mode remains deferred until a second real task requires it or a bounded
+   experiment proves a reliable data source.
+
+PowerShell wildcard mistakes and unsupported `-AssetPath` were caller misuse.
+Keep examples literal-path based where practical, but do not count or implement
+them as asset-tool coverage gaps. The user has now completed the discriminating
+existing-versus-newly-fabricated forklift test: new creation followed the patched
+`DroppedActor`, while the restored actor retained stock behavior through its
+separately serialized class. This confirms the static-analysis boundary rather
+than closing it. Research of pre-spawn saved-class resolution or a safe migration
+hook remains feature-owned; do not present runtime actor replacement as a
+transparent class redirect or promise a generic save migration tool.
+
+The zero-reference-match contract reported by R7 is complete and therefore no
+longer active backlog work. `Inspect-VoyageAsset.ps1` returns a structured
+`no-match` result by default and offers strict `-RequireMatch`; per-package parse
+errors still fail. HC-R1, HC-R2 and HC-R3 are also complete: exact asset JSON
+survives a proven optional pseudocode formatter failure, direct `-File -AsJson`
+returns full paths without a caller conversion pipeline, and normal structural
+inspection mounts stock containers only unless one exact mod is explicitly
+selected. The R7 compact-summary gap is also implemented: Overview plus focused
+Functions/Calls/Members/SoftObjects/Components views reuse the validated JSON,
+record a complete hash-verified summary, and preserve explicit boundaries around
+writability, native call graphs, lifecycle, dispatch and provider precedence.
+On the real turret fixture, the source export was 996,213 bytes, the complete
+summary 130,019 bytes, and the ordinary Overview result 884 UTF-8 bytes; focused
+function queries return only their matching records.
+The thirteen-check Windows PowerShell 5.1 Inspector regression passed with
+evidence under
+`artifacts/tests/inspector-binary-63b82cefbf4b47318e23887957600827/`.
+The accepted Inspector binary was reused unchanged and no game file changed.
+This tool-development result does not retroactively raise R7's adoption score;
+the next real consumer must demonstrate the lower-cost path.
 
 ## Fork binary GitHub release handoff
 

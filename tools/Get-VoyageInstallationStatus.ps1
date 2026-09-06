@@ -3,7 +3,8 @@
 param(
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
     [string]$InstallManifest,
-    [switch]$HashModFiles
+    [switch]$HashModFiles,
+    [switch]$Summary
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -112,7 +113,7 @@ if ($InstallManifest) {
         files = $results
     }
 }
-[pscustomobject][ordered]@{
+$fullResult = [pscustomobject][ordered]@{
     schemaVersion = 1
     capturedAtUtc = [DateTime]::UtcNow.ToString('o')
     gameRoot = $root
@@ -124,4 +125,44 @@ if ($InstallManifest) {
     unscannedSubdirectories = $subdirectories
     files = $files
     installation = $comparison
-} | ConvertTo-Json -Depth 8
+}
+if ($Summary) {
+    $additionalFiles = @($files | Where-Object category -eq 'additional' | ForEach-Object {
+        [pscustomobject]@{
+            name = $_.name
+            state = $_.state
+            size = $_.size
+            sha256 = $_.sha256
+        }
+    })
+    $installationSummary = $null
+    if ($null -ne $comparison) {
+        $installationSummary = [pscustomobject]@{
+            manifestPath = $comparison.manifestPath
+            mod = $comparison.mod
+            artifactVersion = $comparison.artifactVersion
+            filesMatch = $comparison.filesMatch
+            gameFingerprintMatches = $comparison.gameFingerprintMatches
+            fileCount = @($comparison.files).Count
+            mismatchCount = @($comparison.files | Where-Object state -ne 'match').Count
+        }
+    }
+    [pscustomobject][ordered]@{
+        schemaVersion = 1
+        capturedAtUtc = $fullResult.capturedAtUtc
+        gameRoot = $fullResult.gameRoot
+        steamBuildId = $fullResult.steamBuildId
+        executableSha256 = $fullResult.executableSha256
+        gameProcessObserved = $fullResult.gameProcessObserved
+        processCount = @($fullResult.processes).Count
+        topLevelFileCount = @($fullResult.files).Count
+        additionalFileCount = $additionalFiles.Count
+        additionalFiles = $additionalFiles
+        unscannedSubdirectoryCount = @($fullResult.unscannedSubdirectories).Count
+        installation = $installationSummary
+        detail = 'summary; rerun without -Summary only when full process/file inventory is required'
+    } | ConvertTo-Json -Depth 6 -Compress
+}
+else {
+    $fullResult | ConvertTo-Json -Depth 8
+}

@@ -84,6 +84,14 @@ those details here.
   metric with reasoning, source editing, documentation, or genuinely novel
   diagnosis after a black-box failure. Record uncovered operations in
   `docs/voyage-toolchain-backlog.md` instead of normalizing ad-hoc commands.
+- The pipeline's primary outcome is low agent effort and low context/token use
+  for ordinary predictable work, while preserving correctness, provenance and
+  safety gates. A black-box wrapper is only one means to that outcome: it is not
+  successful if callers still have to study its implementation, reconstruct its
+  dependency chain, sift through large raw output, or repeat predictable steps.
+  Prefer one intent-level entry point with a compact structured result and paths
+  to detailed ignored evidence. Keep verbose logs and full JSON out of normal
+  conversation/context unless a reported failure requires them.
 - A reported gap is evidence, not automatic authorization or a requirement to
   build another tool. Prioritize defects and recurring friction in actual
   user-requested workflows. The 80% target is not a mandate for 100% feature
@@ -103,8 +111,12 @@ those details here.
 - A tracked wrapper's normal path must not restore/build a .NET project through
   `dotnet run`. Consume a manifest-validated published binary from
   `.tools/bin/`; reserve source-project execution for explicit tool development.
-- Normal asset analysis calls `Get-VoyageAssetJson.ps1` with the asset identity
-  and consumes only the returned `jsonPath`. Its default `Game` source mounts
+- Normal Blueprint structure, function, call, member-reference, soft-object,
+  and SCS-component questions call `Get-VoyageAssetSummary.ps1` with the asset
+  identity and the narrowest applicable `-Focus`; use its compact result and
+  returned `summaryPath` instead of searching the full export JSON. Call
+  `Get-VoyageAssetJson.ps1` when the complete serialized export is actually
+  required and consume only its returned `jsonPath`. Their default `Game` source mounts
   and caches only stock game containers; use explicit `Mod` source with one
   exact mod container only for exceptional debugging, and never cache or
   promote that output. Request the complete inventory through `-ListPackages`
