@@ -1,5 +1,24 @@
 # Voyage toolchain active backlog
 
+## Common release-manifest producer (2026-09-06 UTC)
+
+Two independent release preparations, Harpoon HC01 and ScopeFix, assembled the
+common schema-2 manifest manually and inspected an existing producer or the
+installer contract. ScopeFix reported this as the only uncovered release-
+packaging operation and explicitly classified its broad installer source read
+as avoidable. This is demonstrated recurring friction, not quota-driven work.
+
+`New-VoyageReleaseManifest.ps1` now takes one exact release root, container,
+ZIP and source scope; fingerprints the installed game; records scoped Git
+provenance and exact hashes; refuses unapproved dirty source and existing
+output; and publishes the manifest only after the common installer accepts it
+in `-ValidateOnly` mode. ZIP construction and mod-owned build/cook/package
+remain with the owning producer. Windows PowerShell 5.1 regression passed 12
+checks against a synthetic Steam tree without game-file mutation, including
+dirty-source authorization, immutable output, containment, ZIP disagreement,
+and no manifest after failed validation. This validates the tool contract, not
+retroactive adoption by either completed feature workflow.
+
 ## C8 freeze: common tooling checkpoint (2026-09-06 UTC)
 
 User requested freezing C8, retiring temporary probes and all old rollback data,
@@ -173,6 +192,9 @@ publish manifests.
   standalone IoStore releases, with mutation-free validation, exact archive
   provenance, staging, backup, hash readback, transaction evidence, and handled
   rollback.
+- [x] Add a common manifest producer for already-built triplets and ZIPs so a
+  new mod producer does not reproduce schema 2 or inspect installer internals.
+  It records exact source scope and delegates final acceptance to the installer.
 - [x] Add the paired hash-guarded restore/remove path with its own validation,
   staging, transaction evidence, and rollback to the installed state.
 - [x] Publish the tracked Inspector as a single-file EXE; move both wrappers off

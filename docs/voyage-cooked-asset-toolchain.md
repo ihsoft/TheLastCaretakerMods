@@ -80,6 +80,9 @@ Use the wrappers listed in `tools/README.md`:
   reviewed mappings; source/dependency changes invalidate it, not a new query;
 - build or prepare fork source only while deliberately changing a dependency
   checkpoint or diagnosing an unexpected publisher/tool result;
+- create the common schema-2 manifest for an already-built triplet and ZIP with
+  `New-VoyageReleaseManifest.ps1`; give it the exact source scope and let its
+  installer validation gate publish the immutable manifest;
 - validate or install an already-built standalone IoStore release through
   `Install-VoyageRelease.ps1`, preserving its exact archive and installation
   transaction evidence; restore its predecessor through

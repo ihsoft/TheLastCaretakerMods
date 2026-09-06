@@ -117,6 +117,7 @@ PowerShell wrappers. Keep real-task samples and their limits in
 | Publish the validated compact UAssetGUI executable | `Publish-UAssetGuiBinary.ps1` | Stable ignored `.tools/bin/UAssetGUI.exe` |
 | Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/bin/UAssetGUI.exe stress-open` | Incremental per-asset JSONL plus parse/binary-equality summary |
 | Build, cook and package an existing mod release | [Release producers](#release-producers) | Route to the owning mod's documented orchestrator; no generic rebuild recipe |
+| Create the common manifest for an already-built triplet and ZIP | `New-VoyageReleaseManifest.ps1` | Immutable schema-2 manifest published only after installer validation |
 | Validate or install an already-built standalone IoStore release | `Install-VoyageRelease.ps1` | Manifest-gated install plan or recoverable installation evidence |
 | Verify one IoStore container and its expected package set | `Test-VoyageContainer.ps1` | Bounded integrity check, package inventory, exact-set differences and file hashes |
 | Restore/remove a common release installation | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded predecessor restoration and recovery evidence |
@@ -348,6 +349,36 @@ under ignored `artifacts/tests/installation-status-*/`.
 
 ### Release installation
 
+For an already-built triplet and ZIP, create the common immutable schema-2
+manifest through the producer rather than assembling JSON or inspecting the
+installer implementation:
+
+```powershell
+.\tools\New-VoyageReleaseManifest.ps1 `
+  -ReleaseRoot '.\artifacts\releases\Example-v1' `
+  -Mod 'Example' `
+  -Version 'v1' `
+  -Container '.\artifacts\releases\Example-v1\package\Example_P.utoc' `
+  -Archive '.\artifacts\releases\Example-v1\Example-v1.zip' `
+  -SourcePath '.\mods\Example'
+```
+
+The producer fingerprints the installed game, records the exact source scope
+and its Git state, hashes the triplet, optional matching `.autoload`, and ZIP,
+then calls `Install-VoyageRelease.ps1 -ValidateOnly`. It publishes
+`release-manifest.json` only after the installer accepts the archive/payload,
+fingerprint, source commit, and dirty-source contract. Existing manifests are
+immutable. A dirty test candidate needs explicit `-AllowDirtySource`; a normal
+release should be committed first. `-InstalledArchiveName` can override the
+default installed provenance ZIP name, and `-AsJson` returns a compact result.
+
+Run its Windows PowerShell regression harness after changing this producer:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\Test-New-VoyageReleaseManifest.ps1
+```
+
 Use the common install-only wrapper for an already built standalone IoStore
 release. It never builds, cooks, repackages, or edits the source release:
 
@@ -357,9 +388,9 @@ release. It never builds, cooks, repackages, or edits the source release:
   -ValidateOnly
 ```
 
-The accepted input is `release-manifest.json` schema 2 (currently produced by
-the DonkLift release builder). Other producers must adopt that explicit
-manifest contract rather than passing an unrelated build manifest.
+The accepted input is `release-manifest.json` schema 2. New release producers
+should call `New-VoyageReleaseManifest.ps1` after their build and ZIP steps
+rather than duplicating this contract or passing an unrelated build manifest.
 
 `-ValidateOnly` verifies the clean source commit, exact manifest-owned
 `.pak/.ucas/.utoc` triplet and ZIP, matching triplet contents inside the archive,

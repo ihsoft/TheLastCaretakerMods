@@ -288,6 +288,42 @@ contract to the already-JSON status tool; that synthetic validation does not
 enter R8. The rejected architecture and user runtime result are not tool
 operations and do not enlarge the denominator.
 
+## R9: ScopeFix legacy recovery and current release candidate
+
+Task `01a0747e-8680-7ea2-8c45-2821ad89e779`, reported 2026-09-06 UTC.
+The owner recovered two values from an old non-indexed UE5.7 mod, built a
+current-game candidate, validated its package, and installed it for user
+testing. Historical recovery needed deliberate fallbacks; the current-game
+release path exposed a repeated manifest-producer gap.
+
+| Intended recurring operation | Actual interface | Coverage |
+| --- | --- | --- |
+| Game fingerprint | `Get-VoyageBuildFingerprint.ps1` | Covered |
+| Mapping resolution | reviewed mapping path, after initial lookup | Covered |
+| Current stock asset retrieval | `Get-VoyageAssetJson.ps1` | Covered |
+| Exact current-package extraction | `Extract-VoyagePackage.ps1` | Covered |
+| Structured asset inspection | documented canonical GUI/Inspector paths | Covered after diagnostic retries |
+| Current asset modification/build | new mod-owned `Build-ScopeFix.ps1` | Uncovered in this first iteration; the producer was created during the task |
+| Release packaging and schema-2 manifest | ZIP plus manually assembled manifest | Uncovered; no common producer existed |
+| Container and changed-asset validation | bounded canonical tools plus hash comparison | Covered |
+| Manifest-gated installation | `Install-VoyageRelease.ps1` | Covered |
+
+Reported and pipeline-reviewed coverage: **7/9 = 77.8% for R9**. The direct
+retoc/UAssetGUI/Inspector work on the old non-indexed container followed real
+parse/index failures and is retained as novel legacy diagnosis outside this
+recurring-operation denominator; it does not become a supported normal path.
+Routine cost was 26 public/external calls, three implementation/dependency files
+opened, repeated JSON/extraction attempts, and several oversized outputs.
+Reading the private catalog was not a bypass: the path came from the public
+`-ListPackages` result. Reading the status implementation and broad installer
+implementation was unnecessary; only a narrow manifest-contract lookup had a
+valid trigger.
+
+The common manifest producer added after this report addresses one demonstrated
+gap but does not rewrite R9. Legacy recovery without index paths remains
+deferred and distinct from the normal current-game path. The user's game test
+of ScopeFix was still pending when the agent report was collected.
+
 ## Current conclusion
 
 Post-publication audit on 2026-09-04 UTC: all four known coding owners were
@@ -305,9 +341,11 @@ as R5 above. The pipeline owner's earlier synthetic tests remain excluded.
 The repair iteration reached 80%, followed by the separately bounded promotion
 iteration R6 at 100%. Canonical binaries are now promoted after interactive GUI
 confirmation. The next real asset/release workflow, R7, reached 77.8%, followed
-by R8 at 100%. This sequence shows useful adoption and a remaining static-
-analysis gap, but does **not** by itself prove repository-wide 80% coverage. Do
-not pool different samples to imply acceptance. Eight bounded reports from five
-requested owners are retained; this is not a complete activity census.
+by R8 at 100%; the separate ScopeFix legacy/release workflow R9 reached 77.8%
+and exposed the repeated manifest-producer gap. This sequence shows useful
+adoption and remaining gaps, but does **not** by itself prove repository-wide
+80% coverage. Do not pool different samples to imply acceptance. Nine bounded
+reports from six requested owners are retained; this is not a complete activity
+census.
 Continue gathering reports
 from actual in-scope work, not synthetic chores or repeated idle-task requests.
