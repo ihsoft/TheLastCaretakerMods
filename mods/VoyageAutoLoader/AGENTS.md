@@ -14,6 +14,7 @@
   Use existing-actor guards, not a claimed strict activation order. Validate
   repeated travel separately: DML can recreate itself independently. Do not
   claim arbitrary async mod initialization has completed when spawning returns.
-- Preserve the exact game-validated C1 no-DML checkpoint and its test14 predecessor.
+- C8 is the accepted source checkpoint. Historical probes/backups were retired
+  at the user's request; retain conclusions in docs/voyage-autoload-research.md.
   Never launch Voyage without permission or install while it is running.
 - Generated Content, build/cook output and package evidence remain ignored.

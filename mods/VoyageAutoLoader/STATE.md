@@ -2,6 +2,12 @@
 
 Date: 2026-09-05. Status: experimental, locally game-tested C8; not a release.
 
+Freeze/cleanup: user accepted C8 and authorized retirement of older probes,
+candidates and rollback copies. Current C8 distribution/source archives remain;
+historical local artifact links may be gone. AutoLoaderCanary is a retired test
+fixture, not a production requirement. DML's saved list is not edited by cleanup.
+The C8 no-HUD lifecycle test was performed before removal of that fixture.
+
 ## What works
 
 An asset-only loader discovers opt-in mods without knowing their filenames in

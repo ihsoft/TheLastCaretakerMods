@@ -3,6 +3,14 @@
 Start with [the working checkpoint](STATE.md) for current behavior, evidence and
 limits. The experiment chronology below preserves earlier, superseded decisions.
 
+Cleanup notice: the user explicitly retired old probes, C1-C7 packages and all
+rollback copies after accepting C8. Historical artifact links below are not an
+instruction to restore or regenerate those snapshots. Retained conclusions are
+in [autoload research](../../docs/voyage-autoload-research.md). Future builds must
+obtain fingerprint-matched game inputs through the public tools, not the removed
+test14 staging directory. The current C8 install manifest is readback evidence
+only after its predecessor backups are removed.
+
 Status: C8 without HUD autoload passed the user's lifecycle retest (2026-09-05).
 C7 remains the recoverable game-tested predecessor. C7 both-phase and BoatHUD entry-only
 tests proved discovery, phase exclusion and custom-path activation; BoatHUD UI
