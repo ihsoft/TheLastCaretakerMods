@@ -428,6 +428,31 @@ pipeline defects. The user confirmed native Drone entry and exit in game; that
 runtime evidence validates HC03 behavior but is not another mechanical tool
 operation. See [the complete HC03 report](harpoon-cannon-hc03-tool-report.md).
 
+## R16: DonkLift hint-provider probes and restoration
+
+Task `01a06fe3-b779-7da2-8650-f2fe9213cfa0`, reported 2026-09-06 UTC. This
+sample covers the already completed `v2-hint-provider-probe6`, `probe8`, and
+final restoration of the game-validated v2; it requested no new experiment or
+code change. The owner separated six recurring mechanical operations:
+
+| Intended recurring operation | Actual interface | Coverage |
+| --- | --- | --- |
+| Inspect installed candidate assets | `Get-VoyageAssetSummary.ps1` | Covered |
+| Build, cook, package, and verify candidate | mod-owned `Build-DonkLiftRelease.ps1` | Covered |
+| Produce schema-2 release manifest | same documented producer | Covered |
+| Readiness, backup, install, and exact readback | same producer's `-Install` route | Covered |
+| Independent installed status | `Get-VoyageInstallationStatus.ps1 -Summary` | Covered |
+| Restore v2 and remove the experimental sidecar | Manual exact-file PowerShell fallback because the producer left only a local backup, not a common installation manifest | Uncovered |
+
+Reported and pipeline-reviewed coverage: **5/6 = 83.3% for R16**. Probe7's
+compile stop came from feature generator/API drift, not a pipeline failure. The
+manual restore was triggered only after two expected runtime no-ops; it verified
+the exact three restored hashes, removed the exact `.autoload` sidecar, and ran
+with the game closed. No tool implementation or dependency source was read for
+the fallback. The reusable gap joins the existing installed-footprint transition
+queue; it does not justify an immediate common restore tool outside the next
+requested DonkLift experiment.
+
 ## Current conclusion
 
 Post-publication audit on 2026-09-04 UTC: all four known coding owners were
@@ -449,6 +474,8 @@ the 80% target: 92.9%, 88.9%, 100%, 83.3%, 100%, and 100%. This is current
 adoption evidence, not a pooled global score or a promise that every future
 workflow is covered. ScopeFix publication sample R14 fell to 40% and exposed
 three repeated manual release operations, while the later HC03 sample R15
-returned to 100% without a new gap. Continue collecting reports only from actual
+returned to 100% without a new gap. DonkLift sample R16 then reached 83.3%; its
+one manual restoration is retained under the existing transition gap rather
+than spawning immediate tool work. Continue collecting reports only from actual
 in-scope work, and act on demonstrated recurring cost rather than synthetic
 chores or marginal score polishing.

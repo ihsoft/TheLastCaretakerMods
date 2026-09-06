@@ -98,6 +98,13 @@ those details here.
   coverage: keep lower-priority gaps deferred rather than inventing new work
   to fill the queue or improve the score. New workflow families require a
   clear user need; an old one-off report alone is insufficient.
+- Do not interrupt active work, change a tool or rule, or create a standalone
+  commit for every low-impact observation. Keep a single occurrence in the
+  owning agent report or active backlog and review such observations in a batch
+  at the next natural checkpoint. Act sooner only when the current workflow is
+  blocked, correctness/safety/provenance is at risk, or the same friction recurs
+  in multiple independent real-task iterations. Repetition is the normal trigger
+  for small usability improvements; one minor occurrence is not.
 - Pipeline work must have a substantial, measurable expected return. Before
   changing a tool or rule, name the observed recurring cost and the intended
   before/after delta in public calls, retries, implementation files opened,

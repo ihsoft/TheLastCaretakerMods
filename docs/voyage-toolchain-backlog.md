@@ -29,6 +29,9 @@ Resume in this order:
    report supplies new evidence.
 6. Implement a pipeline change only when a queue trigger has fired and the
    expected material return is stated before work begins.
+7. Accumulate low-impact one-off observations and review them together at a
+   natural report/commit checkpoint; do not interrupt agents or produce one
+   rule, tool change, or commit per small remark.
 
 Current accepted routing model:
 
@@ -63,6 +66,10 @@ include compact summary `f8451a04`, exact external candidate inspection
   production were covered, while public-root preparation, GitHub publication,
   and remote readback were manual. It used 17 external calls and one premature
   implementation read. RC3 supplies the earlier occurrence of the same gap.
+- DonkLift hint-provider probes/restoration R16 reached 5/6 = 83.3%. Inspection,
+  production, manifest, installation and status used public routes; restoring
+  the previous v2 plus removing the experimental sidecar was manual because the
+  mod-owned producer retained only a local backup, not a common install manifest.
 - Coding-agent reports remain mandatory. Measure intended recurring operations,
   public calls, implementation/dependency reads, retries caused by the interface,
   oversized output, validation, and reusable gaps.
@@ -92,12 +99,16 @@ Defer the item when the expected return is marginal, the operation is a one-off,
 the trigger has not occurred, or validation/repair cost crosses its break-even
 budget. Tool count and 100% coverage are not goals.
 
+Minor observations stay in their owning report until repeated by an independent
+real-task iteration. Promote them into this queue only on repetition, blockage,
+or a correctness, safety, or provenance risk.
+
 ## Triggered work queue
 
 | Gap | Existing evidence | Start only when | Material expected return |
 | --- | --- | --- | --- |
 | Interrupted installer recovery | Installer fails closed and retains staging when a transaction reports `recovery-failed`; completed installs already restore through the public command | A real interrupted transaction must be recovered, or the same manual recovery recurs | Recover or roll back from retained evidence without hand-editing installed files |
-| Partial/obsolete installed-footprint retirement | C2 retirement and C7 sidecar-only addition required bounded manual backup/hash/process-guarded mutations because the common installer owns complete releases | Another authorized release must add/remove only a sidecar or retire a candidate with no restorable predecessor | One manifest-bound transaction replacing a repeated manual file-set mutation while preserving rollback evidence |
+| Partial/obsolete or legacy installed-footprint transition | C2 retirement and C7 sidecar-only addition required bounded manual mutations because the common installer owns complete releases; DonkLift R16 manually restored a local backup and removed `.autoload` because its producer had no common installation manifest | Another authorized release or DonkLift experiment requires the same non-common add/remove/restore transition | One manifest-bound transaction or owning-producer migration replacing repeated manual file-set mutation while preserving rollback evidence; implement only in that live workflow |
 | Semantic equivalence of independent Unreal rebuilds | DonkLift rebuilt five packages with different hashes despite stable package identities, sizes and key pseudocode | Hash churn blocks acceptance of another otherwise equivalent rebuild | Replace five ambiguous binary comparisons and an unnecessary canary decision with one bounded equivalence report |
 | Winning provider for duplicate virtual paths | Exact Game and exact Mod inspection are isolated; combined views still do not prove which duplicate provider wins | A release decision actually depends on runtime provider order and exact-source isolation is insufficient | One explicit winning-container result instead of removing mods or inferring precedence |
 | Native reflected owner/function/call relation | R7's executable correlation returned names/offsets but could not prove persistence ownership | A second real task needs the same relation and asset summaries cannot answer it | A narrow evidence-bearing relation query instead of broad executable-output correlation; only if a reliable data source is first proven |
