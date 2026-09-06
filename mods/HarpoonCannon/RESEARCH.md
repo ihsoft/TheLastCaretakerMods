@@ -141,6 +141,23 @@ owner/version path; neither a broken shell nor latent continuation is proved
 the sole old cause. Next entry/exit probe must prevent timed destruction of
 an occupied Drone before the user is instructed to press Enter.
 
+## HC03 native entry/exit evidence (current-build runtime)
+
+The unchanged standalone stock-spawn path, with observer destruction removed,
+supports native Drone entry. The user reports successful entry and ordinary
+Drone behavior; the HC03 screenshot shows GetPlayerPawn equal to the spawned
+Drone, sticky control-observed YES, and the native vehicle view/action HUD.
+Exit Vehicle, Change mode, Toggle light and Take Sample are offered. The
+resource gate allowed entry without manual charge/item/activation mutation.
+This validates possession and native view/HUD acquisition in this setup, not
+every action, complete native cleanup, persistence, or a stationary Harpoon
+operator. At the entry screenshot, return to the original pawn is still NO.
+The user subsequently explicitly confirmed successful exit. Native user-driven
+entry/exit is therefore game-validated for HC03, without an independent captured
+post-exit pawn-identity sample or proof of every native cleanup operation.
+The stock Drone's mobile lifecycle is inherited behavior, not yet constrained
+to the requested cannon yaw/pitch, fixed mount or telescope optics.
+
 ## Shark classifier
 
 The current full package inventory identifies the same three shark Blueprint

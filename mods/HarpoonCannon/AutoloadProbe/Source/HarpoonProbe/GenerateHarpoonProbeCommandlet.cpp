@@ -103,6 +103,12 @@ public:
         Link(Value, Pin(Fn, P::Binary::LeftOperand)); Default(Fn, P::Binary::RightOperand, Other);
         return Pin(Fn, P::ReturnValue);
     }
+    UEdGraphPin* Binary(FName Function, UEdGraphPin* Left, UEdGraphPin* Right)
+    {
+        auto* Fn = Call(UKismetMathLibrary::StaticClass(), Function);
+        Link(Left, Pin(Fn, P::Binary::LeftOperand)); Link(Right, Pin(Fn, P::Binary::RightOperand));
+        return Pin(Fn, P::ReturnValue);
+    }
     void Text(FName Component, const TCHAR* Value, UEdGraphPin* DynamicText = nullptr)
     {
         auto* Set = Call(UTextRenderComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextRenderComponent, K2_SetText));
@@ -191,6 +197,7 @@ void BuildGraph(UBlueprint* BP)
 
     auto* First = G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_IntInt), G.Read(N::State), N::Zero));
     G.Write(N::State, nullptr, N::Observing); // Arm once before any impure spawn/load.
+    G.Write(N::OriginalPawn, G.Pin(Pawn, P::ReturnValue));
     G.Text(N::Title, N::RunningText);
     auto* Path = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, MakeSoftClassPath));
     G.Default(Path, E::PathString, N::DroneClass);
@@ -221,6 +228,19 @@ void BuildGraph(UBlueprint* BP)
     auto* AddAge = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble));
     G.Link(G.Read(N::Age), G.Pin(AddAge, P::Binary::LeftOperand)); G.Link(G.Pin(Tick, P::DeltaSeconds), G.Pin(AddAge, P::Binary::RightOperand));
     G.Write(N::Age, G.Pin(AddAge, P::ReturnValue)); G.Number(N::Clock, N::ClockPrefix, G.Read(N::Age));
+    auto* ControlsDrone = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject),
+        G.Pin(Pawn, P::ReturnValue), G.Read(N::Drone));
+    G.BooleanText(N::Control, ControlsDrone, N::ControlYes, N::ControlNo);
+    G.Write(N::SawDroneControl, G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR),
+        G.Read(N::SawDroneControl), ControlsDrone));
+    auto* BackAtOriginal = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject),
+        G.Pin(Pawn, P::ReturnValue), G.Read(N::OriginalPawn));
+    auto* ReturnAfterControl = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
+        G.Read(N::SawDroneControl), BackAtOriginal);
+    G.Write(N::SawReturn, G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR),
+        G.Read(N::SawReturn), ReturnAfterControl));
+    G.BooleanText(N::Entered, G.Read(N::SawDroneControl), N::EnteredYes, N::EnteredNo);
+    G.BooleanText(N::Returned, G.Read(N::SawReturn), N::ReturnedYes, N::ReturnedNo);
     auto* Alive = G.Branch(G.Valid(G.Read(N::Drone)));
     G.Text(N::Current, N::CurrentYes);
     auto* DroneLocation = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetActorLocation));
@@ -246,24 +266,10 @@ void BuildGraph(UBlueprint* BP)
     G.Link(G.Pin(CameraLocation, P::ReturnValue), G.Pin(Subtract, P::Binary::RightOperand));
     auto* Length = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, VSize));
     G.Link(G.Pin(Subtract, P::ReturnValue), G.Pin(Length, E::VectorLengthInput)); G.Number(N::Distance, N::DistancePrefix, G.Pin(Length, P::ReturnValue));
-    UEdGraphPin* AliveDone = G.Tail;
     G.Tail = G.Pin(Alive, P::Else); G.Text(N::Current, N::CurrentNo); G.Text(N::Distance, N::NoDistance);
     G.Text(N::Hidden, N::HiddenUnknown); G.Text(N::Collision, N::CollisionUnknown); G.Text(N::Marker, N::EmptyText);
-    auto* TimeDone = G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), G.Read(N::Age), N::ObserveSeconds));
-    G.Link(AliveDone, G.Pin(TimeDone, P::Execute));
-    G.Write(N::State, nullptr, N::Finished); G.Text(N::Title, N::FinishedText);
-    G.Text(N::Marker, N::EmptyText);
-    G.Branch(G.Valid(G.Read(N::Drone)));
-    auto* Destroy = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_DestroyActor));
-    G.Link(G.Read(N::Drone), G.Pin(Destroy, P::FunctionTarget)); G.Exec(Destroy);
-
-    // Clear only our own spawned actor when this entry is destroyed early.
-    auto* End = NewObject<UK2Node_Event>(Graph);
-    End->EventReference.SetExternalMember(BlueprintGraphNames::Events::ActorReceiveDestroyed, AActor::StaticClass());
-    End->bOverrideFunction = true; G.Node(End); G.Tail = G.Pin(End, P::Then);
-    G.Branch(G.Valid(G.Read(N::Drone)));
-    auto* Cleanup = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_DestroyActor));
-    G.Link(G.Read(N::Drone), G.Pin(Cleanup, P::FunctionTarget)); G.Exec(Cleanup);
+    // HC03 intentionally has no destruction path (including observer teardown).
+    // Test in a disposable session: native persistence is not claimed safe.
 }
 }
 
@@ -287,10 +293,16 @@ int32 UGenerateHarpoonProbeCommandlet::Main(const FString& Params)
     AddText(BP, Root, N::Distance, N::NoDistance, 4);
     AddText(BP, Root, N::Hidden, N::HiddenUnknown, 5);
     AddText(BP, Root, N::Collision, N::CollisionUnknown, 6);
-    AddText(BP, Root, N::Marker, N::EmptyText, 7);
+    AddText(BP, Root, N::Control, N::ControlNo, 7);
+    AddText(BP, Root, N::Entered, N::EnteredNo, 8);
+    AddText(BP, Root, N::Returned, N::ReturnedNo, 9);
+    AddText(BP, Root, N::Marker, N::EmptyText, 10);
     AddVariable(BP, N::State, UEdGraphSchema_K2::PC_Int);
     AddVariable(BP, N::Age, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, N::Drone, UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
+    AddVariable(BP, N::OriginalPawn, UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
+    AddVariable(BP, N::SawDroneControl, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, N::SawReturn, UEdGraphSchema_K2::PC_Boolean);
     FKismetEditorUtilities::CompileBlueprint(BP);
     BuildGraph(BP);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);

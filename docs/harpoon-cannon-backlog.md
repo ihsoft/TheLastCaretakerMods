@@ -6,7 +6,77 @@ This section supersedes historical present-tense installation
 and version claims below. Resume here after compaction, then read
 `mods/HarpoonCannon/RESEARCH.md` and the relevant durable shared findings.
 
-### Active: HC02 installed; natural interaction hints game-validated
+### Active: HC03 native entry and exit game-validated
+
+User subsequently explicitly confirmed successful exit as well. Native entry
+and exit are now game-validated for this standalone Drone candidate. No exit
+screenshot was supplied: do not invent the returned-pawn flag or its numeric
+sample. Save/load, repeated entry, travel and stationary attachment remain
+untested. This closes the requested HC03 user-driven entry/exit experiment;
+it does not turn the stock mobile Drone into a stationary cannon operator.
+
+User reports successful entry and ordinary Drone behavior. Screenshot
+`C:/Users/IH/AppData/Local/Temp/codex-clipboard-36daa4b3-423e-4f65-94c7-ad5f938ccfe3.png`
+shows HC03 ALIVE at 18.806339 observation seconds, camera-to-Drone distance
+5.0 cm, current player pawn = Drone YES, Drone control observed YES, returned
+to original pawn NO. Native HUD offers E Exit Vehicle, F Change mode, G Toggle
+light and Take Sample; vehicle gauge shows 98 WH. Entry/possession and native
+Drone view/action HUD are game-validated for this standalone spawn path. The
+energy gate allowed this entry without our manually charging/initializing it;
+this does not establish every resource initialization or vehicle action.
+The requested E Exit Vehicle test was subsequently confirmed successful above.
+The expected post-exit board flags were not independently captured.
+No stationary operator, ship attachment, optics or persistence claim yet.
+Only evidence documentation changed; no source/build/install/Git mutation.
+
+Pipeline pause/recovery is complete. Reliable HC02 checkpoint committed as
+`245710cda06ab4268b4d1d76aea3c459f202d3f3` (21 exact paths, no model/legacy
+source or binaries; only five consumed shared name declarations). A shared-index
+race previously consumed the staged files in another agent's commit; recovery
+preserved them and the final commit used the repository git-transaction wrapper.
+All future Git mutations use the new semaphore. No loss or installed-file change.
+
+HC03 changes the standalone observer only: removes every DestroyActor path,
+including ReceiveDestroyed cleanup, and the 60-second cutoff. The same stock
+Drone remains available for a user-driven native Enter/Exit test. Continuous
+GetPlayerPawn comparisons show current Drone control, remember whether it was
+observed, and remember a subsequent return to the pawn captured before spawn.
+Flags are diagnostic observations, not forced possession or native lifecycle
+completion proof. No native mirrors, shell, model, item, resource, activation,
+attachment, input, camera or HUD mutation added. No own cleanup means possible
+native save/autosave retention is explicitly unvalidated: disposable session,
+start on foot, stay near the Drone, no loot or manual save. Exit using the stock
+HUD action; no guessed exit key. Capture inside and after-exit screenshots.
+
+Candidate `artifacts/harpoon-cannon/hc03-candidate-01` passed Build-Probe,
+Blueprint compile, single-package cook, container verification/exact inventory,
+release-manifest validation and source hash checks on the first build attempt.
+Public Inspect-VoyageAsset with Source Mod inspected this external candidate,
+not installed HC02: 11 TextRender components, native Engine.Actor parent,
+original-pawn capture and sticky possession/return comparisons confirmed.
+No DestroyActor/ReceiveDestroyed, timeout termination, forced possession or
+native activation/collision/attachment mutations in the cooked pseudocode.
+Evidence: candidate build-provenance.json and static-validation.json; container
+report `artifacts/container-checks/99607cbbea5c4df69b4f74ee18e68089/verification.json`.
+
+User explicitly approved HC03 installation. Installed unchanged at
+2026-09-06 04:18:06 UTC through Install-VoyageRelease -AllowDirtySource, after
+the immediate closed-game gate. Installation/recovery manifest:
+`artifacts/installations/HarpoonCannonLifecycleProbe/20260906-041806-hc03-candidate-01-c7d1c1c9/install-manifest.json`.
+Exact HC02 triplet and autoload descriptor backed up; the new versioned HC03 ZIP
+had no predecessor. Older provenance ZIPs retained, other mods unchanged.
+Independent public status at 04:18:15 UTC: five files match, zero mismatches,
+game fingerprint matches (Steam 25056839), process absent.
+Installed utoc SHA256:
+`AFDF0697B19F162179C9072E67239C55660EEC0F62911A6AEC00A1F3E77570A8`.
+HC03 replaces HC02; native entry and exit are confirmed above.
+No cannon required in the save. User should use stock Enter and stock HUD Exit,
+capture inside/after exit, avoid loot/manual save, and close if control fails.
+Tool-use and agent-miss report: `docs/harpoon-cannon-hc03-tool-report.md`.
+Model task supplied a new external-head cradle source-only handoff; explicitly
+deferred during logic testing. No visual integration, inventory or cable change.
+
+### HC02 installed: natural interaction hints game-validated
 
 User screenshot `C:/Users/IH/AppData/Local/Temp/codex-clipboard-22e88fd6-01ed-41a7-8fbe-f4631d7aa353.png`
 shows the spawned Photo Drone visibly on the deck under the observer marker.

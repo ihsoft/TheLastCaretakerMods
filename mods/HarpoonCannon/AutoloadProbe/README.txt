@@ -1,28 +1,27 @@
-HarpoonCannon HC02 - standalone interaction-observation diagnostic, NOT the cannon mod.
-Requires the existing VoyageAutoLoader C8 protocol, Steam build 25056839.
-Adds only a new entry actor package; no stock Blueprint or HUD overrides.
+HarpoonCannon HC03 - stock Drone enter/exit diagnostic, NOT the cannon mod.
+Requires existing VoyageAutoLoader C8, Steam build 25056839.
+One mod-authored entry package; no stock Blueprint, model or HUD overrides.
 
-Load gameplay on a stable deck. Do not save manually or enter/collect the test
-Drone during this disposable test. Normal autosave/streaming behavior for this
-diagnostic has not been validated; use a disposable save/session.
+Use a DISPOSABLE save/session and start on foot on a stable deck. Do not save
+manually or collect the Drone. Autosave/native persistence is not validated.
+Unlike HC02, HC03 never requests destruction of the Drone, including when
+the observer is destroyed. It remains available without a one-minute deadline.
 
-A cyan world-space board should appear near the upper-left view. It reports
-initial spawn validity, independently sampled validity, seconds and distance.
-The observation window is sixty seconds. A separate HC02 DRONE BELOW label
-marks the spawned actor's position. Approach and point the crosshair at the
-Drone; take a screenshot showing any normal Enter/Loot/No Power hint (or its
-absence). DO NOT press Enter/Loot: the probe will request removal at the end.
-Actor hidden/collision diagnostics are whole-actor flags, not mesh visibility
-or proof that an interaction trace hits it.
-At the end it says HC02 DONE, preserving the last sample, and requests removal
-of only the Drone created by this probe. Send that screenshot too if possible.
-If no board appears, or it stays WAITING/OBSERVING, report that instead.
+Approach HC03 DRONE BELOW and use the stock Enter action (F in the prior test).
+Use the stock exit action shown by the Drone HUD. Do not assume an exit key
+from this README. Stay close; no long flight, grab/loot or charging experiment.
+Report whether you saw through the Drone and could return to the character.
+Send a screenshot from inside and after exit, or report any failed entry/hint.
+If control or HUD breaks, close the game; do not save or continue experimenting.
 
-The existing cannon/model is NOT installed or changed. The test Drone receives
-no activation, attachment, possession or input changes; this tests standalone
-creation/lifetime only. It does not claim working cannon entry or optics.
-The observer does not create widgets, change camera/HUD/control or write saves.
-Its reference-scoped cleanup never searches for/deletes other Drone instances.
+The observer shows whether GetPlayerPawn equals the owned Drone and remembers
+that comparison becoming true, then the original pawn being restored. These
+are possession observations, not proof of complete native vehicle cleanup.
+No DONE/deletion timer exists. Whole-Actor hidden/collision flags do not prove
+all mesh/interaction behavior. The probe does not force entry/exit, initialize
+items, recharge, activate, attach or change input/camera/HUD. Native stock code
+handles the actions you press.
 
-Install/remove through the accompanying release/installation manifest tools.
-Never copy or replace mod files while Voyage is running.
+The cannon is not required in the save. When testing ends, exit the Drone and
+close the disposable session without manually saving. Remove/restore the probe
+using its installation manifest with the game closed, not by copying files.

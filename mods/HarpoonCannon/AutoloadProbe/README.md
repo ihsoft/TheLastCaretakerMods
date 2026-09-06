@@ -1,4 +1,4 @@
-# HC02: standalone autoload interaction observation
+# HC03: stock Drone entry/exit observation
 
 This is an isolated preparation project, not the HarpoonCannon release.
 It uses Engine-only Blueprint calls: no Voyage native mirrors, stock package
@@ -55,7 +55,17 @@ recharge or possess the Drone. Observe natural hints only; do not press entry or
 loot because timed cleanup remains active. The same virtual package and
 container family replaced HC01 through an explicitly authorized install. The
 HC01 predecessor is recoverable through the HC02 installation manifest in the
-active backlog. HC03 entry/exit and occupancy-safe cleanup are not implemented.
+active backlog.
+
+Current HC03 source removes both timed and observer-destruction cleanup paths:
+it never destroys the Drone. It samples continuously and records whether the
+player pawn becomes the owned Drone and later returns to the stored original
+pawn. These are observations only; stock actions still own entry and exit.
+No active charge/item/attachment/possession/input/camera/HUD mutation is added.
+Use a disposable session without manual saving, because retention/native
+persistence is unvalidated. The candidate requires real-game entry/exit results
+before a new validated checkpoint. Historical HC02's no-entry warning applies
+to HC02 only, not to a verified installed HC03. Do not conflate the packages.
 
 Explicit installation, when authorized, must use `tools/Install-VoyageRelease.ps1`
 with the returned manifest; restoration uses its returned installation manifest
