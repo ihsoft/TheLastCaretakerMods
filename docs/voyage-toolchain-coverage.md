@@ -46,10 +46,15 @@ Later tool repair now returns valid turret JSON despite that optional formatter
 failure, but synthetic verification does not rewrite this completed adoption
 sample.
 
-Under the user's narrowed scope, R1 + R2 + R4 give **9/15 = 60%**. R3 contains
-no game-asset/release operations, so its current scoped coverage is N/A (0/0).
-This is a recalculation of the same historical reports, NOT measured improvement
-or acceptance of newly added tools. Fresh in-scope reports are still required.
+Four following non-overlapping Harpoon iterations are recorded as R10-R13:
+HC01 preparation 88.9%, HC01 installation 100%, HC02 preparation 83.3%, and
+HC02 installation 100%. Together with the 92.9% restart sample above, every one
+of the five latest bounded real-task samples reaches the 80% target. They are
+kept separate rather than pooled into a misleading repository-wide percentage.
+
+The pre-repair historical R1 + R2 + R4 recalculation remains **9/15 = 60%**.
+R3 contains no game-asset/release operations, so its scoped coverage is N/A
+(0/0). This preserves the old baseline; later adoption does not rewrite it.
 
 ## Historical reports (original broader scope)
 
@@ -327,6 +332,56 @@ before runtime validation; the user later accepted the candidate at checkpoint
 undershoot. That gameplay result does not change the historical 7/9 tool-coverage
 measurement.
 
+## R10: Harpoon HC01 preparation
+
+Task `01a0507c-01d0-71e0-a8a0-09348bb3c406`, reported 2026-09-06 UTC.
+The owner prepared an isolated Engine-only autoload probe through fingerprint,
+mapping, installed-state, inventory, exact extraction, build/cook/package,
+container verification, release validation, and cooked inspection operations.
+Eight of nine used documented public entry points. The newly authored mod-owned
+producer was conservatively uncovered in its first iteration.
+
+Reported and pipeline-reviewed coverage: **8/9 = 88.9% for R10**. Own C++,
+Blueprint and wrapper mistakes remain development evidence, not pipeline gaps.
+The recurring manifest-producer and external-candidate inspection friction that
+the report identified was subsequently addressed by the common manifest
+producer and exact `Inspect-VoyageAsset.ps1 -Source Mod -ModContainer` route.
+Those repairs do not rewrite R10. See
+[the complete HC01 report](harpoon-cannon-hc01-tool-report.md).
+
+## R11: Harpoon HC01 installation
+
+The later bounded installation iteration used installation status, manifest-
+gated installation, and independent installed-state readback. All three passed
+through public tools with zero implementation/dependency reads, fallback, or
+oversized output: **3/3 = 100% for R11**. It is separate from preparation and
+does not enlarge R10's denominator. The user's later screenshot validated the
+bounded lifetime observation, not complete Harpoon gameplay.
+
+## R12: Harpoon HC02 preparation
+
+The next preparation iteration reused the mod-owned producer and common release-
+manifest generator as black boxes. Fingerprint, stock Drone inspection, mapping,
+release preparation, and installed-state readback were covered. Exact inspection
+of a non-installed candidate sharing a virtual package identity with installed
+HC01 required lower-level diagnosis and was conservatively uncovered.
+
+Reported and pipeline-reviewed coverage: **5/6 = 83.3% for R12**. Two tool
+implementation reads followed actual failures: PowerShell 7 null handling in
+the summary helper and the missing isolated external-candidate route. Commits
+`f8451a04` and `74dc53c2` fixed both interfaces and reduced the broad Functions
+result from roughly 8,872 tokens to a compact name index; synthetic validation
+does not rewrite R12. See
+[the complete HC02 report](harpoon-cannon-hc02-tool-report.md).
+
+## R13: Harpoon HC02 installation
+
+Readiness, manifest-gated installation, and independent status readback all
+passed through the public tools: **3/3 = 100% for R13**. Three public calls,
+zero implementation/dependency reads, no fallback, and no new reusable gap.
+The user then observed a visible living Drone and stock Loot/Enter/Grab hints;
+entry, exit, cleanup, save, and shell behavior remain outside that runtime gate.
+
 ## Current conclusion
 
 Post-publication audit on 2026-09-04 UTC: all four known coding owners were
@@ -341,14 +396,11 @@ notifications update a task timestamp.
 The subsequent assigned JSON/UE5_7 repair iteration is now recorded separately
 as R5 above. The pipeline owner's earlier synthetic tests remain excluded.
 
-The repair iteration reached 80%, followed by the separately bounded promotion
-iteration R6 at 100%. Canonical binaries are now promoted after interactive GUI
-confirmation. The next real asset/release workflow, R7, reached 77.8%, followed
-by R8 at 100%; the separate ScopeFix legacy/release workflow R9 reached 77.8%
-and exposed the repeated manifest-producer gap. This sequence shows useful
-adoption and remaining gaps, but does **not** by itself prove repository-wide
-80% coverage. Do not pool different samples to imply acceptance. Nine bounded
-reports from six requested owners are retained; this is not a complete activity
-census.
-Continue gathering reports
-from actual in-scope work, not synthetic chores or repeated idle-task requests.
+The repair iteration reached 80%, followed by R6 at 100%. R7 and R9 each reached
+77.8% and exposed defects or missing producers that were subsequently addressed;
+R8 reached 100%. The five latest fresh Harpoon samples now independently reach
+the 80% target: 92.9%, 88.9%, 100%, 83.3%, and 100%. This is current adoption
+evidence, not a pooled global score or a promise that every future workflow is
+covered. Continue collecting reports only from actual in-scope work, and act on
+demonstrated recurring cost rather than synthetic chores or marginal score
+polishing.
