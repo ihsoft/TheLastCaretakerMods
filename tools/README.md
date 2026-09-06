@@ -94,7 +94,7 @@ PowerShell wrappers. Keep real-task samples and their limits in
 
 ## Choose a tool
 
-ScopeFix's fingerprint-bound two-field candidate builder is documented in
+ScopeFix's fingerprint-bound aiming-adjustment builder is documented in
 [`../mods/ScopeFix/README.md`](../mods/ScopeFix/README.md). Its public entry
 point is `mods/ScopeFix/Build-ScopeFix.ps1`; it creates a fresh verified
 container and evidence, without installation.
