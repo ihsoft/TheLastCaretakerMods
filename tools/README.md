@@ -501,28 +501,25 @@ available:
 
 `-Source Game` is the default and mounts only stock `global` and `pakchunk*`
 containers, regardless of installed mods. This is the normal research mode.
-For exceptional debugging against one installed mod, use `-Source Mod
--ModContainer <exact.utoc>`; it mounts stock dependencies plus only that exact
-additional container and records its path, size and hash in the inspection
-manifest. The selected `.utoc` must be directly inside the game's Paks folder.
-Use `Get-VoyageAssetJson.ps1 -Source Mod` when ownership of one exact returned
-asset must first be proven; a broad inspection query does not itself establish
-which duplicate provider owns an identity.
-
-For a non-installed container that must be resolved together with stock game
-dependencies, call the underlying inspector with the game Paks directory as
-the primary input and the test package directory as the optional sixth
-argument. Both directories remain read-only:
+For exceptional debugging against one exact installed or non-installed mod,
+use `-Source Mod -ModContainer <exact.utoc>`. It mounts stock dependencies plus
+only that selected container and records its path, size, hash, and installed/
+external status in the inspection manifest. The `.utoc` must have its adjacent
+`.ucas`; it may live outside the game's Paks folder. This is the safe candidate
+path when an older installed mod owns the same virtual package: do not move or
+disable the installed copy, add a broad extra-container directory, or call the
+Inspector backend directly.
 
 ```powershell
-.\.tools\bin\VoyageAssetInspector.exe `
-  'P:\SteamLibrary\steamapps\common\Voyage\Voyage\Content\Paks' `
-  'BP_VoyageIngameHud' `
-  '.\artifacts\inspection\probe-hud' `
-  '.\mappings\Voyage\steam-25056839-ue5.8.1\Voyage-25056839.usmap' `
-  'UE5_8' `
-  '.\artifacts\builds\probe\package'
+.\tools\Inspect-VoyageAsset.ps1 `
+  -Query '/Mods/HarpoonCannonLifecycleProbe/ModActor' `
+  -Source Mod `
+  -ModContainer '.\artifacts\harpoon-candidate\payload\HarpoonCannonLifecycleProbe_P.utoc'
 ```
+
+Use `Get-VoyageAssetJson.ps1 -Source Mod` when ownership of one exact returned
+installed-mod asset must first be proven; a broad inspection query does not
+itself establish which duplicate provider owns an identity.
 
 Query reflection mappings rather than package contents:
 

@@ -36,7 +36,7 @@ if ($Source -eq 'Game' -and -not [string]::IsNullOrWhiteSpace($ModContainer)) {
     throw '-ModContainer is valid only with -Source Mod.'
 }
 if ($Source -eq 'Mod' -and [string]::IsNullOrWhiteSpace($ModContainer)) {
-    throw '-Source Mod requires -ModContainer with one exact installed mod .utoc file.'
+    throw '-Source Mod requires -ModContainer with one exact mod .utoc file.'
 }
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
     throw "Voyage executable not found: $exe"
@@ -76,20 +76,27 @@ $sourceIdentity = 'game'
 if ($Source -eq 'Mod') {
     $selectedModPath = (Resolve-Path -LiteralPath $ModContainer).Path
     $selectedModItem = Get-Item -LiteralPath $selectedModPath
-    if ($selectedModItem.PSIsContainer -or $selectedModItem.Extension -ine '.utoc' -or
-        (Split-Path -Parent $selectedModPath) -ine $paks) {
-        throw "-ModContainer must be one exact .utoc directly inside the installed Paks directory: $paks"
+    if ($selectedModItem.PSIsContainer -or $selectedModItem.Extension -ine '.utoc') {
+        throw '-ModContainer must be one exact .utoc file.'
     }
     if ($selectedModItem.Name -match '^(?i:global|pakchunk\d+(?:optional)?-Windows)\.utoc$') {
         throw "-ModContainer must identify an additional mod container, not stock: $selectedModPath"
     }
+    $selectedModData = [IO.Path]::ChangeExtension($selectedModPath, '.ucas')
+    if (-not (Test-Path -LiteralPath $selectedModData -PathType Leaf)) {
+        throw "Selected mod container has no adjacent .ucas file: $selectedModData"
+    }
+    $isInstalledMod = (Split-Path -Parent $selectedModPath) -ieq $paks
     $selectedMod = [pscustomobject]@{
         name = $selectedModItem.Name
         path = $selectedModPath
         length = $selectedModItem.Length
         sha256 = (Get-FileHash -LiteralPath $selectedModPath -Algorithm SHA256).Hash
+        isInstalled = $isInstalledMod
     }
-    $sourceIdentity = 'mod-' + $selectedModItem.BaseName + '-' + $selectedMod.sha256.Substring(0, 12)
+    $sourceLocation = if ($isInstalledMod) { 'installed' } else { 'external' }
+    $sourceIdentity = 'mod-' + $sourceLocation + '-' + $selectedModItem.BaseName +
+        '-' + $selectedMod.sha256.Substring(0, 12)
 }
 $buildId = "steam-$steamBuildId-$($exeHash.Substring(0, 12))-$sourceIdentity"
 $querySafe = ($Query -replace '[^A-Za-z0-9._-]', '_').Trim('_')
@@ -119,16 +126,15 @@ $arguments += $Source
 $arguments += $(if ($null -ne $selectedMod) { $selectedMod.path } else { '-' })
 
 $isReferenceQuery = $Query.StartsWith('references:', [StringComparison]::OrdinalIgnoreCase)
-if ($isReferenceQuery) {
-    $nativeOutput = @(& $inspector.Path @arguments 2>&1)
+$logPath = Join-Path $output 'inspector.log'
+$savedPreference = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'Continue'
+    & $inspector.Path @arguments *> $logPath
     $inspectorExitCode = $LASTEXITCODE
-    foreach ($line in $nativeOutput) {
-        Write-Host ([string]$line)
-    }
 }
-else {
-    & $inspector.Path @arguments
-    $inspectorExitCode = $LASTEXITCODE
+finally {
+    $ErrorActionPreference = $savedPreference
 }
 
 $queryStatus = 'completed'
@@ -154,7 +160,7 @@ if ($isReferenceQuery) {
 
     $isCleanNoMatch = $inspectorExitCode -eq 1 -and $matchCount -eq 0 -and $errorCount -eq 0
     if ($inspectorExitCode -ne 0 -and -not $isCleanNoMatch) {
-        throw "VoyageAssetInspector reference search failed with exit code $inspectorExitCode; inspect $output"
+        throw "VoyageAssetInspector reference search failed with exit code $inspectorExitCode. Log: $logPath"
     }
     if ($errorCount -ne 0) {
         throw "VoyageAssetInspector reference search reported $errorCount error line(s); inspect $errorPath"
@@ -162,7 +168,15 @@ if ($isReferenceQuery) {
     $queryStatus = if ($matchCount -eq 0) { 'no-match' } else { 'matched' }
 }
 elseif ($inspectorExitCode -ne 0) {
-    throw "VoyageAssetInspector failed with exit code $inspectorExitCode"
+    throw "VoyageAssetInspector failed with exit code $inspectorExitCode. Log: $logPath"
+}
+else {
+    $matchesPath = Join-Path $output 'matches.txt'
+    if (Test-Path -LiteralPath $matchesPath -PathType Leaf) {
+        $matchCount = @(Get-Content -LiteralPath $matchesPath | Where-Object {
+            -not [string]::IsNullOrWhiteSpace($_)
+        }).Count
+    }
 }
 
 $manifest = [ordered]@{
@@ -184,6 +198,7 @@ $manifest = [ordered]@{
     queryStatus = $queryStatus
     matchCount = $matchCount
     errorCount = $errorCount
+    logPath = $logPath
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
 $manifestPath = Join-Path $output 'inspection-manifest.json'
@@ -191,17 +206,17 @@ $manifestPath = Join-Path $output 'inspection-manifest.json'
     $manifestPath,
     (($manifest | ConvertTo-Json -Depth 3) + [Environment]::NewLine))
 
-Write-Host "Inspected current-game assets into: $output"
-if ($isReferenceQuery) {
-    $result = [pscustomobject]@{
-        status = $queryStatus
-        matchCount = $matchCount
-        resultPath = $resultPath
-        manifestPath = $manifestPath
-        query = $Query
-    }
-    if ($RequireMatch -and $matchCount -eq 0) {
-        throw "Reference search completed successfully but found no matches: $Query"
-    }
-    Write-Output $result
+$result = [pscustomobject][ordered]@{
+    status = $queryStatus
+    matchCount = $matchCount
+    resultPath = if ($isReferenceQuery) { $resultPath } else { $output }
+    manifestPath = $manifestPath
+    logPath = $logPath
+    query = $Query
+    source = $Source
+    modContainer = $selectedMod
 }
+if ($isReferenceQuery -and $RequireMatch -and $matchCount -eq 0) {
+    throw "Reference search completed successfully but found no matches: $Query"
+}
+Write-Output $result

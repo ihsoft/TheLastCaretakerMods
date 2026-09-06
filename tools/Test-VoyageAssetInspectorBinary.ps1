@@ -66,18 +66,24 @@ Assert-InspectorTest (-not $published.Rebuilt -and $published.Sha256 -ceq $binar
 $checks.Add('publisher-reuse-without-dotnet')
 
 $inspectionRoot = Join-Path $run 'inspection'
-& (Join-Path $PSScriptRoot 'Inspect-VoyageAsset.ps1') -GameRoot $GameRoot `
-    -Query 'list:BP_VoyageCableUpdater' -OutputRoot $inspectionRoot *> (Join-Path $run 'inspect.log')
+$inspectionResult = & (Join-Path $PSScriptRoot 'Inspect-VoyageAsset.ps1') `
+    -GameRoot $GameRoot -Query 'list:BP_VoyageCableUpdater' -OutputRoot $inspectionRoot
 $inspection = @(Get-ChildItem -LiteralPath $inspectionRoot -Recurse -Filter inspection-manifest.json -File)
 Assert-InspectorTest ($inspection.Count -eq 1) 'Legacy inspection did not produce one manifest.'
 $manifest = Get-Content -LiteralPath $inspection[0].FullName -Raw | ConvertFrom-Json
+Assert-InspectorTest ($inspectionResult.status -ceq 'completed' -and
+    $inspectionResult.matchCount -eq 1 -and
+    $inspectionResult.resultPath -ceq $inspection[0].DirectoryName -and
+    $inspectionResult.manifestPath -ceq $inspection[0].FullName -and
+    (Test-Path -LiteralPath $inspectionResult.logPath -PathType Leaf)) `
+    'Normal inspection did not return one compact result with retained evidence.'
 Assert-InspectorTest ($manifest.inspectorBinarySha256 -ceq $binary.Sha256) 'Inspection used an unexpected binary.'
 Assert-InspectorTest ($manifest.source -ceq 'Game' -and $null -eq $manifest.modContainer) `
     'Default inspection did not isolate stock game containers.'
 $matchesFile = Join-Path $inspection[0].DirectoryName 'matches.txt'
 $matches = @(Get-Content -LiteralPath $matchesFile | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 Assert-InspectorTest ($matches.Count -eq 1 -and $matches[0] -match 'BP_VoyageCableUpdater\.uasset$') 'Unexpected narrow inventory.'
-$checks.Add('legacy-inspection-without-dotnet')
+$checks.Add('compact-inspection-without-dotnet')
 
 $sourceGuarded = $false
 try {
