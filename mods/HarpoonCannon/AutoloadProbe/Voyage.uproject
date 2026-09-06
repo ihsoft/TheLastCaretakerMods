@@ -1,0 +1,7 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Description": "Editor-only Harpoon lifecycle diagnostic; no native runtime payload.",
+  "Modules": [{ "Name": "HarpoonProbe", "Type": "Editor", "LoadingPhase": "Default" }],
+  "Plugins": [{ "Name": "AndroidFileServer", "Enabled": false }]
+}

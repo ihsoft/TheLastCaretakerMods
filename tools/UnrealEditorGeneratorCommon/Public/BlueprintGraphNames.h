@@ -25,6 +25,7 @@ inline const FName AddChild(TEXT("AddChild"));
 namespace BlueprintGraphNames::Events
 {
 inline const FName ActorReceiveTick(TEXT("ReceiveTick"));
+inline const FName ActorReceiveDestroyed(TEXT("ReceiveDestroyed"));
 inline const FName WidgetConstruct(TEXT("Construct"));
 inline const FName WidgetTick(TEXT("Tick"));
 }
@@ -40,6 +41,7 @@ namespace BlueprintGraphNames::Detail
 inline const FName PinA(TEXT("A"));
 inline const FName PinB(TEXT("B"));
 inline const FName PinPickA(TEXT("bPickA"));
+inline const FName PinSelf(TEXT("self"));
 }
 
 namespace BlueprintGraphNames::Pins::Binary
@@ -64,6 +66,8 @@ inline const FName Content(TEXT("Content"));
 inline const FName DeltaSeconds(TEXT("DeltaSeconds"));
 inline const FName Duration(TEXT("Duration"));
 inline const FName Else(TEXT("Else"));
+inline const FName Execute(TEXT("execute"));
+inline const FName& FunctionTarget = Detail::PinSelf;
 inline const FName FirstArrayElement(TEXT("[0]"));
 inline const FName FirstIndex(TEXT("FirstIndex"));
 inline const FName Index(TEXT("Index"));
@@ -79,6 +83,7 @@ inline const FName ReturnValue(TEXT("ReturnValue"));
 inline const FName SecondArrayElement(TEXT("[1]"));
 inline const FName SpawnTransform(TEXT("SpawnTransform"));
 inline const FName TargetArray(TEXT("TargetArray"));
+inline const FName Then(TEXT("then"));
 inline const FName Value(TEXT("Value"));
 }
 

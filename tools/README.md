@@ -148,6 +148,7 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 | --- | --- | --- |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
+| Harpoon HC01/HC02 diagnostics (experimental, not the cannon release) | [Preparation contract](../mods/HarpoonCannon/AutoloadProbe/README.md), [rules](../mods/HarpoonCannon/AGENTS.md) | Separate UE5.8.2 Engine-only autoload probe; `Build-Probe.ps1` prepares one exact package and schema-2 manifest, validates only, never installs |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a
