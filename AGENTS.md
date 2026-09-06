@@ -98,6 +98,14 @@ those details here.
   coverage: keep lower-priority gaps deferred rather than inventing new work
   to fill the queue or improve the score. New workflow families require a
   clear user need; an old one-off report alone is insufficient.
+- Pipeline work must have a substantial, measurable expected return. Before
+  changing a tool or rule, name the observed recurring cost and the intended
+  before/after delta in public calls, retries, implementation files opened,
+  output volume, failure rate, or coverage of a real workflow. Afterward record
+  the measured result. Defer marginal score polishing or speculative convenience
+  work when it offers only a small improvement without a repeated failure,
+  material risk reduction, or clear user need; work performed merely to keep
+  improving the pipeline is itself a failure mode.
 - Every coding agent working in this repository must finish with a compact
   tool-use report: intended operations, documented entry points invoked,
   successes and evidence, failures or unexpected results, any fallback/source
