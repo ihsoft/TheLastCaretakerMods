@@ -232,6 +232,15 @@ arbitrary structural edits to every asset.
   and time limits; never repeat an unbounded allocation regression.
 - `VerifyBinaryEquality()` and fully parsed exports are independent gates:
   `RawExport` can preserve unknown bytes while hiding a parse failure.
+- Legacy recovery can succeed at extraction while failing at property parsing.
+  In the ScopeFix investigation, retoc recovered two packages despite missing
+  directory-index filenames; incomplete historical dependencies left unknown
+  imports. CUE4Parse decoded early camera vectors but failed on later fields.
+  Treat such JSON as partial evidence: independently confirm any used value
+  against its serialized payload, and never infer a complete historical diff
+  or schema compatibility from readable early properties. Current mappings
+  and dependencies do not establish the old package's provenance. For current
+  builds, change fresh fingerprint-matched stock assets and validate the result.
 - At the accepted API `6b5ead3` checkpoint, full-asset JSON deserialization
   loses UAssetAPI's internal
   `SpecifiedEngineVersion`. Both GUI JSON opening and CLI `fromjson` need an
