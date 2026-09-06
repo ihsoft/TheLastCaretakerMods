@@ -382,6 +382,33 @@ zero implementation/dependency reads, no fallback, and no new reusable gap.
 The user then observed a visible living Drone and stock Loot/Enter/Grab hints;
 entry, exit, cleanup, save, and shell behavior remain outside that runtime gate.
 
+## R14: ScopeFix v1 GitHub prerelease
+
+Task `01a0747e-8680-7ea2-8c45-2821ad89e779`, reported 2026-09-06 UTC.
+The user requested publication of the already accepted ScopeFix candidate as a
+GitHub prerelease. The owner separated five intended recurring operations:
+
+| Intended recurring operation | Actual interface | Coverage |
+| --- | --- | --- |
+| Current game fingerprint | `Get-VoyageBuildFingerprint.ps1` | Covered |
+| Prepare immutable public release root, renamed ZIP, and notes/context | Manual PowerShell copy/hash/write | Uncovered |
+| Produce and validate schema-2 manifest | `New-VoyageReleaseManifest.ps1` | Covered |
+| Create remote tag/release and upload ZIP | Direct `gh release create` inside the repository lock | Uncovered; no intent-level publisher |
+| Read back tag, prerelease metadata, and asset digest | Direct `gh release view` and `gh api` | Uncovered; no intent-level verifier |
+
+Reported and pipeline-reviewed coverage: **2/5 = 40% for R14**. The uploaded
+`ScopeFix_v1.zip` was 2,869 bytes with SHA-256
+`9233DFD8F0A247FD9E56BBE206F49E58D2C46B72A82055FB69B5830B67864601`;
+remote tag target `21529521bf3999ae2a0eec52072ff9be9dcd38f8`, prerelease state,
+notes, asset state, and server digest were read back. The earlier runtime result
+was not repeated.
+
+Routine cost was 17 external calls, two public game/release calls, one premature
+implementation-file read, two sandbox-auth retries, and manual release assembly,
+publication, and verification. RC3 had already exposed the same publication
+gap, so R14 fires the backlog trigger for one manifest-bound public publisher.
+This later repair must not rewrite R14.
+
 ## Current conclusion
 
 Post-publication audit on 2026-09-04 UTC: all four known coding owners were
@@ -401,6 +428,7 @@ The repair iteration reached 80%, followed by R6 at 100%. R7 and R9 each reached
 R8 reached 100%. The five latest fresh Harpoon samples now independently reach
 the 80% target: 92.9%, 88.9%, 100%, 83.3%, and 100%. This is current adoption
 evidence, not a pooled global score or a promise that every future workflow is
-covered. Continue collecting reports only from actual in-scope work, and act on
-demonstrated recurring cost rather than synthetic chores or marginal score
-polishing.
+covered. The following ScopeFix publication sample R14 fell to 40% and exposed
+three repeated manual release operations. Continue collecting reports only from
+actual in-scope work, and act on demonstrated recurring cost rather than
+synthetic chores or marginal score polishing.

@@ -112,6 +112,12 @@ those details here.
   inspection and its trigger, validation performed, and uncovered reusable
   operation. A delegating agent must request this report explicitly and promote
   reusable gaps or findings into the toolchain backlog or durable rules.
+- Triage cross-agent questions and pause/release requests before continuing a
+  long local pipeline investigation. Give the owning feature agent the smallest
+  decision, evidence, or explicit resume signal needed to keep independent work
+  moving, then continue pipeline work in parallel. Do not make another agent
+  wait merely because the pipeline owner is documenting or developing an
+  unrelated tool; use the Git semaphore only for the short shared mutation.
 - Public build, release, extraction, and packaging scripts must support Windows
   PowerShell 5.1 unless their documented interface explicitly says otherwise.
   Parse and smoke-test the public `-File` entry point with `powershell.exe`;

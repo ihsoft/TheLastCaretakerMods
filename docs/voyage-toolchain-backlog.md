@@ -46,17 +46,21 @@ Current accepted routing model:
 - normal binary use: manifest-validated `.tools/bin/` outputs; publishers run
   only after an intentional accepted fork/source change.
 
-There is no active common-tool implementation at this checkpoint. The next
-normal action is to consume an actual requested workflow and its report, not to
-manufacture a synthetic task. Stable checkpoints include compact summary
-`f8451a04`, exact external candidate inspection `74dc53c2`, Git serialization
-`42e49871`, and the adoption ledger through `21529521`.
+The active implementation is bounded to the R14 GitHub release gap below. Do not
+expand it into build/cook/install logic or a generic release framework. Stable
+checkpoints include compact summary `f8451a04`, exact external candidate
+inspection `74dc53c2`, Git serialization `42e49871`, and the adoption ledger
+through `21529521` before R14.
 
 ## Current state
 
 - The five latest bounded real Harpoon samples independently reached 92.9%,
   88.9%, 100%, 83.3%, and 100% public-tool coverage. Do not pool them into a
   synthetic global percentage or rewrite older samples after later fixes.
+- ScopeFix v1 publication R14 then reached 2/5 = 40%: fingerprint and manifest
+  production were covered, while public-root preparation, GitHub publication,
+  and remote readback were manual. It used 17 external calls and one premature
+  implementation read. RC3 supplies the earlier occurrence of the same gap.
 - Coding-agent reports remain mandatory. Measure intended recurring operations,
   public calls, implementation/dependency reads, retries caused by the interface,
   oversized output, validation, and reusable gaps.
@@ -65,8 +69,9 @@ manufacture a synthetic task. Stable checkpoints include compact summary
   source on a successful supported path.
 - Git-state mutations are serialized through the `git-transaction` semaphore;
   normal commits use `tools/commit-repository-changes.ps1` with exact files.
-- No common tool implementation is currently authorized merely to improve the
-  score. Start work only when a real requested workflow hits a trigger below.
+- A minimal manifest-bound GitHub release publisher is the only active common-
+  tool implementation: R14 fired its repeated-work trigger. Other tools remain
+  deferred until a real requested workflow hits a trigger below.
 
 ## Prioritization gate
 
@@ -94,7 +99,7 @@ or the trigger has not occurred. Tool count and 100% coverage are not goals.
 | DmlAssetRegistryProbe release producer | Test5 and Test6 each manually performed UE build, generation, cook and package/manifest assembly | That probe family receives another authorized iteration | A probe-owned one-command producer covering the four repeated preparation operations; do not create a broad common builder |
 | UE5.8.2 AssetRegistry metadata reader | retoc rejects the cooked registry and CUE4Parse exposed useful entries before a serializer exception in repeated DML probes | Another requested experiment depends on registry group/chunk metadata rather than ordinary package inventory | One bounded metadata projection with explicit partial/failure semantics instead of another forced-scan probe |
 | Compressed SaveGame marker readback | One probe used a bounded ad-hoc Unreal-v2/zlib decoder | A second real task needs the same marker contract | One documented bounded readback instead of re-deriving compression and terminator checks |
-| Fork binary ZIP/GitHub publication | RC3 publication used local staging plus `gh`; canonical local publishers and readback already exist | Another coordinated fork-binary publication is requested | One manifest-bound publication/readback operation with no manual asset selection |
+| GitHub release preparation/publication/readback — **active** | RC3 and ScopeFix v1 both used manual staging plus `gh`; R14 covered only 2/5 operations and used 17 external calls | Trigger fired by the requested ScopeFix v1 prerelease | One manifest-bound public call covering immutable release-root preparation, tag/release/upload, and exact remote digest readback; target analogous coverage 5/5 with zero implementation reads |
 | Historical non-indexed package recovery | ScopeFix UE5.7 recovery required retoc plus partial UAssetAPI/CUE4Parse fallbacks because dependencies were absent | Another non-indexed historical mod blocks a requested migration | Decide from a second sample whether a narrow property-recovery interface is reliable; do not promise general legacy support |
 
 ## Deferred metadata decisions
