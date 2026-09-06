@@ -34,12 +34,10 @@ if ($Source -eq 'Mod' -and [string]::IsNullOrWhiteSpace($ModContainer)) {
 $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'
 $getMappingsScript = Join-Path $PSScriptRoot 'Get-VoyageMappings.ps1'
 $testMappingsScript = Join-Path $PSScriptRoot 'Test-VoyageMappings.ps1'
-$inspectorProject = Join-Path $PSScriptRoot 'VoyageAssetInspector\VoyageAssetInspector.csproj'
-$inspectorSource = Join-Path $PSScriptRoot 'VoyageAssetInspector\Program.cs'
-$cue4ParseBinary = Join-Path $PSScriptRoot '..\.tools\bin\CUE4Parse\CUE4Parse.dll'
+$getInspectorScript = Join-Path $PSScriptRoot 'Get-VoyageAssetInspectorBinary.ps1'
 $cacheRoot = Join-Path $PSScriptRoot '..\artifacts\asset-cache'
 $inspectionRoot = Join-Path $PSScriptRoot '..\artifacts\asset-inspections'
-$cacheSchemaVersion = 2
+$cacheSchemaVersion = 3
 $sha256Pattern = '^[0-9A-F]{64}$'
 
 function Get-TextSha256 {
@@ -142,10 +140,6 @@ function Invoke-Inspector {
     )
 
     $arguments = @(
-        'run',
-        '--project', $inspectorProject,
-        '--configuration', 'Release',
-        '--',
         $PaksDirectory,
         $AssetQuery,
         $OutputDirectory,
@@ -155,7 +149,7 @@ function Invoke-Inspector {
         $ContainerSelection,
         $(if ($SelectedModContainer) { $SelectedModContainer } else { '-' })
     )
-    & dotnet @arguments *> $LogPath
+    & $inspector.Path @arguments *> $LogPath
     if ($LASTEXITCODE -ne 0) {
         throw "VoyageAssetInspector failed with exit code $LASTEXITCODE. Log: $LogPath"
     }
@@ -305,7 +299,8 @@ function Get-PackageIndex {
             [string]$manifest.steamBuildId -ceq $SteamBuildId -and
             [string]$manifest.executableSha256 -ceq $ExecutableSha256 -and
             [string]$manifest.cue4ParseBinarySha256 -ceq $Cue4ParseBinarySha256 -and
-            [string]$manifest.inspectorSourceSha256 -ceq (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash -and
+            [string]$manifest.inspectorSourceSha256 -ceq $inspector.SourceSha256 -and
+            [string](Get-OptionalPropertyValue -Object $manifest -Name 'inspectorBinarySha256') -ceq $inspector.Sha256 -and
             [string]$manifest.gameContainersSha256 -ceq [string]$GameContainerSet.gameContainersSha256 -and
             [string]$manifest.packageIndexSha256 -ceq $actualHash) {
             return (Resolve-Path -LiteralPath $indexPath).Path
@@ -357,7 +352,8 @@ function Get-PackageIndex {
         gameContainersSha256 = [string]$GameContainerSet.gameContainersSha256
         packageCount = $packages.Count
         packageIndexSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $indexPath).Hash
-        inspectorSourceSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash
+        inspectorSourceSha256 = $inspector.SourceSha256
+        inspectorBinarySha256 = $inspector.Sha256
         generatedAtUtc = [DateTime]::UtcNow.ToString('o')
     }
     [IO.File]::WriteAllText(
@@ -435,13 +431,8 @@ function New-PackageListResult {
     }
 }
 
-if (-not (Test-Path -LiteralPath $cue4ParseBinary -PathType Leaf)) {
-    throw 'Canonical CUE4Parse bundle is missing. Run tools\Publish-Cue4ParseBinary.ps1.'
-}
-$cue4ParseBinarySha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $cue4ParseBinary).Hash
-if (-not (Test-Path -LiteralPath $inspectorProject -PathType Leaf)) {
-    throw "VoyageAssetInspector project is missing: $inspectorProject"
-}
+$inspector = & $getInspectorScript
+$cue4ParseBinarySha256 = $inspector.Cue4ParseSha256
 $fingerprintText = (& $fingerprintScript -GameRoot $GameRoot) -join [Environment]::NewLine
 $fingerprint = $fingerprintText | ConvertFrom-Json
 $steamBuildId = [string]$fingerprint.steam.buildId
@@ -489,7 +480,8 @@ if ($Source -eq 'Mod') {
             packageCount = $listResult.packageCount
             packageListSha256 = $listResult.packageListSha256
             cue4ParseBinarySha256 = $cue4ParseBinarySha256
-            inspectorSourceSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash
+            inspectorSourceSha256 = $inspector.SourceSha256
+            inspectorBinarySha256 = $inspector.Sha256
             generatedAtUtc = [DateTime]::UtcNow.ToString('o')
         }
         [IO.File]::WriteAllText(
@@ -545,7 +537,8 @@ if ($Source -eq 'Mod') {
         mappingsManifestPath = [string]$mapping.manifestPath
         mappingsSha256 = [string]$mapping.sha256
         cue4ParseBinarySha256 = $cue4ParseBinarySha256
-        inspectorSourceSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash
+        inspectorSourceSha256 = $inspector.SourceSha256
+        inspectorBinarySha256 = $inspector.Sha256
         jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
         jsonLength = (Get-Item -LiteralPath $jsonPath).Length
         jsonSha256 = $jsonSha256
@@ -602,7 +595,8 @@ if ((Test-Path -LiteralPath $jsonPath -PathType Leaf) -and
     if ([string]$manifest.virtualPath -cne $virtualPath) { $provenanceFailures.Add('virtualPath') }
     if ([string]$manifest.mappingsSha256 -cne [string]$mapping.sha256) { $provenanceFailures.Add('mappingsSha256') }
     if ([string]$manifest.cue4ParseBinarySha256 -cne $cue4ParseBinarySha256) { $provenanceFailures.Add('cue4ParseBinarySha256') }
-    if ([string]$manifest.inspectorSourceSha256 -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash) { $provenanceFailures.Add('inspectorSourceSha256') }
+    if ([string]$manifest.inspectorSourceSha256 -cne $inspector.SourceSha256) { $provenanceFailures.Add('inspectorSourceSha256') }
+    if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'inspectorBinarySha256') -cne $inspector.Sha256) { $provenanceFailures.Add('inspectorBinarySha256') }
     if ([string]$manifest.jsonSha256 -cne $actualJsonHash) { $provenanceFailures.Add('jsonSha256') }
     if ([long]$manifest.jsonLength -ne (Get-Item -LiteralPath $jsonPath).Length) { $provenanceFailures.Add('jsonLength') }
     if ($provenanceFailures.Count -gt 0) {
@@ -674,7 +668,8 @@ $assetManifest = [ordered]@{
     mappingsManifestPath = [string]$mapping.manifestPath
     mappingsSha256 = [string]$mapping.sha256
     cue4ParseBinarySha256 = $cue4ParseBinarySha256
-    inspectorSourceSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $inspectorSource).Hash
+    inspectorSourceSha256 = $inspector.SourceSha256
+    inspectorBinarySha256 = $inspector.Sha256
     jsonFile = [IO.Path]::GetFileName($jsonPath)
     jsonLength = $jsonItem.Length
     jsonSha256 = $jsonSha256

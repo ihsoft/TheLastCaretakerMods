@@ -21,13 +21,10 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
 $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $paks = Join-Path $root 'Voyage\Content\Paks'
 $exe = Join-Path $root 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe'
-$project = Join-Path $PSScriptRoot 'VoyageAssetInspector\VoyageAssetInspector.csproj'
+$inspector = & (Join-Path $PSScriptRoot 'Get-VoyageAssetInspectorBinary.ps1')
 $cue4ParseBinary = Join-Path $PSScriptRoot '..\.tools\bin\CUE4Parse\CUE4Parse.dll'
 $getMappingsScript = Join-Path $PSScriptRoot 'Get-VoyageMappings.ps1'
 $testMappingsScript = Join-Path $PSScriptRoot 'Test-VoyageMappings.ps1'
-if (-not (Test-Path -LiteralPath $cue4ParseBinary -PathType Leaf)) {
-    throw 'Canonical CUE4Parse bundle is missing. Run tools\Publish-Cue4ParseBinary.ps1.'
-}
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
     throw "Voyage executable not found: $exe"
 }
@@ -73,10 +70,6 @@ if (Test-Path -LiteralPath $output) {
 [IO.Directory]::CreateDirectory($output) | Out-Null
 
 $arguments = @(
-    'run',
-    '--project', $project,
-    '--configuration', 'Release',
-    '--',
     $paks,
     $Query,
     $output
@@ -89,7 +82,7 @@ else {
 }
 $arguments += $EngineVersion
 
-& dotnet @arguments
+& $inspector.Path @arguments
 if ($LASTEXITCODE -ne 0) {
     throw "VoyageAssetInspector failed with exit code $LASTEXITCODE"
 }
@@ -103,7 +96,10 @@ $manifest = [ordered]@{
     mappingsPath = $MappingsPath
     mappingsManifestPath = $mappingsManifestPath
     cue4ParseBinaryPath = (Resolve-Path -LiteralPath $cue4ParseBinary).Path
-    cue4ParseBinarySha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $cue4ParseBinary).Hash
+    cue4ParseBinarySha256 = $inspector.Cue4ParseSha256
+    inspectorBinaryPath = $inspector.Path
+    inspectorBinarySha256 = $inspector.Sha256
+    inspectorInputFingerprint = $inspector.InputFingerprint
     engineVersion = $EngineVersion
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }

@@ -26,13 +26,64 @@ verify its fingerprinted inputs, paths, mapping gate, and dependency commit.
 The accepted compatibility checkpoints and validation boundaries are recorded
 in [`../docs/voyage-cooked-asset-toolchain.md`](../docs/voyage-cooked-asset-toolchain.md).
 
+## Coding-agent report contract
+
+Every coding-agent handoff must include this compact evidence block:
+
+```text
+Pipeline operations: <intent -> public tool -> result/evidence>
+Worked: <successful paths and outputs>
+Failed/unexpected: <symptom, diagnostic path, and classification>
+Fallback/internal inspection: <what was opened and which allowed trigger fired>
+Validation: <tests, package checks, or real-game status>
+Coverage: <public-tool operations>/<eligible recurring operations> = <percent>
+Reusable gap: <missing or insufficient interface, or none>
+```
+
+An eligible operation is a recurring mechanical action in **game-asset work
+or release preparation**: game fingerprinting, mapping selection/generation,
+asset retrieval/inspection/modification/validation, or release build, cook,
+package, verification, install and restore. Source-only modeling, image/video
+production and unrelated development are excluded by the user's narrowed scope.
+Import/cook/package steps that put content into an actual game release still
+count; creating or rendering the source model does not.
+Reasoning, code editing,
+documentation, and novel diagnosis after a black-box failure are not counted.
+The target is at least 80% public-tool coverage. A fallback is evidence of a
+coverage gap, not a new normal workflow: add it to
+`../docs/voyage-toolchain-backlog.md` when it can recur.
+
+Reports inform prioritization; they do not automatically authorize tool
+implementation. Fix current workflow failures first, then remove demonstrated
+recurring friction. The target is 80%, not exhaustive automation of every
+historical activity. Keep deferred gaps visible without starting unrelated
+work. Preserve old measurements as superseded history when the user changes
+scope; recompute the scoped sample explicitly, not as an apparent improvement.
+Read the routing table and the selected tool's contract; unrelated recipes and
+implementation files are not mandatory reading on a successful supported path.
+
+Count each requested operation once, not every command, retry, internal phase,
+or test assertion. A documented tool retry that completes the operation remains
+tool-covered; an operation completed by an ad-hoc replacement is uncovered.
+Report an empty denominator as `N/A`, not 100%, and mark unreconstructable
+historical operations `unknown` rather than silently dropping them. Synthetic
+tool-development tests prove the tool's behavior, not adoption by feature
+agents: keep their coverage separate from real-task reports. Attach the task
+identity and iteration boundary so the same activity is not counted twice.
+Public entry points include documented canonical CLI commands, not only
+PowerShell wrappers. Keep real-task samples and their limits in
+`../docs/voyage-toolchain-coverage.md`; do not equate tool existence with adoption.
+
 ## Choose a tool
 
 | Goal | Start with | Result |
 | --- | --- | --- |
+| Run a potentially failing native diagnostic with resource limits | `Invoke-VoyageBoundedTool.ps1` | Time/memory-bounded process tree, separate logs, exit and peak-memory report |
 | Identify the installed game build | `Get-VoyageBuildFingerprint.ps1` | Steam build ID, executable hash, and container metadata/hashes |
+| Inspect installed containers and running game processes without mutation | `Get-VoyageInstallationStatus.ps1` | JSON inventory, process snapshot, optional installed-manifest hash comparison |
 | Get one cooked asset as JSON or list every package | `Get-VoyageAssetJson.ps1` | Validated JSON or package-list path; game storage and reuse are automatic |
 | Find, list, or structurally inspect cooked assets | `Inspect-VoyageAsset.ps1` | Paths, JSON exports, Blueprint pseudocode, or mapping reports |
+| Publish or validate the Inspector executable | `Publish-VoyageAssetInspectorBinary.ps1`, `Get-VoyageAssetInspectorBinary.ps1` | Stable single-file EXE; validated source/dependency/binary identity |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Publish or reuse canonical retoc | `Publish-RetocBinary.ps1` | Stable `.tools/bin/retoc.exe` plus hash/provenance manifest |
 | Get mappings for the installed game | `Get-VoyageMappings.ps1` | Path to the matching reviewed and validated tracked `.usmap` |
@@ -46,6 +97,10 @@ in [`../docs/voyage-cooked-asset-toolchain.md`](../docs/voyage-cooked-asset-tool
 | Prepare reviewed UAssetAPI source for development | `Prepare-UAssetApiVoyageUe58.ps1` | Exact source snapshot for deliberate fork/API investigation |
 | Publish the validated compact UAssetGUI executable | `Publish-UAssetGuiBinary.ps1` | Stable ignored `.tools/bin/UAssetGUI.exe` |
 | Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/bin/UAssetGUI.exe stress-open` | Incremental per-asset JSONL plus parse/binary-equality summary |
+| Build, cook and package an existing mod release | [Release producers](#release-producers) | Route to the owning mod's documented orchestrator; no generic rebuild recipe |
+| Validate or install an already-built standalone IoStore release | `Install-VoyageRelease.ps1` | Manifest-gated install plan or recoverable installation evidence |
+| Verify one IoStore container and its expected package set | `Test-VoyageContainer.ps1` | Bounded integrity check, package inventory, exact-set differences and file hashes |
+| Restore/remove a common release installation | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded predecessor restoration and recovery evidence |
 | Install/remove one unchanged package canary | `Install-VoyageUnchangedProbe.ps1`, `Remove-VoyageUnchangedProbe.ps1` | Current-fingerprint and exact-hash guarded runtime roundtrip test |
 | Locate native names, references, or correlated member offsets | `VoyageExecutableInspector` | Read-only executable report with version-specific offsets |
 | Reproduce one of the existing surgical cooked-asset probes | `VoyageAssetPatcher` | Assertion-checked diagnostic asset written to a new path |
@@ -55,6 +110,129 @@ in [`../docs/voyage-cooked-asset-toolchain.md`](../docs/voyage-cooked-asset-tool
 `VoyageAssetInspector` is the CUE4Parse backend used by
 `Inspect-VoyageAsset.ps1`. Prefer the PowerShell wrapper because it adds the
 game fingerprint, a versioned output directory, and an inspection manifest.
+
+
+## Release producers
+
+Build/cook/package contracts remain with their owning mods. Use these routes
+before searching for scripts or assembling Unreal/retoc commands manually:
+
+| Producer | Public workflow and owning rules | Output / boundary |
+| --- | --- | --- |
+| DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
+| BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
+
+Read only the selected producer's rules and workflow. These links are routing,
+not permission to build/install, evidence of current-game compatibility, or a
+request to revisit the mod's gameplay design. Run its fingerprint/provenance
+gates before reusing inputs. A development probe or another mod's builder is
+not a substitute release producer.
+
+Do not assume that omitting `-Install` makes every preparation phase safe while
+the game runs: the documented original-preparation workflows can temporarily
+disable installed containers and require a closed game. Respect the selected
+producer's preconditions. Do not manually bypass its source or manifest gates.
+
+For an already-built release, skip build/cook and use the common verification
+and installation contracts below. The common installer accepts schema-2 release
+manifests, not every producer's build manifest. A producer without that schema
+keeps its documented installer until an explicit migration is implemented and
+validated. Keep exact commands and stage-specific details in the owning README,
+not duplicated here.
+
+## Release container verification
+
+The common `Install-VoyageRelease.ps1` / `Restore-VoyageReleaseInstallation.ps1`
+pair also supports one optional `.autoload` payload alongside the triplet.
+Its case-sensitive name must equal the container basename plus `.autoload`.
+Declare it in `payload` and include identical bytes in the release ZIP; empty
+files are valid. It participates in the same backup, hash, rollback and restore
+transaction and is reported as kind `autoload`. The installer does not parse
+its contents or claim runtime loading. Test both the legacy contract and this
+extension with Windows PowerShell 5.1 using `Test-Install-VoyageRelease.ps1`
+and the same command with `-WithAutoLoadSidecar`.
+
+```powershell
+$check = & .\tools\Test-VoyageContainer.ps1 -Container '<exact .utoc>'
+$check = & .\tools\Test-VoyageContainer.ps1 -Container '<exact .utoc>' `
+    -ExpectedPackageList '<release-owned expected-paths.txt>'
+```
+
+Uses the manifest-validated canonical `.tools/bin/retoc.exe`; never rebuilds a
+fork, mounts the game directory, extracts assets or installs files. Explicit
+`-Retoc <candidate.exe>` is for deliberate tool development and is identified
+as noncanonical in the report. `verify` and `list --path` each run through
+`Invoke-VoyageBoundedTool.ps1` (default 1024 MiB, 60 seconds per call; override
+with `-MemoryLimitMB`/`-TimeoutSeconds`).
+
+The returned PowerShell object contains `status`, `packageCount`, nullable
+`packageSetMatches`, `reportPath`, `packageListPath` and `error`. Read the full
+JSON report only for details: native-run evidence paths, exact file and retoc
+hashes, chunk types/counts, missing/unexpected packages and failure reason.
+Ignored output lives under `artifacts/container-checks/<run>/`; the package
+list contains sorted relative asset paths, one per line. Default failures
+throw after returning/storing evidence. `-AllowFailure` returns failed status
+without throwing; preflight input/manifest errors still throw. It does not
+turn a failed result into a passing check.
+
+Expected paths are exact, case-sensitive container paths such as
+`Voyage/Content/Blueprints/Example.uasset`, with `.uasset` or `.umap` extension.
+An optional `../../../` prefix and backslash separators are normalized. Blank
+lines are ignored; duplicates, parent traversal, `/Game` aliases, and pipe-
+separated inventory rows are rejected. Supply an independently maintained
+release/build contract: using the check's own returned list as its expectation
+is circular and cannot establish that the release contains the intended assets.
+Without expectations `packageSetMatches` is null, not a claim of correct scope.
+
+The integrity gate covers retoc's IoStore verification and exact
+`ExportBundleData` package paths; all chunk types are reported. Matching `.utoc`,
+`.ucas`, `_sN.ucas` partitions and optional `.pak` are hashed before/after.
+The PAK itself is fingerprinted only, NOT parsed/verified by this gate. A pass
+does not establish UObject parsing, dependency resolution, mount precedence,
+game-fingerprint compatibility or gameplay correctness. Source/retoc changes
+during a successful check invalidate it; no atomic snapshot is claimed.
+
+Regression: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+tools/Test-VoyageContainerTool.ps1 -KnownGoodContainer <exact.utoc>`.
+It copies that container family to ignored test output, then exercises expected
+sets and corrupts only its copy. The test's derived expectation proves the
+comparator, not independent release acceptance. Original files are hash-checked
+afterward. Use a provenance-validated input appropriate for the test.
+
+## Read-only installation status
+
+```powershell
+& .\tools\Get-VoyageInstallationStatus.ps1
+& .\tools\Get-VoyageInstallationStatus.ps1 -HashModFiles
+& .\tools\Get-VoyageInstallationStatus.ps1 -InstallManifest '<returned installManifestPath>'
+```
+
+Returns JSON on stdout; does not create evidence, launch/stop processes, build,
+install, restore, or write game files. `-GameRoot` defaults to the installed
+Voyage location used by the other public tools. The result contains build/exe
+identity, observed Voyage process IDs/paths, and top-level Paks `.pak`, `.utoc`,
+`.ucas`, and `.zip` metadata. `stock-name` is only a filename classification;
+`additional` does not prove the file is mounted. Subdirectories are explicitly
+returned as `unscannedSubdirectories`: this is not a recursive mod-loader or
+runtime mount inventory. Use asset inventory/extraction tools for package ownership.
+
+`-HashModFiles` adds SHA-256 for additional top-level files. An optional completed
+common installation manifest (schema 1, returned by `Install-VoyageRelease.ps1`)
+always hashes its exact installed targets, including the provenance ZIP. It
+reports `match`, `different`, `missing`, `unsupported-path`, or
+`changed-during-read` per file, and separates `filesMatch` from
+`gameFingerprintMatches`. No manifest means `installation: null`, not failure.
+Legacy/mod-specific manifests are not silently interpreted as the common schema.
+
+Exit zero means the snapshot was obtained, not that files matched; consumers
+must inspect the returned states. Invalid inputs/read failures throw. The
+snapshot is not atomic and process/path visibility can race or be unavailable;
+it never replaces an installer's immediate closed-game/hash gates, verifies
+container contents, or establishes gameplay compatibility.
+
+Regression: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+tools/Test-VoyageInstallationStatus.ps1`. Synthetic fixtures/results remain
+under ignored `artifacts/tests/installation-status-*/`.
 
 ## Common setup and safety
 
@@ -91,7 +269,7 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   `ec6595e46448a817ac21ea9bde01caa48f80a420`. It has no Voyage patch and does
   not require a fork.
 - Normal work uses only canonical published artifacts under `.tools/bin/`:
-  `UAssetGUI.exe`, `retoc.exe`, `jmap_dumper.exe`,
+  `UAssetGUI.exe`, `retoc.exe`, `jmap_dumper.exe`, `VoyageAssetInspector.exe`,
   `UAssetAPI/UAssetAPI.dll`, and `CUE4Parse/CUE4Parse.dll`. The fork/source
   checkouts above are build inputs, not normal invocation paths. Run a
   publisher only after its accepted source checkpoint changes or when its
@@ -116,15 +294,12 @@ game fingerprint, a versioned output directory, and an inspection manifest.
   `VoyageAssetInspector` reference the canonical UAssetAPI and CUE4Parse
   bundles by default. Their source-project override properties exist only for
   deliberate tool development.
-- `Get-VoyageAssetJson.ps1` and `Inspect-VoyageAsset.ps1` still launch the
-  tracked Inspector project through `dotnet run`. This is a known transitional
-  exception to the stable-binary model: restore may read the user's NuGet
-  configuration, and a restricted process can therefore report a false tool
-  failure before asset inspection starts. Run these wrappers with access to
-  the normal .NET/NuGet user configuration. Do not diagnose the asset or change
-  mappings when the log reports access denial for `NuGet.Config`. Publishing a
-  canonical Inspector executable and moving both wrappers to it is tracked in
-  the toolchain backlog.
+- `Get-VoyageAssetJson.ps1` and `Inspect-VoyageAsset.ps1` resolve the canonical
+  Inspector EXE and invoke it directly. Normal calls never build, restore, or
+  read NuGet user configuration; missing/stale binaries stop with the explicit
+  publisher command. Publication alone requires the .NET SDK and normal
+  NuGet access. A publish-time `NuGet.Config` access denial is an environment
+  failure, not asset or mapping evidence.
 - `VoyageAssetInspector` pins `Microsoft.Bcl.Memory` `10.0.11` to override the
   vulnerable `9.0.0` transitive dependency in the current CUE4Parse checkout.
   The dependency project can still emit its own audit warning while building;
@@ -135,22 +310,69 @@ game fingerprint, a versioned output directory, and an inspection manifest.
 - Start every version-bound investigation with a fresh fingerprint. Do not use
   an old artifact merely because its path or asset name still looks correct.
 - Installed override containers can shadow base-game assets during extraction.
-  `Extract-VoyagePackage.ps1` refuses additional containers by default; use
-  its `-AllowAdditionalContainers` switch only when the combined installed
-  view is explicitly required. `Get-VoyageAssetJson.ps1` instead selects its
-  source and never mixes unrelated installed mods into a game-asset result.
+  `Extract-VoyagePackage.ps1` defaults to `-Source Game`; `-Source Mod` needs
+  one exact `-ModContainer`. It never falls back to a mixed view silently.
+  Container isolation requires retoc's explicit-set capability (rollout gate
+  below). `Get-VoyageAssetJson.ps1` already supports isolated sources through
+  the published Inspector. Do not remove installed mods for extraction.
 - Never overwrite an extracted source asset. Write transformed output to a new
   ignored directory, preserve a known-good installed package, and do not
   replace installed files while the game is running.
 
 ### Release installation
 
-There is not yet a common install-only wrapper for an already built Voyage mod
-release. Do not emulate one with an unverified copy. Until the backlog item is
-implemented, an owning mod's installer must prove the release manifest and
-source identity, confirm the game is closed immediately before mutation,
-preserve an exact recoverable backup, copy only the manifest-owned files, read
-back their hashes, and update installation evidence only after success.
+Use the common install-only wrapper for an already built standalone IoStore
+release. It never builds, cooks, repackages, or edits the source release:
+
+```powershell
+.\tools\Install-VoyageRelease.ps1 `
+  -ReleaseManifest '.\artifacts\releases\Example-v1\release-manifest.json' `
+  -ValidateOnly
+```
+
+The accepted input is `release-manifest.json` schema 2 (currently produced by
+the DonkLift release builder). Other producers must adopt that explicit
+manifest contract rather than passing an unrelated build manifest.
+
+`-ValidateOnly` verifies the clean source commit, exact manifest-owned
+`.pak/.ucas/.utoc` triplet and ZIP, matching triplet contents inside the archive,
+and current Steam
+build/executable fingerprint, then returns the planned destinations without
+creating evidence or touching the Paks directory. Remove `-ValidateOnly` only
+for an explicitly authorized installation while the game is closed.
+
+During installation the wrapper stages and hashes every source in the Paks
+directory, backs up all existing targets before replacing any of them, checks
+the process again immediately before replacement, reads every installed hash
+back, and writes `install-transaction.json` plus `install-manifest.json` below
+ignored `artifacts/installations/`. A handled failure restores all previous
+files and removes newly installed targets; the transaction records whether the
+rollback succeeded. A dirty-source manifest is rejected unless the caller
+explicitly supplies `-AllowDirtySource`.
+
+Restore the exact predecessor through the paired tool rather than copying the
+backup manually:
+
+```powershell
+.\tools\Restore-VoyageReleaseInstallation.ps1 `
+  -InstallManifest '<returned install-manifest.json>' `
+  -ValidateOnly
+```
+
+Remove `-ValidateOnly` for an authorized restore. It refuses changed installed
+files or damaged/out-of-evidence backups before mutation, restores previous
+files, removes only manifest-owned files that did not previously exist, and
+rolls back a handled restoration failure to the installed state. A changed game
+build does not block removal: ownership and exact file hashes, not a runtime
+compatibility allowlist, are the removal gate. The original release and
+installation manifests remain immutable; restoration gets its own transaction
+and result manifest beside the installation evidence.
+
+If either transaction reports `recovery-failed`, stop normal install/restore
+work: backups and remaining staging copies are intentionally retained for
+recovery. Do not delete them or blindly retry. Abruptly interrupted transactions
+likewise require diagnosis; the restore command accepts a completed installation
+manifest, not an unfinished transaction.
 
 For standalone IoStore mods whose tested installation contract allows a ZIP in
 the Paks directory, retaining the exact release ZIP beside the installed
@@ -159,6 +381,22 @@ available to identify and recover the installed release. The ZIP name and
 installation manifest must carry the artifact version, not merely the mod
 version. This is a provenance copy of a validated release artifact, not a ZIP
 that should be regenerated during installation.
+
+Run the Windows PowerShell regression harness after changing this contract:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\Test-Install-VoyageRelease.ps1
+```
+
+It uses a unique synthetic Steam/Voyage tree under ignored `artifacts/tests/`
+and covers validate-only, successful installation, previous-file backup,
+installed hash readback, successful predecessor restoration, removal of new
+files, injected mid-install and mid-restore failures, and complete rollback in
+both directions. It also rejects a mismatched fingerprint, ZIP/payload mismatch,
+directory target, changed installed file, and damaged backup, and verifies that
+recovery copies survive a failed rollback. `-KeepArtifacts` retains the complete
+synthetic evidence tree; otherwise it is removed after the run.
 
 ## Typical workflow
 
@@ -200,7 +438,7 @@ the primary input and the test package directory as the optional sixth
 argument. Both directories remain read-only:
 
 ```powershell
-dotnet run --project .\tools\VoyageAssetInspector -c Release -- `
+.\.tools\bin\VoyageAssetInspector.exe `
   'P:\SteamLibrary\steamapps\common\Voyage\Voyage\Content\Paks' `
   'BP_VoyageIngameHud' `
   '.\artifacts\inspection\probe-hud' `
@@ -224,8 +462,8 @@ Query reflection mappings rather than package contents:
 ```
 
 `-EngineVersion` selects the CUE4Parse serialization rules. It defaults to
-`UE5_7` for existing version-bound workflows; pass `UE5_8` for current Voyage
-builds based on Unreal Engine 5.8.
+`UE5_8`, matching the current Voyage parser workflow. Use `UE5_7` only for an
+explicit older version-bound investigation with matching provenance.
 
 Find Blueprint-generated classes by their exact direct parent while limiting
 the package scan to a relevant content subtree:
@@ -352,9 +590,179 @@ downstream mapping result.
 `-Filter` matches the IoStore directory-index path. A successful run must
 produce at least one `.uasset`; zero matches are an error. The output includes
 `extraction-manifest.json`, which records the filter, fingerprint, retoc
-path/hash/profile, and whether additional containers were permitted.
+path/hash/profile, selected container paths/hashes/priority, source mode, and
+extracted asset hashes. The result object returns `outputPath`, `manifestPath`,
+`source`, and `assetCount`. Failure logs remain in the output directory and do
+not receive a success manifest. Shader conversion is disabled for this
+package-extraction entry point.
+
+Source modes:
+
+- `Game` mounts only stock global/package containers, ignoring installed mods.
+- `Mod -ModContainer <exact.utoc>` proves package ownership through the public
+  mod inventory, then mounts global, the selected mod, and stock dependencies
+  in that priority order. The selected mod wins even without `_P` in its name.
+  Unrelated mods never participate. Output is diagnostic and never cached.
+
+Canonical retoc `49b7721` provides `--include-container` and the repaired import reader. Published source-isolation and four-case import regressions passed; see the accepted JSON save checkpoint. Use the bounded runner for regression diagnostics. `-AllowAdditionalContainers` remains a
+deprecated, explicit combined-view diagnostic control (manifest source
+`InstalledLegacy`); never treat its output as stock-only evidence. It cannot
+be combined with an explicit `-Source`.
+
+Tool-development integration test (read-only against the game):
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\Test-VoyageExtractionSources.ps1 `
+  -Retoc '<candidate retoc.exe>' `
+  -ModContainer '<installed single-partition override mod.utoc>' `
+  -OverrideFilter 'UI/Game/HUD/BP_VoyageIngameBoatHud'
+```
+
+Supply a real differing stock override fixture. The test checks stock/mod
+separation, renamed-mod priority, stock-only provenance, unchanged candidate
+serialization versus canonical retoc after excluding competing overrides,
+Windows PowerShell default-path binding, and rejection of unowned queries.
+Its copied mod fixture and reports stay below ignored `artifacts/tests/`;
+it does not install anything or replace the canonical binary. Synthetic retoc
+unit tests separately exercise broken unselected containers, duplicates,
+missing paths, empty selection, version mismatch, and unchanged directory
+priority. Passing these checks is not gameplay validation.
 
 ## Specialized tools
+
+### retoc import compatibility regression
+
+Canonical retoc `49b7721` accepts explicit `UE5_8` for Voyage. UE5_7 preserves the pre-fork filtered-import writer. Shared object/container version values do not identify that loose layout; use an explicit engine selector.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\Test-RetocImportCompatibility.ps1 `
+  -CandidateRetoc '<candidate retoc.exe>' `
+  -UpstreamRetoc '<recorded upstream 885a8da retoc.exe>' `
+  -LegacyRetoc '<preserved 234f4e5 retoc.exe>'
+```
+
+This development test pins the two control executable hashes and the reviewed
+Steam-25056839 Dismantle fixture. It rejects other installed mods owning that
+asset before fresh legacy-control extraction. It checks candidate writer byte
+identity at `UE5_8`, and byte identity with upstream at explicit `UE5_7`, then
+packages all four producer/profile cases through the candidate using bounded
+invocations, verifies each container, and asserts one exact asset plus the
+container header. Raw Zen bytes must agree except CookedHeaderSize, whose
+version-bound field and value are independently checked against the legacy
+source. Nothing is installed or published. A changed fingerprint/control
+requires deliberate revalidation, not silently accepting the new input.
+The compact result returns the full `reportPath` under ignored `artifacts/`.
+This is compatibility evidence for the candidate reader, not permission to
+use upstream readers on the fork's expanded output or to claim runtime success.
+
+### GUI full-JSON regression
+
+`Test-UAssetGuiJsonRoundtrip.ps1 -CandidateGui <exe> -InputAsset <uasset>
+-Mappings <usmap> -EngineVersion 5.8 -TestCanPlace` exercises a development
+GUI executable's `tojson`/`fromjson` commands through the bounded runner.
+Run its public `-File` entry point with Windows PowerShell 5.1. The input
+must already have matching provenance and parse fully. `-TestCanPlace` is
+specific to `BP_FabricationPlacementComponent.GenerateAndSetLocation`;
+omit it for other inputs. All outputs and the returned `reportPath` stay in
+a unique ignored `artifacts/tests/gui-json-*` directory.
+
+Cases cover unchanged JSON, obsolete candidate JSON containing an ignored
+engine hint, and optionally the `CanPlace = True` edit. Every write explicitly
+supplies the engine version. The test
+asserts no RawExport, preserved object/custom versions, unchanged source,
+unchanged `.uexp` for no-op cases, and persistence of the changed expression.
+Whole-file byte equality is reported separately: UAssetAPI intentionally
+excludes `OverrideNameMapHashes` from JSON, so recomputed name hashes can
+differ. This does not constitute GUI-click or gameplay validation.
+
+Candidate `fromjson` syntax is `fromjson <json> <uasset> <mapping> [5.8]`;
+the final engine hint selects binary serialization without resetting header
+versions. Supply it for Voyage (5.8); JSON never carries SpecifiedEngineVersion.
+GUI applies its dropdown selection immediately before binary Save. Candidate GUI builds can
+set `-p:RetocResource=<absolute gzip path>` to test a specific retoc resource
+without replacing canonical tools; normal builds use the bundled resource.
+
+### Bounded diagnostic execution
+
+Use the common runner before repeating a tool that hangs, crashes, or grows
+memory unexpectedly:
+
+```powershell
+.\tools\Invoke-VoyageBoundedTool.ps1 `
+  -Executable '.\.tools\bin\retoc.exe' `
+  -Arguments @('--version') `
+  -MemoryLimitMB 256 -TimeoutSeconds 10
+```
+
+`-Executable` is an existing `.exe`, not a shell command; `-Arguments` is an
+array of literal arguments. Optional `-WorkingDirectory` defaults to the
+repository root. Defaults are 1024 MiB and 60 seconds. Use a 64-bit Windows
+PowerShell host. The small Win32 interop helper is loaded through PowerShell
+`Add-Type`; no SDK project, restore, NuGet configuration, or fork rebuild is
+involved. Changed helper source requires a fresh PowerShell host.
+
+The tool creates a suspended process, assigns a Windows Job Object before
+resuming it, and applies both per-process and aggregate-job committed-memory
+limits. Its inherited handles are restricted to stdin/stdout/stderr; windows
+are hidden. Timeout terminates the owned job, and background descendants are
+also terminated when the root process returns or the runner host exits.
+Failure to establish the job is a launch failure, never an unbounded fallback.
+This follows the Windows [job-limit contract](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_extended_limit_information)
+and [restricted handle inheritance](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute).
+
+Consume `status`, `exitCode` when present, `peakJobMemoryBytes`, `stdoutPath`,
+`stderrPath`, and `reportPath`. Evidence is retained under ignored
+`artifacts/tool-runs/`. Status is `passed`, `exit-failed`, `timeout`, or
+`launch-failed`. A nonzero native exit is not automatically classified as a
+memory failure: inspect stderr and the supplied limits. Failure throws by
+default; use `-AllowFailure` only when inspecting an expected failure and then
+check the returned status explicitly. The JSON records literal arguments, so
+do not pass secrets there. Logs are files, not capped buffers; use an appropriate
+time limit. This is resource containment, not a filesystem/network sandbox and
+not authorization to install, delete, or change anything.
+
+Verify with `powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+tools\Test-VoyageBoundedTool.ps1`. Its synthetic probe checks literal argument
+encoding, both output streams, native failure/default throw, per-process and
+aggregate-child memory denial, timeout cleanup, orphan prevention, and invalid
+executables. It does not touch the game or canonical binaries.
+
+### Canonical VoyageAssetInspector executable
+
+```powershell
+.\tools\Publish-VoyageAssetInspectorBinary.ps1
+.\tools\Get-VoyageAssetInspectorBinary.ps1
+```
+
+The publisher produces `.tools/bin/VoyageAssetInspector.exe` plus its sibling
+`VoyageAssetInspector.publish-manifest.json`. It requires committed, clean
+Inspector source and the accepted CUE4Parse bundle. It publishes a
+framework-dependent `win-x64` single file, smoke-tests it, records source,
+dependency and output hashes, and preserves a current binary unchanged
+(`Rebuilt = False`). It does not require unrelated mod work to be clean.
+The executable needs the .NET 10 runtime; mappings remain external.
+
+The read-only resolver checks current build-input fingerprints and binary
+hash/size; it never builds or restores. Both public inspection wrappers call
+it automatically. Clients do not need to locate the manifest or dependencies.
+The internal `-BuildInputsOnly` publisher interface is not an asset-analysis
+entry point. Explicit publication is needed only for changed inputs or a
+missing/invalid binary, not for a new query or game update alone.
+
+Verify this boundary with the installed game (read-only):
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\Test-VoyageAssetInspectorBinary.ps1
+```
+
+The test intercepts `dotnet`/`dotnet.exe` and fails if a supported runtime path
+tries to invoke them. It checks publisher reuse, a narrow legacy query, public
+stock inventory, JSON retrieval and reuse. Diagnostic output is retained under
+ignored `artifacts/tests/`; game files and mapping registry are never changed.
+This is tool validation, not new coding-agent adoption evidence.
 
 ### Canonical retoc, jmap, UAssetAPI, and CUE4Parse binaries
 

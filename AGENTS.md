@@ -17,6 +17,12 @@ those details here.
 - Current source, the closest rules, durable documentation, and the latest
   game-validated Git checkpoint are sources of truth. Chat history and local
   extracted artifacts are not.
+- Keep rules minimal and owned: remove obsolete or counterproductive rules,
+  merge duplicates, and put command syntax and implementation conventions in
+  the owning tool documentation rather than repeating them here. Replace a
+  rule only after preserving its still-valid safety/data contract. Record the
+  reason and verification in the active backlog; do not retain a chronological
+  history of superseded rules in the normal agent reading path.
 
 ## Research and knowledge protocol
 
@@ -69,19 +75,34 @@ those details here.
   or tracing third-party internals. Inspect implementation only when the tool
   fails, hangs, rejects valid-looking inputs, produces an unexpected result,
   or the documented contract is insufficient for the task.
+- Toolchain coverage must reach at least 80% of recurring mechanical operations
+  specifically in game-asset work and release preparation. Measure game
+  fingerprinting, mapping resolution/generation, asset retrieval/inspection/
+  modification/validation, and release build, cook, packaging, verification,
+  installation and restoration. Source-only modeling, image/video production
+  and unrelated development are outside this metric. Do not inflate or dilute the
+  metric with reasoning, source editing, documentation, or genuinely novel
+  diagnosis after a black-box failure. Record uncovered operations in
+  `docs/voyage-toolchain-backlog.md` instead of normalizing ad-hoc commands.
+- A reported gap is evidence, not automatic authorization or a requirement to
+  build another tool. Prioritize defects and recurring friction in actual
+  user-requested workflows. The 80% target is not a mandate for 100% feature
+  coverage: keep lower-priority gaps deferred rather than inventing new work
+  to fill the queue or improve the score. New workflow families require a
+  clear user need; an old one-off report alone is insufficient.
+- Every coding agent working in this repository must finish with a compact
+  tool-use report: intended operations, documented entry points invoked,
+  successes and evidence, failures or unexpected results, any fallback/source
+  inspection and its trigger, validation performed, and uncovered reusable
+  operation. A delegating agent must request this report explicitly and promote
+  reusable gaps or findings into the toolchain backlog or durable rules.
 - Public build, release, extraction, and packaging scripts must support Windows
   PowerShell 5.1 unless their documented interface explicitly says otherwise.
-  A PowerShell 7 success is not compatibility evidence: parse and smoke-test
-  the public `-File` entry point with `powershell.exe`. Do not derive a default
-  from `$PSScriptRoot` in a `param(...)` expression; accept an empty parameter
-  and resolve the repository-relative value in the script body. Use nested
-  two-argument `Join-Path` calls instead of PowerShell 7-only additional child
-  segments.
+  Parse and smoke-test the public `-File` entry point with `powershell.exe`;
+  follow the implementation conventions in `tools/README.md`.
 - A tracked wrapper's normal path must not restore/build a .NET project through
   `dotnet run`. Consume a manifest-validated published binary from
   `.tools/bin/`; reserve source-project execution for explicit tool development.
-  If a legacy wrapper still invokes `dotnet`, failure to read the user's NuGet
-  configuration is an environment/permission failure, not asset evidence.
 - Normal asset analysis calls `Get-VoyageAssetJson.ps1` with the asset identity
   and consumes only the returned `jsonPath`. Its default `Game` source mounts
   and caches only stock game containers; use explicit `Mod` source with one
@@ -99,8 +120,8 @@ those details here.
   `docs/voyage-toolchain-backlog.md`; mod backlogs must not absorb general
   toolchain investigations.
 - Durable findings about the Boat's Diesel socket hover card live in
-  `docs/boat-diesel-socket-architecture.md`; active feature work alone belongs
-  in `docs/boat-total-diesel-backlog.md`.
+  `docs/boat-resource-socket-architecture.md`; active feature work alone belongs
+  in `docs/boat-hud-total-resources-backlog.md`.
 - Before reusing any game-derived input, obtain the installed game's Steam
   build ID and executable hash with `tools/Get-VoyageBuildFingerprint.ps1` and
   compare them with the owning mod's provenance registry.
