@@ -321,8 +321,11 @@ valid trigger.
 
 The common manifest producer added after this report addresses one demonstrated
 gap but does not rewrite R9. Legacy recovery without index paths remains
-deferred and distinct from the normal current-game path. The user's game test
-of ScopeFix was still pending when the agent report was collected.
+deferred and distinct from the normal current-game path. The report was collected
+before runtime validation; the user later accepted the candidate at checkpoint
+`604fe6fd` as a qualitative long-range improvement with an accepted near-range
+undershoot. That gameplay result does not change the historical 7/9 tool-coverage
+measurement.
 
 ## Current conclusion
 
