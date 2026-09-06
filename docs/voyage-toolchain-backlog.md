@@ -600,3 +600,13 @@ live in [the checkpoint](voyage-json-save-checkpoint.md#github-rc3-publication).
 Reusable gap: fork binary ZIP assembly and GitHub publication currently use
 local staging plus gh; no repository release entry point covers them. Deferred
 until recurring user demand warrants it; do not implement solely for coverage.
+
+## ScopeFix legacy recovery gap (2026-09-06)
+
+Downloaded ScopeFix has two packages but no directory-index filenames.
+Canonical retoc recovered both once with UE5_7. Missing historical dependencies
+left unknown imports; UAssetAPI emitted RawExport, while CUE4Parse decoded the
+early camera vectors with later schema errors. Exact payload bytes confirmed
+the recovered vectors. Keep an intent-level historical property recovery path
+deferred; this one-off does not justify broad legacy support work. Details,
+evidence and current-game candidate validation: `mods/ScopeFix/README.md`.

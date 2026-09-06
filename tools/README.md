@@ -94,6 +94,11 @@ PowerShell wrappers. Keep real-task samples and their limits in
 
 ## Choose a tool
 
+ScopeFix's fingerprint-bound two-field candidate builder is documented in
+[`../mods/ScopeFix/README.md`](../mods/ScopeFix/README.md). Its public entry
+point is `mods/ScopeFix/Build-ScopeFix.ps1`; it creates a fresh verified
+container and evidence, without installation.
+
 | Goal | Start with | Result |
 | --- | --- | --- |
 | Run a potentially failing native diagnostic with resource limits | `Invoke-VoyageBoundedTool.ps1` | Time/memory-bounded process tree, separate logs, exit and peak-memory report |
