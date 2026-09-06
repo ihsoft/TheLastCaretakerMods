@@ -69,9 +69,10 @@ through `21529521` before R14.
   source on a successful supported path.
 - Git-state mutations are serialized through the `git-transaction` semaphore;
   normal commits use `tools/commit-repository-changes.ps1` with exact files.
-- A minimal manifest-bound GitHub release publisher is the only active common-
-  tool implementation: R14 fired its repeated-work trigger. Other tools remain
-  deferred until a real requested workflow hits a trigger below.
+- There is no active speculative common-tool implementation. R14 proved a real
+  GitHub publication gap, but its synthetic publisher harness exceeded the
+  break-even budget before becoming reliable. Resume only inside the next
+  analogous requested release, using the smallest live-workflow improvement.
 
 ## Prioritization gate
 
@@ -81,10 +82,13 @@ Before implementing a backlog item, record:
 2. the next requested workflow that needs it;
 3. the expected measurable change in calls, source reads, retries, output size,
    coverage, recoverability, or false acceptance;
-4. the smallest discriminating validation.
+4. the expected implementation/debug/maintenance and caller token cost versus
+   cumulative savings across realistically expected uses;
+5. the smallest discriminating validation and a stop condition if it expands.
 
 Defer the item when the expected return is marginal, the operation is a one-off,
-or the trigger has not occurred. Tool count and 100% coverage are not goals.
+the trigger has not occurred, or validation/repair cost crosses its break-even
+budget. Tool count and 100% coverage are not goals.
 
 ## Triggered work queue
 
@@ -99,7 +103,7 @@ or the trigger has not occurred. Tool count and 100% coverage are not goals.
 | DmlAssetRegistryProbe release producer | Test5 and Test6 each manually performed UE build, generation, cook and package/manifest assembly | That probe family receives another authorized iteration | A probe-owned one-command producer covering the four repeated preparation operations; do not create a broad common builder |
 | UE5.8.2 AssetRegistry metadata reader | retoc rejects the cooked registry and CUE4Parse exposed useful entries before a serializer exception in repeated DML probes | Another requested experiment depends on registry group/chunk metadata rather than ordinary package inventory | One bounded metadata projection with explicit partial/failure semantics instead of another forced-scan probe |
 | Compressed SaveGame marker readback | One probe used a bounded ad-hoc Unreal-v2/zlib decoder | A second real task needs the same marker contract | One documented bounded readback instead of re-deriving compression and terminator checks |
-| GitHub release preparation/publication/readback — **active** | RC3 and ScopeFix v1 both used manual staging plus `gh`; R14 covered only 2/5 operations and used 17 external calls | Trigger fired by the requested ScopeFix v1 prerelease | One manifest-bound public call covering immutable release-root preparation, tag/release/upload, and exact remote digest readback; target analogous coverage 5/5 with zero implementation reads |
+| GitHub release preparation/publication/readback | RC3 and ScopeFix v1 both used manual staging plus `gh`; R14 covered only 2/5 operations and used 17 external calls. A synthetic publisher was abandoned because its harness/debug cost crossed the expected break-even budget before reliable validation | The next analogous release is actually requested; improve that live workflow only if the remaining expected uses still repay implementation and maintenance | Smallest safe intent-level reduction in manual staging/publication/readback; stop rather than build a generic publisher if live evidence does not justify it |
 | Historical non-indexed package recovery | ScopeFix UE5.7 recovery required retoc plus partial UAssetAPI/CUE4Parse fallbacks because dependencies were absent | Another non-indexed historical mod blocks a requested migration | Decide from a second sample whether a narrow property-recovery interface is reliable; do not promise general legacy support |
 
 ## Deferred metadata decisions

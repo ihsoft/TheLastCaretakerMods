@@ -101,11 +101,15 @@ those details here.
 - Pipeline work must have a substantial, measurable expected return. Before
   changing a tool or rule, name the observed recurring cost and the intended
   before/after delta in public calls, retries, implementation files opened,
-  output volume, failure rate, or coverage of a real workflow. Afterward record
-  the measured result. Defer marginal score polishing or speculative convenience
-  work when it offers only a small improvement without a repeated failure,
-  material risk reduction, or clear user need; work performed merely to keep
-  improving the pipeline is itself a failure mode.
+  output volume, failure rate, or coverage of a real workflow. Include the
+  expected implementation, debugging, maintenance, and caller-context/token
+  cost: the cumulative savings over the realistically expected uses must exceed
+  that cost by a clear margin. Re-evaluate this break-even estimate when a test
+  or repair expands unexpectedly, and stop or defer the work when it no longer
+  pays back. Afterward record the measured result. Defer marginal score polishing
+  or speculative convenience work when it offers only a small improvement
+  without a repeated failure, material risk reduction, or clear user need;
+  work performed merely to keep improving the pipeline is itself a failure mode.
 - Every coding agent working in this repository must finish with a compact
   tool-use report: intended operations, documented entry points invoked,
   successes and evidence, failures or unexpected results, any fallback/source
