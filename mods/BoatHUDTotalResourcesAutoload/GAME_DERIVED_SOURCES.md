@@ -1,0 +1,91 @@
+# Game-derived source contracts
+
+Current gate:
+
+- Steam app: `1783560`
+- Steam build ID: `25056839`
+- engine: Unreal Engine `5.8.1`
+- `VoyageSteam-Win64-Shipping.exe` SHA-256:
+  `CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`
+
+Reconstructed editor-only identities:
+
+- `/Script/Voyage.VoyageBaseUserWidget : /Script/UMG.UserWidget`
+- `/Script/Voyage.VoyageInGameWidget : VoyageBaseUserWidget`
+- `/Script/Voyage.VoyageInGameVehicleWidget : VoyageInGameWidget`
+- `/Script/Voyage.VoyageInGameBoatWidget : VoyageInGameVehicleWidget`
+- `VoyageInGameBoatWidget.PetrolTB : UTextBlock`
+- `VoyageInGameBoatWidget.BatteryTB : UTextBlock`
+- `/Script/Voyage.EModuleResourceType::Electricity = 0`
+- `/Script/Voyage.EModuleResourceType::Diesel = 16`
+- `/Script/Voyage.VoyageModuleComponent.GetResourceAmount(EModuleResourceType) : double`
+- `/Script/Voyage.VoyageModuleSubsystem : /Script/Engine.TickableWorldSubsystem`
+- `VoyageModuleSubsystem.GetModulesInSameGrid(VoyageModuleComponent, out Array<VoyageModuleComponent>)`
+- stock package `/Game/UI/Game/HUD/BP_VoyageIngameBoatHud`
+- `/Game/UI/BP_VoyageHUD` derives from `/Script/Voyage.VoyageHUD` and its
+  `CharacterWidgetClasses` map selects
+  `VoyageBoatPawn -> BP_VoyageIngameBoatHud_C`
+
+The reflected identities above were revalidated from a live UE 5.8.1 process
+with `jmap_dumper 0.2.0`. Its automatic `GUObjectArray` resolver returned a
+false address for this executable; a bounded scan of the writable image data
+located the structurally valid array, after which both `.usmap` and full
+reflection dumps succeeded. The current mapping keeps `Petrol = 1` and
+`Diesel = 16`; the two native function owners, parameters, and return types are
+unchanged. A fresh current-build base-container export also confirms that
+`BatteryTB` and `PetrolTB` remain separate `UTextBlock` leaves. Both use size
+`10`, `VoyageRoboto` Regular, specified color `(0.5, 0.5, 0.5, 1.0)`, centered
+justification, and uppercase transformation.
+
+CUE4Parse with the explicit UE 5.8 serializer loaded the current stock Boat HUD
+from the base container. Its generated pseudocode is byte-for-byte identical to
+the preserved build `23962331` stock report, including the native parent,
+widget identities, native-Tick requirement, and absence of Blueprint Tick.
+
+Current Voyage still uses IoStore TOC `ReplaceIoChunkHashWithIoHash` and
+container header `SoftPackageReferencesOffset`, matching retoc's `UE5_7`
+profile. That compatibility profile remains explicit in the scripts because
+the installed retoc does not yet name `UE5_8`. The fresh stock HUD extracted
+successfully with the corrected converter and no shaders, and preserves the
+exact `2`/`0` relocation path counts. The final four-package container passed
+`retoc verify` and independent CUE4Parse UE5_8 inspection while mounted with
+the base game.
+The installed UE 5.8.2 editor is used to cook for the UE 5.8.1 game. Static
+container checks passed, and on 2026-08-31 the user confirmed that the
+installed container loads and the total-Diesel HUD works in the real game.
+Petrol present in tanks on the same ship was confirmed not to enter the sum.
+This validates the 5.8.2-editor/5.8.1-game combination for the primary path.
+On 2026-09-02, the final `BoatHUDTotalResources_P` container for build
+`25056839` passed the exact four-asset gates and was confirmed working after a
+real-save load.
+
+UE 5.8.2 enables ZenStore for a direct cook commandlet through its effective
+packaging defaults. The mod build passes `-SkipZenStore` explicitly because
+the checked relocation and retoc pipeline consumes loose `.uasset`/`.uexp`
+pairs. The build manifest records `LooseCookedPackageWriter`, and installation
+rejects another cook-storage contract.
+
+Upstream retoc `0.1.5` also omits `FObjectImport.PackageName` while reading and
+writing filtered legacy packages, although UE 5.8 serializes the field with an
+`ObjectName` placeholder. Mixed conversion shifted every later import and
+panicked on invalid outer indices. `tools/Build-RetocUe58Compatibility.ps1`
+reproduces the narrow correction from a hash-gated upstream source. Extraction
+and build manifests must record the same patched executable SHA-256.
+
+The current dynamic-child mod does not ship the extracted stock package.
+The editor cannot load Voyage's unversioned cooked Blueprint directly, so the
+generator compiles against an editor-only parent at the equal-length package
+path `/Game/Mods/Boat/BP_VoyageIngameBoatHud_O`. After cooking, the build
+rewrites that parent reference in the generated child to
+`/Game/UI/Game/HUD/BP_VoyageIngameBoatHud`, verifies that the temporary path is
+gone, and stages only the four mod-owned packages. The generated entry is the
+DML-compatible `/Game/Mods/BoatHUDTotalResources/ModActor.ModActor_C`; it
+changes only the `VoyageBoatPawn` value in
+`VoyageHUD.CharacterWidgetClasses`. The container family without `_P` and this
+entry identity passed a real-game load check on Steam build `25056839`.
+Revalidate all identities and reconstructed headers after any fingerprint
+change.
+
+Extracted originals, mappings, cooked assets, `scriptobjects.bin`, staging
+trees, and containers are generated game data and must stay under ignored
+`artifacts/` or ignored project output directories.
