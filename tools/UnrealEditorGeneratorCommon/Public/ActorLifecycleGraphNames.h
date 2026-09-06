@@ -23,4 +23,5 @@ inline const FName SoftClassPath(TEXT("SoftClassPath"));
 inline const FName CollisionHandling(TEXT("CollisionHandlingOverride"));
 inline const FName Teleport(TEXT("bTeleport"));
 inline const FName VectorLengthInput(TEXT("A"));
+inline const FName SimulatePhysics(TEXT("bSimulate"));
 }

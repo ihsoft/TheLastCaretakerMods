@@ -5,6 +5,7 @@
 #include "Modules/ModuleManager.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Components/TextRenderComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/SCS_Node.h"
@@ -13,6 +14,7 @@
 #include "GameFramework/Actor.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_ClassDynamicCast.h"
+#include "K2Node_DynamicCast.h"
 #include "K2Node_Event.h"
 #include "K2Node_IfThenElse.h"
 #include "K2Node_VariableGet.h"
@@ -172,6 +174,62 @@ void AddText(UBlueprint* BP, USCS_Node* Root, FName Name, const TCHAR* Text, int
     Root->AddChildNode(Node);
 }
 
+void SamplePhysics(FGraph& G, UEdGraphPin* DroneLocation)
+{
+    auto* Simulating = G.Call(UPrimitiveComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, IsSimulatingPhysics));
+    G.Link(G.Read(N::PhysicsBody), G.Pin(Simulating, P::FunctionTarget));
+    G.BooleanText(N::Physics, G.Pin(Simulating, P::ReturnValue), N::PhysicsYes, N::PhysicsNo);
+    auto* Difference = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_VectorVector),
+        DroneLocation, G.Read(N::EntryLocation));
+    auto* Length = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, VSize));
+    G.Link(Difference, G.Pin(Length, E::VectorLengthInput));
+    G.Number(N::Drift, N::DriftPrefix, G.Pin(Length, P::ReturnValue));
+}
+
+void PhysicsExperiment(FGraph& G, UEdGraphPin* ControlsDrone, UEdGraphPin* DroneLocation)
+{
+    auto* Occupied = G.Branch(ControlsDrone);
+    auto* Attempted = G.Branch(G.Read(N::EntryAttempted));
+    G.Branch(G.Read(N::FreezeHeld));
+    G.Branch(G.Valid(G.Read(N::PhysicsBody)));
+    SamplePhysics(G, DroneLocation); // Observe any native re-enable; never fight it every Tick.
+
+    G.Tail = G.Pin(Attempted, P::Else);
+    G.Write(N::EntryAttempted, nullptr, N::True);
+    auto* Root = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetRootComponent));
+    G.Link(G.Read(N::Drone), G.Pin(Root, P::FunctionTarget));
+    auto* Cast = NewObject<UK2Node_DynamicCast>(G.Graph);
+    Cast->TargetType = UPrimitiveComponent::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
+    G.Link(G.Tail, G.Pin(Cast, P::Execute)); G.Link(G.Pin(Root, P::ReturnValue), Cast->GetCastSourcePin());
+    G.Tail = Cast->GetInvalidCastPin(); G.Text(N::FreezeStatus, N::FreezeFailed);
+    G.Tail = Cast->GetValidCastPin();
+    G.Write(N::PhysicsBody, Cast->GetCastResultPin());
+    auto* WasSimulating = G.Call(UPrimitiveComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, IsSimulatingPhysics));
+    G.Link(G.Read(N::PhysicsBody), G.Pin(WasSimulating, P::FunctionTarget));
+    G.Write(N::OriginalSimulation, G.Pin(WasSimulating, P::ReturnValue));
+    G.BooleanText(N::OriginalPhysicsText, G.Read(N::OriginalSimulation), N::OriginalPhysicsYes, N::OriginalPhysicsNo);
+    G.Write(N::EntryLocation, DroneLocation);
+    auto* Freeze = G.Call(UPrimitiveComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, SetSimulatePhysics));
+    G.Link(G.Read(N::PhysicsBody), G.Pin(Freeze, P::FunctionTarget));
+    G.Default(Freeze, E::SimulatePhysics, N::False); G.Exec(Freeze);
+    G.Write(N::FreezeHeld, nullptr, N::True);
+    G.Text(N::FreezeStatus, N::FreezeApplied);
+    SamplePhysics(G, DroneLocation);
+
+    G.Tail = G.Pin(Occupied, P::Else);
+    G.Write(N::EntryAttempted, nullptr, N::False);
+    G.Branch(G.Read(N::FreezeHeld));
+    G.Branch(G.Valid(G.Read(N::PhysicsBody)));
+    auto* Restore = G.Call(UPrimitiveComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, SetSimulatePhysics));
+    G.Link(G.Read(N::PhysicsBody), G.Pin(Restore, P::FunctionTarget));
+    G.Link(G.Read(N::OriginalSimulation), G.Pin(Restore, E::SimulatePhysics)); G.Exec(Restore);
+    G.Write(N::FreezeHeld, nullptr, N::False);
+    G.Text(N::FreezeStatus, N::FreezeRestored);
+    SamplePhysics(G, DroneLocation);
+}
+
 void BuildGraph(UBlueprint* BP)
 {
     UEdGraph* Graph = BP->UbergraphPages[0];
@@ -266,9 +324,10 @@ void BuildGraph(UBlueprint* BP)
     G.Link(G.Pin(CameraLocation, P::ReturnValue), G.Pin(Subtract, P::Binary::RightOperand));
     auto* Length = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, VSize));
     G.Link(G.Pin(Subtract, P::ReturnValue), G.Pin(Length, E::VectorLengthInput)); G.Number(N::Distance, N::DistancePrefix, G.Pin(Length, P::ReturnValue));
+    PhysicsExperiment(G, ControlsDrone, G.Pin(DroneLocation, P::ReturnValue));
     G.Tail = G.Pin(Alive, P::Else); G.Text(N::Current, N::CurrentNo); G.Text(N::Distance, N::NoDistance);
     G.Text(N::Hidden, N::HiddenUnknown); G.Text(N::Collision, N::CollisionUnknown); G.Text(N::Marker, N::EmptyText);
-    // HC03 intentionally has no destruction path (including observer teardown).
+    // HC04 still has no destruction path (including observer teardown).
     // Test in a disposable session: native persistence is not claimed safe.
 }
 }
@@ -297,12 +356,21 @@ int32 UGenerateHarpoonProbeCommandlet::Main(const FString& Params)
     AddText(BP, Root, N::Entered, N::EnteredNo, 8);
     AddText(BP, Root, N::Returned, N::ReturnedNo, 9);
     AddText(BP, Root, N::Marker, N::EmptyText, 10);
+    AddText(BP, Root, N::Physics, N::PhysicsUnknown, 10);
+    AddText(BP, Root, N::Drift, N::DriftPrefix, 11);
+    AddText(BP, Root, N::FreezeStatus, N::FreezeWaiting, 12);
+    AddText(BP, Root, N::OriginalPhysicsText, N::PhysicsUnknown, 13);
     AddVariable(BP, N::State, UEdGraphSchema_K2::PC_Int);
     AddVariable(BP, N::Age, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, N::Drone, UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
     AddVariable(BP, N::OriginalPawn, UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
     AddVariable(BP, N::SawDroneControl, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, N::SawReturn, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, N::PhysicsBody, UEdGraphSchema_K2::PC_Object, UPrimitiveComponent::StaticClass());
+    AddVariable(BP, N::EntryLocation, UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
+    AddVariable(BP, N::EntryAttempted, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, N::FreezeHeld, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, N::OriginalSimulation, UEdGraphSchema_K2::PC_Boolean);
     FKismetEditorUtilities::CompileBlueprint(BP);
     BuildGraph(BP);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);

@@ -12,7 +12,7 @@ An update invalidates evidence; it is not by itself proof of incompatibility.
 
 ## Original source fingerprint
 
-The separate `AutoloadProbe/` HC01/HC02 experiments do not consume the retained
+The separate `AutoloadProbe/` HC01-HC04 experiments do not consume the retained
 native definitions below. Its engine-only generator targets editor UE5.8.2
 and current game build 25056839 with the executable hash above. The only game
 class reference is the current-stock inspected soft class
@@ -22,7 +22,13 @@ retoc. Renew this reference, script-object input and autoload contract after
 fingerprint changes. Build manifests record tool/mapping/source hashes; static
 success cannot establish native spawn/persistence or interaction safety.
 Subsequent HC01/HC02 user screenshots validate bounded lifetime and natural
-stock action hints only; see RESEARCH.md. Entry/exit and cleanup remain pending.
+stock action hints only; HC03 subsequently validates native entry and exit.
+HC04 re-inspected this same fingerprint through public summaries and stock
+inspection: Drone RootComponent and MeshComponent both resolve to VehicleMesh;
+look handlers require active and not snapped. The sole new runtime call is an
+Engine PrimitiveComponent simulation toggle, guarded by a runtime root cast.
+No VoyageFastSceneComponent mirror or assumed native field layout is generated.
+Full cleanup, physics-toggle behavior and save safety remain pending.
 
 - Steam build: `23962331`
 - Unreal Engine mapping version: `5.7.4`

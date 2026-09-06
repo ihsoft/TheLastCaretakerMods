@@ -1,4 +1,4 @@
-# HC03: stock Drone entry/exit observation
+# HC04: occupied Drone root-physics discriminator
 
 This is an isolated preparation project, not the HarpoonCannon release.
 It uses Engine-only Blueprint calls: no Voyage native mirrors, stock package
@@ -41,7 +41,7 @@ scriptobjects and loader contract. The old Harpoon UE5.7 project remains blocked
 Autoload descriptor uses `entryClass` and `activateIn: gameplay` from the existing
 C8 loader protocol. The loader is a prerequisite, not bundled or mutated here.
 The observer is a mod-authored Engine Actor using a Tick state machine and
-TextRender components. HC02 is installed and the user observed the Drone alive
+TextRender components. In the historical HC02 test the user observed the Drone alive
 at 21.406092 seconds with hidden NO, collision ON and stock Loot/Enter/Grab
 hints. This validates observation/target acquisition, not pressing those actions.
 Native spawned-Drone save/streaming and
@@ -63,9 +63,23 @@ player pawn becomes the owned Drone and later returns to the stored original
 pawn. These are observations only; stock actions still own entry and exit.
 No active charge/item/attachment/possession/input/camera/HUD mutation is added.
 Use a disposable session without manual saving, because retention/native
-persistence is unvalidated. The candidate requires real-game entry/exit results
-before a new validated checkpoint. Historical HC02's no-entry warning applies
+persistence is unvalidated. HC03 native entry/exit was confirmed in game and
+preserved in commit a78baca1b529157d25b43d8eae380579e7258269.
+Historical HC02's no-entry warning applies
 to HC02 only, not to a verified installed HC03. Do not conflate the packages.
+
+HC04 keeps that stock creation/entry/exit path and changes only the possessed
+Drone's root PrimitiveComponent physics simulation. It captures the component,
+its pre-entry simulation flag and entry world position, requests simulation OFF
+once per occupancy, and restores the captured flag when the player pawn is no
+longer that Drone. A failed root cast makes no mutation and is not retried until
+another entry. No Tick-disable, inactive/snap state, attachment, input override,
+stock asset override or native mirror is added. Continued observation exposes
+native simulation re-enable instead of fighting it repeatedly. The board has
+15 TextRender components, including original/current simulation and world drift.
+This deliberately tests world stationarity on a stopped ship, not ship-relative
+attachment. Mouse look and native exit must remain usable; otherwise restore
+HC03. No claimed safety for observer teardown, save/load or travel while frozen.
 
 Explicit installation, when authorized, must use `tools/Install-VoyageRelease.ps1`
 with the returned manifest; restoration uses its returned installation manifest

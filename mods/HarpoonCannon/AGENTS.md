@@ -11,7 +11,11 @@ Repository rules in `../../AGENTS.md` also apply.
   before editing shared architecture documents in an active shared worktree.
 - Implementation scope is checkpoint-specific; see the active backlog. The
   renewed autoload experiment owns only `AutoloadProbe/`, not the historical
-  UE5.7 shell or model generator. Installation requires separate authorization.
+  UE5.7 shell or model generator. The user authorizes subsequent in-scope
+  HarpoonCannon test-package installations without repeated questions when the
+  game is closed. Check the process immediately before mutation; retain all
+  manifest/fingerprint/backup/hash-readback gates. This does not authorize
+  stopping the game, changing other mods or expanding experiment scope.
 - Resume from the active section of the Harpoon backlog and `RESEARCH.md`.
   Chronological install claims in old experiments are historical, not gates or
   current state. Use the public installation-status tool for current state.

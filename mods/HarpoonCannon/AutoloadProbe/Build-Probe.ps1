@@ -6,7 +6,7 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 $project = Join-Path $PSScriptRoot 'Voyage.uproject'
 $engine = 'K:\Epic Games\UE_5.8\Engine'
 $editor = Join-Path $engine 'Binaries/Win64/UnrealEditor-Cmd.exe'
-if (-not $OutputRoot) { $OutputRoot = Join-Path $repo ('artifacts/harpoon-cannon/hc03-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')) }
+if (-not $OutputRoot) { $OutputRoot = Join-Path $repo ('artifacts/harpoon-cannon/hc04-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')) }
 $output = [IO.Path]::GetFullPath($OutputRoot)
 $artifactBoundary = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')) + [IO.Path]::DirectorySeparatorChar
 if (-not $output.StartsWith($artifactBoundary, [StringComparison]::OrdinalIgnoreCase)) { throw 'Output must be under repository artifacts.' }
@@ -82,7 +82,7 @@ if (($sourceAfter -join "`n") -cne ($sourceStatus -join "`n")) { throw 'Source s
 if ((@(Get-ProbeSourceHashes) | ConvertTo-Json -Compress) -cne ($sourceHashes | ConvertTo-Json -Compress)) { throw 'Source content changed during preparation.' }
 if ((& git -C $repo rev-parse HEAD).Trim() -cne $sourceCommit) { throw 'Repository HEAD changed during preparation.' }
 $provenance = [ordered]@{
-    schemaVersion=1;mod='HarpoonCannonLifecycleProbe';version=$version;experiment='HC03';createdAtUtc=[DateTime]::UtcNow.ToString('o');
+    schemaVersion=1;mod='HarpoonCannonLifecycleProbe';version=$version;experiment='HC04';createdAtUtc=[DateTime]::UtcNow.ToString('o');
     sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;
     gameEngineVersion='5.8.1';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';retocSha256=$extraction.retocSha256;
     gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId;executableSha256=$fingerprint.executable.sha256};

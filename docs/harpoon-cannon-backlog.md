@@ -2,11 +2,79 @@
 
 ## Active restart: 2026-09-05 Pacific / 2026-09-06 UTC
 
+### Standing installation authorization
+
+User explicitly instructed: install without further questions if the game is
+closed. Applies to subsequent in-scope HarpoonCannon test packages. Use the live
+process gate, validated manifest, exact recoverable backup and independent hash
+readback; do not stop a running game or alter other mods. This supersedes older
+per-candidate approval requests below. HC04 is already installed; this instruction
+does not itself require another installation or package change.
+
 This section supersedes historical present-tense installation
 and version claims below. Resume here after compaction, then read
 `mods/HarpoonCannon/RESEARCH.md` and the relevant durable shared findings.
 
-### Active: HC03 native entry and exit game-validated
+### Active: HC04 mouse look, blocked translation and native exit confirmed
+
+User subsequently explicitly confirmed working exit in HC04. The requested
+behavioral checkpoint passes: mouse look retained, translation blocked and exit
+usable. No post-exit
+screenshot or explicit physics-state readback was supplied; do not promote this
+to proof that original body simulation was restored. Save/travel, repeated
+occupancy and ship-relative attachment remain unvalidated. Source commit pending.
+
+User explicitly reports that mouse look works and movement does not in HC04.
+This validates the intended behavioral separation for this occupied Drone test.
+No diagnostic screenshot was supplied: original/current simulation values and
+numeric world drift are not independently observed, and "no movement" is a
+qualitative user result, not measured zero drift. HC04 exit is confirmed above;
+body simulation restoration has no independent readback. Ship-relative mount,
+camera limits, optics, repeated occupancy and save/travel remain unvalidated.
+Only evidence documentation updated after this report; installed HC04 unchanged.
+
+Validated HC03 source saved through scoped Git semaphore as
+`a78baca1b529157d25b43d8eae380579e7258269` (eight exact owning files).
+No shared model/generator source was integrated. Model owner acknowledged
+continued isolation; pipeline pause is lifted.
+
+HC04 discriminator: while occupied, request root PrimitiveComponent simulation
+OFF once, without setting Drone inactive/snapped or disabling Tick/input.
+Capture original simulation flag and world position; display original/current
+simulation and world drift. Restore captured flag when occupancy ends. Failed
+root cast makes no mutation and is not retried during that occupancy; native
+re-enable is observed rather than overwritten. Mouse look and stock exit should
+remain live if they are independent of rigid-body simulation. Test briefly on
+a stopped ship; world stationarity is NOT ship attachment and must not become
+the final ship-relative implementation. Save/travel/observer teardown while
+occupied remains unvalidated. Fifteen TextRender components, unchanged inventory.
+
+Fresh fingerprint matches Steam25056839/CA84428CF456...9933. Stock summary and
+control-flow inspection confirms MeshComponent and RootComponent share native
+VehicleMesh; movement uses forces/torque while look uses controller input gated
+by active/not-snapped. SetDroneActive(false) would suppress look and is rejected
+for this discriminator. No native mirrors or game property setters added.
+Candidate `artifacts/harpoon-cannon/hc04-candidate-01` passed first build,
+generation, single-package cook, exact inventory/integrity and manifest gates.
+Actual external candidate inspection confirms 15 text components, guarded root
+cast, exactly two simulation setter nodes (false and captured OriginalSimulation),
+one attempt per occupancy and unchanged native entry/exit. Source hashes match.
+Cooked JSON SHA256 `4D45F4513B79D433320A32A58D5354B52F38FF18F177EBE7CC07505163E2AC31`.
+Verification: `artifacts/container-checks/ea86895bf1214a7ebea89dfba03c04f4/verification.json`.
+
+User separately approved installation. Unchanged HC04 installed at
+2026-09-06 04:35:47 UTC through Install-VoyageRelease -AllowDirtySource after
+immediate closed-game gate. Recovery manifest:
+`artifacts/installations/HarpoonCannonLifecycleProbe/20260906-043547-hc04-candidate-01-122e3371/install-manifest.json`.
+Exact HC03 triplet/descriptor preserved; new HC04 ZIP had no predecessor.
+Public readback at 04:35:57 UTC: five files match, zero mismatches, matching
+game fingerprint, process absent. Installed utoc SHA256:
+`E6EDB88F7E510BFDEA9DCC1E3DEB7D0DE326B453A876382FADECB8F6163B0D3A`.
+No other mod changed. HC04 behavioral test passed as recorded above. HC03 release
+and source remain the known-good baseline. Tool report:
+`docs/harpoon-cannon-hc04-tool-report.md`.
+
+### HC03 native entry and exit game-validated
 
 User subsequently explicitly confirmed successful exit as well. Native entry
 and exit are now game-validated for this standalone Drone candidate. No exit

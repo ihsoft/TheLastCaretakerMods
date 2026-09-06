@@ -158,7 +158,35 @@ post-exit pawn-identity sample or proof of every native cleanup operation.
 The stock Drone's mobile lifecycle is inherited behavior, not yet constrained
 to the requested cannon yaw/pitch, fixed mount or telescope optics.
 
+## Drone movement/view split: HC04 discriminator
+
+Fresh stock summaries and pseudocode on Steam25056839 show Blueprint flight
+applying forces to MeshComponent and torque toward a desired rotation. The CDO
+binds MeshComponent and RootComponent to the same native VehicleMesh object.
+OnLookUpChanged and OnLookRightChanged call controller pitch/yaw input only
+when IsActive and not IsSnapped. SetDroneActive(false) and forcing a snap state
+are therefore poor isolation experiments: they can suppress the desired view
+input. Disabling all Tick also conflates movement, zoom and other lifecycle work.
+
+HC04 instead requests Engine PrimitiveComponent.SetSimulatePhysics(false) once
+on the dynamically cast root after stock possession, preserving input and native
+active state; restore the captured prior flag on exit. Static code supports this
+as a discriminating test, not proof that native code cannot re-enable simulation,
+that camera rotation survives, or that all movement is physics-driven. Observe
+both simulation and world displacement. World stationarity is deliberately not
+a moving-ship attachment solution. No native mirror is needed for this test.
+
+HC04 user runtime result: mouse look works while translational movement does
+not. This supports separating native view input from the physical flight body
+without deactivating the Drone or suppressing all input/Tick. No screenshot of
+physics flags or numeric drift accompanied the report; do not infer measured
+zero displacement or a confirmed simulation flag. The user subsequently confirmed
+working exit under HC04 as well. The behavioral test passes; the post-exit body
+simulation flag and complete cleanup were not independently captured. This is
+not yet a ship-relative mount.
+
 ## Shark classifier
+
 
 The current full package inventory identifies the same three shark Blueprint
 and gameplay-data pairs. Fresh Blueprint exports confirm:
