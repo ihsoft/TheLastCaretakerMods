@@ -46,11 +46,12 @@ Later tool repair now returns valid turret JSON despite that optional formatter
 failure, but synthetic verification does not rewrite this completed adoption
 sample.
 
-Five following non-overlapping Harpoon iterations are recorded as R10-R13 and
-R15:
+Six following non-overlapping Harpoon iterations are recorded as R10-R13, R15,
+and R17:
 HC01 preparation 88.9%, HC01 installation 100%, HC02 preparation 83.3%, and
 HC02 installation 100%, followed by HC03 preparation/installation at 100%.
-Together with the 92.9% restart sample above, every one of the six latest
+HC04 research/preparation/installation reached 100%. Together with the 92.9%
+restart sample above, every one of the seven latest
 bounded real-task samples reaches the 80% target. They are kept separate rather
 than pooled into a misleading repository-wide percentage.
 
@@ -453,6 +454,24 @@ the fallback. The reusable gap joins the existing installed-footprint transition
 queue; it does not justify an immediate common restore tool outside the next
 requested DonkLift experiment.
 
+## R17: Harpoon HC04 occupied-root physics discriminator
+
+Task `01a0507c-01d0-71e0-a8a0-09348bb3c406`, reported and committed at
+`10745abb` on 2026-09-06 UTC. Nine distinct intents covered fingerprinting,
+targeted Drone/turret structure, the required full control-flow/CDO inspection,
+mod-owned build/release production, exact candidate inspection, readiness,
+manifest-gated installation, and independent installed-state readback. All used
+documented public entry points: **9/9 = 100% for R17**.
+
+The iteration made 14 public asset/release calls, including one fingerprint
+display retry and one query-shape recovery. It opened zero pipeline
+implementation/dependency files and found no uncovered recurring operation.
+The `/Game/...` Inspector query ambiguity remains one deferred usability
+observation; the same public route succeeded with the documented container
+path. The user later confirmed mouse look, blocked character movement, and exit
+in game. Runtime validation is feature evidence, not an additional mechanical
+operation. See [the complete HC04 report](harpoon-cannon-hc04-tool-report.md).
+
 ## Current conclusion
 
 Post-publication audit on 2026-09-04 UTC: all four known coding owners were
@@ -469,13 +488,14 @@ as R5 above. The pipeline owner's earlier synthetic tests remain excluded.
 
 The repair iteration reached 80%, followed by R6 at 100%. R7 and R9 each reached
 77.8% and exposed defects or missing producers that were subsequently addressed;
-R8 reached 100%. The six latest fresh Harpoon samples now independently reach
-the 80% target: 92.9%, 88.9%, 100%, 83.3%, 100%, and 100%. This is current
+R8 reached 100%. The seven latest fresh Harpoon samples now independently reach
+the 80% target: 92.9%, 88.9%, 100%, 83.3%, 100%, 100%, and 100%. This is current
 adoption evidence, not a pooled global score or a promise that every future
 workflow is covered. ScopeFix publication sample R14 fell to 40% and exposed
 three repeated manual release operations, while the later HC03 sample R15
 returned to 100% without a new gap. DonkLift sample R16 then reached 83.3%; its
 one manual restoration is retained under the existing transition gap rather
-than spawning immediate tool work. Continue collecting reports only from actual
-in-scope work, and act on demonstrated recurring cost rather than synthetic
-chores or marginal score polishing.
+than spawning immediate tool work. HC04 R17 returned to 100% with zero pipeline
+implementation reads. Continue collecting reports only from actual in-scope
+work, and act on demonstrated recurring cost rather than synthetic chores or
+marginal score polishing.

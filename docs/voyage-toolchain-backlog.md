@@ -61,11 +61,11 @@ include compact summary `f8451a04`, exact external candidate inspection
 
 Acceptance audit, 2026-09-06 UTC:
 
-- **Black-box adoption:** current Harpoon R15, DonkLift R16, and the pending
-  HC04 report used documented entry points with zero pipeline implementation or
-  dependency reads. This criterion is supported for those current workflows,
-  not proven forever for every future task.
-- **At least 80% coverage:** the six latest Harpoon samples and DonkLift R16
+- **Black-box adoption:** current Harpoon R15/R17 and DonkLift R16 used
+  documented entry points with zero pipeline implementation or dependency
+  reads. This criterion is supported for those current workflows, not proven
+  forever for every future task.
+- **At least 80% coverage:** the seven latest Harpoon samples and DonkLift R16
   each meet the target. Release preparation remains incomplete because ScopeFix
   GitHub publication R14 reached only 2/5 = 40%.
 - **Coding-agent reports:** all four current owners have supplied bounded
@@ -94,10 +94,11 @@ improve the next analogous user-requested release.
   production, manifest, installation and status used public routes; restoring
   the previous v2 plus removing the experimental sidecar was manual because the
   mod-owned producer retained only a local backup, not a common install manifest.
-- Harpoon HC04 has a complete pre-runtime owner report at 9/9 with zero pipeline
-  implementation reads, but its installed candidate and report remain
-  uncommitted pending the user's game result. Record it only after the owning
-  checkpoint becomes authoritative; do not request the report again.
+- Harpoon HC04 is committed at `10745abb` and recorded as R17: 9/9, zero
+  pipeline implementation reads, with user-confirmed mouse look, blocked
+  character movement, and exit. HC05 is prepared but not installed while the
+  user plays; its current non-overlapping repository-only continuation is 3/3
+  and remains pending the owning checkpoint. Do not request either report again.
 - The model owner supplied its latest report: source-only blockout/render work
   was 0/0, N/A, with no game import/cook/package/install operation. The old
   untracked pipeline-owned `VoyageModel` export/render/test prototypes had no
@@ -141,7 +142,7 @@ or a correctness, safety, or provenance risk.
 | Gap | Existing evidence | Start only when | Material expected return |
 | --- | --- | --- | --- |
 | Interrupted installer recovery | Installer fails closed and retains staging when a transaction reports `recovery-failed`; completed installs already restore through the public command | A real interrupted transaction must be recovered, or the same manual recovery recurs | Recover or roll back from retained evidence without hand-editing installed files |
-| Partial/obsolete or legacy installed-footprint transition | C2 retirement and C7 sidecar-only addition required bounded manual mutations because the common installer owns complete releases; DonkLift R16 manually restored a local backup and removed `.autoload` because its producer had no common installation manifest | Another authorized release or DonkLift experiment requires the same non-common add/remove/restore transition | One manifest-bound transaction or owning-producer migration replacing repeated manual file-set mutation while preserving rollback evidence; implement only in that live workflow |
+| Partial/obsolete or legacy installed-footprint transition | C2 retirement and C7 sidecar-only addition required bounded manual mutations because the common installer owns complete releases; DonkLift R16 manually restored a local backup and removed `.autoload` because its producer had no common installation manifest; HC05 needed one exact `Test-Path` because compact status did not expose `.autoload` removal after four public restores | Another authorized workflow requires the same non-common add/remove/restore transition or compact removal proof | One manifest-bound transaction or owning-producer migration replacing repeated manual file-set mutation while preserving rollback evidence; implement only in that live workflow |
 | Semantic equivalence of independent Unreal rebuilds | DonkLift rebuilt five packages with different hashes despite stable package identities, sizes and key pseudocode | Hash churn blocks acceptance of another otherwise equivalent rebuild | Replace five ambiguous binary comparisons and an unnecessary canary decision with one bounded equivalence report |
 | Winning provider for duplicate virtual paths | Exact Game and exact Mod inspection are isolated; combined views still do not prove which duplicate provider wins | A release decision actually depends on runtime provider order and exact-source isolation is insufficient | One explicit winning-container result instead of removing mods or inferring precedence |
 | Native reflected owner/function/call relation | R7's executable correlation returned names/offsets but could not prove persistence ownership | A second real task needs the same relation and asset summaries cannot answer it | A narrow evidence-bearing relation query instead of broad executable-output correlation; only if a reliable data source is first proven |
@@ -177,7 +178,8 @@ or a correctness, safety, or provenance risk.
 - Shared-index/ref race: Git mutation semaphore and exact-path commit wrapper in
   `42e49871`; concurrency, occupied-index rejection, and real Harpoon recovery
   commit were validated.
-- Current adoption ledger through DonkLift R16: `2e269181`.
+- Current adoption ledger through Harpoon R17 lives in
+  `docs/voyage-toolchain-coverage.md`.
 - Compaction restart now uses compact status/next-action sections followed by
   targeted searches. HC03, HC04, and the pipeline owner each reproduced costly
   broad reads; the pipeline instance alone returned about 14k tokens before a
