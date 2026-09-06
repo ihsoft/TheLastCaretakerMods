@@ -209,6 +209,14 @@ those details here.
 
 ## Repository hygiene
 
+- Serialize every Git-state mutation through the repository `git-transaction`
+  semaphore documented in `tools/repository-git-coordination.md`. Normal scoped
+  commits must use `tools/commit-repository-changes.ps1`, which owns exact-path
+  staging, commit, and post-commit verification inside one lock. Do not run
+  direct `git add`, `git commit`, or another index/HEAD/ref mutation, and never
+  split staging and commit across lock acquisitions. Read-only Git commands and
+  edits/builds on explicitly disjoint paths may remain concurrent. If the lock
+  is busy, wait or report its recorded owner; never delete an active lock.
 - Preserve unrelated worktree changes and stage only the exact files belonging
   to the validated change.
 - In C++ generator code, replace every repeated `TEXT("...")` literal with a
