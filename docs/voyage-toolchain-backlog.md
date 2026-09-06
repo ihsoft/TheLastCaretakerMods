@@ -46,11 +46,11 @@ Current accepted routing model:
 - normal binary use: manifest-validated `.tools/bin/` outputs; publishers run
   only after an intentional accepted fork/source change.
 
-The active implementation is bounded to the R14 GitHub release gap below. Do not
-expand it into build/cook/install logic or a generic release framework. Stable
-checkpoints include compact summary `f8451a04`, exact external candidate
-inspection `74dc53c2`, Git serialization `42e49871`, and the adoption ledger
-through `21529521` before R14.
+There is no active common-tool implementation. R14 remains a deferred gap, not
+an instruction to resume the abandoned publisher prototype. Stable checkpoints
+include compact summary `f8451a04`, exact external candidate inspection
+`74dc53c2`, Git serialization `42e49871`, and the adoption ledger through
+`21529521` before R14.
 
 ## Current state
 
