@@ -7,11 +7,20 @@ contains only the reproducible transformation.
 Official UAssetAPI support currently stops at Unreal Engine 5.7. Normal builds
 reference the canonical managed bundle at `.tools/bin/UAssetAPI/`, published
 from reviewed fork commit
-`6b5ead37f213adc79d814689040a519be4e04a74` by
+`21c982fa8f04e12d5d216fdf330a2f206e81156f` by
 `tools/Publish-UAssetApiBinary.ps1`.
 
-Override the project path only when deliberately developing and testing a new
-UAssetAPI source checkpoint:
+Normal operations use the manifest-validated single-file executable at
+`.tools/bin/VoyageAssetPatcher.exe` through
+`tools/Invoke-VoyageAssetPatcher.ps1`. The wrapper validates the binary,
+resolves the reviewed current-game mapping, refuses existing output, and
+returns compact output hashes plus the full log path. Resolve the binary alone
+without building through `tools/Get-VoyageAssetPatcherBinary.ps1`; rebuild it
+only after an intentional, committed patcher or accepted UAssetAPI change through
+`tools/Publish-VoyageAssetPatcherBinary.ps1`.
+
+Build the source project or override its project path only when deliberately
+developing and testing the patcher or a new UAssetAPI checkpoint:
 
 ```powershell
 dotnet build .\tools\VoyageAssetPatcher\VoyageAssetPatcher.csproj `

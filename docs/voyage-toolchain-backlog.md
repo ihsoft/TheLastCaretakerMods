@@ -19,6 +19,31 @@ dirty-source authorization, immutable output, containment, ZIP disagreement,
 and no manifest after failed validation. This validates the tool contract, not
 retroactive adoption by either completed feature workflow.
 
+## Canonical VoyageAssetPatcher boundary (2026-09-06 UTC)
+
+The public routing table advertised assertion-heavy patch operations while its
+normal command still used `dotnet run`. That contradicted the stable-binary
+contract and exposed routine work to restore, NuGet configuration, and source
+build costs. The patcher now has an intent-level wrapper with reviewed mapping
+resolution, read-only manifest/hash/input resolution, compact output evidence,
+and an explicit checkpoint-gated single-file publisher. The stable EXE is
+`.tools/bin/VoyageAssetPatcher.exe`, SHA-256
+`4298009F9034E9F5D93BFF343ED9613D35F1F501EB7F4B6AAB5A390EDDBBA1A9`.
+
+Windows PowerShell 5.1 regression passed nine checks on Steam `25056839`:
+script parse, idempotent publisher reuse with `dotnet` intercepted, executable
+usage, public mapping/extraction inputs, real UE5_8 unchanged roundtrip and JSON
+export of `BP_VoyageCableUpdater`, compact result, existing-companion and legacy-
+mapping guards, and unchanged installed executable/container hashes.
+Evidence is under ignored
+`artifacts/tests/asset-patcher-binary-1d05ad6bf1984d2ba4f9891710aa06eb/`.
+The first publish needed normal NuGet.Config access; a documentation-only
+`UAssetAPI.xml` beside the candidate was correctly excluded from required
+runtime sidecars. Documentation-only patcher files are likewise excluded from
+the binary input fingerprint, as are UAssetAPI PDB/XML/deps files that do not
+enter this direct-reference executable, so those changes do not force a rebuild.
+This is tool validation, not a new feature-agent adoption sample.
+
 ## C8 freeze: common tooling checkpoint (2026-09-06 UTC)
 
 User requested freezing C8, retiring temporary probes and all old rollback data,
@@ -156,6 +181,7 @@ preserved, not an instruction to extend it or integrate models.
 | UAssetAPI | `.tools/bin/UAssetAPI/UAssetAPI.dll` | UAssetAPI `21c982f` | accepted |
 | CUE4Parse | `.tools/bin/CUE4Parse/CUE4Parse.dll` | CUE4Parse `ec6595e` | accepted, managed-only |
 | VoyageAssetInspector | `.tools/bin/VoyageAssetInspector.exe` | tracked source/input fingerprint in sibling publish manifest | published; wrapper smoke passed |
+| VoyageAssetPatcher | `.tools/bin/VoyageAssetPatcher.exe` | patcher `9d32697`, UAssetAPI `21c982f`, sibling input/hash manifest | published; PS5.1 real-asset smoke passed |
 
 Exact binary hashes and bundle contents are recorded after successful local
 publication in `docs/voyage-cooked-asset-toolchain.md` and in ignored sibling
@@ -212,6 +238,10 @@ publish manifests.
   and explicit publish-time permission diagnosis. Six-check regression above
   validates the replaced runtime contract; rule changes do not weaken game
   mutation, mapping, or provenance gates.
+- [x] Publish `VoyageAssetPatcher` as a manifest-validated single-file EXE and
+  replace the documented normal `dotnet run` path. Its PS5.1 regression blocks
+  source-project launch and exercises the intent-level wrapper on fresh UE5_8
+  unchanged roundtrip and JSON-export paths.
 
 Acceptance evidence:
 
@@ -423,8 +453,6 @@ Windows PowerShell and Inspector-launch follow-up:
 - Make mod override resolution emit the winning provider/container and read
   order, then assert that an exact stock replacement resolves from the selected
   mod rather than merely accepting duplicate identical virtual paths.
-- Decide whether the tracked patcher should also have a canonical published
-  executable instead of being built through `dotnet run`.
 - Add a single read-only health check for every canonical binary and publish
   manifest if repeated manual verification becomes error-prone.
 

@@ -39,7 +39,12 @@ The accepted UE 5.8 checkpoint is:
   `6DF2606BBA89987AEB4BF1EFBD3C64AC565DBC5D6113A0A7A5062C7CD8B249FD`;
 - canonical managed CUE4Parse at `.tools/bin/CUE4Parse/CUE4Parse.dll`, size
   `4,025,344` bytes and SHA-256
-  `F304981BAD4C53D209DFDABA9EB65A01D825572E543A04914BEBFD3538DCF4FD`.
+  `F304981BAD4C53D209DFDABA9EB65A01D825572E543A04914BEBFD3538DCF4FD`;
+- canonical VoyageAssetPatcher at `.tools/bin/VoyageAssetPatcher.exe`, size
+  `5,556,137` bytes and SHA-256
+  `4298009F9034E9F5D93BFF343ED9613D35F1F501EB7F4B6AAB5A390EDDBBA1A9`,
+  built from patcher source checkpoint `9d32697` and accepted UAssetAPI
+  `21c982f`.
 
 For Steam build `25056839`, game UE `5.8.1`, executable SHA-256
 `CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`,
@@ -78,6 +83,10 @@ Use the wrappers listed in `tools/README.md`:
   `Get-VoyageAssetInspectorBinary.ps1`. Runtime paths check provenance and never
   build or restore. The framework-dependent EXE requires .NET 10 and external
   reviewed mappings; source/dependency changes invalidate it, not a new query;
+- run normal surgical patch operations through `Invoke-VoyageAssetPatcher.ps1`,
+  which resolves the current mapping and validated executable; publish the EXE
+  through `Publish-VoyageAssetPatcherBinary.ps1` only after an intentional
+  committed patcher or accepted UAssetAPI change;
 - build or prepare fork source only while deliberately changing a dependency
   checkpoint or diagnosing an unexpected publisher/tool result;
 - create the common schema-2 manifest for an already-built triplet and ZIP with
