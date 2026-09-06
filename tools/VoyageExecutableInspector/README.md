@@ -10,11 +10,9 @@ generated Unreal class-registration records, whose class names are commonly
 stored as wide literals next to their native function tables.
 
 ```powershell
-dotnet run --project tools\VoyageExecutableInspector -c Release -- `
-  P:\SteamLibrary\steamapps\common\Voyage\Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe `
-  artifacts\inspection\native-input-chain.txt `
-  --window=8192 `
-  VoyageInputControlsComponent VoyageDynamicPlayerInputComponent GetProvidedActions
+.\tools\Invoke-VoyageExecutableInspector.ps1 `
+  -Query VoyageInputControlsComponent,VoyageDynamicPlayerInputComponent,GetProvidedActions `
+  -WindowBytes 8192
 ```
 
 Treat offsets as version-specific. Always record the executable hash beside
@@ -25,13 +23,21 @@ and direct calls or jumps to an already-known image address without copying the
 executable or loading it into the game process:
 
 ```powershell
-dotnet run --project tools\VoyageExecutableInspector -c Release -- `
-  P:\SteamLibrary\steamapps\common\Voyage\Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe `
-  artifacts\inspection\get-provided-actions-global.txt `
-  --target-va=0x14AD1B8D8
+.\tools\Invoke-VoyageExecutableInspector.ps1 `
+  -TargetVirtualAddress 0x14AD1B8D8
 ```
 
 `--member-offsets` searches executable sections for little-endian member
 displacements and reports pages containing at least three distinct requested
 offsets. This is a correlation aid, not a full x86 decoder; inspect the
 reported instructions before drawing conclusions.
+
+Normal work must use the wrapper above. It fingerprints the installed game,
+resolves `.tools/bin/VoyageExecutableInspector.exe` through its hash and input
+manifest, preserves the full report and log under ignored `artifacts/`, and
+returns a compact result. Use `Get-VoyageExecutableInspectorBinary.ps1` only to
+resolve or audit the accepted binary. After an intentional committed change to
+this source project, publish with `Publish-VoyageExecutableInspectorBinary.ps1`
+and run `Test-VoyageExecutableInspectorBinary.ps1` under Windows PowerShell 5.1.
+Direct `dotnet run` is reserved for deliberate development of this utility, not
+routine game research.

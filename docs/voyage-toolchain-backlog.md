@@ -44,6 +44,32 @@ the binary input fingerprint, as are UAssetAPI PDB/XML/deps files that do not
 enter this direct-reference executable, so those changes do not force a rebuild.
 This is tool validation, not a new feature-agent adoption sample.
 
+## Canonical VoyageExecutableInspector boundary (2026-09-06 UTC)
+
+The documented native-correlation path still launched its source project with
+`dotnet run`, exposing routine research to restore, NuGet configuration, build,
+and oversized-output costs. It now uses one intent-level wrapper that resolves a
+manifest-validated single-file EXE, fingerprints the installed game, protects
+existing reports, preserves full evidence under ignored `artifacts/`, and
+returns a compact structured result. Query-only zero matches are a normal
+`no-match` result unless the caller requests strict `-RequireMatch` behavior.
+
+The stable EXE is `.tools/bin/VoyageExecutableInspector.exe`, size `196,700`
+bytes and SHA-256
+`3A33483362EF5BA122C370C76322A6A4012BEB298D58A07C67CD6045A2F6C718`,
+from source checkpoint `79d01b3`. Its explicit contract remains narrow: names,
+bytes, pointers, references, and correlated offsets do not prove reflected
+ownership, call relations, or persistence lifecycle.
+
+Windows PowerShell 5.1 regression passed six checks: public-script parse,
+publisher reuse with both `dotnet` names intercepted, canonical usage smoke,
+pre-scan overwrite protection, one real current-game query, and retained game
+identity. The single read-only scan of the 198,655,048-byte executable found two
+`VoyageInputControlsComponent` matches; installed game files remained unchanged.
+Evidence is under ignored
+`artifacts/tests/executable-inspector-binary-fdac0d8c9ca345c1b3f325357b711e67/`.
+This is tool validation, not a new feature-agent adoption sample.
+
 ## C8 freeze: common tooling checkpoint (2026-09-06 UTC)
 
 User requested freezing C8, retiring temporary probes and all old rollback data,
@@ -182,6 +208,7 @@ preserved, not an instruction to extend it or integrate models.
 | CUE4Parse | `.tools/bin/CUE4Parse/CUE4Parse.dll` | CUE4Parse `ec6595e` | accepted, managed-only |
 | VoyageAssetInspector | `.tools/bin/VoyageAssetInspector.exe` | tracked source/input fingerprint in sibling publish manifest | published; wrapper smoke passed |
 | VoyageAssetPatcher | `.tools/bin/VoyageAssetPatcher.exe` | patcher `9d32697`, UAssetAPI `21c982f`, sibling input/hash manifest | published; PS5.1 real-asset smoke passed |
+| VoyageExecutableInspector | `.tools/bin/VoyageExecutableInspector.exe` | source `79d01b3`, sibling input/hash manifest | published; PS5.1 current-EXE smoke passed |
 
 Exact binary hashes and bundle contents are recorded after successful local
 publication in `docs/voyage-cooked-asset-toolchain.md` and in ignored sibling
@@ -242,6 +269,10 @@ publish manifests.
   replace the documented normal `dotnet run` path. Its PS5.1 regression blocks
   source-project launch and exercises the intent-level wrapper on fresh UE5_8
   unchanged roundtrip and JSON-export paths.
+- [x] Publish `VoyageExecutableInspector` as a manifest-validated single-file
+  EXE and replace the documented normal `dotnet run` path with one compact,
+  fingerprinted wrapper. Preserve the explicit correlation-versus-proof
+  boundary; do not count this synthetic validation as feature-agent adoption.
 
 Acceptance evidence:
 
@@ -498,13 +529,12 @@ The dynamic DonkLift report is recorded as R7 in
 changes only when the affected public tool is next changed or the operation
 recurs; the report is evidence, not blanket authorization for a new analyzer.
 
-Remaining deferred item:
-
-1. Document `VoyageExecutableInspector`'s present boundary before extending it:
-   name/string/reference correlation is not proof of a reflected owner, call
-   relation, or persistence lifecycle. A structured reflected-type/function/call
-   mode remains deferred until a second real task requires it or a bounded
-   experiment proves a reliable data source.
+The `VoyageExecutableInspector` launch and documentation boundary is complete:
+normal work uses its canonical binary through one compact wrapper, while name,
+string, reference and offset correlation is explicitly not proof of a reflected
+owner, call relation, or persistence lifecycle. A structured reflected-type/
+function/call mode remains deferred until a second real task requires it or a
+bounded experiment proves a reliable data source.
 
 PowerShell wildcard mistakes and unsupported `-AssetPath` were caller misuse.
 Keep examples literal-path based where practical, but do not count or implement

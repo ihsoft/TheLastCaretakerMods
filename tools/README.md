@@ -116,6 +116,7 @@ PowerShell wrappers. Keep real-task samples and their limits in
 | Prepare reviewed UAssetAPI source for development | `Prepare-UAssetApiVoyageUe58.ps1` | Exact source snapshot for deliberate fork/API investigation |
 | Publish the validated compact UAssetGUI executable | `Publish-UAssetGuiBinary.ps1` | Stable ignored `.tools/bin/UAssetGUI.exe` |
 | Publish or resolve the surgical Voyage asset patcher | `Publish-VoyageAssetPatcherBinary.ps1`, `Get-VoyageAssetPatcherBinary.ps1` | Manifest-validated single-file `.tools/bin/VoyageAssetPatcher.exe` |
+| Publish or resolve the native executable inspector | `Publish-VoyageExecutableInspectorBinary.ps1`, `Get-VoyageExecutableInspectorBinary.ps1` | Manifest-validated single-file `.tools/bin/VoyageExecutableInspector.exe` |
 | Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/bin/UAssetGUI.exe stress-open` | Incremental per-asset JSONL plus parse/binary-equality summary |
 | Build, cook and package an existing mod release | [Release producers](#release-producers) | Route to the owning mod's documented orchestrator; no generic rebuild recipe |
 | Create the common manifest for an already-built triplet and ZIP | `New-VoyageReleaseManifest.ps1` | Immutable schema-2 manifest published only after installer validation |
@@ -123,7 +124,7 @@ PowerShell wrappers. Keep real-task samples and their limits in
 | Verify one IoStore container and its expected package set | `Test-VoyageContainer.ps1` | Bounded integrity check, package inventory, exact-set differences and file hashes |
 | Restore/remove a common release installation | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded predecessor restoration and recovery evidence |
 | Install/remove one unchanged package canary | `Install-VoyageUnchangedProbe.ps1`, `Remove-VoyageUnchangedProbe.ps1` | Current-fingerprint and exact-hash guarded runtime roundtrip test |
-| Locate native names, references, or correlated member offsets | `VoyageExecutableInspector` | Read-only executable report with version-specific offsets |
+| Locate native names, references, or correlated member offsets | `Invoke-VoyageExecutableInspector.ps1` | Compact fingerprinted result plus retained read-only executable report |
 | Reproduce one of the existing surgical cooked-asset probes | `Invoke-VoyageAssetPatcher.ps1` | Manifest-validated patcher, reviewed current mapping, compact output hashes, and full log path |
 | Discover which Blueprint editor APIs Unreal Python exposes | `Inspect-UnrealBlueprintApi.py` | `Saved/BlueprintApi.txt` in an Unreal project |
 | Reuse semantic C++ names while generating Blueprint graphs | `UnrealEditorGeneratorCommon` | Header-only build-time helpers; not a command-line tool |
@@ -319,11 +320,12 @@ under ignored `artifacts/tests/installation-status-*/`.
 - Do not inspect the registry or run jmap during normal work. Call
   `Get-VoyageMappings.ps1`; regenerate only when it reports that the installed
   fingerprint has no matching reviewed entry.
-- C# tools currently target .NET 10. Normal `VoyageAssetPatcher` and
-  `VoyageAssetInspector` calls resolve their manifest-validated single-file
-  executables under `.tools/bin/`; they never restore or build. Their source
-  projects reference the canonical UAssetAPI and CUE4Parse bundles, and their
-  override properties exist only for deliberate tool development.
+- C# tools currently target .NET 10. Normal `VoyageAssetPatcher`,
+  `VoyageAssetInspector`, and `VoyageExecutableInspector` calls resolve their
+  manifest-validated single-file executables under `.tools/bin/`; they never
+  restore or build. Asset-tool source projects reference the canonical
+  UAssetAPI and CUE4Parse bundles, and their override properties exist only for
+  deliberate tool development.
 - `Get-VoyageAssetJson.ps1` and `Inspect-VoyageAsset.ps1` resolve the canonical
   Inspector EXE and invoke it directly. Normal calls never build, restore, or
   read NuGet user configuration; missing/stale binaries stop with the explicit
@@ -1126,16 +1128,29 @@ known virtual addresses, and correlate pages containing several member
 offsets.
 
 ```powershell
-dotnet run --project .\tools\VoyageExecutableInspector -c Release -- `
-  'D:\SteamLibrary\steamapps\common\Voyage\Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe' `
-  '.\artifacts\inspection\native-input-chain.txt' `
-  --window=8192 `
-  VoyageInputControlsComponent GetProvidedActions
+.\tools\Invoke-VoyageExecutableInspector.ps1 `
+  -Query VoyageInputControlsComponent,GetProvidedActions `
+  -WindowBytes 8192
 ```
 
-See [`VoyageExecutableInspector/README.md`](VoyageExecutableInspector/README.md)
-for `--target-va` and `--member-offsets`. Record the executable hash beside any
-conclusion based on an offset.
+The wrapper resolves the manifest-validated canonical EXE, fingerprints the
+installed game, refuses to overwrite a report, and returns only the match count,
+hashes, game identity, report/log paths, and analysis boundary. Use
+`-TargetVirtualAddress` or `-MemberOffset` for their respective correlation
+modes. A zero-result string query returns structured `no-match` unless
+`-RequireMatch` is selected.
+
+This output is a correlation aid: names, bytes, pointers, and offsets do not
+prove reflected ownership, call relations, or lifecycle. See
+[`VoyageExecutableInspector/README.md`](VoyageExecutableInspector/README.md)
+for details. Publish only after an intentional committed source change, then
+run the Windows PowerShell regression:
+
+```powershell
+.\tools\Publish-VoyageExecutableInspectorBinary.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\Test-VoyageExecutableInspectorBinary.ps1
+```
 
 ### `VoyageAssetPatcher`
 

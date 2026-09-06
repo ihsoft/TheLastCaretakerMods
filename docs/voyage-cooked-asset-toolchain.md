@@ -44,7 +44,11 @@ The accepted UE 5.8 checkpoint is:
   `5,556,137` bytes and SHA-256
   `4298009F9034E9F5D93BFF343ED9613D35F1F501EB7F4B6AAB5A390EDDBBA1A9`,
   built from patcher source checkpoint `9d32697` and accepted UAssetAPI
-  `21c982f`.
+  `21c982f`;
+- canonical VoyageExecutableInspector at
+  `.tools/bin/VoyageExecutableInspector.exe`, size `196,700` bytes and SHA-256
+  `3A33483362EF5BA122C370C76322A6A4012BEB298D58A07C67CD6045A2F6C718`,
+  built from source checkpoint `79d01b3`.
 
 For Steam build `25056839`, game UE `5.8.1`, executable SHA-256
 `CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`,
@@ -87,6 +91,12 @@ Use the wrappers listed in `tools/README.md`:
   which resolves the current mapping and validated executable; publish the EXE
   through `Publish-VoyageAssetPatcherBinary.ps1` only after an intentional
   committed patcher or accepted UAssetAPI change;
+- run native name, address, and member-offset correlation through
+  `Invoke-VoyageExecutableInspector.ps1`; it resolves the validated EXE and
+  returns compact fingerprinted evidence while retaining the detailed report.
+  Publish through `Publish-VoyageExecutableInspectorBinary.ps1` only after an
+  intentional committed source change. Its output does not prove reflected
+  ownership, call relations, or lifecycle;
 - build or prepare fork source only while deliberately changing a dependency
   checkpoint or diagnosing an unexpected publisher/tool result;
 - create the common schema-2 manifest for an already-built triplet and ZIP with
