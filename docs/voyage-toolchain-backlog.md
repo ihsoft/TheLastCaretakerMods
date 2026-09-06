@@ -59,6 +59,28 @@ include compact summary `f8451a04`, exact external candidate inspection
 
 ## Current state
 
+Acceptance audit, 2026-09-06 UTC:
+
+- **Black-box adoption:** current Harpoon R15, DonkLift R16, and the pending
+  HC04 report used documented entry points with zero pipeline implementation or
+  dependency reads. This criterion is supported for those current workflows,
+  not proven forever for every future task.
+- **At least 80% coverage:** the six latest Harpoon samples and DonkLift R16
+  each meet the target. Release preparation remains incomplete because ScopeFix
+  GitHub publication R14 reached only 2/5 = 40%.
+- **Coding-agent reports:** all four current owners have supplied bounded
+  reports: Harpoon, DonkLift, ScopeFix, and model work (`0/0`, N/A). HC04 is
+  already reported and must not be requested again.
+- **Reduced routine effort:** compact summaries, stable binaries, intent-level
+  producers, Git serialization, bounded compaction reads, and batched minor
+  observations have current evidence. The remaining acceptance proof is a
+  future real GitHub release workflow at or above 80% without resurrecting the
+  abandoned speculative publisher.
+
+The overall pipeline goal therefore remains active, not complete. Do not fill
+the missing release evidence with synthetic work; evaluate and minimally
+improve the next analogous user-requested release.
+
 - The six latest bounded real Harpoon samples independently reached 92.9%,
   88.9%, 100%, 83.3%, 100%, and 100% public-tool coverage. HC03 supplied the
   newest 5/5 sample with no implementation reads or uncovered recurring
