@@ -56,16 +56,5 @@ Revalidate packages, property contracts and game behavior on any changed
 fingerprint before building for that game version. Generated assets stay in
 ignored `artifacts/` directories; the repository keeps the method.
 
-The accepted installed artifact retains its immutable name `25056839-test1`.
-The suffix records its original packaging identity, not pending user approval.
-
-- ZIP: `artifacts/scope-fix/ScopeFix_25056839-test1.zip`.
-- SHA256: `9233DFD8F0A247FD9E56BBE206F49E58D2C46B72A82055FB69B5830B67864601`.
-- Build report: `artifacts/scope-fix/build/build-evidence.json`.
-- Semantic checks: `artifacts/scope-fix/validation.json`.
-- Release manifest: `artifacts/scope-fix/release-manifest.json`.
-- Installation/rollback manifest:
-  `artifacts/installations/ScopeFix/20260906-022853-25056839-test1-e7f26172/install-manifest.json`.
-
-All artifact paths above are relative to the repository root. Installation
-checked that the game was closed and read back all four installed hashes.
+The tested installation also passed the closed-game check and hash readback
+for its container triplet and archive.
