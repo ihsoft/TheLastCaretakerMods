@@ -36,12 +36,16 @@ $keySeparator = [char]31
 function Get-OptionalPropertyValue {
     param(
         [Parameter(Mandatory = $true)]
+        [AllowNull()]
         [object]$Object,
 
         [Parameter(Mandatory = $true)]
         [string]$Name
     )
 
+    if ($null -eq $Object) {
+        return $null
+    }
     $property = $Object.PSObject.Properties[$Name]
     if ($null -eq $property) {
         return $null
@@ -448,9 +452,17 @@ if (-not [string]::IsNullOrWhiteSpace($FunctionName)) {
 switch ($Focus) {
     'Overview' { $focusData = @($summary.generatedClasses) }
     'Functions' {
-        $focusData = @($summary.functions | Where-Object {
+        $selectedFunctions = @($summary.functions | Where-Object {
             [string]::IsNullOrWhiteSpace($FunctionName) -or [string]$_.name -ceq $FunctionName
         })
+        $focusData = if ([string]::IsNullOrWhiteSpace($FunctionName)) {
+            @($selectedFunctions | ForEach-Object {
+                [pscustomobject]@{ name = [string]$_.name }
+            })
+        }
+        else {
+            $selectedFunctions
+        }
     }
     'Calls' {
         $focusData = @($summary.calledFunctions | Where-Object {

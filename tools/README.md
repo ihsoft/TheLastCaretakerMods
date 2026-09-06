@@ -598,13 +598,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
 `Overview` is the low-cost default. Other focuses are `Functions`, `Calls`,
 `Members`, `SoftObjects`, `Components`, and explicit `All`. With `Functions`,
 `Calls`, `Members`, or `SoftObjects`, optional `-FunctionName` selects one exact
-serialized function and fails clearly when it does not exist. The compact
-result carries the generated-class overview or selected records, total counts,
-`resultCount`, and a hash-verified `summaryPath`; the complete summary contains
-all focus families and their source-function correlations. Normal repeated
-game calls reuse a content-addressed derived summary. Explicit `-Source Mod
--ModContainer <exact.utoc>` remains a one-off uncached diagnostic, matching the
-underlying asset-retrieval contract.
+serialized function and fails clearly when it does not exist. `Functions`
+without `-FunctionName` is a name-only discovery index; call it again with one
+exact name for the full function record. The compact result carries the
+generated-class overview or selected records, total counts, `resultCount`, and
+a hash-verified `summaryPath`; the complete summary contains all focus families
+and their source-function correlations. Normal repeated game calls reuse a
+content-addressed derived summary. The wrapper supports both Windows PowerShell
+5.1 and PowerShell 7, including missing/null optional export properties. Explicit
+`-Source Mod -ModContainer <exact.utoc>` remains a one-off uncached diagnostic,
+matching the underlying asset-retrieval contract.
 
 This is a cooked-bytecode summary, not a native runtime call graph, ownership/
 lifecycle proof, or provider-precedence model. It reports serialized function

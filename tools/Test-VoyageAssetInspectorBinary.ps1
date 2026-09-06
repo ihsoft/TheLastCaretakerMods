@@ -24,6 +24,40 @@ foreach ($name in @('Get-VoyageAssetInspectorBinary.ps1', 'Publish-VoyageAssetIn
     Assert-InspectorTest ($parseErrors.Count -eq 0) "PowerShell parse failure: $name"
 }
 $checks.Add('public-script-parse')
+
+$summaryScript = Join-Path $PSScriptRoot 'Get-VoyageAssetSummary.ps1'
+$summaryTokens = $null
+$summaryParseErrors = $null
+$summaryAst = [Management.Automation.Language.Parser]::ParseFile(
+    $summaryScript,
+    [ref]$summaryTokens,
+    [ref]$summaryParseErrors)
+$optionalPropertyHelper = $summaryAst.Find({
+    param($node)
+    $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+        $node.Name -ceq 'Get-OptionalPropertyValue'
+}, $true)
+Assert-InspectorTest ($null -ne $optionalPropertyHelper) `
+    'Could not find the optional-property helper for shell compatibility testing.'
+$helperProbe = $optionalPropertyHelper.Extent.Text + [Environment]::NewLine +
+    '$value = Get-OptionalPropertyValue -Object $null -Name ''Missing''' +
+    [Environment]::NewLine + 'if ($null -ne $value) { exit 3 }'
+$helperProbeEncoded = [Convert]::ToBase64String(
+    [Text.Encoding]::Unicode.GetBytes($helperProbe))
+$powerShell7 = Get-Command pwsh.exe -ErrorAction Stop
+$savedPreference = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'Continue'
+    & $powerShell7.Source -NoProfile -EncodedCommand $helperProbeEncoded *> $null
+    $helperProbeExitCode = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $savedPreference
+}
+Assert-InspectorTest ($helperProbeExitCode -eq 0) `
+    'Optional null properties fail under PowerShell 7.'
+$checks.Add('optional-null-property-powershell7')
+
 $binary = & (Join-Path $PSScriptRoot 'Get-VoyageAssetInspectorBinary.ps1')
 $beforeTime = (Get-Item -LiteralPath $binary.Path).LastWriteTimeUtc
 $published = & (Join-Path $PSScriptRoot 'Publish-VoyageAssetInspectorBinary.ps1')
@@ -105,7 +139,6 @@ Assert-InspectorTest ($formatterResult.pseudocodeStatus -ceq 'unavailable' -and
     (Get-FileHash -LiteralPath $formatterResult.jsonPath -Algorithm SHA256).Hash -ceq $formatterResult.jsonSha256) `
     'Formatter-only failure did not return validated asset JSON with explicit status.'
 $checks.Add('asset-json-independent-of-optional-pseudocode')
-$summaryScript = Join-Path $PSScriptRoot 'Get-VoyageAssetSummary.ps1'
 $summaryText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $summaryScript `
     -GameRoot $GameRoot `
     -Query 'Voyage/Content/Blueprints/Modules/Utility/Weapons/BP_Module_Turret.uasset' `
@@ -131,6 +164,26 @@ Assert-InspectorTest ($functionResult.resultCount -eq 1 -and
     $functionResult.summarySha256 -ceq $summaryResult.summarySha256) `
     'Exact function focus did not reuse and filter the asset summary.'
 $checks.Add('compact-asset-function-focus')
+$functionIndexText = & $powerShell7.Source -NoProfile -File $summaryScript `
+    -GameRoot $GameRoot `
+    -Query '/Game/Blueprints/Vehicles/BP_CameraDrone' `
+    -Focus Functions -AsJson
+Assert-InspectorTest ($LASTEXITCODE -eq 0) `
+    'Get-VoyageAssetSummary function index failed through PowerShell 7.'
+$functionIndexJson = [string]::Join([Environment]::NewLine, @($functionIndexText))
+$functionIndex = $functionIndexJson | ConvertFrom-Json
+$unexpectedFunctionDetail = @($functionIndex.data | Where-Object {
+    $_.PSObject.Properties.Name -ccontains 'parameters'
+})
+Assert-InspectorTest ($functionIndex.resultCount -gt 0 -and
+    @($functionIndex.data).Count -eq $functionIndex.resultCount -and
+    @($functionIndex.data | Where-Object {
+        [string]::IsNullOrWhiteSpace([string]$_.name)
+    }).Count -eq 0 -and
+    $unexpectedFunctionDetail.Count -eq 0 -and
+    [Text.Encoding]::UTF8.GetByteCount($functionIndexJson) -lt 8192) `
+    'Unfiltered function discovery is not a compact name index.'
+$checks.Add('compact-function-index-powershell7')
 $asset = & $getJson -GameRoot $GameRoot -Query '/Game/Blueprints/BP_VoyageCableUpdater'
 Assert-InspectorTest ((Test-Path -LiteralPath $asset.jsonPath -PathType Leaf) -and
     (Get-FileHash -LiteralPath $asset.jsonPath -Algorithm SHA256).Hash -ceq $asset.jsonSha256 -and
