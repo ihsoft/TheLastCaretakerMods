@@ -46,11 +46,13 @@ Later tool repair now returns valid turret JSON despite that optional formatter
 failure, but synthetic verification does not rewrite this completed adoption
 sample.
 
-Four following non-overlapping Harpoon iterations are recorded as R10-R13:
+Five following non-overlapping Harpoon iterations are recorded as R10-R13 and
+R15:
 HC01 preparation 88.9%, HC01 installation 100%, HC02 preparation 83.3%, and
-HC02 installation 100%. Together with the 92.9% restart sample above, every one
-of the five latest bounded real-task samples reaches the 80% target. They are
-kept separate rather than pooled into a misleading repository-wide percentage.
+HC02 installation 100%, followed by HC03 preparation/installation at 100%.
+Together with the 92.9% restart sample above, every one of the six latest
+bounded real-task samples reaches the 80% target. They are kept separate rather
+than pooled into a misleading repository-wide percentage.
 
 The pre-repair historical R1 + R2 + R4 recalculation remains **9/15 = 60%**.
 R3 contains no game-asset/release operations, so its scoped coverage is N/A
@@ -409,6 +411,23 @@ publication, and verification. RC3 had already exposed the same publication
 gap, so R14 fires the backlog trigger for one manifest-bound public publisher.
 This later repair must not rewrite R14.
 
+## R15: Harpoon HC03 native entry/exit candidate
+
+Task `01a0507c-01d0-71e0-a8a0-09348bb3c406`, reported and committed at
+`a78baca1` on 2026-09-06 UTC. The owner separated five recurring mechanical
+operations: mod-owned build/release production, exact non-installed candidate
+inspection, pre-install readiness, manifest-gated installation, and independent
+installed-state readback. All five completed through documented public entry
+points: **5/5 = 100% for R15**.
+
+The producer's nested build, cook, package, container and release-validation
+gates are not counted again. There were zero implementation/dependency reads,
+fallbacks, tool failures, or uncovered recurring operations. Two broad-read and
+patch-shape mistakes were correctly reported as agent errors rather than
+pipeline defects. The user confirmed native Drone entry and exit in game; that
+runtime evidence validates HC03 behavior but is not another mechanical tool
+operation. See [the complete HC03 report](harpoon-cannon-hc03-tool-report.md).
+
 ## Current conclusion
 
 Post-publication audit on 2026-09-04 UTC: all four known coding owners were
@@ -425,10 +444,11 @@ as R5 above. The pipeline owner's earlier synthetic tests remain excluded.
 
 The repair iteration reached 80%, followed by R6 at 100%. R7 and R9 each reached
 77.8% and exposed defects or missing producers that were subsequently addressed;
-R8 reached 100%. The five latest fresh Harpoon samples now independently reach
-the 80% target: 92.9%, 88.9%, 100%, 83.3%, and 100%. This is current adoption
-evidence, not a pooled global score or a promise that every future workflow is
-covered. The following ScopeFix publication sample R14 fell to 40% and exposed
-three repeated manual release operations. Continue collecting reports only from
-actual in-scope work, and act on demonstrated recurring cost rather than
-synthetic chores or marginal score polishing.
+R8 reached 100%. The six latest fresh Harpoon samples now independently reach
+the 80% target: 92.9%, 88.9%, 100%, 83.3%, 100%, and 100%. This is current
+adoption evidence, not a pooled global score or a promise that every future
+workflow is covered. ScopeFix publication sample R14 fell to 40% and exposed
+three repeated manual release operations, while the later HC03 sample R15
+returned to 100% without a new gap. Continue collecting reports only from actual
+in-scope work, and act on demonstrated recurring cost rather than synthetic
+chores or marginal score polishing.

@@ -54,9 +54,11 @@ include compact summary `f8451a04`, exact external candidate inspection
 
 ## Current state
 
-- The five latest bounded real Harpoon samples independently reached 92.9%,
-  88.9%, 100%, 83.3%, and 100% public-tool coverage. Do not pool them into a
-  synthetic global percentage or rewrite older samples after later fixes.
+- The six latest bounded real Harpoon samples independently reached 92.9%,
+  88.9%, 100%, 83.3%, 100%, and 100% public-tool coverage. HC03 supplied the
+  newest 5/5 sample with no implementation reads or uncovered recurring
+  operation. Do not pool them into a synthetic global percentage or rewrite
+  older samples after later fixes.
 - ScopeFix v1 publication R14 then reached 2/5 = 40%: fingerprint and manifest
   production were covered, while public-root preparation, GitHub publication,
   and remote readback were manual. It used 17 external calls and one premature
