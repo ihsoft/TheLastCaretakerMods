@@ -51,12 +51,6 @@ Repository rules in `../../AGENTS.md` also apply.
 - UE 5.8 extraction and packaging must use the hash-gated retoc compatibility
   build from `tools/Build-RetocUe58Compatibility.ps1`; upstream retoc 0.1.5
   misreads `FObjectImport.PackageName` in filtered cooked packages.
-- Run `Build-BoatHUDTotalResources.ps1` in an environment that permits UnrealBuildTool
-  to rotate `%LOCALAPPDATA%\UnrealBuildTool\Trace*.uba`. A sandbox-denied trace
-  rotation appears as a `dotnet.exe` dialog and exit `-532462766` / `0xE0434352`
-  before UBT reads this project; it is not evidence of a Blueprint, .NET, or
-  engine incompatibility. Inspect the captured UBT output before retrying, and
-  grant the build that narrow AppData access instead of repeatedly relaunching.
 - Never install or remove the mod while Voyage is running. Keep its unique
   container name so removal is exact and does not touch another mod.
 - Do not add Tick to the inherited Boat HUD child. Any repeating logic belongs

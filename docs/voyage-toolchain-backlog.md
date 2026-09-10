@@ -167,6 +167,13 @@ or a correctness, safety, or provenance risk.
 
 ## Recently closed; do not reopen without new evidence
 
+- Unreal producer sandbox launch boundary: repeated real Harpoon preparation
+  again entered the restricted sandbox and failed before UBT initialized with
+  the known `dotnet.exe` dialog / `-532462766` signature. The prohibition now
+  lives in root `AGENTS.md` and is explicit in `tools/README.md`: request
+  outside-sandbox execution on the producer's first invocation, not after a
+  probe fails. Two BoatHUD-local copies were removed after a repository-wide
+  rule search confirmed they were the only mod-specific duplicates.
 - Compact Blueprint summary and exact focused queries: `f8451a04`.
 - Exact non-installed Mod candidate inspection: `74dc53c2`.
 - Common schema-2 release-manifest producer and manifest-gated install/restore:

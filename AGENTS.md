@@ -139,6 +139,15 @@ those details here.
   PowerShell 5.1 unless their documented interface explicitly says otherwise.
   Parse and smoke-test the public `-File` entry point with `powershell.exe`;
   follow the implementation conventions in `tools/README.md`.
+- Never launch an Unreal Engine build producer, `Build.bat`, UnrealBuildTool, or
+  an `UnrealEditor-Cmd.exe` build/generate/cook step in the restricted sandbox,
+  not even as a first probe. Request outside-sandbox execution for the initial
+  invocation of the owning producer. UBT must write and rotate
+  `%LOCALAPPDATA%\UnrealBuildTool\Trace*.uba`; sandbox denial causes a
+  `dotnet.exe` dialog and exit `-532462766` / `0xE0434352` before the project is
+  read. Treat that signature as a launch-permission failure, not a project,
+  Blueprint, engine, SDK, or .NET defect; inspect the captured output and retry
+  once outside the sandbox with a fresh output identity.
 - A tracked wrapper's normal path must not restore/build a .NET project through
   `dotnet run`. Consume a manifest-validated published binary from
   `.tools/bin/`; reserve source-project execution for explicit tool development.
