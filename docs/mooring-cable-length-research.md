@@ -56,13 +56,25 @@ Detailed ignored build/cook evidence: `artifacts/mooring60/limitgraph-test5-r3/`
 (compiled graph) and `limitgraph-test5-r4/` (tagged cook).
 
 Finalization tool report: promoted the accepted containers without recooking;
-the final source cleanup was compiled separately. Windows PowerShell parsing,
-Test-VoyageContainer exact package verification, New-VoyageReleaseManifest
-validation and common installation/hash readback are the final release gates.
+the final source cleanup compiled successfully in `final-source-build-r2.log`.
+PowerShell parsing, Test-VoyageContainer exact three-package verification,
+New-VoyageReleaseManifest validation and common installation/hash readback all
+passed. Source checkpoint: `4c8c99826fa72cccf2dd0e23e8c620fb057fda82`.
+Final installation with the game closed:
+`artifacts/installations/MooringCable60m/20260911-051113-1.0.0-2e0c5bb9/install-manifest.json`.
+Independent Get-VoyageInstallationStatus readback: four matching files, zero
+mismatches, matching game fingerprint. The archive and all three containers
+match test5 bytes; `artifacts/releases/MooringCable60m-1.0.0/promotion-report.json`
+records their relationship and the exact validation scope.
 No common tool implementation changes or new pipeline wrapper were needed.
 The new TimerGraphNames header contains shared engine event/timer identities;
 the generator uses only committed shared Blueprint pin contracts. Detailed
 final evidence belongs to the ignored final release and installation directories.
+The shared tool index contained unrelated edits: only the mooring routing and
+diagnostic contracts were committed, with the full working file preserved.
+Coordination helper parameters were inspected because the documented normal
+exact-file workflow did not cover this mixed-file preservation; the normal
+commit wrapper still owned staging and commit under the same Git semaphore.
 
 **Prior validated deployment baseline.** Test4 combines mooring
 `MaxLengthBase = 6000` with male-socket `IntegratedCableLength = 6000`, and
