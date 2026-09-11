@@ -1,0 +1,9 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Modules": [
+    { "Name": "Voyage", "Type": "Runtime", "LoadingPhase": "Default" },
+    { "Name": "MooringGenerator", "Type": "Editor", "LoadingPhase": "Default" }
+  ],
+  "Plugins": [{ "Name": "AndroidFileServer", "Enabled": false }]
+}

@@ -146,6 +146,7 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 
 | Producer | Public workflow and owning rules | Output / boundary |
 | --- | --- | --- |
+| MooringCable60m | [Release workflow](../mods/MooringCable60m/README.md) | `Build-LimitGraph.ps1` builds/cooks the attached/free limit graph outside the sandbox; `Build-Candidate.ps1 -GraphManifest` preserves fresh stock inheritance, sets 60 m manual / 20 m attached payout, verifies exactly three assets and creates a schema-2 release manifest; neither installs |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
 | Harpoon HC01/HC02 diagnostics (experimental, not the cannon release) | [Preparation contract](../mods/HarpoonCannon/AutoloadProbe/README.md), [rules](../mods/HarpoonCannon/AGENTS.md) | Separate UE5.8.2 Engine-only autoload probe; `Build-Probe.ps1` prepares one exact package and schema-2 manifest, validates only, never installs |
@@ -1127,6 +1128,30 @@ Validate a supposedly standalone build from an otherwise empty directory with
 missing bundled resource.
 
 ### `VoyageExecutableInspector`
+
+For a novel native investigation requiring decoded instructions rather than
+the inspector's byte correlations, `Inspect-VoyageNativeMemberAccess.py`
+accepts `<exe> <new-output.json> --offset <hex>` (repeat `--offset`). It needs
+Python, `pefile`, and `capstone`; it reads the PE without process access and
+records the executable SHA-256. Outputs must remain below ignored artifacts.
+Candidate functions come from exception ranges containing the offset bytes;
+only decoded matching memory operands are retained. An offset match does not
+establish class ownership, and the output is not a whole-program call graph.
+Use only for targeted diagnosis after the compact inspector is insufficient.
+For a known instruction boundary, `--start-va <hex> --size <bytes>` instead
+decodes one exact window (up to 65536 bytes); it does not infer alignment.
+
+`Read-VoyageCableState.py` is a narrowly version-pinned, read-only runtime
+diagnostic for Steam 25056839 and 25191271 (exact EXE hashes). Pass `--pid`, `--base`, `--objects`, `--count`
+and `--exe` from a fresh `Find-VoyageUObjectArray.ps1` result, plus a new ignored
+`--output` JSON path. It uses Python's standard library, verifies the executable
+hash, opens only query/read process rights, and limits its scan to 60 seconds.
+It classifies cable/socket objects through the native class base-chain and
+reports length values; on 25191271 it also records the cable component's actual
+length, segment count, width, tightness and computed native force threshold.
+Unreadable objects are counted. A nonzero error count
+or an unloaded save invalidates gameplay conclusions. This is a non-atomic
+observation, not a mutation tool or a generic object inspector.
 
 This is a read-only PE inspector, not a decompiler and not an injector. It can
 search ASCII/UTF-16 strings, show nearby bytes and pointers, find references to
