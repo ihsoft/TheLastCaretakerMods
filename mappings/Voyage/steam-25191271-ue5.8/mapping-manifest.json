@@ -1,0 +1,27 @@
+{
+  "kind": "Voyage reflection mappings",
+  "game": "The Last Caretaker",
+  "internalProjectName": "Voyage",
+  "steamAppId": "1783560",
+  "steamBuildId": "25191271",
+  "executableName": "VoyageSteam-Win64-Shipping.exe",
+  "executableSha256": "747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B",
+  "engineVersion": "5.8",
+  "uassetApiEngineVersion": "VER_UE5_8",
+  "engineVersionBasis": "Explicit UE 5.8 dumper/parser target; minor/patch game engine version not independently established",
+  "generator": "ihsoft/jmap Voyage UE 5.8 compatibility fork",
+  "generatorCommit": "4f88d8af758712839529f9eeeb02b82c9469e271",
+  "generatorSha256": "75E693C2ACD22BB63671EF368C8608931CEF59E8F6F441AFFA3F7A72A3D11543",
+  "generationWorkflow": "tools/New-VoyageMappings.ps1 (PowerShell 7, main menu)",
+  "mappingFile": "Voyage-25191271.usmap",
+  "mappingLength": 2376216,
+  "mappingSha256": "E25620FB2D0674B26A3E4EF059AC2C5AF58E28CE1B4F07307860F7FADB9A0F68",
+  "generatedAtUtc": "2026-09-11T03:23:42.4132576Z",
+  "validation": {
+    "mappingGate": "Test-VoyageMappings.ps1 passed header, payload, fingerprint, hash and required names",
+    "assetParser": "Get-VoyageAssetJson.ps1 parsed current stock BP_ModuleCable_Mooring and BP_MooringCable_Socket_Male, no pseudocode failures",
+    "runtime": "No new cooked-asset runtime compatibility claim",
+    "evidence": "Ignored artifacts/mappings/steam-25191271-747DC2553F7E-jmap-4f88d8a-20260911T032148Z"
+  },
+  "revalidateWhen": "Steam build ID or VoyageSteam-Win64-Shipping.exe SHA-256 changes"
+}

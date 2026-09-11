@@ -176,16 +176,22 @@ function Invoke-JmapDumper {
     $startInfo.CreateNoWindow = $true
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
-    $startInfo.Environment['JMAP_CONCURRENCY'] = [string]$Concurrency
-    foreach ($argument in @(
+    $startInfo.EnvironmentVariables['JMAP_CONCURRENCY'] = [string]$Concurrency
+    $dumperArguments = @(
         '--pid', [string]$TargetProcessId,
         '--guobject-array', $GuObjectArray,
         '--engine-version', $engineVersion,
         '--all',
         $MappingsPath
-    )) {
-        [void]$startInfo.ArgumentList.Add($argument)
+    )
+    # ProcessStartInfo.ArgumentList is unavailable in Windows PowerShell 5.1.
+    # Escape backslashes before quotes and the closing quote using Win32 argv rules.
+    $quotedArguments = foreach ($argument in $dumperArguments) {
+        '"' + ([regex]::Replace(
+            [regex]::Replace($argument, '(\\*)"', '$1$1\"'),
+            '(\\+)$', '$1$1')) + '"'
     }
+    $startInfo.Arguments = $quotedArguments -join ' '
 
     $dumperProcess = [Diagnostics.Process]::new()
     $dumperProcess.StartInfo = $startInfo
@@ -197,7 +203,7 @@ function Invoke-JmapDumper {
     $completed = $dumperProcess.WaitForExit($DumpTimeoutSeconds * 1000)
     if (-not $completed) {
         try {
-            $dumperProcess.Kill($true)
+            $dumperProcess.Kill()
             $dumperProcess.WaitForExit()
         }
         catch {
