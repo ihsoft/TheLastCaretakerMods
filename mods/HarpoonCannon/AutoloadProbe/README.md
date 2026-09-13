@@ -1,86 +1,69 @@
-# HC04: occupied Drone root-physics discriminator
+# Harpoon station generator: accepted HC33
 
-This is an isolated preparation project, not the HarpoonCannon release.
-It uses Engine-only Blueprint calls: no Voyage native mirrors, stock package
-overrides, model edits, possession or screen widgets. See the active Harpoon
-backlog for interpretation limits and the player-facing `README.txt` for tests.
+Historical directory name only. This is the active editor-only producer for the
+station, not a runtime DLL and not a stock Drone/Forklift replacement.
+The user accepted HC33 target labels and 20%-reduced mouse tuning on 2026-09-13.
+See [architecture](../RESEARCH.md) and the [active backlog](../../../docs/harpoon-cannon-backlog.md)
+for exact retained manifests.
 
-## Preparation (Windows PowerShell 5.1)
+## Prepare, never install implicitly
 
-From the repository root:
+Windows PowerShell 5.1; FIRST invocation outside sandbox:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/HarpoonCannon/AutoloadProbe/Build-Probe.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/HarpoonCannon/AutoloadProbe/Build-Probe.ps1 -StationPrototype -OutputRoot R:/Codex/TheLastCaretakerMods/artifacts/harpoon-cannon/station-next
 ```
 
-Requires the reviewed installed Steam build 25056839, reviewed mappings,
-editor `K:\Epic Games\UE_5.8` version 5.8.2, C++ toolchain and manifest-validated
-canonical retoc. `-OutputRoot` must be a fresh path beneath repository artifacts.
-The script fingerprints/resolves mappings, builds the editor module, generates
-one asset, cooks one exact package without references, extracts current
-scriptobjects, packages/validates an exact one-package inventory, creates a ZIP
-and schema-2 manifest, then calls the common installer with `-ValidateOnly`.
-The current producer uses `tools/New-VoyageReleaseManifest.ps1` for the common
-manifest and validation. Engine/mapping/source hashes remain separately in
-`build-provenance.json`; it no longer assembles schema2 fields itself.
-It never installs. `-SkipBuild` is for explicit local debugging only, not a
-release preparation claim; normal preparation always builds incrementally.
+OutputRoot must be fresh beneath repository artifacts. Producer gates exact game
+fingerprint, reviewed mapping and editor 5.8.2; builds, generates, cooks, checks
+tagged headers, extracts current scriptobjects, packages/verifies, writes ZIP and
+schema-2 release manifest. Source hashes/status and HEAD must stay unchanged.
+No native producer in sandbox; no dotnet run. SkipBuild only for an unchanged binary.
 
-Stage logs and source hashes are retained in the result directory. Previous
-generated Content is moved recoverably into that directory. Source hashes and
-HEAD must remain stable throughout the preparation. Uncommitted experiment
-sources are explicitly declared; installation validation uses AllowDirtySource.
-Final output is compact JSON with status, manifest/archive and verification.
+StationInputsOnly is a mutually exclusive authoring-only preflight: five input
+assets, no runtime actor/HUD/autoload. It is not a playable station.
+The common station contains exactly nine tagged packages:
 
-The current class identity was re-inspected through stock-isolated public JSON
-on Steam25056839, executable CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933.
-Only a soft reference to BP_CameraDrone is generated; extraction is not copied
-as a replacement Blueprint. Fingerprint change invalidates this game reference,
-scriptobjects and loader contract. The old Harpoon UE5.7 project remains blocked.
+- /Game/Mods/HarpoonCannon/Station/BP_HarpoonOperator
+- /Game/Mods/HarpoonCannon/Station/WBP_HarpoonHUD
+- /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonLookYaw
+- /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonLookPitch
+- /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonExit
+- /Game/Mods/HarpoonCannon/Inputs/IMC_HarpoonKeyboard
+- /Game/Mods/HarpoonCannon/Inputs/DA_HarpoonInputContext
+- /Game/Mods/HarpoonCannonLifecycleProbe/ModActor
+- /Game/Mods/HarpoonCannonLifecycleProbe/ProbeHUD
 
-Autoload descriptor uses `entryClass` and `activateIn: gameplay` from the existing
-C8 loader protocol. The loader is a prerequisite, not bundled or mutated here.
-The observer is a mod-authored Engine Actor using a Tick state machine and
-TextRender components. In the historical HC02 test the user observed the Drone alive
-at 21.406092 seconds with hidden NO, collision ON and stock Loot/Enter/Grab
-hints. This validates observation/target acquisition, not pressing those actions.
-Native spawned-Drone save/streaming and
-early teardown behavior are not assumed safe; use a disposable session.
+The unchanged shell is a separate four-package manifest. Autoload support is an
+external prerequisite, not bundled. Package names are stable runtime identities:
+do not rename them to cosmetically remove the word Probe.
 
-HC01 already game-validated initial validity and survival to 8.002636 seconds.
-HC02 changes only the observation window to 60 seconds and its instrumentation:
-read-only whole-Actor hidden/collision flags, and an observer-owned text label
-45 cm above the Drone origin. It does not activate, reposition, attach, register,
-recharge or possess the Drone. Observe natural hints only; do not press entry or
-loot because timed cleanup remains active. The same virtual package and
-container family replaced HC01 through an explicitly authorized install. The
-HC01 predecessor is recoverable through the HC02 installation manifest in the
-active backlog.
+## Hard semantic gates
 
-Current HC03 source removes both timed and observer-destruction cleanup paths:
-it never destroys the Drone. It samples continuously and records whether the
-player pawn becomes the owned Drone and later returns to the stored original
-pawn. These are observations only; stock actions still own entry and exit.
-No active charge/item/attachment/possession/input/camera/HUD mutation is added.
-Use a disposable session without manual saving, because retention/native
-persistence is unvalidated. HC03 native entry/exit was confirmed in game and
-preserved in commit a78baca1b529157d25b43d8eae380579e7258269.
-Historical HC02's no-entry warning applies
-to HC02 only, not to a verified installed HC03. Do not conflate the packages.
+All station headers reject PKG_UnversionedProperties. Partial native mirrors
+must not serialize guessed inherited properties, native struct defaults or
+unintended native component/CDO deltas. Preserve native VehicleMesh identity.
+Public exact-Mod JSON checks own K2 InteractiveInterface membership AND exact
+GetInteractiveProvidedActions signature, plus explicit cooked Interact=Block.
+An explicit interface implementation need not have an inherited SuperStruct.
+Source graph creation must use the exact declaring interface.
 
-HC04 keeps that stock creation/entry/exit path and changes only the possessed
-Drone's root PrimitiveComponent physics simulation. It captures the component,
-its pre-entry simulation flag and entry world position, requests simulation OFF
-once per occupancy, and restores the captured flag when the player pawn is no
-longer that Drone. A failed root cast makes no mutation and is not retried until
-another entry. No Tick-disable, inactive/snap state, attachment, input override,
-stock asset override or native mirror is added. Continued observation exposes
-native simulation re-enable instead of fighting it repeatedly. The board has
-15 TextRender components, including original/current simulation and world drift.
-This deliberately tests world stationarity on a stopped ship, not ship-relative
-attachment. Mouse look and native exit must remain usable; otherwise restore
-HC03. No claimed safety for observer teardown, save/load or travel while frozen.
+Independent audits are retained at artifacts/harpoon-cannon/hc32-audit.ps1
+(66 baseline structural checks) and hc33-compare.ps1 (22 HC32/HC33 comparisons).
+They consume public returned JSON paths plus hashes. The comparison defaults to
+the retained HC33 candidate; it is an evidence helper, not a generic future gate.
+Adapt a future experiment's assertions deliberately and preflight against known
+JSON before paying for another cook. Never confuse static pass with runtime pass.
 
-Explicit installation, when authorized, must use `tools/Install-VoyageRelease.ps1`
-with the returned manifest; restoration uses its returned installation manifest
-and `tools/Restore-VoyageReleaseInstallation.ps1`. Never copy files by hand.
+## Runtime protocol / cleanup
+
+Load a save containing a built cannon. Aim at the base, use labeled Enter Harpoon,
+check first-person x5, aim at two solid targets then empty sky, and exit with E.
+Technical names are allowed when game Name is absent. Both mouse axes scale1.024.
+Stats remain. F8 and20 seconds are EXIT safeguards, not an alternative entry route.
+No firing, saving, dismantling, looting or entering another vehicle while occupied.
+Absent/empty hint: capture one useful observation and stop blind iterations.
+
+After result and closed-game gate, restore station then shell by exact installation
+manifests. Prepared artifacts are retained; no automatic next-test installation.
+Legacy HC01-HC32 protocols are historical archive material, not normal instructions.

@@ -1,78 +1,68 @@
 # HarpoonCannon rules
 
-Repository rules in `../../AGENTS.md` also apply.
+Root ../../AGENTS.md applies. This file contains only mod-owned constraints.
 
-## Ownership and research mode
+## Scope and restart
 
-- This task owns gameplay research, `mods/HarpoonCannon/**` and
-  `../../docs/harpoon-cannon-backlog.md`. Model geometry and its backlog belong
-  to the separate model task; coordinate before any generator/model/build work.
-- Do not modify DonkLift, another mod's assets or installed containers. Coordinate
-  before editing shared architecture documents in an active shared worktree.
-- Implementation scope is checkpoint-specific; see the active backlog. The
-  renewed autoload experiment owns only `AutoloadProbe/`, not the historical
-  UE5.7 shell or model generator. The user authorizes subsequent in-scope
-  HarpoonCannon test-package installations without repeated questions when the
-  game is closed. Check the process immediately before mutation; retain all
-  manifest/fingerprint/backup/hash-readback gates. This does not authorize
-  stopping the game, changing other mods or expanding experiment scope.
-- Resume from the active section of the Harpoon backlog and `RESEARCH.md`.
-  Chronological install claims in old experiments are historical, not gates or
-  current state. Use the public installation-status tool for current state.
-- Use the public tools selected through `../../tools/README.md`. Keep failed
-  tool cases and any fallback method in the iteration report; common reusable
-  gaps belong in the shared toolchain backlog, not in gameplay rules.
+- Ada owns logic and this mod's sources/docs. Model geometry and its backlog have
+  another owner; do not contact that agent without actual model work.
+- Start with ../../docs/harpoon-cannon-backlog.md, then RESEARCH.md and the narrow
+  relevant contract in VEHICLE_ENTRY_RESEARCH.md / GAME_DERIVED_SOURCES.md.
+  Historical archives are evidence, never current build/install instructions.
+- Do not modify DonkLift, other mods or their installed files. Coordinate shared
+  architecture edits if another owner is actively changing that file.
+- User permits scoped Harpoon installs without asking again when game is closed.
+  Never stop the game. Keep all manifest/fingerprint/backup/readback gates.
+- Test/play cycle: after a result, restore probe FIRST and shell SECOND through
+  exact installation manifests once game is closed. Prepare the next change
+  repository-only; announce readiness and wait for the agreed test window.
+  State what was established and the next action, not just permission to play.
 
-## Version and authoring gates
+## Authoring and preserved behavior
 
-- The code is an editor-only asset generator plus experimental probes. Never
-  ship its native binaries: the game supplies the actual `/Script/Voyage` types.
-- Fingerprint first and resolve reviewed mappings through the public resolver.
-  Before generation/cook/package, renew every affected entry in
-  `GAME_DERIVED_SOURCES.md`; a new mapping alone does not renew native mirrors.
-- Reproduce exact native declaring owners, default-subobject identities,
-  inherited property ordering and referenced types. Never invent native members
-  or infer successful runtime overrides from a compile/cook result.
-- Generated Content, extracted snapshots, logs, cooked output, inventories and
-  backups remain ignored artifacts. Follow the root reviewed-mapping exception.
-- Future installation must use the current documented manifest/process/backup/
-  hash-readback gates. A historical closed-game message is not a process gate.
+- Current supported paths are Build-Shell.ps1 and AutoloadProbe/Build-Probe.ps1.
+  AutoloadProbe contains the active HC33 generator despite its historical name.
+  Root generator supports only ShellOnly; legacy operator emission stays blocked.
+- Native Voyage mirrors and generator DLLs are editor-only; never ship them.
+  Renew all consumed identities on fingerprint change using public tools.
+- Station packages must be TAGGED. Reject PKG_UnversionedProperties and unintended
+  native CDO/subobject/property deltas through independent cooked inspection.
+  Partial action structs are named bytecode fields, not serialized native defaults.
+  Never invent ABI padding or infer native interface inheritance from a donor.
+- Preserve exact declaring function owners AND required implemented interfaces.
+  Explicit Blueprint interface implementation uses the exact interface graph;
+  it does not require an inherited SuperStruct. Gate the signature and membership.
+- Construction remains VoyageModuleActor at the Cyclone LEAF with exact item/DSO
+  identities. Do not override small-turbine/Whisper parent. Preserve base-mesh simple
+  collision for unfinished Q cancellation; do not alter it to fix preview rendering.
+- Use the common VoyageVehiclePawn native entry/exit, stationary nonphysical root
+  and independent camera/HUD/inputs. Do not import Drone/Forklift movement/physics
+  or mask ownership defects through per-Tick transforms/global HUD suppression.
+- Keep explicit cooked Interact=Block and separate interaction/query ownership.
+  Editor in-memory collision masks do not prove serialized runtime masks.
+- Keep own native HUD selection, matching context/action hints and useful character
+  stats. First-person angular x5, yaw360, pitch -50/+10, character-to-hit distance.
+- Any-hit display name is not target eligibility or persistent identity. Prefer
+  nonempty game item Name; otherwise technical actor name. Clear on miss and
+  write fallback/range before optional game-data gates.
 
-## Preserved gameplay boundaries
+## Validation and cleanup
 
-- Placement/module attachment, possession, input, camera, optical trace,
-  classification and HUD remain separate layers.
-- The historical construction-safe owner is a `VoyageModuleActor` shell with
-  exact named native default subobjects and custom-module ItemAsset alignment.
-  Revalidate it on the installed build before claiming current compatibility.
-- The disposable item adapter may target only the verified Cyclone leaf
-  `/Game/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New`.
-  Never restore the rejected small-turbine/Whisper parent-path override.
-- Preserve the base mesh's simple collision. It supplied unfinished-fabricator
-  acquisition for stock Q cancellation. The temporary fabricator clones meshes,
-  not the shell's independent box. More mount-overlap changes were a no-op;
-  collision is not a remedy for the separate preview-rendering defect.
-- Two direct reconstructed InteractiveInterface variants crashed at completion.
-  Do not iterate guessed interface signatures or combine new entry bytecode
-  with the same unproven class contract.
-- Historical shell-spawn tests produced no usable interaction; their latent
-  continuation remains unresolved. Current standalone HC01/HC02 validate Drone
-  survival and stock action hints, not entry/exit. Do not call the old
-  missing-barrel observation proof of timed self-destruction.
-- Do not inherit from another mod's replacement of the canonical Forklift path.
-  Any stock relocation is version-bound and requires fresh isolated extraction.
-- Full HUD selection through `GetHUDOverrideWidget` remains unbound until its
-  exact declaring native identity and lifecycle are established for this mod.
-- Keep 360-degree yaw, pitch -50/+10, first-person approximately 5x optics and
-  distance from character to optical hit point. Re-inventory all shark identities
-  after updates; use stable gameplay data, not localized/display/class-name text.
-  Other wildlife can later extend the classifier without rewriting trace/HUD.
-
-## Validation
-
-- Compile, generated graph validation, cooked inspection and container verification
-  are separate lower gates, never substitutes for real-game gameplay validation.
-- Change one architectural variable per runtime experiment with recoverable
-  evidence. After one or two no-ops revisit ownership or improve the discriminator.
-- Preserve safe construction first; then validate entry/exit, camera, aim,
-  HUD/trace and persistence in isolated checkpoints. No firing is implemented.
+- Every test must justify its information value and separate observable outcomes.
+  One/two no-ops or a weak discriminator means research, not blind field changes.
+  Place markers before guards and audit reachability, not just bytecode presence.
+- Preserve last accepted exact payload and source before risky changes. Compile,
+  cook/retoc and clean load do not replace gameplay validation.
+- HC33 is a tested operator/optics checkpoint, not a firing/persistence release.
+  Safety timeout/diagnostics remain in its immutable artifact until a separately
+  verified change. Do not claim full lifecycle or multiplayer support.
+- Housekeeping preserves active source, accepted payloads, provenance/recovery
+  manifests and methods. Archive/hash-check old evidence before deleting it;
+  generated intermediate files may be rebuilt. Never clean the shared game store.
+- Report tool results/friction at the natural checkpoint; reusable observations
+  belong in PIPELINE_OBSERVATIONS.md and the shared toolchain backlog as a batch,
+  not a new wrapper/rule for each failed command.
+- Do not create one tracked report per experiment. Give the compact tool-use
+  report in the handoff, promote durable findings into existing owned documents,
+  and put transient logs/receipts in ignored artifacts. Keep only current state
+  and pending gates in the backlog; discard report prose after consolidation.

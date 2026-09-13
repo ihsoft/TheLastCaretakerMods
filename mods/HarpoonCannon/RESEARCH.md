@@ -1,219 +1,125 @@
-# HarpoonCannon: owner contracts and research boundaries
+# HarpoonCannon: accepted architecture and pitfalls
 
-## Evidence scope
+## Evidence boundary
 
-Current static inspection: Steam build `25056839`, executable SHA-256
-`CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`.
-The reviewed mapping resolver selected the build-25056839 mapping and UE5_8
-parser profile. Evidence from 2026-09-05 Pacific is indexed in
-`../../docs/harpoon-cannon-tool-report-2026-09-05.md`.
+HC33 user acceptance, 2026-09-13, Steam25191271 / UE5.8, is the latest stable
+operator/optics checkpoint. Exact executable/mapping hashes and dependencies are
+in GAME_DERIVED_SOURCES.md; package and cleanup identities in the active backlog.
+The latest test could be performed on ordinary targets; shark-specific behavior
+was not separately retested because no sharks were nearby. Historical HC27
+confirmed Talon Shark name/range. Displaying a name is not hooking eligibility.
 
-The construction successes and operator crashes in the gameplay backlog were
-on build 23962331. They are useful architectural evidence, not validation of
-the current native mirrors. Subsequent current-build HC01/HC02 runtime evidence
-is recorded below; it validates standalone Drone observation/acquisition only.
+Stable means the requested single-player entry/aim/HUD/exit test works. It does
+NOT mean persistence, multiplayer, death/travel teardown, long-session operation,
+firing, cable attachment or all strong-motion edge cases have been validated.
 
-## Construction owner
+## Owners
 
-Current stock data still connects Cyclone's
-`/Game/Data/Assets/Modules/DA_Item_Module_WindTurbineMedium` to
-`/Game/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New`.
-The item remains dismantlable; the actor remains a child of the small-turbine
-Blueprint and its custom module component names that exact Cyclone item.
-This refreshes the identity chain only, not the native parent constructor,
-full unversioned property prefixes, carrier registration or persistence.
-
-Historical runtime evidence favors a module shell as the structural owner.
-The unfinished object is a different actor: the stock location fabricator
-clones the item's mesh components. Base-mesh simple collision made its Q
-cancel target discoverable; changing the final shell's separate collision box
-could not do that. Preserve this boundary while renewing the current build.
-
-## Telescope is an optical consumer, not an operator parent
-
-Current `BP_Equipment_Telescope` retains the Binoculars parent and overrides
-StateKey `Telescope`, InitialLockFOV `5`, FOV choices `[5]`, its telescope
-overlay widget and `bMeasureDistance=false`.
-
-Current `BP_Equipment_Binoculars` separates:
-
-- camera effects: obtain the owning controller's Voyage camera manager,
-  `AddOverridePPBlends(StateKey, ...)`, and `SetLockedFOV(StateKey, FOV)`;
-- visual HUD: create the overlay for the owning player, add it to the player
-  screen, and request game-state widget visibility `2`;
-- exit cleanup: release the keyed FOV/post-process, restore visibility `0`,
-  and remove the overlay.
-
-These inspected optical functions do not possess another pawn. They are useful
-consumers for a future occupied cannon, but do not supply its interaction,
-driver fixation, first-person camera transform or mouse-input owner.
-The literal 5-degree FOV is not 5x magnification. For base FOV F and 5x linear
-magnification use `2*atan(tan(F/2)/5)` with consistent angle units; at F=90
-degrees this is about 22.62 degrees.
-
-Do not copy the stock cleanup graph uncritically. The current exported control
-flow removes a valid overlay and returns; delegate-unregistration code is on
-the other branch. This observation requires a separate lifecycle audit, not an
-assumption that every stock cleanup action is unconditionally symmetric.
-Montage/AnimNotify producers, widget native ancestry and exact camera native
-signatures from the old research have not all been renewed in this iteration.
-
-## Drone supplies several independent contracts
-
-Current item `/Game/Data/Assets/Items/DA_CameraDrone` is a module whose dropped
-actor is `/Game/Blueprints/Vehicles/BP_CameraDrone`; its localized source name
-in the inspected item is `Photo Drone`.
-
-The Blueprint's external provider calls `GetInteractActions`, returns both
-`LootDrone` and `EnterDrone`, and binds them to stock `IAV_Interact` and
-`IAV_InteractTwo`. Entry delegates to `InputAction_EnterVehicle`, which checks
-the Drone module's resource amount (serialized resource type 0) is positive
-before calling `OnEnterVehicle(InputAction.Controller)`.
-Thus resource gating can block entry, but this graph still constructs both
-actions: absent energy alone is not an explanation for no hints at all.
-
-`SetDroneActive` changes gravity, active collision, light/material state and
-optional deployment. It is not a complete creation/registration contract.
-`ReceiveBeginPlay` initializes camera state, subscribes to a snap-socket
-connection and schedules a one-second delayed snapping-state update.
-`OnDriverChanged` separately owns activation, timers, visual first-person
-parts, camera fade, rotation reset and buoyancy updates. This is a substantial
-mobile vehicle lifecycle, not a neutral stationary operator.
-
-The Blueprint CDO's VehicleMesh explicitly references `PhotoDrone_Body`.
-The item's DropVariations separately references `SM_Camera_Drone_Full`.
-Missing item-drop setup is therefore not proof that a directly spawned Drone
-has no body mesh. In the inspected Blueprint, explicit DestroyActor calls
-target HighlightActor, not a demonstrated two-second self-destruction branch.
-This does not rule out native destruction, collection, streaming, registration
-failure or a defect in the diagnostic continuation.
-
-Current CDO component inspection additionally confirms DroneModuleComponent
-already references DA_CameraDrone, specifies MaxResources Electricity=100 and
-ConfigData DefaultResourceAmount/MaxResourceAmount=100. These are configuration
-defaults, not proof of actual resource amounts in a directly spawned instance.
-Do not add duplicate item identity/charge setup without a runtime discriminator.
-The VehicleMesh response list explicitly overlaps `Interact`; the separate
-ActiveCollisionSphere ignores `Interactive` and starts NoCollision. Do not
-conflate those channel names, or actor-wide collision flags with the actual
-component/channel hit path. HC02 observes natural hints and actor flags before
-changing registration, resource or collision state.
-
-Historical marker limits:
-
-- barrel hiding was a positive immediate-spawn branch marker;
-- the later marker reused that hidden state and restored it only on a valid
-  delayed result; it had no independent visible continuation marker;
-- no restoration cannot distinguish early actor invalidation from failure to
-  reach the delayed branch or an incorrect stored-reference path;
-- do not demand stopwatch measurements from the user. Either audit the owner
-  path or design independently observable outcomes before another runtime test.
-
-## HC01 standalone lifetime evidence (current-build runtime)
-
-The user tested the separately installed autoload candidate
-`artifacts/harpoon-cannon/hc01-candidate-05`. Its readable world-space board
-reported initial spawn VALID, final independent sample ALIVE at 8.002636
-observation seconds and camera-to-Drone distance 455.186035 cm. Thus a stock
-CameraDrone created through this Engine-only standalone path can retain a valid
-actor reference for at least this observed window, without calling SetDroneActive
-or binding it to the construction shell. The non-latent observer reached DONE.
-
-This rejects necessary immediate/two-second invalidation for this setup; it
-does not explain the old missing-barrel test, validate item setup/action hints,
-or prove physical visibility, successful cleanup, save/load or travel safety.
-The terminal text says cleanup requested and preserves a pre-cleanup sample.
-Do not infer completed destruction from it. Runtime record and screenshot
-identity are in the active backlog; no original asset snapshot was replaced.
-
-## HC02 natural interaction evidence (current-build runtime)
-
-The user screenshot from installed `hc02-candidate-01` visibly shows the Photo
-Drone on the deck, sampled ALIVE at 21.406092 seconds, with hidden NO and actor
-collision ON. The stock HUD offers Loot, Enter and Grab for Photo Drone while
-the character aims at it. This validates natural target acquisition and the
-stock interaction-hint path after standalone Engine-only spawning. No manual
-item/charge/registration/collision/activation change was needed for those hints.
-
-Do not promote hints to successful entry, resource initialization, exit,
-cleanup or persistence. The old construction-shell test remains a different
-owner/version path; neither a broken shell nor latent continuation is proved
-the sole old cause. Next entry/exit probe must prevent timed destruction of
-an occupied Drone before the user is instructed to press Enter.
-
-## HC03 native entry/exit evidence (current-build runtime)
-
-The unchanged standalone stock-spawn path, with observer destruction removed,
-supports native Drone entry. The user reports successful entry and ordinary
-Drone behavior; the HC03 screenshot shows GetPlayerPawn equal to the spawned
-Drone, sticky control-observed YES, and the native vehicle view/action HUD.
-Exit Vehicle, Change mode, Toggle light and Take Sample are offered. The
-resource gate allowed entry without manual charge/item/activation mutation.
-This validates possession and native view/HUD acquisition in this setup, not
-every action, complete native cleanup, persistence, or a stationary Harpoon
-operator. At the entry screenshot, return to the original pawn is still NO.
-The user subsequently explicitly confirmed successful exit. Native user-driven
-entry/exit is therefore game-validated for HC03, without an independent captured
-post-exit pawn-identity sample or proof of every native cleanup operation.
-The stock Drone's mobile lifecycle is inherited behavior, not yet constrained
-to the requested cannon yaw/pitch, fixed mount or telescope optics.
-
-## Drone movement/view split: HC04 discriminator
-
-Fresh stock summaries and pseudocode on Steam25056839 show Blueprint flight
-applying forces to MeshComponent and torque toward a desired rotation. The CDO
-binds MeshComponent and RootComponent to the same native VehicleMesh object.
-OnLookUpChanged and OnLookRightChanged call controller pitch/yaw input only
-when IsActive and not IsSnapped. SetDroneActive(false) and forcing a snap state
-are therefore poor isolation experiments: they can suppress the desired view
-input. Disabling all Tick also conflates movement, zoom and other lifecycle work.
-
-HC04 instead requests Engine PrimitiveComponent.SetSimulatePhysics(false) once
-on the dynamically cast root after stock possession, preserving input and native
-active state; restore the captured prior flag on exit. Static code supports this
-as a discriminating test, not proof that native code cannot re-enable simulation,
-that camera rotation survives, or that all movement is physics-driven. Observe
-both simulation and world displacement. World stationarity is deliberately not
-a moving-ship attachment solution. No native mirror is needed for this test.
-
-HC04 user runtime result: mouse look works while translational movement does
-not. This supports separating native view input from the physical flight body
-without deactivating the Drone or suppressing all input/Tick. No screenshot of
-physics flags or numeric drift accompanied the report; do not infer measured
-zero displacement or a confirmed simulation flag. The user subsequently confirmed
-working exit under HC04 as well. The behavioral test passes; the post-exit body
-simulation flag and complete cleanup were not independently captured. This is
-not yet a ship-relative mount.
-
-## Shark classifier
-
-
-The current full package inventory identifies the same three shark Blueprint
-and gameplay-data pairs. Fresh Blueprint exports confirm:
-
-| Blueprint | PlayerModuleComponent.ItemAsset |
+| Concern | Owner / accepted contract |
 | --- | --- |
-| BP_NPC_Shark | /Game/Data/NPCData/DA_NPC_Shark |
-| BP_NPC_RamShark | /Game/Data/NPCData/DA_NPC_RamShark |
-| BP_NPC_Shark_Laser | /Game/Data/NPCData/DA_NPC_LaserShark |
+| Construction, deck mount, dismantle/item identity | VoyageModuleActor shell at Cyclone leaf; native module/default-subobject contract |
+| Unfinished construction cancellation | Stock location fabricator clones item meshes; base simple collision enables Q acquisition |
+| Gaze acquisition | Character native InteractiveDetectorPointerComponent, station interaction component and query |
+| Enter action | Own explicit InteractiveInterface implementation; native descriptor/delegate |
+| Driver fixation and possession | Common VoyageVehiclePawn.OnEnterVehicle / OnExitVehicle |
+| Station motion | Nonphysical native root attached to shell; no inherited mobile-vehicle behavior |
+| Aim inputs | Own Enhanced Input MouseX/MouseY handlers; E Started exits |
+| Optical view | Owned Engine CameraActor and CameraComponent, attached to station |
+| Complete HUD | Own VoyageActorWidgetInterface.GetHUDOverrideWidget |
+| Occupied exit hint | Base-owned GetProvidedActionsBP, matching input context, stock horizontal hint widget |
+| Target display | First blocking optical hit, optional game item Name, actor-name fallback and range |
+| Diagnostics | Separate observer/widget; not evidence of gameplay state unless correctly sampled |
 
-Ordinary and laser sharks meet only at the general BP_NPC_Simple_Base;
-RamShark derives from ordinary Shark. A simple ordinary-Shark class test misses
-laser sharks; the general NPC base overmatches non-sharks. Prefer the exact
-gameplay-data whitelist, not localized names. Name-based inventory discovery
-is evidence for these identifiable variants, not proof that an unrelatedly
-named future creature cannot be a shark. Renew the inventory after updates.
+## Construction boundary
 
-Trace origin/direction remain the optical-axis component. Distance remains
-character location to hit impact point. This inspection did not implement
-runtime tracing or promote the old generator to current-game compatibility.
+Keep Cyclone's item /Game/Data/Assets/Modules/DA_Item_Module_WindTurbineMedium
+aligned with leaf /Game/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New.
+Never override its small-turbine/Whisper parent: that caused Bad export index4607/19
+in the untouched child. Three-package and five-package variants both failed;
+extra meshes or stock connector were not proved the cause of that particular crash.
 
-## Next operator discriminator
+The final module and unfinished fabricator are different actors. Q became usable
+after base-mesh simple collision, not more mount overlaps or an independent box
+on the completed actor. Preserve it. Historical current-build shell revalidation
+retained that contract; user waived a redundant Q retest after cleanup.
+Do not expand this into a claim that every future update preserves cancellation.
 
-Inspect the stock module turret's actual ownership before selecting a parent.
-Its presence by name is not evidence of manual possession. That exact asset's
-initial public JSON request failed in optional pseudocode rendering; the
-pipeline subsequently repaired the public interface. Renew inspection through
-the current public tool rather than using rejected staging output. Keep the
-module shell, operator lifecycle and Telescope optics
-as separate decisions until the native interaction boundary is understood.
+The model remains separately owned. No stock-head/cable/preview-material change
+belongs to a logic cleanup. Preview wireframe appearance was not fixed by simple
+collision and is not evidence that cancellation collision is wrong.
+
+## Station lifecycle
+
+Autoload scans the exact built-shell class and pairs one station by owner.
+Prepare the station before making entry available: native context/root/attachment
+checks, no spawn inside Fabricated or a hover/provider callback. Failed preparation
+stays blocked instead of endlessly spawning replacements.
+Native root VehicleMesh is non-simulating/NoCollision; shell owns physical mount.
+Use native vehicle entry/exit, not direct generic Possess plus manual UI hiding.
+Exit retains the native character handoff; own camera/HUD/input helpers must not
+destroy an occupied station. F8 and20-second timeout are experimental exit guards.
+
+Ordinary walking and helm occupancy are distinct: HC10 observed no root parent +
+deck movement base + Walking before/after; VehicleMesh parent + no movement base +
+None inside. Limited displacement in that sample was not a strong-motion proof.
+
+## View, input and HUD
+
+Use the common vehicle parent, not Drone/Forklift behavior. Enhanced Input actions
+have their own execution handlers; GetProvidedActionsBP describes hints, not
+movement execution. Matching context identity connects descriptor and hint widget.
+HUD visibility alone never disables character actions: HC15/16 demonstrated that.
+Generic Pawn possession improved routing but left fallback UI artifacts.
+The own vehicle HUD/interface path resolved this in HC26 onward.
+
+Camera is an owned Engine actor, not a borrowed Forklift third-person manager.
+A native first-person flag was true in HC24 while actual FOV stayed100 degrees:
+requested flags are not proof of final POV selection.
+Compute x5 as 2*atan(tan(entryFOV/2)/5), not literal5 degrees. Re-entry samples
+on-foot FOV again. Station-local yaw wraps360 degrees; pitch clamps -50/+10.
+Current owned-axis scalar1.024 = HC32's1.28 *0.8. No raw player rotation writes.
+Preserve useful central character stats as requested by the user.
+
+## Optical hit display
+
+LineTraceSingle: Visibility, simple collision, first blocking hit, <=100000cm.
+Ignore shell and original character, preserve ignore-self. Do not select an actor
+behind the first obstruction. Display fields clear before the trace every update.
+A valid actor first writes GetObjectName fallback and rounded character-to-impact
+meters. Optional VoyageModuleComponent.ItemAsset -> VoyageBaseDataAsset.Name
+replaces it only if valid and nonempty. Missing component/item/name keeps fallback.
+Historical DetectedSharkName property name is retained for widget compatibility;
+its contents are now generic. This is display, not creature classification.
+Technical actor names may contain generated instance identifiers and are not save IDs.
+
+## Failed approaches / retained lessons
+
+- Drone autoload spawn/hints/entry/exit worked; permanent pre-entry ship mounting
+  later caused sinking/circling. Root simulation off did not isolate all native
+  forces/collision/activation callbacks. Retire the physical donor, not more patches.
+- World-space diagnostic text updated intermittently drifted/smeared on a moving
+  ship. Measure parent/local transform separately and use screen-space diagnostics.
+- Missing barrel was an immediate branch marker; no independent delayed marker
+  meant it did not prove timed actor destruction. Do not ask the user to stopwatch it.
+- HUD text placed after successful shark-hit branches was unreachable on misses.
+  Markers must precede filters or use independent execution; bytecode presence is
+  not reachability. HC33 fallback/range also precedes optional item gates.
+- Partial native mirrors plus unversioned serialization can compile/cook/retoc yet
+  corrupt inherited properties. Tagged headers AND independent semantic inspection
+  are mandatory for this station; no guessed padding or convenient native members.
+- An interface method of the right name is insufficient without class membership.
+  HC31 acquired the right component but never called the provider; HC32 explicit
+  K2 membership fixed entry. See VEHICLE_ENTRY_RESEARCH.md.
+- Stock assets are useful contracts, not a complete parent to copy. Forklift's
+  ExitAction was mandatory in its native provider; missing it caused null+0x28.
+  That donor-specific field is not a new dependency of our dedicated station.
+- Multiple no-op gameplay tests are costly. After one/two no-ops, localize acquisition,
+  provider, callback, native handoff, input and render separately before another test.
+
+## Recovery / research methods
+
+Public tool routing is in tools/README.md. Reusable external interaction observer
+is tools/Read-VoyageInteractionState.py with fresh UObject discovery and serial/cache
+validation. No writes/injection. Native addresses are fingerprint-bound research
+anchors, never runtime mod code. The exact source and old evidence archive is
+indexed by mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md; do not reopen it routinely.

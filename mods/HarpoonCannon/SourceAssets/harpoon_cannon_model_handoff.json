@@ -1,0 +1,100 @@
+{
+  "checkpoint": "accepted-rough-model-2026-08-30",
+  "purpose": "Replace the probe-only HarpoonCannon visual with a direct-fire mooring-connector launcher blockout without changing placement or logic contracts.",
+  "coordinateSystem": {
+    "units": "centimeters",
+    "forward": "+X",
+    "right": "+Y",
+    "up": "+Z"
+  },
+  "overallBoundsCm": {
+    "x": 248,
+    "y": 164,
+    "z": 159
+  },
+  "files": {
+    "mesh": "harpoon_cannon_blockout.obj",
+    "materials": "harpoon_cannon_blockout.mtl",
+    "preview": "harpoon_cannon_blockout_preview.png",
+    "turntable": "harpoon_cannon_blockout_turntable.mp4",
+    "generator": "build_blockout.py"
+  },
+  "gameOwnedAssets": {
+    "firedConnector": "/Game/AssetSets/Sockets/SM_Mooring_CableSocket_Out.SM_Mooring_CableSocket_Out",
+    "firedConnectorScale": [2.0, 2.0, 2.0],
+    "firedConnectorBlueprintRotation": {
+      "rollDegrees": 90.0
+    },
+    "connectorProxyBoundsInModelAxesCm": {
+      "x": 54,
+      "y": 46,
+      "z": 43
+    },
+    "shipSocketBlueprint": "/Game/Blueprints/Cables/BP_MooringCable_Socket_Male.BP_MooringCable_Socket_Male_C",
+    "shipSocketMesh": "/Game/AssetSets/Sockets/Mooring_Cable_ShipPlate.Mooring_Cable_ShipPlate",
+    "craftableSocketMesh": "/Game/AssetSets/Sockets/SM_MooringCraftable.SM_MooringCraftable",
+    "cableActor": "/Game/Blueprints/Cables/BP_ModuleCable_Mooring.BP_ModuleCable_Mooring_C",
+    "cableComponentClass": "/Script/Voyage.VoyageCableComponent",
+    "cableWidth": 20.0,
+    "cableMaterial": "/Game/Materials/Cables/MI_AnchorCable.MI_AnchorCable"
+  },
+  "visualContract": [
+    "Direct axial launch like a classic harpoon gun; no catapult arm or ballistic throw.",
+    "The standard mooring connector is the projectile and remains visually recognizable.",
+    "The standard mooring device remains part of the assembly; the launcher does not own a duplicate cable drum.",
+    "The cable runs from the standard mooring device through a fairlead to the rear of the loaded connector.",
+    "The mooring device and cable feed stay inside the rotating assembly so 360-degree traverse does not wrap the cable around a fixed external pedestal.",
+    "The orange OBJ objects are insertion proxies only and must be replaced by the game-owned connector mesh at generation or runtime."
+  ],
+  "suggestedRuntimeGroups": {
+    "staticMount": [
+      "HC_StaticMount"
+    ],
+    "yawAssembly": [
+      "HC_RotatingBase",
+      "HC_RotationRing",
+      "HC_Yoke_Left",
+      "HC_Yoke_Right",
+      "HC_StockMooring_BaseProxy",
+      "HC_StockMooring_RecessProxy",
+      "HC_StockMooring_LipProxy"
+    ],
+    "pitchAssembly": [
+      "HC_Trunnion",
+      "HC_ElevationGear_Left",
+      "HC_ElevationGear_Right",
+      "HC_PressureChamber",
+      "HC_PressureBand_Rear",
+      "HC_PressureBand_Front",
+      "HC_LinearRam",
+      "HC_Guide_Bottom",
+      "HC_Guide_Left",
+      "HC_Guide_Right",
+      "HC_MuzzleBrace_Left",
+      "HC_MuzzleBrace_Right",
+      "HC_SightPost",
+      "HC_SightAperture"
+    ],
+    "connectorProxy": [
+      "HC_ConnectorProxy_Body",
+      "HC_ConnectorProxy_Collar",
+      "HC_ConnectorProxy_Handle_Left",
+      "HC_ConnectorProxy_Handle_Right",
+      "HC_ConnectorProxy_Handle_Top"
+    ],
+    "cableProxy": [
+      "HC_FairleadRoller",
+      "HC_CableProxy_00",
+      "HC_CableProxy_01",
+      "HC_CableProxy_02",
+      "HC_CableProxy_03",
+      "HC_CableProxy_04",
+      "HC_CableProxy_05"
+    ]
+  },
+  "integrationBoundary": [
+    "Do not change the current VoyageModuleActor shell, attachment probe, item replacement, placement rules, possession, input, camera, trace, HUD, or save contracts merely to adopt this model.",
+    "Treat the OBJ as a rough visual source. Preserve the current generator's component ownership and replace only its probe geometry in the narrowest safe step.",
+    "Do not package copied game-derived mesh data. Reference the installed base-game connector asset by path."
+  ]
+}

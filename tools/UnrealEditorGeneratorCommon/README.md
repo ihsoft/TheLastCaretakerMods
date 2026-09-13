@@ -8,6 +8,14 @@ Each consuming module adds `Public` to its private include paths. Add only
 engine-level reflected names or helpers here; game paths, reconstructed Voyage
 contracts, and mod-specific tuning belong to their owning mod.
 
+[`CharacterObservationGraphNames.h`](Public/CharacterObservationGraphNames.h)
+owns the semantic Engine string-conversion input pins used by read-only
+character observation and reporting graphs. It contains no Voyage or mod
+identity.
+
+`ActorScanGraphNames.h` owns Engine actor-enumeration macro pins and string
+suffix comparison pins; consuming generators keep their game identities local.
+
 Style contract:
 
 - expose semantic node roles such as binary operands and select branches;

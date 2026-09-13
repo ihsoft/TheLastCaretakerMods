@@ -44,9 +44,13 @@ those details here.
 - Before a visibly heavy investigation (large binary analysis, broad asset
   extraction/cook, long brute-force scan, or uncertain reverse engineering),
   tell the user why it is costly and offer a lighter discriminating experiment.
-- Experiments must discriminate between hypotheses. After one or two no-op
-  results, strengthen the marker or revisit the architecture instead of
-  changing more fields blindly.
+- Experiments must justify their information value against the user's time to
+  launch, check and close the game. Before requesting a test, state the hypothesis,
+  distinguishable outcomes and the next decision each outcome supports. Many
+  tests without useful evidence are expensive, not progress. After one or two
+  no-op results, or earlier when confidence in the discriminator is low, return
+  to research or strengthen observation before requesting another gameplay test;
+  do not keep changing fields blindly.
 - A controlled crash or visibly wrong result is acceptable when it proves the
   intended path is live, the game process is disposable, and a recoverable
   baseline exists.

@@ -8,6 +8,7 @@ public class HarpoonProbe : ModuleRules
         PrivateIncludePaths.Add(Path.GetFullPath(Path.Combine(ModuleDirectory,
             "../../../../../tools/UnrealEditorGeneratorCommon/Public")));
         PrivateDependencyModuleNames.AddRange(new[] {
-            "Core", "CoreUObject", "Engine", "UnrealEd", "BlueprintGraph", "KismetCompiler" });
+            "Core", "CoreUObject", "Engine", "UnrealEd", "BlueprintGraph", "KismetCompiler",
+            "UMG", "UMGEditor", "SlateCore", "Voyage", "EnhancedInput", "InputCore", "InputBlueprintNodes" });
     }
 }

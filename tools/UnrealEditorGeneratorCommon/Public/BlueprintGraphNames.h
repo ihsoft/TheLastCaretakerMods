@@ -7,8 +7,10 @@
 namespace BlueprintGraphNames::MathFunctions
 {
 inline const FName AddDouble(TEXT("Add_DoubleDouble"));
+inline const FName BooleanAnd(TEXT("BooleanAND"));
 inline const FName ClampFloat(TEXT("FClamp"));
 inline const FName EqualDouble(TEXT("EqualEqual_DoubleDouble"));
+inline const FName EqualInt(TEXT("EqualEqual_IntInt"));
 inline const FName LessDouble(TEXT("Less_DoubleDouble"));
 inline const FName MultiplyDouble(TEXT("Multiply_DoubleDouble"));
 inline const FName SelectFloat(TEXT("SelectFloat"));
@@ -20,6 +22,13 @@ namespace BlueprintGraphNames::WidgetFunctions
 // UPanelWidget::AddChild is overloaded, so GET_FUNCTION_NAME_CHECKED cannot
 // disambiguate it without an explicit reflected name.
 inline const FName AddChild(TEXT("AddChild"));
+}
+
+namespace BlueprintGraphNames::ActorFunctions
+{
+// APawn::GetController also has a templated C++ overload, so the reflected
+// Blueprint function cannot use GET_FUNCTION_NAME_CHECKED at the call site.
+inline const FName GetController(TEXT("GetController"));
 }
 
 namespace BlueprintGraphNames::Events
@@ -60,6 +69,7 @@ inline const FName& Condition = Detail::PinPickA;
 namespace BlueprintGraphNames::Pins
 {
 inline const FName Actor(TEXT("Actor"));
+inline const FName Class(TEXT("Class"));
 inline const FName Completed(TEXT("Completed"));
 inline const FName Condition(TEXT("Condition"));
 inline const FName Content(TEXT("Content"));
@@ -78,10 +88,14 @@ inline const FName LoopBody(TEXT("LoopBody"));
 inline const FName Max(TEXT("Max"));
 inline const FName Min(TEXT("Min"));
 inline const FName Object(TEXT("Object"));
+inline const FName Owner(TEXT("Owner"));
+inline const FName ParentActor(TEXT("ParentActor"));
 inline const FName PlayerIndex(TEXT("PlayerIndex"));
+inline const FName Pressed(TEXT("Pressed"));
 inline const FName ReturnValue(TEXT("ReturnValue"));
 inline const FName SecondArrayElement(TEXT("[1]"));
 inline const FName SpawnTransform(TEXT("SpawnTransform"));
+inline const FName Tag(TEXT("Tag"));
 inline const FName TargetArray(TEXT("TargetArray"));
 inline const FName Then(TEXT("then"));
 inline const FName Value(TEXT("Value"));

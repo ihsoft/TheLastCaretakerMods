@@ -2,6 +2,6 @@
   "FileVersion": 3,
   "EngineAssociation": "5.8",
   "Description": "Editor-only Harpoon lifecycle diagnostic; no native runtime payload.",
-  "Modules": [{ "Name": "HarpoonProbe", "Type": "Editor", "LoadingPhase": "Default" }],
-  "Plugins": [{ "Name": "AndroidFileServer", "Enabled": false }]
+  "Modules": [{ "Name": "Voyage", "Type": "Runtime", "LoadingPhase": "Default" }, { "Name": "HarpoonProbe", "Type": "Editor", "LoadingPhase": "Default" }],
+  "Plugins": [{ "Name": "AndroidFileServer", "Enabled": false }, { "Name": "EnhancedInput", "Enabled": true }, { "Name": "ModularGameplay", "Enabled": true }]
 }
