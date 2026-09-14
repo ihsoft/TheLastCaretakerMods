@@ -288,14 +288,17 @@ under ignored `artifacts/tests/installation-status-*/`.
   shell-aware. For Windows PowerShell 5.1, materialize statement results first
   (`$rows = @(foreach (...) { ... })`) and pipe `$rows` separately instead of
   piping directly from a `foreach` statement.
-- UnrealBuildTool-based mod builds must be launched with permission to write
-  and rotate `%LOCALAPPDATA%\UnrealBuildTool\Trace*.uba`, even when `-Log`
-  targets an ignored repository artifact. In a restricted sandbox, denial at
-  that path produces a `dotnet.exe` dialog and managed exit `-532462766`
-  (`0xE0434352`) before UBT loads the project. Read the redirected UBT output;
-  treat an `UnauthorizedAccessException` for `Trace-backup-*.uba` as a launch
-  permission failure, then rerun once with that narrow access. It is not a
-  reason to change the project, SDK, Blueprint generator, or .NET installation.
+- **Do not launch Unreal build producers in the restricted sandbox, including
+  as a first probe.** Run the owning producer outside the sandbox from its first
+  invocation because Build.bat, UnrealBuildTool and UnrealEditor build/generate/
+  cook stages may write and rotate `%LOCALAPPDATA%\UnrealBuildTool\Trace*.uba`,
+  even when `-Log` targets an ignored repository artifact. Sandbox denial there
+  produces a `dotnet.exe` dialog and managed exit `-532462766` (`0xE0434352`)
+  before UBT loads the project. Read the redirected UBT output; treat an
+  `UnauthorizedAccessException` for `Trace-backup-*.uba` as a launch-permission
+  failure, then retry once outside the sandbox with a fresh output identity. It
+  is not a reason to change the project, SDK, Blueprint generator, engine or
+  .NET installation.
 - Patched third-party checkouts live under ignored `.tools/`: `ihsoft/retoc`
   at `49b7721`, `ihsoft/jmap` at `4f88d8a`, `ihsoft/UAssetAPI` at `21c982f`,
   and `ihsoft/UAssetGUI` at `df18b5f`. The GUI checkout contains the same
