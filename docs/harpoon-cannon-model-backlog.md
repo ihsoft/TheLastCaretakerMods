@@ -4,21 +4,87 @@
 
 - **Accepted working model: railgun C v4**, approved by the user on 2026-09-13.
   Hold its geometry until the user requests the next refinement.
+- User authorized committing the current model contract, including the rear-breech
+  sight point. This checkpoint includes model-owned files only; gameplay changes
+  and runtime camera validation remain with the logic task.
 - Durable source: [models/HarpoonCannon](../models/HarpoonCannon/README.md).
   OBJ/MTL, exact baseline hashes, generator, audit and direct renderer live there.
   The authored mesh is independent of game-derived resources and Unreal.
+- Runtime importer entry point: `models/HarpoonCannon/runtime-model.json`, schema
+  1. Model-owned relative paths, source hashes, role selections, hierarchy and six
+  ammo instances; regenerate with `prepare_handoff.py --write-runtime-descriptor`.
+  Default invocation checks it for drift. Logic owns consuming this descriptor;
+  no gameplay generator/source/collision changes are part of this handoff.
 - Reproducible local images/audits live under ignored
   `artifacts/modeling/HarpoonCannon/`. See the model README for commands.
-- This is source-model acceptance, not Unreal or real-game validation. UVs,
-  final materials/smoothing, motion clearances and in-game appearance remain open.
+- Logic owner reports user confirmation of the new model/articulation and saved
+  nonzero aim after exit (shell04/station03 test). This is bounded runtime evidence,
+  not validation of all motion clearances, UVs or final materials/smoothing.
+- Optional schema-1 `sight` is now **(-62,0,47)** cm under pitch, optical forward
+  +X, no rotation override. Source **(-80,0,154)** is above the rear breech with
+  5 cm top clearance. User replaced the muzzle-point request; do not reuse it.
+  Logic integration/runtime sight framing and camera near-clip remain pending.
 - Model work must preserve the gameplay task's existing source, collision,
-  camera/HUD/input, package and installation. Do not ping its agent during this
-  independent phase. Gameplay decisions belong to
+  camera/HUD/input, package and installation. The user explicitly permits replies
+  to direct requests from the logic agent; unsolicited pings remain out of scope.
+  Gameplay decisions belong to
   [the logic backlog](harpoon-cannon-backlog.md).
 - After compaction, read this restart state and relevant sections below before
   editing. Old archived task history is evidence, not current instructions.
 
 ## Accepted source and shape
+
+Integration handoff prepared on direct request from the logic task and delivered
+after the user explicitly authorized replies. Reproduce with
+`models/HarpoonCannon/prepare_handoff.py`; local output is
+`artifacts/modeling/HarpoonCannon/integration-v4/handoff.json`.
+It covers all 83 objects exactly once: 8 base, 27 yaw, 42 pitch and 6 independent
+ammunition rods. Yaw origin (0,0,0); pitch origin (-18,0,107) cm; subtract this
+origin only from pitch mesh vertices and restore via component translation.
+Rod base origins are (-106+15.5*i,-86,58), i=0..5, under yaw. Local rod meshes
+match within 1e-6 cm, allowing one reused mesh with six independent components.
+The logic owner requested yaw +/-40 degrees from installation orientation;
+input and bounds belong to that task and are not encoded in the mesh.
+
+Source hash, topology, partition coverage and neutral reconstruction checks pass.
+At the initial handoff, the importer needed new path/allowlists/pivot; it accepted
+v//vn but ignored normals/UVs and used default slot materials. No gameplay source
+was edited here.
+On the logic owner's subsequent direct request, replaced the proposed hardcoded
+integration inputs with a model-owned runtime descriptor contract. Stable roles
+base/yaw/pitch plus ammo prototype and ammo01..ammo06 do not depend on OBJ names.
+Schema is documented in the model README; the ignored diagnostic handoff remains
+available but is not the runtime input. No absolute paths or version-specific
+artifact identity occur in the runtime descriptor. Source hashes/geometry unchanged.
+Current descriptor SHA-256: `4BA7E56832299F7668AD2A8795E6011BC647FEF3DA75F670C1A796FF8404277C`.
+The exact schema and completed worktree files were delivered to the requesting
+logic task. Descriptor/handoff-script work is included in this user-approved
+model-contract commit checkpoint.
+Validation: default regeneration check matches byte-for-byte; 83-object coverage,
+shared prototype/material/topology and neutral hierarchy reconstruction pass.
+Negative checks reject wrong pitch/ammo offsets, omitted objects and absolute
+source paths. `git diff --check` passed (only normal Windows EOL warnings).
+Tool-use report: source-only Python audit/descriptor generation and read-only Git;
+no game pipeline, fallback, runtime validation or uncovered reusable operation.
+On direct logic-owner request, added optional `sight` without changing schema 1,
+mesh selections, origins, hierarchy, ammo or OBJ/MTL. The user subsequently
+replaced the muzzle location with a rear-breech eye point. Actual OBJ top panel
+spans X=-86..-22 and tops at Z=149. Inset 6 cm from rear gives X=-80, Y=0;
+nearby upper envelope within +/-10 cm XY is Z=149. Sight source Z=154 clears
+the panel by 5 cm, housing by 12 cm, rear capacitor bands by 8 cm. Subtract pitch
+origin (-18,0,107) once to get local (-62,0,47). Forward +/-5 cm Y strip retains
+at least 5 cm clearance by conservative AABB test in neutral assembly. Optical
++X is parallel to, and 43 cm above, bore axis; it is not muzzle-convergent.
+The side optic Y=-47..-33 is outside this central strip. Camera FOV/near-clip and
+moving non-pitch parts remain runtime checks; source clearance is not full view
+validation. Reproduction/hashes/source audits pass. Tests reject former muzzle
+point and on-panel/insufficient-clearance points; absent optional sight is valid.
+Geometry/generator/collision/packages untouched; source-only tools, no runtime
+sight test or new reusable tooling gap. Logic owner reports the tested
+shell04/station03 pair was removed; installation remains entirely logic-owned.
+The decorative yaw actuators are not rigged telescoping links; full motion and
+camera clearances remain unvalidated. Complete handoff includes these limits.
+No game-asset/release operation or runtime test occurred; tool coverage N/A.
 
 Files: `models/HarpoonCannon/harpoon_cannon_railgun_c_blockout_v4.obj` and `.mtl`.
 Exact SHA-256 values are owned by `models/HarpoonCannon/baseline.json`:
