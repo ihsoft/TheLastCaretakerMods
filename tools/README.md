@@ -149,7 +149,8 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 | MooringCable60m | [Release workflow](../mods/MooringCable60m/README.md) | `Build-LimitGraph.ps1` builds/cooks the attached/free limit graph outside the sandbox; `Build-Candidate.ps1 -GraphManifest` preserves fresh stock inheritance, sets 60 m manual / 20 m attached payout, verifies exactly three assets and creates a schema-2 release manifest; neither installs |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
-| Harpoon HC01/HC02 diagnostics (experimental, not the cannon release) | [Preparation contract](../mods/HarpoonCannon/AutoloadProbe/README.md), [rules](../mods/HarpoonCannon/AGENTS.md) | Separate UE5.8.2 Engine-only autoload probe; `Build-Probe.ps1` prepares one exact package and schema-2 manifest, validates only, never installs |
+| Prepare Harpoon operator assets | [Preparation contract](../mods/HarpoonCannon/AutoloadProbe/README.md), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Probe.ps1 -StationInputsOnly` prepares five authoring-only inputs; `-StationPrototype` prepares nine tagged station packages. Gates include explicit K2 entry-interface membership, exact function signature, cooked Interact=Block, container/header verification and schema-2 manifest. Initial execution must be outside the sandbox; neither mode installs |
+| Prepare HarpoonCannon shell assets | [Shell preparation](../mods/HarpoonCannon/README.md#current-shell-only-preparation), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Shell.ps1` owns the UE5.8.2 shell build, exact four-package cook, stock extraction, retoc packaging, common verification, semantic validation, ZIP and schema-2 manifest; it never installs or enables autoload. This authoring pipeline is not a finished weapon release |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a
@@ -1155,6 +1156,37 @@ length, segment count, width, tightness and computed native force threshold.
 Unreadable objects are counted. A nonzero error count
 or an unloaded save invalidates gameplay conclusions. This is a non-atomic
 observation, not a mutation tool or a generic object inspector.
+
+#### Interaction acquisition observation
+
+`Read-VoyageInteractionState.py` reads the stock gaze detector's cached hit and
+interaction object on Steam25191271, exact EXE hash `747DC255...F58B` (full hash
+enforced by the script). Python3 standard library only. Obtain a fresh
+`Find-VoyageUObjectArray.ps1` result and pass its `processId`, `imageBase`,
+`objects`, `numElements`, `executable` as `--pid`, `--base`, `--objects`,
+`--count`, `--exe`; add `--label <observation label>` and `--output <new artifacts JSON>`.
+Never reuse addresses across launches. No UE build or installed observer is needed.
+
+It requests query/read rights only, verifies image/hash/name pool/UObject index,
+the native detector vtable, and both weak-reference index and serial before and
+after target identity reads. Object-relative caches360/370 are fingerprint-bound;
+they are not interface-relative110/120. Live reflected properties supply reach,
+radius, attachment chains and query extent. Optional mod-owned diagnostic fields
+are read as reported values, not inferred engine state; their interpretation
+belongs to the owning backlog. The reader does not execute diagnostic callbacks.
+The scan has a60-second ceiling; output is compact status/path/count/time plus
+detailed ignored JSON. Exit2/status invalid rejects an unreadable/unstable scan.
+No writes, injection, ProcessEvent or game-function calls occur.
+
+Validate acquisition against a stock target with its visible action hint.
+Empty caches during uncontrolled play prove only reader operation,
+not successful target decoding. Require stable caches and serial-validated targets
+before drawing target conclusions. The snapshot is non-atomic; cached targets do
+not prove dispatch, and relative transforms are not world bounds. Full query
+collision filters and actual provider recipient remain outside this reader.
+
+Offline synthetic tests: `python tools/Test-VoyageInteractionState.py` (six tests).
+Architecture/provenance: `mods/HarpoonCannon/VEHICLE_ENTRY_RESEARCH.md`.
 
 This is a read-only PE inspector, not a decompiler and not an injector. It can
 search ASCII/UTF-16 strings, show nearby bytes and pointers, find references to

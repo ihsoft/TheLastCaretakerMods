@@ -39,9 +39,14 @@ in the verified cleanup archive. Do not re-run failed recipes as instructions.
 
 ## Tool gaps / unexpected output (historical; not all current defects)
 
-- Asset summary omitted some FieldPath/ResolvedOwner information and once gave
-  zero Overview functions for WidgetBlueprintGeneratedClass while full JSON had
-  them. Supported fallback: public Get-VoyageAssetJson returned jsonPath.
+- Asset summary omitted native references encoded as Path/ResolvedOwner even
+  when full JSON contained valid ItemAsset/Name owners. Missing summary entries
+  do not prove missing fields or distinguish valid from stripped references.
+  Overview also reported zero generated classes for
+  /Game/UI/Game/BP_DynamicPlayerInputHorizontalWidget while full JSON contained
+  WidgetBlueprintGeneratedClass with VoyageDynamicPlayerInputWidget parent.
+  Supported fallback: public Get-VoyageAssetJson returned jsonPath. Reproduce
+  against current tools before treating either historical omission as open.
 - Pseudocode exporter encountered WeakObjectProperty yet completed manifest with
   errorCount0 and missing expected output/errors.txt. Check artifact existence
   and diagnostics, not success metadata alone; confirm current status before repair.

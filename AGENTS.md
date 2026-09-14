@@ -6,6 +6,12 @@ those details here.
 
 ## Rule and knowledge ownership
 
+- Repository-level README files and the shared tool index contain only verified,
+  established capabilities, current interfaces and safety/compatibility limits.
+  Keep candidate IDs, experimental hypotheses, trial instructions and progress
+  history in the owning backlog or ignored artifacts, not in shared guidance.
+  Promote validated conclusions as general contracts without candidate labels;
+  retain version/fingerprint restrictions when they determine applicability.
 - Autonomous DonkLift rules live in
   `mods/DonkLiftKeyboardControl/AGENTS.md`.
 - The preserved UE4SS/Lua DonkLift implementation is a separate alternative

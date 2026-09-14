@@ -24,6 +24,15 @@ Cleanup did NOT silently build a different diagnostics-free artifact.
 
 ## Next action
 
+Documentation boundary: candidate history is excluded from repository-level
+README/tool routing. The interaction observer's HC30/HC31 details belong here:
+HC30 compared stock helm acquisition with cannon acquisition in one session;
+HC31 added HarpoonEntryInteractBlocks, sampled once after spawn against Block.
+It is not a continuous collision-filter read. False before readiness is
+inconclusive. Provider/callback markers likewise describe their own instrumented
+paths, not universal detector state. Shared guidance retains only the verified
+reader interface, fingerprint/serial checks and non-atomic observation limits.
+
 Resume feature design from this accepted baseline, not old probe instructions.
 Before the next runtime candidate, define one useful discriminator for the next
 core function (shot / stock mooring cable integration) or explicit productionization

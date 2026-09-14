@@ -155,6 +155,23 @@ or a correctness, safety, or provenance risk.
 
 ## Deferred metadata decisions
 
+### Inspection output: deferred verification
+
+These are historical observations to reproduce only when the next real workflow
+needs them, not confirmed defects in today's binaries. No implementation is
+active. Prior evidence and supported fallbacks are consolidated in
+[inspection findings](../mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md#tool-gaps--unexpected-output-historical-not-all-current-defects).
+
+| Question | Next useful check | Continue only if |
+| --- | --- | --- |
+| Does the compact Blueprint summary preserve native Path/ResolvedOwner references and WidgetBlueprintGeneratedClass identity? | Compare a focused current summary with the public full JSON for the same fingerprinted asset; use the horizontal input widget for class identity | A current consumer still gets a misleading omission; fix only that projection and regression-test it |
+| Does native target-VA output distinguish string match count from address references? | Compare current compact counters with its returned reference report for one known address | The ambiguity still affects a real decision; clarify the existing result contract, not a new disassembler |
+
+Full JSON is the existing fallback for summary omissions. Native reference
+reports, not string-match counts alone, establish whether an address was found.
+Stale UHT package flags and unsupported one-off config retrieval remain findings,
+not pending experiments or automatic requests to extend the toolchain.
+
 - Voyage's user-facing display version has no proven local machine-readable
   source. Keep it nullable and distinct from Steam build, executable hash, UE
   version, mod version, and artifact version. Investigate only when a release

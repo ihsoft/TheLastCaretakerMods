@@ -1,8 +1,8 @@
 # Harpoon station generator: accepted HC33
 
-Historical directory name only. This is the active editor-only producer for the
-station, not a runtime DLL and not a stock Drone/Forklift replacement.
-The user accepted HC33 target labels and 20%-reduced mouse tuning on 2026-09-13.
+This is the active editor-only producer for the stationary Harpoon operator.
+Its native binaries are authoring inputs and must not enter the runtime package.
+The user accepted the current operator/optics baseline on 2026-09-13.
 See [architecture](../RESEARCH.md) and the [active backlog](../../../docs/harpoon-cannon-backlog.md)
 for exact retained manifests.
 
@@ -48,12 +48,10 @@ GetInteractiveProvidedActions signature, plus explicit cooked Interact=Block.
 An explicit interface implementation need not have an inherited SuperStruct.
 Source graph creation must use the exact declaring interface.
 
-Independent audits are retained at artifacts/harpoon-cannon/hc32-audit.ps1
-(66 baseline structural checks) and hc33-compare.ps1 (22 HC32/HC33 comparisons).
-They consume public returned JSON paths plus hashes. The comparison defaults to
-the retained HC33 candidate; it is an evidence helper, not a generic future gate.
-Adapt a future experiment's assertions deliberately and preflight against known
-JSON before paying for another cook. Never confuse static pass with runtime pass.
+Checkpoint-specific audit paths and results are recorded in the active backlog.
+They consume public returned JSON paths plus hashes and are not generic future
+gates. Preflight changed assertions against known JSON before another cook.
+Never confuse static pass with runtime pass.
 
 ## Runtime protocol / cleanup
 
@@ -66,4 +64,3 @@ Absent/empty hint: capture one useful observation and stop blind iterations.
 
 After result and closed-game gate, restore station then shell by exact installation
 manifests. Prepared artifacts are retained; no automatic next-test installation.
-Legacy HC01-HC32 protocols are historical archive material, not normal instructions.
