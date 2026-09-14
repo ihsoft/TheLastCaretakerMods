@@ -45,7 +45,7 @@ inline constexpr TCHAR ActionName[] = TEXT("HarpoonEnter");
 inline constexpr TCHAR Label[] = TEXT("Enter Harpoon");
 inline constexpr TCHAR LoopPackage[] = TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros");
 inline const FName LoopGraph(TEXT("ForEachLoop"));
-inline constexpr TCHAR PreparedStatus[] = TEXT("HC33: enter; aim at objects then sky; E exit. Mouse 80%. No saving.");
+inline constexpr TCHAR PreparedStatus[] = TEXT("Enter; check breech sight, E exit. Defaults: mouse40%, yaw +/-80. No saving.");
 inline constexpr TCHAR CountLabel[] = TEXT("Prepared stations: ");
 inline constexpr TCHAR ProviderYes[] = TEXT("Entry provider observed (ANY, sticky): YES");
 inline constexpr TCHAR ProviderNo[] = TEXT("Entry provider observed (ANY, sticky): NO");

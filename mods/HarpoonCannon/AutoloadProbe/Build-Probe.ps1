@@ -19,6 +19,8 @@ $null = New-Item -ItemType Directory -Path $output
 $sourcePaths = @('mods/HarpoonCannon/AutoloadProbe','tools/UnrealEditorGeneratorCommon/Public/ActorLifecycleGraphNames.h','tools/UnrealEditorGeneratorCommon/Public/AssetLoadingGraphNames.h','tools/UnrealEditorGeneratorCommon/Public/BlueprintGraphNames.h','tools/UnrealEditorGeneratorCommon/Public/CharacterObservationGraphNames.h','tools/UnrealEditorGeneratorCommon/Public/CharacterStationGraphNames.h','tools/UnrealEditorGeneratorCommon/Public/OpticalCameraGraphNames.h')
 $sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
 $sourcePaths += 'tools/UnrealEditorGeneratorCommon/Public/ActorScanGraphNames.h'
+$sourcePaths += 'mods/HarpoonCannon/HarpoonModelContract.h'
+$sourcePaths += 'tools/UnrealEditorGeneratorCommon/Public/TextSettingsGraphNames.h'
 $sourceStatus = @(& git -C $repo status --porcelain -- $sourcePaths)
 function Get-ProbeSourceHashes {
     @(& git -C $repo ls-files --cached --others --exclude-standard -- $sourcePaths | Sort-Object -Unique | ForEach-Object {
@@ -53,9 +55,11 @@ $ddc = Join-Path $PSScriptRoot '.ddc'
 $null = New-Item -ItemType Directory -Path $ddc -Force
 Invoke-NativeStage 'generate' $editor @($project,'-run=GenerateHarpoonInputs','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-unreal.log')))
 $packages = @('/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonLookYaw','/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonLookPitch','/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonExit','/Game/Mods/HarpoonCannon/Inputs/IMC_HarpoonKeyboard','/Game/Mods/HarpoonCannon/Inputs/DA_HarpoonInputContext')
+$packages += '/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonZoom'
 if ($StationPrototype) {
     Invoke-NativeStage 'generate-station' $editor @($project,'-run=GenerateHarpoonProbe','-DedicatedStation','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-station-unreal.log')))
     $packages += @('/Game/Mods/HarpoonCannon/Station/BP_HarpoonOperator','/Game/Mods/HarpoonCannon/Station/WBP_HarpoonHUD','/Game/Mods/HarpoonCannonLifecycleProbe/ModActor','/Game/Mods/HarpoonCannonLifecycleProbe/ProbeHUD')
+    $packages += '/Game/Mods/HarpoonCannon/Station/T_HarpoonOpticalMask'
 }
 $cookArguments = @($project,'-run=cook','-targetplatform=Windows','-SkipZenStore','-CookSinglePackageNoRefs',('-Package=' + ($packages -join '+')),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'cook-unreal.log')))
 if ($StationInputsOnly) { $cookArguments += '-unversioned' }
@@ -126,7 +130,7 @@ $sourceAfter = @(& git -C $repo status --porcelain -- $sourcePaths)
 if (($sourceAfter -join "`n") -cne ($sourceStatus -join "`n")) { throw 'Source status changed during preparation.' }
 if ((@(Get-ProbeSourceHashes) | ConvertTo-Json -Compress) -cne ($sourceHashes | ConvertTo-Json -Compress)) { throw 'Source content changed during preparation.' }
 if ((& git -C $repo rev-parse HEAD).Trim() -cne $sourceCommit) { throw 'Repository HEAD changed during preparation.' }
-$experiment = if ($StationPrototype) { 'HC33-all-hit-names-mouse80' } else { 'HC25-input-authoring' }
+$experiment = if ($StationPrototype) { 'eye-parallax-mask-size' } else { 'input-authoring' }
 $architecture = if ($StationPrototype) { 'Nine tagged packages. Own common VehiclePawn child, native-selected own HUD, Enhanced Input E/mouse handlers and owned camera. No Forklift runtime dependency. Native inherited property deltas must pass independent audit; runtime pending.' } else { 'Five standalone Harpoon input assets only; no actor, widget, autoload, Forklift references or installation.' }
 $provenance = [ordered]@{
     schemaVersion=1;mod=$modName;version=$version;experiment=$experiment;createdAtUtc=[DateTime]::UtcNow.ToString('o');

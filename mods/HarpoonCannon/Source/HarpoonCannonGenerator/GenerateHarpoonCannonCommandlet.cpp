@@ -11,6 +11,9 @@
 #include "BlueprintGraphNames.h"
 #include "Camera/CameraComponent.h"
 #include "CannonAssetNames.h"
+#include "ModelRecipe.h"
+#include "../../HarpoonModelContract.h"
+#include "../../../../models/HarpoonCannon/Unreal/HarpoonPaletteMaterials.h"
 #include "Components/BoxComponent.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
@@ -283,11 +286,8 @@ struct FObjSource
     TArray<FObjFace> Faces;
 };
 
-bool ParseObjSource(FObjSource& Source)
+bool ParseObjSource(FObjSource& Source, const FString& SourcePath)
 {
-    const FString SourcePath = FPaths::Combine(
-        FPaths::ProjectDir(),
-        CannonAssetNames::VisualSourceRelativePath);
     FString Text;
     if (!FFileHelper::LoadFileToString(Text, *SourcePath))
     {
@@ -383,12 +383,11 @@ bool ParseObjSource(FObjSource& Source)
 
 bool IncludesObject(
     const FString& ObjectName,
-    const TCHAR* const* IncludedObjects,
-    const int32 IncludedObjectCount)
+    const TArray<FString>& IncludedObjects)
 {
-    for (int32 Index = 0; Index < IncludedObjectCount; ++Index)
+    for (const FString& IncludedObject : IncludedObjects)
     {
-        if (ObjectName.Equals(IncludedObjects[Index], ESearchCase::CaseSensitive))
+        if (ObjectName.Equals(IncludedObject, ESearchCase::CaseSensitive))
         {
             return true;
         }
@@ -400,8 +399,7 @@ UStaticMesh* CreateVisualMesh(
     const FObjSource& Source,
     const TCHAR* PackageName,
     const TCHAR* AssetName,
-    const TCHAR* const* IncludedObjects,
-    const int32 IncludedObjectCount,
+    const TArray<FString>& IncludedObjects,
     const FVector& Pivot,
     const bool bCreateFabricatorInteractionCollision)
 {
@@ -426,7 +424,7 @@ UStaticMesh* CreateVisualMesh(
     int32 TriangleCount = 0;
     for (const FObjFace& Face : Source.Faces)
     {
-        if (!IncludesObject(Face.ObjectName, IncludedObjects, IncludedObjectCount))
+        if (!IncludesObject(Face.ObjectName, IncludedObjects))
         {
             continue;
         }
@@ -440,9 +438,9 @@ UStaticMesh* CreateVisualMesh(
             const FName MaterialSlotName(*MaterialName);
             const FPolygonGroupID NewPolygonGroup = Builder.AppendPolygonGroup(MaterialSlotName);
             PolygonGroups.Add(MaterialName, NewPolygonGroup);
-            Mesh->GetStaticMaterials().Add(FStaticMaterial(
-                UMaterial::GetDefaultMaterial(MD_Surface),
-                MaterialSlotName));
+            UMaterialInterface* PaletteMaterial = HarpoonPaletteMaterials::Create(Package, MaterialName);
+            if (!PaletteMaterial) return nullptr;
+            Mesh->GetStaticMaterials().Add(FStaticMaterial(PaletteMaterial, MaterialSlotName));
             PolygonGroup = PolygonGroups.Find(MaterialName);
         }
 
@@ -501,12 +499,11 @@ UStaticMesh* CreateVisualMesh(
             return nullptr;
         }
 
-        const FBoxSphereBounds MeshBounds = Mesh->GetBounds();
         FKBoxElem InteractionBox(
-            MeshBounds.BoxExtent.X * 2.0,
-            MeshBounds.BoxExtent.Y * 2.0,
-            MeshBounds.BoxExtent.Z * 2.0);
-        InteractionBox.Center = MeshBounds.Origin;
+            HarpoonModelContract::FabricatorBoxSize.X,
+            HarpoonModelContract::FabricatorBoxSize.Y,
+            HarpoonModelContract::FabricatorBoxSize.Z);
+        InteractionBox.Center = HarpoonModelContract::FabricatorBoxCenter;
         BodySetup->RemoveSimpleCollision();
         BodySetup->AggGeom.BoxElems.Add(MoveTemp(InteractionBox));
         BodySetup->CollisionTraceFlag = CTF_UseSimpleAsComplex;
@@ -538,13 +535,12 @@ UStaticMesh* CreateLoadedConnectorReferenceStub()
             {CannonAssetNames::ReferenceStubObjectName, CannonAssetNames::ReferenceStubObjectName, {3, 0, 4, 7}}
         }
     };
-    constexpr const TCHAR* StubObjects[] = {CannonAssetNames::ReferenceStubObjectName};
+    const TArray<FString> StubObjects = {CannonAssetNames::ReferenceStubObjectName};
     return CreateVisualMesh(
         StubSource,
         CannonAssetNames::LoadedConnectorPackageName,
         CannonAssetNames::LoadedConnectorAssetName,
         StubObjects,
-        UE_ARRAY_COUNT(StubObjects),
         FVector::ZeroVector,
         CannonAssetNames::MovingMeshBuildsFabricatorInteractionCollision);
 }
@@ -1452,7 +1448,9 @@ UBlueprint* CreateLeafPlacementProbe(
     UStaticMesh* LoadedConnectorMesh,
     UVoyageItem* LeafItem,
     UBlueprint* OperatorBlueprint,
-    UBlueprint* CameraDroneReferenceBlueprint)
+    UBlueprint* CameraDroneReferenceBlueprint,
+    UStaticMesh* AmmoMesh,
+    const ModelRecipe::FRecipe& Model)
 {
     UPackage* Package = CreatePackage(CannonAssetNames::LeafProbePackageName);
     UBlueprint* Blueprint = FKismetEditorUtilities::CreateBlueprint(
@@ -1560,6 +1558,23 @@ UBlueprint* CreateLeafPlacementProbe(
         CannonAssetNames::ModuleComponentName,
         UVoyageCustomModuleComponent::StaticClass()));
 
+    // Stable role tags decouple station input from source mesh names/pivots.
+    auto* YawTemplate = CastChecked<USceneComponent>(YawPivot->ComponentTemplate);
+    auto* PitchTemplate = CastChecked<USceneComponent>(PitchPivot->ComponentTemplate);
+    YawTemplate->SetRelativeLocation(Model.Parts.FindChecked(ModelRecipe::Yaw).ComponentLocation);
+    PitchTemplate->SetRelativeLocation(Model.Parts.FindChecked(ModelRecipe::Pitch).ComponentLocation);
+    YawTemplate->ComponentTags.Add(HarpoonModelContract::YawTag);
+    PitchTemplate->ComponentTags.Add(HarpoonModelContract::PitchTag);
+    USCS_Node* Sight = AddChildNode(ConstructionScript, PitchPivot, USceneComponent::StaticClass(), HarpoonModelContract::SightComponent);
+    auto* SightTemplate = CastChecked<USceneComponent>(Sight->ComponentTemplate);
+    SightTemplate->SetRelativeLocation(Model.SightLocation);
+    SightTemplate->ComponentTags.Add(HarpoonModelContract::SightTag);
+    for (const auto& Instance : Model.AmmoInstances)
+    {
+        USCS_Node* Rod = AddChildNode(ConstructionScript, YawPivot, UStaticMeshComponent::StaticClass(), Instance.ComponentName);
+        ConfigureDecorativeMesh(Rod, AmmoMesh, Instance.Location, FRotator::ZeroRotator, FVector::OneVector);
+    }
+
     // Shell-only restoration deliberately emits no Fabricated/BeginPlay/Tick
     // operator path. The historical lifecycle helpers above are not invoked.
 
@@ -1619,7 +1634,8 @@ int32 UGenerateHarpoonCannonCommandlet::Main(const FString& Params)
     }
 
     FObjSource VisualSource;
-    if (!ParseObjSource(VisualSource))
+    ModelRecipe::FRecipe Model;
+    if (!ModelRecipe::Load(Model) || !ParseObjSource(VisualSource, Model.ObjPath))
     {
         return 1;
     }
@@ -1627,25 +1643,26 @@ int32 UGenerateHarpoonCannonCommandlet::Main(const FString& Params)
         VisualSource,
         CannonAssetNames::BaseMeshPackageName,
         CannonAssetNames::BaseMeshAssetName,
-        CannonAssetNames::StaticMountObjects,
-        UE_ARRAY_COUNT(CannonAssetNames::StaticMountObjects),
-        FVector::ZeroVector,
+        Model.Parts.FindChecked(ModelRecipe::Base).Objects,
+        Model.Parts.FindChecked(ModelRecipe::Base).MeshOrigin,
         CannonAssetNames::BaseMeshBuildsFabricatorInteractionCollision);
     UStaticMesh* YawMesh = CreateVisualMesh(
         VisualSource,
         CannonAssetNames::YawMeshPackageName,
         CannonAssetNames::YawMeshAssetName,
-        CannonAssetNames::YawAssemblyObjects,
-        UE_ARRAY_COUNT(CannonAssetNames::YawAssemblyObjects),
-        FVector::ZeroVector,
+        Model.Parts.FindChecked(ModelRecipe::Yaw).Objects,
+        Model.Parts.FindChecked(ModelRecipe::Yaw).MeshOrigin,
         CannonAssetNames::MovingMeshBuildsFabricatorInteractionCollision);
     UStaticMesh* PitchMesh = CreateVisualMesh(
         VisualSource,
         CannonAssetNames::PitchMeshPackageName,
         CannonAssetNames::PitchMeshAssetName,
-        CannonAssetNames::PitchAssemblyObjects,
-        UE_ARRAY_COUNT(CannonAssetNames::PitchAssemblyObjects),
-        CannonAssetNames::PitchPivotRelativeLocation,
+        Model.Parts.FindChecked(ModelRecipe::Pitch).Objects,
+        Model.Parts.FindChecked(ModelRecipe::Pitch).MeshOrigin,
+        CannonAssetNames::MovingMeshBuildsFabricatorInteractionCollision);
+    UStaticMesh* AmmoMesh = CreateVisualMesh(
+        VisualSource, CannonAssetNames::AmmoMeshPackageName, CannonAssetNames::AmmoMeshAssetName,
+        Model.AmmoMesh.Objects, Model.AmmoMesh.MeshOrigin,
         CannonAssetNames::MovingMeshBuildsFabricatorInteractionCollision);
     UStaticMesh* LoadedConnectorMesh =
         CannonAssetNames::IncludeBaseGameLoadedConnectorReference
@@ -1653,7 +1670,7 @@ int32 UGenerateHarpoonCannonCommandlet::Main(const FString& Params)
         : nullptr;
     UVoyageItem* LeafItem = CreateLeafItemReferenceStub();
     UBlueprint* LeafProbe =
-        BaseMesh && YawMesh && PitchMesh && LeafItem
+        BaseMesh && YawMesh && PitchMesh && AmmoMesh && LeafItem
         ? CreateLeafPlacementProbe(
             BaseMesh,
             YawMesh,
@@ -1661,9 +1678,11 @@ int32 UGenerateHarpoonCannonCommandlet::Main(const FString& Params)
             LoadedConnectorMesh,
             LeafItem,
             nullptr,
-            nullptr)
+            nullptr,
+            AmmoMesh,
+            Model)
         : nullptr;
-    if (!BaseMesh || !YawMesh || !PitchMesh || !LeafItem || !LeafProbe ||
+    if (!BaseMesh || !YawMesh || !PitchMesh || !AmmoMesh || !LeafItem || !LeafProbe ||
         (CannonAssetNames::IncludeBaseGameLoadedConnectorReference &&
             !LoadedConnectorMesh))
     {

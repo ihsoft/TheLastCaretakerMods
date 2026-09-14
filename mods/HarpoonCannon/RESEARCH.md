@@ -2,8 +2,8 @@
 
 ## Evidence boundary
 
-HC33 user acceptance, 2026-09-13, Steam25191271 / UE5.8, is the latest stable
-operator/optics checkpoint. Exact executable/mapping hashes and dependencies are
+User acceptance of clean-hud-02 + visual-v5-palette-02 on Steam25191271 / UE5.8
+establishes the operator/optics/model checkpoint. Exact hashes and dependencies are
 in GAME_DERIVED_SOURCES.md; package and cleanup identities in the active backlog.
 The latest test could be performed on ordinary targets; shark-specific behavior
 was not separately retested because no sharks were nearby. Historical HC27
@@ -14,6 +14,26 @@ NOT mean persistence, multiplayer, death/travel teardown, long-session operation
 firing, cable attachment or all strong-motion edge cases have been validated.
 
 ## Owners
+
+### Firing research boundary
+
+Current-build stock BP_Module_Turret derives from VoyageModuleActor and has
+OutputLocation plus CreateAbilityComponent/StartFiring/ActivateAbility events.
+Its cooked ubergraph references VoyageCombatBlueprintFunctionLibrary.ActivateAbility
+and ActivateBallisticAbility, and WeaponAbilityComponent.GetWeaponData. Individual
+event wrappers only jump into that shared graph; the summary alone does not prove
+their internal sequence, payload, hit ownership or collision exclusions. Next
+inspect exact native signatures and weapon ability setup before choosing reuse.
+
+Camera measurement (Steam25191271): user screenshots show character root drift
+0cm, native GetActorEyesViewPoint drift below0.15cm, but FirstPersonCamera local
+position changes from (53.980,8.241,34.687) to (42.140,-35.868,29.215)cm.
+Native eye getter is therefore not interchangeable with this camera position
+while operating the station. Runtime enumeration also found ThirdPersonCamera.
+SK_Head component origin stayed (0,0,-102)cm; this says nothing about animated
+bones/eye sockets. Following FirstPersonCamera position was subsequently accepted
+in game, followed by clean HUD/circle and Toggle scope acceptance. Animation and
+lifecycle edge cases are not comprehensively validated.
 
 | Concern | Owner / accepted contract |
 | --- | --- |
@@ -123,3 +143,11 @@ is tools/Read-VoyageInteractionState.py with fresh UObject discovery and serial/
 validation. No writes/injection. Native addresses are fingerprint-bound research
 anchors, never runtime mod code. The exact source and old evidence archive is
 indexed by mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md; do not reopen it routinely.
+# Authored HUD image sizing
+
+When generating a texture and a UImage in the same editor commandlet, do not
+derive the brush's desired size from texture platform dimensions before cook.
+SetBrushFromTexture(matchSize=true) can persist ImageSize0x0 although the cooked
+texture is valid. Author explicit FSlateBrush.ImageSize and audit the cooked
+widget. UImage.SetDesiredSizeOverride only updates a live Slate image and is not
+a persistent asset-setting substitute. Mask rendering still requires game QA.

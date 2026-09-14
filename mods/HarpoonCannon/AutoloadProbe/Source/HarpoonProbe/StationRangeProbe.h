@@ -9,7 +9,7 @@ inline constexpr TCHAR MeterSuffix[] = TEXT(" m");
 inline constexpr TCHAR MaximumCentimeters[] = TEXT("100000.0");
 inline constexpr TCHAR CentimetersPerMeter[] = TEXT("100.0");
 inline constexpr TCHAR NoHit[] = TEXT("RANGE: no hit within 1000m");
-inline constexpr TCHAR Distance[] = TEXT("TARGET distance from character (m): ");
+inline constexpr TCHAR Distance[] = TEXT("TARGET distance from sight (m): ");
 }
 namespace Range = StationRangeNames;
 
@@ -48,9 +48,8 @@ void UpdateStationRange(FGraph& G, bool StoreOnStation = false)
     G.Link(G.Pin(Hit, SP::HitActor), G.Pin(ObjectName, P::Object));
     auto* Fallback = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText));
     G.Link(G.Pin(ObjectName, P::ReturnValue), G.Pin(Fallback, E::StringValue)); TargetText(Range::TargetName, G.Pin(Fallback, P::ReturnValue));
-    auto* Character = ObserveCall(G, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetActorLocation), G.Read(N::OriginalPawn));
     auto* Length = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, VSize));
-    G.Link(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_VectorVector), G.Pin(Hit, OP::ImpactPoint), Character), G.Pin(Length, E::VectorLengthInput));
+    G.Link(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_VectorVector), G.Pin(Hit, OP::ImpactPoint), Start), G.Pin(Length, E::VectorLengthInput));
     auto* Meters = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble));
     G.Link(G.Pin(Length, P::ReturnValue), G.Pin(Meters, P::Binary::LeftOperand)); G.Default(Meters, P::Binary::RightOperand, Range::CentimetersPerMeter);
     auto* Rounded = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Round)); G.Link(G.Pin(Meters, P::ReturnValue), G.Pin(Rounded, OP::AngleValue));

@@ -1,9 +1,9 @@
 # HarpoonCannon
 
-Stable **operator/optics checkpoint: HC33**, accepted by the user on 2026-09-13.
+Game-validated operator/optics/model baseline; exact artifacts are in the backlog.
 This is not a finished harpoon weapon or a production release: firing, cable
 attachment and save-safe station persistence are not implemented/validated.
-The completed test installation has been removed for normal play.
+Current installed package and recovery receipts are recorded in the backlog.
 
 ## Start here
 
@@ -20,14 +20,15 @@ The completed test installation has been removed for normal play.
 
 A buildable Cyclone-leaf module shell follows the deck. A separate stationary
 common VoyageVehiclePawn supplies contextual Enter Harpoon, native entry/exit,
-own mouse inputs, first-person x5 camera, own HUD and standard exit-action hint.
+own mouse inputs, first-person 1x/5x cameras, own HUD and standard action hints.
 Character stats remain visible deliberately. Any first blocking optical hit
-shows its game item name or technical actor name, plus character-to-hit distance;
-a miss clears both. Mouse scale is 1.024.
+shows its game item name or technical actor name, plus optical-camera-to-hit
+distance; a miss clears both. The accepted v5 model uses its authored palette.
 
-The accepted package still has a diagnostic panel, F8 exit fallback and 20-second
-safety exit. These safeguards remain in the current package. Do not
-silently rebuild or relabel it as a diagnostics-free release.
+The accepted HUD has no diagnostic overlays. 1x uses a hollow center circle and
+tracks FirstPersonCamera position; its gaze ray converges gun aim within limits.
+5x uses the barrel sight, crosshair and optical mask. RMB is Toggle scope; E exits.
+F8 fallback and 20-second safety exit remain. This is not a save-safe weapon release.
 
 ## Current shell-only preparation
 
@@ -38,9 +39,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/HarpoonCannon/Build
 ```
 
 Use a fresh output identity. Build-Shell owns fingerprint/mapping/editor gates,
-GenerateHarpoonCannon -ShellOnly, exact four-package cook, original extraction,
+GenerateHarpoonCannon -ShellOnly, exact five-package cook, original extraction,
 retoc verification, independent semantic checks, ZIP and schema-2 manifest.
-It never installs. The Cyclone leaf and three authored meshes are the inventory.
+It never installs. The Cyclone leaf and four authored meshes are the inventory:
+base, yaw, pitch and shared ammunition geometry. The model-owned
+`models/HarpoonCannon/runtime-model.json` selects source objects and origins;
+named ammo instances remain separate components without ammunition-state logic.
+The descriptor and source hashes are checked before Unreal runs. Role identities
+and collision stay mod-owned; changing source names/offsets needs no C++ change.
 Validate-Shell.ps1 is the independent cooked shell inspector. Preserve base
 simple collision, native module/item identities and exact default subobjects.
 Geometry changes belong to the model task.
@@ -50,6 +56,33 @@ Geometry changes belong to the model task.
 [Station producer contract](AutoloadProbe/README.md).
 AutoloadProbe/ contains the active station generator. Source/ contains the shell
 generator, used through its ShellOnly entry. Both are required source inputs.
+
+### Runtime tuning interface (awaiting game validation)
+
+The prepared implementation reads `Config/HarpoonCannon.ini` beneath the game's
+ProjectSavedDir on each entry, not every frame. The standard installed location
+is `%LOCALAPPDATA%/Voyage/Saved/Config/HarpoonCannon.ini`; a template is provided
+in this directory. Exit the cannon before editing, then enter again. No binary
+rebuild is needed. Defaults:
+
+```ini
+OpticsMousePercent=35
+YawLimitDegrees=80
+MinimumPitchDegrees=-50
+MaximumPitchDegrees=10
+```
+
+Normal1x mouse scalar is1.28 (100%); optics35% gives0.448. Legacy MousePercent
+is ignored. RMB is the station's own toggle action; entry defaults to1x.
+Only5x displays the circular mask, crosshair and hit data; 1x shows a center circle.
+Modes and HUD are game-validated; settings reload remains a separate gate.
+Yaw is symmetric about installation
+forward. Keys are case-sensitive; whitespace around key/value is trimmed. Use
+decimal points and no inline comments. Unknown/non-numeric lines are ignored;
+last valid duplicate wins. Bounds are mouse1..100, yaw1..170, minimum pitch-89..0,
+maximum pitch0..89. Missing/empty/unreadable file retains defaults; the native
+reader does not distinguish these cases. Keep this small local file after test
+cleanup to retain preferences. The current pending test is in the backlog.
 
 ## Install / remove
 

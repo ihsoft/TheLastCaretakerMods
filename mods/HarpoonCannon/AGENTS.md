@@ -41,7 +41,11 @@ Root ../../AGENTS.md applies. This file contains only mod-owned constraints.
 - Keep explicit cooked Interact=Block and separate interaction/query ownership.
   Editor in-memory collision masks do not prove serialized runtime masks.
 - Keep own native HUD selection, matching context/action hints and useful character
-  stats. First-person angular x5, yaw360, pitch -50/+10, character-to-hit distance.
+  stats. First-person angular x5. Aim limits and sensitivity are logic-owned;
+  requested tuning and pending camera/range changes live in the active backlog.
+- Model names/origins/instance offsets come from models/HarpoonCannon/runtime-model.json.
+  Preserve stable base/yaw/pitch roles and individual ammo components, not old OBJ
+  names. Collision and camera/input contracts must not be inferred from geometry.
 - Any-hit display name is not target eligibility or persistent identity. Prefer
   nonempty game item Name; otherwise technical actor name. Clear on miss and
   write fallback/range before optional game-data gates.

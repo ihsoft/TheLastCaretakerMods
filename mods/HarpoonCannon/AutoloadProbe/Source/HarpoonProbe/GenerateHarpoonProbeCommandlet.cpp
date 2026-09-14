@@ -2,9 +2,15 @@
 #include "ProbeNames.h"
 #include "HarpoonInputNames.h"
 #include "DedicatedStationNames.h"
+#include "Kismet/BlueprintPathsLibrary.h"
+#include "VoyageEditorBlueprintFunctionLibrary.h"
+#include "TextSettingsGraphNames.h"
 #include "ContextEntryNames.h"
 #include "ActorScanGraphNames.h"
 #include "Components/BoxComponent.h"
+#include "Components/Image.h"
+#include "Components/ScaleBox.h"
+#include "Engine/Texture2D.h"
 #include "K2Node_CreateDelegate.h"
 #include "K2Node_BreakStruct.h"
 #include "K2Node_MacroInstance.h"
@@ -517,7 +523,8 @@ int32 UGenerateHarpoonProbeCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, DedicatedStationNames::VerifySwitch))
     {
         for (const TCHAR* Package : {N::Package, N::HudPackage, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
-            HarpoonInputNames::LookYaw, HarpoonInputNames::LookPitch, HarpoonInputNames::Exit, HarpoonInputNames::Keyboard, HarpoonInputNames::Context})
+            HarpoonInputNames::LookYaw, HarpoonInputNames::LookPitch, HarpoonInputNames::Exit, HarpoonInputNames::Zoom,
+            ZoomTest::MaskPackage, HarpoonInputNames::Keyboard, HarpoonInputNames::Context})
         {
             FString Relative(Package); check(Relative.RemoveFromStart(DedicatedStationNames::GamePrefix));
             FString File = FPaths::Combine(FPaths::ProjectDir(), DedicatedStationNames::CookPrefix, Relative) + FPackageName::GetAssetPackageExtension();

@@ -4,6 +4,7 @@
 // Engine-only graph pins for actor enumeration and exact string identity tests.
 namespace ActorScanGraphNames
 {
+inline const FName ComponentTag(TEXT("Tag"));
 // AActor::GetOwner also has a templated overload.
 inline const FName GetActorOwner(TEXT("GetOwner"));
 inline const FName ForEachLoop(TEXT("ForEachLoop"));

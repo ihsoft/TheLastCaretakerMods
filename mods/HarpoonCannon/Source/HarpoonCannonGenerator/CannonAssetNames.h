@@ -37,9 +37,10 @@ constexpr TCHAR YawMeshPackageName[] = TEXT("/Game/Mods/HarpoonCannon/SM_Harpoon
 constexpr TCHAR YawMeshAssetName[] = TEXT("SM_HarpoonCannonYawAssembly");
 constexpr TCHAR PitchMeshPackageName[] = TEXT("/Game/Mods/HarpoonCannon/SM_HarpoonCannonPitchAssembly");
 constexpr TCHAR PitchMeshAssetName[] = TEXT("SM_HarpoonCannonPitchAssembly");
+constexpr TCHAR AmmoMeshPackageName[] = TEXT("/Game/Mods/HarpoonCannon/SM_HarpoonCannonAmmo");
+constexpr TCHAR AmmoMeshAssetName[] = TEXT("SM_HarpoonCannonAmmo");
 constexpr TCHAR LoadedConnectorPackageName[] = TEXT("/Game/AssetSets/Sockets/SM_Mooring_CableSocket_Out");
 constexpr TCHAR LoadedConnectorAssetName[] = TEXT("SM_Mooring_CableSocket_Out");
-constexpr TCHAR VisualSourceRelativePath[] = TEXT("SourceAssets/harpoon_cannon_blockout.obj");
 constexpr TCHAR LeafItemPackageName[] = TEXT("/Game/Data/Assets/Modules/DA_Item_Module_WindTurbineMedium");
 constexpr TCHAR LeafItemAssetName[] = TEXT("DA_Item_Module_WindTurbineMedium");
 constexpr TCHAR LeafItemObjectPath[] = TEXT("/Game/Data/Assets/Modules/DA_Item_Module_WindTurbineMedium.DA_Item_Module_WindTurbineMedium");
@@ -105,48 +106,6 @@ constexpr TCHAR ObjMaterialPrefix[] = TEXT("usemtl ");
 constexpr TCHAR ObjFacePrefix[] = TEXT("f ");
 constexpr TCHAR ObjIndexSeparator[] = TEXT("/");
 
-constexpr const TCHAR* StaticMountObjects[] = {
-    TEXT("HC_StaticMount")
-};
-constexpr const TCHAR* YawAssemblyObjects[] = {
-    TEXT("HC_RotatingBase"),
-    TEXT("HC_RotationRing"),
-    TEXT("HC_Yoke_Left"),
-    TEXT("HC_Yoke_Right"),
-    TEXT("HC_StockMooring_BaseProxy"),
-    TEXT("HC_StockMooring_RecessProxy"),
-    TEXT("HC_StockMooring_LipProxy"),
-    TEXT("HC_FairleadRoller"),
-    TEXT("HC_CableProxy_00"),
-    TEXT("HC_CableProxy_01"),
-    TEXT("HC_CableProxy_02"),
-    TEXT("HC_CableProxy_03"),
-    TEXT("HC_CableProxy_04"),
-    TEXT("HC_CableProxy_05"),
-    TEXT("HC_ControlGrip"),
-    TEXT("HC_StatusLight")
-};
-constexpr const TCHAR* PitchAssemblyObjects[] = {
-    TEXT("HC_Trunnion"),
-    TEXT("HC_ElevationGear_Left"),
-    TEXT("HC_ElevationGear_Right"),
-    TEXT("HC_PressureChamber"),
-    TEXT("HC_PressureBand_Rear"),
-    TEXT("HC_PressureBand_Front"),
-    TEXT("HC_LinearRam"),
-    TEXT("HC_Guide_Bottom"),
-    TEXT("HC_Guide_Left"),
-    TEXT("HC_Guide_Right"),
-    TEXT("HC_MuzzleBrace_Left"),
-    TEXT("HC_MuzzleBrace_Right"),
-    TEXT("HC_SightPost"),
-    TEXT("HC_SightAperture"),
-    TEXT("HC_ConnectorProxy_Body"),
-    TEXT("HC_ConnectorProxy_Collar"),
-    TEXT("HC_ConnectorProxy_Handle_Left"),
-    TEXT("HC_ConnectorProxy_Handle_Right"),
-    TEXT("HC_ConnectorProxy_Handle_Top")
-};
 
 constexpr double FullYawDegrees = 360.0;
 constexpr double MinimumPitchDegrees = -50.0;

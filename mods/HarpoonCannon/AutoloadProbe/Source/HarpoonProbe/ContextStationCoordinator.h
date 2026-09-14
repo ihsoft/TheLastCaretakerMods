@@ -91,8 +91,8 @@ void BuildContextCoordinator(UBlueprint* BP, UClass* HudClass, UClass* StationCl
     auto* HudCast = NewObject<UK2Node_DynamicCast>(Graph); HudCast->TargetType = HudClass; HudCast->SetPurity(false); G.Node(HudCast);
     G.Link(G.Tail, G.Pin(HudCast, P::Execute)); G.Link(G.Pin(Create, P::ReturnValue), HudCast->GetCastSourcePin()); G.Tail = HudCast->GetValidCastPin();
     G.Write(N::HudInstance, HudCast->GetCastResultPin());
-    auto* Add = G.Call(UUserWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UUserWidget, AddToViewport));
-    G.Link(G.Read(N::HudInstance), G.Pin(Add, P::FunctionTarget)); G.Default(Add, E::ZOrder, N::HudZOrder); G.Exec(Add);
+    // Keep legacy diagnostic sink private: never attach its panel/instructions
+    // to the viewport. Station selection and action hints have their own HUD.
     G.Tail = ReadyHud;
     auto* ClassValid = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, IsValidClass));
     G.Link(G.Read(CE::ShellClass), G.Pin(ClassValid, P::Class));

@@ -23,6 +23,7 @@ public class HarpoonCannonGenerator : ModuleRules
             "CoreUObject",
             "Engine",
             "InputCore",
+            "Json",
             "KismetCompiler",
             "MeshConversion",
             "MeshDescription",

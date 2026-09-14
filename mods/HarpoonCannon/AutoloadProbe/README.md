@@ -20,21 +20,23 @@ tagged headers, extracts current scriptobjects, packages/verifies, writes ZIP an
 schema-2 release manifest. Source hashes/status and HEAD must stay unchanged.
 No native producer in sandbox; no dotnet run. SkipBuild only for an unchanged binary.
 
-StationInputsOnly is a mutually exclusive authoring-only preflight: five input
+StationInputsOnly is a mutually exclusive authoring-only preflight: six input
 assets, no runtime actor/HUD/autoload. It is not a playable station.
-The common station contains exactly nine tagged packages:
+The common station contains exactly eleven tagged packages:
 
 - /Game/Mods/HarpoonCannon/Station/BP_HarpoonOperator
 - /Game/Mods/HarpoonCannon/Station/WBP_HarpoonHUD
 - /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonLookYaw
 - /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonLookPitch
 - /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonExit
+- /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonZoom
+- /Game/Mods/HarpoonCannon/Station/T_HarpoonOpticalMask
 - /Game/Mods/HarpoonCannon/Inputs/IMC_HarpoonKeyboard
 - /Game/Mods/HarpoonCannon/Inputs/DA_HarpoonInputContext
 - /Game/Mods/HarpoonCannonLifecycleProbe/ModActor
 - /Game/Mods/HarpoonCannonLifecycleProbe/ProbeHUD
 
-The unchanged shell is a separate four-package manifest. Autoload support is an
+The unchanged shell is a separate five-package manifest. Autoload support is an
 external prerequisite, not bundled. Package names are stable runtime identities:
 do not rename them to cosmetically remove the word Probe.
 
@@ -56,8 +58,9 @@ Never confuse static pass with runtime pass.
 ## Runtime protocol / cleanup
 
 Load a save containing a built cannon. Aim at the base, use labeled Enter Harpoon,
-check first-person x5, aim at two solid targets then empty sky, and exit with E.
-Technical names are allowed when game Name is absent. Both mouse axes scale1.024.
+check 1x eye view and center circle, RMB Toggle scope to5x, aim at two solid
+targets then empty sky, and exit with E. Technical names are allowed when game
+Name is absent. Wide mouse scalar1.28; optics defaults35% (0.448).
 Stats remain. F8 and20 seconds are EXIT safeguards, not an alternative entry route.
 No firing, saving, dismantling, looting or entering another vehicle while occupied.
 Absent/empty hint: capture one useful observation and stop blind iterations.

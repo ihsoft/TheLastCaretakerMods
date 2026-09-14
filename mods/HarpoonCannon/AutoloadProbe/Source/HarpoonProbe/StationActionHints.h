@@ -20,6 +20,8 @@ inline constexpr TCHAR StockWidget[] = TEXT("/Game/UI/Game/BP_DynamicPlayerInput
 inline constexpr TCHAR ActionName[] = TEXT("HarpoonExit");
 inline constexpr TCHAR ActionCategory[] = TEXT("HarpoonCannon");
 inline constexpr TCHAR ExitLabel[] = TEXT("Exit Harpoon");
+inline constexpr TCHAR ZoomName[] = TEXT("HarpoonZoom");
+inline constexpr TCHAR ZoomLabel[] = TEXT("Toggle scope");
 inline constexpr TCHAR Central[] = TEXT("EPlayerInputInterfaceActionType::Central");
 inline constexpr TCHAR NotReady[] = TEXT("HC28: native hint widget NOT READY; E exits, F8 fallback");
 inline constexpr TCHAR NoProvider[] = TEXT("HC28: hint widget READY; action provider NOT OBSERVED");
@@ -55,6 +57,18 @@ void AddStationActions(UBlueprint* BP)
     for (auto* Pin : Action->Pins) if (Pin->Direction == EGPD_Output) ActionOutput = Pin;
     for (auto* Pin : Array->Pins) if (Pin->Direction == EGPD_Input) { FirstElement = Pin; break; }
     check(ActionOutput && FirstElement); G.Link(ActionOutput, FirstElement);
+    auto* ZoomAction = NewObject<UK2Node_MakeStruct>(Graph); ZoomAction->StructType = FPlayerInputInterfaceAction::StaticStruct();
+    ZoomAction->bMadeAfterOverridePinRemoval = true; G.Node(ZoomAction);
+    auto* ZoomInput = LoadObject<UInputAction>(nullptr, HarpoonInputNames::Zoom); check(ZoomInput);
+    G.Pin(ZoomAction, Hint::InputAction)->DefaultObject = ZoomInput;
+    G.Default(ZoomAction, Hint::Name, Hint::ZoomName); G.Default(ZoomAction, Hint::Category, Hint::ActionCategory);
+    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultText(*G.Pin(ZoomAction, Hint::Text), FText::FromString(Hint::ZoomLabel));
+    G.Link(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), OpticalSelf(G)), G.Pin(ZoomAction, Hint::Enabled));
+    G.Default(ZoomAction, Hint::Type, Hint::Central);
+    Array->AddInputPin();
+    UEdGraphPin* LastElement = nullptr;
+    for (auto* Pin : Array->Pins) if (Pin->Direction == EGPD_Input) LastElement = Pin;
+    for (auto* Pin : ZoomAction->Pins) if (Pin->Direction == EGPD_Output) G.Link(Pin, LastElement);
     G.Link(Array->GetOutputPin(), G.Pin(Result, P::ReturnValue));
 }
 

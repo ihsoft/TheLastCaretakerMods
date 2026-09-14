@@ -4,6 +4,7 @@
 // Engine-reflected pins for diagnostic actor generators. Build-time only.
 namespace ActorLifecycleGraphNames
 {
+inline constexpr TCHAR SnapToTarget[] = TEXT("SnapToTarget");
 inline const FName NewTransform(TEXT("NewTransform"));
 inline const FName NewLocation(TEXT("NewLocation"));
 inline const FName NewRelativeLocation(TEXT("NewRelativeLocation"));

@@ -1,5 +1,18 @@
 # Game-derived source registry
 
+## Runtime settings reader (current build revalidation)
+
+Steam25191271/executable747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+VoyageEditorBlueprintFunctionLibrary.LoadFileToArray remains BlueprintCallable
+static/native, flags0x04022401, FString InPath at0 and TArray<FString> return at16,
+parameter size32. Bounded PE registration0x14b174110 and outer getter0x14524c1d0
+confirm owner /Script/Voyage.VoyageEditorBlueprintFunctionLibrary. Evidence:
+artifacts/harpoon-cannon/settings-reader-audit.json; method .py next to it, derived
+from public executable-inspector string/pointer output, not an arbitrary scan.
+Editor mirror never ships. Missing-file/parse behavior in this new consumer is
+runtime pending; earlier autoload's reader acceptance is not new-version proof.
+Revalidate on any game fingerprint change.
+
 Current checkpoint: HC33 user-accepted on 2026-09-13. Fresh cleanup fingerprint
 at23:05:01UTC still matches Steam25191271 and the hashes in the HC33 section.
 Older dated entries are historical provenance, not current compatibility claims.
