@@ -127,14 +127,17 @@ def main():
     out=args.output.resolve()
     if out==SOURCE_DIR or SOURCE_DIR in out.parents:
         parser.error('Handoff output must remain outside the accepted source directory')
-    registry=json.loads((SOURCE_DIR/'baseline.json').read_text(encoding='utf-8'))
+    existing=json.loads((SOURCE_DIR/'runtime-model.json').read_text(encoding='utf-8'))
     sources=[]
-    for name,expected in registry['sha256'].items():
-        p=SOURCE_DIR/name
+    for source in existing['sources'].values():
+        p=(SOURCE_DIR/source['path']).resolve()
+        if p.parent!=SOURCE_DIR or Path(source['path']).is_absolute():
+            raise RuntimeError('Model source must be a sibling of the descriptor')
+        expected=source['sha256']
         actual=hashlib.sha256(p.read_bytes()).hexdigest().upper()
         if actual!=expected: raise RuntimeError('Baseline changed: '+str(p))
         sources.append({'path':str(p),'sha256':actual})
-    scene=read_obj(SOURCE_DIR/(STEM+'.obj'))
+    scene=read_obj(SOURCE_DIR/existing['sources']['obj']['path'])
     checked=audit(scene)
     definitions=[('base','HC_RG_STATIC_','mountRoot',[0,0,0]),
                  ('yaw','HC_RG_YAW_','yawPivot',[0,0,0]),

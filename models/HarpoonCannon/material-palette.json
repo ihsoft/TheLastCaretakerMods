@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "sourceMtl": {
+    "path": "harpoon_cannon_railgun_c_blockout_v5.mtl",
+    "sha256": "D87428030929573105454C93DC42B5E77A22C2DDC50E697C498E2F259412D7DD"
+  },
+  "colorContract": "Preview Kd raised to power 2.2; linear shader inputs; opaque default-lit, single-sided",
+  "slots": [
+    {
+      "name": "CopperCoil",
+      "baseColorLinear": [
+        0.361867191,
+        0.047366143,
+        0.002878828
+      ],
+      "roughness": 0.4,
+      "metallic": 0.0,
+      "emissiveColorLinear": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "DarkMetal",
+      "baseColorLinear": [
+        0.017744508,
+        0.024421807,
+        0.027420549
+      ],
+      "roughness": 0.65,
+      "metallic": 0.0,
+      "emissiveColorLinear": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "EdgeMetal",
+      "baseColorLinear": [
+        0.081532349,
+        0.099300103,
+        0.105649027
+      ],
+      "roughness": 0.4,
+      "metallic": 0.0,
+      "emissiveColorLinear": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "MachinedSteel",
+      "baseColorLinear": [
+        0.156181864,
+        0.189939499,
+        0.198943943
+      ],
+      "roughness": 0.4,
+      "metallic": 0.0,
+      "emissiveColorLinear": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "PowerBlue",
+      "baseColorLinear": [
+        0.000182922,
+        0.301676573,
+        0.681419299
+      ],
+      "roughness": 0.65,
+      "metallic": 0.0,
+      "emissiveColorLinear": [
+        7.3169e-05,
+        0.120670629,
+        0.27256772
+      ]
+    },
+    {
+      "name": "RailBlue",
+      "baseColorLinear": [
+        0.006309573,
+        0.017744508,
+        0.025897505
+      ],
+      "roughness": 0.65,
+      "metallic": 0.0,
+      "emissiveColorLinear": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "RubberCable",
+      "baseColorLinear": [
+        0.00778151,
+        0.011237647,
+        0.012210524
+      ],
+      "roughness": 0.65,
+      "metallic": 0.0,
+      "emissiveColorLinear": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "SafetyOrange",
+      "baseColorLinear": [
+        0.646234999,
+        0.047366143,
+        0.000626541
+      ],
+      "roughness": 0.65,
+      "metallic": 0.0,
+      "emissiveColorLinear": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "ServicePanel",
+      "baseColorLinear": [
+        0.198943943,
+        0.217637641,
+        0.198943943
+      ],
+      "roughness": 0.65,
+      "metallic": 0.0,
+      "emissiveColorLinear": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ]
+}
