@@ -1,0 +1,3 @@
+# Preserve the exact accepted SHA-256 across Windows checkouts.
+*.obj -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*.mtl -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
