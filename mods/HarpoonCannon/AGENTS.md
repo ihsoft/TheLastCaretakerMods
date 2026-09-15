@@ -43,9 +43,12 @@ Root ../../AGENTS.md applies. This file contains only mod-owned constraints.
 - Keep own native HUD selection, matching context/action hints and useful character
   stats. First-person angular x5. Aim limits and sensitivity are logic-owned;
   requested tuning and pending camera/range changes live in the active backlog.
-- Model names/origins/instance offsets come from models/HarpoonCannon/runtime-model.json.
-  Preserve stable base/yaw/pitch roles and individual ammo components, not old OBJ
-  names. Collision and camera/input contracts must not be inferred from geometry.
+- Authoritative model authoring/handoff is GLB, versioned by
+  models/HarpoonCannon/model-source.json. Read actual node hierarchy/matrices;
+  prefixes do not determine parents (V1 ammo follows pitch). Preserve role/sight/
+  ammo/anchor names. Current runtime-model.json/OBJ/palette is a frozen pre-GLB
+  build bridge, NOT a V1 conversion; retain until a coordinated consumer migration.
+  Do not feed new GLB assumptions into old readers or infer collision/input from it.
 - Any-hit display name is not target eligibility or persistent identity. Prefer
   nonempty game item Name; otherwise technical actor name. Clear on miss and
   write fallback/range before optional game-data gates.

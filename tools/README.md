@@ -94,6 +94,19 @@ PowerShell wrappers. Keep real-task samples and their limits in
 
 ## Choose a tool
 
+For the standard electrical socket's geometry-only planning reference, see
+[VoyageMeshReference](VoyageMeshReference/README.md): stock mesh LOD0, approximate
+colors, Blender/GLB and readback checks. Not full Unreal-material/Nanite export;
+validated target/build and limits are in its README.
+
+GLB-first model inspection, direct previews and standard Blender conversions are
+collected in [tools/glb](glb/README.md). GLB is the editable source/handoff, not a
+generated preview of a procedural OBJ. The [owning model registry and guide](../models/HarpoonCannon/README.md)
+define version/hash/roles and any temporary legacy build bridge. Texture/material
+extraction tools are a desired extension, not a capability of the geometry reader.
+Source-only conversion/preview is outside game-tool coverage; extraction/build
+operations retain the normal game provenance gates.
+
 ScopeFix's fingerprint-bound aiming-adjustment builder is documented in
 [`../mods/ScopeFix/README.md`](../mods/ScopeFix/README.md). Its public entry
 point is `mods/ScopeFix/Build-ScopeFix.ps1`; it creates a fresh verified

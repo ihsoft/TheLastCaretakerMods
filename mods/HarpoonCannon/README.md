@@ -42,9 +42,14 @@ Use a fresh output identity. Build-Shell owns fingerprint/mapping/editor gates,
 GenerateHarpoonCannon -ShellOnly, exact five-package cook, original extraction,
 retoc verification, independent semantic checks, ZIP and schema-2 manifest.
 It never installs. The Cyclone leaf and four authored meshes are the inventory:
-base, yaw, pitch and shared ammunition geometry. The model-owned
-`models/HarpoonCannon/runtime-model.json` selects source objects and origins;
+base, yaw, pitch and shared ammunition geometry. This existing producer uses the
+frozen pre-GLB `models/HarpoonCannon/runtime-model.json` OBJ/palette bridge;
 named ammo instances remain separate components without ammunition-state logic.
+New model authoring and handoff use GLB V1 and
+[`model-source.json`](../../models/HarpoonCannon/model-source.json), as described
+in the [model guide](../../models/HarpoonCannon/README.md). This producer has NOT
+yet been migrated to that GLB and does not build V1. Its changed pitch/ammo/sight
+hierarchy requires a coordinated derived-import adapter, not a source-path swap.
 The descriptor and source hashes are checked before Unreal runs. Role identities
 and collision stay mod-owned; changing source names/offsets needs no C++ change.
 Validate-Shell.ps1 is the independent cooked shell inspector. Preserve base
