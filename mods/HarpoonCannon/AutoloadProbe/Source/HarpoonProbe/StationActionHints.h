@@ -22,6 +22,8 @@ inline constexpr TCHAR ActionCategory[] = TEXT("HarpoonCannon");
 inline constexpr TCHAR ExitLabel[] = TEXT("Exit Harpoon");
 inline constexpr TCHAR ZoomName[] = TEXT("HarpoonZoom");
 inline constexpr TCHAR ZoomLabel[] = TEXT("Toggle scope");
+inline constexpr TCHAR FireName[] = TEXT("HarpoonFire");
+inline constexpr TCHAR FireLabel[] = TEXT("Fire");
 inline constexpr TCHAR Central[] = TEXT("EPlayerInputInterfaceActionType::Central");
 inline constexpr TCHAR NotReady[] = TEXT("HC28: native hint widget NOT READY; E exits, F8 fallback");
 inline constexpr TCHAR NoProvider[] = TEXT("HC28: hint widget READY; action provider NOT OBSERVED");
@@ -69,6 +71,17 @@ void AddStationActions(UBlueprint* BP)
     UEdGraphPin* LastElement = nullptr;
     for (auto* Pin : Array->Pins) if (Pin->Direction == EGPD_Input) LastElement = Pin;
     for (auto* Pin : ZoomAction->Pins) if (Pin->Direction == EGPD_Output) G.Link(Pin, LastElement);
+    auto* FireAction = NewObject<UK2Node_MakeStruct>(Graph); FireAction->StructType = FPlayerInputInterfaceAction::StaticStruct();
+    FireAction->bMadeAfterOverridePinRemoval = true; G.Node(FireAction);
+    auto* FireInput = LoadObject<UInputAction>(nullptr, HarpoonInputNames::Fire); check(FireInput);
+    G.Pin(FireAction, Hint::InputAction)->DefaultObject = FireInput;
+    G.Default(FireAction, Hint::Name, Hint::FireName); G.Default(FireAction, Hint::Category, Hint::ActionCategory);
+    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultText(*G.Pin(FireAction, Hint::Text), FText::FromString(Hint::FireLabel));
+    G.Link(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), OpticalSelf(G)), G.Pin(FireAction, Hint::Enabled));
+    G.Default(FireAction, Hint::Type, Hint::Central);
+    Array->AddInputPin();
+    for (auto* Pin : Array->Pins) if (Pin->Direction == EGPD_Input) LastElement = Pin;
+    for (auto* Pin : FireAction->Pins) if (Pin->Direction == EGPD_Output) G.Link(Pin, LastElement);
     G.Link(Array->GetOutputPin(), G.Pin(Result, P::ReturnValue));
 }
 

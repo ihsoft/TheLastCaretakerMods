@@ -1,115 +1,90 @@
 # HarpoonCannon: current state and next work
 
-## Accepted baseline
+## Restart
 
-- Logic/integration commit: `089d1e42397c85f89be1306985cb0b9bdca449d8`.
-- Model/palette commit: `0dd54ca113e5ec319938dbd250ba1d64ee55f51b`.
-- User accepted clean HUD, center circle, Toggle scope, first-person camera and
-  v5 model/materials. Single-player operator/optics are game-validated.
-- Not implemented/validated: firing, cable attachment/tension, ammunition state,
-  save-safe station persistence, multiplayer and long-session lifecycle.
-- Native E exit, F8 fallback and 20-second safety exit remain.
-- GLB V1 integration `glb-v1-rt-04` game-validated 2026-09-16: placement,
-  construction, entry, yaw/elevation, RMB 1x/5x and E exit.
+User accepted native firing and requested removal of test-only code and a scoped
+commit. The shark died after approximately four shots at200 configured base
+damage with no inter-click cooldown. This validates damage and repeated firing,
+not exact effective damage, initial shark health or final weapon balance.
+Do not repeat the high-speed collision, shark-kill or dismantle discriminators
+without new evidence. Durable contracts are in RESEARCH.md and
+VEHICLE_ENTRY_RESEARCH.md.
 
-## Installed pair and recovery
-
-All paths below are repository-relative. Retain these immutable artifacts.
-Older manifest sourceCommit fields remain original build provenance.
-
-Operator:
-`artifacts/harpoon-cannon/clean-hud-02/release-manifest.json`
-
-Current shell (construction and operator/optics game-validated 2026-09-16):
-`artifacts/harpoon-cannon/glb-v1-rt-04/release-manifest.json`
-
-Previous accepted shell, retained for recovery:
-`artifacts/harpoon-cannon/visual-v5-palette-02/release-manifest.json`
-
-Recovery only when requested, after checking the game is closed. Undo the current
-GLB layer through its receipt before using older baseline teardown instructions:
+Installed game-validated station:
+`artifacts/harpoon-cannon/direct-damage-200-01/release-manifest.json`.
+Receipt and exact predecessor backup:
+`artifacts/installations/HarpoonCannonLifecycleProbe/20260917-073610-direct-damage-200-01-33cbecc8/install-manifest.json`.
+Installed shell remains:
+`artifacts/harpoon-cannon/glb-v1-rt-04/release-manifest.json`.
+Its receipt:
 `artifacts/installations/HarpoonCannonShellProbe/20260915-083631-glb-v1-rt-04-f532945e/install-manifest.json`.
-For older baseline teardown, restore OPERATOR FIRST through:
-`artifacts/installations/HarpoonCannonLifecycleProbe/20260914-051228-clean-hud-02-ac501b80/install-manifest.json`
 
-Then SHELL:
-`artifacts/installations/HarpoonCannonShellProbe/20260914-050913-visual-v5-palette-02-1f91521e/install-manifest.json`
+Cleanup removes the automatic speed-test harness, diagnostic trajectory/contact
+meshes, shot-status text and20s forced exit. E exit, emergency F8, normal target
+name/range, scope, character stats and native attack safeguards remain.
+Stable runtime package names (including BP_HarpoonTestShot) are intentionally
+unchanged. No accepted payload, receipt or shared game-store entry was deleted.
+Clean package: `artifacts/harpoon-cannon/firing-clean-02/release-manifest.json`.
+Prepared, not installed or independently game-validated after cleanup.
 
-Use public installer/restorer, exact manifests and installed hash checks.
-Do not replace packages while playing. Repository-only research may continue.
-Retain local `%LOCALAPPDATA%/Voyage/Saved/Config/HarpoonCannon.ini` preferences.
+## Next feature scope
 
-## Current checkpoint: validated GLB integration
+Preserve the accepted firing core: LMB Started -> one projectile per click ->
+native swept movement2000m/s -> original ReceiveHit -> one Directional attack.
+Range1000m; ignore cannon/operator/station, not the ship. No inherited ship or
+character velocity, gravity, penetration or ricochet. Four-second shot lifetime
+keeps the native attack causer alive and is not a cooldown.
+Next additions are ammunition and energy eligibility/consumption, then physical
+and audio effects. Do not implement them as part of cleanup. Exact resource
+costs and balance require a separate decision.
+Save persistence, multiplayer, death/travel and long-session lifecycle remain
+unvalidated. Do not claim a save-safe release.
 
-User confirmed on 2026-09-16 that `glb-v1-rt-04` supports placement,
-construction, entry, yaw/elevation, RMB 1x/5x and E exit. Do not repeat these tests.
-Unfinished-construction Q cancellation was not separately reported for V1.
-Save persistence, multiplayer, ammunition and firing remain outside validation.
+## Established model/operator baseline
 
-Current source: `models/HarpoonCannon/model-source.json`, GLB SHA256
+GLB integration source checkpoint: `402f627b685686df502bef4455d02e4067dcf8ee`.
+User validated placement, construction, entry, yaw/elevation, RMB1x/5x and E exit.
+Current model: `models/HarpoonCannon/model-source.json`, GLB SHA256
 `9FD66B3350239F4CE0E37E0B8BF4F8E9F033A3E22E8EE88CD2DBF9158578A5BD`.
-Native Interchange imports 72 meshes and13 material instances. The adapter keeps
-93 component nodes, actual hierarchy and registry-bound yaw/pitch/sight roles;
-ammo stays separately addressable under its actual pitch ancestor. The86-package
-inventory drives cook and validation. No manual OBJ/palette/offset bridge.
+Native Interchange imports72 meshes and13 material instances; adapter retains
+93 component nodes and actual hierarchy. Ammo objects stay independently
+addressable under pitch; no ammo consumption is implemented yet.
+Model ownership remains separate. Changes should reuse the GLB pipeline; stop
+and discuss recurring per-revision conversion work instead of normalizing it.
+V1 lacks an authored muzzle: hash-gated pitch-local fallback(208.4,0,4)cm, +X,
+from `artifacts/modeling/HarpoonCannon/muzzle-v1-audit.json`. A future authored
+muzzle replaces this fallback. Sight and projectile origin are distinct.
 
-Independent verification matched rigid local transforms (max error1.42e-14) and
-all13 cooked material factors against
-`artifacts/harpoon-cannon/glb-v1-02/source-audit.json`.
-Reviewed stock material parent:
-`/InterchangeAssets/gltf/MaterialInstances/MI_Default_Opaque`.
-Source-only model revisions should reuse this pipeline. Stop and discuss if
-conversion requires recurring per-revision code changes.
+Dismantle-after-exit was validated with `dismantle-safe-01` and retained in the
+current firing source. All seven unavailable-entry branches explicitly return
+handled/empty actions, preventing native legacy fallback. Invalid-anchor cleanup
+disables new acquisition before station destruction. See VEHICLE_ENTRY_RESEARCH.
+The earlier GLB construction crash was resolved by ray-tracing resource cooking;
+see PIPELINE_OBSERVATIONS, not old trial instructions.
 
-Recovery: no automatic rollback requested by user. Retain the exact manifests
-above; do not delete accepted payloads. A prior crash at executable RVA0x2f3851b
-was resolved by ray-tracing resource cooking, without geometry/control changes.
-Bounded evidence: `artifacts/harpoon-cannon/glb-crash-top.json`,
-`glb-crash-caller.json`, and the glb-v1-03/glb-v1-rt-04 cook logs.
-The small dump lacks some heap pages; JSON inspector omits ray-tracing proxy
-data. Preserve this validation limitation, not a false static-resource assertion.
-Durable import/client-mode and ray-tracing lessons are in PIPELINE_OBSERVATIONS.
+## Retained evidence and recovery
 
-Cleanup authorized: removed unused OBJ/parser/legacy operator generation and
-ModelRecipe.h; source-model files owned by the model task remain untouched.
-Candidate `glb-cleanup-06` passed build/generate/cook/container/semantic checks
-without installation. Its model inventory exactly matches the game-validated
-payload; independent93-component/13-material verification passed again.
-The first cleanup attempt stopped before Unreal because hashing included a
-Git-tracked deleted file. Source hashes now cover existing files; Git source
-status retains deletions. This was a blocking correctness fix, not a new tool.
-Next: resume firing research below. Installed user-validated shell stays unchanged.
-Shared tools/README.md and tools/glb/README.md contain mixed concurrent changes
-and are intentionally excluded from the scoped feature commit; their Harpoon
-documentation additions remain unstaged alongside the other owner's additions.
-Tool report: public Build-Shell initially rejected a deleted source at hashing;
-after the scoped fix its full pipeline passed. verify_harpoon_import and exact
-inventory comparison passed. No runtime test repeated and no install performed.
+All paths are repository-relative; generated evidence remains ignored.
+- Native speed collision: `artifacts/harpoon-cannon/speed-collision-04/release-manifest.json`.
+  Both200/2000m/s hit a1cm blocker123.45m away. This does not prove moving-target,
+  water or full weapon-ability behavior; timings were event age, not precise flight time.
+- Native attack: `artifacts/harpoon-cannon/attack-signature-audit.json`,
+  `attack-struct-audit.json`, `attack-constructor.json`,
+  `register-attack-thunk.json`, `register-attack-body.json` and
+  `register-attack-directional.json` in the same directory.
+- Accepted firing cooked JSON: asset-inspections/20260917T073452782Z-d8ffa0e9
+  (shot) and20260917T073455225Z-bafa3057(station), beneath artifacts.
+- Dismantle repair: `artifacts/harpoon-cannon/dismantle-modern-fallback.json`
+  and `dismantle-safe-01/release-manifest.json`.
+- Scoped audits: `artifacts/harpoon-cannon/verify-direct-damage.py` and
+  `verify-dismantle-provider.py`. These are checkpoint assertions, not general tools.
 
-## Next work: firing
-
-User authorized transition to shot logic. No firing implementation or new test
-package exists yet. Keep the accepted installed pair unchanged during research.
-
-Current-build stock `BP_Module_Turret` has `OutputLocation`,
-`CreateAbilityComponent`, `StartFiring` and `ActivateAbility`.
-Its shared ubergraph references:
-- `VoyageCombatBlueprintFunctionLibrary.ActivateAbility`;
-- `VoyageCombatBlueprintFunctionLibrary.ActivateBallisticAbility`;
-- `WeaponAbilityComponent.GetWeaponData`.
-
-Next inspect the native signatures, ability setup and hit consumer. Event
-wrappers jump into a shared graph; a call summary is not the full firing contract.
-Evidence: `artifacts/asset-summaries/game/05E7DB681D3AA8B6ADF4A73FF8F3598B19E1BAE59490851B2293271084A5A8A9/summary.json`.
-
-Proposed first discriminator: one visible shot from a model-defined muzzle,
-trajectory and hit detection, with explicit own-actor collision policy.
-Separate cable/tension, damage balance and ammunition persistence from that test.
-Do not invent those contracts from the successful operator prototype.
+No automatic rollback requested. Restore only through exact receipts if needed,
+after checking the game is closed. Preserve local HarpoonCannon.ini preferences.
 
 ## Version gate and owning references
 
-Last fingerprint check: Steam25191271, executable SHA256
+Steam25191271; executable SHA256
 `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
 Game UE5.8 / editor5.8.2. Recheck before reusing game-derived inputs.
 Reviewed mapping: `mappings/Voyage/steam-25191271-ue5.8/Voyage-25191271.usmap`.
@@ -120,5 +95,19 @@ Reviewed mapping: `mappings/Voyage/steam-25191271-ue5.8/Voyage-25191271.usmap`.
 - [Tool pitfalls and recovery](../mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md)
 - [Rules](../mods/HarpoonCannon/AGENTS.md)
 
-Model work is separately owned. Historical chronology is recoverable from Git;
-old logs/candidates remain ignored evidence, not routine reading instructions.
+## Tool-use checkpoint
+
+Accepted damage build passed producer compilation/generation/cook,13 tagged
+headers, container verification, public Mod JSON audit and installation readback.
+User supplied the runtime damage/kill result. Cleanup build/generate/cook,
+13 tagged packages and container verification passed. Public Mod JSON plus
+verify-direct-damage.py --clean confirm200 damage, one attack/single-hit guard,
+per-click spawning and removal of shot visuals/status/timed exit.
+verify-dismantle-provider.py passes all7 handled/empty paths.
+Evidence: asset-inspections/20260917T082831498Z-56d2fe7e(shot) and
+20260917T082834402Z-a5030772(station), beneath artifacts.
+First cleanup compile found one stale renamed constant reference; fixed and
+rebuilt with fresh output identity. Python was absent from PATH; audits used the
+bundled runtime executable. No shared-tool implementation inspection, installation
+or new reusable workflow was needed. All recurring asset/release operations used
+documented entry points; no uncovered recurring operation identified.

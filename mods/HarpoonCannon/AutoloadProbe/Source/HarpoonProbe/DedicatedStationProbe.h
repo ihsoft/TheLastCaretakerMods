@@ -86,7 +86,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     Tick->bOverrideFunction = true; G.Node(Tick); G.Tail = G.Pin(Tick, P::Then);
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
     G.Link(G.Tail, G.Pin(Work, P::Execute)); G.Tail = Work->GetThenPinGivenIndex(0);
-    ContextStationSafety(G, G.Pin(Tick, P::DeltaSeconds));
+    ContextStationSafety(G);
     G.Tail = Work->GetThenPinGivenIndex(1);
     G.Branch(G.Valid(G.Read(S::Anchor)));
     auto* Controlled = G.Branch(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self()));
@@ -185,6 +185,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     SetZoom(false);
     G.Tail = G.Pin(Wide, P::Else); SetZoom(true);
 
+    AddCannonFire(G);
     // Real Enhanced Input events on the possessed station, not observer key polling.
     auto ActionNode = [&](const TCHAR* Package, FName Trigger)
     {
@@ -221,6 +222,7 @@ UClass* CreateDedicatedStation()
 {
     auto* BP = FKismetEditorUtilities::CreateBlueprint(AVoyageVehiclePawn::StaticClass(), CreatePackage(DS::OperatorPackage),
         *FPackageName::GetLongPackageAssetName(DS::OperatorPackage), BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
+    AddVariable(BP, Shot::SpawnedThisPress, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, ZoomTest::Wide, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, EyeAim::Yaw, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, EyeAim::Pitch, UEdGraphSchema_K2::PC_Real);
@@ -229,8 +231,7 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, ZoomTest::Label, UEdGraphSchema_K2::PC_Text);
     for (FName Field : {Settings::Mouse, Settings::Yaw, Settings::PitchMin, Settings::PitchMax}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, DS::Sight, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
-    for (FName Field : {CE::Ready, CE::InteractBlocks, CE::ProviderSeen, CE::CallbackSeen, CE::ExitSent}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, CE::Age, UEdGraphSchema_K2::PC_Real);
+    for (FName Field : {CE::Ready, CE::InteractBlocks, CE::ProviderSeen, CE::CallbackSeen}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, O::BaselineFov, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, S::Movement, UEdGraphSchema_K2::PC_Object, UCharacterMovementComponent::StaticClass());
     AddVariable(BP, CE::EntryAction, UEdGraphSchema_K2::PC_Object, UInputAction::StaticClass());

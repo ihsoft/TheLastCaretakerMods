@@ -1,4 +1,4 @@
-# Harpoon station generator: accepted HC33
+# Harpoon station generator
 
 This is the active editor-only producer for the stationary Harpoon operator.
 Its native binaries are authoring inputs and must not enter the runtime package.
@@ -23,9 +23,9 @@ No native producer in sandbox; no dotnet run. SkipBuild only for an unchanged bi
 the shell producer. Filesystem DDC and explicit Zen data path use this directory;
 old caches and global Unreal settings are left unchanged.
 
-StationInputsOnly is a mutually exclusive authoring-only preflight: six input
+StationInputsOnly is a mutually exclusive authoring-only preflight: seven input
 assets, no runtime actor/HUD/autoload. It is not a playable station.
-The common station contains exactly eleven tagged packages:
+The common station contains exactly thirteen tagged packages:
 
 - /Game/Mods/HarpoonCannon/Station/BP_HarpoonOperator
 - /Game/Mods/HarpoonCannon/Station/WBP_HarpoonHUD
@@ -33,6 +33,8 @@ The common station contains exactly eleven tagged packages:
 - /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonLookPitch
 - /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonExit
 - /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonZoom
+- /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonFire
+- /Game/Mods/HarpoonCannon/Station/BP_HarpoonTestShot
 - /Game/Mods/HarpoonCannon/Station/T_HarpoonOpticalMask
 - /Game/Mods/HarpoonCannon/Inputs/IMC_HarpoonKeyboard
 - /Game/Mods/HarpoonCannon/Inputs/DA_HarpoonInputContext
@@ -64,9 +66,22 @@ Load a save containing a built cannon. Aim at the base, use labeled Enter Harpoo
 check 1x eye view and center circle, RMB Toggle scope to5x, aim at two solid
 targets then empty sky, and exit with E. Technical names are allowed when game
 Name is absent. Wide mouse scalar1.28; optics defaults35% (0.448).
-Stats remain. F8 and20 seconds are EXIT safeguards, not an alternative entry route.
-No firing, saving, dismantling, looting or entering another vehicle while occupied.
+Stats remain. E is native exit; F8 is an emergency exit, with no timed auto-exit.
+LMB fires one native projectile per click at2000m/s, up to1000m. No cooldown or
+hold-to-repeat. ReceiveHit submits one native Directional attack with200 base
+damage and the stock PhysicalForce damage class. Repeated hits on a shark and
+its death were user-validated; effective damage and balance are not inferred.
+No diagnostic trajectory, contact marker or shot-status overlay is emitted.
+The cannon, operator and station are ignored; the ship remains an obstacle.
+Actor tick precedes movement and bounds displacement by remaining range with a
+1cm collision-radius allowance. No inherited velocity, gravity, ricochet or
+penetration. A4s actor lifetime preserves the attack causer, not a firing delay.
+Ammunition/energy conditions and physical/audio effects remain future work.
+Muzzle fallback is pitch-local(208.4,0,4)cm and gated to the audited V1 GLB hash;
+changed models require adapter review, not arbitrary reuse of the offset.
+No saving, dismantling, looting or entering another vehicle while occupied.
 Absent/empty hint: capture one useful observation and stop blind iterations.
 
-After result and closed-game gate, restore station then shell by exact installation
-manifests. Prepared artifacts are retained; no automatic next-test installation.
+Retain the accepted installation while preparing changes. Install or restore only
+through the public manifest-based workflow after the game-closed gate; preparation
+does not install or roll back implicitly.

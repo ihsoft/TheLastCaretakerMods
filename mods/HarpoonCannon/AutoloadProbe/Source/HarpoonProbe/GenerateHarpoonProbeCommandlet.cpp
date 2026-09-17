@@ -8,6 +8,13 @@
 #include "ContextEntryNames.h"
 #include "ActorScanGraphNames.h"
 #include "Components/BoxComponent.h"
+#include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "VoyageProjectileMovementComponent.h"
+#include "VoyageCombatSubsystem.h"
+#include "Subsystems/SubsystemBlueprintLibrary.h"
+#include "TimerGraphNames.h"
 #include "Components/Image.h"
 #include "Components/ScaleBox.h"
 #include "Engine/Texture2D.h"
@@ -509,6 +516,7 @@ namespace
 #include "ForkliftEntryProbe.h"
 #include "StationActionHints.h"
 #include "ContextEntryProbe.h"
+#include "CannonShotProbe.h"
 #include "DedicatedStationProbe.h"
 #include "ContextStationCoordinator.h"
 }
@@ -522,9 +530,10 @@ int32 UGenerateHarpoonProbeCommandlet::Main(const FString& Params)
 {
     if (FParse::Param(*Params, DedicatedStationNames::VerifySwitch))
     {
-        for (const TCHAR* Package : {N::Package, N::HudPackage, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
-            HarpoonInputNames::LookYaw, HarpoonInputNames::LookPitch, HarpoonInputNames::Exit, HarpoonInputNames::Zoom,
-            ZoomTest::MaskPackage, HarpoonInputNames::Keyboard, HarpoonInputNames::Context})
+        TArray<const TCHAR*> VerifyPackages {N::Package, N::HudPackage, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
+            HarpoonInputNames::LookYaw, HarpoonInputNames::LookPitch, HarpoonInputNames::Exit, HarpoonInputNames::Zoom, HarpoonInputNames::Fire, Shot::Package,
+            ZoomTest::MaskPackage, HarpoonInputNames::Keyboard, HarpoonInputNames::Context};
+        for (const TCHAR* Package : VerifyPackages)
         {
             FString Relative(Package); check(Relative.RemoveFromStart(DedicatedStationNames::GamePrefix));
             FString File = FPaths::Combine(FPaths::ProjectDir(), DedicatedStationNames::CookPrefix, Relative) + FPackageName::GetAssetPackageExtension();
@@ -537,6 +546,7 @@ int32 UGenerateHarpoonProbeCommandlet::Main(const FString& Params)
     }
     const bool Dedicated = FParse::Param(*Params, DedicatedStationNames::DedicatedSwitch);
     checkf(Dedicated, TEXT("HC24 runtime emission is rejected; use DedicatedStation only"));
+    Shot::Class=CreateCannonShot();
     UClass* StationClass = CreateDedicatedStation();
     UPackage* HudPackage = CreatePackage(N::HudPackage);
     auto* Hud = CastChecked<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(UUserWidget::StaticClass(),

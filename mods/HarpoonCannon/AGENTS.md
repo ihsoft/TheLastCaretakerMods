@@ -13,15 +13,14 @@ Root ../../AGENTS.md applies. This file contains only mod-owned constraints.
   architecture edits if another owner is actively changing that file.
 - User permits scoped Harpoon installs without asking again when game is closed.
   Never stop the game. Keep all manifest/fingerprint/backup/readback gates.
-- Test/play cycle: after a result, restore probe FIRST and shell SECOND through
-  exact installation manifests once game is closed. Prepare the next change
-  repository-only; announce readiness and wait for the agreed test window.
-  State what was established and the next action, not just permission to play.
+- Retain the accepted installation during repository-only preparation. Install or
+  restore only through exact manifests and the closed-game gate; no automatic
+  rollback after a successful test. State the result and next action.
 
 ## Authoring and preserved behavior
 
 - Current supported paths are Build-Shell.ps1 and AutoloadProbe/Build-Probe.ps1.
-  AutoloadProbe contains the active HC33 generator despite its historical name.
+  AutoloadProbe contains the active station generator despite its historical name.
   Root generator supports only ShellOnly; legacy operator emission stays blocked.
 - Native Voyage mirrors and generator DLLs are editor-only; never ship them.
   Renew all consumed identities on fingerprint change using public tools.
@@ -61,9 +60,9 @@ Root ../../AGENTS.md applies. This file contains only mod-owned constraints.
   Place markers before guards and audit reachability, not just bytecode presence.
 - Preserve last accepted exact payload and source before risky changes. Compile,
   cook/retoc and clean load do not replace gameplay validation.
-- HC33 is a tested operator/optics checkpoint, not a firing/persistence release.
-  Safety timeout/diagnostics remain in its immutable artifact until a separately
-  verified change. Do not claim full lifecycle or multiplayer support.
+- Operator/optics and native firing have user-validated checkpoints. Retain their
+  immutable artifacts. Do not infer persistence, full lifecycle or multiplayer
+  support from those scoped tests.
 - Housekeeping preserves active source, accepted payloads, provenance/recovery
   manifests and methods. Archive/hash-check old evidence before deleting it;
   generated intermediate files may be rebuilt. Never clean the shared game store.

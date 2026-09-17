@@ -6,6 +6,28 @@ The dated sections are retained research evidence, not pending test instructions
 Older artifact paths now resolve through the verified cleanup archive inventories.
 No native addresses below are portable beyond their recorded executable hash.
 
+## Unavailable modern actions and teardown
+
+For Steam25191271 / executable SHA256
+747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B,
+GetInteractiveProvidedActions false means decline handling, not handled with no
+actions. Consumer call0x1454671b2 branches on false to0x145467329 and can dispatch
+legacy GetInteractIndices on the component owner at0x1454673bb. True plus an
+empty action array instead skips legacy fallback and reaches0x14546796c.
+An unavailable own modern provider must therefore explicitly return true/empty,
+including during teardown; unconnected Blueprint guard exits are not equivalent.
+Disable acquisition before destroying the station, but retain safe provider
+responses for detector references acquired earlier. This does not justify adding
+invented native interface inheritance or a partial legacy implementation.
+
+The dismantle-completion crash null-read at0x1452217f0 is inside the registered
+GetInteractIndices thunk0x145221720, with return0x1454673c0 on the stack. That
+establishes the dangerous legacy route, not the exact live target UObject.
+User confirmed dismantling works after explicit handled/empty guard responses
+and acquisition shutdown were added. This validates the combined correction for
+the reported exit-then-dismantle case, not each change independently or all teardown
+paths. Exact candidate identity and transient evidence are in the active backlog.
+
 ## HC32 runtime acceptance (2026-09-13)
 
 User reported the contextual-entry test works; only shark recognition could not

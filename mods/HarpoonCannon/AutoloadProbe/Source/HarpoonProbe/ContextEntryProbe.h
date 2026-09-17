@@ -59,7 +59,6 @@ void AddContextEntry(UBlueprint* BP)
     C.Link(Difference, C.Pin(Distance, E::VectorLengthInput));
     C.Branch(C.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, LessEqual_DoubleDouble), C.Pin(Distance, P::ReturnValue), S::Range));
     CalculateNativeOpticalFov(C);
-    C.Write(CE::Age, nullptr, N::Zero); C.Write(CE::ExitSent, nullptr, N::False);
     auto* Enter = C.Call(AVoyageVehiclePawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(AVoyageVehiclePawn, OnEnterVehicle));
     C.Link(OpticalSelf(C), C.Pin(Enter, P::FunctionTarget)); C.Link(C.Read(DS::Controller), C.Pin(Enter, V::NewPossessor)); C.Exec(Enter);
     C.Link(C.Tail, C.Pin(Result, P::Execute));
@@ -82,11 +81,24 @@ void AddContextEntry(UBlueprint* BP)
     { if (auto* It = Cast<UK2Node_FunctionEntry>(Node)) Entry = It; if (auto* It = Cast<UK2Node_FunctionResult>(Node)) Result = It; }
     check(Entry && Result); FGraph G(Graph, nullptr);
     G.Pin(Entry, P::Then)->BreakAllPinLinks(); G.Pin(Result, P::Execute)->BreakAllPinLinks(); G.Tail = G.Pin(Entry, P::Then);
+    // Modern-provider ownership is independent of action availability. Returning
+    // false asks Voyage to invoke the legacy interface, which this K2-only
+    // station does not implement. Every rejected entry query must return an
+    // explicit handled/empty result, including the shell-destruction window.
+    auto* EmptyResult = NewObject<UK2Node_FunctionResult>(Graph);
+    EmptyResult->FunctionReference = Result->FunctionReference;
+    G.Node(EmptyResult); G.Default(EmptyResult, P::ReturnValue, N::True);
+    check(G.Pin(EmptyResult, CE::OutActions)->LinkedTo.IsEmpty());
+    auto Available = [&](UEdGraphPin* Condition)
+    {
+        auto* Guard = G.Branch(Condition);
+        G.Link(G.Pin(Guard, P::Else), G.Pin(EmptyResult, P::Execute));
+    };
     G.Write(CE::ProviderSeen, nullptr, N::True);
-    G.Branch(G.Read(CE::Ready)); G.Branch(G.Valid(G.Read(S::Anchor))); G.Branch(ContextParentValid(G));
-    G.Branch(G.Valid(G.Read(CE::EntryAction))); G.Branch(G.Valid(G.Pin(Entry, CE::MyCharacter)));
-    G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), G.Pin(Entry, CE::Component), G.Read(CE::Interaction)));
-    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
+    Available(G.Read(CE::Ready)); Available(G.Valid(G.Read(S::Anchor))); Available(ContextParentValid(G));
+    Available(G.Valid(G.Read(CE::EntryAction))); Available(G.Valid(G.Pin(Entry, CE::MyCharacter)));
+    Available(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), G.Pin(Entry, CE::Component), G.Read(CE::Interaction)));
+    Available(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
         ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), OpticalSelf(G)), N::False));
     auto* Action = NewObject<UK2Node_MakeStruct>(Graph); Action->StructType = FPlayerInputInterfaceAction::StaticStruct(); Action->bMadeAfterOverridePinRemoval = true; G.Node(Action);
     G.Link(G.Read(CE::EntryAction), G.Pin(Action, Hint::InputAction));
@@ -102,12 +114,16 @@ void AddContextEntry(UBlueprint* BP)
 }
 
 // Independent station safety tick. Never destroy a possessed pawn.
-void ContextStationSafety(FGraph& G, UEdGraphPin* Delta)
+void ContextStationSafety(FGraph& G)
 {
     auto* Self = OpticalSelf(G);
     auto Exit = [&]() { auto* Call = G.Call(AVoyageVehiclePawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(AVoyageVehiclePawn, OnExitVehicle)); G.Link(Self, G.Pin(Call, P::FunctionTarget)); G.Exec(Call); };
     auto* AnchorValid = G.Branch(G.Valid(G.Read(S::Anchor))); auto* Normal = G.Tail;
     G.Tail = G.Pin(AnchorValid, P::Else); G.Write(CE::Ready, nullptr, N::False);
+    // Stop new acquisition before camera/station destruction. A detector can
+    // still hold an earlier result: handled/empty provider above covers it.
+    auto* DisableQuery = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, SetActorEnableCollision));
+    G.Link(Self, G.Pin(DisableQuery, P::FunctionTarget)); G.Default(DisableQuery, SP::CollisionEnabled, N::False); G.Exec(DisableQuery);
     auto* Occupied = G.Branch(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self));
     Exit(); auto* Requested = G.Tail; G.Tail = G.Pin(Occupied, P::Else);
     auto* Camera = G.Branch(G.Valid(G.Read(DS::Camera))); auto* NoCamera = G.Pin(Camera, P::Else);
@@ -116,14 +132,8 @@ void ContextStationSafety(FGraph& G, UEdGraphPin* Delta)
     auto* Destroy = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_DestroyActor)); G.Link(Self, G.Pin(Destroy, P::FunctionTarget)); G.Exec(Destroy);
     (void)Requested; // Exit branch deliberately waits until an independent next tick.
     G.Tail = Normal;
-    auto* Controlled = G.Branch(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self)); auto* Inside = G.Tail;
-    G.Tail = G.Pin(Controlled, P::Else); G.Write(CE::Age, nullptr, N::Zero); G.Write(CE::ExitSent, nullptr, N::False);
-    G.Tail = Inside; G.Write(CE::Age, G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble), G.Read(CE::Age), Delta));
+    G.Branch(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self));
     auto* Key = G.Call(APlayerController::StaticClass(), GET_FUNCTION_NAME_CHECKED(APlayerController, WasInputKeyJustPressed));
     G.Link(G.Read(DS::Controller), G.Pin(Key, P::FunctionTarget)); G.Default(Key, P::Key, S::Key);
-    auto* Timeout = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
-        G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool), G.Read(CE::ExitSent), N::False),
-        G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), G.Read(CE::Age), S::Limit));
-    G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR), G.Pin(Key, P::ReturnValue), Timeout));
-    G.Write(CE::ExitSent, nullptr, N::True); Exit();
+    G.Branch(G.Pin(Key, P::ReturnValue)); Exit();
 }

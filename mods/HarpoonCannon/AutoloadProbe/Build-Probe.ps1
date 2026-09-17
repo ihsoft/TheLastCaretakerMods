@@ -20,6 +20,8 @@ $sourcePaths = @('mods/HarpoonCannon/AutoloadProbe','tools/UnrealEditorGenerator
 $sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
 $sourcePaths += 'tools/UnrealEditorGeneratorCommon/Public/ActorScanGraphNames.h'
 $sourcePaths += 'mods/HarpoonCannon/HarpoonModelContract.h'
+$modelPath = Join-Path $repo 'models/HarpoonCannon/HarpoonCannon_V1.glb'
+if ((Get-FileHash -LiteralPath $modelPath -Algorithm SHA256).Hash -cne '9FD66B3350239F4CE0E37E0B8BF4F8E9F033A3E22E8EE88CD2DBF9158578A5BD') { throw 'Muzzle fallback requires audited V1 GLB; revalidate muzzle adapter for changed geometry.' }
 $sourcePaths += 'tools/UnrealEditorGeneratorCommon/Public/TextSettingsGraphNames.h'
 $sourceStatus = @(& git -C $repo status --porcelain -- $sourcePaths)
 function Get-ProbeSourceHashes {
@@ -57,16 +59,20 @@ $null = New-Item -ItemType Directory -Path $ddc -Force
 Invoke-NativeStage 'generate' $editor @($project,'-run=GenerateHarpoonInputs','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-unreal.log')))
 $packages = @('/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonLookYaw','/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonLookPitch','/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonExit','/Game/Mods/HarpoonCannon/Inputs/IMC_HarpoonKeyboard','/Game/Mods/HarpoonCannon/Inputs/DA_HarpoonInputContext')
 $packages += '/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonZoom'
+$packages += '/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonFire'
 if ($StationPrototype) {
-    Invoke-NativeStage 'generate-station' $editor @($project,'-run=GenerateHarpoonProbe','-DedicatedStation','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-station-unreal.log')))
+    $stationArgs = @($project,'-run=GenerateHarpoonProbe','-DedicatedStation','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-station-unreal.log')))
+    Invoke-NativeStage 'generate-station' $editor $stationArgs
     $packages += @('/Game/Mods/HarpoonCannon/Station/BP_HarpoonOperator','/Game/Mods/HarpoonCannon/Station/WBP_HarpoonHUD','/Game/Mods/HarpoonCannonLifecycleProbe/ModActor','/Game/Mods/HarpoonCannonLifecycleProbe/ProbeHUD')
     $packages += '/Game/Mods/HarpoonCannon/Station/T_HarpoonOpticalMask'
+    $packages += '/Game/Mods/HarpoonCannon/Station/BP_HarpoonTestShot'
 }
 $cookArguments = @($project,'-run=cook','-targetplatform=Windows','-SkipZenStore','-CookSinglePackageNoRefs',('-Package=' + ($packages -join '+')),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'cook-unreal.log')))
 if ($StationInputsOnly) { $cookArguments += '-unversioned' }
 Invoke-NativeStage 'cook' $editor $cookArguments
 if ($StationPrototype) {
-    Invoke-NativeStage 'verify-tagged' $editor @($project,'-run=GenerateHarpoonProbe','-VerifyTagged','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'verify-tagged-unreal.log')))
+    $taggedArgs = @($project,'-run=GenerateHarpoonProbe','-VerifyTagged','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'verify-tagged-unreal.log')))
+    Invoke-NativeStage 'verify-tagged' $editor $taggedArgs
 }
 $original = & (Join-Path $repo 'tools/Extract-VoyagePackage.ps1') -Filter 'Blueprints/BP_FirstPersonCharacter_New.uasset' -RetocEngineVersion UE5_8 -OutputRoot (Join-Path $output 'original')
 $extraction = Get-Content -LiteralPath $original.manifestPath -Raw | ConvertFrom-Json
@@ -131,8 +137,8 @@ $sourceAfter = @(& git -C $repo status --porcelain -- $sourcePaths)
 if (($sourceAfter -join "`n") -cne ($sourceStatus -join "`n")) { throw 'Source status changed during preparation.' }
 if ((@(Get-ProbeSourceHashes) | ConvertTo-Json -Compress) -cne ($sourceHashes | ConvertTo-Json -Compress)) { throw 'Source content changed during preparation.' }
 if ((& git -C $repo rev-parse HEAD).Trim() -cne $sourceCommit) { throw 'Repository HEAD changed during preparation.' }
-$experiment = if ($StationPrototype) { 'eye-parallax-mask-size' } else { 'input-authoring' }
-$architecture = if ($StationPrototype) { 'Nine tagged packages. Own common VehiclePawn child, native-selected own HUD, Enhanced Input E/mouse handlers and owned camera. No Forklift runtime dependency. Native inherited property deltas must pass independent audit; runtime pending.' } else { 'Five standalone Harpoon input assets only; no actor, widget, autoload, Forklift references or installation.' }
+$experiment = if ($StationPrototype) { 'direct-fire' } else { 'input-authoring' }
+$architecture = if ($StationPrototype) { 'Thirteen tagged packages. Own common VehiclePawn child, native-selected own HUD, Enhanced Input E/mouse handlers and owned camera. No Forklift runtime dependency. Native inherited property deltas must pass independent audit; runtime pending.' } else { 'Seven standalone Harpoon input assets only; no actor, widget, autoload, Forklift references or installation.' }
 $provenance = [ordered]@{
     schemaVersion=1;mod=$modName;version=$version;experiment=$experiment;createdAtUtc=[DateTime]::UtcNow.ToString('o');
     sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;

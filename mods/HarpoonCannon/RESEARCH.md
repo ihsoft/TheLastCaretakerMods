@@ -5,13 +5,13 @@
 User acceptance of clean-hud-02 + visual-v5-palette-02 on Steam25191271 / UE5.8
 establishes the operator/optics/model checkpoint. Exact hashes and dependencies are
 in GAME_DERIVED_SOURCES.md; package and cleanup identities in the active backlog.
-The latest test could be performed on ordinary targets; shark-specific behavior
-was not separately retested because no sharks were nearby. Historical HC27
-confirmed Talon Shark name/range. Displaying a name is not hooking eligibility.
+Target-name/range display was accepted on ordinary objects and sharks. Displaying
+an actor name does not establish hooking eligibility. Native firing and shark
+kill were subsequently validated; see the direct-hit contract below.
 
 Stable means the requested single-player entry/aim/HUD/exit test works. It does
 NOT mean persistence, multiplayer, death/travel teardown, long-session operation,
-firing, cable attachment or all strong-motion edge cases have been validated.
+cable attachment or all strong-motion edge cases have been validated.
 
 ## Owners
 
@@ -22,8 +22,9 @@ OutputLocation plus CreateAbilityComponent/StartFiring/ActivateAbility events.
 Its cooked ubergraph references VoyageCombatBlueprintFunctionLibrary.ActivateAbility
 and ActivateBallisticAbility, and WeaponAbilityComponent.GetWeaponData. Individual
 event wrappers only jump into that shared graph; the summary alone does not prove
-their internal sequence, payload, hit ownership or collision exclusions. Next
-inspect exact native signatures and weapon ability setup before choosing reuse.
+their internal sequence, payload, hit ownership or collision exclusions. The
+implemented direct-hit path below uses native movement and combat submission,
+not the complete stock weapon ability.
 
 Camera measurement (Steam25191271): user screenshots show character root drift
 0cm, native GetActorEyesViewPoint drift below0.15cm, but FirstPersonCamera local
@@ -49,6 +50,142 @@ lifecycle edge cases are not comprehensively validated.
 | Occupied exit hint | Base-owned GetProvidedActionsBP, matching input context, stock horizontal hint widget |
 | Target display | First blocking optical hit, optional game item Name, actor-name fallback and range |
 | Diagnostics | Separate observer/widget; not evidence of gameplay state unless correctly sampled |
+
+## Firing ownership (Steam25191271, UE5.8)
+
+Stock BP_Module_Turret separates control from weapon execution. Its
+CreateAbilityComponent creates a WeaponAbilityComponent from a template,
+configures it before FinishAddComponent, and its firing graph calls
+VoyageCombatBlueprintFunctionLibrary.ActivateBallisticAbility with ability
+configuration, component location, forward vector, ammo and ability component.
+The non-ballistic ActivateAbility path takes configuration, location, direction
+and an actor instead. These are different contracts, not interchangeable helpers.
+
+Native registration and exec thunk confirm the ballistic signature:
+`bool ActivateBallisticAbility(const FVoyageAbilityConfig& Config,
+const FVector& InOrigin, const FVector& InDirection, UVoyageItemAmmo* ItemAmmo,
+UObject* Instigator)`, declared by VoyageCombatBlueprintFunctionLibrary.
+The reflected parameter block is96bytes; input offsets are0/24/48/72/80.
+The return is a BoolProperty; do not decode its offset with the ordinary
+non-bool property layout.
+
+The native body builds activation args itself. It distinguishes
+VoyageEquipmentActor (controller reference at its own native member plus actor)
+from an ordinary Actor (null controller plus actor); an unrelated UObject such
+as an ActorComponent falls through to null actor/controller in this branch.
+Thus the turret's component argument is not proof that a component supplies
+shooter attribution. This does not establish the downstream collision policy.
+Origin/direction are copied from the supplied vectors and ActivationMultiplier
+is set to1. The function returns true after issuing its downstream virtual calls;
+that alone is not proof of a spawned projectile or confirmed hit.
+Activation args mappings list Origin, Direction, ActivationMultiplier,
+InstigatorController, InstigatorActor, AttackID, TraceResult and ActivationIndex.
+
+BP_Weapon_Projectile inherits native UtilityProjectile and uses
+VoyageProjectileComponent / VoyageProjectileMovementComponent. OnSpawn receives
+ProjectileAbilityComponent, VoyageWeaponDataStruct (serialized parameter size1152)
+and VoyageEquipmentAbilityActivationArgs (size344). Spawning the actor alone is
+not equivalent to ability-driven initialization. Do not invent padding or mirror
+these structs partially as serialized defaults.
+
+Its IgnoreCollisions function calls IgnoreActorWhenMoving for an actor array;
+PerformAttack forwards an assembled attack to VoyageCombatSubsystem.RegisterAttack.
+The initialization graph adds InArgs.InstigatorActor to IgnoreActorsArray,
+appends a GetOwnedActors result, then calls IgnoreCollisions (bytecode7147-7405).
+The producer/receiver of GetOwnedActors still needs tracing; this is not proof
+that attachment to a ship makes the whole ship ignored.
+GetImpartedMovementBaseVelocity is called on a CharacterMovementComponent;
+its result feeds a vector addition with ProjectileMovement.Velocity and a Niagara
+InheritVelocity parameter. A stationary vehicle lacking character movement cannot
+be assumed to inherit ship velocity through this branch. Exact branch guards and
+receiver acquisition still need tracing before reuse.
+The base has configurable bounce, sweep damage, water and destruction handling;
+it is not yet a validated harpoon attachment implementation.
+
+DA_Ammo_Bolt_Rifle_762 supplies both a projectile class and an instanced projectile
+template, weapon data, mesh and effects. Do not replace this setup with a bare
+SpawnActor call or treat its bullet damage/speed as harpoon balance.
+Evidence identities and remaining integration gates live in the active backlog.
+
+### Direct-hit attack submission contract
+
+On Steam25191271 / EXE747DC255...F58B, stock PerformAttack copies
+WeaponData.Attack, writes Hit, Target, Instigator (Controller), DamageCauser
+(projectile self) and AttackID, then calls VoyageCombatSubsystem.RegisterAttack.
+Native registration confirms `void RegisterAttack(FVoyageAttack Attack,
+bool bAcceptDuration)`; Attack is by value, not an output/reference parameter.
+The native parameter block is456 bytes; native VoyageAttack is448 bytes.
+Cooked stock Blueprint metadata reports464 bytes for its local VoyageAttack and
+264 for HitResult; these must not be treated as shipping-native memcpy sizes.
+The native constructor initializes private trailing state beyond the reflected
+AttackID at368. Any editor mirror must be bytecode/named-field-only, with no
+native struct CDO/default serialization or invented padding.
+
+Reflected AttackType values are Unknown0, Directional1, Radial2, AreaEffect3,
+Force4. RegisterAttack routes Directional to0x145559dca and Radial/AreaEffect to
+0x14555980e. Directional checks a Hit flag and deduplicates target against AttackID.
+Zero AttackID is assigned from the subsystem counter at0x145559469..48a. A valid
+DamageCauser weak reference is required before dispatch (0x1455594bb..4c8).
+bAcceptDuration permits a separate duration path when DurationAttack.duration>0;
+it is not a success output. Submitting an attack is not proof of health loss.
+
+The rifle ammo export uses BP_DamageTypePhysicalForce, Damage5, AreaEffect,
+InnerRadius/OuterRadius10 and ImpulseOverride5000. Those settings are not a
+harpoon specification and must not be copied indiscriminately. The damage-type
+Blueprint parent is VoyageDamageType, whose parent is Engine.DamageType.
+VoyageCombatSubsystem derives from TickableWorldSubsystem, not plain UObject.
+First direct-hit integration should preserve native construction of the attack,
+use the original ReceiveHit result, explicit Directional type, valid shot causer
+and firing controller, and distinguish submitted attack from observed damage.
+
+Real-game validation on this fingerprint: the own swept projectile submitted
+Directional attacks with fixed200 base damage, stock PhysicalForce damage class,
+original ReceiveHit/target, shot causer and captured controller, with duration
+disabled. User killed a shark after approximately four shots and reported normal
+operation. This establishes actual damage delivery and kill, not merely aggression
+or submission. It does not establish200 effective damage per hit,800 starting
+health, universal target compatibility, or final weapon balance. Independent
+per-click spawning is accepted; the single-hit guard remains per projectile.
+
+### High-speed detection boundary
+
+Current fingerprint rechecked: Steam25191271 /747DC255...F58B. Reviewed mappings
+show VoyageProjectileMovementComponent derives from ProjectileMovementComponent.
+Stock BP_Weapon_Projectile.ProjectileComp serializes MaxSpeed300000cm/s
+(3000m/s), above the proposed2000m/s. This is a configured cap, not proof that
+Voyage's runtime overrides or collision handling work correctly at that speed.
+Local UE5.8 ProjectileMovementComponent.h documents bSweepCollision as swept
+movement and straight-line movement as not normally needing forced substeps.
+Disabling sweep means teleporting without blocking hits. The stock export does
+not explicitly serialize bSweepCollision. Its registered bool setter at
+0x142917c10 sets bit0x40 at component offset0x130. The engine constructor
+0x142920b40 enables that bit (`or al,0x68`); Voyage's constructor0x1454d6eb0
+calls it and does not write that byte. This establishes the native initial default
+on this fingerprint, not that later initialization cannot change it.
+Voyage also adds penetration, ricochet and water handling. Verify the live
+high-speed path before claiming engine documentation validates those extensions.
+At2000m/s displacement is33.3m/frame at60fps and66.7m/frame at30fps. A full segment
+sweep can detect a thin stationary obstacle between endpoints; testing endpoint
+overlap alone is insufficient. Moving targets remain a separate sampling issue.
+
+On this fingerprint, a real-game isolated test of the native Voyage movement
+component recorded blocking hits at both200m/s and2000m/s against a1cm-thick
+stationary wall123.45m away, using a1cm-radius sphere, sweep enabled, explicit
+UpdatedComponent and penetration/ricochet disabled. This supports native swept
+movement for the first cannon-shot integration; it does not validate the complete
+stock ability/projectile pipeline, damage, water, moving targets or range cutoff.
+ReceiveHit actor age is not a fractional contact timestamp, and later actor
+displacement is not HitResult.ImpactPoint. Use the actual hit result for contact
+position; do not infer exact speed from those coarse diagnostic readings.
+
+The subsequent muzzle-origin integration on the same fingerprint produced a
+visible trajectory, a ReceiveHit-derived range of89.536349m against a
+BP_DynamicMeshActor instance, and a separate empty-sky range-limit completion.
+This validates reachability of both terminal paths from cannon input, not exact
+range metrology or damage delivery. A technical dynamic-mesh actor name does
+not establish gameplay target identity or damage eligibility. Stock attack
+consumer integration was subsequently validated on a shark as described above;
+this earlier collision observation alone did not establish damage.
 
 ## Construction boundary
 
