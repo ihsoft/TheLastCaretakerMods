@@ -46,9 +46,10 @@ Root ../../AGENTS.md applies. This file contains only mod-owned constraints.
 - Authoritative model authoring/handoff is GLB, versioned by
   models/HarpoonCannon/model-source.json. Read actual node hierarchy/matrices;
   prefixes do not determine parents (V1 ammo follows pitch). Preserve role/sight/
-  ammo/anchor names. Current runtime-model.json/OBJ/palette is a frozen pre-GLB
-  build bridge, NOT a V1 conversion; retain until a coordinated consumer migration.
-  Do not feed new GLB assumptions into old readers or infer collision/input from it.
+  ammo/anchor names. Build-Shell consumes GLB via native Interchange; game
+  validated behaviors are recorded in the backlog. Old runtime-model.json/OBJ/palette is
+  frozen previous-source evidence, NOT a V1 conversion. Do not infer collision/
+  input from geometry. Reject unsupported role-axis changes instead of guessing.
 - Any-hit display name is not target eligibility or persistent identity. Prefer
   nonempty game item Name; otherwise technical actor name. Clear on miss and
   write fallback/range before optional game-data gates.

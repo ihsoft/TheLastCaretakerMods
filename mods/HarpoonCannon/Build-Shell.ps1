@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$OutputRoot = '', [switch]$SkipBuild)
+param([string]$OutputRoot = '', [switch]$SkipBuild, [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -15,41 +15,19 @@ $null = New-Item -ItemType Directory -Path $output
 $sourcePaths = @('mods/HarpoonCannon/Source','mods/HarpoonCannon/SourceAssets','mods/HarpoonCannon/Config','mods/HarpoonCannon/Voyage.uproject','mods/HarpoonCannon/Build-Shell.ps1','mods/HarpoonCannon/Validate-Shell.ps1','mods/HarpoonCannon/Shell-README.txt','mods/HarpoonCannon/GAME_DERIVED_SOURCES.md','tools/UnrealEditorGeneratorCommon/Public/BlueprintGraphNames.h')
 $sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
 $modelDirectory = Join-Path $repo 'models/HarpoonCannon'
-$modelPath = Join-Path $modelDirectory 'runtime-model.json'
+$modelPath = Join-Path $modelDirectory 'model-source.json'
 $model = Get-Content -LiteralPath $modelPath -Raw | ConvertFrom-Json
-if (-not ($model.PSObject.Properties.Name -contains 'sight') -or $model.sight.parentRole -cne 'pitch' -or $model.sight.locationRelativeToParentCm.Count -ne 3) { throw 'Optical shell requires model sight under pitch.' }
-if ($model.schemaVersion -ne 1 -or $model.units -cne 'centimeters' -or $model.uniformScale -ne 1 -or $model.axes.forward -cne '+X' -or $model.axes.right -cne '+Y' -or $model.axes.up -cne '+Z') { throw 'Unsupported model coordinate contract.' }
-$sourcePaths += @('mods/HarpoonCannon/HarpoonModelContract.h','models/HarpoonCannon/runtime-model.json')
-$sourcePaths += @('models/HarpoonCannon/material-palette.json','models/HarpoonCannon/prepare_materials.py','models/HarpoonCannon/Unreal/HarpoonPaletteData.h','models/HarpoonCannon/Unreal/HarpoonPaletteMaterials.h')
-foreach ($inputSource in @($model.sources.obj, $model.sources.mtl)) {
-    if ([IO.Path]::IsPathRooted($inputSource.path)) { throw 'Model source must be relative.' }
-    $inputPath = [IO.Path]::GetFullPath((Join-Path $modelDirectory $inputSource.path))
-    if (-not $inputPath.StartsWith($modelDirectory + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Model source escapes its directory.' }
-    if ((Get-FileHash -LiteralPath $inputPath -Algorithm SHA256).Hash -cne $inputSource.sha256) { throw 'Model source hash differs from reviewed descriptor.' }
-    $sourcePaths += $inputPath.Substring($repo.Length + 1).Replace('\','/')
-}
-$objectNames = @(Get-Content -LiteralPath (Join-Path $modelDirectory $model.sources.obj.path) | Where-Object { $_ -cmatch '^o ' } | ForEach-Object { $_.Substring(2).Trim() })
-$selected = @($model.meshes | ForEach-Object { $_.objectNames }) + @($model.ammo.instances | ForEach-Object { $_.sourceObjectName })
-if ($selected.Count -ne @($selected | Sort-Object -Unique).Count -or @(Compare-Object ($objectNames | Sort-Object) ($selected | Sort-Object)).Count -ne 0) { throw 'Model selections must cover every OBJ object exactly once.' }
-if ((@($model.meshes.role | Sort-Object) -join ',') -cne 'base,pitch,yaw') { throw 'Expected base/yaw/pitch mesh roles.' }
-if (($model.hierarchy.role -join ',') -cne 'base,yaw,pitch' -or $null -ne $model.hierarchy[0].parentRole -or $model.hierarchy[1].parentRole -cne 'base' -or $model.hierarchy[2].parentRole -cne 'yaw') { throw 'Unsupported model hierarchy.' }
-$origin = @(0.0,0.0,0.0)
-foreach ($part in $model.hierarchy) {
-    if ($part.locationRelativeToParentCm.Count -ne 3) { throw 'Invalid model translation.' }
-    for ($axis=0; $axis -lt 3; $axis++) { $origin[$axis] += $part.locationRelativeToParentCm[$axis] }
-    $mesh = @($model.meshes | Where-Object { $_.role -ceq $part.role })[0]
-    if ($mesh.meshOriginInSourceCm.Count -ne 3) { throw 'Invalid mesh origin.' }
-    for ($axis=0; $axis -lt 3; $axis++) { if ([Math]::Abs($origin[$axis] - $mesh.meshOriginInSourceCm[$axis]) -gt 0.000001) { throw 'Mesh origin and hierarchy do not reconstruct neutral pose.' } }
-}
-if (@($model.hierarchy[0].locationRelativeToParentCm | Where-Object { [Math]::Abs([double]$_) -gt 0.000001 }).Count -ne 0) { throw 'Base must retain the physical installation origin.' }
-$instanceNames = @($model.ammo.instances.name)
-if ($instanceNames.Count -ne @($instanceNames | Sort-Object -Unique).Count) { throw 'Duplicate ammo component names.' }
-foreach ($instance in $model.ammo.instances) {
-    if ($instance.parentRole -cne 'yaw' -or $instance.name -cnotmatch '^ammo[0-9]+$' -or $instance.locationRelativeToParentCm.Count -ne 3) { throw 'Unsupported independent ammo component contract.' }
-}
+if ($model.schemaVersion -ne 1 -or $model.format -cne 'GLB') { throw 'Unsupported GLB registry.' }
+if ([IO.Path]::IsPathRooted($model.source.path)) { throw 'Model path must be relative.' }
+$glbPath = [IO.Path]::GetFullPath((Join-Path $modelDirectory $model.source.path))
+if (-not $glbPath.StartsWith($modelDirectory + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Model escapes its directory.' }
+if ((Get-FileHash -LiteralPath $glbPath -Algorithm SHA256).Hash -cne $model.source.sha256 -or (Get-Item -LiteralPath $glbPath).Length -ne $model.source.byteLength) { throw 'GLB differs from accepted registry.' }
+$sourcePaths += @('mods/HarpoonCannon/HarpoonModelContract.h','models/HarpoonCannon/model-source.json', $glbPath.Substring($repo.Length + 1).Replace('\','/'))
 $sourceStatus = @(& git -C $repo status --porcelain -- $sourcePaths)
 function Get-ShellSourceHashes {
-    @(& git -C $repo ls-files --cached --others --exclude-standard -- $sourcePaths | Sort-Object -Unique | ForEach-Object {
+    @(& git -C $repo ls-files --cached --others --exclude-standard -- $sourcePaths | Sort-Object -Unique | Where-Object {
+        Test-Path -LiteralPath (Join-Path $repo $_) -PathType Leaf
+    } | ForEach-Object {
         [pscustomobject]@{path=$_;sha256=(Get-FileHash -LiteralPath (Join-Path $repo $_) -Algorithm SHA256).Hash}
     })
 }
@@ -61,6 +39,7 @@ $engineVersion = Get-Content -LiteralPath (Join-Path $engine 'Build/Build.versio
 if ($engineVersion.MajorVersion -ne 5 -or $engineVersion.MinorVersion -ne 8 -or $engineVersion.PatchVersion -ne 2) { throw 'Shell-return requires reviewed editor 5.8.2.' }
 
 function Invoke-NativeStage([string]$Name, [string]$Executable, [string[]]$NativeArguments) {
+    if ($Executable -eq $editor) { $NativeArguments += ('-ZenDataPath=' + (Join-Path $ddc 'Zen')) }
     $log = Join-Path $output ($Name + '.log')
     & $Executable @NativeArguments *> $log
     if ($LASTEXITCODE -ne 0) { throw "$Name failed ($LASTEXITCODE); log: $log" }
@@ -76,12 +55,15 @@ if (Test-Path -LiteralPath $content) {
     if ($resolvedContent -cne [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'Content'))) { throw 'Unexpected generated Content target.' }
     Move-Item -LiteralPath $resolvedContent -Destination (Join-Path $output 'previous-generated')
 }
-$ddc = Join-Path $PSScriptRoot '.ddc'
+$ddc = [IO.Path]::GetFullPath($CacheRoot)
 [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'Process')
 $null = New-Item -ItemType Directory -Path $ddc -Force
 Invoke-NativeStage 'generate' $editor @($project,'-run=GenerateHarpoonCannon','-ShellOnly','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-unreal.log')))
-$packages = @('/Game/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New','/Game/Mods/HarpoonCannon/SM_HarpoonCannonBase','/Game/Mods/HarpoonCannon/SM_HarpoonCannonYawAssembly','/Game/Mods/HarpoonCannon/SM_HarpoonCannonPitchAssembly')
-$packages += '/Game/Mods/HarpoonCannon/SM_HarpoonCannonAmmo'
+$inventoryPath = Join-Path $output 'model-inventory.json'
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Saved/HarpoonGlbInventory.json') -Destination $inventoryPath
+$inventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
+$packages = @($inventory.packages)
+if ($packages.Count -lt 2 -or @($packages | Where-Object { -not $_.StartsWith('/Game/Mods/HarpoonCannon/Visual/') -and $_ -cne '/Game/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New' }).Count) { throw 'GLB cook inventory escaped owned packages.' }
 # Keep new material shader code inline in owned packages. Do not change shared
 # project config or require a game-global ShaderArchive-Voyage library override.
 Invoke-NativeStage 'cook' $editor @($project,'-run=cook','-targetplatform=Windows','-unversioned','-SkipZenStore','-CookSinglePackageNoRefs',('-Package=' + ($packages -join '+')),'-ini:Game:[/Script/UnrealEd.ProjectPackagingSettings]:bShareMaterialShaderCode=False','-ini:Engine:[/Script/WindowsTargetPlatform.WindowsTargetSettings]:D3D12TargetedShaderFormats=PCD3D_SM6,D3D11TargetedShaderFormats=PCD3D_SM5','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'cook-unreal.log')))
@@ -110,7 +92,7 @@ $expected = Join-Path $output 'expected-packages.txt'
 [IO.File]::WriteAllLines($expected, @($assetRelatives | ForEach-Object { $_ + '.uasset' }))
 $verify = & (Join-Path $repo 'tools/Test-VoyageContainer.ps1') -Container $container -ExpectedPackageList $expected
 if ($verify.status -ne 'passed' -or -not $verify.packageSetMatches) { throw 'Container verification failed.' }
-$semantic = & (Join-Path $PSScriptRoot 'Validate-Shell.ps1') -Container $container -OutputRoot (Join-Path $output 'semantic')
+$semantic = & (Join-Path $PSScriptRoot 'Validate-Shell.ps1') -Container $container -OutputRoot (Join-Path $output 'semantic') -ModelInventory $inventoryPath
 if ($semantic.status -ne 'passed') { throw 'Shell semantic validation failed.' }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Shell-README.txt') -Destination (Join-Path $payload 'README.txt')
 $version = Split-Path -Leaf $output
@@ -125,7 +107,7 @@ $provenance = [ordered]@{
     sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;
     gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';retocSha256=$extraction.retocSha256;
     gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId;executableSha256=$fingerprint.executable.sha256};
-    validation='static-only; runtime pending';runtimeArchitecture='Cyclone leaf VoyageModuleActor shell; descriptor-driven base/yaw/pitch and shared ammo mesh with separate instances; no operator event graph';
+    validation='static-only; runtime pending';runtimeArchitecture='Cyclone leaf VoyageModuleActor shell; native GLB hierarchy and registry-driven role tags, separate ammo components; no operator event graph';
     mappingSha256=$mapping.sha256;verificationReport=$verify.reportPath;packagingReport=$pack.reportPath;semanticReport=$semantic.reportPath;
 }
 $provenance | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'build-provenance.json') -Encoding UTF8

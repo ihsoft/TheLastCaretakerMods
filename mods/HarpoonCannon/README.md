@@ -23,7 +23,7 @@ common VoyageVehiclePawn supplies contextual Enter Harpoon, native entry/exit,
 own mouse inputs, first-person 1x/5x cameras, own HUD and standard action hints.
 Character stats remain visible deliberately. Any first blocking optical hit
 shows its game item name or technical actor name, plus optical-camera-to-hit
-distance; a miss clears both. The accepted v5 model uses its authored palette.
+distance; a miss clears both. The GLB model retains its authored material factors.
 
 The accepted HUD has no diagnostic overlays. 1x uses a hollow center circle and
 tracks FirstPersonCamera position; its gaze ray converges gun aim within limits.
@@ -38,23 +38,39 @@ Run from the repository root, Windows PowerShell 5.1, OUTSIDE the sandbox:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/HarpoonCannon/Build-Shell.ps1 -OutputRoot R:/Codex/TheLastCaretakerMods/artifacts/harpoon-cannon/shell-next
 ```
 
-Use a fresh output identity. Build-Shell owns fingerprint/mapping/editor gates,
-GenerateHarpoonCannon -ShellOnly, exact five-package cook, original extraction,
+Use a fresh output identity.
+Both Harpoon producers accept `-CacheRoot` (default
+`P:\UnrealCache\TheLastCaretakerMods\UE5.8`). They select process-local filesystem
+DDC there and explicitly select its `Zen` subdirectory for editor invocations.
+No global settings are changed and no previous cache is moved or deleted.
+
+Build-Shell owns fingerprint/mapping/editor gates,
+GenerateHarpoonCannon -ShellOnly, inventory-driven cook, original extraction,
 retoc verification, independent semantic checks, ZIP and schema-2 manifest.
-It never installs. The Cyclone leaf and four authored meshes are the inventory:
-base, yaw, pitch and shared ammunition geometry. This existing producer uses the
-frozen pre-GLB `models/HarpoonCannon/runtime-model.json` OBJ/palette bridge;
-named ammo instances remain separate components without ammunition-state logic.
+It never installs. Native Interchange imports GLB meshes/materials and hierarchy;
+the adapter attaches visual components to the existing module root and assigns
+registry-driven yaw/pitch/sight tags. Named ammo instances remain separate
+components without ammunition-state logic.
 New model authoring and handoff use GLB V1 and
 [`model-source.json`](../../models/HarpoonCannon/model-source.json), as described
-in the [model guide](../../models/HarpoonCannon/README.md). This producer has NOT
-yet been migrated to that GLB and does not build V1. Its changed pitch/ammo/sight
-hierarchy requires a coordinated derived-import adapter, not a source-path swap.
-The descriptor and source hashes are checked before Unreal runs. Role identities
+in the [model guide](../../models/HarpoonCannon/README.md). GLB integration is
+game-validated for placement, construction, entry, rotation/elevation, optics
+switching and exit. Save persistence and multiplayer are not validated.
+The shell no longer consumes the old OBJ/palette bridge.
+Generated `Saved/HarpoonGlbInventory.json` is copied to the artifact and drives
+package selection and cooked component checks.
+The registry and source hashes are checked before Unreal runs. Role identities
 and collision stay mod-owned; changing source names/offsets needs no C++ change.
-Validate-Shell.ps1 is the independent cooked shell inspector. Preserve base
+Validate-Shell.ps1 requires `-ModelInventory` from the same build and is the
+independent cooked shell inspector. Preserve base
 simple collision, native module/item identities and exact default subobjects.
 Geometry changes belong to the model task.
+
+For independent source comparison, run `tools/glb/verify_harpoon_import.py`
+with `--source-audit <inspect_glb JSON> --inventory <model-inventory.json>`
+and `--semantic <semantic/validation.json>` from the same model/build.
+Requires Python3.10+ and NumPy. This read-only check covers rigid local transforms,
+hierarchy and untextured material factors, not runtime rendering or gameplay.
 
 ## Current station preparation
 

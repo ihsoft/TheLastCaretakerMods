@@ -2,6 +2,16 @@
 
 Use tools/README.md for current public interfaces. This document records
 contracts and failure modes, not a chronological series of experiment reports.
+
+## Native GLB material import
+
+The import commandlet must enable client material data (`IsClient=true`, as the
+stock Python commandlet does). With `IsClient=false`, native Interchange can
+report missing parent parameters and serialize colorless material instances
+despite successful generation/cook. Require cooked color/PBR parameter evidence;
+parent references and exit0 alone do not validate imported materials. The GLB
+shell preserves native hierarchy and uses a derived package inventory rather
+than the former fixed four-mesh/palette layout. Runtime acceptance is separate.
 Current acceptance, pending gates and installation receipts live only in the
 [active backlog](../../docs/harpoon-cannon-backlog.md).
 
@@ -50,14 +60,22 @@ Current acceptance, pending gates and installation receipts live only in the
   valid texture pixels alone did not prevent a cooked 0x0 brush.
 - Telescope's InitialLockFOV5 is five degrees, not angular x5. Equipment animation
   notifies target the equipped slot; borrowing them is not a safe camera lifecycle.
-- Model descriptor owns source selections, origins and ammo instances; gameplay
-  roles, Q collision and attachment remain independent of visual bounds. Exact
-  shell inventory is five packages. See model and shell validator documentation.
+- GLB hierarchy and its registry own model nodes and role bindings; gameplay
+  roles, Q collision and attachment remain independent of visual bounds. The
+  generated inventory drives shell packages; do not hard-code mesh counts.
 - Read settings via the fingerprint-validated native LoadFileToArray contract in
   GAME_DERIVED_SOURCES.md. First-time user config provisioning was a one-off gap,
   not justification for a new general tool. Preserve preferences on cleanup.
 
 ## Evidence and tool failure interpretation
+
+- Imported StaticMesh ray-tracing support must agree with the authoring project's
+  cooked resources. On Steam25191271 / UE5.8 (editor5.8.2), importing supported
+  meshes but cooking with r.RayTracing=0 caused a null-resource crash before the
+  construction preview appeared. Enabling ray-tracing resource cooking resolved
+  placement, construction and entry in the user's 2026-09-16 test. This changes
+  the mod authoring project, not user game graphics settings. Container/semantic
+  success alone did not catch the missing resource; revalidate on engine changes.
 
 - Use exact absolute ModContainer for candidate inspection. Relative paths can
   resolve beneath game Paks. Do not use an accidentally mounted installed mod as

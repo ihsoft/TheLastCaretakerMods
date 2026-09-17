@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$OutputRoot = '', [switch]$SkipBuild, [switch]$StationInputsOnly, [switch]$StationPrototype)
+param([string]$OutputRoot = '', [switch]$SkipBuild, [switch]$StationInputsOnly, [switch]$StationPrototype, [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ($StationInputsOnly.IsPresent -eq $StationPrototype.IsPresent) { throw 'Select exactly one: -StationInputsOnly (authoring only) or -StationPrototype (HC33 all-hit target names experiment).' }
@@ -35,6 +35,7 @@ $engineVersion = Get-Content -LiteralPath (Join-Path $engine 'Build/Build.versio
 if ($engineVersion.MajorVersion -ne 5 -or $engineVersion.MinorVersion -ne 8 -or $engineVersion.PatchVersion -ne 2) { throw 'HC01 requires reviewed editor 5.8.2.' }
 
 function Invoke-NativeStage([string]$Name, [string]$Executable, [string[]]$NativeArguments) {
+    if ($Executable -eq $editor) { $NativeArguments += ('-ZenDataPath=' + (Join-Path $ddc 'Zen')) }
     $log = Join-Path $output ($Name + '.log')
     & $Executable @NativeArguments *> $log
     if ($LASTEXITCODE -ne 0) { throw "$Name failed ($LASTEXITCODE); log: $log" }
@@ -50,7 +51,7 @@ if (Test-Path -LiteralPath $content) {
     if ($resolvedContent -cne [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'Content'))) { throw 'Unexpected generated Content target.' }
     Move-Item -LiteralPath $resolvedContent -Destination (Join-Path $output 'previous-generated')
 }
-$ddc = Join-Path $PSScriptRoot '.ddc'
+$ddc = [IO.Path]::GetFullPath($CacheRoot)
 [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'Process')
 $null = New-Item -ItemType Directory -Path $ddc -Force
 Invoke-NativeStage 'generate' $editor @($project,'-run=GenerateHarpoonInputs','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-unreal.log')))

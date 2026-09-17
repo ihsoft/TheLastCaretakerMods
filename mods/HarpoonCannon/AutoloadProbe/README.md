@@ -19,6 +19,9 @@ fingerprint, reviewed mapping and editor 5.8.2; builds, generates, cooks, checks
 tagged headers, extracts current scriptobjects, packages/verifies, writes ZIP and
 schema-2 release manifest. Source hashes/status and HEAD must stay unchanged.
 No native producer in sandbox; no dotnet run. SkipBuild only for an unchanged binary.
+`-CacheRoot` defaults to `P:\UnrealCache\TheLastCaretakerMods\UE5.8`, shared with
+the shell producer. Filesystem DDC and explicit Zen data path use this directory;
+old caches and global Unreal settings are left unchanged.
 
 StationInputsOnly is a mutually exclusive authoring-only preflight: six input
 assets, no runtime actor/HUD/autoload. It is not a playable station.
