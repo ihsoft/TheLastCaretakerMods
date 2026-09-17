@@ -13,6 +13,8 @@ outputs. Never replace a GLB with a roundtripped copy merely to inspect it.
 | Direct render of actual GLB | preview_glb.py | Blender bundled glTF importer; PNG, no source rewrite |
 | Convert editable Blender hierarchy to GLB | export_blender_glb.py | Standard bundled exporter, source hash/geometry/material readback |
 | Extract original game socket geometry | ../VoyageMeshReference | Fingerprinted stock-only LOD0; approximate palette; original UVs/pivot |
+| Extract a material library from game | ../Export-VoyageMaterialsGlb.ps1 | [Batch exact paths -> GLB](../VoyageMaterialLibrary/README.md); used textures only, inherited parameters, approximate PBR, omissions report |
+| Verify extracted material library | verify_material_library.py | Python3.10+, Pillow; embedded PNG/hash/dimension/provenance checks; schema2 rejects unbound images |
 
 Python examples, repository root:
 
@@ -59,12 +61,29 @@ linear PBR inputs. Missing textures must stay explicit, not silently synthesized
 
 ## Collection policy / pending capabilities
 
+### Harpoon native-import verification
+
+`verify_harpoon_import.py --source-audit <inspect_glb JSON> --inventory
+<HarpoonGlbInventory JSON> --semantic <Validate-Shell validation.json>` compares
+all rigid model-node local transforms after glTF-to-Unreal axis/unit conversion,
+hierarchy, mesh presence, and cooked untextured base-color/emissive/metallic/
+roughness factors. Requires Python3.10+ and NumPy. It reads evidence only and
+does not import or rewrite assets. It rejects textures/animations; shader
+appearance and gameplay still require a game test. Omitted factor overrides
+use glTF defaults and require the reviewed stock native parent.
+
+The shell's `Build-Shell.ps1` now imports GLB through native Interchange and emits
+a derived component/package inventory. Placement, construction and operator/optics
+are game-validated; save persistence and multiplayer are not. The reusable parser
+is not a custom geometry converter.
+
 Keep reusable tools for mesh extraction, UV/normal/material inspection, textures,
 PBR conversion and validation. Reuse standard libraries/exporters; extend small
 methods against a concrete requested asset rather than inventing a universal
-converter. Desired does not mean available: texture decoding, inherited Unreal
-material reconstruction/baking, high-resolution Nanite and general GLB-to-Unreal
-integration are not provided by this toolkit yet.
+converter. The material-library exporter now provides decoded textures and
+inherited parameters with bounded PBR approximations. Full Unreal shader baking,
+high-resolution Nanite and general GLB-to-Unreal
+integration outside the scoped Harpoon adapter are not provided by this toolkit yet.
 
 Game-derived inputs retain fingerprint/provenance and normally stay ignored. GLB source
 files containing only authored content may be tracked with their owning registry;
