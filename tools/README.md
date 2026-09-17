@@ -99,11 +99,19 @@ For the standard electrical socket's geometry-only planning reference, see
 colors, Blender/GLB and readback checks. Not full Unreal-material/Nanite export;
 validated target/build and limits are in its README.
 
+Harpoon shell/station producers accept `-CacheRoot`; their local default is
+`P:\UnrealCache\TheLastCaretakerMods\UE5.8` (Zen in its `Zen` subdirectory).
+This is process-scoped selection, not a global cache migration or cleanup.
+
 GLB-first model inspection, direct previews and standard Blender conversions are
 collected in [tools/glb](glb/README.md). GLB is the editable source/handoff, not a
 generated preview of a procedural OBJ. The [owning model registry and guide](../models/HarpoonCannon/README.md)
-define version/hash/roles and any temporary legacy build bridge. Texture/material
-extraction tools are a desired extension, not a capability of the geometry reader.
+define version/hash/roles and any temporary legacy build bridge. Batch material
+extraction uses [`Export-VoyageMaterialsGlb.ps1`](VoyageMaterialLibrary/README.md):
+exact material list -> self-contained GLB, inherited parameters and only textures
+actually used by the approximate PBR sample surfaces; explicit omission/provenance
+report. Unknown/ambiguous/disabled texture payloads are not decoded or archived.
+This is separate from the geometry reader, not full Unreal shader recovery/baking.
 Source-only conversion/preview is outside game-tool coverage; extraction/build
 operations retain the normal game provenance gates.
 
@@ -163,7 +171,7 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
 | Prepare Harpoon operator assets | [Preparation contract](../mods/HarpoonCannon/AutoloadProbe/README.md), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Probe.ps1 -StationInputsOnly` prepares five authoring-only inputs; `-StationPrototype` prepares nine tagged station packages. Gates include explicit K2 entry-interface membership, exact function signature, cooked Interact=Block, container/header verification and schema-2 manifest. Initial execution must be outside the sandbox; neither mode installs |
-| Prepare HarpoonCannon shell assets | [Shell preparation](../mods/HarpoonCannon/README.md#current-shell-only-preparation), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Shell.ps1` validates the model-owned descriptor/source hashes and owns the UE5.8.2 shell build, exact five-package cook (leaf plus base/yaw/pitch/ammo), stock extraction, retoc packaging, common verification, semantic validation, ZIP and schema-2 manifest; it never installs or enables autoload. This authoring pipeline is not a finished weapon release |
+| Prepare HarpoonCannon shell assets | [Shell preparation](../mods/HarpoonCannon/README.md#current-shell-only-preparation), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Shell.ps1` validates the GLB registry/hash, owns native Interchange import and role binding, inventory-driven cook/package verification and `Validate-Shell.ps1 -ModelInventory` cooked checks, ZIP and schema-2 manifest. No installation. Gameplay validation remains a separate gate; see the owning backlog |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a
