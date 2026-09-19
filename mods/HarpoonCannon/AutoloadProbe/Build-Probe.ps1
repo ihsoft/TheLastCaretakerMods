@@ -20,8 +20,6 @@ $sourcePaths = @('mods/HarpoonCannon/AutoloadProbe','tools/UnrealEditorGenerator
 $sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
 $sourcePaths += 'tools/UnrealEditorGeneratorCommon/Public/ActorScanGraphNames.h'
 $sourcePaths += 'mods/HarpoonCannon/HarpoonModelContract.h'
-$modelPath = Join-Path $repo 'models/HarpoonCannon/HarpoonCannon_V1.glb'
-if ((Get-FileHash -LiteralPath $modelPath -Algorithm SHA256).Hash -cne '9FD66B3350239F4CE0E37E0B8BF4F8E9F033A3E22E8EE88CD2DBF9158578A5BD') { throw 'Muzzle fallback requires audited V1 GLB; revalidate muzzle adapter for changed geometry.' }
 $sourcePaths += 'tools/UnrealEditorGeneratorCommon/Public/TextSettingsGraphNames.h'
 $sourceStatus = @(& git -C $repo status --porcelain -- $sourcePaths)
 function Get-ProbeSourceHashes {

@@ -15,6 +15,11 @@ inline constexpr TCHAR BaseKey[] = TEXT("base");
 inline constexpr TCHAR YawKey[] = TEXT("yaw");
 inline constexpr TCHAR PitchKey[] = TEXT("pitch");
 inline constexpr TCHAR SightKey[] = TEXT("sight");
+inline constexpr TCHAR MuzzleKey[] = TEXT("muzzle");
+inline constexpr TCHAR FabricatorKey[] = TEXT("fabricatorCollision");
+inline constexpr TCHAR CollisionNodeKey[] = TEXT("node");
+inline constexpr TCHAR SizeKey[] = TEXT("sizeCm");
+inline constexpr TCHAR CenterKey[] = TEXT("centerCm");
 inline constexpr TCHAR AmmoKey[] = TEXT("ammoInstances");
 inline constexpr TCHAR NameKey[] = TEXT("name");
 inline constexpr TCHAR ParentKey[] = TEXT("parent");
@@ -60,7 +65,7 @@ inline int32 Generate()
         if (Actors.Contains(Actor->GetActorLabel())) { UE_LOG(LogTemp, Error, TEXT("Duplicate GLB node name")); return 1; }
         Actors.Add(Actor->GetActorLabel(), Actor);
     }
-    for (const TCHAR* Key : {RootKey, BaseKey, YawKey, PitchKey, SightKey})
+    for (const TCHAR* Key : {RootKey, BaseKey, YawKey, PitchKey, SightKey, MuzzleKey})
         if (!Actors.Contains(Roles->GetStringField(Key))) { UE_LOG(LogTemp, Error, TEXT("Missing GLB role %s"), Key); return 1; }
     for (const auto& Value : Roles->GetArrayField(AmmoKey)) if (!Actors.Contains(Value->AsString())) return 1;
     AActor* ModelRoot = Actors.FindChecked(Roles->GetStringField(RootKey));
@@ -75,17 +80,31 @@ inline int32 Generate()
     }
     if (!ModelRoot->GetActorLocation().IsNearlyZero() || !Base->GetActorLocation().IsNearlyZero()) return 1;
     TArray<FString> Names; Actors.GetKeys(Names); Names.Sort();
-    // Reuse one stationary, origin-aligned render mesh for stock unfinished-Q
-    // acquisition. Never derive gameplay collision size from visual bounds.
-    AActor* CollisionActor = nullptr;
-    for (const FString& Name : Names)
+    // Explicit carrier; nested stationary nodes are allowed, moving ancestry is not.
+    const auto CollisionConfig = Registry->GetObjectField(FabricatorKey);
+    const FString CarrierName = CollisionConfig->GetStringField(CollisionNodeKey);
+    AActor* CollisionActor = Actors.FindRef(CarrierName);
+    auto* Carrier = CollisionActor ? Cast<UStaticMeshComponent>(CollisionActor->GetRootComponent()) : nullptr;
+    if (!Carrier || !Carrier->GetStaticMesh()) { UE_LOG(LogTemp, Error, TEXT("Collision carrier must be a mesh: %s"), *CarrierName); return 1; }
+    AActor* Ancestor = CollisionActor;
+    while (Ancestor && Ancestor != Base)
     {
-        AActor* Actor = Actors[Name];
-        auto* MeshComponent = Cast<UStaticMeshComponent>(Actor->GetRootComponent());
-        if (Actor->GetAttachParentActor() == Base && MeshComponent && MeshComponent->GetStaticMesh() && Actor->GetActorTransform().Equals(FTransform::Identity, 0.0001))
-        { CollisionActor = Actor; break; }
+        if (Ancestor == Actors.FindChecked(Roles->GetStringField(YawKey)) || Ancestor == Actors.FindChecked(Roles->GetStringField(PitchKey))) return 1;
+        Ancestor = Ancestor->GetAttachParentActor();
     }
-    if (!CollisionActor) { UE_LOG(LogTemp, Error, TEXT("No stationary origin-aligned mesh for fabricator collision; model contract needs review")); return 1; }
+    if (Ancestor != Base || !CollisionActor->GetActorTransform().Equals(FTransform::Identity, 0.0001))
+    { UE_LOG(LogTemp, Error, TEXT("Collision carrier requires stationary base ancestry and world identity: %s"), *CarrierName); return 1; }
+    auto ReadVector = [&](const TCHAR* Key, FVector& Out)
+    {
+        const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+        if (!CollisionConfig->TryGetArrayField(Key, Values) || Values->Num() != 3) return false;
+        double XYZ[3];
+        for (int32 I = 0; I < 3; ++I) if (!(*Values)[I]->TryGetNumber(XYZ[I]) || !FMath::IsFinite(XYZ[I])) return false;
+        Out = FVector(XYZ[0], XYZ[1], XYZ[2]); return true;
+    };
+    FVector BoxSize, BoxCenter;
+    if (!ReadVector(SizeKey, BoxSize) || !ReadVector(CenterKey, BoxCenter) || BoxSize.GetMin() <= 0)
+    { UE_LOG(LogTemp, Error, TEXT("Collision box requires finite center and positive size in cm")); return 1; }
     UStaticMesh* CollisionMesh = CastChecked<UStaticMeshComponent>(CollisionActor->GetRootComponent())->GetStaticMesh();
     int32 CollisionUses = 0;
     for (const auto& Pair : Actors) if (auto* C = Cast<UStaticMeshComponent>(Pair.Value->GetRootComponent())) if (C->GetStaticMesh() == CollisionMesh) ++CollisionUses;
@@ -98,8 +117,8 @@ inline int32 Generate()
         auto* Body = Mesh->GetBodySetup(); Body->RemoveSimpleCollision();
         if (Mesh == CollisionMesh)
         {
-            const auto Size = HarpoonModelContract::FabricatorBoxSize;
-            FKBoxElem Box(Size.X, Size.Y, Size.Z); Box.Center = HarpoonModelContract::FabricatorBoxCenter;
+            const auto Size = BoxSize;
+            FKBoxElem Box(Size.X, Size.Y, Size.Z); Box.Center = BoxCenter;
             Body->AggGeom.BoxElems.Add(Box); Body->CollisionTraceFlag = CTF_UseSimpleAsComplex;
         }
         Body->InvalidatePhysicsData();
@@ -147,6 +166,7 @@ inline int32 Generate()
             }
             if (Name == Roles->GetStringField(YawKey)) Component->ComponentTags.Add(HarpoonModelContract::YawTag);
             if (Name == Roles->GetStringField(PitchKey)) Component->ComponentTags.Add(HarpoonModelContract::PitchTag);
+            if (Name == Roles->GetStringField(MuzzleKey)) Component->ComponentTags.Add(HarpoonModelContract::MuzzleTag);
             if (Name == Roles->GetStringField(SightKey)) Component->ComponentTags.Add(HarpoonModelContract::SightTag);
             Nodes.Add(Actor, Node);
             auto Entry = MakeShared<FJsonObject>(); Entry->SetStringField(NameKey, Name);
@@ -177,6 +197,7 @@ inline int32 Generate()
     TArray<FString> Sorted = PackageNames.Array(); Sorted.Sort();
     for (const FString& Name : Sorted) Packages.Add(MakeShared<FJsonValueString>(Name));
     Inventory->SetArrayField(PackagesKey, Packages); Inventory->SetArrayField(ComponentsKey, ComponentEvidence);
+    Inventory->SetObjectField(FabricatorKey, CollisionConfig);
     Inventory->SetStringField(CollisionKey, CollisionMesh->GetOutermost()->GetName()); Inventory->SetObjectField(RolesKey, Roles);
     FString Json; FJsonSerializer::Serialize(Inventory, TJsonWriterFactory<>::Create(&Json));
     if (!FFileHelper::SaveStringToFile(Json, *FPaths::Combine(FPaths::ProjectDir(), InventoryFile))) return 1;

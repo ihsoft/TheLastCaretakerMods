@@ -1,50 +1,44 @@
 {
   "schemaVersion": 1,
   "model": "HarpoonCannon",
-  "version": "V1",
+  "version": "Type02",
   "format": "GLB",
   "source": {
-    "path": "HarpoonCannon_V1.glb",
-    "sha256": "9FD66B3350239F4CE0E37E0B8BF4F8E9F033A3E22E8EE88CD2DBF9158578A5BD",
-    "byteLength": 463824,
-    "storage": "git-user-authorized-v1-reference-exception"
+    "path": "Railgun-Type02.glb",
+    "sha256": "1062CF835F4D74B0ACA7AF7EEF32B021E8AD2320381273954EE38D43630DE7A6",
+    "byteLength": 878184,
+    "storage": "user-supplied-model"
   },
-  "acceptance": "user-selected-model-baseline-not-game-validated",
-  "coordinates": { "units": "meters", "upAxis": "+Y", "forwardAxis": "+X", "matrixOrder": "column-major" },
+  "acceptance": "user-selected-pending-game-validation",
+  "coordinates": {
+    "units": "meters",
+    "upAxis": "+Y",
+    "forwardAxis": "+X",
+    "matrixOrder": "column-major"
+  },
   "nodes": {
-    "root": "HarpoonCannon",
-    "base": "HC_Base",
-    "yaw": "HC_Yaw",
-    "pitch": "HC_Pitch",
-    "sight": "HC_Sight",
-    "powerSocketAnchor": "HC_PowerSocket",
-    "ammoContainer": "HC_RG_YAW_AmmoBasket_Ammo",
-    "ammoInstances": ["HC_RG_AMMO_Rod_01", "HC_RG_AMMO_Rod_02", "HC_RG_AMMO_Rod_03", "HC_RG_AMMO_Rod_04", "HC_RG_AMMO_Rod_05", "HC_RG_AMMO_Rod_06"]
+    "root": "Railgun_Type_02",
+    "base": "BASE",
+    "yaw": "YAW",
+    "pitch": "PITCH",
+    "sight": "Muzzle",
+    "muzzle": "Muzzle",
+    "ammoInstances": []
+  },
+  "fabricatorCollision": {
+    "node": "Foundation_BottomPlate__Gray",
+    "sizeCm": [
+      164,
+      164,
+      12
+    ],
+    "centerCm": [
+      0,
+      0,
+      6
+    ]
   },
   "hierarchyPolicy": "Read actual GLB ancestors and full matrices; names identify nodes, not motion ownership",
-  "referenceOnlySubtrees": [
-    {
-      "node": "ElectricalSocket_Reference",
-      "anchor": "HC_PowerSocket",
-      "containsGameDerivedGeometry": true,
-      "sourceAsset": "/Game/AssetSets/Sockets/SM_Socket_Electrical_Output",
-      "provenance": {
-        "steamBuildId": "25191271",
-        "executableSha256": "747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B",
-        "engineVersion": "5.8",
-        "mappingSha256": "E25620FB2D0674B26A3E4EF059AC2C5AF58E28CE1B4F07307860F7FADB9A0F68",
-        "parserSourceCommit": "ec6595e46448a817ac21ea9bde01caa48f80a420",
-        "method": "VoyageMeshReference ordinary LOD0 extraction; Blender planning reference with approximate colors, subsequently positioned in user-supplied GLB",
-        "revalidation": "Revalidate original game socket before native integration or new extraction after fingerprint change; never silently rewrite accepted V1"
-      },
-      "policy": "Retain unchanged in V1 for planning; future coordinated integration substitutes original game socket at anchor"
-    }
-  ],
-  "materialPolicy": "Use embedded glTF PBR values as encoded; do not regenerate from old MTL palette",
-  "legacyBuildBridge": {
-    "descriptor": "runtime-model.json",
-    "status": "frozen-pre-GLB-v5-until-consumer-migration",
-    "isDerivedFromThisVersion": false,
-    "canBuildThisVersion": false
-  }
+  "referenceOnlySubtrees": [],
+  "materialPolicy": "Use embedded glTF PBR values as encoded; do not regenerate from old MTL palette"
 }

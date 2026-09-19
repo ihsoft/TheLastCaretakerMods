@@ -68,17 +68,22 @@ foreach ($expected in $inventory.components) {
         }
     }
 }
-foreach ($role in @('yaw','pitch','sight')) {
+foreach ($role in @('yaw','pitch','sight','muzzle')) {
     $component = @($shell | Where-Object { $_.Name -ceq ($inventory.roles.$role + '_GEN_VARIABLE') })
-    $tag = @{yaw='Harpoon.Model.Yaw';pitch='Harpoon.Model.Pitch';sight='Harpoon.Model.Sight'}[$role]
+    $tag = @{yaw='Harpoon.Model.Yaw';pitch='Harpoon.Model.Pitch';sight='Harpoon.Model.Sight';muzzle='Harpoon.Model.Muzzle'}[$role]
     Require (@($component[0].Properties.ComponentTags) -ccontains $tag) ('Missing tag: ' + $role)
 }
 $mesh = @(Read-Candidate $inventory.collisionMesh)
 $body = @($mesh | Where-Object { $_.Type -ceq 'BodySetup' })
 Require ($body.Count -eq 1) 'Missing collision BodySetup.'
 $boxes = @($body[0].Properties.AggGeom.BoxElems)
-Require ($boxes.Count -eq 1 -and $boxes[0].X -eq 164 -and $boxes[0].Y -eq 164 -and $boxes[0].Z -eq 12) 'Fabricator collision dimensions changed.'
-Require ($boxes[0].Center.X -eq 0 -and $boxes[0].Center.Y -eq 0 -and $boxes[0].Center.Z -eq 6) 'Fabricator collision center changed.'
+Require ($boxes.Count -eq 1) 'Expected one fabricator collision box.'
+$config = $inventory.fabricatorCollision
+for ($i=0; $i -lt 3; $i++) {
+    $axis = @('X','Y','Z')[$i]
+    Require ([Math]::Abs($boxes[0].$axis - $config.sizeCm[$i]) -lt 0.001) 'Fabricator collision dimensions mismatch.'
+    Require ([Math]::Abs($boxes[0].Center.$axis - $config.centerCm[$i]) -lt 0.001) 'Fabricator collision center mismatch.'
+}
 Require ($body[0].Properties.CollisionTraceFlag -ceq 'ECollisionTraceFlag::CTF_UseSimpleAsComplex') 'Fabricator collision mode changed.'
 foreach ($package in @($inventory.packages | Where-Object { $_ -like '*/Materials/*' })) {
     $exports = @(Read-Candidate $package)

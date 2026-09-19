@@ -5,8 +5,6 @@ namespace Shot
 {
 inline constexpr TCHAR Package[] = TEXT("/Game/Mods/HarpoonCannon/Station/BP_HarpoonTestShot");
 inline constexpr TCHAR Speed[] = TEXT("200000.0"), Range[] = TEXT("99999.0"), Life[] = TEXT("4.0");
-// V1-only fallback: build producer gates the exact audited GLB hash.
-inline constexpr TCHAR MuzzleLocal[] = TEXT("208.4,0,4");
 inline const FName Body(TEXT("ShotCollision")), Move(TEXT("ShotMovement"));
 inline const FName Start(TEXT("ShotOrigin")), Direction(TEXT("ShotDirection")), Done(TEXT("ShotDone"));
 inline const FName SpawnedThisPress(TEXT("ShotSpawnedThisPress"));
@@ -154,15 +152,14 @@ void AddCannonFire(FGraph& G)
     G.Branch(G.Valid(G.Read(S::Anchor)));
     auto* Cannon=ObserveCall(G,UActorComponent::StaticClass(),OP::ComponentOwner,G.Read(S::Anchor));
     auto* Find=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,GetComponentsByTag));
-    G.Link(Cannon,G.Pin(Find,P::FunctionTarget)); G.Pin(Find,OP::ComponentClass)->DefaultObject=USceneComponent::StaticClass(); G.Default(Find,ActorScanGraphNames::ComponentTag,*HarpoonModelContract::PitchTag.ToString());
+    G.Link(Cannon,G.Pin(Find,P::FunctionTarget)); G.Pin(Find,OP::ComponentClass)->DefaultObject=USceneComponent::StaticClass(); G.Default(Find,ActorScanGraphNames::ComponentTag,*HarpoonModelContract::MuzzleTag.ToString());
     auto* Loop=ContextLoop(G,G.Pin(Find,P::ReturnValue));
     auto* Cast=NewObject<UK2Node_DynamicCast>(G.Graph); Cast->TargetType=USceneComponent::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
     G.Link(G.Tail,G.Pin(Cast,P::Execute)); G.Link(G.Pin(Loop,CE::ArrayElement),Cast->GetCastSourcePin()); G.Tail=Cast->GetValidCastPin();
-    auto* Already=G.Branch(G.Read(Shot::SpawnedThisPress)); G.Tail=G.Pin(Already,P::Else); // one shot even if duplicate pitch tags exist
-    auto* World=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentToWorld),Cast->GetCastResultPin());
-    auto* Location=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,TransformLocation)); G.Link(World,G.Pin(Location,Shot::Transform)); G.Default(Location,Shot::Location,Shot::MuzzleLocal);
+    auto* Already=G.Branch(G.Read(Shot::SpawnedThisPress)); G.Tail=G.Pin(Already,P::Else); // one shot even if duplicate muzzle tags exist
+    auto* Location=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentLocation),Cast->GetCastResultPin());
     auto* Rotation=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentRotation),Cast->GetCastResultPin());
-    auto* Transform=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,MakeTransform)); G.Link(G.Pin(Location,P::ReturnValue),G.Pin(Transform,E::Location)); G.Link(Rotation,G.Pin(Transform,Shot::ActorRotation)); G.Default(Transform,E::Scale,N::UnitScale);
+    auto* Transform=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,MakeTransform)); G.Link(Location,G.Pin(Transform,E::Location)); G.Link(Rotation,G.Pin(Transform,Shot::ActorRotation)); G.Default(Transform,E::Scale,N::UnitScale);
     auto* Spawn=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,BeginDeferredActorSpawnFromClass)); G.Pin(Spawn,E::ActorClass)->DefaultObject=Shot::Class; G.Link(G.Pin(Transform,P::ReturnValue),G.Pin(Spawn,P::SpawnTransform)); G.Default(Spawn,E::CollisionHandling,N::AlwaysSpawn); G.Exec(Spawn);
     auto* Typed=NewObject<UK2Node_DynamicCast>(G.Graph); Typed->TargetType=Shot::Class; Typed->SetPurity(false); G.Node(Typed); G.Link(G.Tail,G.Pin(Typed,P::Execute)); G.Link(G.Pin(Spawn,P::ReturnValue),Typed->GetCastSourcePin()); G.Tail=Typed->GetValidCastPin();
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Cannon,Cannon);
