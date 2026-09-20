@@ -8,6 +8,8 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
+#include "Engine/EngineTypes.h"
+#include "ModuleConfigData.h"
 #include "VoyageModuleComponent.generated.h"
 
 UCLASS(BlueprintType, ClassGroup = (Voyage), meta = (BlueprintSpawnableComponent))
@@ -16,9 +18,8 @@ class VOYAGE_API UVoyageModuleComponent : public UActorComponent
     GENERATED_BODY()
 
 public:
-    // Exact unversioned-property prefix through ItemAsset. Properties after
-    // ItemAsset remain intentionally absent because this probe serializes only
-    // the item reference at property index 7.
+    // Partial native schema. The shell writes named tags; never cook this
+    // mirror with unversioned property indices.
     UPROPERTY()
     int32 CachedGridID = 0;
 
@@ -42,4 +43,20 @@ public:
 
     UPROPERTY()
     TObjectPtr<UObject> ItemAsset;
+
+    UPROPERTY() FModuleConfigData ConfigData;
+
+    // Exact native owner; partial schema is only valid with tagged cooking.
+    UPROPERTY()
+    bool bUseSocketCustomTarget = false;
+
+    UPROPERTY()
+    FComponentReference SocketCustomTarget;
+
+    // Exact native function identities used by stock active modules. The
+    // editor mirror only exposes the signatures needed by the generated
+    // Blueprint; Voyage supplies the runtime implementations.
+    UFUNCTION(BlueprintCallable)
+    bool HasPower() const { return false; }
+
 };

@@ -9,6 +9,9 @@
 namespace CannonAssetNames
 {
 constexpr TCHAR ShellOnlyParameter[] = TEXT("ShellOnly");
+constexpr TCHAR VerifyTaggedParameter[] = TEXT("VerifyTagged");
+constexpr TCHAR GamePackagePrefix[] = TEXT("/Game/");
+constexpr TCHAR CookedContentDirectory[] = TEXT("Saved/Cooked/Windows/Voyage/Content");
 enum class EOperatorLifecycleProbe
 {
     NativeActor,
@@ -44,6 +47,7 @@ constexpr TCHAR LoadedConnectorAssetName[] = TEXT("SM_Mooring_CableSocket_Out");
 constexpr TCHAR LeafItemPackageName[] = TEXT("/Game/Data/Assets/Modules/DA_Item_Module_WindTurbineMedium");
 constexpr TCHAR LeafItemAssetName[] = TEXT("DA_Item_Module_WindTurbineMedium");
 constexpr TCHAR LeafItemObjectPath[] = TEXT("/Game/Data/Assets/Modules/DA_Item_Module_WindTurbineMedium.DA_Item_Module_WindTurbineMedium");
+constexpr TCHAR ElectricSocketDataObjectPath[] = TEXT("/Game/Data/Assets/ModuleSockets/DA_Socket_ElectricData.DA_Socket_ElectricData");
 constexpr TCHAR CameraDronePackageName[] = TEXT("/Game/Blueprints/Vehicles/BP_CameraDrone");
 constexpr TCHAR CameraDroneAssetName[] = TEXT("BP_CameraDrone");
 
@@ -57,6 +61,8 @@ const FName ModuleMountRootName(TEXT("ModuleMountCollision"));
 const FName MountRootName(TEXT("MountRoot"));
 const FName CollisionProbeName(TEXT("PlacementCollisionProbe"));
 const FName DynamicCollisionName(TEXT("VoyageDynamicCollision"));
+const FName ElectricComponentName(TEXT("Electric"));
+const FName ElectricSocketName(TEXT("ElectricSocket"));
 const FName BaseBodyName(TEXT("HarpoonBaseBody"));
 const FName TurretBodyName(TEXT("HarpoonTurretBody"));
 const FName BarrelBodyName(TEXT("HarpoonBarrelBody"));
@@ -118,6 +124,10 @@ constexpr float CollisionHalfHeightCentimeters = 50.0f;
 constexpr bool ModuleMountGeneratesInteractionOverlaps = true;
 constexpr bool BaseMeshBuildsFabricatorInteractionCollision = true;
 constexpr bool MovingMeshBuildsFabricatorInteractionCollision = false;
+constexpr double HarpoonEnergyConsumptionOn = 1000.0;
+constexpr double HarpoonEnergyConsumptionStandby = 1000.0;
+constexpr double HarpoonIdleBufferWh = 1000.0 / 3600.0;
+constexpr uint32 ElectricSocketId = 2236302826u;
 constexpr bool IncludeBaseGameLoadedConnectorReference = false;
 constexpr EOperatorLifecycleProbe OperatorLifecycleProbe =
     EOperatorLifecycleProbe::StockCameraDroneDelayedValidityMarkerBlueprint;

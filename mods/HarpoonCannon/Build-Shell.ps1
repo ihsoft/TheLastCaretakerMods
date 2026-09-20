@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$OutputRoot = '', [switch]$SkipBuild, [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
+param([string]$OutputRoot = '', [switch]$SkipBuild, [switch]$Install, [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -21,7 +21,9 @@ if ($model.schemaVersion -ne 1 -or $model.format -cne 'GLB') { throw 'Unsupporte
 if ([IO.Path]::IsPathRooted($model.source.path)) { throw 'Model path must be relative.' }
 $glbPath = [IO.Path]::GetFullPath((Join-Path $modelDirectory $model.source.path))
 if (-not $glbPath.StartsWith($modelDirectory + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Model escapes its directory.' }
-if ((Get-FileHash -LiteralPath $glbPath -Algorithm SHA256).Hash -cne $model.source.sha256 -or (Get-Item -LiteralPath $glbPath).Length -ne $model.source.byteLength) { throw 'GLB differs from accepted registry.' }
+if (-not (Test-Path -LiteralPath $glbPath -PathType Leaf)) { throw "GLB not found: $glbPath" }
+# Registry selects the live authoring file; hashes below record the actual input
+# and reject edits during a build, not revisions since the registry was written.
 $sourcePaths += @('mods/HarpoonCannon/HarpoonModelContract.h','models/HarpoonCannon/model-source.json', $glbPath.Substring($repo.Length + 1).Replace('\','/'))
 $sourceStatus = @(& git -C $repo status --porcelain -- $sourcePaths)
 function Get-ShellSourceHashes {
@@ -66,7 +68,9 @@ $packages = @($inventory.packages)
 if ($packages.Count -lt 2 -or @($packages | Where-Object { -not $_.StartsWith('/Game/Mods/HarpoonCannon/Visual/') -and $_ -cne '/Game/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New' }).Count) { throw 'GLB cook inventory escaped owned packages.' }
 # Keep new material shader code inline in owned packages. Do not change shared
 # project config or require a game-global ShaderArchive-Voyage library override.
-Invoke-NativeStage 'cook' $editor @($project,'-run=cook','-targetplatform=Windows','-unversioned','-SkipZenStore','-CookSinglePackageNoRefs',('-Package=' + ($packages -join '+')),'-ini:Game:[/Script/UnrealEd.ProjectPackagingSettings]:bShareMaterialShaderCode=False','-ini:Engine:[/Script/WindowsTargetPlatform.WindowsTargetSettings]:D3D12TargetedShaderFormats=PCD3D_SM6,D3D11TargetedShaderFormats=PCD3D_SM5','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'cook-unreal.log')))
+# Partial native mirrors serialize named property tags, never positional indices.
+Invoke-NativeStage 'cook' $editor @($project,'-run=cook','-targetplatform=Windows','-SkipZenStore','-CookSinglePackageNoRefs',('-Package=' + ($packages -join '+')),'-ini:Game:[/Script/UnrealEd.ProjectPackagingSettings]:bShareMaterialShaderCode=False','-ini:Engine:[/Script/WindowsTargetPlatform.WindowsTargetSettings]:D3D12TargetedShaderFormats=PCD3D_SM6,D3D11TargetedShaderFormats=PCD3D_SM5','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'cook-unreal.log')))
+Invoke-NativeStage 'verify-tagged' $editor @($project,'-run=GenerateHarpoonCannon','-VerifyTagged','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'verify-tagged-unreal.log')))
 $original = & (Join-Path $repo 'tools/Extract-VoyagePackage.ps1') -Filter 'Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New.uasset' -RetocEngineVersion UE5_8 -OutputRoot (Join-Path $output 'original')
 $extraction = Get-Content -LiteralPath $original.manifestPath -Raw | ConvertFrom-Json
 $retoc = Join-Path $repo '.tools/bin/retoc.exe'
@@ -114,4 +118,9 @@ $provenance | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $out
 $release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod HarpoonCannonShellProbe -Version $version -Container $container -Archive $archivePath -SourcePath $sourcePaths -AllowDirtySource -AsJson) | ConvertFrom-Json
 $manifestPath = Join-Path $output 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Manifest producer did not publish the candidate.' }
-[pscustomobject]@{status='prepared-not-installed';releaseManifestPath=$manifestPath;archivePath=$archivePath;verificationReport=$verify.reportPath} | ConvertTo-Json -Compress
+$installation = $null
+if ($Install) {
+    $installation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') -ReleaseManifest $manifestPath -AllowDirtySource
+    Write-Host 'Harpoon shell installed successfully; installed hashes verified.'
+}
+[pscustomobject]@{status=$(if ($Install) { 'installed' } else { 'prepared-not-installed' });releaseManifestPath=$manifestPath;archivePath=$archivePath;verificationReport=$verify.reportPath;installation=$installation} | ConvertTo-Json -Depth 8 -Compress

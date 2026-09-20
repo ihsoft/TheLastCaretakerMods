@@ -14,6 +14,18 @@ UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values)
 
 void ContextPrepareStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
 {
+    // Resolve before spawning: old/missing shell contract must not create an
+    // active fallback query around the gun body or orphan replacement stations.
+    G.Write(CE::ModelEntry, nullptr, N::EmptyText);
+    auto* FindEntry = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, GetComponentsByTag));
+    G.Link(Shell, G.Pin(FindEntry, P::FunctionTarget));
+    G.Pin(FindEntry, OP::ComponentClass)->DefaultObject = UBoxComponent::StaticClass();
+    G.Default(FindEntry, ActorScanGraphNames::ComponentTag, *HarpoonModelContract::EntryTag.ToString());
+    auto* EntryLoop = ContextLoop(G, G.Pin(FindEntry, P::ReturnValue));
+    auto* EntryCast = NewObject<UK2Node_DynamicCast>(G.Graph); EntryCast->TargetType = UBoxComponent::StaticClass(); EntryCast->SetPurity(false); G.Node(EntryCast);
+    G.Link(G.Tail, G.Pin(EntryCast, P::Execute)); G.Link(G.Pin(EntryLoop, CE::ArrayElement), EntryCast->GetCastSourcePin()); G.Tail = EntryCast->GetValidCastPin();
+    G.Write(CE::ModelEntry, EntryCast->GetCastResultPin()); G.Tail = G.Pin(EntryLoop, CE::Completed);
+    G.Branch(G.Valid(G.Read(CE::ModelEntry)));
     auto* Root = ObserveCall(G, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetRootComponent), Shell);
     G.Branch(G.Valid(Root)); G.Write(S::Anchor, Root);
     // Fabricator visuals are not this class; exact native-built mount guards
@@ -55,6 +67,13 @@ void ContextPrepareStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     auto* Interaction = ReadNativeInputField(G, Station, StationClass, CE::Interaction);
     auto* Query = ReadNativeInputField(G, Station, StationClass, CE::QueryBox);
     G.Require(G.Valid(Interaction), V::Failed); G.Require(G.Valid(Query), V::Failed);
+    auto* PlaceEntry = G.Call(USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_SetWorldTransform));
+    G.Link(Interaction, G.Pin(PlaceEntry, P::FunctionTarget));
+    G.Link(ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_GetComponentToWorld), G.Read(CE::ModelEntry)), G.Pin(PlaceEntry, ActorLifecycleGraphNames::NewTransform));
+    G.Default(PlaceEntry, OP::Sweep, N::False); G.Exec(PlaceEntry);
+    auto* ResizeEntry = G.Call(UBoxComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UBoxComponent, SetBoxExtent));
+    G.Link(Query, G.Pin(ResizeEntry, P::FunctionTarget));
+    G.Link(ObserveCall(G, UBoxComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UBoxComponent, GetUnscaledBoxExtent), G.Read(CE::ModelEntry)), G.Pin(ResizeEntry, CE::BoxExtentPin)); G.Exec(ResizeEntry);
     G.Require(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject),
         ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, GetAttachParent), Query), Interaction), V::Failed);
     // Only own query box is enabled: native root remains NoCollision/nonphysical.
@@ -70,6 +89,7 @@ void ContextPrepareStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
 
 void BuildContextCoordinator(UBlueprint* BP, UClass* HudClass, UClass* StationClass)
 {
+    AddVariable(BP, CE::ModelEntry, UEdGraphSchema_K2::PC_Object, UBoxComponent::StaticClass());
     AddVariable(BP, CE::ShellClass, UEdGraphSchema_K2::PC_Class, AActor::StaticClass());
     AddVariable(BP, CE::EntryAction, UEdGraphSchema_K2::PC_Object, UInputAction::StaticClass());
     AddVariable(BP, CE::FoundPair, UEdGraphSchema_K2::PC_Boolean);

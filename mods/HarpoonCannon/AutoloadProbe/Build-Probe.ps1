@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$OutputRoot = '', [switch]$SkipBuild, [switch]$StationInputsOnly, [switch]$StationPrototype, [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
+param([string]$OutputRoot = '', [switch]$SkipBuild, [switch]$StationInputsOnly, [switch]$StationPrototype, [switch]$Install, [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ($StationInputsOnly.IsPresent -eq $StationPrototype.IsPresent) { throw 'Select exactly one: -StationInputsOnly (authoring only) or -StationPrototype (HC33 all-hit target names experiment).' }
@@ -20,6 +20,7 @@ $sourcePaths = @('mods/HarpoonCannon/AutoloadProbe','tools/UnrealEditorGenerator
 $sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
 $sourcePaths += 'tools/UnrealEditorGeneratorCommon/Public/ActorScanGraphNames.h'
 $sourcePaths += 'mods/HarpoonCannon/HarpoonModelContract.h'
+$sourcePaths += 'mods/HarpoonCannon/Assets/HarpoonCannon.ini'
 $sourcePaths += 'tools/UnrealEditorGeneratorCommon/Public/TextSettingsGraphNames.h'
 $sourceStatus = @(& git -C $repo status --porcelain -- $sourcePaths)
 function Get-ProbeSourceHashes {
@@ -125,6 +126,7 @@ if ($StationPrototype) {
     $queryEvidence | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $output 'collision-json-evidence.json') -Encoding UTF8
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'HarpoonCannonLifecycleProbe_P.autoload') -Destination $payload
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'StationPrototype-README.txt') -Destination (Join-Path $payload 'README.txt')
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../Assets/HarpoonCannon.ini') -Destination $payload
 } else {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'InputPrototype-README.txt') -Destination (Join-Path $payload 'README.txt')
 }
@@ -149,4 +151,33 @@ $provenance | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $out
 $release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod $modName -Version $version -Container $container -Archive $archivePath -SourcePath $sourcePaths -AllowDirtySource -AsJson) | ConvertFrom-Json
 $manifestPath = Join-Path $output 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Manifest producer did not publish the candidate.' }
-[pscustomobject]@{status='prepared-not-installed';releaseManifestPath=$manifestPath;archivePath=$archivePath;verificationReport=$verify.reportPath} | ConvertTo-Json -Compress
+$installation = $null
+$settingsInstallation = $null
+if ($Install) {
+    $installation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') -ReleaseManifest $manifestPath -AllowDirtySource
+    if ($StationPrototype) {
+        # User-owned settings are create-only, not an immutable container payload.
+        # Read the template from the manifest-verified archive, never overwrite edits.
+        $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+        if ((Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash -cne $manifest.archive.sha256) { throw 'Settings archive hash mismatch.' }
+        $settingsPath = Join-Path $installation.paksDirectory 'HarpoonCannon.ini'
+        $created = $false
+        if (-not (Test-Path -LiteralPath $settingsPath)) {
+            $zip = [IO.Compression.ZipFile]::OpenRead($archivePath)
+            try {
+                $entry = $zip.GetEntry('HarpoonCannon.ini')
+                if ($null -eq $entry) { throw 'Release has no settings template.' }
+                if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' -ErrorAction SilentlyContinue).Count -gt 0) { throw 'Game started; settings installation refused.' }
+                [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $settingsPath, $false)
+                $created = $true
+            } finally { $zip.Dispose() }
+            if ((Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash -cne (Get-FileHash -LiteralPath (Join-Path $payload 'HarpoonCannon.ini') -Algorithm SHA256).Hash) { throw 'Installed settings readback mismatch.' }
+        }
+        if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) { throw 'Settings path is not a file.' }
+        $settingsInstallation = [pscustomobject]@{path=$settingsPath;created=$created;preserved=(-not $created);sha256=(Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash}
+        $settingsInstallation | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'settings-installation.json') -Encoding UTF8
+        Write-Host "Harpoon settings $(if ($created) { 'created' } else { 'preserved' }): $settingsPath"
+    }
+    Write-Host 'Harpoon station/input release installed successfully; installed hashes verified.'
+}
+[pscustomobject]@{status=$(if ($Install) { 'installed' } else { 'prepared-not-installed' });releaseManifestPath=$manifestPath;archivePath=$archivePath;verificationReport=$verify.reportPath;installation=$installation;settingsInstallation=$settingsInstallation} | ConvertTo-Json -Depth 8 -Compress

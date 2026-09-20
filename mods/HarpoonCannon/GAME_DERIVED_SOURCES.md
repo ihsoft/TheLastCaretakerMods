@@ -1,5 +1,35 @@
 # Game-derived source registry
 
+## Electrical buffer and debit signatures
+
+Steam25191271 / UE5.8, executable
+747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+Revalidate on fingerprint change. Public enum/struct mappings, stock battery and
+DistillationTower/FoodProcessor CDOs, and bounded native decoding establish:
+
+- ModuleConfigData is a native struct; EVoyageModuleType Passive=0, Active=1.
+  Source mirror is partial and requires tagged cooking, not ABI layout copying.
+- VoyageModuleComponent.GetResourceAmount takes EModuleResourceType, returns
+  double. RemoveResource takes Type, double RemoveAmount, RemovalType and returns
+  bool. ConsumptionAfterModifiers=1 bypasses a second consumption modifier.
+- Base debit checks balance and subtracts only on success, unless native
+  overconsumption is enabled. Never use a HasPower flag as a debit receipt.
+- SetCustomConsumption takes three doubles: InAcceptanceFilter,
+  InMaxResourceAmount, InConsumptionON. It writes base configuration only.
+  VoyageCustomModuleComponent overrides max capacity through its own maps;
+  its use cannot be mixed with a base-only capacity setter.
+- Native operation consumption divides W by 3600 times a runtime scale before
+  applying elapsed seconds; electricity storage is Wh, not joules. Do not infer
+  exact real-time supply rates from nominal W alone without the runtime test.
+
+Evidence is ignored artifacts/harpoon-cannon/energy-*.json; bounded decoder
+windows include base constructor14548B260, custom constructor14548A5C0,
+RemoveResource1454B7690/1454B74D0, ConsumeOperationResources14549B690,
+time factor1454A7C40, and SetCustomConsumption1454BB690. These are fingerprinted
+research addresses, never hard-coded runtime calls. The mod emits reflected calls
+and ships no mirror DLL. Integration and weak-grid timing remain runtime-pending;
+current paired release manifests and test gates belong in the backlog.
+
 ## Runtime settings reader (current build revalidation)
 
 Steam25191271/executable747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
@@ -672,3 +702,25 @@ Native widget mapping: VoyageBaseUserWidget parent, eight own fields; ContextAss
 and bFilterByActionType field-only mirror, never instantiated/cooked as native
 child. Public evidence paths in mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md.
 Revalidate all contracts after EXE/mapping change. Runtime discovery still pending.
+
+## Electrical socket authoring contract
+
+Steam25191271, UE5.8, EXE
+747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+Public Inspect-VoyageAsset mapping queries confirm:
+- VoyageModuleSocketViewComponent : ModuleSocketComponent : BoxComponent.
+  DataAsset is SoftObjectProperty on the view; SocketID (UInt32),
+  bAutoInitialize and Port (ModuleSocketIOData) belong to ModuleSocketComponent.
+- ModuleSocketIOData.DefaultDirection uses EModuleSocketType; ST_Input=1.
+- VoyageModuleComponent owns bUseSocketCustomTarget and SocketCustomTarget
+  (Engine.ComponentReference). The target must name the actual socket component.
+- Consumption maps use EModuleResourceType enum keys (Electricity=0), double values.
+
+Stock FoodProcessor confirms electric DataAsset path and input DefaultDirection.
+The generator writes a soft path directly: it must neither load stock assets
+into the editor nor instantiate UObject/DataAsset reference stubs for that path.
+These partial native mirrors REQUIRE tagged properties. Build-Shell verifies
+every inventory package header after cook; Validate-Shell independently reads
+the candidate container and checks socket reference, input direction and resource
+maps. Compile/cook/readback are authoring evidence, not runtime energy validation.
+Renew mappings, stock reference and cooked readback after any fingerprint change.

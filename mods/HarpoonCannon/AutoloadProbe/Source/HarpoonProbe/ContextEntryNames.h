@@ -3,6 +3,8 @@
 namespace ContextEntryNames
 {
 inline const FName Ready(TEXT("HarpoonEntryReady"));
+inline const FName ModelEntry(TEXT("HarpoonModelEntryReference"));
+inline const FName BoxExtentPin(TEXT("InBoxExtent"));
 inline const FName InteractBlocks(TEXT("HarpoonEntryInteractBlocks"));
 inline const FName CollisionChannelPin(TEXT("Channel"));
 inline constexpr TCHAR InteractChannelValue[] = TEXT("ECC_GameTraceChannel1");
@@ -38,7 +40,9 @@ inline const FName ChildActors(TEXT("OutActors"));
 inline const FName Recurse(TEXT("bRecursivelyIncludeAttachedActors"));
 inline const FName Spawned(TEXT("HarpoonPreparedCount"));
 inline const FName WasOccupied(TEXT("HarpoonWasOccupied"));
-inline constexpr TCHAR InteractActionPath[] = TEXT("/Game/Game/Input/Character/IAV_Interact.IAV_Interact");
+// Secondary character interaction (default F), as used for drone entry.
+// Keep primary interaction (default E) available for the electrical socket.
+inline constexpr TCHAR InteractActionPath[] = TEXT("/Game/Game/Input/Character/IAV_InteractTwo.IAV_InteractTwo");
 inline constexpr TCHAR ActionName[] = TEXT("HarpoonEnter");
 inline constexpr TCHAR Label[] = TEXT("Enter Harpoon");
 inline constexpr TCHAR LoopPackage[] = TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros");
@@ -50,7 +54,7 @@ inline constexpr TCHAR ProviderNo[] = TEXT("Entry provider observed (ANY, sticky
 inline constexpr TCHAR CallbackYes[] = TEXT("Entry callback observed (ANY, sticky): YES");
 inline constexpr TCHAR CallbackNo[] = TEXT("Entry callback observed (ANY, sticky): NO");
 inline constexpr float ScanInterval = 1.0f;
-inline const FVector BoxExtent(95.0f, 90.0f, 50.0f);
-// Station origin is (-170,0,140) relative to shell: query surrounds base.
-inline const FVector BoxOffset(170.0f, 0.0f, -85.0f);
+// Runtime geometry is copied from the shell's manifest-authored entry reference.
+inline const FVector BoxExtent(1.0f, 1.0f, 1.0f);
+inline const FVector BoxOffset = FVector::ZeroVector;
 }

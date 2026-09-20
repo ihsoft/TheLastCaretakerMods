@@ -7,6 +7,7 @@
 // Module descriptor is Runtime so UHT omits PKG_EditorOnly; editor usage only,
 // and the release inventory must still exclude every native binary.
 #include "Components/ActorComponent.h"
+#include "ModuleResourceType.h"
 #include "VoyageModuleComponent.generated.h"
 UCLASS(BlueprintType)
 class VOYAGE_API UVoyageModuleComponent : public UActorComponent
@@ -21,4 +22,21 @@ public:
     UPROPERTY() bool bRegisterModule = false;
     UPROPERTY() TObjectPtr<UObject> ModuleConfigData;
     UPROPERTY(BlueprintReadOnly, Category="HarpoonReadOnly") TObjectPtr<UObject> ItemAsset;
+
+    // Steam25191271 native registration/thunk and stock FoodProcessor call.
+    // Read-only methods; module lifecycle/consumption is not ActorComponent activation.
+    UFUNCTION(BlueprintPure, Category="HarpoonReadOnly")
+    bool HasPower() const { return false; }
+
+    UFUNCTION(BlueprintPure, Category="HarpoonReadOnly")
+    bool HasSocketConnection() const { return false; }
+
+    UFUNCTION(BlueprintPure, Category="HarpoonReadOnly")
+    double GetResourceAmount(EModuleResourceType Type) const { return 0; }
+
+    UFUNCTION(BlueprintCallable, Category="HarpoonEnergy")
+    bool RemoveResource(EModuleResourceType Type, double RemoveAmount, EModuleResourceRemovalType RemovalType) { return false; }
+
+    UFUNCTION(BlueprintCallable, Category="HarpoonEnergy")
+    void SetCustomConsumption(double InAcceptanceFilter, double InMaxResourceAmount, double InConsumptionON) {}
 };

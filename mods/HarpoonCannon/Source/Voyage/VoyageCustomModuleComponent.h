@@ -7,7 +7,9 @@
 
 #pragma once
 
+#include "Components/ActorComponent.h"
 #include "VoyageModuleComponent.h"
+#include "ModuleResourceType.h"
 #include "VoyageCustomModuleComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVoyageItemConsumedDelegate);
@@ -18,10 +20,9 @@ class VOYAGE_API UVoyageCustomModuleComponent : public UVoyageModuleComponent
     GENERATED_BODY()
 
 public:
-    // Exact 20-property derived-class prefix. Container inner types are
-    // alignment-only editor placeholders: this probe does not serialize any of
-    // these values, but their presence keeps inherited ItemAsset at the same
-    // unversioned field index as the runtime class.
+    // Historical prefix fields remain at empty defaults. Only ConsumptionsOn
+    // and ConsumptionsStandby are authored here, with exact native enum keys.
+    // This partial mirror requires tagged cooking.
     UPROPERTY()
     FVoyageItemConsumedDelegate OnItemConsumedDelegate;
 
@@ -47,10 +48,10 @@ public:
     TMap<uint8, double> MaxResources;
 
     UPROPERTY()
-    TMap<uint8, double> ConsumptionsOn;
+    TMap<EModuleResourceType, double> ConsumptionsOn;
 
     UPROPERTY()
-    TMap<uint8, double> ConsumptionsStandby;
+    TMap<EModuleResourceType, double> ConsumptionsStandby;
 
     UPROPERTY()
     TMap<UObject*, double> ItemConsumptionsOn;
@@ -81,4 +82,5 @@ public:
 
     UPROPERTY()
     TMap<uint8, double> TemporaryResourceMax;
+
 };

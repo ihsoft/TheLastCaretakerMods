@@ -222,6 +222,15 @@ None inside. Limited displacement in that sample was not a strong-motion proof.
 
 ## View, input and HUD
 
+Widget-local updates must call UTextBlock::SetText on the widget's own field.
+The station generator's FGraph::Text/Number/BooleanText helpers target an external
+observer through HudClass and HudInstance; Text silently returns for null HudClass.
+Using them inside FGraph(HudGraph,nullptr) leaves designer defaults unchanged,
+and unused pure power/query expressions can disappear during compilation.
+Verify cooked data-to-widget calls, not merely visible default labels or source
+query nodes. In particular, "module unavailable" as a designer default does not
+prove that module lookup ran or failed.
+
 Use the common vehicle parent, not Drone/Forklift behavior. Enhanced Input actions
 have their own execution handlers; GetProvidedActionsBP describes hints, not
 movement execution. Matching context identity connects descriptor and hint widget.

@@ -26,6 +26,11 @@
     "powerSocketAnchor": "ElectricalSocket_Reference",
     "ammoInstances": []
   },
+  "entryInteraction": {
+    "node": "BASE",
+    "centerCm": [-135, 0, 90],
+    "sizeCm": [40, 60, 60]
+  },
   "fabricatorCollision": {
     "node": "Foundation_BottomPlate__Gray",
     "sizeCm": [

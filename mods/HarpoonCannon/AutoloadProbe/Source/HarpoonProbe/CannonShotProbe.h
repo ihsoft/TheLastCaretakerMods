@@ -1,5 +1,7 @@
 #pragma once
 #include "../../../HarpoonModelContract.h"
+#include "VoyageModuleComponent.h"
+#include "StationEnergy.h"
 // Native swept projectile with a single direct-hit combat submission.
 namespace Shot
 {
@@ -144,10 +146,15 @@ UClass* CreateCannonShot()
     check(SaveDedicatedAsset(BP)); return BP->GeneratedClass;
 }
 
-void AddCannonFire(FGraph& G)
+void AddCannonFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail)
 {
+    // Independent tick branch: charging continues with nobody operating the gun.
+    G.Tail = TickTail; UpdateAutomaticCharge(G, DeltaSeconds);
     auto* Event=NewObject<UK2Node_EnhancedInputAction>(G.Graph); Event->InputAction=LoadObject<UInputAction>(nullptr,HarpoonInputNames::Fire); check(Event->InputAction); G.Node(Event); G.Tail=G.Pin(Event,DS::Started);
     G.Branch(ObserveCall(G,APawn::StaticClass(),GET_FUNCTION_NAME_CHECKED(APawn,IsPlayerControlled),OpticalSelf(G)));
+    FindEnergyModule(G);
+    // A premature press is ignored, never queued for a later automatic shot.
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), EnergyAmount(G), Charge::ShotWh));
     G.Write(Shot::SpawnedThisPress,nullptr,N::False); // no cooldown; each Started is independent
     G.Branch(G.Valid(G.Read(S::Anchor)));
     auto* Cannon=ObserveCall(G,UActorComponent::StaticClass(),OP::ComponentOwner,G.Read(S::Anchor));
@@ -157,6 +164,12 @@ void AddCannonFire(FGraph& G)
     auto* Cast=NewObject<UK2Node_DynamicCast>(G.Graph); Cast->TargetType=USceneComponent::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
     G.Link(G.Tail,G.Pin(Cast,P::Execute)); G.Link(G.Pin(Loop,CE::ArrayElement),Cast->GetCastSourcePin()); G.Tail=Cast->GetValidCastPin();
     auto* Already=G.Branch(G.Read(Shot::SpawnedThisPress)); G.Tail=G.Pin(Already,P::Else); // one shot even if duplicate muzzle tags exist
+    G.Branch(DebitEnergy(G)); // no free shot if native atomic withdrawal fails
+    // Claim this request before spawn/cast can fail, including duplicate tags.
+    G.Write(Shot::SpawnedThisPress, nullptr, N::True);
+    G.Write(Charge::Sampled, nullptr, N::False);
+    G.Write(Charge::Energy, nullptr, N::Zero); G.Write(Charge::Previous, nullptr, N::Zero); G.Write(Charge::Rate, nullptr, N::Zero);
+    SetEnergyDemand(G, true);
     auto* Location=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentLocation),Cast->GetCastResultPin());
     auto* Rotation=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentRotation),Cast->GetCastResultPin());
     auto* Transform=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,MakeTransform)); G.Link(Location,G.Pin(Transform,E::Location)); G.Link(Rotation,G.Pin(Transform,Shot::ActorRotation)); G.Default(Transform,E::Scale,N::UnitScale);
@@ -166,6 +179,5 @@ void AddCannonFire(FGraph& G)
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Operator,G.Read(N::OriginalPawn));
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Station,OpticalSelf(G));
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,ShotAttack::Controller,ObserveCall(G,APawn::StaticClass(),ShotAttack::GetController,OpticalSelf(G)));
-    G.Write(Shot::SpawnedThisPress,nullptr,N::True);
     auto* Finish=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,FinishSpawningActor)); G.Link(G.Pin(Spawn,P::ReturnValue),G.Pin(Finish,P::Actor)); G.Link(G.Pin(Transform,P::ReturnValue),G.Pin(Finish,P::SpawnTransform)); G.Exec(Finish);
 }

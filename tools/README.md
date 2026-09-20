@@ -103,6 +103,10 @@ Harpoon shell/station producers accept `-CacheRoot`; their local default is
 `P:\UnrealCache\TheLastCaretakerMods\UE5.8` (Zen in its `Zen` subdirectory).
 This is process-scoped selection, not a global cache migration or cleanup.
 
+Harpoon shell cooking uses tagged properties for its partial native mirrors.
+`Build-Shell.ps1` runs `GenerateHarpoonCannon -VerifyTagged` over the generated
+inventory before packaging, then independently validates the cooked container.
+
 GLB-first model inspection, direct previews and standard Blender conversions are
 collected in [tools/glb](glb/README.md). GLB is the editable source/handoff, not a
 generated preview of a procedural OBJ. The [owning model registry and guide](../models/HarpoonCannon/README.md)
@@ -170,8 +174,8 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 | MooringCable60m | [Release workflow](../mods/MooringCable60m/README.md) | `Build-LimitGraph.ps1` builds/cooks the attached/free limit graph outside the sandbox; `Build-Candidate.ps1 -GraphManifest` preserves fresh stock inheritance, sets 60 m manual / 20 m attached payout, verifies exactly three assets and creates a schema-2 release manifest; neither installs |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
-| Prepare Harpoon operator assets | [Preparation contract](../mods/HarpoonCannon/AutoloadProbe/README.md), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Probe.ps1 -StationInputsOnly` prepares seven authoring-only inputs; `-StationPrototype` prepares thirteen tagged station packages. Gates include explicit K2 entry-interface membership, exact function signature, cooked Interact=Block, container/header verification and schema-2 manifest. Initial execution must be outside the sandbox; neither mode installs |
-| Prepare HarpoonCannon shell assets | [Shell preparation](../mods/HarpoonCannon/README.md#current-shell-only-preparation), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Shell.ps1` validates the GLB registry/hash, owns native Interchange import and role binding, inventory-driven cook/package verification and `Validate-Shell.ps1 -ModelInventory` cooked checks, ZIP and schema-2 manifest. No installation. Gameplay validation remains a separate gate; see the owning backlog |
+| Prepare Harpoon operator assets | [Preparation contract](../mods/HarpoonCannon/AutoloadProbe/README.md), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Probe.ps1 -StationInputsOnly` prepares seven authoring-only inputs; `-StationPrototype` prepares thirteen tagged station packages. Gates include explicit K2 entry-interface membership, exact function signature, cooked Interact=Block, container/header verification and schema-2 manifest. Initial execution must be outside the sandbox. Optional `-Install` invokes the manifest installer after success, allowing dirty development sources but retaining closed-game/backup/readback gates |
+| Prepare HarpoonCannon shell assets | [Shell preparation](../mods/HarpoonCannon/README.md#current-shell-only-preparation), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Shell.ps1` reads the current GLB selected by the registry (no recorded model SHA/size gate), owns native Interchange import and role binding, inventory-driven cook/package verification and `Validate-Shell.ps1 -ModelInventory` cooked checks, ZIP and schema-2 manifest. Actual input hashes are recorded and must remain unchanged during preparation. Optional `-Install` uses the common guarded installer after success. Gameplay validation remains a separate gate |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a

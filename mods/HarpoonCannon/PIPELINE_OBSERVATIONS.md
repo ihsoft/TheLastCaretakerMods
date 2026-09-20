@@ -100,6 +100,20 @@ Current acceptance, pending gates and installation receipts live only in the
 
 ## Caller discipline
 
+- Electrical shell repair: repeated compile/generate patches missed the native
+  schema. Query mappings for ancestry, field owner and property type before
+  authoring a new component. JSON value shape alone is insufficient. Soft
+  references require no object stub; both UObject and UDataAsset are abstract.
+  Partial schemas require tagged cook plus independent readback. Tagged enum
+  JSON may omit the type prefix; validators may accept both exact spellings
+  while retaining the same enum-value check.
+- Repair used the public shell producer through build/generate/cook/header gate,
+  packaging and semantic verification. First readback stopped on enum spelling;
+  subsequent full run passed. No new tool family needed. Research failures were
+  a missing process ExecutionPolicy Bypass, an existing mapping-output identity,
+  and a relative ModContainer resolved against Paks; reuse returned evidence and
+  pass absolute candidate-container paths.
+
 Use quoted exact paths and directory -g searches; PowerShell does not implement
 Bash brace expansion and -LiteralPath does not expand wildcard names. Use a true
 PowerShell array for a string-array parameter, not comma text through -File.

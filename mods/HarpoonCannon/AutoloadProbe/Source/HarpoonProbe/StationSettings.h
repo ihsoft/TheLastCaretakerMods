@@ -6,7 +6,7 @@ inline const FName Yaw(TEXT("HarpoonYawLimitDegrees"));
 inline const FName PitchMin(TEXT("HarpoonMinimumPitchDegrees"));
 inline const FName PitchMax(TEXT("HarpoonMaximumPitchDegrees"));
 inline const FName FilePath(TEXT("InPath")); // Voyage declaring signature.
-inline constexpr TCHAR RelativePath[] = TEXT("Config/HarpoonCannon.ini");
+inline constexpr TCHAR RelativePath[] = TEXT("Paks/HarpoonCannon.ini");
 inline constexpr TCHAR Separator[] = TEXT("=");
 inline constexpr TCHAR MouseKey[] = TEXT("OpticsMousePercent");
 inline constexpr TCHAR YawKey[] = TEXT("YawLimitDegrees");
@@ -59,9 +59,9 @@ void ReadStationSettings(FGraph& G)
     G.Write(Settings::PitchMax, nullptr, Aim::MaximumPitch);
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(G.Graph));
     G.Link(G.Tail, G.Pin(Work, P::Execute)); G.Tail = Work->GetThenPinGivenIndex(0);
-    auto* Saved = G.Call(UBlueprintPathsLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UBlueprintPathsLibrary, ProjectSavedDir));
+    auto* Content = G.Call(UBlueprintPathsLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UBlueprintPathsLibrary, ProjectContentDir));
     auto* Path = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Concat_StrStr));
-    G.Link(G.Pin(Saved, P::ReturnValue), G.Pin(Path, P::Binary::LeftOperand)); G.Default(Path, P::Binary::RightOperand, Settings::RelativePath);
+    G.Link(G.Pin(Content, P::ReturnValue), G.Pin(Path, P::Binary::LeftOperand)); G.Default(Path, P::Binary::RightOperand, Settings::RelativePath);
     auto* Read = G.Call(UVoyageEditorBlueprintFunctionLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UVoyageEditorBlueprintFunctionLibrary, LoadFileToArray));
     G.Link(G.Pin(Path, P::ReturnValue), G.Pin(Read, Settings::FilePath)); G.Exec(Read);
     auto* Loop = ContextLoop(G, G.Pin(Read, P::ReturnValue));

@@ -10,4 +10,6 @@ inline const FName PitchTag(TEXT("Harpoon.Model.Pitch"));
 inline const FName MuzzleTag(TEXT("Harpoon.Model.Muzzle"));
 inline const FName SightTag(TEXT("Harpoon.Model.Sight"));
 inline const FName SightComponent(TEXT("HarpoonSight"));
+inline const FName EntryTag(TEXT("Harpoon.Model.Entry"));
+inline const FName EntryComponent(TEXT("HarpoonEntryReference"));
 }

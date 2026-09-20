@@ -16,7 +16,9 @@ inline constexpr TCHAR YawKey[] = TEXT("yaw");
 inline constexpr TCHAR PitchKey[] = TEXT("pitch");
 inline constexpr TCHAR SightKey[] = TEXT("sight");
 inline constexpr TCHAR MuzzleKey[] = TEXT("muzzle");
+inline constexpr TCHAR PowerSocketAnchorKey[] = TEXT("powerSocketAnchor");
 inline constexpr TCHAR FabricatorKey[] = TEXT("fabricatorCollision");
+inline constexpr TCHAR EntryKey[] = TEXT("entryInteraction");
 inline constexpr TCHAR CollisionNodeKey[] = TEXT("node");
 inline constexpr TCHAR SizeKey[] = TEXT("sizeCm");
 inline constexpr TCHAR CenterKey[] = TEXT("centerCm");
@@ -70,6 +72,27 @@ inline int32 Generate()
     for (const auto& Value : Roles->GetArrayField(AmmoKey)) if (!Actors.Contains(Value->AsString())) return 1;
     AActor* ModelRoot = Actors.FindChecked(Roles->GetStringField(RootKey));
     AActor* Base = Actors.FindChecked(Roles->GetStringField(BaseKey));
+    FString PowerAnchorName;
+    if (!Roles->TryGetStringField(PowerSocketAnchorKey, PowerAnchorName) || !Actors.Contains(PowerAnchorName))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Set nodes.powerSocketAnchor to an existing empty GLB node under BASE"));
+        return 1;
+    }
+    AActor* PowerAnchor = Actors.FindChecked(PowerAnchorName);
+    AActor* PowerAncestor = PowerAnchor;
+    while (PowerAncestor && PowerAncestor != Base)
+    {
+        if (PowerAncestor == Actors.FindChecked(Roles->GetStringField(YawKey)) ||
+            PowerAncestor == Actors.FindChecked(Roles->GetStringField(PitchKey))) break;
+        PowerAncestor = PowerAncestor->GetAttachParentActor();
+    }
+    if (PowerAncestor != Base || PowerAnchor == Base ||
+        Cast<UStaticMeshComponent>(PowerAnchor->GetRootComponent()) ||
+        !PowerAnchor->GetActorScale3D().Equals(FVector::OneVector, 0.0001))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Power socket anchor must be an empty stationary descendant of BASE with unit world scale: %s"), *PowerAnchorName);
+        return 1;
+    }
     // Existing controls write neutral-relative yaw/pitch; reject changed axis
     // contracts rather than silently applying rotations in the wrong frame.
     for (const TCHAR* Key : {RootKey, BaseKey, YawKey, PitchKey})
@@ -94,17 +117,31 @@ inline int32 Generate()
     }
     if (Ancestor != Base || !CollisionActor->GetActorTransform().Equals(FTransform::Identity, 0.0001))
     { UE_LOG(LogTemp, Error, TEXT("Collision carrier requires stationary base ancestry and world identity: %s"), *CarrierName); return 1; }
-    auto ReadVector = [&](const TCHAR* Key, FVector& Out)
+    auto ReadVector = [&](const TSharedPtr<FJsonObject>& Config, const TCHAR* Key, FVector& Out)
     {
         const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
-        if (!CollisionConfig->TryGetArrayField(Key, Values) || Values->Num() != 3) return false;
+        if (!Config->TryGetArrayField(Key, Values) || Values->Num() != 3) return false;
         double XYZ[3];
         for (int32 I = 0; I < 3; ++I) if (!(*Values)[I]->TryGetNumber(XYZ[I]) || !FMath::IsFinite(XYZ[I])) return false;
         Out = FVector(XYZ[0], XYZ[1], XYZ[2]); return true;
     };
     FVector BoxSize, BoxCenter;
-    if (!ReadVector(SizeKey, BoxSize) || !ReadVector(CenterKey, BoxCenter) || BoxSize.GetMin() <= 0)
+    if (!ReadVector(CollisionConfig, SizeKey, BoxSize) || !ReadVector(CollisionConfig, CenterKey, BoxCenter) || BoxSize.GetMin() <= 0)
     { UE_LOG(LogTemp, Error, TEXT("Collision box requires finite center and positive size in cm")); return 1; }
+    const auto EntryConfig = Registry->GetObjectField(EntryKey);
+    AActor* EntryParent = Actors.FindRef(EntryConfig->GetStringField(CollisionNodeKey));
+    FVector EntrySize, EntryCenter;
+    if (!EntryParent || !ReadVector(EntryConfig, SizeKey, EntrySize) ||
+        !ReadVector(EntryConfig, CenterKey, EntryCenter) || EntrySize.GetMin() <= 0)
+    { UE_LOG(LogTemp, Error, TEXT("Entry interaction requires a model node, finite center and positive full size in Unreal cm")); return 1; }
+    AActor* EntryAncestor = EntryParent;
+    while (EntryAncestor && EntryAncestor != Base)
+    {
+        if (EntryAncestor == Actors.FindChecked(Roles->GetStringField(YawKey)) || EntryAncestor == Actors.FindChecked(Roles->GetStringField(PitchKey))) break;
+        EntryAncestor = EntryAncestor->GetAttachParentActor();
+    }
+    if (EntryAncestor != Base || !EntryParent->GetActorScale3D().Equals(FVector::OneVector, 0.0001))
+    { UE_LOG(LogTemp, Error, TEXT("Entry interaction must follow a stationary unit-scale node under BASE")); return 1; }
     UStaticMesh* CollisionMesh = CastChecked<UStaticMeshComponent>(CollisionActor->GetRootComponent())->GetStaticMesh();
     int32 CollisionUses = 0;
     for (const auto& Pair : Actors) if (auto* C = Cast<UStaticMeshComponent>(Pair.Value->GetRootComponent())) if (C->GetStaticMesh() == CollisionMesh) ++CollisionUses;
@@ -136,7 +173,25 @@ inline int32 Generate()
     MountTemplate->SetSimulatePhysics(false);
     auto* Dynamic = AddRootNode(SCS, UVoyageDynamicCollisionComponent::StaticClass(), CannonAssetNames::DynamicCollisionName);
     CastChecked<UVoyageDynamicCollisionComponent>(Dynamic->ComponentTemplate)->bAutoWeld = true;
-    BP->ComponentClassOverrides.Emplace(FBPComponentClassOverride(CannonAssetNames::ModuleComponentName, UVoyageCustomModuleComponent::StaticClass()));
+    // Attach after importing the hierarchy; no fixed offset or second axis conversion.
+    auto* Electric = SCS->CreateNode(USceneComponent::StaticClass(), CannonAssetNames::ElectricComponentName);
+    CastChecked<USceneComponent>(Electric->ComponentTemplate)->SetRelativeTransform(FTransform::Identity);
+    auto* ElectricSocketClass = UVoyageModuleSocketViewComponent::StaticClass();
+    if (!ElectricSocketClass)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Voyage electric socket class is unavailable"));
+        return 1;
+    }
+    auto* ElectricSocket = AddChildNode(SCS, Electric, ElectricSocketClass, CannonAssetNames::ElectricSocketName);
+    auto* ElectricSocketTemplate = Cast<UVoyageModuleSocketViewComponent>(ElectricSocket->ComponentTemplate);
+    if (!ElectricSocketTemplate) return 1;
+    ElectricSocketTemplate->SetRelativeLocation(FVector::ZeroVector);
+    ElectricSocketTemplate->SocketID = CannonAssetNames::ElectricSocketId;
+    ElectricSocketTemplate->bAutoInitialize = false;
+    ElectricSocketTemplate->Port.DefaultDirection = EModuleSocketType::ST_Input;
+    ElectricSocketTemplate->DataAsset = TSoftObjectPtr<UObject>(FSoftObjectPath(CannonAssetNames::ElectricSocketDataObjectPath));
+    // Native base module owns the bounded electric buffer. CustomModule has
+    // separate MaxResources/consumption maps that shadow base configuration.
     TMap<AActor*, USCS_Node*> Nodes;
     TArray<TSharedPtr<FJsonValue>> ComponentEvidence;
     while (Nodes.Num() < Actors.Num())
@@ -179,10 +234,29 @@ inline int32 Generate()
         }
         if (Nodes.Num() == Previous) return 1;
     }
+    Nodes.FindChecked(PowerAnchor)->AddChildNode(Electric);
+    auto* Entry = AddChildNode(SCS, Nodes.FindChecked(EntryParent), UBoxComponent::StaticClass(), HarpoonModelContract::EntryComponent);
+    auto* EntryTemplate = CastChecked<UBoxComponent>(Entry->ComponentTemplate);
+    EntryTemplate->SetRelativeLocation(EntryCenter);
+    EntryTemplate->SetBoxExtent(EntrySize * 0.5);
+    EntryTemplate->SetCollisionProfileName(CannonAssetNames::NoCollisionProfileName);
+    EntryTemplate->SetGenerateOverlapEvents(false);
+    EntryTemplate->ComponentTags.Add(HarpoonModelContract::EntryTag);
     if (!CompileGeneratedBlueprint(BP)) return 1;
     UVoyageModuleComponent* Module = CastChecked<AVoyageModuleActor>(BP->GeneratedClass->GetDefaultObject())->ModuleComponent;
-    if (!Module || !Module->IsA<UVoyageCustomModuleComponent>()) return 1;
+    if (!Module || Module->GetClass() != UVoyageModuleComponent::StaticClass()) return 1;
     Module->ItemAsset = CreateLeafItemReferenceStub(); if (!Module->ItemAsset) return 1;
+    Module->ConfigData.bAutoStartModule = true;
+    Module->ConfigData.ModuleType = EVoyageModuleType::Active;
+    Module->ConfigData.bAcceptResourceOffer = true;
+    Module->ConfigData.bAcceptResourceOfferOff = true; // an empty receiver must be able to recover power
+    Module->ConfigData.bAcceptResourceOfferProduction = true;
+    Module->ConfigData.ResourceBandwidthInput = CannonAssetNames::HarpoonEnergyConsumptionOn;
+    Module->ConfigData.MaxResourceAmount = CannonAssetNames::HarpoonIdleBufferWh;
+    Module->ConfigData.ResourceConsumptionOn = CannonAssetNames::HarpoonEnergyConsumptionOn;
+    Module->ConfigData.ResourceConsumptionStandby = CannonAssetNames::HarpoonEnergyConsumptionStandby;
+    Module->SocketCustomTarget.ComponentProperty = CannonAssetNames::ElectricSocketName;
+    Module->bUseSocketCustomTarget = true;
     TSet<FString> PackageNames;
     for (UObject* Asset : Imported)
     {
@@ -198,6 +272,7 @@ inline int32 Generate()
     for (const FString& Name : Sorted) Packages.Add(MakeShared<FJsonValueString>(Name));
     Inventory->SetArrayField(PackagesKey, Packages); Inventory->SetArrayField(ComponentsKey, ComponentEvidence);
     Inventory->SetObjectField(FabricatorKey, CollisionConfig);
+    Inventory->SetObjectField(EntryKey, EntryConfig);
     Inventory->SetStringField(CollisionKey, CollisionMesh->GetOutermost()->GetName()); Inventory->SetObjectField(RolesKey, Roles);
     FString Json; FJsonSerializer::Serialize(Inventory, TJsonWriterFactory<>::Create(&Json));
     if (!FFileHelper::SaveStringToFile(Json, *FPaths::Combine(FPaths::ProjectDir(), InventoryFile))) return 1;

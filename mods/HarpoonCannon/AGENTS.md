@@ -13,6 +13,12 @@ Root ../../AGENTS.md applies. This file contains only mod-owned constraints.
   architecture edits if another owner is actively changing that file.
 - User permits scoped Harpoon installs without asking again when game is closed.
   Never stop the game. Keep all manifest/fingerprint/backup/readback gates.
+- For requested Harpoon builds, invoke the producer with -Install by default.
+  For an already prepared release, invoke the common manifest installer without
+  rebuilding solely to install. Attempt installation, then report any refusal or
+  failure; do not ask for another install confirmation. This does not bypass the
+  closed-game gate or authorize stopping the game. Explicit prepare-only requests
+  override this default.
 - Retain the accepted installation during repository-only preparation. Install or
   restore only through exact manifests and the closed-game gate; no automatic
   rollback after a successful test. State the result and next action.

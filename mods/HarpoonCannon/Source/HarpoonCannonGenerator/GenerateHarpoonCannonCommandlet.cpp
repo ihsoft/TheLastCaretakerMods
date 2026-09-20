@@ -22,11 +22,14 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "UObject/SavePackage.h"
+#include "UObject/PackageFileSummary.h"
+#include "UObject/UnrealType.h"
 #include "VoyageCustomModuleComponent.h"
 #include "VoyageDynamicCollisionComponent.h"
 #include "VoyageItem.h"
 #include "VoyageModuleActor.h"
 #include "VoyageModuleComponent.h"
+#include "VoyageModuleSocketViewComponent.h"
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "InterchangeManager.h"
@@ -97,6 +100,7 @@ USCS_Node* AddChildNode(
     Parent->AddChildNode(Node);
     return Node;
 }
+
 }
 
 #include "GlbShell.h"
@@ -113,6 +117,29 @@ UGenerateHarpoonCannonCommandlet::UGenerateHarpoonCannonCommandlet()
 
 int32 UGenerateHarpoonCannonCommandlet::Main(const FString& Params)
 {
+    if (FParse::Param(*Params, CannonAssetNames::VerifyTaggedParameter))
+    {
+        FString Json;
+        TSharedPtr<FJsonObject> Inventory;
+        if (!FFileHelper::LoadFileToString(Json, *FPaths::Combine(FPaths::ProjectDir(), HarpoonGlb::InventoryFile)) ||
+            !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Json), Inventory)) return 1;
+        for (const auto& Value : Inventory->GetArrayField(HarpoonGlb::PackagesKey))
+        {
+            FString Relative = Value->AsString();
+            if (!Relative.RemoveFromStart(CannonAssetNames::GamePackagePrefix)) return 1;
+            const FString File = FPaths::Combine(FPaths::ProjectDir(), CannonAssetNames::CookedContentDirectory, Relative) + FPackageName::GetAssetPackageExtension();
+            TUniquePtr<FArchive> Reader(IFileManager::Get().CreateFileReader(*File));
+            if (!Reader) return 1;
+            FPackageFileSummary Summary; *Reader << Summary;
+            if (Reader->IsError() || (Summary.GetPackageFlags() & PKG_UnversionedProperties))
+            {
+                UE_LOG(LogTemp, Error, TEXT("Tagged property gate failed: %s"), *File);
+                return 1;
+            }
+        }
+        UE_LOG(LogTemp, Display, TEXT("All inventory packages use tagged properties"));
+        return 0;
+    }
     if (!FParse::Param(*Params, CannonAssetNames::ShellOnlyParameter) ||
         CannonAssetNames::IncludeBaseGameLoadedConnectorReference)
     {

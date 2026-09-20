@@ -1,6 +1,7 @@
 #pragma once
 #include "../../../HarpoonModelContract.h"
 #include "StationSettings.h"
+#include "StationEnergyHud.h"
 namespace ZoomTest
 {
 inline const FName Wide(TEXT("HarpoonWideView"));
@@ -86,6 +87,8 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     Tick->bOverrideFunction = true; G.Node(Tick); G.Tail = G.Pin(Tick, P::Then);
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
     G.Link(G.Tail, G.Pin(Work, P::Execute)); G.Tail = Work->GetThenPinGivenIndex(0);
+    auto* SafetyAndEnergy = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
+    G.Link(G.Tail, G.Pin(SafetyAndEnergy, P::Execute)); G.Tail = SafetyAndEnergy->GetThenPinGivenIndex(0);
     ContextStationSafety(G);
     G.Tail = Work->GetThenPinGivenIndex(1);
     G.Branch(G.Valid(G.Read(S::Anchor)));
@@ -185,7 +188,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     SetZoom(false);
     G.Tail = G.Pin(Wide, P::Else); SetZoom(true);
 
-    AddCannonFire(G);
+    AddCannonFire(G, G.Pin(Tick, P::DeltaSeconds), SafetyAndEnergy->GetThenPinGivenIndex(1));
     // Real Enhanced Input events on the possessed station, not observer key polling.
     auto ActionNode = [&](const TCHAR* Package, FName Trigger)
     {
@@ -223,6 +226,9 @@ UClass* CreateDedicatedStation()
     auto* BP = FKismetEditorUtilities::CreateBlueprint(AVoyageVehiclePawn::StaticClass(), CreatePackage(DS::OperatorPackage),
         *FPackageName::GetLongPackageAssetName(DS::OperatorPackage), BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
     AddVariable(BP, Shot::SpawnedThisPress, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, Charge::Sampled, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, Charge::Module, UEdGraphSchema_K2::PC_Object, UVoyageModuleComponent::StaticClass());
+    for (FName Field : {Charge::Energy, Charge::Previous, Charge::Rate}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, ZoomTest::Wide, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, EyeAim::Yaw, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, EyeAim::Pitch, UEdGraphSchema_K2::PC_Real);
@@ -318,6 +324,10 @@ UClass* CreateDedicatedStation()
     AddScopeText(Range::TargetName, N::EmptyText, DS::TargetNameOffsetY, true);
     AddScopeText(Range::TargetRange, N::EmptyText, DS::TargetRangeOffsetY, true);
     AddScopeText(ZoomTest::WideCenter, ZoomTest::WideCenterText, 0.0f, true);
+    AddScopeText(EnergyHud::Connection, EnergyHud::UnknownConnection, EnergyHud::ConnectionOffset, true);
+    AddScopeText(EnergyHud::Power, EnergyHud::UnknownPower, EnergyHud::PowerOffset, true);
+    AddScopeText(EnergyHud::Progress, EnergyHud::EmptyCharge, EnergyHud::ProgressOffset, true);
+    AddScopeText(EnergyHud::Rate, EnergyHud::EmptyRate, EnergyHud::RateOffset, true);
     auto* Host = Hud->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), Hint::Root); Host->bIsVariable = true;
     auto* HostSlot = Canvas->AddChildToCanvas(Host); HostSlot->SetAnchors(FAnchors(0.0f, 1.0f));
     HostSlot->SetAlignment(FVector2D(0.0f, 1.0f)); HostSlot->SetPosition(DS::HintHostOffset); HostSlot->SetAutoSize(true);
@@ -355,6 +365,7 @@ UClass* CreateDedicatedStation()
     SetOpticalVisibility(ZoomTest::Hidden); SetWideCenter(ZoomTest::Shown); auto* WideTail = HG.Tail;
     HG.Tail = HG.Pin(WideHud, P::Else); SetOpticalVisibility(ZoomTest::Shown); SetWideCenter(ZoomTest::Hidden);
     StationMerge(HG, {WideTail, HG.Tail});
+    UpdateStationEnergyHud(HG, Station->GetCastResultPin(), BP->GeneratedClass);
     AddStationHintConstruction(Hud);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud); FKismetEditorUtilities::CompileBlueprint(Hud);
     check(Hud->Status != BS_Error);

@@ -23,6 +23,12 @@ No native producer in sandbox; no dotnet run. SkipBuild only for an unchanged bi
 the shell producer. Filesystem DDC and explicit Zen data path use this directory;
 old caches and global Unreal settings are left unchanged.
 
+Add `-Install` to install the successfully prepared release without a separate
+command. It uses the common manifest installer with dirty development sources
+allowed, closed-game checks, exact backups and installed hash readback. The final
+JSON reports `installed` and includes the installation receipt. A failed build
+never installs; a failed installation leaves the prepared release available.
+
 StationInputsOnly is a mutually exclusive authoring-only preflight: seven input
 assets, no runtime actor/HUD/autoload. It is not a playable station.
 The common station contains exactly thirteen tagged packages:
