@@ -23,6 +23,7 @@
     "pitch": "PITCH",
     "sight": "Muzzle",
     "muzzle": "Muzzle",
+    "powerSocketAnchor": "ElectricalSocket_Reference",
     "ammoInstances": []
   },
   "fabricatorCollision": {
