@@ -1,5 +1,5 @@
-"""Blender background GLB import + direct preview, without rewriting the source.
-Usage: --input source.glb --output fresh.png. Standard bundled glTF importer.
+"""Blender 5+ background GLB import + preview, without rewriting the source.
+Usage: --input source.glb --output fresh.png. Built-in glTF importer.
 """
 import argparse
 import hashlib
@@ -15,9 +15,14 @@ p.add_argument('--output', type=Path, required=True)
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert bpy.app.background and not a.output.exists()
 assert a.output.suffix.lower() == '.png'
+if bpy.app.version < (5, 0, 0):
+    raise RuntimeError('Blender 5.0 or newer is required')
+try:
+    bpy.ops.import_scene.gltf.get_rna_type()
+except (AttributeError, RuntimeError) as error:
+    raise RuntimeError('Blender built-in glTF importer is unavailable') from error
 before = hashlib.sha256(a.input.read_bytes()).hexdigest()
 bpy.ops.wm.read_factory_settings(use_empty=True)
-bpy.ops.wm.addon_enable(module='io_scene_gltf2')
 assert 'FINISHED' in bpy.ops.import_scene.gltf(filepath=str(a.input.resolve()))
 scene = bpy.context.scene
 meshes = [o for o in scene.objects if o.type == 'MESH']

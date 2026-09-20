@@ -176,14 +176,20 @@ def main():
     require(bool(args.input) != bool(args.registry), 'Supply input OR --registry')
     if args.registry:
         registry = json.loads(args.registry.read_text(encoding='utf-8'))
-        require(registry['schemaVersion'] == 1 and registry['format'] == 'GLB', 'Unsupported model registry')
-        args.input = (args.registry.parent / registry['source']['path']).resolve()
-        args.expect_sha256 = registry['source']['sha256']
+        require(registry['schemaVersion'] == 1, 'Unsupported model registry')
+        if 'source' in registry:
+            args.input = (args.registry.parent / registry['source']['path']).resolve()
+            args.expect_sha256 = registry['source'].get('sha256')
+        else:
+            candidates = list(args.registry.parent.glob('*.glb'))
+            require(len(candidates) == 1, 'Registry directory must contain exactly one GLB')
+            args.input = candidates[0].resolve()
     report = inspect(args.input)
     if args.expect_sha256:
         require(report['sha256'] == args.expect_sha256.upper(), 'Source hash mismatch')
     if args.registry:
-        require(report['byteLength'] == registry['source']['byteLength'], 'Registry size mismatch')
+        if 'source' in registry and 'byteLength' in registry['source']:
+            require(report['byteLength'] == registry['source']['byteLength'], 'Registry size mismatch')
         active_names = {n['name'] for n in report['nodes'] if n['active']}
         for binding in registry.get('nodes', {}).values():
             for name in (binding if isinstance(binding, list) else [binding]):

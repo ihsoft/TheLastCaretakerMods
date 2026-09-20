@@ -27,7 +27,7 @@ $mapping = & tools/Get-VoyageMappings.ps1
   /Game/AssetSets/Sockets/SM_Socket_Electrical_Output `
   (Join-Path $referenceDir 'socket-source.json')
 if ($LASTEXITCODE -ne 0) { throw 'Extraction failed' }
-$blenderExe = 'K:\Program Files\Blender Foundation\Blender-80\blender.exe'
+$blenderExe = 'K:\Program Files\Blender Foundation\Blender 5.2\blender.exe'
 & $blenderExe --background --factory-startup --python-exit-code 1 `
   --python tools/VoyageMeshReference/make_socket_reference.py -- `
   --input (Join-Path $referenceDir 'socket-source.json') `
@@ -42,8 +42,9 @@ if ($LASTEXITCODE -ne 0) { throw 'GLB export/readback failed' }
 ```
 
 Keep GLB in a separate folder because both converters write a sibling audit.json.
-The exporter also supports `--verify-only`. Blender 2.80 sub39 tested; newer APIs
-are not validated. No extracted data is committed. No game build/install occurs.
+The exporter also supports `--verify-only`. Blender 5.0 or newer is required;
+Blender 5.2.2 LTS is the validated runtime. No extracted data is committed. No
+game build/install occurs.
 
 Extractor validates current EXE versus fingerprint, mapping hash/EXE binding,
 and canonical parser bundle hashes, then mounts ONLY stock global/pakchunk Windows

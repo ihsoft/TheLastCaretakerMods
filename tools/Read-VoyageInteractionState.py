@@ -1,6 +1,5 @@
 """Read-only gaze-cache observer, Steam 25191271 / UE5.8 only.
 
-Provenance: mods/HarpoonCannon/VEHICLE_ENTRY_RESEARCH.md, post-HC30.
 Native cache offsets are object-relative (not interface-relative). Revalidate
 all native layouts on fingerprint change. No game calls, injection or writes.
 """

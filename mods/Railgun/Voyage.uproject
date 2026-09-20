@@ -1,0 +1,30 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Modding",
+  "Description": "Editor-only project for generating the Railgun mod assets.",
+  "Plugins": [
+    {"Name": "AndroidFileServer", "Enabled": false},
+    {"Name": "EnhancedInput", "Enabled": true},
+    {"Name": "Interchange", "Enabled": true},
+    {"Name": "InterchangeEditor", "Enabled": true},
+    {"Name": "ModularGameplay", "Enabled": true}
+  ],
+  "Modules": [
+    {
+      "Name": "Voyage",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "RailgunModelGenerator",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "RailgunRuntimeGenerator",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ]
+}

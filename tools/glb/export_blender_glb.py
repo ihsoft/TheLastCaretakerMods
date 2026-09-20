@@ -1,8 +1,8 @@
-"""Thin Blender glTF exporter wrapper; run in a disposable background process.
+"""Thin Blender 5+ glTF exporter wrapper; use a disposable background process.
 
 Blender --background --factory-startup --python-exit-code 1 --python export_blender_glb.py
   -- --input model.blend --output model.glb
-Uses the bundled io_scene_gltf2 exporter, not a custom format converter.
+Uses Blender's built-in glTF exporter, not a custom format converter.
 """
 import argparse
 import hashlib
@@ -45,6 +45,12 @@ def main():
     args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
     source, output = args.input.resolve(), args.output.resolve()
     require(bpy.app.background, 'Use a separate background Blender process')
+    require(bpy.app.version >= (5, 0, 0), 'Blender 5.0 or newer is required')
+    try:
+        bpy.ops.import_scene.gltf.get_rna_type()
+        bpy.ops.export_scene.gltf.get_rna_type()
+    except (AttributeError, RuntimeError) as error:
+        raise RuntimeError('Blender built-in glTF import/export operators are unavailable') from error
     require(source.is_file() and source.suffix.lower() == '.blend', 'Input must be a .blend')
     require(output.suffix.lower() == '.glb', 'Output must be .glb')
     require(output.is_file() if args.verify_only else not output.exists(),
@@ -87,7 +93,6 @@ def main():
                 'emissiveFactor': [v * emission.inputs['Strength'].default_value
                                    for v in emission.inputs['Color'].default_value[:3]] if emission else [0, 0, 0],
             }
-    bpy.ops.wm.addon_enable(module='io_scene_gltf2')
     properties = bpy.ops.export_scene.gltf.get_rna_type().properties
     options = dict(filepath=str(output), export_format='GLB', export_yup=True,
                    export_normals=True, export_animations=False, export_cameras=False,
@@ -130,7 +135,6 @@ def main():
     # including the exporter's Z-up -> glTF Y-up -> Blender Z-up conversion.
     # Sharp-normal vertex splits are legal, so compare points in both directions.
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    bpy.ops.wm.addon_enable(module='io_scene_gltf2')
     require('FINISHED' in bpy.ops.import_scene.gltf(filepath=str(output)), 'GLB re-import failed')
     imported = {o.name: o for o in bpy.context.scene.objects if o.type == 'MESH'}
     require(set(imported) == set(expected_points), 'Re-import mesh coverage mismatch')
@@ -150,7 +154,7 @@ def main():
     require(sha(source) == source_hash, 'Source blend changed')
     audit = dict(source=str(source), sourceSha256=source_hash, output=str(output),
                  outputSha256=sha(output), blender=bpy.app.version_string,
-                 exporter='bundled io_scene_gltf2', nodes=len(nodes),
+                 exporter='Blender built-in glTF 2.0', nodes=len(nodes),
                  meshObjects=len(expected_triangles), triangles=sum(expected_triangles.values()),
                  materials=len(materials), hierarchyVerified=True, materialValuesVerified=True,
                  selfContained=True, sourceUnchanged=True, units='meters', upAxis='+Y',

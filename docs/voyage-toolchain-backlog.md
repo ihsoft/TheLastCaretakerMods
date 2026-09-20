@@ -1,5 +1,109 @@
 # Voyage toolchain active backlog
 
+## Material-library restart / used-only policy (2026-09-16 UTC)
+
+User explicitly rejected speculative dependency archives. Export only images with
+a supported use in the exported PBR material. Unknown/ambiguous maps and known
+disabled emission stay as paths/reasons in SkippedTextures, not image payloads.
+No archive-all option. Preserve only the converted normal actually used, not a
+second raw image. Parameter inheritance still informs selection; this is NOT a
+claim that the full original Unreal shader has been recovered.
+
+Measured reason/return: previous sample was 211291308 bytes (201.503MiB), of which
+193.740MiB was 21 unbound images. Small correction to existing adapter: lazy
+decode selected bindings, remove unconditional archive append, schema2 used-variant
+provenance, require every image/texture to have a material consumer. Public entry
+and call count remain unchanged. Avoided building another tool or reducing mip
+resolution. This fixes the actual user-visible size/cost regression.
+
+New sample: artifacts/material-export/socket-library-used-only.glb, 8102532 bytes
+(~7.73MiB / 8.10MB), 3 materials / 3 images, 1 textured PBR material, zero decoding
+failures. Public PS5.1 export took 5.41s vs 48.35s. SHA256
+3375805513AE5C03D8F660F1993D814F22C51D5AB55D7342B91DDB8CFA08835E.
+Stock fingerprint/mapping gates passed inside Export-VoyageMaterialsGlb.ps1;
+schema2 verify_material_library.py and inspect_glb.py passed, Blender2.80 imported
+and rendered. 19 exporter self-checks passed; four in-memory validator corruption
+checks reject orphan image/texture, disabled-emission payload and wrong image hash.
+No model, game, shared producer or installed-file mutation. Old artifacts retained
+as prior diagnostic evidence, not current output. No commit requested.
+
+Tool-use report: intended publish/export/validate/import -> documented Publish.ps1,
+Export-VoyageMaterialsGlb.ps1, verify_material_library.py, inspect_glb.py and
+preview_glb.py all succeeded without fallback. Source edits addressed the observed
+archive-all behavior; no upstream/library investigation or new dependency. Current
+supported export is still one call / no implementation reads / compact summary.
+Local tool-development evidence, not a new feature-agent adoption percentage.
+Remaining limitation is approximate shader reconstruction, not image completeness.
+
+## Superseded initial archive-all checkpoint (2026-09-16 UTC)
+
+Direct user request: list of cooked materials -> one GLB for reuse in authored
+models; explicitly prefer existing tools over custom decoding. Shallow upstream
+survey found FModel/CUE4Parse material+texture extraction and Unreal editor GLTF
+baking, but no verified ready batch-library GLB route for cooked Voyage. Reused
+reviewed CUE4Parse inheritance reader and unmodified Conversion/AssetRipper texture
+decoder plus SharpGLTF. New public route: tools/Export-VoyageMaterialsGlb.ps1;
+contract, limits and one-time publisher in tools/VoyageMaterialLibrary/README.md.
+No gameplay, generated assets, installed files or model edits in this work.
+
+Cost/return: the requested recurring workflow otherwise needs per-material
+parent/parameter inspection, texture decoding and manual GLB assembly. Target is
+ONE public batch call, zero routine implementation reads and one summary instead.
+Development required parser/conversion/API inspection because this output was
+missing, a private executable+publisher and bounded PBR adapter, not a universal
+shader converter. Initial three-material batch produces ~201.5MiB: preserve all
+available dependencies, not just selected PBR maps. Further shader-specific work
+is deferred until needed on a concrete material, not expanded speculatively.
+
+Verified: existing Get-VoyageAssetJson -ListPackages -AsJson returns 23983 stock
+packages; fingerprint and mapping resolvers select Steam25191271/UE5.8. Single
+material and three-material JSON-list calls work in Windows PowerShell5.1. Three
+socket materials yield 25 embedded images, no texture failures; only ONE material
+has inferred PBR textures. Layered trim and glyph material retain dependencies
+but import as flat approximations, NOT recovered shaders. SharpGLTF readback,
+independent GLB structure/PNG hash/dimension/provenance checks, Blender2.80 import
+and render passed. Twelve synthetic checks cover exact input identity, ambiguity,
+normal-green convention, factors and disabled emission. Wrong-type mesh and
+overwrite attempts fail without creating/replacing GLB. Evidence under ignored
+artifacts/material-export; final published run uses socket-library-final.glb.
+
+Development fixes: PS execution policy needed documented Bypass; publishing under
+the host identity needed invocation-local Git safe.directory (no global config);
+dotnet publish uses RestoreLockedMode MSBuild property, not restore-only CLI flag;
+PS5 JSON arrays must be assigned before enumeration. Low emission is represented
+in core factors so old Blender need not understand emissive-strength extension.
+No changes to canonical/shared parser binaries. Full logs remain in evidence.
+
+Tool-use report: intended list/fingerprint/mappings/extract/validate paths now have
+documented entry points; local development exercised them, not a measured feature-
+agent adoption sample. Supported export routine: one public call, no implementation
+reads, compact summary+report link. Fallback/source reads were limited to the
+missing conversion capability and observed publisher/input issues. Remaining gap:
+exact procedural/layered/UV-dependent shader appearance and unsupported textures;
+reported explicitly, not silently promised or a mandate to implement baking.
+Final public batch took 48.35s; SHA256
+B60CD07CDCF5C4B09A8794B776EE6B3C03B47A9817FC11D86F98FB930A05949D.
+
+GLB-first model workflow is now a direct user requirement. Keep reusable GLB
+inspection/conversion/preview tools and the stock mesh reference reader; extend
+texture/material extraction when a real asset request needs it. The current
+catalog is tools/glb/README.md. Do not confuse the prior rejection of speculative
+model pipeline expansion with a ban on these requested utilities. Harpoon V1
+is a local GLB baseline, not yet supported by the old OBJ shell build bridge;
+consumer migration belongs to the model/gameplay owners. No full Unreal shader
+or texture conversion is currently claimed.
+
+Model-owned socket export, 2026-09-15 UTC: real request narrowed to original
+electrical socket geometry with approximate colors. Public fingerprint/mapping
+covered 2 operations; raw geometry extraction was an uncovered third (2/3 at entry).
+JSON tools omit raw positions/indices. Narrow tools/VoyageMeshReference reader now
+tested on one stock socket LOD0, Steam25191271, with 2932 triangles/3 slots and GLB
+readback. Blender assembly/render/conversion is source-only, excluded from metric.
+No evidence for arbitrary meshes; full materials/textures/Nanite remain deferred.
+Do not restore a broad model pipeline. Method/limits in its README. Development
+cost: SDK config permission retry, CUE API adjustment, duplicate-face preservation;
+no game build/install/shared producer changes. Future adoption remains unmeasured.
+
 This file contains only unresolved cross-cutting pipeline work. Current public
 interfaces and commands live in [`tools/README.md`](../tools/README.md), accepted
 binary and cooked-asset contracts in
@@ -58,6 +162,32 @@ include compact summary `f8451a04`, exact external candidate inspection
 `21529521` before R14.
 
 ## Current state
+
+### New-build mapping recovery (Mooring, 2026-09-11 UTC)
+
+Resolved: a repeated capture at the main menu succeeded with the unchanged
+canonical dumper. Map 25191271 is validated and registered; both mooring assets
+parse. The PowerShell 5.1 process launch defect was corrected and smoke-tested.
+Measured recovery: one main-menu generation call succeeded, versus two failed
+calls in the original workflow; no Rust rebuild was required. Keep any future
+null-pointer failure evidence separate rather than assuming object churn.
+Full compact report: `docs/voyage-mapping-25191271-tool-report.md`.
+
+Installed build 25191271 / executable
+`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`
+has no reviewed mapping. User started Voyage. Documented
+`New-VoyageMappings.ps1` fails under Windows PowerShell 5.1 because
+`ProcessStartInfo.ArgumentList` is unavailable (line 187); the narrow source
+read confirmed the launch incompatibility. Retrying under installed PowerShell
+7 passes launch but jmap exits 1 with `unexpected null ptr` / out-of-range
+integral conversion after warnings about bad GUObjectArray entries. Evidence:
+`artifacts/mappings/steam-25191271-747DC2553F7E-jmap-4f88d8a-20260911T030116Z/jmap.stderr.log`.
+Neither failed result was promoted. The successful main-menu result resolves
+the mapping blocker; rebuilding mod candidates still needs fresh asset inputs.
+Repair scope/return: restore the real new-build mapping workflow (currently
+zero successes in two public calls), first distinguish live-object churn from
+a deterministic decoder failure before changing dumper internals. No tool
+Rust implementation change was needed by the Mooring investigation.
 
 Acceptance audit, 2026-09-06 UTC:
 
@@ -159,8 +289,7 @@ or a correctness, safety, or provenance risk.
 
 These are historical observations to reproduce only when the next real workflow
 needs them, not confirmed defects in today's binaries. No implementation is
-active. Prior evidence and supported fallbacks are consolidated in
-[inspection findings](../mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md#tool-gaps--unexpected-output-historical-not-all-current-defects).
+active.
 
 | Question | Next useful check | Continue only if |
 | --- | --- | --- |

@@ -67,13 +67,9 @@ those details here.
   assets, `.jmap`, JSON, pseudocode, raw reports, disassembly dumps, cooked
   packages, container inventories, or installed-file backups. Keep
   version-specific output below ignored `artifacts/` paths. Exceptions are the
-  explicitly reviewed `.usmap` registry under `mappings/Voyage/` and the single
-  user-authorized `models/HarpoonCannon/HarpoonCannon_V1.glb` planning baseline
-  pinned by `models/HarpoonCannon/model-source.json`. The latter includes a
-  temporary original-game socket reference; its exact approved hash/provenance
-  is recorded there. This does not authorize other extracted meshes/materials
-  or future mixed GLB revisions in Git. Replace the reference with the native
-  socket integration when that model revision is explicitly requested.
+  explicitly reviewed `.usmap` registry under `mappings/Voyage/`. User-authored
+  mod assets, including `mods/Railgun/Assets/Model/Railgun.glb`, are ordinary
+  source inputs; this does not authorize extracted game meshes or materials.
 - Every tracked `.usmap` must live in its own Steam-build/engine-version
   directory and have a sibling manifest containing the executable fingerprint,
   exact engine/parser version, generator commit, file hash, validation evidence,

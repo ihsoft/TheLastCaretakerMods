@@ -99,18 +99,20 @@ For the standard electrical socket's geometry-only planning reference, see
 colors, Blender/GLB and readback checks. Not full Unreal-material/Nanite export;
 validated target/build and limits are in its README.
 
-Harpoon shell/station producers accept `-CacheRoot`; their local default is
+The Railgun producer accepts `-CacheRoot`; its local default is
 `P:\UnrealCache\TheLastCaretakerMods\UE5.8` (Zen in its `Zen` subdirectory).
 This is process-scoped selection, not a global cache migration or cleanup.
 
-Harpoon shell cooking uses tagged properties for its partial native mirrors.
-`Build-Shell.ps1` runs `GenerateHarpoonCannon -VerifyTagged` over the generated
-inventory before packaging, then independently validates the cooked container.
+Railgun cooking uses tagged properties for its partial native mirrors.
+`mods/Railgun/Build-Railgun.ps1` owns generation, cook, verification, packaging
+and optional guarded installation of the single `Railgun_P` container.
 
 GLB-first model inspection, direct previews and standard Blender conversions are
 collected in [tools/glb](glb/README.md). GLB is the editable source/handoff, not a
-generated preview of a procedural OBJ. The [owning model registry and guide](../models/HarpoonCannon/README.md)
-define version/hash/roles and any temporary legacy build bridge. Batch material
+generated preview of a procedural OBJ. Railgun owns its live model and compact
+role/box manifest under [`mods/Railgun/Assets/Model`](../mods/Railgun/README.md).
+Blender-backed GLB preview, conversion and reference assembly require Blender
+5.0 or newer; Blender 5.2.2 LTS is the validated runtime. Batch material
 extraction uses [`Export-VoyageMaterialsGlb.ps1`](VoyageMaterialLibrary/README.md):
 exact material list -> self-contained GLB, inherited parameters and only textures
 actually used by the approximate PBR sample surfaces; explicit omission/provenance
@@ -174,8 +176,7 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 | MooringCable60m | [Release workflow](../mods/MooringCable60m/README.md) | `Build-LimitGraph.ps1` builds/cooks the attached/free limit graph outside the sandbox; `Build-Candidate.ps1 -GraphManifest` preserves fresh stock inheritance, sets 60 m manual / 20 m attached payout, verifies exactly three assets and creates a schema-2 release manifest; neither installs |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
-| Prepare Harpoon operator assets | [Preparation contract](../mods/HarpoonCannon/AutoloadProbe/README.md), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Probe.ps1 -StationInputsOnly` prepares seven authoring-only inputs; `-StationPrototype` prepares fourteen tagged station packages, including the imported shot sound. Gates include explicit K2 entry-interface membership, exact function signature, cooked Interact=Block, sound call/reference, container/header verification and schema-2 manifest. Initial execution must be outside the sandbox. Optional `-Install` invokes the manifest installer after success, allowing dirty development sources but retaining closed-game/backup/readback gates |
-| Prepare HarpoonCannon shell assets | [Shell preparation](../mods/HarpoonCannon/README.md#current-shell-only-preparation), [rules](../mods/HarpoonCannon/AGENTS.md) | `Build-Shell.ps1` reads the current GLB selected by the registry (no recorded model SHA/size gate), owns native Interchange import and role binding, inventory-driven cook/package verification and `Validate-Shell.ps1 -ModelInventory` cooked checks, ZIP and schema-2 manifest. Actual input hashes are recorded and must remain unchanged during preparation. Optional `-Install` uses the common guarded installer after success. Gameplay validation remains a separate gate |
+| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes the fixed `Assets/Model/Railgun.glb` plus its compact role/box manifest, generates all mod assets, cooks and verifies one `Railgun_P` container, then writes the ZIP and schema-2 release manifest. Actual input hashes are recorded and must remain unchanged during the build. Optional `-Install` uses the common guarded installer. Gameplay validation remains a separate gate |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a
@@ -1211,7 +1212,8 @@ not prove dispatch, and relative transforms are not world bounds. Full query
 collision filters and actual provider recipient remain outside this reader.
 
 Offline synthetic tests: `python tools/Test-VoyageInteractionState.py` (six tests).
-Architecture/provenance: `mods/HarpoonCannon/VEHICLE_ENTRY_RESEARCH.md`.
+Validated shared vehicle/HUD conclusions live in
+[`docs/vehicle-and-hud-modding-patterns.md`](../docs/vehicle-and-hud-modding-patterns.md).
 
 This is a read-only PE inspector, not a decompiler and not an injector. It can
 search ASCII/UTF-16 strings, show nearby bytes and pointers, find references to

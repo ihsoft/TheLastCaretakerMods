@@ -1,6 +1,6 @@
-"""Blender-only: --input extracted.json --output fresh.blend [--render].
+"""Blender 5+ only: --input extracted.json --output fresh.blend [--render].
 Original electrical socket geometry, approximate flat PBR slot colors only.
-Does not add this reference to HarpoonCannon or implement socket behavior.
+Does not integrate the reference into a mod or implement socket behavior.
 """
 import argparse
 import hashlib
@@ -17,6 +17,8 @@ parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--render', action='store_true')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 assert bpy.app.background
+if bpy.app.version < (5, 0, 0):
+    raise RuntimeError('Blender 5.0 or newer is required')
 assert not args.output.exists() and args.output.suffix == '.blend'
 d = json.loads(args.input.read_text(encoding='utf-8'))
 assert d['source'] == '/Game/AssetSets/Sockets/SM_Socket_Electrical_Output'
@@ -55,7 +57,6 @@ obj.parent = root
 # Unreal's clockwise indices + handedness reflection yield Blender outward faces.
 # Keep every original triangle, including the small authored label surfaces.
 normals = [tuple(Vector((d['normals'][i][0], -d['normals'][i][1], d['normals'][i][2])).normalized()) for i in source_indices]
-mesh.use_auto_smooth = True
 mesh.normals_split_custom_set_from_vertices(normals)
 for polygon in mesh.polygons:
     polygon.use_smooth = True

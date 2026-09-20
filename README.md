@@ -52,11 +52,9 @@ inputs are still fingerprint-gated and must be reviewed after an update.
 
 ## Layout
 
-- `models/` — GLB-first editable models and version/role registries; see
-  [HarpoonCannon](models/HarpoonCannon/README.md) and the [GLB toolkit](tools/glb/README.md).
-  Mixed game references normally remain under artifacts; HarpoonCannon V1 has an
-  explicit, hash-pinned user exception so the initial GLB baseline is kept in Git.
-- `mods/` — source code and mod-local build rules for installable mods.
+- `mods/` — source code, authored assets and mod-local build rules for
+  installable mods. Railgun's live GLB and role manifest are owned by
+  [`mods/Railgun`](mods/Railgun/README.md).
 - [`tools/`](tools/README.md) — catalog and usage guide for reproducible
   extraction, inspection, and patching utilities.
 - `docs/` — durable architecture findings, workflow, and research pitfalls.

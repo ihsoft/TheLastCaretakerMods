@@ -41,7 +41,7 @@ tools (92.9%). Four identity/inventory/status operations plus nine successful
 exact-asset inspections; the tenth asset (turret) is blocked by optional
 pseudocode generation. Retries/variants counted once per asset, no ad-hoc
 replacement and no runtime test. This is not an update of the historical
-baseline below. See [consolidated observations](../mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md).
+baseline below.
 Later tool repair now returns valid turret JSON despite that optional formatter
 failure, but synthetic verification does not rewrite this completed adoption
 sample.
@@ -349,8 +349,7 @@ Blueprint and wrapper mistakes remain development evidence, not pipeline gaps.
 The recurring manifest-producer and external-candidate inspection friction that
 the report identified was subsequently addressed by the common manifest
 producer and exact `Inspect-VoyageAsset.ps1 -Source Mod -ModContainer` route.
-Those repairs do not rewrite R10. See
-[consolidated observations](../mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md).
+Those repairs do not rewrite R10.
 
 ## R11: Harpoon HC01 installation
 
@@ -374,8 +373,7 @@ implementation reads followed actual failures: PowerShell 7 null handling in
 the summary helper and the missing isolated external-candidate route. Commits
 `f8451a04` and `74dc53c2` fixed both interfaces and reduced the broad Functions
 result from roughly 8,872 tokens to a compact name index; synthetic validation
-does not rewrite R12. See
-[consolidated observations](../mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md).
+does not rewrite R12.
 
 ## R13: Harpoon HC02 installation
 
@@ -427,7 +425,7 @@ fallbacks, tool failures, or uncovered recurring operations. Two broad-read and
 patch-shape mistakes were correctly reported as agent errors rather than
 pipeline defects. The user confirmed native Drone entry and exit in game; that
 runtime evidence validates HC03 behavior but is not another mechanical tool
-operation. See [consolidated observations](../mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md).
+operation.
 
 ## R16: DonkLift hint-provider probes and restoration
 
@@ -470,7 +468,7 @@ The `/Game/...` Inspector query ambiguity remains one deferred usability
 observation; the same public route succeeded with the documented container
 path. The user later confirmed mouse look, blocked character movement, and exit
 in game. Runtime validation is feature evidence, not an additional mechanical
-operation. See [consolidated observations](../mods/HarpoonCannon/PIPELINE_OBSERVATIONS.md).
+operation.
 
 ## Current conclusion
 

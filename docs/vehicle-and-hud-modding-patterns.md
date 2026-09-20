@@ -61,6 +61,28 @@ Mappings and input-event nodes alone may be invisible because the standard HUD
 renders the provided-action collection instead. Prefer a strong reversible
 probe on a known native action or filter over repeated speculative new fields.
 
+## Selecting a complete vehicle HUD
+
+The full HUD class and the standard provided-action rows are separate
+contracts. In Steam build `23962331`, both `BP_JetSki_Possessable` and
+`BP_GyroCopter_Possessable` implement
+`/Script/Voyage.VoyageActorWidgetInterface` and their Blueprint event
+`GetHUDOverrideWidget()` returns the vehicle-specific
+`VoyageBaseUserWidget` subclass. This is the leading extension point when a
+vehicle needs a genuinely different screen composition, such as an optical
+first-person view, rather than one or two additional action hints.
+
+Treat the exact declaring UFunction identity as unconfirmed until native
+registration or a narrow runtime marker proves it. The cooked Blueprint export
+shows the interface implementation and return type but does not serialize a
+`SuperStruct` for this function. A same-name function on a convenient vehicle
+stand-in is therefore not sufficient evidence of a valid override.
+
+Prefer this actor-selected HUD lifecycle over a free `AddToViewport` overlay
+when the entire vehicle display changes. Still validate creation, pause/menu
+visibility, actor handoff, exit teardown, and reload in game; static asset
+inspection proves the producer path, not every consumer-state transition.
+
 ## Stable UI composition
 
 Do not assume returned-array order survives native collection processing.
@@ -73,6 +95,32 @@ description text, and localized label are fragile identities.
 An `AddToViewport` overlay is useful as a lifecycle marker but is not equivalent
 to a standard hint: it can ignore pause hiding, rebindings, input-device glyphs,
 layout rules, and other native HUD state.
+
+### Replacing one native-updated leaf
+
+When native code continuously rewrites one inherited widget property, a
+one-shot child-Blueprint text change is not a replacement mechanism. On Steam
+build `23962331`, a bound `UUserWidget::PreConstruct` override on the stock Boat
+HUD successfully changed the inherited fuel text's render opacity, but native
+logic restored its litre string afterward. This discriminates live field access
+from update ownership: the override and field were correct, the write timing was
+not.
+
+For a narrow value replacement, keep the stock HUD as lifecycle owner, collapse
+only the native-updated leaf, and add a separate `UUserWidget` to the leaf's
+existing parent panel. Repeating mod logic can then live on a widget derived
+directly from engine `UUserWidget`, avoiding an inherited Voyage HUD Tick CDO
+delta. The Boat HUD `TOTAL SLOT` probe validated this exact insertion while
+preserving the stock fuel icon, position, and all neighboring values. Validate
+insertion and teardown with a static marker before adding the resource query.
+
+The following aggregate Boat candidate also validated the data path on Steam
+build `23962331`: its separate leaf obtained the possessed Boat's module,
+enumerated `VoyageModuleComponent` instances in the same grid through
+`VoyageModuleSubsystem`, summed only
+`GetResourceAmount(EModuleResourceType::Diesel)`, and displayed the confirmed
+total in the stock lower-right slot. Keep the resource enum identity explicit;
+the inherited field name `PetrolTB` does not identify the resource being shown.
 
 ## Language and lifecycle
 
