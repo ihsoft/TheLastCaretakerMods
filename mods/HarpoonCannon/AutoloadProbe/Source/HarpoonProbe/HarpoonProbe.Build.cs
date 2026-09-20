@@ -9,6 +9,7 @@ public class HarpoonProbe : ModuleRules
             "../../../../../tools/UnrealEditorGeneratorCommon/Public")));
         PrivateDependencyModuleNames.AddRange(new[] {
             "Core", "CoreUObject", "Engine", "UnrealEd", "BlueprintGraph", "KismetCompiler",
-            "UMG", "UMGEditor", "SlateCore", "Voyage", "EnhancedInput", "InputCore", "InputBlueprintNodes" });
+            "UMG", "UMGEditor", "SlateCore", "Voyage", "EnhancedInput", "InputCore", "InputBlueprintNodes",
+            "AssetTools", "AudioEditor" });
     }
 }

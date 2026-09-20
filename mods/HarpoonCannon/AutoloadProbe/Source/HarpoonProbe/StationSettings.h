@@ -12,8 +12,10 @@ inline constexpr TCHAR MouseKey[] = TEXT("OpticsMousePercent");
 inline constexpr TCHAR YawKey[] = TEXT("YawLimitDegrees");
 inline constexpr TCHAR PitchMinKey[] = TEXT("MinimumPitchDegrees");
 inline constexpr TCHAR PitchMaxKey[] = TEXT("MaximumPitchDegrees");
+inline constexpr TCHAR ShotVolumeKey[] = TEXT("ShotVolumePercent");
 inline constexpr TCHAR MouseDefault[] = TEXT("35.0");
 inline constexpr TCHAR YawDefault[] = TEXT("80.0");
+inline constexpr TCHAR ShotVolumeDefault[] = TEXT("600.0");
 inline constexpr TCHAR OriginalPerPercent[] = TEXT("0.0128");
 inline constexpr TCHAR PercentMin[] = TEXT("1.0");
 inline constexpr TCHAR PercentMax[] = TEXT("100.0");
@@ -57,6 +59,7 @@ void ReadStationSettings(FGraph& G)
     G.Write(Settings::Yaw, nullptr, Settings::YawDefault);
     G.Write(Settings::PitchMin, nullptr, Aim::MinimumPitch);
     G.Write(Settings::PitchMax, nullptr, Aim::MaximumPitch);
+    G.Write(ShotAudio::VolumePercent, nullptr, Settings::ShotVolumeDefault);
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(G.Graph));
     G.Link(G.Tail, G.Pin(Work, P::Execute)); G.Tail = Work->GetThenPinGivenIndex(0);
     auto* Content = G.Call(UBlueprintPathsLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UBlueprintPathsLibrary, ProjectContentDir));
@@ -90,6 +93,13 @@ void ReadStationSettings(FGraph& G)
     ReadKey(Settings::YawKey, Settings::Yaw, Settings::PercentMin, Settings::YawMax);
     ReadKey(Settings::PitchMinKey, Settings::PitchMin, Settings::PitchLowerBound, N::Zero);
     ReadKey(Settings::PitchMaxKey, Settings::PitchMax, N::Zero, Settings::PitchUpperBound);
+    G.Tail = NextKey;
+    auto* VolumeMatch = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr));
+    G.Link(Key, G.Pin(VolumeMatch, P::Binary::LeftOperand)); G.Default(VolumeMatch, P::Binary::RightOperand, Settings::ShotVolumeKey);
+    G.Branch(G.Pin(VolumeMatch, P::ReturnValue));
+    auto* NonnegativeVolume = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax));
+    G.Link(G.Pin(Value, P::ReturnValue), G.Pin(NonnegativeVolume, P::Binary::LeftOperand)); G.Default(NonnegativeVolume, P::Binary::RightOperand, N::Zero);
+    G.Write(ShotAudio::VolumePercent, G.Pin(NonnegativeVolume, P::ReturnValue));
     // A missing file returns an empty array. Parsing must never block entry.
     G.Tail = Work->GetThenPinGivenIndex(1);
     G.Write(Aim::Yaw, ClampStationAim(G, true, G.Read(Aim::Yaw)));

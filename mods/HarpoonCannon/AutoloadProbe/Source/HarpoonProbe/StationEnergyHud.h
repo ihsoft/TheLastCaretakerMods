@@ -5,13 +5,15 @@ namespace EnergyHud
 inline const FName Connection(TEXT("HarpoonEnergyConnection"));
 inline const FName Power(TEXT("HarpoonEnergyPower"));
 inline const FName Progress(TEXT("HarpoonEnergyProgress")), Rate(TEXT("HarpoonEnergyRate"));
-inline constexpr float ProgressOffset = 266.0f, RateOffset = 294.0f;
+inline constexpr float DiagnosticLeft = 24.0f;
+inline constexpr float ConnectionOffset = 400.0f;
+inline constexpr float PowerOffset = 428.0f;
+inline constexpr float ProgressOffset = 456.0f;
+inline constexpr float RateOffset = 484.0f;
 inline constexpr TCHAR EmptyCharge[] = TEXT("Charge kJ (required 500): 0");
 inline constexpr TCHAR EmptyRate[] = TEXT("CHARGING");
 inline constexpr TCHAR ChargePrefix[] = TEXT("Charge kJ (required 500): ");
 inline constexpr TCHAR Ready[] = TEXT("READY");
-inline constexpr float ConnectionOffset = 210.0f;
-inline constexpr float PowerOffset = 238.0f;
 inline constexpr TCHAR UnknownConnection[] = TEXT("Grid: module unavailable");
 inline constexpr TCHAR UnknownPower[] = TEXT("Power: unknown");
 inline constexpr TCHAR Connected[] = TEXT("Grid: connected");

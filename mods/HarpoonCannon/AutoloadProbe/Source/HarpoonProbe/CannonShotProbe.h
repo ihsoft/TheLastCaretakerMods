@@ -32,8 +32,44 @@ inline const FName ClassPin(TEXT("Class")), Context(TEXT("ContextObject"));
 inline constexpr TCHAR PhysicalType[] = TEXT("/Game/Blueprints/DamageTypes/BP_DamageTypePhysicalForce.BP_DamageTypePhysicalForce_C");
 inline constexpr TCHAR BaseDamage[] = TEXT("200.0"), Directional[] = TEXT("Directional");
 }
+namespace ShotAudio
+{
+inline constexpr TCHAR Package[] = TEXT("/Game/Mods/HarpoonCannon/Station/S_RailgunShotBlast");
+inline constexpr TCHAR Asset[] = TEXT("S_RailgunShotBlast");
+inline constexpr TCHAR SourceArgument[] = TEXT("ShotSound=");
+inline const FName PlayAtLocation(TEXT("PlaySoundAtLocation"));
+inline const FName SoundPin(TEXT("Sound"));
+inline const FName VolumePercent(TEXT("HarpoonShotVolumePercent"));
+inline const FName VolumeMultiplierPin(TEXT("VolumeMultiplier"));
+inline constexpr TCHAR PercentMultiplier[] = TEXT("0.01");
+inline USoundWave* Wave = nullptr;
+}
 bool SaveDedicatedAsset(UObject* Asset);
 UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values);
+USoundWave* ImportShotSound(const FString& Filename)
+{
+    auto* Task = NewObject<UAssetImportTask>();
+    Task->Filename = Filename;
+    Task->DestinationPath = FPackageName::GetLongPackagePath(ShotAudio::Package);
+    Task->DestinationName = ShotAudio::Asset;
+    Task->bReplaceExisting = true;
+    Task->bReplaceExistingSettings = true;
+    Task->bAutomated = true;
+    Task->bSave = false;
+    Task->bAsync = false;
+    auto* Factory = NewObject<USoundFactory>();
+    Factory->bAutoCreateCue = false;
+    Factory->SuppressImportDialogs();
+    Task->Factory = Factory;
+    TArray<UAssetImportTask*> Tasks {Task};
+    FAssetToolsModule::GetModule().Get().ImportAssetTasks(Tasks);
+    const TArray<UObject*>& Imported = Task->GetObjects();
+    checkf(Imported.Num() == 1, TEXT("Expected one imported shot sound, got %d"), Imported.Num());
+    auto* Sound = CastChecked<USoundWave>(Imported[0]);
+    checkf(Sound->GetOutermost()->GetName() == ShotAudio::Package, TEXT("Shot sound package mismatch: %s"), *Sound->GetPathName());
+    check(SaveDedicatedAsset(Sound));
+    return Sound;
+}
 UEdGraphPin* ShotLength(FGraph& G, UEdGraphPin* Vector)
 {
     auto* Length=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,VSize));
@@ -180,4 +216,11 @@ void AddCannonFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail)
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Station,OpticalSelf(G));
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,ShotAttack::Controller,ObserveCall(G,APawn::StaticClass(),ShotAttack::GetController,OpticalSelf(G)));
     auto* Finish=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,FinishSpawningActor)); G.Link(G.Pin(Spawn,P::ReturnValue),G.Pin(Finish,P::Actor)); G.Link(G.Pin(Transform,P::ReturnValue),G.Pin(Finish,P::SpawnTransform)); G.Exec(Finish);
+    check(ShotAudio::Wave);
+    auto* Play=G.Call(UGameplayStatics::StaticClass(),ShotAudio::PlayAtLocation);
+    G.Pin(Play,ShotAudio::SoundPin)->DefaultObject=ShotAudio::Wave;
+    auto* Volume=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Multiply_DoubleDouble));
+    G.Link(G.Read(ShotAudio::VolumePercent),G.Pin(Volume,P::Binary::LeftOperand)); G.Default(Volume,P::Binary::RightOperand,ShotAudio::PercentMultiplier);
+    G.Link(G.Pin(Volume,P::ReturnValue),G.Pin(Play,ShotAudio::VolumeMultiplierPin));
+    G.Link(Location,G.Pin(Play,E::Location)); G.Link(Rotation,G.Pin(Play,Shot::ActorRotation)); G.Exec(Play);
 }

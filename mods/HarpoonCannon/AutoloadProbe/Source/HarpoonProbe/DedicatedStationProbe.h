@@ -235,7 +235,7 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, EyeAim::Target, UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
     AddVariable(BP, ZoomTest::Mouse, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, ZoomTest::Label, UEdGraphSchema_K2::PC_Text);
-    for (FName Field : {Settings::Mouse, Settings::Yaw, Settings::PitchMin, Settings::PitchMax}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
+    for (FName Field : {Settings::Mouse, Settings::Yaw, Settings::PitchMin, Settings::PitchMax, ShotAudio::VolumePercent}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, DS::Sight, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
     for (FName Field : {CE::Ready, CE::InteractBlocks, CE::ProviderSeen, CE::CallbackSeen}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, O::BaselineFov, UEdGraphSchema_K2::PC_Real);
@@ -320,14 +320,22 @@ UClass* CreateDedicatedStation()
         auto* Layout = Canvas->AddChildToCanvas(Widget); Layout->SetAnchors(FAnchors(0.5f, 0.5f));
         Layout->SetAlignment(FVector2D(0.5f, 0.5f)); Layout->SetPosition(FVector2D(0, Offset)); Layout->SetAutoSize(true);
     };
+    auto AddDiagnosticText = [&](FName Field, const TCHAR* Text, float Offset)
+    {
+        auto* Widget = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Field); Widget->bIsVariable = true;
+        Widget->SetText(FText::FromString(Text)); Widget->SetJustification(ETextJustify::Left); Widget->SetFont(Font);
+        Widget->SetVisibility(ESlateVisibility::HitTestInvisible);
+        auto* Layout = Canvas->AddChildToCanvas(Widget); Layout->SetAnchors(FAnchors(0.0f, 0.0f));
+        Layout->SetAlignment(FVector2D(0.0f, 0.0f)); Layout->SetPosition(FVector2D(EnergyHud::DiagnosticLeft, Offset)); Layout->SetAutoSize(true);
+    };
     AddScopeText(O::Reticle, O::ReticleText, 0.0f, true);
     AddScopeText(Range::TargetName, N::EmptyText, DS::TargetNameOffsetY, true);
     AddScopeText(Range::TargetRange, N::EmptyText, DS::TargetRangeOffsetY, true);
     AddScopeText(ZoomTest::WideCenter, ZoomTest::WideCenterText, 0.0f, true);
-    AddScopeText(EnergyHud::Connection, EnergyHud::UnknownConnection, EnergyHud::ConnectionOffset, true);
-    AddScopeText(EnergyHud::Power, EnergyHud::UnknownPower, EnergyHud::PowerOffset, true);
-    AddScopeText(EnergyHud::Progress, EnergyHud::EmptyCharge, EnergyHud::ProgressOffset, true);
-    AddScopeText(EnergyHud::Rate, EnergyHud::EmptyRate, EnergyHud::RateOffset, true);
+    AddDiagnosticText(EnergyHud::Connection, EnergyHud::UnknownConnection, EnergyHud::ConnectionOffset);
+    AddDiagnosticText(EnergyHud::Power, EnergyHud::UnknownPower, EnergyHud::PowerOffset);
+    AddDiagnosticText(EnergyHud::Progress, EnergyHud::EmptyCharge, EnergyHud::ProgressOffset);
+    AddDiagnosticText(EnergyHud::Rate, EnergyHud::EmptyRate, EnergyHud::RateOffset);
     auto* Host = Hud->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), Hint::Root); Host->bIsVariable = true;
     auto* HostSlot = Canvas->AddChildToCanvas(Host); HostSlot->SetAnchors(FAnchors(0.0f, 1.0f));
     HostSlot->SetAlignment(FVector2D(0.0f, 1.0f)); HostSlot->SetPosition(DS::HintHostOffset); HostSlot->SetAutoSize(true);

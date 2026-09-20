@@ -21,6 +21,7 @@ $sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
 $sourcePaths += 'tools/UnrealEditorGeneratorCommon/Public/ActorScanGraphNames.h'
 $sourcePaths += 'mods/HarpoonCannon/HarpoonModelContract.h'
 $sourcePaths += 'mods/HarpoonCannon/Assets/HarpoonCannon.ini'
+$sourcePaths += 'mods/HarpoonCannon/Assets/Railgun_Shot_Blast.wav'
 $sourcePaths += 'tools/UnrealEditorGeneratorCommon/Public/TextSettingsGraphNames.h'
 $sourceStatus = @(& git -C $repo status --porcelain -- $sourcePaths)
 function Get-ProbeSourceHashes {
@@ -60,11 +61,13 @@ $packages = @('/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonLookYaw','/Game/Mods/Ha
 $packages += '/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonZoom'
 $packages += '/Game/Mods/HarpoonCannon/Inputs/IA_HarpoonFire'
 if ($StationPrototype) {
-    $stationArgs = @($project,'-run=GenerateHarpoonProbe','-DedicatedStation','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-station-unreal.log')))
+    $shotSound = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../Assets/Railgun_Shot_Blast.wav')).Path
+    $stationArgs = @($project,'-run=GenerateHarpoonProbe','-DedicatedStation',('-ShotSound=' + $shotSound),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-station-unreal.log')))
     Invoke-NativeStage 'generate-station' $editor $stationArgs
     $packages += @('/Game/Mods/HarpoonCannon/Station/BP_HarpoonOperator','/Game/Mods/HarpoonCannon/Station/WBP_HarpoonHUD','/Game/Mods/HarpoonCannonLifecycleProbe/ModActor','/Game/Mods/HarpoonCannonLifecycleProbe/ProbeHUD')
     $packages += '/Game/Mods/HarpoonCannon/Station/T_HarpoonOpticalMask'
     $packages += '/Game/Mods/HarpoonCannon/Station/BP_HarpoonTestShot'
+    $packages += '/Game/Mods/HarpoonCannon/Station/S_RailgunShotBlast'
 }
 $cookArguments = @($project,'-run=cook','-targetplatform=Windows','-SkipZenStore','-CookSinglePackageNoRefs',('-Package=' + ($packages -join '+')),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'cook-unreal.log')))
 if ($StationInputsOnly) { $cookArguments += '-unversioned' }
@@ -86,6 +89,10 @@ foreach ($assetRelative in $assetRelatives) {
         $cooked = Join-Path (Join-Path $PSScriptRoot 'Saved/Cooked/Windows') ($assetRelative + $extension)
         Copy-Item -LiteralPath $cooked -Destination ($looseAsset + $extension)
     }
+    foreach ($extension in @('.ubulk','.uptnl')) {
+        $cooked = Join-Path (Join-Path $PSScriptRoot 'Saved/Cooked/Windows') ($assetRelative + $extension)
+        if (Test-Path -LiteralPath $cooked -PathType Leaf) { Copy-Item -LiteralPath $cooked -Destination ($looseAsset + $extension) }
+    }
 }
 Copy-Item -LiteralPath (Join-Path $original.outputPath 'scriptobjects.bin') -Destination (Join-Path $loose 'scriptobjects.bin')
 $payload = Join-Path $output 'payload'
@@ -100,9 +107,18 @@ $expected = Join-Path $output 'expected-packages.txt'
 $verify = & (Join-Path $repo 'tools/Test-VoyageContainer.ps1') -Container $container -ExpectedPackageList $expected
 if ($verify.status -ne 'passed' -or -not $verify.packageSetMatches) { throw 'Container verification failed.' }
 if ($StationPrototype) {
+    $containerReport = Get-Content -LiteralPath $verify.reportPath -Raw | ConvertFrom-Json
+    $bulkChunks = @($containerReport.chunkTypes | Where-Object { $_.type -ceq 'BulkData' } | ForEach-Object { $_.count } | Measure-Object -Sum).Sum
+    if ($null -eq $bulkChunks -or $bulkChunks -lt 1) { throw 'Cooked shot sound bulk data is absent from the container.' }
     # Cheap release-blocking gate: editor defaults must not erase this channel delta.
     $queryEvidence = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') -Query '/Game/Mods/HarpoonCannon/Station/BP_HarpoonOperator' -Source Mod -ModContainer $container -AsJson) | ConvertFrom-Json
-    $stationExports = Get-Content -LiteralPath $queryEvidence.jsonPath -Raw | ConvertFrom-Json
+    $stationJson = Get-Content -LiteralPath $queryEvidence.jsonPath -Raw
+    $stationExports = $stationJson | ConvertFrom-Json
+    if (-not $stationJson.Contains('PlaySoundAtLocation') -or -not $stationJson.Contains('/Game/Mods/HarpoonCannon/Station/S_RailgunShotBlast')) { throw 'Shot sound call/reference missing from cooked operator.' }
+    if (-not $stationJson.Contains('HarpoonShotVolumePercent') -or -not $stationJson.Contains('VolumeMultiplier')) { throw 'Configurable shot volume path missing from cooked operator.' }
+    $soundEvidence = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') -Query '/Game/Mods/HarpoonCannon/Station/S_RailgunShotBlast' -Source Mod -ModContainer $container -AsJson) | ConvertFrom-Json
+    $soundExports = Get-Content -LiteralPath $soundEvidence.jsonPath -Raw | ConvertFrom-Json
+    if (@($soundExports | Where-Object { $_.Type -ceq 'SoundWave' }).Count -ne 1) { throw 'Cooked shot sound is missing or ambiguous.' }
     $classes = @($stationExports | Where-Object { $_.Name -ceq 'BP_HarpoonOperator_C' -and $_.Type -ceq 'BlueprintGeneratedClass' })
     if ($classes.Count -ne 1) { throw 'HC32: missing/ambiguous operator class.' }
     $entryInterfaces = @($classes[0].Interfaces | Where-Object { $_.Class.ObjectName -ceq "Class'InteractiveInterface'" -and $_.Class.ObjectPath -ceq '/Script/Voyage' -and $_.bImplementedByK2 -eq $true })
@@ -123,7 +139,7 @@ if ($StationPrototype) {
     if ($queryBoxes.Count -ne 1) { throw 'HC31: missing/ambiguous cooked query box.' }
     $responses = @($queryBoxes[0].Properties.BodyInstance.CollisionResponses.ResponseArray | Where-Object { $_.Channel -ceq 'Interact' })
     if ($responses.Count -ne 1 -or $responses[0].Response -notmatch '(^|::)ECR_Block$') { throw 'HC31: cooked query must explicitly serialize Interact=Block.' }
-    $queryEvidence | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $output 'collision-json-evidence.json') -Encoding UTF8
+    [ordered]@{station=$queryEvidence;sound=$soundEvidence} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $output 'station-json-evidence.json') -Encoding UTF8
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'HarpoonCannonLifecycleProbe_P.autoload') -Destination $payload
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'StationPrototype-README.txt') -Destination (Join-Path $payload 'README.txt')
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../Assets/HarpoonCannon.ini') -Destination $payload
@@ -138,7 +154,7 @@ if (($sourceAfter -join "`n") -cne ($sourceStatus -join "`n")) { throw 'Source s
 if ((@(Get-ProbeSourceHashes) | ConvertTo-Json -Compress) -cne ($sourceHashes | ConvertTo-Json -Compress)) { throw 'Source content changed during preparation.' }
 if ((& git -C $repo rev-parse HEAD).Trim() -cne $sourceCommit) { throw 'Repository HEAD changed during preparation.' }
 $experiment = if ($StationPrototype) { 'direct-fire' } else { 'input-authoring' }
-$architecture = if ($StationPrototype) { 'Thirteen tagged packages. Own common VehiclePawn child, native-selected own HUD, Enhanced Input E/mouse handlers and owned camera. No Forklift runtime dependency. Native inherited property deltas must pass independent audit; runtime pending.' } else { 'Seven standalone Harpoon input assets only; no actor, widget, autoload, Forklift references or installation.' }
+$architecture = if ($StationPrototype) { 'Fourteen tagged packages. Own common VehiclePawn child, native-selected own HUD, Enhanced Input actions, owned camera and imported shot sound. No Forklift runtime dependency. Native inherited property deltas must pass independent audit; runtime pending.' } else { 'Seven standalone Harpoon input assets only; no actor, widget, autoload, Forklift references or installation.' }
 $provenance = [ordered]@{
     schemaVersion=1;mod=$modName;version=$version;experiment=$experiment;createdAtUtc=[DateTime]::UtcNow.ToString('o');
     sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;
@@ -156,8 +172,8 @@ $settingsInstallation = $null
 if ($Install) {
     $installation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') -ReleaseManifest $manifestPath -AllowDirtySource
     if ($StationPrototype) {
-        # User-owned settings are create-only, not an immutable container payload.
-        # Read the template from the manifest-verified archive, never overwrite edits.
+        # User-owned settings are not an immutable container payload. Create the
+        # file when absent; otherwise append only newly introduced default keys.
         $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
         if ((Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash -cne $manifest.archive.sha256) { throw 'Settings archive hash mismatch.' }
         $settingsPath = Join-Path $installation.paksDirectory 'HarpoonCannon.ini'
@@ -174,9 +190,21 @@ if ($Install) {
             if ((Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash -cne (Get-FileHash -LiteralPath (Join-Path $payload 'HarpoonCannon.ini') -Algorithm SHA256).Hash) { throw 'Installed settings readback mismatch.' }
         }
         if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) { throw 'Settings path is not a file.' }
-        $settingsInstallation = [pscustomobject]@{path=$settingsPath;created=$created;preserved=(-not $created);sha256=(Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash}
+        $updatedKeys = @()
+        $settingsText = Get-Content -LiteralPath $settingsPath -Raw
+        if ($settingsText -cnotmatch '(?m)^\s*ShotVolumePercent\s*=') {
+            if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' -ErrorAction SilentlyContinue).Count -gt 0) { throw 'Game started; settings migration refused.' }
+            $templatePath = Join-Path $payload 'HarpoonCannon.ini'
+            $volumeDefaults = @(Get-Content -LiteralPath $templatePath | Where-Object { $_ -cmatch '^\s*ShotVolumePercent\s*=' })
+            if ($volumeDefaults.Count -ne 1) { throw 'Settings template has no unique ShotVolumePercent default.' }
+            $separator = if ($settingsText.Length -gt 0 -and -not $settingsText.EndsWith("`n")) { [Environment]::NewLine } else { '' }
+            $utf8NoBom = New-Object Text.UTF8Encoding($false)
+            [IO.File]::AppendAllText($settingsPath, $separator + $volumeDefaults[0] + [Environment]::NewLine, $utf8NoBom)
+            $updatedKeys += 'ShotVolumePercent'
+        }
+        $settingsInstallation = [pscustomobject]@{path=$settingsPath;created=$created;preserved=(-not $created);updatedKeys=$updatedKeys;sha256=(Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash}
         $settingsInstallation | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'settings-installation.json') -Encoding UTF8
-        Write-Host "Harpoon settings $(if ($created) { 'created' } else { 'preserved' }): $settingsPath"
+        Write-Host "Harpoon settings $(if ($created) { 'created' } elseif ($updatedKeys.Count) { 'preserved and extended' } else { 'preserved' }): $settingsPath"
     }
     Write-Host 'Harpoon station/input release installed successfully; installed hashes verified.'
 }

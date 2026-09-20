@@ -18,6 +18,10 @@
 #include "Components/Image.h"
 #include "Components/ScaleBox.h"
 #include "Engine/Texture2D.h"
+#include "Sound/SoundWave.h"
+#include "AssetImportTask.h"
+#include "AssetToolsModule.h"
+#include "Factories/SoundFactory.h"
 #include "K2Node_CreateDelegate.h"
 #include "K2Node_BreakStruct.h"
 #include "K2Node_MacroInstance.h"
@@ -532,7 +536,7 @@ int32 UGenerateHarpoonProbeCommandlet::Main(const FString& Params)
     {
         TArray<const TCHAR*> VerifyPackages {N::Package, N::HudPackage, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
             HarpoonInputNames::LookYaw, HarpoonInputNames::LookPitch, HarpoonInputNames::Exit, HarpoonInputNames::Zoom, HarpoonInputNames::Fire, Shot::Package,
-            ZoomTest::MaskPackage, HarpoonInputNames::Keyboard, HarpoonInputNames::Context};
+            ShotAudio::Package, ZoomTest::MaskPackage, HarpoonInputNames::Keyboard, HarpoonInputNames::Context};
         for (const TCHAR* Package : VerifyPackages)
         {
             FString Relative(Package); check(Relative.RemoveFromStart(DedicatedStationNames::GamePrefix));
@@ -546,6 +550,10 @@ int32 UGenerateHarpoonProbeCommandlet::Main(const FString& Params)
     }
     const bool Dedicated = FParse::Param(*Params, DedicatedStationNames::DedicatedSwitch);
     checkf(Dedicated, TEXT("HC24 runtime emission is rejected; use DedicatedStation only"));
+    FString ShotSoundFile;
+    checkf(FParse::Value(*Params, ShotAudio::SourceArgument, ShotSoundFile) && FPaths::FileExists(ShotSoundFile),
+        TEXT("Missing shot sound source: %s"), *ShotSoundFile);
+    ShotAudio::Wave = ImportShotSound(ShotSoundFile);
     Shot::Class=CreateCannonShot();
     UClass* StationClass = CreateDedicatedStation();
     UPackage* HudPackage = CreatePackage(N::HudPackage);

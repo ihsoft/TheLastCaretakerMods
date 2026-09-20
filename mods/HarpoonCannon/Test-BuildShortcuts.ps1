@@ -57,8 +57,22 @@ if (-not $shell.Contains('Source content changed during preparation.')) { throw 
 $cases++
 $settingsTemplate = Join-Path $PSScriptRoot 'Assets/HarpoonCannon.ini'
 if (-not (Test-Path -LiteralPath $settingsTemplate -PathType Leaf)) { throw 'Distribution settings template missing.' }
+$settingsText = Get-Content -LiteralPath $settingsTemplate -Raw
+if ($settingsText -cnotmatch '(?m)^ShotVolumePercent=600\s*$') { throw 'Distribution settings template has no baseline shot volume.' }
+$shotSound = Join-Path $PSScriptRoot 'Assets/Railgun_Shot_Blast.wav'
+if (-not (Test-Path -LiteralPath $shotSound -PathType Leaf)) { throw 'Shot sound source missing.' }
 $station = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AutoloadProbe/Build-Probe.ps1') -Raw
 if (-not $station.Contains("mods/HarpoonCannon/Assets/HarpoonCannon.ini") -or
     -not $station.Contains("../Assets/HarpoonCannon.ini")) { throw 'Station producer does not own the distribution settings template.' }
+if (-not $station.Contains("mods/HarpoonCannon/Assets/Railgun_Shot_Blast.wav") -or
+    -not $station.Contains("/Game/Mods/HarpoonCannon/Station/S_RailgunShotBlast")) { throw 'Station producer does not own the shot sound source/package.' }
+if (-not $station.Contains('ShotVolumePercent') -or -not $station.Contains('preserved and extended')) { throw 'Station producer does not migrate the shot volume setting.' }
+$settingsSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AutoloadProbe/Source/HarpoonProbe/StationSettings.h') -Raw
+$shotSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AutoloadProbe/Source/HarpoonProbe/CannonShotProbe.h') -Raw
+$hudSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AutoloadProbe/Source/HarpoonProbe/DedicatedStationProbe.h') -Raw
+$energyHudSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AutoloadProbe/Source/HarpoonProbe/StationEnergyHud.h') -Raw
+if (-not $settingsSource.Contains('ShotVolumeKey') -or -not $settingsSource.Contains('ShotVolumeDefault') -or
+    -not $shotSource.Contains('HarpoonShotVolumePercent') -or -not $shotSource.Contains('VolumeMultiplier')) { throw 'Shot volume graph contract is incomplete.' }
+if (-not $hudSource.Contains('AddDiagnosticText') -or -not $energyHudSource.Contains('DiagnosticLeft')) { throw 'Diagnostic HUD is not separated into its upper-left layout.' }
 $cases++
 [pscustomobject]@{status='passed';cases=$cases;boundary='mocked installer; no game mutation or Unreal build'} | ConvertTo-Json -Compress

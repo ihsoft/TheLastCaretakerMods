@@ -31,7 +31,7 @@ never installs; a failed installation leaves the prepared release available.
 
 StationInputsOnly is a mutually exclusive authoring-only preflight: seven input
 assets, no runtime actor/HUD/autoload. It is not a playable station.
-The common station contains exactly thirteen tagged packages:
+The common station contains exactly fourteen tagged packages:
 
 - /Game/Mods/HarpoonCannon/Station/BP_HarpoonOperator
 - /Game/Mods/HarpoonCannon/Station/WBP_HarpoonHUD
@@ -41,6 +41,7 @@ The common station contains exactly thirteen tagged packages:
 - /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonZoom
 - /Game/Mods/HarpoonCannon/Inputs/IA_HarpoonFire
 - /Game/Mods/HarpoonCannon/Station/BP_HarpoonTestShot
+- /Game/Mods/HarpoonCannon/Station/S_RailgunShotBlast
 - /Game/Mods/HarpoonCannon/Station/T_HarpoonOpticalMask
 - /Game/Mods/HarpoonCannon/Inputs/IMC_HarpoonKeyboard
 - /Game/Mods/HarpoonCannon/Inputs/DA_HarpoonInputContext
