@@ -55,6 +55,14 @@ Blueprint overrides the resource getters or initializes special resource
 state in Blueprint `BeginPlay`. There is no resource-specific socket behavior
 to fix.
 
+The `kWh` suffix is a stock presentation convention, not a physical conversion
+contract. The UI divides the native electricity amount by `1000`; runtime power
+integration shows that the native stored amount behaves as kJ while module
+demand is expressed in W. Code that controls energy consumption must therefore
+use kJ and W directly and must not convert native amounts through Wh or apply a
+factor of `3.6`. UI replacements may retain the stock `/1000` formatting when
+visual parity is the goal.
+
 The surveyed indicator creation path does not call
 `VoyageBaseUserWidget::SetInteractiveSource` on its button container. A global
 replacement consumer therefore cannot reliably recover the exact hovered

@@ -61,7 +61,14 @@ YawLimitDegrees=80
 MinimumPitchDegrees=-50
 MaximumPitchDegrees=10
 ShotVolumePercent=600
+HitDamage=200
+FullChargeEnergyKJ=500
+FullChargeTimeSeconds=2.0
 ```
+
+Electricity storage is configured in kJ and charge demand is calculated in W:
+`FullChargeEnergyKJ * 1000 / FullChargeTimeSeconds`, plus the 1 kW idle load.
+The game's stock `kWh` presentation is not used for this conversion.
 
 ## Compatibility and validation
 

@@ -14,6 +14,9 @@ inline constexpr TCHAR IdleW[] = TEXT("1000.0");
 inline constexpr TCHAR IdleCapacityKJ[] = TEXT("1.0");
 inline constexpr TCHAR JoulesPerKJ[] = TEXT("1000.0");
 }
+// Voyage electricity amounts behave as kJ while SetCustomConsumption accepts W.
+// The stock HUD's amount/1000 "kWh" text is a display convention, not an SI
+// conversion; do not introduce a 3.6 factor into charge storage or withdrawal.
 UEdGraphPin* EnergyMath(FGraph& G, FName Function, UEdGraphPin* Left, const TCHAR* Right)
 {
     auto* N = G.Call(UKismetMathLibrary::StaticClass(), Function);
