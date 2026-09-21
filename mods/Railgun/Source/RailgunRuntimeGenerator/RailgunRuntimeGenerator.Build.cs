@@ -9,7 +9,7 @@ public class RailgunRuntimeGenerator : ModuleRules
             "../../../../tools/UnrealEditorGeneratorCommon/Public")));
         PrivateDependencyModuleNames.AddRange(new[] {
             "Core", "CoreUObject", "Engine", "UnrealEd", "BlueprintGraph", "KismetCompiler",
-            "UMG", "UMGEditor", "SlateCore", "Voyage", "EnhancedInput", "InputCore", "InputBlueprintNodes",
+            "UMG", "UMGEditor", "SlateCore", "SlateBaseRenderer", "Voyage", "EnhancedInput", "InputCore", "InputBlueprintNodes",
             "AssetTools", "AudioEditor" });
     }
 }

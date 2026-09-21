@@ -67,8 +67,9 @@ $inventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
 $packages = @($inventory.packages)
 if ($packages.Count -lt 2 -or @($packages | Where-Object { -not $_.StartsWith('/Game/Mods/Railgun/Visual/') -and $_ -cne '/Game/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New' }).Count) { throw 'GLB cook inventory escaped owned packages.' }
 $shotSound = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/Railgun_Shot_Blast.wav')).Path
+$scopeOverlay = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/ScopeOverlay/ScopeOverlay.png')).Path
 Invoke-NativeStage 'generate-inputs' $editor @($project,'-run=GenerateRailgunInputs','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-inputs-unreal.log')))
-Invoke-NativeStage 'generate-runtime' $editor @($project,'-run=GenerateRailgunRuntime','-DedicatedStation',('-ShotSound=' + $shotSound),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-runtime-unreal.log')))
+Invoke-NativeStage 'generate-runtime' $editor @($project,'-run=GenerateRailgunRuntime','-DedicatedStation',('-ShotSound=' + $shotSound),('-ScopeOverlay=' + $scopeOverlay),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-runtime-unreal.log')))
 $packages += @(
     '/Game/Mods/Railgun/Inputs/IA_RailgunLookYaw',
     '/Game/Mods/Railgun/Inputs/IA_RailgunLookPitch',
@@ -145,7 +146,8 @@ $provenance = [ordered]@{
     mappingSha256=$mapping.sha256;verificationReport=$verify.reportPath;packagingReport=$pack.reportPath;semanticReport=$semantic.reportPath;
 }
 $provenance | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'build-provenance.json') -Encoding UTF8
-$release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod Railgun -Version $version -Container $container -Archive $archivePath -SourcePath $sourcePaths -AllowDirtySource -AsJson) | ConvertFrom-Json
+$releaseSourcePaths = @($sourcePaths | ForEach-Object { [IO.Path]::GetFullPath((Join-Path $repo $_)) })
+$release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod Railgun -Version $version -Container $container -Archive $archivePath -SourcePath $releaseSourcePaths -AllowDirtySource -AsJson) | ConvertFrom-Json
 $manifestPath = Join-Path $output 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Manifest producer did not publish the candidate.' }
 $installation = $null

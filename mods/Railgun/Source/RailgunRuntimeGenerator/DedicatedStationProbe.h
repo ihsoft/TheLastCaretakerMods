@@ -10,6 +10,8 @@ inline const FName Mouse(TEXT("RailgunActiveMousePercent"));
 inline const FName Mask(TEXT("RailgunOpticalMask"));
 inline const FName MaskImage(TEXT("RailgunOpticalMaskImage"));
 inline constexpr TCHAR MaskPackage[] = TEXT("/Game/Mods/Railgun/Station/T_RailgunOpticalMask");
+inline constexpr TCHAR MaskAsset[] = TEXT("T_RailgunOpticalMask");
+inline constexpr TCHAR OverlaySourceArgument[] = TEXT("ScopeOverlay=");
 inline constexpr TCHAR WideLabel[] = TEXT("x1");
 inline constexpr TCHAR NarrowLabel[] = TEXT("x5");
 inline constexpr TCHAR NormalMouse[] = TEXT("100.0");
@@ -17,6 +19,7 @@ inline constexpr TCHAR Hidden[] = TEXT("Collapsed");
 inline constexpr TCHAR Shown[] = TEXT("HitTestInvisible");
 inline const FName WideCenter(TEXT("RailgunWideCenter"));
 inline constexpr TCHAR WideCenterText[] = TEXT("\u25CB");
+inline UTexture2D* OverlayTexture = nullptr;
 }
 // HC26: authored child of COMMON transport. TAGGED cook required, no Forklift.
 // Included after graph helpers. Native entry/exit remains unmodified.
@@ -28,6 +31,46 @@ bool SaveDedicatedAsset(UObject* Asset)
     IFileManager::Get().MakeDirectory(*FPaths::GetPath(File), true);
     FSavePackageArgs Args; Args.TopLevelFlags = RF_Public | RF_Standalone; Args.SaveFlags = SAVE_NoError;
     return UPackage::SavePackage(Package, Asset, *File, Args);
+}
+
+UTexture2D* ImportScopeOverlay(const FString& Filename)
+{
+    auto* Task = NewObject<UAssetImportTask>();
+    Task->Filename = Filename;
+    Task->DestinationPath = FPackageName::GetLongPackagePath(ZoomTest::MaskPackage);
+    Task->DestinationName = ZoomTest::MaskAsset;
+    Task->bReplaceExisting = true;
+    Task->bReplaceExistingSettings = true;
+    Task->bAutomated = true;
+    Task->bSave = false;
+    Task->bAsync = false;
+    auto* Factory = NewObject<UTextureFactory>();
+    Factory->NoCompression = true;
+    Factory->NoAlpha = false;
+    Factory->bDeferCompression = false;
+    Factory->CompressionSettings = TC_EditorIcon;
+    Factory->MipGenSettings = TMGS_NoMipmaps;
+    Factory->LODGroup = TEXTUREGROUP_UI;
+    UTextureFactory::SuppressImportOverwriteDialog(true);
+    Task->Factory = Factory;
+    TArray<UAssetImportTask*> Tasks {Task};
+    FAssetToolsModule::GetModule().Get().ImportAssetTasks(Tasks);
+    const TArray<UObject*>& Imported = Task->GetObjects();
+    checkf(Imported.Num() == 1, TEXT("Expected one imported scope overlay, got %d"), Imported.Num());
+    auto* Texture = CastChecked<UTexture2D>(Imported[0]);
+    checkf(Texture->GetOutermost()->GetName() == ZoomTest::MaskPackage,
+        TEXT("Scope overlay package mismatch: %s"), *Texture->GetPathName());
+    const int32 Width = Texture->Source.GetSizeX();
+    const int32 Height = Texture->Source.GetSizeY();
+    checkf(Width > 0 && Width == Height, TEXT("Scope overlay must be a non-empty square, got %dx%d"), Width, Height);
+    Texture->CompressionSettings = TC_EditorIcon;
+    Texture->MipGenSettings = TMGS_NoMipmaps;
+    Texture->LODGroup = TEXTUREGROUP_UI;
+    Texture->NeverStream = true;
+    Texture->SRGB = true;
+    Texture->UpdateResource();
+    check(SaveDedicatedAsset(Texture));
+    return Texture;
 }
 
 void DedicatedViewTarget(FGraph& G, UEdGraphPin* Target)
@@ -236,6 +279,10 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, ZoomTest::Mouse, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, ZoomTest::Label, UEdGraphSchema_K2::PC_Text);
     for (FName Field : {Settings::Mouse, Settings::Yaw, Settings::PitchMin, Settings::PitchMax, ShotAudio::VolumePercent}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
+    for (const auto& Setting : Settings::DisplayNumbers) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
+    for (const auto& Setting : Settings::DisplayText) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_String);
+    AddVariable(BP, Settings::TargetNameFontObject, UEdGraphSchema_K2::PC_Object, UObject::StaticClass());
+    AddVariable(BP, Settings::TargetDistanceFontObject, UEdGraphSchema_K2::PC_Object, UObject::StaticClass());
     AddVariable(BP, DS::Sight, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
     for (FName Field : {CE::Ready, CE::InteractBlocks, CE::ProviderSeen, CE::CallbackSeen}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, O::BaselineFov, UEdGraphSchema_K2::PC_Real);
@@ -278,28 +325,15 @@ UClass* CreateDedicatedStation()
     AddVariable(Hud, Hint::HintInstance, UEdGraphSchema_K2::PC_Object, UVoyageDynamicPlayerInputWidget::StaticClass());
     auto* Canvas = Hud->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), N::HudCanvas); Canvas->bIsVariable = false;
     Hud->WidgetTree->RootWidget = Canvas;
-    // Authored alpha mask, 4:1 texture scaled uniformly to fill the viewport.
-    // For ordinary landscape aspect ratios up to4:1 the aperture stays circular.
-    constexpr int32 MaskHeight = 512, MaskWidth = MaskHeight * 4;
-    constexpr float ApertureRadius = 0.42f, FeatherWidth = 0.045f;
-    TArray<FColor> Pixels; Pixels.SetNumUninitialized(MaskWidth * MaskHeight);
-    for (int32 Y = 0; Y < MaskHeight; ++Y) for (int32 X = 0; X < MaskWidth; ++X)
-    {
-        const float DX = (X + 0.5f - MaskWidth * 0.5f) / MaskHeight;
-        const float DY = (Y + 0.5f - MaskHeight * 0.5f) / MaskHeight;
-        const float T = FMath::Clamp((FMath::Sqrt(DX * DX + DY * DY) - ApertureRadius) / FeatherWidth, 0.0f, 1.0f);
-        Pixels[Y * MaskWidth + X] = FColor(0, 0, 0, FMath::RoundToInt(255.0f * T * T * (3.0f - 2.0f * T)));
-    }
-    auto* MaskTexture = NewObject<UTexture2D>(CreatePackage(ZoomTest::MaskPackage), *FPackageName::GetLongPackageAssetName(ZoomTest::MaskPackage), RF_Public | RF_Standalone);
-    MaskTexture->Source.Init(MaskWidth, MaskHeight, 1, 1, TSF_BGRA8, reinterpret_cast<const uint8*>(Pixels.GetData()));
-    MaskTexture->CompressionSettings = TC_EditorIcon; MaskTexture->MipGenSettings = TMGS_NoMipmaps;
-    MaskTexture->NeverStream = true; MaskTexture->UpdateResource(); check(SaveDedicatedAsset(MaskTexture));
+    check(ZoomTest::OverlayTexture);
+    const int32 MaskWidth = ZoomTest::OverlayTexture->Source.GetSizeX();
+    const int32 MaskHeight = ZoomTest::OverlayTexture->Source.GetSizeY();
     auto* Mask = Hud->WidgetTree->ConstructWidget<UScaleBox>(UScaleBox::StaticClass(), ZoomTest::Mask); Mask->bIsVariable = true;
-    Mask->SetStretch(EStretch::ScaleToFill); Mask->SetClipping(EWidgetClipping::ClipToBounds);
+    // A square image is scaled uniformly inside the full viewport. ScaleBox
+    // centers its child, so the authored center pixel remains the aim center.
+    Mask->SetStretch(EStretch::ScaleToFit); Mask->SetClipping(EWidgetClipping::ClipToBounds);
     auto* MaskImage = Hud->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), ZoomTest::MaskImage);
-    MaskImage->SetBrushFromTexture(MaskTexture, false);
-    // Newly authored texture has no platform dimensions until cooked. Do not
-    // derive the Slate desired size from GetSizeX/Y at this stage (returns0).
+    MaskImage->SetBrushFromTexture(ZoomTest::OverlayTexture, false);
     FSlateBrush MaskBrush = MaskImage->GetBrush();
     MaskBrush.ImageSize = FVector2D(MaskWidth, MaskHeight);
     MaskImage->SetBrush(MaskBrush);
@@ -328,9 +362,8 @@ UClass* CreateDedicatedStation()
         auto* Layout = Canvas->AddChildToCanvas(Widget); Layout->SetAnchors(FAnchors(0.0f, 0.0f));
         Layout->SetAlignment(FVector2D(0.0f, 0.0f)); Layout->SetPosition(FVector2D(EnergyHud::DiagnosticLeft, Offset)); Layout->SetAutoSize(true);
     };
-    AddScopeText(O::Reticle, O::ReticleText, 0.0f, true);
-    AddScopeText(Range::TargetName, N::EmptyText, DS::TargetNameOffsetY, true);
-    AddScopeText(Range::TargetRange, N::EmptyText, DS::TargetRangeOffsetY, true);
+    AddScopeText(Range::TargetName, N::EmptyText, 0.0f, true);
+    AddScopeText(Range::TargetRange, N::EmptyText, 0.0f, true);
     AddScopeText(ZoomTest::WideCenter, ZoomTest::WideCenterText, 0.0f, true);
     AddDiagnosticText(EnergyHud::Connection, EnergyHud::UnknownConnection, EnergyHud::ConnectionOffset);
     AddDiagnosticText(EnergyHud::Power, EnergyHud::UnknownPower, EnergyHud::PowerOffset);
@@ -356,10 +389,51 @@ UClass* CreateDedicatedStation()
         auto* Set = HG.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
         HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Link(Value, HG.Pin(Set, E::WidgetText)); HG.Exec(Set);
     }
+    auto ApplyTargetStyle = [&](FName WidgetField, FName OffsetX, FName OffsetY, FName Opacity,
+        FName FontSize, FName FontObject, FName Typeface)
+    {
+        auto* Position = HG.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector2D));
+        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, OffsetX), HG.Pin(Position, Settings::XPin));
+        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, OffsetY), HG.Pin(Position, Settings::YPin));
+        auto* Translation = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderTranslation));
+        HG.Link(HG.Read(WidgetField), HG.Pin(Translation, P::FunctionTarget));
+        HG.Link(HG.Pin(Position, P::ReturnValue), HG.Pin(Translation, Settings::TranslationPin)); HG.Exec(Translation);
+
+        auto* NormalizedOpacity = HG.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble));
+        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Opacity), HG.Pin(NormalizedOpacity, P::Binary::LeftOperand));
+        HG.Default(NormalizedOpacity, P::Binary::RightOperand, Settings::PercentMultiplier);
+        auto* SetOpacity = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderOpacity));
+        HG.Link(HG.Read(WidgetField), HG.Pin(SetOpacity, P::FunctionTarget));
+        HG.Link(HG.Pin(NormalizedOpacity, P::ReturnValue), HG.Pin(SetOpacity, Settings::OpacityPin)); HG.Exec(SetOpacity);
+
+        auto* SizeValue = ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, FontSize);
+        auto* SetSize = HG.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetFontSize));
+        HG.Link(HG.Read(WidgetField), HG.Pin(SetSize, P::FunctionTarget));
+        HG.Link(SizeValue, HG.Pin(SetSize, Settings::DisplayFontSizePin)); HG.Exec(SetSize);
+
+        auto* FontValue = ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, FontObject);
+        auto* HasFont = HG.Branch(HG.Valid(FontValue));
+        auto* NoFont = HG.Pin(HasFont, P::Else);
+        auto* TypefaceName = HG.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Conv_StringToName));
+        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Typeface),
+            HG.Pin(TypefaceName, TextSettingsGraphNames::NumericString));
+        auto* FontInfo = HG.Call(USlateFontInfoBlueprintLibrary::StaticClass(), Settings::MakeSlateFontInfoFunction);
+        HG.Link(FontValue, HG.Pin(FontInfo, Settings::FontObjectPin));
+        HG.Link(HG.Pin(TypefaceName, P::ReturnValue), HG.Pin(FontInfo, Settings::TypefaceFontNamePin));
+        HG.Link(SizeValue, HG.Pin(FontInfo, Settings::FontSizePin));
+        auto* SetFont = HG.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetFont));
+        HG.Link(HG.Read(WidgetField), HG.Pin(SetFont, P::FunctionTarget));
+        HG.Link(HG.Pin(FontInfo, P::ReturnValue), HG.Pin(SetFont, Settings::FontInfoPin)); HG.Exec(SetFont);
+        StationMerge(HG, {HG.Tail, NoFont});
+    };
+    ApplyTargetStyle(Range::TargetName, Settings::TargetNameOffsetX, Settings::TargetNameOffsetY,
+        Settings::TargetNameOpacity, Settings::TargetNameFontSize, Settings::TargetNameFontObject, Settings::TargetNameTypeface);
+    ApplyTargetStyle(Range::TargetRange, Settings::TargetDistanceOffsetX, Settings::TargetDistanceOffsetY,
+        Settings::TargetDistanceOpacity, Settings::TargetDistanceFontSize, Settings::TargetDistanceFontObject, Settings::TargetDistanceTypeface);
     auto* WideHud = HG.Branch(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, ZoomTest::Wide));
     auto SetOpticalVisibility = [&](const TCHAR* Visibility)
     {
-        for (FName Field : {ZoomTest::Mask, O::Reticle, Range::TargetName, Range::TargetRange})
+        for (FName Field : {ZoomTest::Mask, Range::TargetName, Range::TargetRange})
         {
             auto* Set = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
             HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Default(Set, OP::Visibility, Visibility); HG.Exec(Set);

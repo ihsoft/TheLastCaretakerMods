@@ -22,6 +22,7 @@
 #include "AssetImportTask.h"
 #include "AssetToolsModule.h"
 #include "Factories/SoundFactory.h"
+#include "Factories/TextureFactory.h"
 #include "K2Node_CreateDelegate.h"
 #include "K2Node_BreakStruct.h"
 #include "K2Node_MacroInstance.h"
@@ -56,6 +57,7 @@
 #include "Components/VerticalBox.h"
 #include "Components/TextBlock.h"
 #include "Components/PrimitiveComponent.h"
+#include "SlateFontInfoBlueprintLibrary.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/SCS_Node.h"
@@ -554,6 +556,10 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     checkf(FParse::Value(*Params, ShotAudio::SourceArgument, ShotSoundFile) && FPaths::FileExists(ShotSoundFile),
         TEXT("Missing shot sound source: %s"), *ShotSoundFile);
     ShotAudio::Wave = ImportShotSound(ShotSoundFile);
+    FString ScopeOverlayFile;
+    checkf(FParse::Value(*Params, ZoomTest::OverlaySourceArgument, ScopeOverlayFile) && FPaths::FileExists(ScopeOverlayFile),
+        TEXT("Missing scope overlay source: %s"), *ScopeOverlayFile);
+    ZoomTest::OverlayTexture = ImportScopeOverlay(ScopeOverlayFile);
     Shot::Class=CreateRailgunShot();
     UClass* StationClass = CreateDedicatedStation();
     UPackage* HudPackage = CreatePackage(N::HudPackage);
