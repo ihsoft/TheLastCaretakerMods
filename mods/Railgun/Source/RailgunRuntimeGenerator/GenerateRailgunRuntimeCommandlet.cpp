@@ -538,7 +538,8 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     {
         TArray<const TCHAR*> VerifyPackages {N::Package, N::HudPackage, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
             RailgunInputNames::LookYaw, RailgunInputNames::LookPitch, RailgunInputNames::Exit, RailgunInputNames::Zoom, RailgunInputNames::Fire, Shot::Package,
-            ShotAudio::Package, ZoomTest::MaskPackage, RailgunInputNames::Keyboard, RailgunInputNames::Context};
+            ShotAudio::Package, ZoomTest::MaskPackage, EnergyHud::ChargingPackage, EnergyHud::OfflinePackage, EnergyHud::ReadyPackage,
+            RailgunInputNames::Keyboard, RailgunInputNames::Context};
         for (const TCHAR* Package : VerifyPackages)
         {
             FString Relative(Package); check(Relative.RemoveFromStart(DedicatedStationNames::GamePrefix));
@@ -556,10 +557,22 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     checkf(FParse::Value(*Params, ShotAudio::SourceArgument, ShotSoundFile) && FPaths::FileExists(ShotSoundFile),
         TEXT("Missing shot sound source: %s"), *ShotSoundFile);
     ShotAudio::Wave = ImportShotSound(ShotSoundFile);
-    FString ScopeOverlayFile;
-    checkf(FParse::Value(*Params, ZoomTest::OverlaySourceArgument, ScopeOverlayFile) && FPaths::FileExists(ScopeOverlayFile),
-        TEXT("Missing scope overlay source: %s"), *ScopeOverlayFile);
-    ZoomTest::OverlayTexture = ImportScopeOverlay(ScopeOverlayFile);
+    auto ImportRequiredTexture = [&](const TCHAR* Argument, const TCHAR* PackageName,
+        const TCHAR* AssetName, bool RequireSquare)
+    {
+        FString SourceFile;
+        checkf(FParse::Value(*Params, Argument, SourceFile) && FPaths::FileExists(SourceFile),
+            TEXT("Missing UI texture source for %s: %s"), AssetName, *SourceFile);
+        return ImportUiTexture(SourceFile, PackageName, AssetName, RequireSquare);
+    };
+    ZoomTest::OverlayTexture = ImportRequiredTexture(ZoomTest::OverlaySourceArgument,
+        ZoomTest::MaskPackage, ZoomTest::MaskAsset, true);
+    EnergyHud::ChargingTexture = ImportRequiredTexture(EnergyHud::ChargingSourceArgument,
+        EnergyHud::ChargingPackage, EnergyHud::ChargingAsset, false);
+    EnergyHud::OfflineTexture = ImportRequiredTexture(EnergyHud::OfflineSourceArgument,
+        EnergyHud::OfflinePackage, EnergyHud::OfflineAsset, false);
+    EnergyHud::ReadyTexture = ImportRequiredTexture(EnergyHud::ReadySourceArgument,
+        EnergyHud::ReadyPackage, EnergyHud::ReadyAsset, false);
     Shot::Class=CreateRailgunShot();
     UClass* StationClass = CreateDedicatedStation();
     UPackage* HudPackage = CreatePackage(N::HudPackage);

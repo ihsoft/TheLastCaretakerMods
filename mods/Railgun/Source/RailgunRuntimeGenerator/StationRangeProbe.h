@@ -5,11 +5,16 @@ namespace StationRangeNames
 // Retain the existing widget/property identity; HC33 generalizes its contents.
 inline const FName TargetName(TEXT("DetectedSharkName"));
 inline const FName TargetRange(TEXT("OpticalTargetRange"));
-inline constexpr TCHAR MeterSuffix[] = TEXT(" m");
 inline constexpr TCHAR MaximumCentimeters[] = TEXT("100000.0");
+inline constexpr TCHAR MaximumDisplayedMeters[] = TEXT("999.0");
 inline constexpr TCHAR CentimetersPerMeter[] = TEXT("100.0");
 inline constexpr TCHAR NoHit[] = TEXT("RANGE: no hit within 1000m");
+inline constexpr TCHAR NoHitLabel[] = TEXT("---");
 inline constexpr TCHAR Distance[] = TEXT("TARGET distance from sight (m): ");
+inline constexpr TCHAR IntegralDigits[] = TEXT("3");
+inline const FName UseGroupingPin(TEXT("bUseGrouping"));
+inline const FName MinimumIntegralDigitsPin(TEXT("MinimumIntegralDigits"));
+inline const FName MaximumIntegralDigitsPin(TEXT("MaximumIntegralDigits"));
 }
 namespace Range = StationRangeNames;
 
@@ -27,7 +32,9 @@ void UpdateStationRange(FGraph& G, bool StoreOnStation = false)
     };
     // First blocking optical hit only; any actor is a display target, not a fireable target.
     if (!StoreOnStation) G.Text(N::Current, Range::NoHit);
-    TargetText(Range::TargetName); TargetText(Range::TargetRange);
+    TargetText(Range::TargetName);
+    auto* NoHitText = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText));
+    G.Default(NoHitText, E::StringValue, Range::NoHitLabel); TargetText(Range::TargetRange, G.Pin(NoHitText, P::ReturnValue));
     auto* Start = ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_GetComponentLocation), G.Read(O::Camera));
     auto* Direction = ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, GetForwardVector), G.Read(O::Camera));
     auto* Ray = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_VectorFloat));
@@ -52,12 +59,18 @@ void UpdateStationRange(FGraph& G, bool StoreOnStation = false)
     G.Link(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_VectorVector), G.Pin(Hit, OP::ImpactPoint), Start), G.Pin(Length, E::VectorLengthInput));
     auto* Meters = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble));
     G.Link(G.Pin(Length, P::ReturnValue), G.Pin(Meters, P::Binary::LeftOperand)); G.Default(Meters, P::Binary::RightOperand, Range::CentimetersPerMeter);
-    auto* Rounded = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Round)); G.Link(G.Pin(Meters, P::ReturnValue), G.Pin(Rounded, OP::AngleValue));
+    auto* ClampedMeters = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMin));
+    G.Link(G.Pin(Meters, P::ReturnValue), G.Pin(ClampedMeters, P::Binary::LeftOperand));
+    G.Default(ClampedMeters, P::Binary::RightOperand, Range::MaximumDisplayedMeters);
+    auto* Rounded = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Round));
+    G.Link(G.Pin(ClampedMeters, P::ReturnValue), G.Pin(Rounded, OP::AngleValue));
     if (!StoreOnStation) G.Number(N::Current, Range::Distance, G.Pin(Rounded, P::ReturnValue));
-    auto* Label = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, BuildString_Int));
-    G.Link(G.Pin(Rounded, P::ReturnValue), G.Pin(Label, OP::IntegerValue)); G.Default(Label, OP::StringSuffix, Range::MeterSuffix);
-    auto* Text = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText));
-    G.Link(G.Pin(Label, P::ReturnValue), G.Pin(Text, E::StringValue)); TargetText(Range::TargetRange, G.Pin(Text, P::ReturnValue));
+    auto* Digits = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_IntToText));
+    G.Link(G.Pin(Rounded, P::ReturnValue), G.Pin(Digits, P::Value));
+    G.Default(Digits, Range::UseGroupingPin, N::False);
+    G.Default(Digits, Range::MinimumIntegralDigitsPin, Range::IntegralDigits);
+    G.Default(Digits, Range::MaximumIntegralDigitsPin, Range::IntegralDigits);
+    TargetText(Range::TargetRange, G.Pin(Digits, P::ReturnValue));
     [[maybe_unused]] constexpr auto ComponentSignature = static_cast<UActorComponent* (AActor::*)(TSubclassOf<UActorComponent>) const>(&AActor::GetComponentByClass);
     auto* Component = G.Call(AActor::StaticClass(), OP::FindComponent);
     G.Link(G.Pin(Hit, SP::HitActor), G.Pin(Component, P::FunctionTarget)); G.Pin(Component, OP::ComponentClass)->DefaultObject = UVoyageModuleComponent::StaticClass();

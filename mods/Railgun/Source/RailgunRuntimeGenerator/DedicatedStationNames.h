@@ -13,7 +13,6 @@ inline constexpr TCHAR HudObserved[] = TEXT("Own HUD override callback observed:
 inline constexpr TCHAR HudNotObserved[] = TEXT("Own HUD override callback observed: NO");
 inline constexpr TCHAR ContextPath[] = TEXT("/Game/Mods/Railgun/Inputs/DA_RailgunInputContext.DA_RailgunInputContext");
 inline const FName Sight(TEXT("RailgunSightComponent"));
-inline constexpr float ExitLabelOffsetY = 130.0f;
 inline constexpr float TargetNameOffsetY = 72.0f;
 inline constexpr float TargetRangeOffsetY = 100.0f;
 inline constexpr float HintStatusOffsetY = 175.0f;

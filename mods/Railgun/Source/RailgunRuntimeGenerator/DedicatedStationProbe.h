@@ -5,15 +5,12 @@
 namespace ZoomTest
 {
 inline const FName Wide(TEXT("RailgunWideView"));
-inline const FName Label(TEXT("RailgunZoomLabel"));
 inline const FName Mouse(TEXT("RailgunActiveMousePercent"));
 inline const FName Mask(TEXT("RailgunOpticalMask"));
 inline const FName MaskImage(TEXT("RailgunOpticalMaskImage"));
 inline constexpr TCHAR MaskPackage[] = TEXT("/Game/Mods/Railgun/Station/T_RailgunOpticalMask");
 inline constexpr TCHAR MaskAsset[] = TEXT("T_RailgunOpticalMask");
 inline constexpr TCHAR OverlaySourceArgument[] = TEXT("ScopeOverlay=");
-inline constexpr TCHAR WideLabel[] = TEXT("x1");
-inline constexpr TCHAR NarrowLabel[] = TEXT("x5");
 inline constexpr TCHAR NormalMouse[] = TEXT("100.0");
 inline constexpr TCHAR Hidden[] = TEXT("Collapsed");
 inline constexpr TCHAR Shown[] = TEXT("HitTestInvisible");
@@ -33,12 +30,13 @@ bool SaveDedicatedAsset(UObject* Asset)
     return UPackage::SavePackage(Package, Asset, *File, Args);
 }
 
-UTexture2D* ImportScopeOverlay(const FString& Filename)
+UTexture2D* ImportUiTexture(const FString& Filename, const TCHAR* PackageName,
+    const TCHAR* AssetName, bool RequireSquare)
 {
     auto* Task = NewObject<UAssetImportTask>();
     Task->Filename = Filename;
-    Task->DestinationPath = FPackageName::GetLongPackagePath(ZoomTest::MaskPackage);
-    Task->DestinationName = ZoomTest::MaskAsset;
+    Task->DestinationPath = FPackageName::GetLongPackagePath(PackageName);
+    Task->DestinationName = AssetName;
     Task->bReplaceExisting = true;
     Task->bReplaceExistingSettings = true;
     Task->bAutomated = true;
@@ -56,13 +54,14 @@ UTexture2D* ImportScopeOverlay(const FString& Filename)
     TArray<UAssetImportTask*> Tasks {Task};
     FAssetToolsModule::GetModule().Get().ImportAssetTasks(Tasks);
     const TArray<UObject*>& Imported = Task->GetObjects();
-    checkf(Imported.Num() == 1, TEXT("Expected one imported scope overlay, got %d"), Imported.Num());
+    checkf(Imported.Num() == 1, TEXT("Expected one imported UI texture, got %d"), Imported.Num());
     auto* Texture = CastChecked<UTexture2D>(Imported[0]);
-    checkf(Texture->GetOutermost()->GetName() == ZoomTest::MaskPackage,
-        TEXT("Scope overlay package mismatch: %s"), *Texture->GetPathName());
+    checkf(Texture->GetOutermost()->GetName() == PackageName,
+        TEXT("UI texture package mismatch: %s"), *Texture->GetPathName());
     const int32 Width = Texture->Source.GetSizeX();
     const int32 Height = Texture->Source.GetSizeY();
-    checkf(Width > 0 && Width == Height, TEXT("Scope overlay must be a non-empty square, got %dx%d"), Width, Height);
+    checkf(Width > 0 && Height > 0, TEXT("UI texture must be non-empty, got %dx%d"), Width, Height);
+    checkf(!RequireSquare || Width == Height, TEXT("Scope overlay must be square, got %dx%d"), Width, Height);
     Texture->CompressionSettings = TC_EditorIcon;
     Texture->MipGenSettings = TMGS_NoMipmaps;
     Texture->LODGroup = TEXTUREGROUP_UI;
@@ -156,7 +155,6 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Write(DS::Controller, Cast->GetCastResultPin());
     ReadStationSettings(G);
     G.Write(ZoomTest::Wide, nullptr, N::True);
-    G.Write(ZoomTest::Label, nullptr, ZoomTest::WideLabel);
     G.Write(ZoomTest::Mouse, nullptr, ZoomTest::NormalMouse);
     auto* FindSight = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, GetComponentsByTag));
     G.Link(ObserveCall(G, UActorComponent::StaticClass(), OP::ComponentOwner, G.Read(S::Anchor)), G.Pin(FindSight, P::FunctionTarget));
@@ -222,7 +220,6 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
         if (!ToWide) ConvergeEyeAim(G);
         PlaceModeCamera(G, ToWide);
         G.Write(ZoomTest::Wide, nullptr, ToWide ? N::True : N::False);
-        G.Write(ZoomTest::Label, nullptr, ToWide ? ZoomTest::WideLabel : ZoomTest::NarrowLabel);
         G.Write(ZoomTest::Mouse, ToWide ? nullptr : G.Read(Settings::Mouse), ToWide ? ZoomTest::NormalMouse : nullptr);
         auto* Set = G.Call(UCameraComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UCameraComponent, SetFieldOfView));
         G.Link(G.Read(O::Camera), G.Pin(Set, P::FunctionTarget));
@@ -277,7 +274,6 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, EyeAim::Pitch, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, EyeAim::Target, UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
     AddVariable(BP, ZoomTest::Mouse, UEdGraphSchema_K2::PC_Real);
-    AddVariable(BP, ZoomTest::Label, UEdGraphSchema_K2::PC_Text);
     for (FName Field : {Settings::Mouse, Settings::Yaw, Settings::PitchMin, Settings::PitchMax, ShotAudio::VolumePercent}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
     for (const auto& Setting : Settings::DisplayNumbers) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
     for (const auto& Setting : Settings::DisplayText) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_String);
@@ -340,16 +336,26 @@ UClass* CreateDedicatedStation()
     Mask->AddChild(MaskImage);
     auto* MaskSlot = Canvas->AddChildToCanvas(Mask); MaskSlot->SetAnchors(FAnchors(0, 0, 1, 1)); MaskSlot->SetOffsets(FMargin(0));
     Mask->SetVisibility(ESlateVisibility::Collapsed);
-    auto* Label = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), ZoomTest::Label); Label->bIsVariable = true;
-    Label->SetText(FText::FromString(ZoomTest::NarrowLabel)); Label->SetJustification(ETextJustify::Center);
-    auto Font = Label->GetFont(); Font.Size = H::TargetFontSize; Label->SetFont(Font);
-    Label->SetColorAndOpacity(FSlateColor(FLinearColor::Green)); Label->SetVisibility(ESlateVisibility::HitTestInvisible);
-    auto* Slot = Canvas->AddChildToCanvas(Label); Slot->SetAnchors(FAnchors(0.5f, 0.5f)); Slot->SetAlignment(FVector2D(0.5f, 0.5f)); Slot->SetAutoSize(true);
-    Slot->SetPosition(FVector2D(0, DS::ExitLabelOffsetY));
+    auto AddStatusIcon = [&](FName Field, UTexture2D* Texture)
+    {
+        check(Texture);
+        auto* Icon = Hud->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), Field); Icon->bIsVariable = true;
+        Icon->SetBrushFromTexture(Texture, false);
+        FSlateBrush Brush = Icon->GetBrush();
+        Brush.ImageSize = FVector2D(Texture->Source.GetSizeX(), Texture->Source.GetSizeY()); Icon->SetBrush(Brush);
+        Icon->SetVisibility(ESlateVisibility::Collapsed);
+        auto* IconSlot = Canvas->AddChildToCanvas(Icon); IconSlot->SetAnchors(FAnchors(0.5f, 0.5f));
+        IconSlot->SetAlignment(FVector2D(0.5f, 0.5f)); IconSlot->SetPosition(FVector2D(0.0f, EnergyHud::StatusOffsetY));
+        IconSlot->SetAutoSize(true);
+    };
+    AddStatusIcon(EnergyHud::StatusCharging, EnergyHud::ChargingTexture);
+    AddStatusIcon(EnergyHud::StatusOffline, EnergyHud::OfflineTexture);
+    AddStatusIcon(EnergyHud::StatusReady, EnergyHud::ReadyTexture);
     auto AddScopeText = [&](FName Field, const TCHAR* Text, float Offset, bool Variable)
     {
         auto* Widget = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Field); Widget->bIsVariable = Variable;
-        Widget->SetText(FText::FromString(Text)); Widget->SetJustification(ETextJustify::Center); Widget->SetFont(Font);
+        Widget->SetText(FText::FromString(Text)); Widget->SetJustification(ETextJustify::Center);
+        auto Font = Widget->GetFont(); Font.Size = H::TargetFontSize; Widget->SetFont(Font);
         Widget->SetVisibility(ESlateVisibility::HitTestInvisible);
         auto* Layout = Canvas->AddChildToCanvas(Widget); Layout->SetAnchors(FAnchors(0.5f, 0.5f));
         Layout->SetAlignment(FVector2D(0.5f, 0.5f)); Layout->SetPosition(FVector2D(0, Offset)); Layout->SetAutoSize(true);
@@ -357,7 +363,8 @@ UClass* CreateDedicatedStation()
     auto AddDiagnosticText = [&](FName Field, const TCHAR* Text, float Offset)
     {
         auto* Widget = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Field); Widget->bIsVariable = true;
-        Widget->SetText(FText::FromString(Text)); Widget->SetJustification(ETextJustify::Left); Widget->SetFont(Font);
+        Widget->SetText(FText::FromString(Text)); Widget->SetJustification(ETextJustify::Left);
+        auto Font = Widget->GetFont(); Font.Size = H::TargetFontSize; Widget->SetFont(Font);
         Widget->SetVisibility(ESlateVisibility::HitTestInvisible);
         auto* Layout = Canvas->AddChildToCanvas(Widget); Layout->SetAnchors(FAnchors(0.0f, 0.0f));
         Layout->SetAlignment(FVector2D(0.0f, 0.0f)); Layout->SetPosition(FVector2D(EnergyHud::DiagnosticLeft, Offset)); Layout->SetAutoSize(true);
@@ -383,7 +390,7 @@ UClass* CreateDedicatedStation()
     auto* Player = HG.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, GetPlayerPawn));
     auto* Station = NewObject<UK2Node_DynamicCast>(HudGraph); Station->TargetType = BP->GeneratedClass; Station->SetPurity(false); HG.Node(Station);
     HG.Link(HG.Tail, HG.Pin(Station, P::Execute)); HG.Link(HG.Pin(Player, P::ReturnValue), Station->GetCastSourcePin()); HG.Tail = Station->GetValidCastPin();
-    for (FName Field : {Range::TargetName, Range::TargetRange, ZoomTest::Label})
+    for (FName Field : {Range::TargetName, Range::TargetRange})
     {
         auto* Value = ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Field);
         auto* Set = HG.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
@@ -447,6 +454,9 @@ UClass* CreateDedicatedStation()
     SetOpticalVisibility(ZoomTest::Hidden); SetWideCenter(ZoomTest::Shown); auto* WideTail = HG.Tail;
     HG.Tail = HG.Pin(WideHud, P::Else); SetOpticalVisibility(ZoomTest::Shown); SetWideCenter(ZoomTest::Hidden);
     StationMerge(HG, {WideTail, HG.Tail});
+    UpdateStationStatusHud(HG, Station->GetCastResultPin(), BP->GeneratedClass,
+        ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, ZoomTest::Wide),
+        ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Settings::StatusIconOpacity));
     UpdateStationEnergyHud(HG, Station->GetCastResultPin(), BP->GeneratedClass);
     AddStationHintConstruction(Hud);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud); FKismetEditorUtilities::CompileBlueprint(Hud);

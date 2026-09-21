@@ -68,8 +68,11 @@ $packages = @($inventory.packages)
 if ($packages.Count -lt 2 -or @($packages | Where-Object { -not $_.StartsWith('/Game/Mods/Railgun/Visual/') -and $_ -cne '/Game/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New' }).Count) { throw 'GLB cook inventory escaped owned packages.' }
 $shotSound = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/Railgun_Shot_Blast.wav')).Path
 $scopeOverlay = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/ScopeOverlay/ScopeOverlay.png')).Path
+$chargingStatusIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/ScopeOverlay/ChargingStatusIcon.png')).Path
+$offlineStatusIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/ScopeOverlay/OfflineStatusIcon.png')).Path
+$readyStatusIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/ScopeOverlay/ReadyStatusIcon.png')).Path
 Invoke-NativeStage 'generate-inputs' $editor @($project,'-run=GenerateRailgunInputs','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-inputs-unreal.log')))
-Invoke-NativeStage 'generate-runtime' $editor @($project,'-run=GenerateRailgunRuntime','-DedicatedStation',('-ShotSound=' + $shotSound),('-ScopeOverlay=' + $scopeOverlay),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-runtime-unreal.log')))
+Invoke-NativeStage 'generate-runtime' $editor @($project,'-run=GenerateRailgunRuntime','-DedicatedStation',('-ShotSound=' + $shotSound),('-ScopeOverlay=' + $scopeOverlay),('-ChargingStatusIcon=' + $chargingStatusIcon),('-OfflineStatusIcon=' + $offlineStatusIcon),('-ReadyStatusIcon=' + $readyStatusIcon),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-runtime-unreal.log')))
 $packages += @(
     '/Game/Mods/Railgun/Inputs/IA_RailgunLookYaw',
     '/Game/Mods/Railgun/Inputs/IA_RailgunLookPitch',
@@ -81,6 +84,9 @@ $packages += @(
     '/Game/Mods/Railgun/Station/BP_RailgunOperator',
     '/Game/Mods/Railgun/Station/WBP_RailgunHUD',
     '/Game/Mods/Railgun/Station/T_RailgunOpticalMask',
+    '/Game/Mods/Railgun/Station/T_RailgunStatusCharging',
+    '/Game/Mods/Railgun/Station/T_RailgunStatusOffline',
+    '/Game/Mods/Railgun/Station/T_RailgunStatusReady',
     '/Game/Mods/Railgun/Station/BP_RailgunTestShot',
     '/Game/Mods/Railgun/Station/S_RailgunShotBlast',
     '/Game/Mods/Railgun/Runtime/BP_RailgunCoordinator',

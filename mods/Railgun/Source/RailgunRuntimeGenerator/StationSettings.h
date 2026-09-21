@@ -5,6 +5,7 @@ inline const FName Mouse(TEXT("RailgunMousePercent"));
 inline const FName Yaw(TEXT("RailgunYawLimitDegrees"));
 inline const FName PitchMin(TEXT("RailgunMinimumPitchDegrees"));
 inline const FName PitchMax(TEXT("RailgunMaximumPitchDegrees"));
+inline const FName StatusIconOpacity(TEXT("RailgunStatusIconOpacityPercent"));
 inline const FName TargetNameOffsetX(TEXT("RailgunTargetNameOffsetX"));
 inline const FName TargetNameOffsetY(TEXT("RailgunTargetNameOffsetY"));
 inline const FName TargetNameOpacity(TEXT("RailgunTargetNameOpacityPercent"));
@@ -27,6 +28,7 @@ inline constexpr TCHAR YawKey[] = TEXT("YawLimitDegrees");
 inline constexpr TCHAR PitchMinKey[] = TEXT("MinimumPitchDegrees");
 inline constexpr TCHAR PitchMaxKey[] = TEXT("MaximumPitchDegrees");
 inline constexpr TCHAR ShotVolumeKey[] = TEXT("ShotVolumePercent");
+inline constexpr TCHAR StatusIconOpacityKey[] = TEXT("StatusIconOpacityPercent");
 inline constexpr TCHAR TargetNameOffsetXKey[] = TEXT("TargetNameOffsetX");
 inline constexpr TCHAR TargetNameOffsetYKey[] = TEXT("TargetNameOffsetY");
 inline constexpr TCHAR TargetNameOpacityKey[] = TEXT("TargetNameOpacityPercent");
@@ -42,6 +44,7 @@ inline constexpr TCHAR TargetDistanceTypefaceKey[] = TEXT("TargetDistanceTypefac
 inline constexpr TCHAR MouseDefault[] = TEXT("35.0");
 inline constexpr TCHAR YawDefault[] = TEXT("80.0");
 inline constexpr TCHAR ShotVolumeDefault[] = TEXT("600.0");
+inline constexpr TCHAR StatusIconOpacityDefault[] = TEXT("100.0");
 inline constexpr TCHAR TargetNameOffsetXDefault[] = TEXT("0.0");
 inline constexpr TCHAR TargetNameOffsetYDefault[] = TEXT("72.0");
 inline constexpr TCHAR TargetDistanceOffsetXDefault[] = TEXT("0.0");
@@ -85,6 +88,7 @@ struct FNumericDisplaySetting
     const TCHAR* Maximum;
 };
 inline const FNumericDisplaySetting DisplayNumbers[] = {
+    {StatusIconOpacityKey, StatusIconOpacity, StatusIconOpacityDefault, OpacityMin, PercentMax},
     {TargetNameOffsetXKey, TargetNameOffsetX, TargetNameOffsetXDefault, OffsetMin, OffsetMax},
     {TargetNameOffsetYKey, TargetNameOffsetY, TargetNameOffsetYDefault, OffsetMin, OffsetMax},
     {TargetNameOpacityKey, TargetNameOpacity, TargetOpacityDefault, OpacityMin, PercentMax},
