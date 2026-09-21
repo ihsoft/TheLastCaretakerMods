@@ -35,7 +35,7 @@ $energy = $module[0].Properties.ConfigData
 Require ([Math]::Abs($energy.ResourceConsumptionOn - 1000) -lt 0.001) 'Idle ON consumption mismatch.'
 Require ([Math]::Abs($energy.ResourceConsumptionStandby - 1000) -lt 0.001) 'Idle standby consumption mismatch.'
 Require ([Math]::Abs($energy.ResourceBandwidthInput - 1000) -lt 0.001) 'Idle input bandwidth mismatch.'
-Require ([Math]::Abs($energy.MaxResourceAmount - (1000.0/3600.0)) -lt 0.000001) 'Idle buffer mismatch.'
+Require ([Math]::Abs($energy.MaxResourceAmount - 1.0) -lt 0.000001) 'Idle buffer mismatch.'
 Require ($energy.bAutoStartModule -and $energy.bAcceptResourceOffer -and $energy.bAcceptResourceOfferProduction) 'Native receiver disabled.'
 Require ($energy.bAcceptResourceOfferOff) 'Empty/unpowered receiver cannot recover.'
 Require ($module[0].Properties.SocketCustomTarget.ComponentProperty -ceq 'ElectricSocket') 'Electric socket target mismatch.'

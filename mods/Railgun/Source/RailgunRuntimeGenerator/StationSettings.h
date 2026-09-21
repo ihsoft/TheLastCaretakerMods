@@ -28,6 +28,9 @@ inline constexpr TCHAR YawKey[] = TEXT("YawLimitDegrees");
 inline constexpr TCHAR PitchMinKey[] = TEXT("MinimumPitchDegrees");
 inline constexpr TCHAR PitchMaxKey[] = TEXT("MaximumPitchDegrees");
 inline constexpr TCHAR ShotVolumeKey[] = TEXT("ShotVolumePercent");
+inline constexpr TCHAR HitDamageKey[] = TEXT("HitDamage");
+inline constexpr TCHAR FullChargeEnergyKey[] = TEXT("FullChargeEnergyKJ");
+inline constexpr TCHAR FullChargeTimeKey[] = TEXT("FullChargeTimeSeconds");
 inline constexpr TCHAR StatusIconOpacityKey[] = TEXT("StatusIconOpacityPercent");
 inline constexpr TCHAR TargetNameOffsetXKey[] = TEXT("TargetNameOffsetX");
 inline constexpr TCHAR TargetNameOffsetYKey[] = TEXT("TargetNameOffsetY");
@@ -44,6 +47,9 @@ inline constexpr TCHAR TargetDistanceTypefaceKey[] = TEXT("TargetDistanceTypefac
 inline constexpr TCHAR MouseDefault[] = TEXT("35.0");
 inline constexpr TCHAR YawDefault[] = TEXT("80.0");
 inline constexpr TCHAR ShotVolumeDefault[] = TEXT("600.0");
+inline constexpr TCHAR HitDamageDefault[] = TEXT("200.0");
+inline constexpr TCHAR FullChargeEnergyDefault[] = TEXT("500.0");
+inline constexpr TCHAR FullChargeTimeDefault[] = TEXT("2.0");
 inline constexpr TCHAR StatusIconOpacityDefault[] = TEXT("100.0");
 inline constexpr TCHAR TargetNameOffsetXDefault[] = TEXT("0.0");
 inline constexpr TCHAR TargetNameOffsetYDefault[] = TEXT("72.0");
@@ -65,6 +71,10 @@ inline constexpr TCHAR FontSizeMax[] = TEXT("200.0");
 inline constexpr TCHAR YawMax[] = TEXT("170.0");
 inline constexpr TCHAR PitchLowerBound[] = TEXT("-89.0");
 inline constexpr TCHAR PitchUpperBound[] = TEXT("89.0");
+inline constexpr TCHAR DamageMin[] = TEXT("0.0");
+inline constexpr TCHAR PositiveGameplayMin[] = TEXT("0.001");
+inline constexpr TCHAR GameplayMax[] = TEXT("1000000000.0");
+inline constexpr TCHAR ChargeTimeMax[] = TEXT("86400.0");
 inline constexpr TCHAR Negate[] = TEXT("-1.0");
 inline const FName FontObjectPin(TEXT("FontObject"));
 inline const FName TypefaceFontNamePin(TEXT("TypefaceFontName"));
@@ -97,6 +107,11 @@ inline const FNumericDisplaySetting DisplayNumbers[] = {
     {TargetDistanceOffsetYKey, TargetDistanceOffsetY, TargetDistanceOffsetYDefault, OffsetMin, OffsetMax},
     {TargetDistanceOpacityKey, TargetDistanceOpacity, TargetOpacityDefault, OpacityMin, PercentMax},
     {TargetDistanceFontSizeKey, TargetDistanceFontSize, TargetFontSizeDefault, FontSizeMin, FontSizeMax}
+};
+inline const FNumericDisplaySetting GameplayNumbers[] = {
+    {HitDamageKey, ShotAttack::ConfiguredDamage, HitDamageDefault, DamageMin, GameplayMax},
+    {FullChargeEnergyKey, Charge::ConfiguredEnergyKJ, FullChargeEnergyDefault, PositiveGameplayMin, GameplayMax},
+    {FullChargeTimeKey, Charge::ConfiguredTimeSeconds, FullChargeTimeDefault, PositiveGameplayMin, ChargeTimeMax}
 };
 
 struct FTextDisplaySetting
@@ -148,6 +163,7 @@ void ReadStationSettings(FGraph& G)
     G.Write(Settings::PitchMin, nullptr, Aim::MinimumPitch);
     G.Write(Settings::PitchMax, nullptr, Aim::MaximumPitch);
     G.Write(ShotAudio::VolumePercent, nullptr, Settings::ShotVolumeDefault);
+    for (const auto& Setting : Settings::GameplayNumbers) G.Write(Setting.Field, nullptr, Setting.Default);
     for (const auto& Setting : Settings::DisplayNumbers) G.Write(Setting.Field, nullptr, Setting.Default);
     for (const auto& Setting : Settings::DisplayText) G.Write(Setting.Field, nullptr, Setting.Default);
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(G.Graph));
@@ -186,6 +202,7 @@ void ReadStationSettings(FGraph& G)
     ReadKey(Settings::YawKey, Settings::Yaw, Settings::PercentMin, Settings::YawMax);
     ReadKey(Settings::PitchMinKey, Settings::PitchMin, Settings::PitchLowerBound, N::Zero);
     ReadKey(Settings::PitchMaxKey, Settings::PitchMax, N::Zero, Settings::PitchUpperBound);
+    for (const auto& Setting : Settings::GameplayNumbers) ReadKey(Setting.Key, Setting.Field, Setting.Minimum, Setting.Maximum);
     for (const auto& Setting : Settings::DisplayNumbers) ReadKey(Setting.Key, Setting.Field, Setting.Minimum, Setting.Maximum);
     G.Tail = NextKey;
     auto* VolumeMatch = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr));

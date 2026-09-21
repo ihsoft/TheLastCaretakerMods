@@ -255,7 +255,7 @@ inline int32 Generate()
     Module->ConfigData.bAcceptResourceOfferOff = true; // an empty receiver must be able to recover power
     Module->ConfigData.bAcceptResourceOfferProduction = true;
     Module->ConfigData.ResourceBandwidthInput = RailgunAssetNames::RailgunEnergyConsumptionOn;
-    Module->ConfigData.MaxResourceAmount = RailgunAssetNames::RailgunIdleBufferWh;
+    Module->ConfigData.MaxResourceAmount = RailgunAssetNames::RailgunIdleBufferKJ;
     Module->ConfigData.ResourceConsumptionOn = RailgunAssetNames::RailgunEnergyConsumptionOn;
     Module->ConfigData.ResourceConsumptionStandby = RailgunAssetNames::RailgunEnergyConsumptionStandby;
     Module->SocketCustomTarget.ComponentProperty = RailgunAssetNames::ElectricSocketName;

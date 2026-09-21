@@ -124,6 +124,10 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     for (UEdGraphNode* Node : DefaultNodes) Node->DestroyNode();
     FGraph G(Graph, nullptr);
     auto Self = [&]() { return OpticalSelf(G); };
+    auto* BeginPlay = NewObject<UK2Node_Event>(Graph);
+    BeginPlay->EventReference.SetExternalMember(TimerGraphNames::ActorBeginPlay, AActor::StaticClass());
+    BeginPlay->bOverrideFunction = true; G.Node(BeginPlay); G.Tail = G.Pin(BeginPlay, P::Then);
+    ReadStationSettings(G);
     auto* Tick = NewObject<UK2Node_Event>(Graph);
     Tick->EventReference.SetExternalMember(BlueprintGraphNames::Events::ActorReceiveTick, AActor::StaticClass());
     Tick->bOverrideFunction = true; G.Node(Tick); G.Tail = G.Pin(Tick, P::Then);
@@ -275,6 +279,7 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, EyeAim::Target, UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
     AddVariable(BP, ZoomTest::Mouse, UEdGraphSchema_K2::PC_Real);
     for (FName Field : {Settings::Mouse, Settings::Yaw, Settings::PitchMin, Settings::PitchMax, ShotAudio::VolumePercent}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
+    for (const auto& Setting : Settings::GameplayNumbers) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
     for (const auto& Setting : Settings::DisplayNumbers) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
     for (const auto& Setting : Settings::DisplayText) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_String);
     AddVariable(BP, Settings::TargetNameFontObject, UEdGraphSchema_K2::PC_Object, UObject::StaticClass());

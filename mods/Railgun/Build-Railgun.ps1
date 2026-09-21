@@ -47,6 +47,27 @@ function Invoke-NativeStage([string]$Name, [string]$Executable, [string[]]$Nativ
     if ($LASTEXITCODE -ne 0) { throw "$Name failed ($LASTEXITCODE); log: $log" }
     Write-Host "$Name passed; log: $log"
 }
+function Add-MissingRailgunSettings([string]$TemplatePath, [string]$SettingsPath) {
+    $existingKeys = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
+    foreach ($line in [IO.File]::ReadAllLines($SettingsPath)) {
+        if ($line -match '^\s*([^#;][^=]*?)\s*=') { $null = $existingKeys.Add($matches[1].Trim()) }
+    }
+    $missing = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($line in [IO.File]::ReadAllLines($TemplatePath)) {
+        if ($line -match '^\s*([^#;][^=]*?)\s*=' -and -not $existingKeys.Contains($matches[1].Trim())) {
+            $missing.Add($line)
+        }
+    }
+    if ($missing.Count -eq 0) { return @() }
+    if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' -ErrorAction SilentlyContinue).Count -gt 0) {
+        throw 'Game started; settings update refused.'
+    }
+    $current = [IO.File]::ReadAllText($SettingsPath)
+    $prefix = if ($current.EndsWith("`n")) { '' } else { "`r`n" }
+    $addition = $prefix + "`r`n# Defaults added by a newer Railgun build.`r`n" + (($missing -join "`r`n") + "`r`n")
+    [IO.File]::AppendAllText($SettingsPath, $addition, (New-Object System.Text.UTF8Encoding($false)))
+    return @($missing | ForEach-Object { ($_ -split '=', 2)[0].Trim() })
+}
 if (-not $SkipBuild) {
     Invoke-NativeStage 'build' (Join-Path $engine 'Build/BatchFiles/Build.bat') @('VoyageEditor','Win64','Development',('-Project=' + $project),'-WaitMutex','-NoHotReloadFromIDE',('-Log=' + (Join-Path $output 'ubt.log')))
 }
@@ -164,9 +185,10 @@ if ($Install) {
     if (-not (Test-Path -LiteralPath $settingsPath)) {
         if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' -ErrorAction SilentlyContinue).Count -gt 0) { throw 'Game started; settings installation refused.' }
         Copy-Item -LiteralPath (Join-Path $payload 'Railgun.ini') -Destination $settingsPath
-        $settingsInstallation = [pscustomobject]@{path=$settingsPath;created=$true;sha256=(Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash}
+        $settingsInstallation = [pscustomobject]@{path=$settingsPath;created=$true;addedKeys=@();sha256=(Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash}
     } else {
-        $settingsInstallation = [pscustomobject]@{path=$settingsPath;created=$false;sha256=(Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash}
+        $addedKeys = @(Add-MissingRailgunSettings (Join-Path $payload 'Railgun.ini') $settingsPath)
+        $settingsInstallation = [pscustomobject]@{path=$settingsPath;created=$false;addedKeys=$addedKeys;sha256=(Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash}
     }
     Write-Host 'Railgun installed successfully; container hashes verified and settings are present.'
 }

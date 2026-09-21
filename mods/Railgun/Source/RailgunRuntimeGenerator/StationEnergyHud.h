@@ -26,9 +26,9 @@ inline constexpr float ConnectionOffset = 400.0f;
 inline constexpr float PowerOffset = 428.0f;
 inline constexpr float ProgressOffset = 456.0f;
 inline constexpr float RateOffset = 484.0f;
-inline constexpr TCHAR EmptyCharge[] = TEXT("Charge kJ (required 500): 0");
+inline constexpr TCHAR EmptyCharge[] = TEXT("Charge kJ: 0");
 inline constexpr TCHAR EmptyRate[] = TEXT("CHARGING");
-inline constexpr TCHAR ChargePrefix[] = TEXT("Charge kJ (required 500): ");
+inline constexpr TCHAR ChargePrefix[] = TEXT("Charge kJ: ");
 inline constexpr TCHAR Ready[] = TEXT("READY");
 inline constexpr TCHAR UnknownConnection[] = TEXT("Grid: module unavailable");
 inline constexpr TCHAR UnknownPower[] = TEXT("Power: unknown");
@@ -93,7 +93,8 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
     G.Link(Module->GetCastResultPin(), G.Pin(Amount, P::FunctionTarget));
     G.Default(Amount, Charge::Type, Charge::Electricity);
     SetBoolean(EnergyHud::Rate,
-        G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), G.Pin(Amount, P::ReturnValue), Charge::ShotWh),
+        G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), G.Pin(Amount, P::ReturnValue),
+            RequiredEnergyAmount(G, ReadNativeInputField(G, Station, StationClass, Charge::ConfiguredEnergyKJ))),
         EnergyHud::Ready, EnergyHud::EmptyRate);
     SetBoolean(EnergyHud::Connection,
         ObserveCall(G, UVoyageModuleComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, HasSocketConnection), Module->GetCastResultPin()),
@@ -137,8 +138,9 @@ void UpdateStationStatusHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
 
     auto* Amount = G.Call(UVoyageModuleComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, GetResourceAmount));
     G.Link(Module, G.Pin(Amount, P::FunctionTarget)); G.Default(Amount, Charge::Type, Charge::Electricity);
-    auto* Full = G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
-        G.Pin(Amount, P::ReturnValue), Charge::ShotWh));
+    auto* Full = G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
+        G.Pin(Amount, P::ReturnValue),
+        RequiredEnergyAmount(G, ReadNativeInputField(G, Station, StationClass, Charge::ConfiguredEnergyKJ))));
     SetVisible(EnergyHud::StatusReady); auto* ReadyTail = G.Tail;
 
     G.Tail = G.Pin(Full, P::Else);

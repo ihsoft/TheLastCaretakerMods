@@ -23,6 +23,7 @@ inline UClass* Class=nullptr;
 namespace ShotAttack
 {
 inline const FName Controller(TEXT("ShotController")), DamageClass(TEXT("ShotDamageType"));
+inline const FName ConfiguredDamage(TEXT("RailgunHitDamage")), DamageAmount(TEXT("ShotDamageAmount"));
 inline const FName GetController(TEXT("GetController")); // APawn also has a templated C++ overload.
 inline const FName Damage(TEXT("Damage")), Variance(TEXT("DamageVariance")), Impulse(TEXT("ImpulseOverride"));
 inline const FName Type(TEXT("AttackType")), Hit(TEXT("Hit")), Target(TEXT("Target"));
@@ -30,7 +31,7 @@ inline const FName Instigator(TEXT("Instigator")), Causer(TEXT("DamageCauser")),
 inline const FName TypeClass(TEXT("DamageTypeClass")), Attack(TEXT("Attack")), Duration(TEXT("bAcceptDuration"));
 inline const FName ClassPin(TEXT("Class")), Context(TEXT("ContextObject"));
 inline constexpr TCHAR PhysicalType[] = TEXT("/Game/Blueprints/DamageTypes/BP_DamageTypePhysicalForce.BP_DamageTypePhysicalForce_C");
-inline constexpr TCHAR BaseDamage[] = TEXT("200.0"), Directional[] = TEXT("Directional");
+inline constexpr TCHAR Directional[] = TEXT("Directional");
 }
 namespace ShotAudio
 {
@@ -111,6 +112,7 @@ UClass* CreateRailgunShot()
     for(FName Name:{Shot::Railgun,Shot::Operator,Shot::Station}) AddVariable(BP,Name,UEdGraphSchema_K2::PC_Object,AActor::StaticClass());
     AddVariable(BP,ShotAttack::Controller,UEdGraphSchema_K2::PC_Object,AController::StaticClass());
     AddVariable(BP,ShotAttack::DamageClass,UEdGraphSchema_K2::PC_Class,UVoyageDamageType::StaticClass());
+    AddVariable(BP,ShotAttack::DamageAmount,UEdGraphSchema_K2::PC_Real);
     for(FName Name:{Shot::Start,Shot::Direction}) AddVariable(BP,Name,UEdGraphSchema_K2::PC_Struct,TBaseStructure<FVector>::Get());
     AddVariable(BP,Shot::Done,UEdGraphSchema_K2::PC_Boolean);
     FKismetEditorUtilities::CompileBlueprint(BP); FGraph G(BP->UbergraphPages[0],nullptr);
@@ -170,7 +172,7 @@ UClass* CreateRailgunShot()
     auto* Combat=NewObject<UK2Node_DynamicCast>(G.Graph); Combat->TargetType=UVoyageCombatSubsystem::StaticClass(); Combat->SetPurity(false); G.Node(Combat);
     G.Link(G.Tail,G.Pin(Combat,P::Execute)); G.Link(G.Pin(Subsystem,P::ReturnValue),Combat->GetCastSourcePin()); G.Tail=Combat->GetValidCastPin();
     auto* Attack=NewObject<UK2Node_MakeStruct>(G.Graph); Attack->StructType=FVoyageAttack::StaticStruct(); Attack->bMadeAfterOverridePinRemoval=true; G.Node(Attack);
-    G.Link(G.Read(ShotAttack::DamageClass),G.Pin(Attack,ShotAttack::TypeClass)); G.Default(Attack,ShotAttack::Damage,ShotAttack::BaseDamage);
+    G.Link(G.Read(ShotAttack::DamageClass),G.Pin(Attack,ShotAttack::TypeClass)); G.Link(G.Read(ShotAttack::DamageAmount),G.Pin(Attack,ShotAttack::Damage));
     G.Default(Attack,ShotAttack::Variance,N::Zero); G.Default(Attack,ShotAttack::Impulse,N::Zero); G.Default(Attack,ShotAttack::Id,N::Zero); G.Default(Attack,ShotAttack::Type,ShotAttack::Directional);
     G.Link(G.Pin(Hit,E::Hit),G.Pin(Attack,ShotAttack::Hit)); G.Link(G.Pin(Hit,Shot::Other),G.Pin(Attack,ShotAttack::Target));
     G.Link(G.Read(ShotAttack::Controller),G.Pin(Attack,ShotAttack::Instigator)); G.Link(OpticalSelf(G),G.Pin(Attack,ShotAttack::Causer));
@@ -190,7 +192,8 @@ void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail)
     G.Branch(ObserveCall(G,APawn::StaticClass(),GET_FUNCTION_NAME_CHECKED(APawn,IsPlayerControlled),OpticalSelf(G)));
     FindEnergyModule(G);
     // A premature press is ignored, never queued for a later automatic shot.
-    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), EnergyAmount(G), Charge::ShotWh));
+    G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
+        EnergyAmount(G), RequiredEnergyAmount(G)));
     G.Write(Shot::SpawnedThisPress,nullptr,N::False); // no cooldown; each Started is independent
     G.Branch(G.Valid(G.Read(S::Anchor)));
     auto* Railgun=ObserveCall(G,UActorComponent::StaticClass(),OP::ComponentOwner,G.Read(S::Anchor));
@@ -200,7 +203,7 @@ void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail)
     auto* Cast=NewObject<UK2Node_DynamicCast>(G.Graph); Cast->TargetType=USceneComponent::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
     G.Link(G.Tail,G.Pin(Cast,P::Execute)); G.Link(G.Pin(Loop,CE::ArrayElement),Cast->GetCastSourcePin()); G.Tail=Cast->GetValidCastPin();
     auto* Already=G.Branch(G.Read(Shot::SpawnedThisPress)); G.Tail=G.Pin(Already,P::Else); // one shot even if duplicate muzzle tags exist
-    G.Branch(DebitEnergy(G)); // no free shot if native atomic withdrawal fails
+    G.Branch(DebitEnergy(G, RequiredEnergyAmount(G))); // no free shot if native atomic withdrawal fails
     // Claim this request before spawn/cast can fail, including duplicate tags.
     G.Write(Shot::SpawnedThisPress, nullptr, N::True);
     G.Write(Charge::Sampled, nullptr, N::False);
@@ -215,6 +218,7 @@ void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail)
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Operator,G.Read(N::OriginalPawn));
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Station,OpticalSelf(G));
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,ShotAttack::Controller,ObserveCall(G,APawn::StaticClass(),ShotAttack::GetController,OpticalSelf(G)));
+    ContextSet(G,Typed->GetCastResultPin(),Shot::Class,ShotAttack::DamageAmount,G.Read(ShotAttack::ConfiguredDamage));
     auto* Finish=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,FinishSpawningActor)); G.Link(G.Pin(Spawn,P::ReturnValue),G.Pin(Finish,P::Actor)); G.Link(G.Pin(Transform,P::ReturnValue),G.Pin(Finish,P::SpawnTransform)); G.Exec(Finish);
     check(ShotAudio::Wave);
     auto* Play=G.Call(UGameplayStatics::StaticClass(),ShotAudio::PlayAtLocation);
