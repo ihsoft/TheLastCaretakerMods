@@ -52,6 +52,19 @@ no-op или неверную архитектуру. Цель — не повт
 - Сброс `SteeringInput` при выходе прекращает ввод, но не обязан визуально
   выпрямлять колёса: их положение хранится ещё где-то в физике погрузчика.
 
+## Управление Gyro
+
+- Нельзя переносить stock `BP_GyroCopter_Possessable` в mod package и ставить
+  child на исходный package только потому, что этот inheritance-приём работает
+  для DonkLift. На Steam build `25191271` такой Gyro в реальной игре выглядел
+  привязанным к миру, а после входа из него нельзя было выйти. Compile, cook и
+  `retoc verify` при этом проходили. Служебный `DefaultSceneRoot` ребёнка не
+  является различителем: он также присутствует в рабочем DonkLift container.
+- Для нового Gyro сохранять stock Blueprint на исходном package identity.
+  Узкая точка выбора построенного класса —
+  `DA_Item_Module_GyroCopter.DroppedActor`; отдельный mod-subclass нужно
+  подключать через это поле, а не через relocation оригинального Blueprint.
+
 ## Стандартные подсказки
 
 - `BP_VoyageIngameForklift.KeybindRoot` существует, но не является runtime-host

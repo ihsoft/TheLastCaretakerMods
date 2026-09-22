@@ -1,0 +1,28 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Modding",
+  "Description": "Editor-only project for generating the Gyro Keyboard Control IoStore assets.",
+  "Modules": [
+    {
+      "Name": "Voyage",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "GyroKeyboardGenerator",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "PythonScriptPlugin",
+      "Enabled": true
+    },
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    }
+  ]
+}
