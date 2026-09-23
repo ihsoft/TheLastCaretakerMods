@@ -322,6 +322,7 @@ UClass* CreateDedicatedStation()
     if (!Hud->WidgetTree) Hud->WidgetTree = NewObject<UWidgetTree>(Hud, N::HudTree);
     AddVariable(Hud, Hint::HintsReady, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(Hud, Hint::HintInstance, UEdGraphSchema_K2::PC_Object, UVoyageDynamicPlayerInputWidget::StaticClass());
+    AddVariable(Hud, EnergyHud::ChargeInitialized, UEdGraphSchema_K2::PC_Boolean);
     auto* Canvas = Hud->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), N::HudCanvas); Canvas->bIsVariable = false;
     Hud->WidgetTree->RootWidget = Canvas;
     check(ZoomTest::OverlayTexture);

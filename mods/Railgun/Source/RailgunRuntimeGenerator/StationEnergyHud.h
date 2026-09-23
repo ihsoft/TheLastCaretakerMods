@@ -7,6 +7,7 @@ inline const FName Power(TEXT("RailgunEnergyPower"));
 inline const FName Progress(TEXT("RailgunEnergyProgress")), Rate(TEXT("RailgunEnergyRate"));
 inline const FName ChargeRadial(TEXT("RailgunChargeRadial"));
 inline const FName ChargeText(TEXT("RailgunChargeText"));
+inline const FName ChargeInitialized(TEXT("RailgunChargeInitialized"));
 inline const FName StatusCharging(TEXT("RailgunStatusCharging"));
 inline const FName StatusOffline(TEXT("RailgunStatusOffline"));
 inline const FName StatusReady(TEXT("RailgunStatusReady"));
@@ -124,14 +125,19 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
         G.Pin(DisplayedFraction, P::Select::Condition));
     G.Link(G.Pin(ClampedFraction, P::ReturnValue), G.Pin(DisplayedFraction, P::Select::WhenTrue));
     G.Link(G.Pin(InterpolatedFraction, P::ReturnValue), G.Pin(DisplayedFraction, P::Select::WhenFalse));
+    auto* InitialFraction = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectFloat));
+    G.Link(G.Read(EnergyHud::ChargeInitialized), G.Pin(InitialFraction, P::Select::Condition));
+    G.Link(G.Pin(DisplayedFraction, P::ReturnValue), G.Pin(InitialFraction, P::Select::WhenTrue));
+    G.Link(G.Pin(ClampedFraction, P::ReturnValue), G.Pin(InitialFraction, P::Select::WhenFalse));
     auto* FractionAsFloat = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Conv_DoubleToFloat));
-    G.Link(G.Pin(DisplayedFraction, P::ReturnValue), G.Pin(FractionAsFloat, EnergyHud::DoubleInputPin));
+    G.Link(G.Pin(InitialFraction, P::ReturnValue), G.Pin(FractionAsFloat, EnergyHud::DoubleInputPin));
     auto* SetRadialValue = G.Call(URadialSlider::StaticClass(), GET_FUNCTION_NAME_CHECKED(URadialSlider, SetValue));
     G.Link(G.Read(EnergyHud::ChargeRadial), G.Pin(SetRadialValue, P::FunctionTarget));
     G.Link(G.Pin(FractionAsFloat, P::ReturnValue), G.Pin(SetRadialValue, EnergyHud::RadialValuePin)); G.Exec(SetRadialValue);
+    G.Write(EnergyHud::ChargeInitialized, nullptr, N::True);
 
     auto* DisplayCharge = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
-        G.Pin(DisplayedFraction, P::ReturnValue), FullCharge);
+        G.Pin(InitialFraction, P::ReturnValue), FullCharge);
     auto* ChargeAsText = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_DoubleToText));
     G.Link(DisplayCharge, G.Pin(ChargeAsText, EnergyHud::NumericValuePin));
     G.Default(ChargeAsText, EnergyHud::UseGroupingPin, N::False);
