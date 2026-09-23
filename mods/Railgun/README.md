@@ -42,7 +42,12 @@ All mod-owned inputs live below this directory:
 - `Assets\Model\model-source.json` maps stable node roles and the two explicit
   interaction/collision boxes. It contains no revision metadata or stored hash.
 - `Assets\Railgun_Shot_Blast.wav` is the shot sound.
-- `Assets\Railgun.ini` is the default settings template copied beside the mod.
+- `Assets\Railgun.ini` is the distributable template and source of defaults,
+  comments, ordering and formatting. `Settings\Railgun.settings.json` adds the
+  runtime bindings, types and numeric ranges that INI cannot express. The build
+  validates them against each other and generates the runtime header.
+- `Build\New-RailgunSettings.ps1` is an internal build step; invoke the public
+  `Build-Railgun.ps1` producer rather than running it directly.
 - `Source\` contains editor-only generators and game API mirrors.
 - `Config\` and `Voyage.uproject` define the authoring project.
 
@@ -53,22 +58,38 @@ between builds. Unreal's generated `Binaries`, `Build`, `Content`,
 ## Settings
 
 The installed `Railgun.ini` is read when the player enters the weapon. Existing
-user settings are preserved by installation.
+user settings are preserved by installation. A missing key uses its template
+default at runtime and is added to the installed file by the next installation.
+The installer also retains the existing one-time migration from the former
+`FullChargeEnergyKJ` key.
 
 ```ini
 OpticsMousePercent=35
 YawLimitDegrees=80
-MinimumPitchDegrees=-50
+MinimumPitchDegrees=-30
 MaximumPitchDegrees=10
 ShotVolumePercent=600
-HitDamage=200
-FullChargeEnergyKJ=500
-FullChargeTimeSeconds=2.0
+StatusIconOpacityPercent=50
+ChargeIndicatorSmoothingSpeed=4
+ChargeTextOpacityPercent=100
+ChargeTextFontSize=14
+ChargeTextFontPath=/Engine/EngineFonts/Roboto.Roboto
+ChargeTextTypeface=Regular
+HitDamage=350
+FullChargeEnergyKWh=0.85
+FullChargeTimeSeconds=5.5
 ```
 
-Electricity storage is configured in kJ and charge demand is calculated in W:
-`FullChargeEnergyKJ * 1000 / FullChargeTimeSeconds`, plus the 1 kW idle load.
-The game's stock `kWh` presentation is not used for this conversion.
+The wide-view charge gauge is evaluated every rendered widget frame. Its
+`ChargeIndicatorSmoothingSpeed` only interpolates the displayed value between
+the game's discrete energy samples; it does not change charging or firing.
+`0` disables interpolation. Charge text font, typeface, size and opacity are
+configured independently by the corresponding `ChargeText*` keys.
+
+Electricity storage is configured in the same `KWh` unit shown by the game.
+Voyage maps one displayed `KWh` to 1000 native electricity amount units; the
+generator converts that amount to the module's W demand for the configured
+charge time, plus the 1 kW idle load.
 
 ## Compatibility and validation
 

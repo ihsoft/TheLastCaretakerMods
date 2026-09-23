@@ -16,6 +16,7 @@
 #include "Subsystems/SubsystemBlueprintLibrary.h"
 #include "TimerGraphNames.h"
 #include "Components/Image.h"
+#include "Components/RadialSlider.h"
 #include "Components/ScaleBox.h"
 #include "Engine/Texture2D.h"
 #include "Sound/SoundWave.h"

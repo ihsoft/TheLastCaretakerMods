@@ -3,45 +3,47 @@
 namespace Charge
 {
 inline const FName Sampled(TEXT("RailgunEnergySampled")), Module(TEXT("RailgunEnergyModule"));
-inline const FName Energy(TEXT("RailgunChargeKJ")), Previous(TEXT("RailgunPreviousChargeKJ"));
+inline const FName Energy(TEXT("RailgunChargeAmount")), Previous(TEXT("RailgunPreviousChargeAmount"));
 inline const FName Rate(TEXT("RailgunChargeKW"));
-inline const FName ConfiguredEnergyKJ(TEXT("RailgunFullChargeEnergyKJ"));
+inline const FName ConfiguredEnergyKWh(TEXT("RailgunFullChargeEnergyKWh"));
 inline const FName ConfiguredTimeSeconds(TEXT("RailgunFullChargeTimeSeconds"));
 inline const FName Type(TEXT("Type")), RemoveAmount(TEXT("RemoveAmount")), RemovalType(TEXT("RemovalType"));
 inline const FName Input(TEXT("InAcceptanceFilter")), Capacity(TEXT("InMaxResourceAmount")), Idle(TEXT("InConsumptionON"));
 inline constexpr TCHAR Electricity[] = TEXT("Electricity"), ExactRemoval[] = TEXT("ConsumptionAfterModifiers");
 inline constexpr TCHAR IdleW[] = TEXT("1000.0");
-inline constexpr TCHAR IdleCapacityKJ[] = TEXT("1.0");
-inline constexpr TCHAR JoulesPerKJ[] = TEXT("1000.0");
+inline constexpr TCHAR IdleCapacityAmount[] = TEXT("1.0");
+inline constexpr TCHAR GameResourceUnitsPerKWh[] = TEXT("1000.0");
+inline constexpr TCHAR WattsPerResourceUnit[] = TEXT("1000.0");
 }
-// Voyage electricity amounts behave as kJ while SetCustomConsumption accepts W.
-// The stock HUD's amount/1000 "kWh" text is a display convention, not an SI
-// conversion; do not introduce a 3.6 factor into charge storage or withdrawal.
+// Public tuning and HUD values use the game's displayed KWh scale. The module stores
+// 1000 native electricity amount units per displayed KWh, while custom demand
+// is expressed in W. Keep that game contract at this boundary.
 UEdGraphPin* EnergyMath(FGraph& G, FName Function, UEdGraphPin* Left, const TCHAR* Right)
 {
     auto* N = G.Call(UKismetMathLibrary::StaticClass(), Function);
     G.Link(Left, G.Pin(N, P::Binary::LeftOperand)); G.Default(N, P::Binary::RightOperand, Right);
     return G.Pin(N, P::ReturnValue);
 }
-UEdGraphPin* RequiredEnergyAmount(FGraph&, UEdGraphPin* EnergyKJ)
+UEdGraphPin* RequiredEnergyAmount(FGraph& G, UEdGraphPin* EnergyKWh)
 {
-    return EnergyKJ;
+    return EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
+        EnergyKWh, Charge::GameResourceUnitsPerKWh);
 }
 UEdGraphPin* RequiredEnergyAmount(FGraph& G)
 {
-    return RequiredEnergyAmount(G, G.Read(Charge::ConfiguredEnergyKJ));
+    return RequiredEnergyAmount(G, G.Read(Charge::ConfiguredEnergyKWh));
 }
-UEdGraphPin* EnergyCapacityKJ(FGraph& G)
+UEdGraphPin* EnergyCapacityAmount(FGraph& G)
 {
     return EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble),
-        RequiredEnergyAmount(G), Charge::IdleCapacityKJ);
+        RequiredEnergyAmount(G), Charge::IdleCapacityAmount);
 }
 UEdGraphPin* ChargingInputW(FGraph& G)
 {
-    auto* ChargeJoules = EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
-        G.Read(Charge::ConfiguredEnergyKJ), Charge::JoulesPerKJ);
+    auto* ChargeInput = EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
+        RequiredEnergyAmount(G), Charge::WattsPerResourceUnit);
     auto* NetChargeW = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble),
-        ChargeJoules, G.Read(Charge::ConfiguredTimeSeconds));
+        ChargeInput, G.Read(Charge::ConfiguredTimeSeconds));
     return EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble), NetChargeW, Charge::IdleW);
 }
 UEdGraphPin* FindEnergyModule(FGraph& G)
@@ -63,7 +65,7 @@ void SetEnergyDemand(FGraph& G, bool Charging)
     if (Charging) G.Link(ChargingInputW(G), G.Pin(Set, Charge::Input));
     else G.Default(Set, Charge::Input, Charge::IdleW);
     // A full gun keeps its stored charge; idle demand must not shrink capacity.
-    G.Link(EnergyCapacityKJ(G), G.Pin(Set, Charge::Capacity));
+    G.Link(EnergyCapacityAmount(G), G.Pin(Set, Charge::Capacity));
     G.Default(Set, Charge::Idle, Charge::IdleW); G.Exec(Set);
 }
 UEdGraphPin* EnergyAmount(FGraph& G)
@@ -87,7 +89,7 @@ void UpdateAutomaticCharge(FGraph& G, UEdGraphPin* DeltaSeconds)
     G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble), DeltaSeconds, N::Zero));
     auto* Positive = EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax), EnergyAmount(G), N::Zero);
     G.Write(Charge::Energy, G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMin),
-        Positive, G.Read(Charge::ConfiguredEnergyKJ)));
+        Positive, RequiredEnergyAmount(G)));
     auto* Sample = G.Branch(G.Read(Charge::Sampled));
     auto* Delta = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_DoubleDouble), G.Read(Charge::Energy), G.Read(Charge::Previous));
     auto* Net = EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax), Delta, N::Zero);

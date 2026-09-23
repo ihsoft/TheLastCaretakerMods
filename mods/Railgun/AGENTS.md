@@ -8,9 +8,14 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   `-Install` by default unless the user explicitly asks for preparation only.
 - Never stop the game. Installation must retain the common closed-game,
   manifest, backup and installed-hash gates.
-- All mod-authored build inputs, including the GLB, sound and settings template,
+- All mod-authored build inputs, including the GLB, sound and settings schema,
   live below this directory. `artifacts` contains outputs and evidence only and
   must never be required to build.
+- `Assets/Railgun.ini` is the canonical packaged INI and sole source of setting
+  defaults, comments, order and formatting. `Settings/Railgun.settings.json`
+  owns only runtime bindings, types and numeric ranges. Add each option to both,
+  then wire only its consuming behavior by hand; never edit generated output.
+  `Build-Railgun.ps1` owns the internal validation and generation step.
 - The user owns model geometry. Ada may move or wire model files and update the
   role manifest, but does not alter GLB geometry unless explicitly requested.
 - The live model has the stable path `Assets/Model/Railgun.glb`. Model logic

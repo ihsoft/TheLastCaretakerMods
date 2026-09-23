@@ -24,14 +24,13 @@
   mask, reticle and reduced sensitivity. The weapon aligns toward the character
   view target before scoped aiming.
 - The weapon charges from the module electricity system, may fire only when its
-  500 kJ charge is full, resets charge after a shot, and applies a validated
+  configured charge is full, resets charge after a shot, and applies a validated
   direct attack to the hit target. Projectile travel is represented visually;
   hit resolution is authoritative.
-- Voyage electricity storage behaves as kJ and module demand is expressed in
-  W. Charging `E` kJ over `t` seconds therefore requests `E * 1000 / t` W in
-  addition to standby demand. The stock HUD's amount/1000 `kWh` label is a
-  presentation convention and must not introduce a 3.6 conversion into the
-  Railgun storage path.
+- Railgun settings and HUD use the game's displayed `KWh` scale. Voyage maps
+  one displayed `KWh` to 1000 native electricity amount units; module demand
+  remains expressed in W and is derived from the configured charge time in
+  addition to standby demand.
 - Shot audio is cooked as a `SoundWave`; its volume multiplier is read from
   `Railgun.ini`. The accepted baseline is 600 percent.
 - Dismantling after exit is supported and must not leave the coordinator with a

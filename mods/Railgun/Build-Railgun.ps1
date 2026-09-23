@@ -12,6 +12,14 @@ $artifactBoundary = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')) + [IO.
 if (-not $output.StartsWith($artifactBoundary, [StringComparison]::OrdinalIgnoreCase)) { throw 'Output must be under repository artifacts.' }
 if (Test-Path -LiteralPath $output) { throw 'Output already exists; use a new build identity.' }
 $null = New-Item -ItemType Directory -Path $output
+$settingsSchema = Join-Path $PSScriptRoot 'Settings/Railgun.settings.json'
+$settingsDefaults = Join-Path $PSScriptRoot 'Assets/Railgun.ini'
+$settingsGenerator = Join-Path $PSScriptRoot 'Build/New-RailgunSettings.ps1'
+$generatedSettingsDirectory = Join-Path $output 'generated-settings'
+$generatedSettingsHeader = Join-Path $generatedSettingsDirectory 'StationSettings.generated.h'
+$generatedSettingsIni = Join-Path $generatedSettingsDirectory 'Railgun.ini'
+& $settingsGenerator -SchemaPath $settingsSchema -DefaultIniPath $settingsDefaults -HeaderPath $generatedSettingsHeader -IniPath $generatedSettingsIni
+[Environment]::SetEnvironmentVariable('RAILGUN_GENERATED_SETTINGS_DIR', $generatedSettingsDirectory, 'Process')
 $sourcePaths = @('mods/Railgun','tools/UnrealEditorGeneratorCommon/Public')
 $sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
 $modelDirectory = Join-Path $PSScriptRoot 'Assets/Model'
@@ -48,17 +56,63 @@ function Invoke-NativeStage([string]$Name, [string]$Executable, [string[]]$Nativ
     Write-Host "$Name passed; log: $log"
 }
 function Add-MissingRailgunSettings([string]$TemplatePath, [string]$SettingsPath) {
+    $templateLines = @([IO.File]::ReadAllLines($TemplatePath))
+    $lines = @([IO.File]::ReadAllLines($SettingsPath))
+    $newEnergyKey = 'FullChargeEnergyKWh'
+    $newEnergyPattern = '^\s*' + [regex]::Escape($newEnergyKey) + '\s*='
+    $legacyEnergyPattern = '^\s*FullChargeEnergyKJ\s*=\s*(.*?)\s*$'
+    $defaultEnergyValue = 0.0
+    $defaultEnergyText = @($templateLines | Where-Object { $_ -match $newEnergyPattern })
+    if ($defaultEnergyText.Count -ne 1 -or
+        -not [double]::TryParse(($defaultEnergyText[0] -split '=', 2)[1].Trim(), [Globalization.NumberStyles]::Float,
+            [Globalization.CultureInfo]::InvariantCulture, [ref]$defaultEnergyValue)) {
+        throw 'Generated settings template has no valid FullChargeEnergyKWh default.'
+    }
+    $hasNewEnergy = @($lines | Where-Object { $_ -match $newEnergyPattern }).Count -gt 0
+    $rewritten = New-Object 'System.Collections.Generic.List[string]'
+    $migratedEnergy = $false
+    foreach ($line in $lines) {
+        if ($line -match $legacyEnergyPattern) {
+            $migratedEnergy = $true
+            if (-not $hasNewEnergy) {
+                $legacyValue = 0.0
+                if (-not [double]::TryParse($matches[1].Trim(), [Globalization.NumberStyles]::Float,
+                    [Globalization.CultureInfo]::InvariantCulture, [ref]$legacyValue)) {
+                    $legacyValue = 500.0
+                }
+                # Do not preserve the superseded 500-unit default over the new
+                # Railgun balance. Non-default legacy values remain user tuning
+                # and are converted to the game's displayed kWh scale.
+                $gameValueNumber = if ([Math]::Abs($legacyValue - 500.0) -lt 0.000001) { $defaultEnergyValue } else { $legacyValue / 1000.0 }
+                $gameValue = $gameValueNumber.ToString('0.###############', [Globalization.CultureInfo]::InvariantCulture)
+                $rewritten.Add($newEnergyKey + '=' + $gameValue)
+                $hasNewEnergy = $true
+            }
+            continue
+        }
+        $rewritten.Add($line)
+    }
+    if ($migratedEnergy) {
+        if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' -ErrorAction SilentlyContinue).Count -gt 0) {
+            throw 'Game started; settings migration refused.'
+        }
+        [IO.File]::WriteAllLines($SettingsPath, $rewritten, (New-Object System.Text.UTF8Encoding($false)))
+        $lines = @([IO.File]::ReadAllLines($SettingsPath))
+    }
     $existingKeys = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
-    foreach ($line in [IO.File]::ReadAllLines($SettingsPath)) {
+    foreach ($line in $lines) {
         if ($line -match '^\s*([^#;][^=]*?)\s*=') { $null = $existingKeys.Add($matches[1].Trim()) }
     }
     $missing = New-Object 'System.Collections.Generic.List[string]'
-    foreach ($line in [IO.File]::ReadAllLines($TemplatePath)) {
+    foreach ($line in $templateLines) {
         if ($line -match '^\s*([^#;][^=]*?)\s*=' -and -not $existingKeys.Contains($matches[1].Trim())) {
             $missing.Add($line)
         }
     }
-    if ($missing.Count -eq 0) { return @() }
+    if ($missing.Count -eq 0) {
+        if ($migratedEnergy) { return @($newEnergyKey) }
+        return @()
+    }
     if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' -ErrorAction SilentlyContinue).Count -gt 0) {
         throw 'Game started; settings update refused.'
     }
@@ -66,7 +120,9 @@ function Add-MissingRailgunSettings([string]$TemplatePath, [string]$SettingsPath
     $prefix = if ($current.EndsWith("`n")) { '' } else { "`r`n" }
     $addition = $prefix + "`r`n# Defaults added by a newer Railgun build.`r`n" + (($missing -join "`r`n") + "`r`n")
     [IO.File]::AppendAllText($SettingsPath, $addition, (New-Object System.Text.UTF8Encoding($false)))
-    return @($missing | ForEach-Object { ($_ -split '=', 2)[0].Trim() })
+    $reported = @($missing | ForEach-Object { ($_ -split '=', 2)[0].Trim() })
+    if ($migratedEnergy) { $reported = @($newEnergyKey) + $reported }
+    return $reported
 }
 if (-not $SkipBuild) {
     Invoke-NativeStage 'build' (Join-Path $engine 'Build/BatchFiles/Build.bat') @('VoyageEditor','Win64','Development',('-Project=' + $project),'-WaitMutex','-NoHotReloadFromIDE',('-Log=' + (Join-Path $output 'ubt.log')))
@@ -155,7 +211,7 @@ $containerReport = Get-Content -LiteralPath $verify.reportPath -Raw | ConvertFro
 $bulkChunks = @($containerReport.chunkTypes | Where-Object { $_.type -ceq 'BulkData' } | ForEach-Object { $_.count } | Measure-Object -Sum).Sum
 if ($null -eq $bulkChunks -or $bulkChunks -lt 1) { throw 'Cooked shot sound bulk data is absent from the container.' }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Railgun_P.autoload') -Destination $payload
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Assets/Railgun.ini') -Destination $payload
+Copy-Item -LiteralPath $generatedSettingsIni -Destination $payload
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.txt') -Destination $payload
 $version = Split-Path -Leaf $output
 $archivePath = Join-Path $output ('Railgun_' + $version + '.zip')

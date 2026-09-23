@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "groups": [
+    {
+      "id": "controls",
+      "comments": [
+        "Re-read on each entry; exit before editing. No package rebuild is required.",
+        "Exact case-sensitive keys, decimal point, no inline comments."
+      ],
+      "settings": [
+        { "id": "Mouse", "runtimeName": "RailgunMousePercent", "key": "OpticsMousePercent", "type": "number", "minimum": 1, "maximum": 100 },
+        { "id": "Yaw", "runtimeName": "RailgunYawLimitDegrees", "key": "YawLimitDegrees", "type": "number", "minimum": 1, "maximum": 170 },
+        { "id": "PitchMin", "runtimeName": "RailgunMinimumPitchDegrees", "key": "MinimumPitchDegrees", "type": "number", "minimum": -89, "maximum": 0 },
+        { "id": "PitchMax", "runtimeName": "RailgunMaximumPitchDegrees", "key": "MaximumPitchDegrees", "type": "number", "minimum": 0, "maximum": 89 }
+      ]
+    },
+    {
+      "id": "audio-and-status",
+      "settings": [
+        { "id": "ShotVolume", "field": "ShotAudio::VolumePercent", "key": "ShotVolumePercent", "type": "number", "minimum": 0, "maximum": 1000000000 },
+        { "id": "StatusIconOpacity", "runtimeName": "RailgunStatusIconOpacityPercent", "key": "StatusIconOpacityPercent", "type": "number", "minimum": 0, "maximum": 100 }
+      ]
+    },
+    {
+      "id": "target-name",
+      "comments": ["Target labels use viewport-center anchors. Offsets are screen pixels."],
+      "settings": [
+        { "id": "TargetNameOffsetX", "runtimeName": "RailgunTargetNameOffsetX", "key": "TargetNameOffsetX", "type": "number", "minimum": -4096, "maximum": 4096 },
+        { "id": "TargetNameOffsetY", "runtimeName": "RailgunTargetNameOffsetY", "key": "TargetNameOffsetY", "type": "number", "minimum": -4096, "maximum": 4096 },
+        { "id": "TargetNameOpacity", "runtimeName": "RailgunTargetNameOpacityPercent", "key": "TargetNameOpacityPercent", "type": "number", "minimum": 0, "maximum": 100 },
+        { "id": "TargetNameFontSize", "runtimeName": "RailgunTargetNameFontSize", "key": "TargetNameFontSize", "type": "number", "minimum": 1, "maximum": 200 },
+        { "id": "TargetNameFontPath", "runtimeName": "RailgunTargetNameFontPath", "key": "TargetNameFontPath", "type": "text", "fontObjectId": "TargetNameFontObject", "fontObjectRuntimeName": "RailgunTargetNameFontObject" },
+        { "id": "TargetNameTypeface", "runtimeName": "RailgunTargetNameTypeface", "key": "TargetNameTypeface", "type": "text" }
+      ]
+    },
+    {
+      "id": "target-distance",
+      "settings": [
+        { "id": "TargetDistanceOffsetX", "runtimeName": "RailgunTargetDistanceOffsetX", "key": "TargetDistanceOffsetX", "type": "number", "minimum": -4096, "maximum": 4096 },
+        { "id": "TargetDistanceOffsetY", "runtimeName": "RailgunTargetDistanceOffsetY", "key": "TargetDistanceOffsetY", "type": "number", "minimum": -4096, "maximum": 4096 },
+        { "id": "TargetDistanceOpacity", "runtimeName": "RailgunTargetDistanceOpacityPercent", "key": "TargetDistanceOpacityPercent", "type": "number", "minimum": 0, "maximum": 100 },
+        { "id": "TargetDistanceFontSize", "runtimeName": "RailgunTargetDistanceFontSize", "key": "TargetDistanceFontSize", "type": "number", "minimum": 1, "maximum": 200 },
+        { "id": "TargetDistanceFontPath", "runtimeName": "RailgunTargetDistanceFontPath", "key": "TargetDistanceFontPath", "type": "text", "fontObjectId": "TargetDistanceFontObject", "fontObjectRuntimeName": "RailgunTargetDistanceFontObject" },
+        { "id": "TargetDistanceTypeface", "runtimeName": "RailgunTargetDistanceTypeface", "key": "TargetDistanceTypeface", "type": "text" }
+      ]
+    },
+    {
+      "id": "gameplay",
+      "comments": ["Gameplay tuning uses the same KWh energy unit shown by the game."],
+      "settings": [
+        { "id": "HitDamage", "field": "ShotAttack::ConfiguredDamage", "key": "HitDamage", "type": "number", "minimum": 0, "maximum": 1000000000 },
+        { "id": "FullChargeEnergy", "field": "Charge::ConfiguredEnergyKWh", "key": "FullChargeEnergyKWh", "type": "number", "minimum": 0.001, "maximum": 1000000000 },
+        { "id": "FullChargeTime", "field": "Charge::ConfiguredTimeSeconds", "key": "FullChargeTimeSeconds", "type": "number", "minimum": 0.001, "maximum": 86400 }
+      ]
+    },
+    {
+      "id": "wide-charge-hud",
+      "comments": ["Wide-view charge indicator. Smoothing speed 0 disables interpolation."],
+      "settings": [
+        { "id": "ChargeIndicatorSmoothingSpeed", "runtimeName": "RailgunChargeIndicatorSmoothingSpeed", "key": "ChargeIndicatorSmoothingSpeed", "type": "number", "minimum": 0, "maximum": 100 },
+        { "id": "ChargeTextOpacity", "runtimeName": "RailgunChargeTextOpacityPercent", "key": "ChargeTextOpacityPercent", "type": "number", "minimum": 0, "maximum": 100 },
+        { "id": "ChargeTextFontSize", "runtimeName": "RailgunChargeTextFontSize", "key": "ChargeTextFontSize", "type": "number", "minimum": 1, "maximum": 200 },
+        { "id": "ChargeTextFontPath", "runtimeName": "RailgunChargeTextFontPath", "key": "ChargeTextFontPath", "type": "text", "fontObjectId": "ChargeTextFontObject", "fontObjectRuntimeName": "RailgunChargeTextFontObject" },
+        { "id": "ChargeTextTypeface", "runtimeName": "RailgunChargeTextTypeface", "key": "ChargeTextTypeface", "type": "text" }
+      ]
+    }
+  ]
+}

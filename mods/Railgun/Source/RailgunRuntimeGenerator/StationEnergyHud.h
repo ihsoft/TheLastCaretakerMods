@@ -5,6 +5,8 @@ namespace EnergyHud
 inline const FName Connection(TEXT("RailgunEnergyConnection"));
 inline const FName Power(TEXT("RailgunEnergyPower"));
 inline const FName Progress(TEXT("RailgunEnergyProgress")), Rate(TEXT("RailgunEnergyRate"));
+inline const FName ChargeRadial(TEXT("RailgunChargeRadial"));
+inline const FName ChargeText(TEXT("RailgunChargeText"));
 inline const FName StatusCharging(TEXT("RailgunStatusCharging"));
 inline const FName StatusOffline(TEXT("RailgunStatusOffline"));
 inline const FName StatusReady(TEXT("RailgunStatusReady"));
@@ -22,13 +24,20 @@ inline UTexture2D* OfflineTexture = nullptr;
 inline UTexture2D* ReadyTexture = nullptr;
 inline constexpr float DiagnosticLeft = 24.0f;
 inline constexpr float StatusOffsetY = -190.0f;
+inline constexpr float ChargeGaugeSize = 150.0f;
+inline constexpr float ChargeGaugeMargin = 20.0f;
+inline constexpr float ChargeGaugeCenterOffset = -(ChargeGaugeMargin + ChargeGaugeSize * 0.5f);
+inline constexpr float ChargeGaugeBarThickness = 20.0f;
+inline constexpr float ChargeGaugeFontSize = 14.0f;
 inline constexpr float ConnectionOffset = 400.0f;
 inline constexpr float PowerOffset = 428.0f;
 inline constexpr float ProgressOffset = 456.0f;
 inline constexpr float RateOffset = 484.0f;
-inline constexpr TCHAR EmptyCharge[] = TEXT("Charge kJ: 0");
+inline constexpr TCHAR EmptyCharge[] = TEXT("Charge KWh: 0.0");
+inline constexpr TCHAR EmptyChargeDisplay[] = TEXT("0.0 KWh");
+inline constexpr TCHAR ChargeUnitSuffix[] = TEXT(" KWh");
 inline constexpr TCHAR EmptyRate[] = TEXT("CHARGING");
-inline constexpr TCHAR ChargePrefix[] = TEXT("Charge kJ: ");
+inline constexpr TCHAR ChargePrefix[] = TEXT("Charge KWh: ");
 inline constexpr TCHAR Ready[] = TEXT("READY");
 inline constexpr TCHAR UnknownConnection[] = TEXT("Grid: module unavailable");
 inline constexpr TCHAR UnknownPower[] = TEXT("Power: unknown");
@@ -39,16 +48,32 @@ inline constexpr TCHAR Unpowered[] = TEXT("Power: unavailable");
 inline constexpr TCHAR Hidden[] = TEXT("Collapsed");
 inline constexpr TCHAR Shown[] = TEXT("HitTestInvisible");
 inline constexpr TCHAR PercentMultiplier[] = TEXT("0.01");
+inline constexpr TCHAR NormalizedMaximum[] = TEXT("1.0");
+inline constexpr TCHAR MinimumChargeFractionDigits[] = TEXT("1");
+inline constexpr TCHAR MaximumChargeFractionDigits[] = TEXT("1");
 inline constexpr TCHAR BlinkPeriodSeconds[] = TEXT("0.5");
 inline constexpr TCHAR BlinkVisibleSeconds[] = TEXT("0.25");
 inline const FName DividendPin(TEXT("Dividend"));
 inline const FName DivisorPin(TEXT("Divisor"));
 inline const FName RemainderPin(TEXT("Remainder"));
+inline const FName DoubleInputPin(TEXT("InDouble"));
+inline const FName RadialValuePin(TEXT("InValue"));
+inline const FName NumericValuePin(TEXT("Value"));
+inline const FName UseGroupingPin(TEXT("bUseGrouping"));
+inline const FName MinimumFractionalDigitsPin(TEXT("MinimumFractionalDigits"));
+inline const FName MaximumFractionalDigitsPin(TEXT("MaximumFractionalDigits"));
+inline const FName FormattedTextPin(TEXT("InText"));
+inline const FName CurrentPin(TEXT("Current"));
+inline const FName TargetPin(TEXT("Target"));
+inline const FName DeltaTimePin(TEXT("DeltaTime"));
+inline const FName WidgetDeltaTimePin(TEXT("InDeltaTime"));
+inline const FName InterpSpeedPin(TEXT("InterpSpeed"));
+inline const FName FloatInputPin(TEXT("InFloat"));
 }
 
 // Diagnostic values come from the railgun module, not the possessed station.
 // Reset before guards so a destroyed/unavailable module cannot leave stale YES.
-void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClass)
+void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClass, UEdGraphPin* DeltaTime)
 {
     // This graph belongs to the widget itself, not an external observer actor.
     // FGraph::Text requires HudClass/HudInstance and is a no-op in this graph.
@@ -74,9 +99,54 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
         G.Default(Select, P::Select::WhenTrue, WhenTrue); G.Default(Select, P::Select::WhenFalse, WhenFalse);
         SetText(Field, nullptr, G.Pin(Select, P::ReturnValue));
     };
+
+    auto* CurrentCharge = ReadNativeInputField(G, Station, StationClass, Charge::Energy);
+    auto* FullCharge = ReadNativeInputField(G, Station, StationClass, Charge::ConfiguredEnergyKWh);
+    auto* Fraction = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble),
+        CurrentCharge, RequiredEnergyAmount(G, FullCharge));
+    auto* ClampedFraction = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FClamp));
+    G.Link(Fraction, G.Pin(ClampedFraction, OP::ClampValue));
+    G.Default(ClampedFraction, OP::ClampMinimum, N::Zero);
+    G.Default(ClampedFraction, OP::ClampMaximum, EnergyHud::NormalizedMaximum);
+    auto* CurrentFraction = G.Call(URadialSlider::StaticClass(), GET_FUNCTION_NAME_CHECKED(URadialSlider, GetValue));
+    G.Link(G.Read(EnergyHud::ChargeRadial), G.Pin(CurrentFraction, P::FunctionTarget));
+    auto* CurrentAsDouble = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Conv_FloatToDouble));
+    G.Link(G.Pin(CurrentFraction, P::ReturnValue), G.Pin(CurrentAsDouble, EnergyHud::FloatInputPin));
+    auto* InterpolatedFraction = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FInterpTo));
+    G.Link(G.Pin(CurrentAsDouble, P::ReturnValue), G.Pin(InterpolatedFraction, EnergyHud::CurrentPin));
+    G.Link(G.Pin(ClampedFraction, P::ReturnValue), G.Pin(InterpolatedFraction, EnergyHud::TargetPin));
+    G.Link(DeltaTime, G.Pin(InterpolatedFraction, EnergyHud::DeltaTimePin));
+    G.Link(ReadNativeInputField(G, Station, StationClass, Settings::ChargeIndicatorSmoothingSpeed),
+        G.Pin(InterpolatedFraction, EnergyHud::InterpSpeedPin));
+    auto* DisplayedFraction = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectFloat));
+    G.Link(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Less_DoubleDouble),
+        G.Pin(ClampedFraction, P::ReturnValue), G.Pin(CurrentAsDouble, P::ReturnValue)),
+        G.Pin(DisplayedFraction, P::Select::Condition));
+    G.Link(G.Pin(ClampedFraction, P::ReturnValue), G.Pin(DisplayedFraction, P::Select::WhenTrue));
+    G.Link(G.Pin(InterpolatedFraction, P::ReturnValue), G.Pin(DisplayedFraction, P::Select::WhenFalse));
+    auto* FractionAsFloat = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Conv_DoubleToFloat));
+    G.Link(G.Pin(DisplayedFraction, P::ReturnValue), G.Pin(FractionAsFloat, EnergyHud::DoubleInputPin));
+    auto* SetRadialValue = G.Call(URadialSlider::StaticClass(), GET_FUNCTION_NAME_CHECKED(URadialSlider, SetValue));
+    G.Link(G.Read(EnergyHud::ChargeRadial), G.Pin(SetRadialValue, P::FunctionTarget));
+    G.Link(G.Pin(FractionAsFloat, P::ReturnValue), G.Pin(SetRadialValue, EnergyHud::RadialValuePin)); G.Exec(SetRadialValue);
+
+    auto* DisplayCharge = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
+        G.Pin(DisplayedFraction, P::ReturnValue), FullCharge);
+    auto* ChargeAsText = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_DoubleToText));
+    G.Link(DisplayCharge, G.Pin(ChargeAsText, EnergyHud::NumericValuePin));
+    G.Default(ChargeAsText, EnergyHud::UseGroupingPin, N::False);
+    G.Default(ChargeAsText, EnergyHud::MinimumFractionalDigitsPin, EnergyHud::MinimumChargeFractionDigits);
+    G.Default(ChargeAsText, EnergyHud::MaximumFractionalDigitsPin, EnergyHud::MaximumChargeFractionDigits);
+    auto* ChargeAsString = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_TextToString));
+    G.Link(G.Pin(ChargeAsText, P::ReturnValue), G.Pin(ChargeAsString, EnergyHud::FormattedTextPin));
+    auto* WithUnit = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Concat_StrStr));
+    G.Link(G.Pin(ChargeAsString, P::ReturnValue), G.Pin(WithUnit, P::Binary::LeftOperand));
+    G.Default(WithUnit, P::Binary::RightOperand, EnergyHud::ChargeUnitSuffix);
+    SetText(EnergyHud::ChargeText, nullptr, G.Pin(WithUnit, P::ReturnValue));
+
     SetText(EnergyHud::Connection, EnergyHud::UnknownConnection);
     SetText(EnergyHud::Power, EnergyHud::UnknownPower);
-    SetNumber(EnergyHud::Progress, EnergyHud::ChargePrefix, ReadNativeInputField(G, Station, StationClass, Charge::Energy));
+    SetNumber(EnergyHud::Progress, EnergyHud::ChargePrefix, DisplayCharge);
     SetText(EnergyHud::Rate, EnergyHud::EmptyRate);
     auto* Anchor = ReadNativeInputField(G, Station, StationClass, S::Anchor);
     G.Branch(G.Valid(Anchor));
@@ -94,7 +164,7 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
     G.Default(Amount, Charge::Type, Charge::Electricity);
     SetBoolean(EnergyHud::Rate,
         G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), G.Pin(Amount, P::ReturnValue),
-            RequiredEnergyAmount(G, ReadNativeInputField(G, Station, StationClass, Charge::ConfiguredEnergyKJ))),
+            RequiredEnergyAmount(G, ReadNativeInputField(G, Station, StationClass, Charge::ConfiguredEnergyKWh))),
         EnergyHud::Ready, EnergyHud::EmptyRate);
     SetBoolean(EnergyHud::Connection,
         ObserveCall(G, UVoyageModuleComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, HasSocketConnection), Module->GetCastResultPin()),
@@ -140,7 +210,7 @@ void UpdateStationStatusHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
     G.Link(Module, G.Pin(Amount, P::FunctionTarget)); G.Default(Amount, Charge::Type, Charge::Electricity);
     auto* Full = G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
         G.Pin(Amount, P::ReturnValue),
-        RequiredEnergyAmount(G, ReadNativeInputField(G, Station, StationClass, Charge::ConfiguredEnergyKJ))));
+        RequiredEnergyAmount(G, ReadNativeInputField(G, Station, StationClass, Charge::ConfiguredEnergyKWh))));
     SetVisible(EnergyHud::StatusReady); auto* ReadyTail = G.Tail;
 
     G.Tail = G.Pin(Full, P::Else);

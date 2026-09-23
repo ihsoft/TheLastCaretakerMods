@@ -278,12 +278,10 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, EyeAim::Pitch, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, EyeAim::Target, UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
     AddVariable(BP, ZoomTest::Mouse, UEdGraphSchema_K2::PC_Real);
-    for (FName Field : {Settings::Mouse, Settings::Yaw, Settings::PitchMin, Settings::PitchMax, ShotAudio::VolumePercent}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
-    for (const auto& Setting : Settings::GameplayNumbers) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
-    for (const auto& Setting : Settings::DisplayNumbers) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
-    for (const auto& Setting : Settings::DisplayText) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_String);
-    AddVariable(BP, Settings::TargetNameFontObject, UEdGraphSchema_K2::PC_Object, UObject::StaticClass());
-    AddVariable(BP, Settings::TargetDistanceFontObject, UEdGraphSchema_K2::PC_Object, UObject::StaticClass());
+    for (const auto& Setting : Settings::NumericSettings) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
+    for (const auto& Setting : Settings::TextSettings) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_String);
+    for (const auto& Setting : Settings::FontSettings)
+        AddVariable(BP, Setting.ObjectField, UEdGraphSchema_K2::PC_Object, UObject::StaticClass());
     AddVariable(BP, DS::Sight, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
     for (FName Field : {CE::Ready, CE::InteractBlocks, CE::ProviderSeen, CE::CallbackSeen}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, O::BaselineFov, UEdGraphSchema_K2::PC_Real);
@@ -356,6 +354,33 @@ UClass* CreateDedicatedStation()
     AddStatusIcon(EnergyHud::StatusCharging, EnergyHud::ChargingTexture);
     AddStatusIcon(EnergyHud::StatusOffline, EnergyHud::OfflineTexture);
     AddStatusIcon(EnergyHud::StatusReady, EnergyHud::ReadyTexture);
+    auto* ChargeRadial = Hud->WidgetTree->ConstructWidget<URadialSlider>(URadialSlider::StaticClass(), EnergyHud::ChargeRadial);
+    ChargeRadial->bIsVariable = true;
+    ChargeRadial->Value = 0.0f;
+    ChargeRadial->WidgetStyle.BarThickness = EnergyHud::ChargeGaugeBarThickness;
+    ChargeRadial->SliderBarColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.2f);
+    ChargeRadial->SliderProgressColor = FLinearColor::White;
+    ChargeRadial->ShowSliderHandle = false;
+    ChargeRadial->ShowSliderHand = false;
+    ChargeRadial->Locked = true;
+    ChargeRadial->IsFocusable = false;
+    ChargeRadial->SetVisibility(ESlateVisibility::HitTestInvisible);
+    auto* ChargeRadialSlot = Canvas->AddChildToCanvas(ChargeRadial);
+    ChargeRadialSlot->SetAnchors(FAnchors(1.0f, 1.0f));
+    ChargeRadialSlot->SetAlignment(FVector2D(1.0f, 1.0f));
+    ChargeRadialSlot->SetPosition(FVector2D(-EnergyHud::ChargeGaugeMargin, -EnergyHud::ChargeGaugeMargin));
+    ChargeRadialSlot->SetSize(FVector2D(EnergyHud::ChargeGaugeSize, EnergyHud::ChargeGaugeSize));
+    auto* ChargeText = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), EnergyHud::ChargeText);
+    ChargeText->bIsVariable = true;
+    ChargeText->SetText(FText::FromString(EnergyHud::EmptyChargeDisplay));
+    ChargeText->SetJustification(ETextJustify::Center);
+    auto ChargeFont = ChargeText->GetFont(); ChargeFont.Size = EnergyHud::ChargeGaugeFontSize; ChargeText->SetFont(ChargeFont);
+    ChargeText->SetVisibility(ESlateVisibility::HitTestInvisible);
+    auto* ChargeTextSlot = Canvas->AddChildToCanvas(ChargeText);
+    ChargeTextSlot->SetAnchors(FAnchors(1.0f, 1.0f));
+    ChargeTextSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+    ChargeTextSlot->SetPosition(FVector2D(EnergyHud::ChargeGaugeCenterOffset, EnergyHud::ChargeGaugeCenterOffset));
+    ChargeTextSlot->SetAutoSize(true);
     auto AddScopeText = [&](FName Field, const TCHAR* Text, float Offset, bool Variable)
     {
         auto* Widget = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Field); Widget->bIsVariable = Variable;
@@ -401,16 +426,8 @@ UClass* CreateDedicatedStation()
         auto* Set = HG.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
         HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Link(Value, HG.Pin(Set, E::WidgetText)); HG.Exec(Set);
     }
-    auto ApplyTargetStyle = [&](FName WidgetField, FName OffsetX, FName OffsetY, FName Opacity,
-        FName FontSize, FName FontObject, FName Typeface)
+    auto ApplyTextStyle = [&](FName WidgetField, FName Opacity, FName FontSize, FName FontObject, FName Typeface)
     {
-        auto* Position = HG.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector2D));
-        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, OffsetX), HG.Pin(Position, Settings::XPin));
-        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, OffsetY), HG.Pin(Position, Settings::YPin));
-        auto* Translation = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderTranslation));
-        HG.Link(HG.Read(WidgetField), HG.Pin(Translation, P::FunctionTarget));
-        HG.Link(HG.Pin(Position, P::ReturnValue), HG.Pin(Translation, Settings::TranslationPin)); HG.Exec(Translation);
-
         auto* NormalizedOpacity = HG.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble));
         HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Opacity), HG.Pin(NormalizedOpacity, P::Binary::LeftOperand));
         HG.Default(NormalizedOpacity, P::Binary::RightOperand, Settings::PercentMultiplier);
@@ -438,6 +455,19 @@ UClass* CreateDedicatedStation()
         HG.Link(HG.Pin(FontInfo, P::ReturnValue), HG.Pin(SetFont, Settings::FontInfoPin)); HG.Exec(SetFont);
         StationMerge(HG, {HG.Tail, NoFont});
     };
+    auto ApplyTargetStyle = [&](FName WidgetField, FName OffsetX, FName OffsetY, FName Opacity,
+        FName FontSize, FName FontObject, FName Typeface)
+    {
+        auto* Position = HG.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector2D));
+        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, OffsetX), HG.Pin(Position, Settings::XPin));
+        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, OffsetY), HG.Pin(Position, Settings::YPin));
+        auto* Translation = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderTranslation));
+        HG.Link(HG.Read(WidgetField), HG.Pin(Translation, P::FunctionTarget));
+        HG.Link(HG.Pin(Position, P::ReturnValue), HG.Pin(Translation, Settings::TranslationPin)); HG.Exec(Translation);
+        ApplyTextStyle(WidgetField, Opacity, FontSize, FontObject, Typeface);
+    };
+    ApplyTextStyle(EnergyHud::ChargeText, Settings::ChargeTextOpacity, Settings::ChargeTextFontSize,
+        Settings::ChargeTextFontObject, Settings::ChargeTextTypeface);
     ApplyTargetStyle(Range::TargetName, Settings::TargetNameOffsetX, Settings::TargetNameOffsetY,
         Settings::TargetNameOpacity, Settings::TargetNameFontSize, Settings::TargetNameFontObject, Settings::TargetNameTypeface);
     ApplyTargetStyle(Range::TargetRange, Settings::TargetDistanceOffsetX, Settings::TargetDistanceOffsetY,
@@ -456,13 +486,22 @@ UClass* CreateDedicatedStation()
         auto* Set = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
         HG.Link(HG.Read(ZoomTest::WideCenter), HG.Pin(Set, P::FunctionTarget)); HG.Default(Set, OP::Visibility, Visibility); HG.Exec(Set);
     };
-    SetOpticalVisibility(ZoomTest::Hidden); SetWideCenter(ZoomTest::Shown); auto* WideTail = HG.Tail;
-    HG.Tail = HG.Pin(WideHud, P::Else); SetOpticalVisibility(ZoomTest::Shown); SetWideCenter(ZoomTest::Hidden);
+    auto SetWideChargeVisibility = [&](const TCHAR* Visibility)
+    {
+        for (FName Field : {EnergyHud::ChargeRadial, EnergyHud::ChargeText})
+        {
+            auto* Set = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
+            HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Default(Set, OP::Visibility, Visibility); HG.Exec(Set);
+        }
+    };
+    SetOpticalVisibility(ZoomTest::Hidden); SetWideCenter(ZoomTest::Shown); SetWideChargeVisibility(ZoomTest::Shown); auto* WideTail = HG.Tail;
+    HG.Tail = HG.Pin(WideHud, P::Else); SetOpticalVisibility(ZoomTest::Shown); SetWideCenter(ZoomTest::Hidden); SetWideChargeVisibility(ZoomTest::Hidden);
     StationMerge(HG, {WideTail, HG.Tail});
     UpdateStationStatusHud(HG, Station->GetCastResultPin(), BP->GeneratedClass,
         ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, ZoomTest::Wide),
         ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Settings::StatusIconOpacity));
-    UpdateStationEnergyHud(HG, Station->GetCastResultPin(), BP->GeneratedClass);
+    UpdateStationEnergyHud(HG, Station->GetCastResultPin(), BP->GeneratedClass,
+        HG.Pin(HudTick, EnergyHud::WidgetDeltaTimePin));
     AddStationHintConstruction(Hud);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud); FKismetEditorUtilities::CompileBlueprint(Hud);
     check(Hud->Status != BS_Error);
