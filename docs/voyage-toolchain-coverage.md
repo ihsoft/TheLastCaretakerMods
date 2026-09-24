@@ -5,6 +5,19 @@ It records how real coding tasks used the public pipeline. Tool-development
 synthetic tests are separate and do not prove adoption or repository-wide
 coverage. The active improvement queue lives in `voyage-toolchain-backlog.md`.
 
+## R18: Fabricator generic model export (2026-09-23 UTC)
+
+Real user request, 5/5 intended recurring game-asset operations through public
+entry points after one bounded tool-development repair: stock package catalog,
+compact Blueprint component summary, exact Blueprint JSON retrieval, generic
+model/material GLB export, and structural GLB validation. The initial export's
+GLB was valid but its readback compared serialized materials with discovered
+records that included unused slots; the documented exporter completed on the next
+fresh output identity. Source inspection was triggered by the previously recorded
+absence of a general mesh route and the failed readback, not routine caller work.
+Blender preview is source-artifact visual QA and remains outside the coverage
+denominator. No game build, install or gameplay claim occurred.
+
 ## Measurement contract
 
 - Current user-approved scope: game-asset work and release preparation only.

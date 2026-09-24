@@ -118,6 +118,12 @@ exact material list -> self-contained GLB, inherited parameters and only texture
 actually used by the approximate PBR sample surfaces; explicit omission/provenance
 report. Unknown/ambiguous/disabled texture payloads are not decoded or archived.
 This is separate from the geometry reader, not full Unreal shader recovery/baking.
+Generic stock-model extraction uses
+[`Export-VoyageModelGlb.ps1`](VoyageModelExporter/README.md): one exact StaticMesh
+or Blueprint default SCS assembly -> self-contained GLB with hierarchy, transforms,
+ordinary render geometry and the same bounded PBR material policy. Runtime
+Blueprint behavior, animation, Niagara, widgets and full shader graphs remain
+explicit report omissions rather than implied GLB fidelity.
 Source-only conversion/preview is outside game-tool coverage; extraction/build
 operations retain the normal game provenance gates.
 
@@ -134,6 +140,8 @@ container and evidence, without installation.
 | Get one cooked asset as JSON or list every package | `Get-VoyageAssetJson.ps1` | Validated JSON or package-list path; game storage and reuse are automatic |
 | Summarize one Blueprint without reading its full JSON | `Get-VoyageAssetSummary.ps1` | Compact focused structure plus a complete summary path |
 | Find, list, or structurally inspect cooked assets | `Inspect-VoyageAsset.ps1` | Paths, JSON exports, Blueprint pseudocode, or mapping reports |
+| Export one stock StaticMesh or Blueprint default assembly | `Export-VoyageModelGlb.ps1` | Self-contained GLB with static hierarchy, transforms, bounded PBR materials and explicit omissions |
+| Export an exact batch of stock materials | `Export-VoyageMaterialsGlb.ps1` | Self-contained sample-panel GLB with inherited parameters, used textures and PBR approximation report |
 | Publish or validate the Inspector executable | `Publish-VoyageAssetInspectorBinary.ps1`, `Get-VoyageAssetInspectorBinary.ps1` | Stable single-file EXE; validated source/dependency/binary identity |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Publish or reuse canonical retoc | `Publish-RetocBinary.ps1` | Stable `.tools/bin/retoc.exe` plus hash/provenance manifest |

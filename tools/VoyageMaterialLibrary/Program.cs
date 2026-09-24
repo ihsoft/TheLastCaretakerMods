@@ -198,8 +198,8 @@ internal static class Program
             report.Bindings[key + "Factor"] = values[0].Key + " (named scalar; shader operation not evaluated)";
             return Math.Clamp(values[0].Value, 0, 1);
         }
-        var baseColor = Select("baseColor", "basecolor", "basecolortexture", "albedo", "diffuse", "diffusetexture");
-        var normal = Select("normal", "normal", "normalmap", "normaltexture");
+        var baseColor = Select("baseColor", "basecolor", "basecolortexture", "albedo", "diffuse", "diffusetexture", "pmdiffuse");
+        var normal = Select("normal", "normal", "normalmap", "normaltexture", "pmnormals");
         var orm = Select("ORM", "orm", "occlusionroughnessmetallic", "occlusionroughnessmetallictexture");
         var strength = parameters.Scalars.Where(x => new[] { "emissivestrength", "emissivestrenght", "emissiveintensity" }.Contains(Normalize(x.Key))).ToArray();
         var emissionValue = strength.Length == 1 && float.IsFinite(strength[0].Value) ? Math.Max(0, strength[0].Value) : 1;

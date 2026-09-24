@@ -1,5 +1,56 @@
 # Voyage toolchain active backlog
 
+## Generic stock model export checkpoint (2026-09-23 UTC)
+
+Direct user request: extract the Fabricator with all materials, but make the
+workflow reusable for another model and prefer existing tools. Entry cost was no
+public generic model route: the socket reader was validated for one mesh only,
+while the material-library exported swatches rather than model geometry. Manual
+Fabricator handling required catalog search, Blueprint component inspection,
+11 unique mesh exports, 13 component placements, slot/override resolution,
+material extraction and GLB assembly.
+
+Measured return: `tools/Export-VoyageModelGlb.ps1` reduces the supported repeat
+workflow to one public call, no routine source inspection and one compact result
+plus evidence report. It reuses the reviewed CUE4Parse parser/conversion source,
+SharpGLTF and the established used-only material policy. Scope is deliberately
+bounded to one StaticMesh or Blueprint default SCS StaticMeshComponent assembly;
+it reports rather than simulates runtime Blueprint behavior, skeletal/spline,
+Niagara, widget, child-actor, collision, high-resolution Nanite and full Unreal
+shader behavior.
+
+Real Fabricator result on Steam25191271: 39 nodes, 13 mesh instances / 11 unique
+meshes, 19,657 triangles, 14 used materials, 20 images, zero texture failures;
+self-contained structural readback and Blender5.2.2 import/render passed. Initial
+readback rejected discovered but unused material slots; the GLB itself was valid,
+and the check was corrected to distinguish discovered records from serialized
+used materials. Concrete `PM_Diffuse` / `PM_Normals` parameters were added to both
+material adapters, improving the two principal Fabricator materials from ORM-only
+to base-color+normal+ORM without decoding ambiguous rust/mask maps in the initial
+checkpoint. Material
+self-tests remain 19/19; a fresh one-material black-box export embedded three
+used images and passed the independent material-library verifier. Normal
+extraction never builds tools.
+
+Follow-up visual evidence found that all-zero Unreal vertex colors suppressed the
+valid base color under glTF multiplication. The exporter now neutralizes only an
+entirely zero color stream while preserving a meaningful stream. It also performs
+one bounded cheap bake for an exact `ColorMask` with enabled channel switches and
+matching `MaskedColor` parameters, using the disclosed approximation
+`BaseColor * lerp(white, MaskedColor, channel)`. Fabricator v6 has 21 images and
+retains the same 39 nodes / 13 meshes / 19,657 triangles; Blender5.2.2 render shows
+the expected dark-blue lower panels while preserving the white and orange areas.
+Every export now writes `material-omissions.md` with deferred texture identities,
+parameter names and damage/rust controls. Actual rust/damage-layer extraction and
+composition remains the next evidence-backed reusable gap; the current report
+records `/Game/External/PostApocalypticBase/Textures/T_Rust_1_B` and `Damage=0`
+without copying or claiming to evaluate that layer.
+
+Implementation/source-inspection cost was justified by the absent public route
+and this real reusable request. Remaining appearance gaps are shader-specific and
+should be compensated by explicit authored replacements or evidence-backed
+per-material baking/bindings, not speculative dependency archives.
+
 ## Material-library restart / used-only policy (2026-09-16 UTC)
 
 User explicitly rejected speculative dependency archives. Export only images with
