@@ -15,8 +15,9 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   identity, runtime binding, type, and numeric range. Add or remove an option
   in both files, then wire only its consuming behavior by hand; never edit
   generated output. `Build-GyroKeyboardControl.ps1` owns internal settings
-  validation and generation. Installation preserves existing user values and
-  appends only missing canonical keys.
+  validation and generation. Installation preserves existing user values for
+  active keys, appends only missing canonical keys, and may remove only
+  explicitly declared retired keys plus their exact canonical comments.
 - Build-GyroKeyboardControl.ps1 is the only public producer. It owns fingerprinting,
   editor build, generation, cook, clean item-data extraction, surgical patching,
   packaging, verification, ZIP creation, and optional -Install.

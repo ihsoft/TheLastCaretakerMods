@@ -9,6 +9,14 @@
       "type": "number",
       "minimum": 0.05,
       "maximum": 60.0
+    },
+    {
+      "id": "AltitudeStabilizationVerticalDeceleration",
+      "runtimeName": "AltitudeStabilizationVerticalDeceleration",
+      "key": "AltitudeStabilizationVerticalDeceleration",
+      "type": "number",
+      "minimum": 1.0,
+      "maximum": 10000.0
     }
   ]
 }

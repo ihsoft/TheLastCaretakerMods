@@ -10,14 +10,17 @@ public class GyroKeyboardGenerator : ModuleRules
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        string GeneratedSettingsDirectory = System.Environment.GetEnvironmentVariable(
-            "GYRO_KEYBOARD_GENERATED_SETTINGS_DIR");
-        if (string.IsNullOrWhiteSpace(GeneratedSettingsDirectory))
+        string GeneratedSettingsDirectory = Path.GetFullPath(Path.Combine(
+            ModuleDirectory,
+            "..", "..", "Intermediate", "GeneratedSettings"));
+        string GeneratedSettingsHeader = Path.Combine(
+            GeneratedSettingsDirectory, "GyroKeyboardControlSettings.generated.h");
+        if (!File.Exists(GeneratedSettingsHeader))
         {
             throw new BuildException(
                 "GyroKeyboardControl settings were not generated. Build through Build-GyroKeyboardControl.ps1.");
         }
-        PrivateIncludePaths.Add(Path.GetFullPath(GeneratedSettingsDirectory));
+        PrivateIncludePaths.Add(GeneratedSettingsDirectory);
 
         PrivateIncludePaths.Add(Path.GetFullPath(Path.Combine(
             ModuleDirectory,

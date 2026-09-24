@@ -21,8 +21,19 @@ Accepted values are clamped to 0.05..60.0. Restart Voyage after editing.
 The INI is the sole source of defaults, comments, ordering, and packaged
 formatting. Settings/GyroKeyboardControl.settings.json declares only runtime
 bindings, types, and numeric ranges; the public build validates both and
-generates the Blueprint settings bindings internally. Existing installed INI
-values are preserved; `-Install` adds only missing canonical keys.
+generates the Blueprint settings bindings internally.
+
+At full throttle, releasing Space after holding it starts a kinematic braking
+phase for positive vertical speed. `AltitudeStabilizationVerticalDeceleration`
+sets that deceleration in cm/s^2; the default is `100.0` and accepted values
+are clamped to `1..10000`. Horizontal velocity is preserved. When vertical
+speed reaches zero, or is already non-positive, the current altitude becomes
+an exact hold target. Pressing Space returns to the one-sided altitude floor,
+and throttle below 100% disables stabilization.
+
+The retired physical lift-compensation experiment is not present in the
+runtime graph. Installation removes its obsolete `CompensateTiltLift` and
+`TiltLiftCompensationMultiplier` keys while preserving active user settings.
 
 ## Build
 
@@ -43,8 +54,8 @@ ignored `artifacts/gyro-keyboard` output.
 
 Build-GyroKeyboardControl.ps1 is the only public producer; the other
 PowerShell files in this directory are internal stages used by it. Use
--Install only while Voyage is closed. Installation preserves current existing
-GyroKeyboardControl.ini values and only appends keys missing from the validated
-canonical template.
+-Install only while Voyage is closed. Installation preserves current active
+GyroKeyboardControl.ini values, removes explicitly retired keys, and appends
+keys missing from the validated canonical template.
 Build, cook, container verification, and clean load are not gameplay
 validation.

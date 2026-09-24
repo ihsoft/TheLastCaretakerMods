@@ -10,6 +10,7 @@
 #include "ActorScanGraphNames.h"
 #include "BlueprintGraphNames.h"
 #include "GyroKeyboardAssetNames.h"
+#include "GyroKeyboardSettings.h"
 #include "TextSettingsGraphNames.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
@@ -43,6 +44,7 @@ namespace
 namespace P = BlueprintGraphNames::Pins;
 namespace Binary = BlueprintGraphNames::Pins::Binary;
 namespace Select = BlueprintGraphNames::Pins::Select;
+namespace Settings = GyroKeyboardSettings;
 
 constexpr TCHAR HelperPackage[] = TEXT("/Game/Mods/GyroKeyboardControl/ModActor");
 constexpr TCHAR HelperAsset[] = TEXT("ModActor");
@@ -94,30 +96,6 @@ const FName LoopGraphName(TEXT("ForEachLoop"));
 const FName LoopArray(TEXT("Array"));
 const FName LoopElement(TEXT("Array Element"));
 const FName InputPath(TEXT("InPath"));
-
-namespace Settings
-{
-constexpr TCHAR RelativePath[] = TEXT("Paks/GyroKeyboardControl.ini");
-constexpr TCHAR Separator[] = TEXT("=");
-
-struct FNumericSetting
-{
-    const TCHAR* Key;
-    FName Field;
-    const TCHAR* Default;
-    const TCHAR* Minimum;
-    const TCHAR* Maximum;
-};
-
-struct FBooleanSetting
-{
-    const TCHAR* Key;
-    FName Field;
-    const TCHAR* Default;
-};
-
-#include "GyroKeyboardControlSettings.generated.h"
-}
 
 template <typename NodeType>
 NodeType* AddNode(NodeType* Node, UEdGraph* Graph, int32 X, int32 Y)

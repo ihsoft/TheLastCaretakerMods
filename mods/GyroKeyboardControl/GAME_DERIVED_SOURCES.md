@@ -33,6 +33,14 @@ Current stock cooked assets establish:
   `VoyageVehiclePawn` declaration and returns the conditional F DropCargo
   action. The generated child calls that exact Blueprint parent function and
   appends the mod-owned X reset action.
+- stock lift is `TiltControl.UpVector * PropellerVelocity * PropellerLift *
+  (1 - max(Altitude, 0) * LiftReductionByHeight)`, with `PropellerLift=75` and
+  forward/back target pitch `-10 degrees * TiltForwardInput`;
+- stock `GetTotalThrottle` adds raw `abs(ThrottleInput)` on top of
+  `CurrentThrottle`, so held Space can increase PhysicalEnergy production even
+  when CurrentThrottle is already clamped to 1. Gameplay testing established
+  that this extra power is required for useful climb performance, so the mod
+  leaves the complete stock function unchanged.
 
 The generated helper treats only exact native digital markers -1, 0, and 1 as
 commands. It integrates W/S through DeltaSeconds, preserves the integrated
@@ -59,5 +67,15 @@ must remain below ignored artifacts paths.
 The user validated the complete v1 package in Voyage on 2026-09-22: the
 subclass-plus-DroppedActor architecture, enter/exit, pitch controls, X reset,
 and the standard X HUD hint work in the real game. The stock parent action list
-is preserved by construction; its conditional F cargo hint should be checked
-again whenever that stock function or input context changes in a later build.
+is preserved by construction. The first v2 lift formula was not sufficient in
+game, while removing the held-Space contribution made useful climb impossible;
+that throttle experiment is removed. A hard-coded `PropellerLift=300` probe
+proved the helper's reflection write reaches the live physics field and is not
+overwritten before force calculation. The later PropellerLift-scale candidate
+  still produced no clearly visible height support in the user's test. The
+  physical world-up-force experiment and both of its settings have since been
+  removed. The current candidate uses kinematic full-throttle altitude hold
+  with smooth positive-vertical-speed braking after Space release. On
+  2026-09-24 the user confirmed that both remaining settings work in the real
+  game: `PitchRampSeconds=3.0` and
+  `AltitudeStabilizationVerticalDeceleration=100.0`.

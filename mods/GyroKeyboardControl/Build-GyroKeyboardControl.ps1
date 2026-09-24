@@ -94,8 +94,59 @@ function Assert-GameClosed {
     }
 }
 
-function Add-MissingGyroKeyboardSettings {
+function Update-GyroKeyboardSettings {
     param([string]$TemplatePath, [string]$SettingsPath)
+
+    $addedDefaultsComment = '# Defaults added by a newer GyroKeyboardControl build.'
+    $retiredKeys = @(
+        'AltitudeStabilizationDelaySeconds',
+        'CompensateTiltLift',
+        'TiltLiftCompensationMultiplier'
+    )
+    $retiredComments = @(
+        '# Absolute delay after releasing Space at full throttle before exact altitude hold activates.',
+        '# A release below full throttle is ignored. Set to 0 for immediate activation. Clamped to 0..60 seconds.',
+        '# Keep vertical rotor lift while pitch is tilted forward/back.',
+        '# Scale the separate world-up force: 0=none, 1=lost vertical component. Clamped to 0..5.'
+    )
+    $retiredKeySet = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
+    $retiredCommentSet = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
+    foreach ($key in $retiredKeys) { $null = $retiredKeySet.Add($key) }
+    foreach ($comment in $retiredComments) { $null = $retiredCommentSet.Add($comment) }
+
+    $originalLines = [IO.File]::ReadAllLines($SettingsPath)
+    $removedKeys = New-Object 'System.Collections.Generic.List[string]'
+    $keptLines = New-Object 'System.Collections.Generic.List[string]'
+    $addedDefaultsCommentSeen = $false
+    $settingsFileChanged = $false
+    foreach ($line in $originalLines) {
+        if ($retiredCommentSet.Contains($line.Trim())) {
+            $settingsFileChanged = $true
+            continue
+        }
+        if ($line.Trim() -ceq $addedDefaultsComment) {
+            if ($addedDefaultsCommentSeen) {
+                $settingsFileChanged = $true
+                continue
+            }
+            $addedDefaultsCommentSeen = $true
+        }
+        if ($line -match '^\s*([^#;][^=]*?)\s*=' -and
+            $retiredKeySet.Contains($matches[1].Trim())) {
+            if (-not $removedKeys.Contains($matches[1].Trim())) {
+                $removedKeys.Add($matches[1].Trim())
+            }
+            $settingsFileChanged = $true
+            continue
+        }
+        $keptLines.Add($line)
+    }
+    if ($settingsFileChanged) {
+        $text = $keptLines -join [Environment]::NewLine
+        if ($originalLines.Count -gt 0) { $text += [Environment]::NewLine }
+        [IO.File]::WriteAllText(
+            $SettingsPath, $text, (New-Object System.Text.UTF8Encoding($false)))
+    }
 
     $existingKeys = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
     foreach ($line in [IO.File]::ReadAllLines($SettingsPath)) {
@@ -109,16 +160,19 @@ function Add-MissingGyroKeyboardSettings {
             -not $existingKeys.Contains($matches[1].Trim())
         }
     )
-    if ($missing.Count -eq 0) { return @() }
-    $newline = [Environment]::NewLine
-    $current = [IO.File]::ReadAllText($SettingsPath)
-    $prefix = if ($current.EndsWith($newline)) { '' } else { $newline }
-    $addition = $prefix + $newline +
-        '# Defaults added by a newer GyroKeyboardControl build.' + $newline +
-        (($missing -join $newline) + $newline)
-    [IO.File]::AppendAllText(
-        $SettingsPath, $addition, (New-Object System.Text.UTF8Encoding($false)))
-    return @($missing | ForEach-Object { ($_ -split '=', 2)[0].Trim() })
+    if ($missing.Count -gt 0) {
+        $newline = [Environment]::NewLine
+        $current = [IO.File]::ReadAllText($SettingsPath)
+        $prefix = if ($current.EndsWith($newline)) { '' } else { $newline }
+        $heading = if ($addedDefaultsCommentSeen) { '' } else { $addedDefaultsComment + $newline }
+        $addition = $prefix + $newline + $heading + (($missing -join $newline) + $newline)
+        [IO.File]::AppendAllText(
+            $SettingsPath, $addition, (New-Object System.Text.UTF8Encoding($false)))
+    }
+    return [pscustomobject]@{
+        AddedKeys = @($missing | ForEach-Object { ($_ -split '=', 2)[0].Trim() })
+        RemovedKeys = @($removedKeys)
+    }
 }
 
 function Invoke-UnrealGenerator {
@@ -242,7 +296,8 @@ if (Test-Path -LiteralPath $releaseRoot) {
 New-Item -ItemType Directory -Path $releaseRoot | Out-Null
 $logs = Join-Path $releaseRoot 'logs'
 New-Item -ItemType Directory -Path $logs | Out-Null
-$generatedSettingsDirectory = Join-Path $releaseRoot 'generated-settings'
+$generatedSettingsDirectory = Join-Path $modRoot 'Intermediate\GeneratedSettings'
+$releaseGeneratedSettingsDirectory = Join-Path $releaseRoot 'generated-settings'
 $generatedSettingsHeader = Join-Path $generatedSettingsDirectory 'GyroKeyboardControlSettings.generated.h'
 $generatedSettingsIni = Join-Path $generatedSettingsDirectory 'GyroKeyboardControl.ini'
 & $settingsGenerator `
@@ -254,8 +309,9 @@ if ((Get-FileHash -LiteralPath $settingsDefaults -Algorithm SHA256).Hash -cne
     (Get-FileHash -LiteralPath $generatedSettingsIni -Algorithm SHA256).Hash) {
     throw 'Generated settings INI differs from the canonical source INI.'
 }
-[Environment]::SetEnvironmentVariable(
-    'GYRO_KEYBOARD_GENERATED_SETTINGS_DIR', $generatedSettingsDirectory, 'Process')
+New-Item -ItemType Directory -Path $releaseGeneratedSettingsDirectory | Out-Null
+Copy-Item -LiteralPath $generatedSettingsHeader -Destination $releaseGeneratedSettingsDirectory
+Copy-Item -LiteralPath $generatedSettingsIni -Destination $releaseGeneratedSettingsDirectory
 
 $totalStopwatch = [Diagnostics.Stopwatch]::StartNew()
 $timings = [ordered]@{}
@@ -421,15 +477,19 @@ if ($Install) {
     if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
         Copy-Item -LiteralPath $settingsTemplate -Destination $settingsPath
         $addedKeys = @()
+        $removedKeys = @()
         $settingsCreated = $true
     } else {
-        $addedKeys = @(Add-MissingGyroKeyboardSettings $settingsTemplate $settingsPath)
+        $settingsUpdate = Update-GyroKeyboardSettings $settingsTemplate $settingsPath
+        $addedKeys = @($settingsUpdate.AddedKeys)
+        $removedKeys = @($settingsUpdate.RemovedKeys)
         $settingsCreated = $false
     }
     $settingsInstallation = [ordered]@{
         path = $settingsPath
         created = $settingsCreated
         addedKeys = $addedKeys
+        removedKeys = $removedKeys
         sha256 = (Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash
     }
     $installed = $true

@@ -18,4 +18,5 @@ class VOYAGE_API AVoyageVehicleGyroCopter : public AVoyageVehiclePawn
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GyroCopter")
     float TiltForwardInput = 0.0f;
+
 };

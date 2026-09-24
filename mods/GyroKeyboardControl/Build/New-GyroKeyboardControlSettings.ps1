@@ -58,9 +58,13 @@ for ($lineIndex = 0; $lineIndex -lt $defaultIniLines.Count; $lineIndex++) {
         throw "Malformed default INI line $($lineIndex + 1): $line"
     }
     $key = $matches[1]
-    $value = $matches[2].Trim()
-    if ([string]::IsNullOrWhiteSpace($value)) {
+    $rawValue = $matches[2].Trim()
+    if ([string]::IsNullOrWhiteSpace($rawValue)) {
         throw "Empty default INI value on line $($lineIndex + 1): $key"
+    }
+    $value = ($rawValue -split '\s+[\#;]', 2)[0].Trim()
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        throw "Empty default INI value before inline comment on line $($lineIndex + 1): $key"
     }
     if ($iniValues.ContainsKey($key)) { throw "Duplicate setting key in default INI: $key" }
     $iniValues.Add($key, $value)
@@ -135,12 +139,12 @@ foreach ($setting in $settings) {
         $header.Add(('inline constexpr TCHAR {0}Maximum[] = TEXT("{1}");' -f $id, (Format-Number $setting.maximum)))
     }
 }
-$header.Add('inline const FNumericSetting NumericSettings[] = {')
+$header.Add('inline const TArray<FNumericSetting> NumericSettings = {')
 foreach ($setting in @($settings | Where-Object { [string]$_.type -eq 'number' })) {
     $header.Add(('    {{{0}Key, {0}, {0}Default, {0}Minimum, {0}Maximum}},' -f $setting.id))
 }
 $header.Add('};')
-$header.Add('inline const FBooleanSetting BooleanSettings[] = {')
+$header.Add('inline const TArray<FBooleanSetting> BooleanSettings = {')
 foreach ($setting in @($settings | Where-Object { [string]$_.type -eq 'boolean' })) {
     $header.Add(('    {{{0}Key, {0}, {0}Default}},' -f $setting.id))
 }
