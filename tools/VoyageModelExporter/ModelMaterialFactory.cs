@@ -17,10 +17,15 @@ namespace VoyageModelExporter;
 
 internal sealed class ModelMaterialFactory
 {
+    readonly string materialMode;
     readonly Dictionary<string, MaterialBuilder> builders = new(StringComparer.Ordinal);
     readonly Dictionary<string, TextureRecord> textureCache = new(StringComparer.Ordinal);
+    readonly Dictionary<string, UUnrealMaterial> textureSources = new(StringComparer.Ordinal);
     internal List<MaterialRecord> Materials { get; } = [];
+    internal List<TextureArtifactRecord> SourceArtifacts { get; } = [];
     internal IReadOnlyCollection<TextureRecord> Textures => textureCache.Values;
+
+    internal ModelMaterialFactory(string materialMode) => this.materialMode = materialMode;
 
     internal static string PackagePath(string objectPath)
     {
@@ -66,12 +71,17 @@ internal sealed class ModelMaterialFactory
             report.EffectControls[pair.Key] = pair.Value.ToString("R", CultureInfo.InvariantCulture);
         foreach (var pair in parameters.Switches.Where(x => IsDeferredEffectName(x.Key)))
             report.EffectControls[pair.Key] = pair.Value.ToString();
-        report.Warnings.Add("Approximation, not Unreal shader baking. Layer mixing, world/object coordinates, UV math, vertex data, animation and runtime effects are not evaluated.");
+        report.Warnings.Add(materialMode == "BakeReconstructed"
+            ? "Reconstructed bake from cooked parameters and known recipes; the stripped Unreal expression graph is not executed."
+            : "Approximation, not Unreal shader baking. Layer mixing, world/object coordinates, UV math, vertex data, animation and runtime effects are not evaluated.");
         foreach (var pair in parameters.Textures.OrderBy(x => x.Key, StringComparer.Ordinal))
+        {
             report.TextureParameters[pair.Key] = PackagePath(pair.Value.GetPathName());
+            textureSources.TryAdd(PackagePath(pair.Value.GetPathName()), pair.Value);
+        }
         TextureRecord Resolve(string path)
         {
-            var source = parameters.Textures.Values.First(x => PackagePath(x.GetPathName()) == path);
+            var source = textureSources[path];
             if (!textureCache.TryGetValue(path, out var texture)) textureCache[path] = texture = Decode(source);
             return texture;
         }
@@ -128,7 +138,7 @@ internal sealed class ModelMaterialFactory
             normalized.Contains("dirt", StringComparison.Ordinal);
     }
 
-    static MaterialBuilder MakeMaterial(MaterialRecord report, CMaterialParams2 parameters, Func<string, TextureRecord> resolve)
+    MaterialBuilder MakeMaterial(MaterialRecord report, CMaterialParams2 parameters, Func<string, TextureRecord> resolve)
     {
         var builder = new MaterialBuilder(report.Name).WithMetallicRoughnessShader();
         TextureRecord? Select(string role, params string[] aliases)
@@ -186,7 +196,7 @@ internal sealed class ModelMaterialFactory
                         Vector3.Clamp(new Vector3(tint.R, tint.G, tint.B), Vector3.Zero, Vector3.One)));
                 }
             }
-            if (maskPaths.Length == 1 && maskChannels.Count > 0)
+            if (materialMode == "BakeReconstructed" && maskPaths.Length == 1 && maskChannels.Count > 0)
             {
                 var mask = resolve(maskPaths[0]);
                 if (mask.Png != null && mask.Width == baseColor.Width && mask.Height == baseColor.Height)
@@ -196,6 +206,17 @@ internal sealed class ModelMaterialFactory
                         $"{x.Name}={LinearColorHex(x.Color)}"));
                     report.Bindings["colorMask"] = maskPaths[0];
                     report.BakedEffects.Add($"ColorMask tint baked into Base Color with {string.Join(", ", maskChannels.Select(x => x.Name + "=" + LinearColorHex(x.Color)))}.");
+                    report.BakeOperations.Add(new BakeOperationRecord
+                    {
+                        Id = report.Name + ":baseColor:masked-color",
+                        Material = report.Source,
+                        OutputRole = "baseColor",
+                        Algorithm = "baseColor * lerp(white, maskedColor, maskChannel)",
+                        InputTextures = [baseColor.Source, mask.Source],
+                        Parameters = maskChannels.ToDictionary(x => x.Name + "MaskColor", x => LinearColorHex(x.Color), StringComparer.Ordinal),
+                        OutputSha256 = Convert.ToHexString(SHA256.HashData(baseColorPng)),
+                        Fidelity = "reconstructed"
+                    });
                     report.Warnings.Add("Masked-color bake assumes BaseColor * lerp(white, MaskedColor, mask channel); the cooked Unreal shader graph was not evaluated.");
                 }
                 else
@@ -205,7 +226,7 @@ internal sealed class ModelMaterialFactory
                         : $"ColorMask dimensions {mask.Width}x{mask.Height} do not match Base Color {baseColor.Width}x{baseColor.Height}.";
                 }
             }
-            else if (maskPaths.Length > 1)
+            else if (materialMode == "BakeReconstructed" && maskPaths.Length > 1)
             {
                 report.Warnings.Add($"Ambiguous ColorMask; masked-color bake skipped: {string.Join(", ", maskPaths)}");
             }
@@ -237,8 +258,12 @@ internal sealed class ModelMaterialFactory
             report.Bindings["baseColorFactor"] = color[0].Key + " (linear named tint; shader switch not evaluated)";
         }
         foreach (var source in report.TextureParameters.Values.Distinct().Where(p => !report.Bindings.ContainsValue(p)))
-            report.SkippedTextures.TryAdd(source, "No supported unambiguous active PBR binding; image omitted.");
-        report.Warnings.Add("PBR roles are inferred from unambiguous parameter/texture names. Unused resources are listed only; no image payload is kept for them.");
+            report.SkippedTextures.TryAdd(source, materialMode == "BakeReconstructed"
+                ? "Not composited into the PBR result; raw source is retained in materialPipeline.sourceArtifacts when decodable."
+                : "No supported unambiguous active PBR binding; image omitted.");
+        report.Warnings.Add(materialMode == "BakeReconstructed"
+            ? "PBR roles are inferred from names. All decodable Texture2D inputs are additionally retained as machine-indexed source artifacts."
+            : "PBR roles are inferred from unambiguous parameter/texture names. Unused resources are listed only; no image payload is kept for them.");
         return builder;
     }
 
@@ -263,8 +288,43 @@ internal sealed class ModelMaterialFactory
                 described.Add(index);
                 model.LogicalImages[index].Name ??= texture.Source.Split('/')[^1] + "_" + variant.Role;
             }
+        foreach (var operation in Materials.SelectMany(x => x.BakeOperations))
+            operation.OutputImageIndex = images.Single(x => x.Value == operation.OutputSha256).Key;
         if (described.Count != model.LogicalImages.Count)
             throw new InvalidDataException("An embedded image has no used-variant provenance.");
+    }
+
+    internal void EmbedSourceArtifacts(ModelRoot model)
+    {
+        if (materialMode != "BakeReconstructed") return;
+        foreach (var pair in textureSources.OrderBy(x => x.Key, StringComparer.Ordinal))
+        {
+            if (!textureCache.TryGetValue(pair.Key, out var texture)) textureCache[pair.Key] = texture = Decode(pair.Value);
+            var artifact = new TextureArtifactRecord
+            {
+                Source = pair.Key,
+                Sha256 = texture.Sha256,
+                Width = texture.Width,
+                Height = texture.Height,
+                Format = texture.Format,
+                Srgb = texture.Srgb,
+                IsNormal = texture.IsNormal,
+                Error = texture.Error,
+                Consumers = Materials.SelectMany(material => material.TextureParameters
+                    .Where(x => x.Value == pair.Key)
+                    .Select(x => new TextureConsumerRecord { Material = material.Source, Parameter = x.Key }))
+                    .ToArray()
+            };
+            if (texture.Png != null)
+            {
+                var image = model.UseImage(new MemoryImage(texture.Png));
+                image.Name ??= pair.Key.Split('/')[^1] + "_source";
+                artifact.ImageIndex = image.LogicalIndex;
+                artifact.Disposition = "embedded-source";
+            }
+            else artifact.Disposition = "decode-failed";
+            SourceArtifacts.Add(artifact);
+        }
     }
 
     static byte[] FlipNormalGreen(byte[] png) => Transform(png, c => new SKColor(c.Red, (byte)(255 - c.Green), c.Blue, c.Alpha));
@@ -340,7 +400,42 @@ internal sealed class MaterialRecord
     public Dictionary<string, string> SkippedTextures { get; } = new();
     public Dictionary<string, string> EffectControls { get; } = new();
     public List<string> BakedEffects { get; } = [];
+    public List<BakeOperationRecord> BakeOperations { get; } = [];
     public List<string> Warnings { get; } = [];
+}
+
+internal sealed class BakeOperationRecord
+{
+    public string Id { get; set; } = "";
+    public string? Material { get; set; }
+    public string OutputRole { get; set; } = "";
+    public string Algorithm { get; set; } = "";
+    public string[] InputTextures { get; set; } = [];
+    public Dictionary<string, string> Parameters { get; set; } = new();
+    public string OutputSha256 { get; set; } = "";
+    public int OutputImageIndex { get; set; }
+    public string Fidelity { get; set; } = "";
+}
+
+internal sealed class TextureArtifactRecord
+{
+    public string Source { get; set; } = "";
+    public int? ImageIndex { get; set; }
+    public string? Sha256 { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public string? Format { get; set; }
+    public bool Srgb { get; set; }
+    public bool IsNormal { get; set; }
+    public string Disposition { get; set; } = "";
+    public string? Error { get; set; }
+    public TextureConsumerRecord[] Consumers { get; set; } = [];
+}
+
+internal sealed class TextureConsumerRecord
+{
+    public string? Material { get; set; }
+    public string Parameter { get; set; } = "";
 }
 
 internal sealed class TextureRecord

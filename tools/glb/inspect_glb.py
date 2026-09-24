@@ -63,6 +63,58 @@ def inspect(path):
         require(view.get('byteOffset', 0) >= 0 and view.get('byteOffset', 0) + view['byteLength'] <= doc['buffers'][0]['byteLength'], 'Buffer view exceeds data')
     for image in doc.get('images', []):
         require('uri' not in image and 0 <= image['bufferView'] < len(doc['bufferViews']), 'External/invalid image')
+
+    def image_content(index):
+        require(isinstance(index, int) and 0 <= index < len(doc.get('images', [])), 'Invalid material-pipeline image index')
+        view = doc['bufferViews'][doc['images'][index]['bufferView']]
+        start = view.get('byteOffset', 0)
+        return binary[start:start + view['byteLength']]
+
+    pipeline_summary = None
+    pipeline = doc.get('extras', {}).get('materialPipeline')
+    if pipeline is not None:
+        require(pipeline.get('schema') == 'voyage.material-pipeline/1', 'Unsupported material-pipeline schema')
+        mode = pipeline.get('requestedMode')
+        require(mode in ('PbrApproximation', 'BakeReconstructed'), 'Invalid material-pipeline mode')
+        artifacts = pipeline.get('sourceArtifacts', [])
+        generated = pipeline.get('generatedImages', [])
+        operations = pipeline.get('bakeOperations', [])
+        unresolved = pipeline.get('unresolvedLayers', [])
+        sources = [item.get('Source') for item in artifacts]
+        require(all(isinstance(source, str) and source.startswith('/') for source in sources), 'Invalid source-artifact identity')
+        require(len(sources) == len(set(sources)), 'Duplicate source-artifact identity')
+        referenced_images = set()
+        for artifact in artifacts:
+            index = artifact.get('ImageIndex')
+            if artifact.get('Disposition') == 'embedded-source':
+                content = image_content(index)
+                referenced_images.add(index)
+                require(hashlib.sha256(content).hexdigest().upper() == artifact.get('Sha256'), 'Source-artifact hash mismatch')
+                require(content.startswith(b'\x89PNG\r\n\x1a\n') and len(content) >= 24, 'Source artifact is not PNG')
+                width, height = struct.unpack_from('>II', content, 16)
+                require((width, height) == (artifact.get('Width'), artifact.get('Height')), 'Source-artifact dimensions mismatch')
+            else:
+                require(index is None and artifact.get('Error'), 'Non-embedded source artifact lacks error evidence')
+            require(all(isinstance(c.get('Parameter'), str) and c.get('Material') for c in artifact.get('Consumers', [])),
+                    'Invalid source-artifact consumer')
+        for generated_image in generated:
+            index = generated_image.get('ImageIndex')
+            content = image_content(index)
+            referenced_images.add(index)
+            require(hashlib.sha256(content).hexdigest().upper() == generated_image.get('Sha256'), 'Generated-image hash mismatch')
+        for operation in operations:
+            index = operation.get('OutputImageIndex')
+            require(hashlib.sha256(image_content(index)).hexdigest().upper() == operation.get('OutputSha256'), 'Bake output hash mismatch')
+            require(operation.get('Fidelity') == 'reconstructed' and operation.get('InputTextures'), 'Invalid bake operation')
+            require(all(source in sources for source in operation['InputTextures']), 'Bake input lacks source artifact')
+        if mode == 'BakeReconstructed':
+            require(all(layer.get('texture') in sources for layer in unresolved), 'Unresolved layer lacks source artifact')
+        texture_images = {texture['source'] for texture in doc.get('textures', []) if 'source' in texture}
+        require(texture_images | referenced_images == set(range(len(doc.get('images', [])))),
+                'GLB image lacks PBR or material-pipeline provenance')
+        pipeline_summary = dict(schema=pipeline['schema'], requestedMode=mode,
+                                bakeOperations=len(operations), generatedImages=len(generated),
+                                sourceArtifacts=len(artifacts), unresolvedLayers=len(unresolved))
     types = {5120:'i1', 5121:'u1', 5122:'<i2', 5123:'<u2', 5125:'<u4', 5126:'<f4'}
     widths = {'SCALAR':1, 'VEC2':2, 'VEC3':3, 'VEC4':4}
 
@@ -162,6 +214,7 @@ def inspect(path):
                             skins=len(doc.get('skins', []))),
                 worldBoundsMeters=dict(min=np.min(bounds, axis=0).tolist(), max=np.max(bounds, axis=0).tolist()),
                 nodes=reports, materials=doc.get('materials', []), selfContained=True,
+                materialPipeline=pipeline_summary,
                 requiredExtensions=doc.get('extensionsRequired', []),
                 limitations='Structural/geometry audit only; not complete Khronos validation or runtime acceptance')
 
@@ -200,7 +253,7 @@ def main():
         require(not args.output.exists(), 'Choose a fresh audit path')
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
-    print(json.dumps({k:report[k] for k in ('sha256', 'byteLength', 'counts', 'worldBoundsMeters', 'selfContained')} |
+    print(json.dumps({k:report[k] for k in ('sha256', 'byteLength', 'counts', 'worldBoundsMeters', 'selfContained', 'materialPipeline')} |
                      {'auditPath': str(args.output.resolve()) if args.output else None}))
 
 

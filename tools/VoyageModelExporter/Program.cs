@@ -35,6 +35,9 @@ internal static class Program
             var request = JsonNode.Parse(File.ReadAllText(args[0]))!;
             string Str(string key) => request[key]!.GetValue<string>();
             var source = Str("asset");
+            var materialMode = Str("materialMode");
+            if (materialMode is not ("PbrApproximation" or "BakeReconstructed"))
+                throw new ArgumentException("materialMode must be PbrApproximation or BakeReconstructed.");
             if (!Regex.IsMatch(source, @"^/(Game|Engine|[A-Za-z0-9_]+)/[A-Za-z0-9_ /-]+$") || source.Trim() != source)
                 throw new ArgumentException("Use one exact model or Blueprint package identity without object suffix, wildcard or traversal.");
             var output = Path.GetFullPath(Str("output"));
@@ -58,7 +61,7 @@ internal static class Program
             provider.Initialize(); provider.Mount(); provider.PostMount(); provider.LoadVirtualPaths();
             var exports = provider.LoadPackage(source).GetExports();
             var scene = new SceneBuilder();
-            var materialFactory = new ModelMaterialFactory();
+            var materialFactory = new ModelMaterialFactory(materialMode);
             var meshRecords = new List<MeshRecord>();
             var omitted = new Dictionary<string, int>(StringComparer.Ordinal);
             var omittedInstances = new List<OmittedComponentRecord>();
@@ -161,12 +164,38 @@ internal static class Program
 
             var model = scene.ToGltf2();
             materialFactory.MatchUsedImages(model);
+            materialFactory.EmbedSourceArtifacts(model);
+            var materialPipeline = new
+            {
+                schema = "voyage.material-pipeline/1",
+                requestedMode = materialMode,
+                fidelity = materialMode == "BakeReconstructed" ? "reconstructed" : "approximate-pbr",
+                bakeOperations = materialFactory.Materials.SelectMany(x => x.BakeOperations),
+                generatedImages = materialFactory.Textures.SelectMany(x => x.Variants.Select(v => new
+                {
+                    source = x.Source,
+                    v.Role,
+                    v.Transform,
+                    v.Sha256,
+                    v.ImageIndex
+                })),
+                sourceArtifacts = materialFactory.SourceArtifacts,
+                unresolvedLayers = materialFactory.Materials.SelectMany(x => x.SkippedTextures.Select(layer => new
+                {
+                    material = x.Source,
+                    texture = layer.Key,
+                    parameters = x.TextureParameters.Where(p => p.Value == layer.Key).Select(p => p.Key),
+                    reason = layer.Value
+                }))
+            };
             var evidence = new
             {
-                schemaVersion = 1,
-                status = materialFactory.Textures.Any(x => x.Error != null) ? "partial-textures" : "approximate",
+                schemaVersion = 2,
+                status = materialFactory.Textures.Any(x => x.Error != null) ? "partial-textures" :
+                    materialMode == "BakeReconstructed" ? "reconstructed-bake" : "approximate",
                 source,
                 sourceKind,
+                materialMode,
                 steamBuildId = build,
                 executableSha256 = exeHash,
                 mappingSha256 = Hash(Str("mappingPath")),
@@ -179,12 +208,15 @@ internal static class Program
                 omittedComponentInstances = omittedInstances,
                 materials = materialFactory.Materials,
                 textures = materialFactory.Textures,
+                materialPipeline,
                 limitations = new[]
                 {
                     "Static default representation only: Blueprint construction scripts, runtime spawning, state changes and animations are not executed.",
                     "Only StaticMeshComponent geometry is exported; skeletal meshes, splines, Niagara, decals, widgets, lights, audio, collisions and child actors are reported or omitted.",
                     "Highest ordinary render LOD is preferred; high-resolution Nanite reconstruction is not promised.",
-                    "Materials are bounded glTF PBR approximations, not Unreal shader baking."
+                    materialMode == "BakeReconstructed"
+                        ? "Material baking is reconstructed from cooked parameters and known recipes; the stripped Unreal expression graph is not executed."
+                        : "Materials are bounded glTF PBR approximations; layered shader inputs are not baked."
                 }
             };
             model.Extras = JsonSerializer.SerializeToNode(evidence, JsonOptions);
@@ -198,13 +230,14 @@ internal static class Program
             var reportPath = Path.Combine(Directory.GetCurrentDirectory(), "export-report.json");
             File.WriteAllText(reportPath, JsonSerializer.Serialize(evidence, JsonOptions));
             var omissionsPath = Path.Combine(Directory.GetCurrentDirectory(), "material-omissions.md");
-            File.WriteAllText(omissionsPath, MaterialOmissions(materialFactory.Materials));
+            File.WriteAllText(omissionsPath, MaterialOmissions(materialFactory.Materials, materialMode));
             Console.WriteLine(JsonSerializer.Serialize(new
             {
                 status = evidence.status,
                 glbPath = output,
                 sha256 = Hash(output),
                 sourceKind,
+                materialMode,
                 nodeCount,
                 meshCount = meshRecords.Count,
                 uniqueMeshCount = meshRecords.Select(x => x.Source).Distinct(StringComparer.Ordinal).Count(),
@@ -212,6 +245,7 @@ internal static class Program
                 discoveredMaterialRecords = materialFactory.Materials.Count,
                 imageCount = readback.LogicalImages.Count,
                 failedTextures = materialFactory.Textures.Count(x => x.Error != null),
+                sourceArtifactCount = materialFactory.SourceArtifacts.Count,
                 omittedComponentKinds = omitted.Count,
                 reportPath,
                 omissionsPath
@@ -225,11 +259,14 @@ internal static class Program
         }
     }
 
-    static string MaterialOmissions(IEnumerable<MaterialRecord> materials)
+    static string MaterialOmissions(IEnumerable<MaterialRecord> materials, string materialMode)
     {
         var result = new StringBuilder();
         result.AppendLine("# Material effects and omissions").AppendLine();
-        result.AppendLine("Generated alongside the GLB. Paths identify cooked source textures; omitted images are not copied into this evidence directory.").AppendLine();
+        result.Append("Material mode: `").Append(materialMode).AppendLine("`").AppendLine();
+        result.AppendLine(materialMode == "BakeReconstructed"
+            ? "Raw decodable Texture2D inputs are embedded in GLB images and indexed by extras.materialPipeline.sourceArtifacts."
+            : "Paths identify cooked source textures; unresolved image payloads are not copied in this mode.").AppendLine();
         foreach (var material in materials.Where(x => x.BakedEffects.Count > 0 || x.SkippedTextures.Count > 0 || x.EffectControls.Count > 0))
         {
             result.Append("## ").AppendLine(material.Name).AppendLine();

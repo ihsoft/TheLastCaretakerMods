@@ -3,10 +3,14 @@ param(
     [Parameter(Mandatory = $true, ParameterSetName = 'Inline')][string[]]$Materials,
     [Parameter(Mandatory = $true, ParameterSetName = 'File')][string]$MaterialsFile,
     [Parameter(Mandatory = $true)][string]$OutputPath,
+    [ValidateSet('PbrApproximation', 'BakeReconstructed')][string]$MaterialMode,
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage'
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if ([string]::IsNullOrWhiteSpace($MaterialMode)) {
+    throw 'Choose -MaterialMode PbrApproximation or BakeReconstructed. The caller must ask which material representation is wanted when it was not specified.'
+}
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if ($PSCmdlet.ParameterSetName -eq 'File') {
     $raw = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $MaterialsFile).Path)
@@ -46,7 +50,7 @@ $fingerprint = $fingerprintText | ConvertFrom-Json
 $mapping = & (Join-Path $PSScriptRoot 'Get-VoyageMappings.ps1') -GameRoot $GameRoot
 if ($mapping.engineVersion -ne '5.8' -or $mapping.executableSha256 -cne $fingerprint.executable.sha256) { throw 'Unsupported/mismatched game mapping.' }
 $requestPath = Join-Path $evidence 'request.json'
-$request = [ordered]@{ output = $output; materials = @($Materials); fingerprintPath = $fingerprintPath;
+$request = [ordered]@{ output = $output; materials = @($Materials); materialMode = $MaterialMode; fingerprintPath = $fingerprintPath;
     mappingPath = $mapping.mappingsPath; mappingManifestPath = $mapping.manifestPath }
 [IO.File]::WriteAllText($requestPath, ($request | ConvertTo-Json -Depth 5))
 Copy-Item -LiteralPath $manifestFile -Destination (Join-Path $evidence 'tool-manifest.json')

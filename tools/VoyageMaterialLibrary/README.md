@@ -11,8 +11,17 @@ install containers, edit models, or invoke Unreal. Outputs remain under ignored
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Get-VoyageAssetJson.ps1 -ListPackages -AsJson
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageMaterialsGlb.ps1 `
   -MaterialsFile tools/VoyageMaterialLibrary/socket-materials.example.json `
+  -MaterialMode PbrApproximation `
   -OutputPath artifacts/material-export/my-materials.glb
 ```
+
+`-MaterialMode` is deliberately required. If the user's request does not select
+one, the caller must ask rather than silently choosing:
+
+- `PbrApproximation` embeds only supported active PBR bindings.
+- `BakeReconstructed` applies supported cooked-parameter recipes and embeds every
+  decodable referenced `Texture2D` as a source artifact. This is not Unreal
+  engine-executed baking because cooked packages do not retain the editor graph.
 
 Consume the catalog tool's returned `packageListPath`; do not discover its cache
 internals. `M_` and `MI_` are useful naming filters, not proof of export type.
@@ -37,13 +46,20 @@ material, missing parent, mapping mismatch or invalid GLB fails the batch. A
 texture decode failure yields an explicit `partial-textures` result and its
 reason; it is not reported as a complete texture extraction.
 
+GLB root `extras.materialPipeline` is the authoritative downstream-agent
+contract. Schema `voyage.material-pipeline/1` records requested mode and fidelity,
+all bake operations and output image indices, generated image transforms, source
+artifacts with their consumers, and unresolved layers. Source-artifact images may
+be intentionally unbound to glTF PBR texture slots; their manifest references,
+hashes and dimensions are validated independently.
+
 ## What is transferred
 
 - CUE4Parse reads inherited parameters, scalar/vector overrides, switches and
   referenced textures from stock containers only. Game, mapping and tool hashes
   gate the operation. The GLB also records source identities, parent chains,
   extracted parameters, approximation warnings and texture provenance in extras.
-- CUE4Parse-Conversion/AssetRipper decode only selected Texture2D dependencies.
+- In `PbrApproximation`, CUE4Parse-Conversion/AssetRipper decodes only selected Texture2D dependencies.
   **Every embedded PNG must be used by an exported material.** Unknown,
   ambiguous and disabled maps are not decoded or archived; their paths and
   omission reasons appear in `SkippedTextures`. There is no archive-all mode.
@@ -51,6 +67,10 @@ reason; it is not reported as a complete texture extraction.
   green-inverted glTF/OpenGL variant is embedded, not a second raw copy. Color
   maps marked linear are encoded to sRGB for color slots; data maps are not
   gamma-encoded. A known zero emission strength omits the emission map entirely.
+- In `BakeReconstructed`, every decodable referenced Texture2D is embedded once
+  as a source artifact, even when it is not composited into an active PBR slot.
+  Known recipes may additionally produce baked variants; source inputs remain
+  separately addressable through the machine manifest.
 - SharpGLTF constructs/writes/reads back glTF 2.0. One named, UV-mapped 1m sample
   panel per requested material ensures materials survive ordinary Blender import.
   These panels are samples, not extracted game geometry. Assign imported materials
@@ -61,18 +81,19 @@ reason; it is not reported as a complete texture extraction.
   disabled switch is honored. Unknown or ambiguous maps are omitted.
   Mask/translucent modes use base-color alpha only, not the Unreal opacity graph.
 
-This is **not shader graph recovery or baking**. World-aligned projection, UV
-math, multi-layer blends, damage/wetness, runtime parameters, vertex effects,
-refraction, custom shaders and glyph/atlas logic are not reproduced. All results
-are labelled `approximate` even if every texture decoded. A material may therefore
+This is **not engine-executed shader graph recovery**. `BakeReconstructed` applies
+only declared known recipes; world-aligned projection, unknown multi-layer blends,
+damage/wetness formulas, runtime parameters, vertex effects, refraction, custom
+shaders and glyph/atlas logic are not reproduced. A material may therefore
 import as a flat swatch; unsupported texture paths/parameters remain only as
-lightweight diagnostic metadata, not images. "Used" means a known supported use
+machine-readable unresolved layers; their decodable Texture2D inputs are embedded
+in reconstructed mode. "Used" means a known supported use
 in the reconstructed PBR approximation, not proof of the original shader wiring.
 The raw shader bytecode and executable shader graph are not bundled. Unsupported
 texture types/decoders are reported; HDR-to-PNG quantization is disclosed per image.
 Largest available mip is used, not necessarily the original author's source.
 No automatic resizing: used maps retain their decoded mip resolution. Keep
-batches reasonable; decoding and GLB assembly are in memory. Schema2 records
+batches reasonable; decoding and GLB assembly are in memory. Schema3 records
 the decoded-source hash and hashes/indices of the actual used image variants;
 the raw decoded image need not be embedded. A dependency is retained once per
 needed representation, not once per material reference. Generic importers may

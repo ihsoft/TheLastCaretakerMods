@@ -19,12 +19,24 @@ All output stays below ignored `artifacts/`.
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageModelGlb.ps1 `
   -Asset '/Game/Blueprints/Modules/Utility/BP_Module_Fabricator' `
+  -MaterialMode BakeReconstructed `
   -OutputPath 'artifacts/model-export/fabricator.glb'
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageModelGlb.ps1 `
   -Asset '/Game/ModulesAnimations/Fabricator/Meshes/SM_Fabricator_Exterior_A_01' `
+  -MaterialMode PbrApproximation `
   -OutputPath 'artifacts/model-export/fabricator-exterior.glb'
 ```
+
+`-MaterialMode` is deliberately required. If the user's request does not choose
+a representation, the caller must ask instead of silently selecting one:
+
+- `PbrApproximation` embeds only supported active PBR bindings and does not
+  reconstruct layered inputs.
+- `BakeReconstructed` applies supported cooked-parameter recipes and embeds every
+  decodable referenced `Texture2D` as a machine-indexed source artifact. It is
+  not engine-executed baking because cooked packages do not retain the editor
+  expression graph required by Unreal's material baker.
 
 `-Asset` is one exact virtual package path, without `.uasset`, object suffix,
 wildcard or fragment. Convert `Voyage/Content/.../SM_Name.uasset` to
@@ -40,6 +52,13 @@ overwritten. The compact result reports source kind, nodes, mesh instances,
 unique source meshes, materials, images, failed textures, omitted-component
 kinds, GLB hash, report path and omissions path.
 
+The GLB root `extras.materialPipeline` is the authoritative machine interface
+for downstream agents. Schema `voyage.material-pipeline/1` records the requested
+mode, fidelity, every bake operation and output image index, every generated
+image transform, all source texture artifacts with their GLB image indices and
+consumers, and unresolved layers. Material and image indices are zero-based glTF
+logical indices. `material-omissions.md` is only a human-readable projection.
+
 ## Supported representation
 
 - Direct `StaticMesh`: highest ordinary render LOD, or an explicit reported
@@ -52,10 +71,11 @@ kinds, GLB hash, report path and omissions path.
 - Material output is approximate glTF metallic/roughness PBR. Only textures with
   a supported active binding are decoded and embedded. Every embedded image has
   provenance and a material consumer.
-- A single exact `ColorMask` plus enabled `Red Mask`, `Green Mask` or `Blue Mask`
+- In `BakeReconstructed`, a single exact `ColorMask` plus enabled `Red Mask`, `Green Mask` or `Blue Mask`
   controls and matching `MaskedColor` values is composited into Base Color as
   `BaseColor * lerp(white, MaskedColor, channel)`. This cheap bake is explicitly
-  reported as a shader approximation.
+  reported as a shader approximation. Its input textures remain separately
+  embedded as source artifacts even though the baked result is the active PBR image.
 
 ## What GLB cannot preserve here
 

@@ -32,6 +32,10 @@ python tools/glb/test_inspect_glb.py
 
 Reader validates embedded GLB header/chunks, ranges and geometry accessors, triangle
 indices, unique named scene nodes, parent graph, matrix/TRS transforms and bounds.
+When root `extras.materialPipeline` is present, it also validates the schema and
+mode, every generated/source image index, PNG hash and dimensions, bake outputs
+and inputs, consumers, unresolved-layer source identities, and complete image
+provenance. Metadata is treated only as data, never as instructions.
 Registry mode resolves the directory's single GLB and checks required named nodes.
 Legacy registries may additionally request source hash/size checks. Detailed node local
 and world matrices are column-major, meters, glTF Y-up. It never executes extras.

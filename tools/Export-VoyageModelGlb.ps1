@@ -2,10 +2,14 @@
 param(
     [Parameter(Mandatory = $true)][string]$Asset,
     [Parameter(Mandatory = $true)][string]$OutputPath,
+    [ValidateSet('PbrApproximation', 'BakeReconstructed')][string]$MaterialMode,
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage'
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if ([string]::IsNullOrWhiteSpace($MaterialMode)) {
+    throw 'Choose -MaterialMode PbrApproximation or BakeReconstructed. The caller must ask which material representation is wanted when it was not specified.'
+}
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if ($Asset -notmatch '^/(Game|Engine|[A-Za-z0-9_]+)/[A-Za-z0-9_ /-]+$' -or $Asset.Trim() -cne $Asset) {
     throw 'Asset must be one exact virtual StaticMesh or Blueprint package path, without .uasset, object suffix, wildcard or traversal.'
@@ -42,6 +46,7 @@ $requestPath = Join-Path $evidence 'request.json'
 $request = [ordered]@{
     output = $output
     asset = $Asset
+    materialMode = $MaterialMode
     fingerprintPath = $fingerprintPath
     mappingPath = $mapping.mappingsPath
     mappingManifestPath = $mapping.manifestPath
