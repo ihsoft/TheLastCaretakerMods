@@ -56,6 +56,9 @@ $fingerprinter = Join-Path $repoRoot 'tools\Get-VoyageBuildFingerprint.ps1'
 $cookScript = Join-Path $modRoot 'Cook-GyroKeyboardAssets.ps1'
 $prepareScript = Join-Path $modRoot 'Prepare-GyroKeyboardOriginals.ps1'
 $packageScript = Join-Path $modRoot 'Build-InheritancePackage.ps1'
+$settingsSchema = Join-Path $modRoot 'Settings\GyroKeyboardControl.settings.json'
+$settingsDefaults = Join-Path $modRoot 'Assets\GyroKeyboardControl.ini'
+$settingsGenerator = Join-Path $modRoot 'Build\New-GyroKeyboardControlSettings.ps1'
 $containerName = 'GyroKeyboardControl_P'
 $payloadNames = @(
     "$containerName.pak",
@@ -111,7 +114,7 @@ function Add-MissingGyroKeyboardSettings {
     $current = [IO.File]::ReadAllText($SettingsPath)
     $prefix = if ($current.EndsWith($newline)) { '' } else { $newline }
     $addition = $prefix + $newline +
-        '# Defaults added by a newer Gyro Pitch Control build.' + $newline +
+        '# Defaults added by a newer GyroKeyboardControl build.' + $newline +
         (($missing -join $newline) + $newline)
     [IO.File]::AppendAllText(
         $SettingsPath, $addition, (New-Object System.Text.UTF8Encoding($false)))
@@ -204,6 +207,9 @@ $fingerprinter = Resolve-RequiredPath -Path $fingerprinter -Label 'Voyage finger
 $cookScript = Resolve-RequiredPath -Path $cookScript -Label 'GyroKeyboard cook script'
 $prepareScript = Resolve-RequiredPath -Path $prepareScript -Label 'GyroKeyboard original preparer'
 $packageScript = Resolve-RequiredPath -Path $packageScript -Label 'GyroKeyboard package builder'
+$settingsSchema = Resolve-RequiredPath -Path $settingsSchema -Label 'GyroKeyboard settings schema'
+$settingsDefaults = Resolve-RequiredPath -Path $settingsDefaults -Label 'GyroKeyboard canonical settings INI'
+$settingsGenerator = Resolve-RequiredPath -Path $settingsGenerator -Label 'GyroKeyboard settings generator'
 $Retoc = Resolve-RequiredPath -Path $Retoc -Label 'retoc'
 $retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Retoc).Hash
 $GameRoot = Resolve-RequiredPath -Path $GameRoot -Label 'Voyage game root'
@@ -236,6 +242,20 @@ if (Test-Path -LiteralPath $releaseRoot) {
 New-Item -ItemType Directory -Path $releaseRoot | Out-Null
 $logs = Join-Path $releaseRoot 'logs'
 New-Item -ItemType Directory -Path $logs | Out-Null
+$generatedSettingsDirectory = Join-Path $releaseRoot 'generated-settings'
+$generatedSettingsHeader = Join-Path $generatedSettingsDirectory 'GyroKeyboardControlSettings.generated.h'
+$generatedSettingsIni = Join-Path $generatedSettingsDirectory 'GyroKeyboardControl.ini'
+& $settingsGenerator `
+    -SchemaPath $settingsSchema `
+    -DefaultIniPath $settingsDefaults `
+    -HeaderPath $generatedSettingsHeader `
+    -IniPath $generatedSettingsIni
+if ((Get-FileHash -LiteralPath $settingsDefaults -Algorithm SHA256).Hash -cne
+    (Get-FileHash -LiteralPath $generatedSettingsIni -Algorithm SHA256).Hash) {
+    throw 'Generated settings INI differs from the canonical source INI.'
+}
+[Environment]::SetEnvironmentVariable(
+    'GYRO_KEYBOARD_GENERATED_SETTINGS_DIR', $generatedSettingsDirectory, 'Process')
 
 $totalStopwatch = [Diagnostics.Stopwatch]::StartNew()
 $timings = [ordered]@{}
@@ -352,7 +372,7 @@ foreach ($name in $payloadNames) {
     Copy-Item -LiteralPath (Join-Path $containerFiles $name) -Destination (Join-Path $payloadRoot $name)
 }
 Copy-Item -LiteralPath (Join-Path $modRoot 'README.txt') -Destination (Join-Path $payloadRoot 'README.txt')
-Copy-Item -LiteralPath (Join-Path $modRoot 'Assets\GyroKeyboardControl.ini') -Destination (Join-Path $payloadRoot 'GyroKeyboardControl.ini')
+Copy-Item -LiteralPath $generatedSettingsIni -Destination (Join-Path $payloadRoot 'GyroKeyboardControl.ini')
 $archivePath = Join-Path $releaseRoot "GyroKeyboardControl-$Version.zip"
 $installedArchiveName = "GyroKeyboardControl_$Version.zip"
 $payloadFiles = @(Get-ChildItem -LiteralPath $payloadRoot -File | Select-Object -ExpandProperty FullName)
@@ -396,7 +416,7 @@ if ($Install) {
         size = (Get-Item -LiteralPath $archiveTarget).Length
         sha256 = $archiveTargetHash
     }
-    $settingsTemplate = Join-Path $modRoot 'Assets\GyroKeyboardControl.ini'
+    $settingsTemplate = $generatedSettingsIni
     $settingsPath = Join-Path $paks 'GyroKeyboardControl.ini'
     if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
         Copy-Item -LiteralPath $settingsTemplate -Destination $settingsPath

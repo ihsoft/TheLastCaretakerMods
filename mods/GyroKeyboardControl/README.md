@@ -18,6 +18,11 @@ The first implemented keyboard-control improvement is pitch:
 Assets/GyroKeyboardControl.ini is copied beside the container. The default
 PitchRampSeconds=3.0 means three seconds from neutral to either limit.
 Accepted values are clamped to 0.05..60.0. Restart Voyage after editing.
+The INI is the sole source of defaults, comments, ordering, and packaged
+formatting. Settings/GyroKeyboardControl.settings.json declares only runtime
+bindings, types, and numeric ranges; the public build validates both and
+generates the Blueprint settings bindings internally. Existing installed INI
+values are preserved; `-Install` adds only missing canonical keys.
 
 ## Build
 
@@ -38,7 +43,8 @@ ignored `artifacts/gyro-keyboard` output.
 
 Build-GyroKeyboardControl.ps1 is the only public producer; the other
 PowerShell files in this directory are internal stages used by it. Use
--Install only while Voyage is closed. Installation preserves an existing
-GyroKeyboardControl.ini and only appends keys missing from a newer template.
+-Install only while Voyage is closed. Installation preserves current existing
+GyroKeyboardControl.ini values and only appends keys missing from the validated
+canonical template.
 Build, cook, container verification, and clean load are not gameplay
 validation.

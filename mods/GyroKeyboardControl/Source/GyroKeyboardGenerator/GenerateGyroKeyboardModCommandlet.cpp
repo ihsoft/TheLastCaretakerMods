@@ -47,18 +47,14 @@ namespace Select = BlueprintGraphNames::Pins::Select;
 constexpr TCHAR HelperPackage[] = TEXT("/Game/Mods/GyroKeyboardControl/ModActor");
 constexpr TCHAR HelperAsset[] = TEXT("ModActor");
 constexpr TCHAR GeneratorName[] = TEXT("GenerateGyroKeyboardMod");
-constexpr TCHAR SettingsRelativePath[] = TEXT("Paks/GyroKeyboardControl.ini");
-constexpr TCHAR SettingsKey[] = TEXT("PitchRampSeconds");
-constexpr TCHAR SettingsSeparator[] = TEXT("=");
-constexpr TCHAR RampDefault[] = TEXT("3.0");
-constexpr TCHAR RampMinimum[] = TEXT("0.05");
-constexpr TCHAR RampMaximum[] = TEXT("60.0");
 constexpr TCHAR Neutral[] = TEXT("0.0");
 constexpr TCHAR Positive[] = TEXT("1.0");
 constexpr TCHAR Negative[] = TEXT("-1.0");
 constexpr TCHAR IntegratedMinimum[] = TEXT("-0.9999");
 constexpr TCHAR IntegratedMaximum[] = TEXT("0.9999");
 constexpr TCHAR ResetKey[] = TEXT("X");
+constexpr TCHAR FalseText[] = TEXT("false");
+constexpr TCHAR ZeroText[] = TEXT("0");
 constexpr TCHAR LoopPackage[] = TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros");
 constexpr TCHAR GyroContextPackage[] = TEXT("/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard");
 constexpr TCHAR GyroContextAsset[] = TEXT("IMC_GyroCopter_Keyboard");
@@ -91,7 +87,6 @@ constexpr InputActionContract DropCargo{TEXT("/Game/Game/Input/Vehicle/IA_GyroCo
 }
 
 const FName IntegratedPitch(TEXT("IntegratedPitch"));
-const FName PitchRampSeconds(TEXT("PitchRampSeconds"));
 const FName TiltForwardInput(TEXT("TiltForwardInput"));
 const FName ReceiveBeginPlay(TEXT("ReceiveBeginPlay"));
 const FName DivideDouble(TEXT("Divide_DoubleDouble"));
@@ -99,6 +94,30 @@ const FName LoopGraphName(TEXT("ForEachLoop"));
 const FName LoopArray(TEXT("Array"));
 const FName LoopElement(TEXT("Array Element"));
 const FName InputPath(TEXT("InPath"));
+
+namespace Settings
+{
+constexpr TCHAR RelativePath[] = TEXT("Paks/GyroKeyboardControl.ini");
+constexpr TCHAR Separator[] = TEXT("=");
+
+struct FNumericSetting
+{
+    const TCHAR* Key;
+    FName Field;
+    const TCHAR* Default;
+    const TCHAR* Minimum;
+    const TCHAR* Maximum;
+};
+
+struct FBooleanSetting
+{
+    const TCHAR* Key;
+    FName Field;
+    const TCHAR* Default;
+};
+
+#include "GyroKeyboardControlSettings.generated.h"
+}
 
 template <typename NodeType>
 NodeType* AddNode(NodeType* Node, UEdGraph* Graph, int32 X, int32 Y)
@@ -322,43 +341,45 @@ bool AddSettingsGraph(UEdGraph* Graph)
     BeginPlay->bOverrideFunction = true;
     AddNode(BeginPlay, Graph, 0, -700);
 
-    UK2Node_VariableSet* SetDefaultRamp = Write(Graph, PitchRampSeconds, nullptr, 220, -700);
-    Default(SetDefaultRamp, PitchRampSeconds, RampDefault);
+    bool Ok = true;
+    UEdGraphPin* DefaultTail = Pin(BeginPlay, P::Then);
+    int32 DefaultY = -700;
+    for (const Settings::FNumericSetting& Setting : Settings::NumericSettings)
+    {
+        UK2Node_VariableSet* SetDefault = Write(Graph, Setting.Field, nullptr, 220, DefaultY);
+        Default(SetDefault, Setting.Field, Setting.Default);
+        Ok &= Link(DefaultTail, Pin(SetDefault, P::Execute));
+        DefaultTail = Pin(SetDefault, P::Then);
+        DefaultY += 150;
+    }
+    for (const Settings::FBooleanSetting& Setting : Settings::BooleanSettings)
+    {
+        UK2Node_VariableSet* SetDefault = Write(Graph, Setting.Field, nullptr, 220, DefaultY);
+        Default(SetDefault, Setting.Field, Setting.Default);
+        Ok &= Link(DefaultTail, Pin(SetDefault, P::Execute));
+        DefaultTail = Pin(SetDefault, P::Then);
+        DefaultY += 150;
+    }
+
     UK2Node_CallFunction* Content = Call(Graph, UBlueprintPathsLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UBlueprintPathsLibrary, ProjectContentDir), 220, -520);
+        GET_FUNCTION_NAME_CHECKED(UBlueprintPathsLibrary, ProjectContentDir), 450, -520);
     UK2Node_CallFunction* Path = Call(Graph, UKismetStringLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Concat_StrStr), 450, -520);
-    Default(Path, Binary::RightOperand, SettingsRelativePath);
+        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Concat_StrStr), 680, -520);
+    Default(Path, Binary::RightOperand, Settings::RelativePath);
     UK2Node_CallFunction* Load = Call(Graph, UVoyageEditorBlueprintFunctionLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UVoyageEditorBlueprintFunctionLibrary, LoadFileToArray), 680, -700);
-    UK2Node_MacroInstance* Loop = AddForEachLoop(Graph, 920, -700);
+        GET_FUNCTION_NAME_CHECKED(UVoyageEditorBlueprintFunctionLibrary, LoadFileToArray), 910, -700);
+    UK2Node_MacroInstance* Loop = AddForEachLoop(Graph, 1140, -700);
 
     UK2Node_CallFunction* Split = Call(Graph, UKismetStringLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Split), 1160, -520);
-    Default(Split, TextSettingsGraphNames::SplitDelimiter, SettingsSeparator);
-    UK2Node_IfThenElse* HasPair = AddNode(NewObject<UK2Node_IfThenElse>(Graph), Graph, 1390, -700);
+        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Split), 1370, -520);
+    Default(Split, TextSettingsGraphNames::SplitDelimiter, Settings::Separator);
+    UK2Node_IfThenElse* HasPair = AddNode(NewObject<UK2Node_IfThenElse>(Graph), Graph, 1600, -700);
     UK2Node_CallFunction* TrimKey = Call(Graph, UKismetStringLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Trim), 1390, -430);
-    UK2Node_CallFunction* KeyMatches = Call(Graph, UKismetStringLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr), 1620, -430);
-    Default(KeyMatches, Binary::RightOperand, SettingsKey);
-    UK2Node_IfThenElse* IsOurKey = AddNode(NewObject<UK2Node_IfThenElse>(Graph), Graph, 1850, -700);
+        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Trim), 1600, -430);
     UK2Node_CallFunction* TrimValue = Call(Graph, UKismetStringLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Trim), 1850, -430);
-    UK2Node_CallFunction* IsNumeric = Call(Graph, UKismetStringLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, IsNumeric), 2080, -430);
-    UK2Node_IfThenElse* NumericBranch = AddNode(NewObject<UK2Node_IfThenElse>(Graph), Graph, 2310, -700);
-    UK2Node_CallFunction* ToDouble = Call(Graph, UKismetStringLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Conv_StringToDouble), 2310, -430);
-    UK2Node_CallFunction* Clamp = Call(Graph, UKismetMathLibrary::StaticClass(),
-        BlueprintGraphNames::MathFunctions::ClampFloat, 2540, -430);
-    Default(Clamp, P::Min, RampMinimum);
-    Default(Clamp, P::Max, RampMaximum);
-    UK2Node_VariableSet* SetRamp = Write(Graph, PitchRampSeconds, nullptr, 2770, -700);
+        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Trim), 1830, -430);
 
-    bool Ok = true;
-    Ok &= Link(Pin(BeginPlay, P::Then), Pin(SetDefaultRamp, P::Execute));
-    Ok &= Link(Pin(SetDefaultRamp, P::Then), Pin(Load, P::Execute));
+    Ok &= Link(DefaultTail, Pin(Load, P::Execute));
     Ok &= Link(Pin(Content, P::ReturnValue), Pin(Path, Binary::LeftOperand));
     Ok &= Link(Pin(Path, P::ReturnValue), Pin(Load, InputPath));
     Ok &= Link(Pin(Load, P::Then), FirstExecInput(Loop));
@@ -366,20 +387,80 @@ bool AddSettingsGraph(UEdGraph* Graph)
     Ok &= Link(Pin(Loop, P::LoopBody), Pin(HasPair, P::Execute));
     Ok &= Link(Pin(Loop, LoopElement), Pin(Split, ActorScanGraphNames::SourceString));
     Ok &= Link(Pin(Split, P::ReturnValue), Pin(HasPair, P::Condition));
-    Ok &= Link(Pin(HasPair, P::Then), Pin(IsOurKey, P::Execute));
     Ok &= Link(Pin(Split, TextSettingsGraphNames::SplitLeft),
         Pin(TrimKey, ActorScanGraphNames::SourceString));
-    Ok &= Link(Pin(TrimKey, P::ReturnValue), Pin(KeyMatches, Binary::LeftOperand));
-    Ok &= Link(Pin(KeyMatches, P::ReturnValue), Pin(IsOurKey, P::Condition));
-    Ok &= Link(Pin(IsOurKey, P::Then), Pin(NumericBranch, P::Execute));
     Ok &= Link(Pin(Split, TextSettingsGraphNames::SplitRight),
         Pin(TrimValue, ActorScanGraphNames::SourceString));
-    Ok &= Link(Pin(TrimValue, P::ReturnValue), Pin(IsNumeric, ActorScanGraphNames::SourceString));
-    Ok &= Link(Pin(IsNumeric, P::ReturnValue), Pin(NumericBranch, P::Condition));
-    Ok &= Link(Pin(NumericBranch, P::Then), Pin(SetRamp, P::Execute));
-    Ok &= Link(Pin(TrimValue, P::ReturnValue), Pin(ToDouble, TextSettingsGraphNames::NumericString));
-    Ok &= Link(Pin(ToDouble, P::ReturnValue), Pin(Clamp, P::Value));
-    Ok &= Link(Pin(Clamp, P::ReturnValue), Pin(SetRamp, PitchRampSeconds));
+
+    UEdGraphPin* NextKey = Pin(HasPair, P::Then);
+    int32 SettingY = -700;
+    for (const Settings::FNumericSetting& Setting : Settings::NumericSettings)
+    {
+        UK2Node_CallFunction* Matches = Call(Graph, UKismetStringLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr), 2060, SettingY + 180);
+        Default(Matches, Binary::RightOperand, Setting.Key);
+        UK2Node_IfThenElse* IsSetting = AddNode(
+            NewObject<UK2Node_IfThenElse>(Graph), Graph, 2290, SettingY);
+        UK2Node_CallFunction* IsNumeric = Call(Graph, UKismetStringLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, IsNumeric), 2520, SettingY + 180);
+        UK2Node_IfThenElse* ValidNumber = AddNode(
+            NewObject<UK2Node_IfThenElse>(Graph), Graph, 2750, SettingY);
+        UK2Node_CallFunction* ToDouble = Call(Graph, UKismetStringLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Conv_StringToDouble), 2750, SettingY + 180);
+        UK2Node_CallFunction* Clamp = Call(Graph, UKismetMathLibrary::StaticClass(),
+            BlueprintGraphNames::MathFunctions::ClampFloat, 2980, SettingY + 180);
+        Default(Clamp, P::Min, Setting.Minimum);
+        Default(Clamp, P::Max, Setting.Maximum);
+        UK2Node_VariableSet* SetValue = Write(Graph, Setting.Field, nullptr, 3210, SettingY);
+
+        Ok &= Link(NextKey, Pin(IsSetting, P::Execute));
+        Ok &= Link(Pin(TrimKey, P::ReturnValue), Pin(Matches, Binary::LeftOperand));
+        Ok &= Link(Pin(Matches, P::ReturnValue), Pin(IsSetting, P::Condition));
+        Ok &= Link(Pin(IsSetting, P::Then), Pin(ValidNumber, P::Execute));
+        Ok &= Link(Pin(TrimValue, P::ReturnValue), Pin(IsNumeric, ActorScanGraphNames::SourceString));
+        Ok &= Link(Pin(IsNumeric, P::ReturnValue), Pin(ValidNumber, P::Condition));
+        Ok &= Link(Pin(ValidNumber, P::Then), Pin(SetValue, P::Execute));
+        Ok &= Link(Pin(TrimValue, P::ReturnValue), Pin(ToDouble, TextSettingsGraphNames::NumericString));
+        Ok &= Link(Pin(ToDouble, P::ReturnValue), Pin(Clamp, P::Value));
+        Ok &= Link(Pin(Clamp, P::ReturnValue), Pin(SetValue, Setting.Field));
+        NextKey = Pin(IsSetting, P::Else);
+        SettingY += 320;
+    }
+    for (const Settings::FBooleanSetting& Setting : Settings::BooleanSettings)
+    {
+        UK2Node_CallFunction* Matches = Call(Graph, UKismetStringLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr), 2060, SettingY + 180);
+        Default(Matches, Binary::RightOperand, Setting.Key);
+        UK2Node_IfThenElse* IsSetting = AddNode(
+            NewObject<UK2Node_IfThenElse>(Graph), Graph, 2290, SettingY);
+        UK2Node_CallFunction* LowerValue = Call(Graph, UKismetStringLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, ToLower), 2520, SettingY + 180);
+        UK2Node_CallFunction* IsFalse = Call(Graph, UKismetStringLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr), 2750, SettingY + 100);
+        Default(IsFalse, Binary::RightOperand, FalseText);
+        UK2Node_CallFunction* IsZero = Call(Graph, UKismetStringLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr), 2750, SettingY + 250);
+        Default(IsZero, Binary::RightOperand, ZeroText);
+        UK2Node_CallFunction* IsDisabled = Call(Graph, UKismetMathLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR), 2980, SettingY + 180);
+        UK2Node_CallFunction* Parsed = Call(Graph, UKismetMathLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Not_PreBool), 3210, SettingY + 180);
+        UK2Node_VariableSet* SetValue = Write(Graph, Setting.Field, nullptr, 3440, SettingY);
+
+        Ok &= Link(NextKey, Pin(IsSetting, P::Execute));
+        Ok &= Link(Pin(TrimKey, P::ReturnValue), Pin(Matches, Binary::LeftOperand));
+        Ok &= Link(Pin(Matches, P::ReturnValue), Pin(IsSetting, P::Condition));
+        Ok &= Link(Pin(IsSetting, P::Then), Pin(SetValue, P::Execute));
+        Ok &= Link(Pin(TrimValue, P::ReturnValue), Pin(LowerValue, ActorScanGraphNames::SourceString));
+        Ok &= Link(Pin(LowerValue, P::ReturnValue), Pin(IsFalse, Binary::LeftOperand));
+        Ok &= Link(Pin(LowerValue, P::ReturnValue), Pin(IsZero, Binary::LeftOperand));
+        Ok &= Link(Pin(IsFalse, P::ReturnValue), Pin(IsDisabled, Binary::LeftOperand));
+        Ok &= Link(Pin(IsZero, P::ReturnValue), Pin(IsDisabled, Binary::RightOperand));
+        Ok &= Link(Pin(IsDisabled, P::ReturnValue), Pin(Parsed, Binary::LeftOperand));
+        Ok &= Link(Pin(Parsed, P::ReturnValue), Pin(SetValue, Setting.Field));
+        NextKey = Pin(IsSetting, P::Else);
+        SettingY += 320;
+    }
     return Ok;
 }
 
@@ -420,7 +501,7 @@ bool AddTickGraph(UEdGraph* Graph)
         BlueprintGraphNames::MathFunctions::AddDouble, 1370, 270);
     UK2Node_CallFunction* PerSecond = Call(Graph, UKismetMathLibrary::StaticClass(),
         DivideDouble, 1600, 270);
-    UK2Node_VariableGet* Ramp = Read(Graph, PitchRampSeconds, nullptr, 1370, 500);
+    UK2Node_VariableGet* Ramp = Read(Graph, Settings::PitchRampSeconds, nullptr, 1370, 500);
     UK2Node_CallFunction* PerFrame = Call(Graph, UKismetMathLibrary::StaticClass(),
         BlueprintGraphNames::MathFunctions::MultiplyDouble, 1830, 270);
     UK2Node_VariableGet* Current = Read(Graph, IntegratedPitch, nullptr, 1830, 500);
@@ -449,7 +530,6 @@ bool AddTickGraph(UEdGraph* Graph)
     UK2Node_VariableSet* ClearNative = Write(Graph, TiltForwardInput,
         AVoyageVehicleGyroCopter::StaticClass(), 1370, -220);
     Default(ClearNative, TiltForwardInput, Neutral);
-
     bool Ok = true;
     Ok &= Link(Pin(Tick, P::Then), Pin(Cast, P::Execute));
     Ok &= Link(Pin(GetParent, P::ReturnValue), Cast->GetCastSourcePin());
@@ -470,7 +550,7 @@ bool AddTickGraph(UEdGraph* Graph)
     Ok &= Link(Pin(PositiveDirection, P::ReturnValue), Pin(Direction, Binary::LeftOperand));
     Ok &= Link(Pin(NegativeDirection, P::ReturnValue), Pin(Direction, Binary::RightOperand));
     Ok &= Link(Pin(Direction, P::ReturnValue), Pin(PerSecond, Binary::LeftOperand));
-    Ok &= Link(Pin(Ramp, PitchRampSeconds), Pin(PerSecond, Binary::RightOperand));
+    Ok &= Link(Pin(Ramp, Settings::PitchRampSeconds), Pin(PerSecond, Binary::RightOperand));
     Ok &= Link(Pin(PerSecond, P::ReturnValue), Pin(PerFrame, Binary::LeftOperand));
     Ok &= Link(Pin(Tick, P::DeltaSeconds), Pin(PerFrame, Binary::RightOperand));
     Ok &= Link(Pin(Current, IntegratedPitch), Pin(Add, Binary::LeftOperand));
@@ -517,10 +597,22 @@ int32 UGenerateGyroKeyboardModCommandlet::Main(const FString& Params)
     FEdGraphPinType DoubleType;
     DoubleType.PinCategory = UEdGraphSchema_K2::PC_Real;
     DoubleType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
-    if (!FBlueprintEditorUtils::AddMemberVariable(
-            Blueprint, IntegratedPitch, DoubleType, Neutral) ||
+    FEdGraphPinType BoolType;
+    BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+    bool SettingsAdded = true;
+    for (const Settings::FNumericSetting& Setting : Settings::NumericSettings)
+    {
+        SettingsAdded &= FBlueprintEditorUtils::AddMemberVariable(
+            Blueprint, Setting.Field, DoubleType, Setting.Default);
+    }
+    for (const Settings::FBooleanSetting& Setting : Settings::BooleanSettings)
+    {
+        SettingsAdded &= FBlueprintEditorUtils::AddMemberVariable(
+            Blueprint, Setting.Field, BoolType, Setting.Default);
+    }
+    if (!SettingsAdded ||
         !FBlueprintEditorUtils::AddMemberVariable(
-            Blueprint, PitchRampSeconds, DoubleType, RampDefault))
+            Blueprint, IntegratedPitch, DoubleType, Neutral))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to add Gyro pitch state"));
         return 1;

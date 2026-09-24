@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "section": "",
+  "settings": [
+    {
+      "id": "PitchRampSeconds",
+      "runtimeName": "PitchRampSeconds",
+      "key": "PitchRampSeconds",
+      "type": "number",
+      "minimum": 0.05,
+      "maximum": 60.0
+    }
+  ]
+}

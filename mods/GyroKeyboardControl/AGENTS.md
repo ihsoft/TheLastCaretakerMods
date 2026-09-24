@@ -9,8 +9,14 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   without a new user request.
 - W increases, S decreases, and releasing both leaves the integrated value
   unchanged. X writes exact zero immediately.
-- Assets/GyroKeyboardControl.ini owns the default PitchRampSeconds=3.0.
-  Preserve existing installed settings and append only missing keys.
+- `Assets/GyroKeyboardControl.ini` is the canonical packaged INI and sole
+  source of setting defaults, comments, order, and formatting.
+  `Settings/GyroKeyboardControl.settings.json` owns only the flat-section key
+  identity, runtime binding, type, and numeric range. Add or remove an option
+  in both files, then wire only its consuming behavior by hand; never edit
+  generated output. `Build-GyroKeyboardControl.ps1` owns internal settings
+  validation and generation. Installation preserves existing user values and
+  appends only missing canonical keys.
 - Build-GyroKeyboardControl.ps1 is the only public producer. It owns fingerprinting,
   editor build, generation, cook, clean item-data extraction, surgical patching,
   packaging, verification, ZIP creation, and optional -Install.
