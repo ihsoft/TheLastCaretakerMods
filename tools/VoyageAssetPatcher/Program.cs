@@ -4,6 +4,7 @@ using UAssetAPI.PropertyTypes.Objects;
 using UAssetAPI.UnrealTypes;
 using UAssetAPI.Unversioned;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 const string BreakBottomFilter = "break-bottom-action-filter";
 const string SwapHornToExit = "swap-forklift-horn-to-exit";
@@ -192,7 +193,11 @@ if (operation == PatchItemDataAsset)
     if (!File.Exists(specificationPath))
         throw new FileNotFoundException("Item patch specification was not found.", specificationPath);
     ItemPatchSpecification specification = JsonSerializer.Deserialize<ItemPatchSpecification>(
-        File.ReadAllText(specificationPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+        File.ReadAllText(specificationPath), new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
+        })
         ?? throw new InvalidDataException("Item patch specification is empty.");
     WriteItemDataAsset(asset, outputPath, mappings, engineVersion, specification);
     Console.WriteLine($"Patched item data asset '{specification.ItemObjectName}' from its owned specification.");
@@ -1066,8 +1071,10 @@ void WriteItemDataAsset(UAsset target, string destinationUasset,
         ?? throw new InvalidDataException("Item craft time is missing.");
     FloatPropertyData craftEnergy = item["CraftElectricityCost"] as FloatPropertyData
         ?? throw new InvalidDataException("Item craft energy is missing.");
-    IntPropertyData craftAmount = item["CraftAmount"] as IntPropertyData
-        ?? throw new InvalidDataException("Item craft amount is missing.");
+    IntPropertyData? craftAmount = item["CraftAmount"] as IntPropertyData;
+    if ((specification.Expected.CraftAmount.HasValue || specification.Patch.CraftAmount.HasValue) &&
+        craftAmount is null)
+        throw new InvalidDataException("Item craft amount is missing.");
     MapPropertyData components = item["Components"] as MapPropertyData
         ?? throw new InvalidDataException("Item component recipe is missing.");
     TextPropertyData name = item["Name"] as TextPropertyData
@@ -1079,7 +1086,8 @@ void WriteItemDataAsset(UAsset target, string destinationUasset,
     if (weight.Value != specification.Expected.Weight ||
         craftTime.Value != specification.Expected.CraftTime ||
         craftEnergy.Value != specification.Expected.CraftElectricityCost ||
-        craftAmount.Value != specification.Expected.CraftAmount ||
+        (specification.Expected.CraftAmount.HasValue &&
+            craftAmount!.Value != specification.Expected.CraftAmount.Value) ||
         components.Value.Count != specification.Expected.Components.Count ||
         name.HistoryType != TextHistoryType.StringTableEntry ||
         description.HistoryType != TextHistoryType.StringTableEntry ||
@@ -1089,11 +1097,21 @@ void WriteItemDataAsset(UAsset target, string destinationUasset,
 
     Import FindImport(AssetReference reference)
     {
-        Import package = target.Imports.Single(import =>
-            import.ObjectName.ToString() == reference.Package);
-        Import asset = target.Imports.Single(import =>
+        Import[] packageCandidates = target.Imports.Where(import =>
+            import.ObjectName.ToString() == reference.Package).ToArray();
+        if (packageCandidates.Length != 1)
+            throw new InvalidDataException(
+                $"Expected one package import '{reference.Package}', found {packageCandidates.Length}.");
+        Import package = packageCandidates[0];
+        Import[] assetCandidates = target.Imports.Where(import =>
             import.ObjectName.ToString() == reference.Name &&
-            import.OuterIndex.Index == FPackageIndex.FromImport(target.Imports.IndexOf(package)).Index);
+            import.OuterIndex.Index == FPackageIndex.FromImport(target.Imports.IndexOf(package)).Index)
+            .ToArray();
+        if (assetCandidates.Length != 1)
+            throw new InvalidDataException(
+                $"Expected one asset import '{reference.Package}.{reference.Name}', " +
+                $"found {assetCandidates.Length}.");
+        Import asset = assetCandidates[0];
         if (asset.ClassName.ToString() != reference.ClassName)
             throw new InvalidDataException($"Import '{reference.Name}' has an unexpected class.");
         return asset;
@@ -1120,6 +1138,107 @@ void WriteItemDataAsset(UAsset target, string destinationUasset,
             throw new InvalidDataException($"Item recipe precondition failed for '{expected.Material.Name}'.");
     }
 
+    if (componentEntries.Count != specification.Expected.Components.Count)
+        throw new InvalidDataException("Item recipe contains an unexpected material.");
+    if (specification.Patch.Components is not null &&
+        specification.Patch.ComponentReplacements.Count != 0)
+        throw new InvalidDataException(
+            "Patch components and componentReplacements are mutually exclusive.");
+    if (specification.Patch.Components is { Count: 0 })
+        throw new InvalidDataException("A replacement recipe must contain at least one component.");
+    if (specification.Expected.Components.Select(component => component.Material.Name)
+        .Distinct(StringComparer.Ordinal).Count() != specification.Expected.Components.Count)
+        throw new InvalidDataException("Expected recipe contains duplicate material names.");
+    if (specification.Patch.Components is not null &&
+        specification.Patch.Components.Select(component => component.Material.Name)
+            .Distinct(StringComparer.Ordinal).Count() != specification.Patch.Components.Count)
+        throw new InvalidDataException("Replacement recipe contains duplicate material names.");
+    if (specification.Expected.Components.Any(component => component.Amount <= 0) ||
+        specification.Patch.Components?.Any(component => component.Amount <= 0) == true)
+        throw new InvalidDataException("Recipe component amounts must be positive.");
+
+    Dictionary<string, int> expectedFinalComponents =
+        (specification.Patch.Components ?? specification.Expected.Components).ToDictionary(
+            component => component.Material.Name, component => component.Amount);
+    if (specification.Patch.Components is null)
+    {
+        foreach (ComponentReplacement replacement in specification.Patch.ComponentReplacements)
+        {
+            if (!expectedFinalComponents.Remove(replacement.From.Name, out int amount))
+                throw new InvalidDataException(
+                    $"Recipe replacement source '{replacement.From.Name}' is absent or duplicated.");
+            if (!expectedFinalComponents.TryAdd(replacement.To.Name, amount))
+                throw new InvalidDataException(
+                    $"Recipe replacement target '{replacement.To.Name}' is duplicated.");
+        }
+    }
+
+    var replacementRecipe = new List<(ObjectPropertyData Material, IntPropertyData Amount)>();
+    if (specification.Patch.Components is not null)
+    {
+        ObjectPropertyData materialTemplate = componentEntries.Values.First().Property;
+        IntPropertyData amountTemplate = componentEntries.Values.First().Amount;
+        foreach (RecipeComponent replacement in specification.Patch.Components)
+        {
+            Import replacementImport = FindImport(replacement.Material);
+            var material = (ObjectPropertyData)materialTemplate.Clone();
+            var amount = (IntPropertyData)amountTemplate.Clone();
+            material.Value = FPackageIndex.FromImport(target.Imports.IndexOf(replacementImport));
+            amount.Value = replacement.Amount;
+            replacementRecipe.Add((material, amount));
+        }
+    }
+
+    var softObjectMutations = new List<(SoftObjectPropertyData Property,
+        SoftObjectReferenceMutation Mutation)>();
+    foreach (SoftObjectReferenceMutation mutation in specification.Patch.SoftObjectReferences)
+    {
+        if (softObjectMutations.Any(candidate =>
+            candidate.Mutation.Property == mutation.Property))
+            throw new InvalidDataException(
+                $"Soft-object property '{mutation.Property}' is targeted more than once.");
+        SoftObjectPropertyData property = item[mutation.Property] as SoftObjectPropertyData
+            ?? throw new InvalidDataException(
+                $"'{specification.ItemObjectName}.{mutation.Property}' is absent or not a " +
+                "SoftObjectPropertyData.");
+        AssertSoftObjectIdentity(mutation.Expected, mutation.Property, "expected");
+        AssertSoftObjectIdentity(mutation.Value, mutation.Property, "replacement");
+        AssertSoftObjectReference(property, mutation.Expected, mutation.Property);
+        softObjectMutations.Add((property, mutation));
+    }
+
+    var mapClearMutations = new List<(MapPropertyData Property, MapClearMutation Mutation)>();
+    foreach (MapClearMutation mutation in specification.Patch.ClearNameObjectMaps)
+    {
+        if (mapClearMutations.Any(candidate =>
+            candidate.Mutation.Property == mutation.Property))
+            throw new InvalidDataException(
+                $"Map property '{mutation.Property}' is targeted more than once.");
+        if (mutation.KeyType != "NameProperty" || mutation.ValueType != "ObjectProperty")
+            throw new InvalidDataException(
+                $"Map clear for '{mutation.Property}' must declare NameProperty/ObjectProperty types.");
+        if (string.IsNullOrWhiteSpace(mutation.Property))
+            throw new InvalidDataException("Map clear property name is empty.");
+        MapPropertyData property = item[mutation.Property] as MapPropertyData
+            ?? throw new InvalidDataException(
+                $"'{specification.ItemObjectName}.{mutation.Property}' is absent or not a MapPropertyData.");
+        AssertNameObjectMap(target, property, mutation);
+        mapClearMutations.Add((property, mutation));
+    }
+
+    foreach (ComponentReplacement replacement in specification.Patch.ComponentReplacements)
+    {
+        _ = FindImport(replacement.From);
+        if (string.IsNullOrWhiteSpace(replacement.To.Package) ||
+            string.IsNullOrWhiteSpace(replacement.To.Name) ||
+            string.IsNullOrWhiteSpace(replacement.To.ClassName))
+            throw new InvalidDataException("Recipe replacement target identity is incomplete.");
+    }
+    if (string.IsNullOrWhiteSpace(specification.Patch.Icon.Package) ||
+        string.IsNullOrWhiteSpace(specification.Patch.Icon.Name) ||
+        string.IsNullOrWhiteSpace(specification.Patch.Icon.ClassName))
+        throw new InvalidDataException("Replacement icon identity is incomplete.");
+
     FPackageIndex AddReplacementImport(AssetReference source, AssetReference replacement)
     {
         Import sourceAsset = FindImport(source);
@@ -1130,16 +1249,36 @@ void WriteItemDataAsset(UAsset target, string destinationUasset,
     }
 
     icon.Value = AddReplacementImport(specification.Expected.Icon, specification.Patch.Icon);
-    foreach (ComponentReplacement replacement in specification.Patch.ComponentReplacements)
+    if (specification.Patch.Components is not null)
     {
-        Import source = FindImport(replacement.From);
-        if (!componentEntries.TryGetValue(source.ObjectName.ToString(), out var entry))
-            throw new InvalidDataException($"Recipe replacement source '{replacement.From.Name}' is absent.");
-        entry.Property.Value = AddReplacementImport(replacement.From, replacement.To);
+        components.Value.Clear();
+        foreach (var replacement in replacementRecipe)
+            components.Value.Add(replacement.Material, replacement.Amount);
+    }
+    else
+    {
+        foreach (ComponentReplacement replacement in specification.Patch.ComponentReplacements)
+        {
+            Import source = FindImport(replacement.From);
+            if (!componentEntries.TryGetValue(source.ObjectName.ToString(), out var entry))
+                throw new InvalidDataException(
+                    $"Recipe replacement source '{replacement.From.Name}' is absent.");
+            entry.Property.Value = AddReplacementImport(replacement.From, replacement.To);
+        }
+    }
+
+    foreach (var mutation in softObjectMutations)
+        mutation.Property.Value = CreateSoftObjectPath(target, mutation.Mutation.Value);
+    foreach (var mutation in mapClearMutations)
+    {
+        mutation.Property.Value.Clear();
+        mutation.Property.KeyType = new FName(target, mutation.Mutation.KeyType);
+        mutation.Property.ValueType = new FName(target, mutation.Mutation.ValueType);
     }
 
     craftTime.Value = specification.Patch.CraftTime;
-    craftAmount.Value = specification.Patch.CraftAmount;
+    if (specification.Patch.CraftAmount.HasValue)
+        craftAmount!.Value = specification.Patch.CraftAmount.Value;
     foreach ((TextPropertyData property, ItemTextPatch text) in new[]
     {
         (name, specification.Patch.Name),
@@ -1163,8 +1302,9 @@ void WriteItemDataAsset(UAsset target, string destinationUasset,
     AssertImportName(written, RequireObjectProperty(writtenItem, "Icon"), specification.Patch.Icon.Name);
     if (writtenItem["CraftTime"] is not FloatPropertyData writtenTime ||
         writtenTime.Value != specification.Patch.CraftTime ||
-        writtenItem["CraftAmount"] is not IntPropertyData writtenAmount ||
-        writtenAmount.Value != specification.Patch.CraftAmount ||
+        (specification.Patch.CraftAmount.HasValue &&
+            (writtenItem["CraftAmount"] is not IntPropertyData writtenAmount ||
+                writtenAmount.Value != specification.Patch.CraftAmount.Value)) ||
         writtenItem["Weight"] is not FloatPropertyData writtenWeight ||
         writtenWeight.Value != specification.Expected.Weight ||
         writtenItem["CraftElectricityCost"] is not FloatPropertyData writtenEnergy ||
@@ -1178,14 +1318,6 @@ void WriteItemDataAsset(UAsset target, string destinationUasset,
         writtenDescription.CultureInvariantString?.Value != specification.Patch.Description.Text)
         throw new InvalidDataException("Patched item text changed on reopening.");
 
-    Dictionary<string, int> expectedFinalComponents = specification.Expected.Components.ToDictionary(
-        component => component.Material.Name, component => component.Amount);
-    foreach (ComponentReplacement replacement in specification.Patch.ComponentReplacements)
-    {
-        int amount = expectedFinalComponents[replacement.From.Name];
-        expectedFinalComponents.Remove(replacement.From.Name);
-        expectedFinalComponents.Add(replacement.To.Name, amount);
-    }
     MapPropertyData writtenComponents = writtenItem["Components"] as MapPropertyData
         ?? throw new InvalidDataException("Patched item recipe map was lost.");
     if (writtenComponents.Value.Count != expectedFinalComponents.Count)
@@ -1198,6 +1330,111 @@ void WriteItemDataAsset(UAsset target, string destinationUasset,
                 material.ToImport(written).ObjectName.ToString(), out int expectedAmount) ||
             amount.Value != expectedAmount)
             throw new InvalidDataException("Patched item recipe map changed on reopening.");
+    }
+
+    foreach (SoftObjectReferenceMutation mutation in specification.Patch.SoftObjectReferences)
+    {
+        SoftObjectPropertyData property = writtenItem[mutation.Property] as SoftObjectPropertyData
+            ?? throw new InvalidDataException(
+                $"Patched soft-object property '{mutation.Property}' was lost or changed type.");
+        AssertSoftObjectReference(property, mutation.Value, mutation.Property);
+    }
+    foreach (MapClearMutation mutation in specification.Patch.ClearNameObjectMaps)
+    {
+        MapPropertyData property = writtenItem[mutation.Property] as MapPropertyData
+            ?? throw new InvalidDataException(
+                $"Patched map property '{mutation.Property}' was lost or changed type.");
+        if (property.Value.Count != 0 || property.KeyType.ToString() != mutation.KeyType ||
+            property.ValueType.ToString() != mutation.ValueType)
+            throw new InvalidDataException(
+                $"Patched map property '{mutation.Property}' did not reopen as the requested empty map.");
+    }
+
+    void AssertSoftObjectReference(
+        SoftObjectPropertyData property,
+        SoftObjectReference expected,
+        string propertyName)
+    {
+        FSoftObjectPath value = property.Value;
+        string? subPath = value.SubPathString?.Value;
+        if (value.AssetPath.PackageName.ToString() != expected.PackageName ||
+            value.AssetPath.AssetName.ToString() != expected.AssetName ||
+            subPath != expected.SubPathString)
+            throw new InvalidDataException(
+                $"Soft-object property '{propertyName}' does not match its expected value.");
+    }
+
+    void AssertSoftObjectIdentity(
+        SoftObjectReference value,
+        string propertyName,
+        string role)
+    {
+        if (string.IsNullOrWhiteSpace(value.PackageName) ||
+            string.IsNullOrWhiteSpace(value.AssetName))
+            throw new InvalidDataException(
+                $"Soft-object property '{propertyName}' has an incomplete {role} identity.");
+    }
+
+    FSoftObjectPath CreateSoftObjectPath(UAsset asset, SoftObjectReference value)
+    {
+        return new FSoftObjectPath(
+            new FTopLevelAssetPath(
+                new FName(asset, value.PackageName),
+                new FName(asset, value.AssetName)),
+            value.SubPathString is null ? null! : new FString(value.SubPathString));
+    }
+
+    void AssertNameObjectMap(UAsset asset, MapPropertyData property, MapClearMutation mutation)
+    {
+        if (property.Value.Count != mutation.ExpectedEntries.Count)
+            throw new InvalidDataException(
+                $"Map '{mutation.Property}' does not have the expected entry count.");
+        var actual = new Dictionary<string, (string Kind, string Name)>(StringComparer.Ordinal);
+        foreach (KeyValuePair<PropertyData, PropertyData> entry in property.Value)
+        {
+            if (entry.Key is not NamePropertyData key ||
+                entry.Value is not ObjectPropertyData objectReference)
+                throw new InvalidDataException(
+                    $"Map '{mutation.Property}' is not a NameProperty/ObjectProperty map.");
+            string kind;
+            string objectName;
+            if (objectReference.IsImport())
+            {
+                kind = "import";
+                objectName = objectReference.ToImport(asset).ObjectName.ToString();
+            }
+            else if (objectReference.IsExport())
+            {
+                kind = "export";
+                objectName = objectReference.ToExport(asset).ObjectName.ToString();
+            }
+            else
+            {
+                throw new InvalidDataException(
+                    $"Map '{mutation.Property}' contains a null object reference.");
+            }
+            if (!actual.TryAdd(key.Value.ToString(), (kind, objectName)))
+                throw new InvalidDataException(
+                    $"Map '{mutation.Property}' contains a duplicate key '{key.Value}'.");
+        }
+        foreach (NameObjectMapEntry expectedEntry in mutation.ExpectedEntries)
+        {
+            if (string.IsNullOrWhiteSpace(expectedEntry.Key) ||
+                string.IsNullOrWhiteSpace(expectedEntry.ObjectName))
+                throw new InvalidDataException(
+                    $"Map '{mutation.Property}' contains an incomplete expected entry.");
+            if (expectedEntry.ReferenceKind is not ("import" or "export"))
+                throw new InvalidDataException(
+                    $"Map '{mutation.Property}' has unsupported reference kind " +
+                    $"'{expectedEntry.ReferenceKind}'.");
+            if (!actual.Remove(expectedEntry.Key, out var actualEntry) ||
+                actualEntry.Kind != expectedEntry.ReferenceKind ||
+                actualEntry.Name != expectedEntry.ObjectName)
+                throw new InvalidDataException(
+                    $"Map '{mutation.Property}' entry '{expectedEntry.Key}' does not match.");
+        }
+        if (actual.Count != 0)
+            throw new InvalidDataException($"Map '{mutation.Property}' contains unexpected entries.");
     }
 }
 
@@ -1229,7 +1466,7 @@ sealed class ExpectedItemState
     public float Weight { get; init; }
     public float CraftTime { get; init; }
     public float CraftElectricityCost { get; init; }
-    public int CraftAmount { get; init; }
+    public int? CraftAmount { get; init; }
     public required string NameStringTableKey { get; init; }
     public required string DescriptionStringTableKey { get; init; }
     public required AssetReference Icon { get; init; }
@@ -1239,11 +1476,14 @@ sealed class ExpectedItemState
 sealed class ItemMutation
 {
     public float CraftTime { get; init; }
-    public int CraftAmount { get; init; }
+    public int? CraftAmount { get; init; }
     public required ItemTextPatch Name { get; init; }
     public required ItemTextPatch Description { get; init; }
     public required AssetReference Icon { get; init; }
     public required List<ComponentReplacement> ComponentReplacements { get; init; }
+    public List<RecipeComponent>? Components { get; init; }
+    public List<SoftObjectReferenceMutation> SoftObjectReferences { get; init; } = [];
+    public List<MapClearMutation> ClearNameObjectMaps { get; init; } = [];
 }
 
 sealed class ItemTextPatch
@@ -1269,4 +1509,33 @@ sealed class AssetReference
     public required string Package { get; init; }
     public required string Name { get; init; }
     public required string ClassName { get; init; }
+}
+
+sealed class SoftObjectReferenceMutation
+{
+    public required string Property { get; init; }
+    public required SoftObjectReference Expected { get; init; }
+    public required SoftObjectReference Value { get; init; }
+}
+
+sealed class SoftObjectReference
+{
+    public required string PackageName { get; init; }
+    public required string AssetName { get; init; }
+    public string? SubPathString { get; init; }
+}
+
+sealed class MapClearMutation
+{
+    public required string Property { get; init; }
+    public required string KeyType { get; init; }
+    public required string ValueType { get; init; }
+    public required List<NameObjectMapEntry> ExpectedEntries { get; init; }
+}
+
+sealed class NameObjectMapEntry
+{
+    public required string Key { get; init; }
+    public required string ReferenceKind { get; init; }
+    public required string ObjectName { get; init; }
 }

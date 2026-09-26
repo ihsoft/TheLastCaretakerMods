@@ -136,3 +136,39 @@ icon mutations. The shared patcher contains no mod-specific item identities or
 values. It adds replacement imports, writes only the requested properties, then
 reopens and verifies the complete result. A changed donor or game build must
 fail the preconditions and be revalidated by the owning mod.
+
+The schema also supports three bounded item operations without becoming a
+general reflection editor:
+
+- `patch.components` replaces the complete `ObjectProperty -> IntProperty`
+  recipe with references that already exist in the donor imports. It is
+  mutually exclusive with `componentReplacements`.
+- `patch.softObjectReferences` replaces named `SoftObjectPropertyData` values
+  only after their complete package, asset and optional subpath match the
+  declared expected value.
+- `patch.clearNameObjectMaps` clears a named
+  `NameProperty -> ObjectProperty` map only after its complete entry set,
+  reference kinds and referenced object names match. The empty map is written
+  with its declared key and value types.
+
+`expected.craftAmount` and `patch.craftAmount` are optional because some item
+classes inherit the default amount instead of serializing the property. If
+either value is supplied, the property must exist; existing specifications that
+declare it retain the previous strict behavior. Unknown JSON members, duplicate
+targets, conflicting recipe operations, wrong property types, ambiguous
+imports and changed expected values are rejected before an output is written.
+
+For a new specification that uses all three bounded operations, run the generic
+positive/negative contract test after publishing the candidate binary:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\Test-VoyageItemPatchSpecification.ps1 `
+  -InputAsset <exact-extracted-item.uasset> `
+  -Specification <owner-specification.json>
+```
+
+The test embeds no item identity. It verifies the supplied positive patch and
+rejections for unknown fields, a wrong soft-object property type, changed map
+content, a duplicate target and conflicting recipe operations. Evidence stays
+under ignored `artifacts/tests/`.

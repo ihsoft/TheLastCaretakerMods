@@ -170,6 +170,7 @@ container and evidence, without installation.
 | Install/remove one unchanged package canary | `Install-VoyageUnchangedProbe.ps1`, `Remove-VoyageUnchangedProbe.ps1` | Current-fingerprint and exact-hash guarded runtime roundtrip test |
 | Locate native names, references, or correlated member offsets | `Invoke-VoyageExecutableInspector.ps1` | Compact fingerprinted result plus retained read-only executable report |
 | Reproduce one of the existing surgical cooked-asset probes | `Invoke-VoyageAssetPatcher.ps1` | Manifest-validated patcher, reviewed current mapping, compact output hashes, and full log path |
+| Validate an extended owner-supplied item patch specification | `Test-VoyageItemPatchSpecification.ps1` | Positive write/reopen plus fail-closed schema, type, content, duplicate-target and conflict checks |
 | Discover which Blueprint editor APIs Unreal Python exposes | `Inspect-UnrealBlueprintApi.py` | `Saved/BlueprintApi.txt` in an Unreal project |
 | Reuse semantic C++ names while generating Blueprint graphs | `UnrealEditorGeneratorCommon` | Header-only build-time helpers; not a command-line tool |
 
