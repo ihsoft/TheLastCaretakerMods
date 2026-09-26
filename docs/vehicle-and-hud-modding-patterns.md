@@ -1,8 +1,9 @@
 # Voyage vehicle and standard-HUD modding patterns
 
-This document extracts reusable patterns learned from DonkLift-320. It is a
-starting model for other Voyage vehicles, not proof that every vehicle uses
-the same concrete class, field, package, action, or widget lifecycle.
+This document extracts reusable patterns learned from DonkLift-320 and
+GyroKeyboardControl. It is a starting model for other Voyage vehicles, not
+proof that every vehicle uses the same concrete class, field, package, action,
+or widget lifecycle.
 
 ## Separate the runtime layers
 
@@ -18,6 +19,45 @@ Treat these as independent until a test proves otherwise:
 A working mapping does not imply a visible standard hint. A changed HUD value
 does not prove movement consumes the same field. Diagnose the producer and
 consumer of each layer separately.
+
+## Post-physics kinematic correction
+
+When a mod must cancel or reshape stock physics, the observation and correction
+belong after the stock Blueprint and Chaos integration. An Actor helper ticks in
+`TG_PrePhysics` by default even when ticking is merely enabled; explicitly set
+its tick group to `TG_PostPhysics`. A pre-physics velocity write can be valid yet
+be overwritten by stock force integration in the same frame.
+
+Keep corrections axis-local and additive. Horizontal stabilization should read
+the post-physics velocity, calculate the desired XY velocity, and add
+`(desiredXY - observedXY, 0)` through `SetPhysicsLinearVelocity` with
+`bAddToCurrent=true`. Rewriting a complete XYZ vector can interfere with a
+separate vertical state machine even when its Z value was copied from the same
+observation. A vertical correction likewise owns only Z velocity or Z position
+and preserves the live X/Y state.
+
+To prevent continuous stock force from rebuilding speed, retain the previous
+velocity commanded by the helper. In each stabilized subspace, first reject
+observed growth beyond that previous command, then apply the configured
+constant-rate decay. On first entry there is no trustworthy previous sample;
+seed it from the observation. Clear sample validity whenever control ownership,
+the actuator-speed gate, throttle eligibility, or stabilization mode changes so
+stale commands cannot create a transition jump.
+
+Use local control intent, not a moving component's world orientation, to decide
+which motion is permitted. Combine the vehicle's world-horizontal forward and
+right axes using its native forward/side input values, normalize the result,
+and preserve only positive velocity along it. Neutral input damps all horizontal
+velocity; sideways and opposing components still decay under directional input.
+
+For a smooth transition from physical climb to exact altitude hold, brake only
+positive vertical speed at a constant configured rate. Reject renewed positive
+growth relative to the previous command before each braking step. Once the
+result becomes non-positive, capture the current Z and activate exact hold in
+that same tick; an already descending vehicle enters hold immediately. Gate all
+kinematic corrections on a measured live actuator state such as rotor speed,
+and clear their state below the threshold, otherwise a disabled or obstructed
+vehicle can be pinned unnaturally to an obstacle.
 
 ## Replacing a Blueprint while preserving original behavior
 

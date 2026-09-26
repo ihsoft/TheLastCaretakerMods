@@ -1,6 +1,6 @@
 # Game-derived source and build inputs
 
-## Current fingerprint
+## Fingerprint gate
 
 - Steam build: 25191271
 - Unreal parser target: 5.8
@@ -10,9 +10,9 @@
 Run tools/Get-VoyageBuildFingerprint.ps1 before every generation or package
 build. A mismatch invalidates all contracts below.
 
-## Revalidated contracts
+## Game contracts
 
-Current stock cooked assets establish:
+The stock cooked assets establish:
 
 - the vehicle package is /Game/Blueprints/Vehicles/BP_GyroCopter_Possessable;
 - its native parent is /Script/Voyage.VoyageVehicleGyroCopter;
@@ -31,7 +31,7 @@ Current stock cooked assets establish:
   camera response, and total-throttle calculations;
 - the game settings reader
   VoyageEditorBlueprintFunctionLibrary.LoadFileToArray(FString) retains the
-  exact signature already validated by Railgun on this fingerprint.
+  exact signature already established by Railgun on this fingerprint;
 - `/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard` contains the stock
   mouse, E, T, Space, LeftControl, arrow, W/S/A/D, and F mappings and has no X
   mapping;
@@ -47,7 +47,7 @@ Current stock cooked assets establish:
   the rotor body overrides its maximum angular velocity to `360000` degrees per
   second, but this is only a Chaos safety cap and is far above its normal
   operating speed. The stock physical root overrides its mass to `300 kg`.
-  With `PropellerLift=75`, the confirmed near-sea-level hover at ordinary 100%
+  With `PropellerLift=75`, near-sea-level hover at ordinary 100%
   throttle corresponds approximately to
   `PropellerVelocity = 300 * 980 / 75 = 3920`. Assuming the stock near-linear
   steady-state response gives approximate references `392`, `784`, and `1176`
@@ -56,15 +56,13 @@ Current stock cooked assets establish:
   guessed maximum;
 - stock `GetTotalThrottle` adds raw `abs(ThrottleInput)` on top of
   `CurrentThrottle`, so held Space can increase PhysicalEnergy production even
-  when CurrentThrottle is already clamped to 1. Gameplay testing established
-  that this extra power is required for useful climb performance, so the mod
-  leaves the complete stock function unchanged.
-
-The generated helper treats only exact native digital markers -1, 0, and 1 as
-commands. It integrates W/S through DeltaSeconds, preserves the integrated
-value when neither key is active, clamps mod output to +/-0.9999, and writes X
-as immediate neutral. When the owning Gyro is not player controlled, helper
-and native pitch state are reset to zero.
+  when CurrentThrottle is already clamped to 1. The extra power is required for
+  useful climb performance, so the mod leaves the complete stock function
+  unchanged;
+- the Blueprint property `MeshComponent` references a runtime component whose
+  UObject name is `VehicleMesh`. Code that scans components through
+  `GetObjectName` must compare the runtime UObject name, not the reflected
+  property name.
 
 ## Tracked reconstructed inputs
 
@@ -79,24 +77,3 @@ and native pitch state are reset to zero.
 The original Gyro item data asset, scriptobjects.bin, mappings, extracted JSON,
 cooked packages, containers, inventories, and build logs are game-derived and
 must remain below ignored artifacts paths.
-
-## Validation status
-
-The user validated the complete v1 package in Voyage on 2026-09-22: the
-subclass-plus-DroppedActor architecture, enter/exit, pitch controls, X reset,
-and the standard X HUD hint work in the real game. The stock parent action list
-is preserved by construction. The first v2 lift formula was not sufficient in
-game, while removing the held-Space contribution made useful climb impossible;
-that throttle experiment is removed. A hard-coded `PropellerLift=300` probe
-proved the helper's reflection write reaches the live physics field and is not
-overwritten before force calculation. The later PropellerLift-scale candidate
-  still produced no clearly visible height support in the user's test. The
-  physical world-up-force experiment and both of its settings have since been
-  removed. The current implementation uses PostPhysics kinematic full-throttle
-  altitude hold with smooth positive-vertical-speed braking after Space release
-  plus horizontal damping driven by local control intent. On 2026-09-25 the
-  user confirmed the complete behavior works in the real game with effective
-  runtime defaults `PitchRampSeconds=3.0`,
-  `AltitudeStabilizationVerticalDeceleration=100.0`, and
-  `HorizontalVelocityDecayAcceleration=1500.0`. The current canonical default
-  lowers horizontal decay to `150.0`; that tuning still needs a game check.
