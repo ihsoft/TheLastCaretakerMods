@@ -1,9 +1,12 @@
-Gyro Pitch Control
+StableGyro
 
-Copy GyroKeyboardControl_P.pak, GyroKeyboardControl_P.ucas,
-GyroKeyboardControl_P.utoc, and GyroKeyboardControl.ini to:
+Copy StableGyro_P.pak, StableGyro_P.ucas,
+StableGyro_P.utoc, and StableGyro.ini to:
 
 Voyage\Content\Paks
+
+When updating an existing StableGyro installation, preserve your current
+StableGyro.ini instead of overwriting it with the archive default.
 
 Controls:
 W  - smoothly increase forward pitch
@@ -12,7 +15,7 @@ X  - immediately reset pitch to zero
 
 Releasing W or S keeps the current pitch value.
 
-PitchRampSeconds in GyroKeyboardControl.ini sets the time from zero to maximum
+PitchRampSeconds in StableGyro.ini sets the time from zero to maximum
 pitch. Default: 3.0 seconds. Restart the game after editing the file.
 Put comments on their own lines; inline comments after values are invalid.
 

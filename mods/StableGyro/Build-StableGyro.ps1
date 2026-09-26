@@ -1,6 +1,6 @@
 # HAND-WRITTEN BUILD ORCHESTRATOR: the only public producer. It builds,
 # generates, cooks, packages, verifies, archives, and optionally installs
-# GyroKeyboardControl. It creates only ignored local artifacts and
+# StableGyro. It creates only ignored local artifacts and
 # never publishes externally.
 
 [CmdletBinding()]
@@ -32,13 +32,13 @@ $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
 $versionMetadataPath = Join-Path $modRoot 'VERSION.json'
 if (-not (Test-Path -LiteralPath $versionMetadataPath -PathType Leaf)) {
-    throw "GyroKeyboard version metadata was not found: $versionMetadataPath"
+    throw "StableGyro version metadata was not found: $versionMetadataPath"
 }
 $versionMetadata = Get-Content -LiteralPath $versionMetadataPath -Raw | ConvertFrom-Json
 $modVersion = [string]$versionMetadata.current.modVersion
 $testedGameVersion = $versionMetadata.current.testedGame.gameVersion
 if ($modVersion -notmatch '^v[1-9][0-9]*$') {
-    throw "GyroKeyboard version metadata is invalid: $versionMetadataPath"
+    throw "StableGyro version metadata is invalid: $versionMetadataPath"
 }
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = $modVersion
@@ -53,19 +53,18 @@ $buildBatch = Join-Path $EngineRoot 'Engine\Build\BatchFiles\Build.bat'
 $unrealEditor = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 $engineVersionPath = Join-Path $EngineRoot 'Engine\Build\Build.version'
 $fingerprinter = Join-Path $repoRoot 'tools\Get-VoyageBuildFingerprint.ps1'
-$cookScript = Join-Path $modRoot 'Cook-GyroKeyboardAssets.ps1'
-$prepareScript = Join-Path $modRoot 'Prepare-GyroKeyboardOriginals.ps1'
+$cookScript = Join-Path $modRoot 'Cook-StableGyroAssets.ps1'
+$prepareScript = Join-Path $modRoot 'Prepare-StableGyroOriginals.ps1'
 $packageScript = Join-Path $modRoot 'Build-InheritancePackage.ps1'
-$settingsSchema = Join-Path $modRoot 'Settings\GyroKeyboardControl.settings.json'
-$settingsDefaults = Join-Path $modRoot 'Assets\GyroKeyboardControl.ini'
-$settingsGenerator = Join-Path $modRoot 'Build\New-GyroKeyboardControlSettings.ps1'
-$containerName = 'GyroKeyboardControl_P'
+$settingsSchema = Join-Path $modRoot 'Settings\StableGyro.settings.json'
+$settingsDefaults = Join-Path $modRoot 'Assets\StableGyro.ini'
+$settingsGenerator = Join-Path $modRoot 'Build\New-StableGyroSettings.ps1'
+$containerName = 'StableGyro_P'
 $payloadNames = @(
     "$containerName.pak",
     "$containerName.ucas",
     "$containerName.utoc"
 )
-
 function Resolve-RequiredPath {
     param([Parameter(Mandatory = $true)] [string]$Path, [Parameter(Mandatory = $true)] [string]$Label)
 
@@ -94,10 +93,10 @@ function Assert-GameClosed {
     }
 }
 
-function Update-GyroKeyboardSettings {
+function Update-StableGyroSettings {
     param([string]$TemplatePath, [string]$SettingsPath)
 
-    $addedDefaultsComment = '# Defaults added by a newer GyroKeyboardControl build.'
+    $addedDefaultsComment = '# Defaults added by a newer StableGyro build.'
     $retiredKeys = @(
         'AltitudeStabilizationDelaySeconds',
         'CompensateTiltLift',
@@ -256,17 +255,17 @@ function Get-CleanOriginalInputs {
 }
 
 $project = Resolve-RequiredPath -Path $project -Label 'Unreal project'
-$provenancePath = Resolve-RequiredPath -Path $provenancePath -Label 'GyroKeyboard provenance registry'
+$provenancePath = Resolve-RequiredPath -Path $provenancePath -Label 'StableGyro provenance registry'
 $buildBatch = Resolve-RequiredPath -Path $buildBatch -Label 'Unreal build script'
 $unrealEditor = Resolve-RequiredPath -Path $unrealEditor -Label 'UnrealEditor-Cmd'
 $engineVersionPath = Resolve-RequiredPath -Path $engineVersionPath -Label 'Unreal build version'
 $fingerprinter = Resolve-RequiredPath -Path $fingerprinter -Label 'Voyage fingerprint tool'
-$cookScript = Resolve-RequiredPath -Path $cookScript -Label 'GyroKeyboard cook script'
-$prepareScript = Resolve-RequiredPath -Path $prepareScript -Label 'GyroKeyboard original preparer'
-$packageScript = Resolve-RequiredPath -Path $packageScript -Label 'GyroKeyboard package builder'
-$settingsSchema = Resolve-RequiredPath -Path $settingsSchema -Label 'GyroKeyboard settings schema'
-$settingsDefaults = Resolve-RequiredPath -Path $settingsDefaults -Label 'GyroKeyboard canonical settings INI'
-$settingsGenerator = Resolve-RequiredPath -Path $settingsGenerator -Label 'GyroKeyboard settings generator'
+$cookScript = Resolve-RequiredPath -Path $cookScript -Label 'StableGyro cook script'
+$prepareScript = Resolve-RequiredPath -Path $prepareScript -Label 'StableGyro original preparer'
+$packageScript = Resolve-RequiredPath -Path $packageScript -Label 'StableGyro package builder'
+$settingsSchema = Resolve-RequiredPath -Path $settingsSchema -Label 'StableGyro settings schema'
+$settingsDefaults = Resolve-RequiredPath -Path $settingsDefaults -Label 'StableGyro canonical settings INI'
+$settingsGenerator = Resolve-RequiredPath -Path $settingsGenerator -Label 'StableGyro settings generator'
 $Retoc = Resolve-RequiredPath -Path $Retoc -Label 'retoc'
 $retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Retoc).Hash
 $GameRoot = Resolve-RequiredPath -Path $GameRoot -Label 'Voyage game root'
@@ -274,14 +273,14 @@ $GameRoot = Resolve-RequiredPath -Path $GameRoot -Label 'Voyage game root'
 $engineVersion = Get-Content -LiteralPath $engineVersionPath -Raw | ConvertFrom-Json
 $actualEngineVersion = "$($engineVersion.MajorVersion).$($engineVersion.MinorVersion).$($engineVersion.PatchVersion)"
 if ($actualEngineVersion -cne $expectedEditorEngineVersion) {
-    throw "GyroKeyboard requires Unreal Engine $expectedEditorEngineVersion; selected engine is $actualEngineVersion."
+    throw "StableGyro requires Unreal Engine $expectedEditorEngineVersion; selected engine is $actualEngineVersion."
 }
 
 $sourceStatus = @(& git -C $repoRoot status --porcelain -- `
-    'mods/GyroKeyboardControl' `
-    ':(exclude)mods/GyroKeyboardControl/Slideshow')
+    'mods/StableGyro' `
+    ':(exclude)mods/StableGyro/Slideshow')
 if ($LASTEXITCODE -ne 0) {
-    throw 'Unable to inspect GyroKeyboard source status.'
+    throw 'Unable to inspect StableGyro source status.'
 }
 $sourceCommit = (& git -C $repoRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) {
@@ -290,7 +289,7 @@ if ($LASTEXITCODE -ne 0) {
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $buildIdentity = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
-    $OutputRoot = Join-Path $artifactsRoot "gyro-keyboard\build-$buildIdentity"
+    $OutputRoot = Join-Path $artifactsRoot "stable-gyro\build-$buildIdentity"
 }
 $releaseRoot = Assert-UnderArtifacts -Path $OutputRoot -Label 'OutputRoot'
 if (Test-Path -LiteralPath $releaseRoot) {
@@ -301,8 +300,8 @@ $logs = Join-Path $releaseRoot 'logs'
 New-Item -ItemType Directory -Path $logs | Out-Null
 $generatedSettingsDirectory = Join-Path $modRoot 'Intermediate\GeneratedSettings'
 $releaseGeneratedSettingsDirectory = Join-Path $releaseRoot 'generated-settings'
-$generatedSettingsHeader = Join-Path $generatedSettingsDirectory 'GyroKeyboardControlSettings.generated.h'
-$generatedSettingsIni = Join-Path $generatedSettingsDirectory 'GyroKeyboardControl.ini'
+$generatedSettingsHeader = Join-Path $generatedSettingsDirectory 'StableGyroSettings.generated.h'
+$generatedSettingsIni = Join-Path $generatedSettingsDirectory 'StableGyro.ini'
 & $settingsGenerator `
     -SchemaPath $settingsSchema `
     -DefaultIniPath $settingsDefaults `
@@ -338,7 +337,7 @@ $expectedBuild = $buildMatch.Groups['value'].Value
 $expectedExecutableHash = $hashMatch.Groups['value'].Value
 if ([string]$fingerprint.steam.buildId -cne $expectedBuild -or
     [string]$fingerprint.executable.sha256 -cne $expectedExecutableHash) {
-    throw "Installed Voyage fingerprint does not match the validated GyroKeyboard source. See $fingerprintPath"
+    throw "Installed Voyage fingerprint does not match the validated StableGyro source. See $fingerprintPath"
 }
 $phase.Stop()
 $timings.Fingerprint = $phase.Elapsed.TotalSeconds
@@ -370,8 +369,8 @@ if (Test-Path -LiteralPath $content) {
     Remove-Item -LiteralPath $content -Recurse -Force
 }
 New-Item -ItemType Directory -Path $content | Out-Null
-Invoke-UnrealGenerator -Commandlet 'GenerateGyroKeyboardMod' -LogDirectory $logs
-Invoke-UnrealGenerator -Commandlet 'GenerateGyroKeyboardInheritance' -LogDirectory $logs
+Invoke-UnrealGenerator -Commandlet 'GenerateStableGyroMod' -LogDirectory $logs
+Invoke-UnrealGenerator -Commandlet 'GenerateStableGyroInheritance' -LogDirectory $logs
 $phase.Stop()
 $timings.Generation = $phase.Elapsed.TotalSeconds
 
@@ -425,15 +424,15 @@ $timings.Package = $phase.Elapsed.TotalSeconds
 Write-Host '7/7 Creating the player-facing archive'
 $phase.Restart()
 $containerFiles = Join-Path $containerRoot 'package'
-$payloadRoot = Join-Path $releaseRoot "payload\GyroKeyboardControl-$Version"
+$payloadRoot = Join-Path $releaseRoot "payload\StableGyro-$Version"
 New-Item -ItemType Directory -Path $payloadRoot -Force | Out-Null
 foreach ($name in $payloadNames) {
     Copy-Item -LiteralPath (Join-Path $containerFiles $name) -Destination (Join-Path $payloadRoot $name)
 }
 Copy-Item -LiteralPath (Join-Path $modRoot 'README.txt') -Destination (Join-Path $payloadRoot 'README.txt')
-Copy-Item -LiteralPath $generatedSettingsIni -Destination (Join-Path $payloadRoot 'GyroKeyboardControl.ini')
-$archivePath = Join-Path $releaseRoot "GyroKeyboardControl-$Version.zip"
-$installedArchiveName = "GyroKeyboardControl_$Version.zip"
+Copy-Item -LiteralPath $generatedSettingsIni -Destination (Join-Path $payloadRoot 'StableGyro.ini')
+$archivePath = Join-Path $releaseRoot "StableGyro-$Version.zip"
+$installedArchiveName = "StableGyro_$Version.zip"
 $payloadFiles = @(Get-ChildItem -LiteralPath $payloadRoot -File | Select-Object -ExpandProperty FullName)
 Compress-Archive -LiteralPath $payloadFiles -DestinationPath $archivePath -CompressionLevel Optimal
 $phase.Stop()
@@ -476,14 +475,14 @@ if ($Install) {
         sha256 = $archiveTargetHash
     }
     $settingsTemplate = $generatedSettingsIni
-    $settingsPath = Join-Path $paks 'GyroKeyboardControl.ini'
+    $settingsPath = Join-Path $paks 'StableGyro.ini'
     if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
         Copy-Item -LiteralPath $settingsTemplate -Destination $settingsPath
         $addedKeys = @()
         $removedKeys = @()
         $settingsCreated = $true
     } else {
-        $settingsUpdate = Update-GyroKeyboardSettings $settingsTemplate $settingsPath
+        $settingsUpdate = Update-StableGyroSettings $settingsTemplate $settingsPath
         $addedKeys = @($settingsUpdate.AddedKeys)
         $removedKeys = @($settingsUpdate.RemovedKeys)
         $settingsCreated = $false
@@ -512,7 +511,7 @@ $payloadEvidence = @(
 )
 $manifest = [ordered]@{
     schemaVersion = 2
-    mod = 'GyroKeyboardControl'
+    mod = 'StableGyro'
     version = $Version
     modVersion = $modVersion
     createdAtUtc = [DateTime]::UtcNow.ToString('o')
@@ -547,7 +546,7 @@ $manifestPath = Join-Path $releaseRoot 'release-manifest.json'
 $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding utf8
 
 Write-Host ''
-Write-Host "GyroKeyboard release artifact is ready: $archivePath"
+Write-Host "StableGyro release artifact is ready: $archivePath"
 Write-Host "Manifest: $manifestPath"
 Write-Host ("Elapsed: {0:N1} seconds" -f $totalStopwatch.Elapsed.TotalSeconds)
 if ($installed) {

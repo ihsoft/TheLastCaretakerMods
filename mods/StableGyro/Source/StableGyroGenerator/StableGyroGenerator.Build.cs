@@ -1,12 +1,12 @@
-// HAND-WRITTEN BUILD TOOL SOURCE: editor-only module hosting the GyroKeyboard
+// HAND-WRITTEN BUILD TOOL SOURCE: editor-only module hosting the StableGyro
 // asset-generator commandlets. It is compiled into UnrealEditor, not shipped.
 
 using System.IO;
 using UnrealBuildTool;
 
-public class GyroKeyboardGenerator : ModuleRules
+public class StableGyroGenerator : ModuleRules
 {
-    public GyroKeyboardGenerator(ReadOnlyTargetRules Target) : base(Target)
+    public StableGyroGenerator(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
@@ -14,11 +14,11 @@ public class GyroKeyboardGenerator : ModuleRules
             ModuleDirectory,
             "..", "..", "Intermediate", "GeneratedSettings"));
         string GeneratedSettingsHeader = Path.Combine(
-            GeneratedSettingsDirectory, "GyroKeyboardControlSettings.generated.h");
+            GeneratedSettingsDirectory, "StableGyroSettings.generated.h");
         if (!File.Exists(GeneratedSettingsHeader))
         {
             throw new BuildException(
-                "GyroKeyboardControl settings were not generated. Build through Build-GyroKeyboardControl.ps1.");
+                "StableGyro settings were not generated. Build through Build-StableGyro.ps1.");
         }
         PrivateIncludePaths.Add(GeneratedSettingsDirectory);
 

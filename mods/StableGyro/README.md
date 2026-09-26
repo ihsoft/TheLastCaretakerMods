@@ -1,11 +1,12 @@
-# GyroKeyboardControl
+# StableGyro
 
 Loader-free IoStore mod for the stock Gyro. It leaves the complete current
 Gyro Blueprint at its original package identity, adds a small generated child,
 and redirects newly built Gyros through the stock item data asset's
 `DroppedActor` class path.
 
-The first implemented keyboard-control improvement is pitch:
+StableGyro improves both direct controls and flight stability. Its pitch
+controls are:
 
 - holding W increases TiltForwardInput linearly;
 - holding S decreases it linearly;
@@ -15,12 +16,12 @@ The first implemented keyboard-control improvement is pitch:
 - Space/Ctrl altitude throttle, A/D input behavior, yaw, camera, possession,
   save behavior, and all existing keyboard mappings remain unchanged.
 
-Assets/GyroKeyboardControl.ini is copied beside the container. The default
+Assets/StableGyro.ini is copied beside the container. The default
 PitchRampSeconds=3.0 means three seconds from neutral to either limit.
 Accepted values are clamped to 0.05..60.0. Restart Voyage after editing.
 Comments must be on separate lines; inline comments after values are invalid.
 The INI is the sole source of defaults, comments, ordering, and packaged
-formatting. Settings/GyroKeyboardControl.settings.json declares only runtime
+formatting. Settings/StableGyro.settings.json declares only runtime
 bindings, types, and numeric ranges; the public build validates both and
 generates the Blueprint settings bindings internally.
 
@@ -65,23 +66,24 @@ runtime graph. Installation removes its obsolete `CompensateTiltLift` and
 
 The normal preparation entry point is:
 
-    .\Build-GyroKeyboardControl.ps1
+    .\Build-StableGyro.ps1
 
 To build and install in one run:
 
-    .\Build-GyroKeyboardControl.ps1 -Install
+    .\Build-StableGyro.ps1 -Install
 
 It fingerprints the installed game, builds the UE 5.8.2 editor project,
 generates the helper, reset action, keyboard context, and replacement child,
 narrowly cooks four generated packages, freshly extracts
 and surgically patches the stock Gyro item data asset, packages and verifies
 the five-asset container, and creates a ZIP under
-ignored `artifacts/gyro-keyboard` output.
+ignored `artifacts/stable-gyro` output.
 
-Build-GyroKeyboardControl.ps1 is the only public producer; the other
+Build-StableGyro.ps1 is the only public producer; the other
 PowerShell files in this directory are internal stages used by it. Use
--Install only while Voyage is closed. Installation preserves current active
-GyroKeyboardControl.ini values, removes explicitly retired keys, and appends
-keys missing from the validated canonical template.
+-Install only while Voyage is closed. Installation preserves current values and
+comments in an existing StableGyro.ini, removes explicitly retired keys, and
+appends keys missing from the validated canonical template. A missing
+StableGyro.ini is created from the canonical packaged defaults.
 Build, cook, container verification, and clean load are not gameplay
 validation.

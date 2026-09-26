@@ -2,7 +2,7 @@
   "FileVersion": 3,
   "EngineAssociation": "5.8",
   "Category": "Modding",
-  "Description": "Editor-only project for generating the Gyro Keyboard Control IoStore assets.",
+  "Description": "Editor-only project for generating the Stable Gyro IoStore assets.",
   "Modules": [
     {
       "Name": "Voyage",
@@ -10,7 +10,7 @@
       "LoadingPhase": "Default"
     },
     {
-      "Name": "GyroKeyboardGenerator",
+      "Name": "StableGyroGenerator",
       "Type": "Editor",
       "LoadingPhase": "Default"
     }

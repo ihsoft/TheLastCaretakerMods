@@ -4,17 +4,17 @@
 #pragma once
 
 #include "Commandlets/Commandlet.h"
-#include "GenerateGyroKeyboardModCommandlet.generated.h"
+#include "GenerateStableGyroModCommandlet.generated.h"
 
 #if WITH_EDITOR
 
 UCLASS()
-class GYROKEYBOARDGENERATOR_API UGenerateGyroKeyboardModCommandlet : public UCommandlet
+class STABLEGYROGENERATOR_API UGenerateStableGyroModCommandlet : public UCommandlet
 {
     GENERATED_BODY()
 
 public:
-    UGenerateGyroKeyboardModCommandlet();
+    UGenerateStableGyroModCommandlet();
     virtual int32 Main(const FString& Params) override;
 };
 

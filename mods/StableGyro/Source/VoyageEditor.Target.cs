@@ -1,5 +1,5 @@
 // HAND-WRITTEN EDITOR PROJECT SCAFFOLD: builds the Voyage mirror together with
-// the GyroKeyboardGenerator editor-tools module. Native output is never shipped.
+// the StableGyroGenerator editor-tools module. Native output is never shipped.
 
 using UnrealBuildTool;
 
@@ -11,6 +11,6 @@ public class VoyageEditorTarget : TargetRules
         DefaultBuildSettings = BuildSettingsVersion.Latest;
         IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
         ExtraModuleNames.Add("Voyage");
-        ExtraModuleNames.Add("GyroKeyboardGenerator");
+        ExtraModuleNames.Add("StableGyroGenerator");
     }
 }

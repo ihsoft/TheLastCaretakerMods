@@ -3,7 +3,7 @@
 // 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
 // The generator is editor-only and never ships in the mod container.
 
-#include "GenerateGyroKeyboardInheritanceCommandlet.h"
+#include "GenerateStableGyroInheritanceCommandlet.h"
 
 #if WITH_EDITOR
 
@@ -38,8 +38,8 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "UObject/SavePackage.h"
-#include "GyroKeyboardAssetNames.h"
-#include "GyroKeyboardSettings.h"
+#include "StableGyroAssetNames.h"
+#include "StableGyroSettings.h"
 #include "VoyageGameUserSettings.h"
 #include "VoyageInputAction.h"
 #include "VoyageVehicleGyroCopter.h"
@@ -48,13 +48,13 @@
 namespace
 {
 constexpr TCHAR BasePackage[] = TEXT("/Game/Blueprints/Vehicles/BP_GyroCopter_Possessable");
-constexpr TCHAR ChildPackage[] = TEXT("/Game/Mods/GyroKeyboardBP/BP_GyroCopter_KeyboardCtl");
+constexpr TCHAR ChildPackage[] = TEXT("/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot");
 constexpr TCHAR BaseAssetName[] = TEXT("BP_GyroCopter_Possessable");
-constexpr TCHAR ChildAssetName[] = TEXT("BP_GyroCopter_KeyboardCtl");
-constexpr TCHAR HelperPath[] = TEXT("/Game/Mods/GyroKeyboardControl/ModActor.ModActor");
-const FName BaseBlueprintName(TEXT("GenerateGyroKeyboardInheritanceBase"));
-const FName ChildBlueprintName(TEXT("GenerateGyroKeyboardInheritanceChild"));
-const FName HelperComponentName(TEXT("GyroKeyboardControlHelper"));
+constexpr TCHAR ChildAssetName[] = TEXT("BP_GyroCopter_StablePilot");
+constexpr TCHAR HelperPath[] = TEXT("/Game/Mods/StableGyro/ModActor.ModActor");
+const FName BaseBlueprintName(TEXT("GenerateStableGyroInheritanceBase"));
+const FName ChildBlueprintName(TEXT("GenerateStableGyroInheritanceChild"));
+const FName HelperComponentName(TEXT("StableGyroHelper"));
 const FName ProvidedActionsFunctionName(TEXT("GetProvidedActionsBP"));
 const FName CurrentThrottle(TEXT("CurrentThrottle"));
 const FName AltitudeLockActive(TEXT("AltitudeLockActive"));
@@ -70,7 +70,7 @@ const FName PreviousCorrectedHorizontalVelocity(TEXT("PreviousCorrectedHorizonta
 const FName HorizontalVelocitySampleValid(TEXT("HorizontalVelocitySampleValid"));
 const FName PreviousCorrectedVerticalVelocity(TEXT("PreviousCorrectedVerticalVelocity"));
 const FName VerticalVelocitySampleValid(TEXT("VerticalVelocitySampleValid"));
-namespace Settings = GyroKeyboardSettings;
+namespace Settings = StableGyroSettings;
 
 namespace ArcadeAltitude
 {
@@ -312,9 +312,9 @@ bool AddProvidedActionsBpOverride(UBlueprint* Blueprint, UInputAction* ResetActi
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectText)));
     FinishNode(SelectText, Graph, 260, 300);
     Schema->TrySetDefaultText(*RequirePin(SelectText, SelectPins::WhenTrue),
-        FText::FromString(GyroKeyboardAssetNames::ResetRussianLabel));
+        FText::FromString(StableGyroAssetNames::ResetRussianLabel));
     Schema->TrySetDefaultText(*RequirePin(SelectText, SelectPins::WhenFalse),
-        FText::FromString(GyroKeyboardAssetNames::ResetDisplayLabel));
+        FText::FromString(StableGyroAssetNames::ResetDisplayLabel));
 
     UK2Node_MakeStruct* Reset = NewObject<UK2Node_MakeStruct>(Graph);
     Reset->StructType = FPlayerInputInterfaceAction::StaticStruct();
@@ -322,11 +322,11 @@ bool AddProvidedActionsBpOverride(UBlueprint* Blueprint, UInputAction* ResetActi
     FinishNode(Reset, Graph, 520, 80);
     Schema->TrySetDefaultObject(*RequirePin(Reset, PinNames::InputAction), ResetAction);
     Schema->TrySetDefaultValue(*RequirePin(Reset, PinNames::Name),
-        GyroKeyboardAssetNames::ResetMappingName);
+        StableGyroAssetNames::ResetMappingName);
     Schema->TrySetDefaultValue(*RequirePin(Reset, PinNames::Category),
-        GyroKeyboardAssetNames::VehicleInputCategory);
+        StableGyroAssetNames::VehicleInputCategory);
     Schema->TrySetDefaultText(*RequirePin(Reset, PinNames::Text),
-        FText::FromString(GyroKeyboardAssetNames::ResetDisplayLabel));
+        FText::FromString(StableGyroAssetNames::ResetDisplayLabel));
     Schema->TrySetDefaultValue(*RequirePin(Reset, PinNames::Enabled), ProvidedActionDefaults::Enabled);
     Schema->TrySetDefaultValue(*RequirePin(Reset, PinNames::Priority), ProvidedActionDefaults::Priority);
     Schema->TrySetDefaultValue(*RequirePin(Reset, PinNames::Type), ProvidedActionDefaults::Type);
@@ -1116,7 +1116,7 @@ bool SaveBlueprint(
 }
 }
 
-UGenerateGyroKeyboardInheritanceCommandlet::UGenerateGyroKeyboardInheritanceCommandlet()
+UGenerateStableGyroInheritanceCommandlet::UGenerateStableGyroInheritanceCommandlet()
 {
     IsClient = false;
     IsEditor = true;
@@ -1124,7 +1124,7 @@ UGenerateGyroKeyboardInheritanceCommandlet::UGenerateGyroKeyboardInheritanceComm
     ShowErrorCount = true;
 }
 
-int32 UGenerateGyroKeyboardInheritanceCommandlet::Main(const FString& Params)
+int32 UGenerateStableGyroInheritanceCommandlet::Main(const FString& Params)
 {
     if (FPackageName::DoesPackageExist(BasePackage) ||
         FPackageName::DoesPackageExist(ChildPackage))
@@ -1135,7 +1135,7 @@ int32 UGenerateGyroKeyboardInheritanceCommandlet::Main(const FString& Params)
     UBlueprint* Helper = LoadObject<UBlueprint>(nullptr, HelperPath);
     if (!Helper || !Helper->GeneratedClass) return 1;
     UVoyageInputAction* ResetAction = LoadObject<UVoyageInputAction>(
-        nullptr, GyroKeyboardAssetNames::ResetActionObjectPath);
+        nullptr, StableGyroAssetNames::ResetActionObjectPath);
     if (!ResetAction) return 1;
 
     UPackage* ParentPackage = CreatePackage(BasePackage);

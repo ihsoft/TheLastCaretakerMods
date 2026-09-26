@@ -31,9 +31,9 @@ $outputContent = Join-Path $output 'Content'
 New-Item -ItemType Directory -Path $outputContent -Force | Out-Null
 
 $packages = @(
-    '/Game/Mods/GyroKeyboardControl/ModActor',
-    '/Game/Mods/GyroKeyboardControl/IAV_GyroPitchReset',
-    '/Game/Mods/GyroKeyboardBP/BP_GyroCopter_KeyboardCtl',
+    '/Game/Mods/StableGyro/ModActor',
+    '/Game/Mods/StableGyro/IAV_GyroPitchReset',
+    '/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot',
     '/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard'
 )
 
@@ -48,7 +48,7 @@ foreach ($package in $packages) {
     }
 }
 
-Write-Host "Cooking $($packages.Count) GyroKeyboard packages in one Unreal process"
+Write-Host "Cooking $($packages.Count) StableGyro packages in one Unreal process"
 $arguments = @(
     ('"{0}"' -f $projectPath),
     '-run=cook',
@@ -99,7 +99,7 @@ if ($files.Count -ne $expectedFileCount) {
     throw "Expected $expectedFileCount staged cooked files; found $($files.Count)."
 }
 
-Write-Host "Cooked GyroKeyboard production assets: $output"
+Write-Host "Cooked StableGyro production assets: $output"
 Get-FileHash -Algorithm SHA256 -LiteralPath $files.FullName |
     Select-Object Path, Hash |
     Format-Table -AutoSize

@@ -1,7 +1,7 @@
 # Voyage vehicle and standard-HUD modding patterns
 
 This document extracts reusable patterns learned from DonkLift-320 and
-GyroKeyboardControl. It is a starting model for other Voyage vehicles, not
+StableGyro. It is a starting model for other Voyage vehicles, not
 proof that every vehicle uses the same concrete class, field, package, action,
 or widget lifecycle.
 

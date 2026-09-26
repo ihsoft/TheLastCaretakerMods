@@ -17,7 +17,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$OutputRoot,
 
-    [string]$ContainerName = 'GyroKeyboardControl_P'
+    [string]$ContainerName = 'StableGyro_P'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,9 +33,9 @@ if ([string]::IsNullOrWhiteSpace($Retoc)) {
 }
 
 $stockDroppedActorPackage = '/Game/Blueprints/Vehicles/BP_GyroCopter_Possessable'
-$modDroppedActorPackage = '/Game/Mods/GyroKeyboardBP/BP_GyroCopter_KeyboardCtl'
+$modDroppedActorPackage = '/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot'
 $stockDroppedActorObject = 'BP_GyroCopter_Possessable_C'
-$modDroppedActorObject = 'BP_GyroCopter_KeyboardCtl_C'
+$modDroppedActorObject = 'BP_GyroCopter_StablePilot_C'
 if ($stockDroppedActorPackage.Length -ne $modDroppedActorPackage.Length -or
     $stockDroppedActorObject.Length -ne $modDroppedActorObject.Length) {
     throw 'The stock and mod DroppedActor package/object identities must have equal component lengths.'
@@ -119,14 +119,14 @@ if ($scriptObjectsEvidence.ManifestPath -cne $itemEvidence.ManifestPath) {
 $stage = Join-Path $output 'stage'
 $package = Join-Path $output 'package'
 $itemStage = Join-Path $stage 'Voyage\Content\Data\Assets\Modules'
-$childStage = Join-Path $stage 'Voyage\Content\Mods\GyroKeyboardBP'
-$helperStage = Join-Path $stage 'Voyage\Content\Mods\GyroKeyboardControl'
+$childStage = Join-Path $stage 'Voyage\Content\Mods\StableGyroCtrl'
+$helperStage = Join-Path $stage 'Voyage\Content\Mods\StableGyro'
 $contextStage = Join-Path $stage 'Voyage\Content\Game\Input\Vehicle'
 New-Item -ItemType Directory -Path $itemStage, $childStage, $helperStage, $contextStage, $package -Force | Out-Null
 
-$childSource = Join-Path $cooked 'Content\Mods\GyroKeyboardBP'
-$helperSource = Join-Path $cooked 'Content\Mods\GyroKeyboardControl'
-foreach ($assetName in @('BP_GyroCopter_KeyboardCtl.uasset', 'BP_GyroCopter_KeyboardCtl.uexp')) {
+$childSource = Join-Path $cooked 'Content\Mods\StableGyroCtrl'
+$helperSource = Join-Path $cooked 'Content\Mods\StableGyro'
+foreach ($assetName in @('BP_GyroCopter_StablePilot.uasset', 'BP_GyroCopter_StablePilot.uexp')) {
     Copy-Item -LiteralPath (Join-Path $childSource $assetName) -Destination $childStage
 }
 foreach ($assetName in @('ModActor.uasset', 'ModActor.uexp')) {
@@ -241,9 +241,9 @@ if ($LASTEXITCODE -ne 0) {
 $expectedAssetPaths = @(
     '../../../Voyage/Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset'
     '../../../Voyage/Content/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.uasset'
-    '../../../Voyage/Content/Mods/GyroKeyboardControl/IAV_GyroPitchReset.uasset'
-    '../../../Voyage/Content/Mods/GyroKeyboardControl/ModActor.uasset'
-    '../../../Voyage/Content/Mods/GyroKeyboardBP/BP_GyroCopter_KeyboardCtl.uasset'
+    '../../../Voyage/Content/Mods/StableGyro/IAV_GyroPitchReset.uasset'
+    '../../../Voyage/Content/Mods/StableGyro/ModActor.uasset'
+    '../../../Voyage/Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset'
 )
 $inventory = @(& $retocPath list --path --size --hash --package $utoc)
 if ($LASTEXITCODE -ne 0) {
@@ -266,7 +266,7 @@ $inventoryRecords = @(
 $actualAssetPaths = @($inventoryRecords.Path | Sort-Object)
 $inventoryDifference = @(Compare-Object ($expectedAssetPaths | Sort-Object) $actualAssetPaths)
 if ($inventoryRecords.Count -ne $expectedAssetPaths.Count -or $inventoryDifference.Count -ne 0) {
-    throw 'Packaged asset inventory does not match the exact GyroKeyboard production set.'
+    throw 'Packaged asset inventory does not match the exact StableGyro production set.'
 }
 $inventoryPath = Join-Path $package ($ContainerName + '.inventory.txt')
 $inventoryLines = @(
@@ -289,7 +289,7 @@ foreach ($path in $outputs) {
     }
 }
 
-Write-Host 'Autonomous GyroKeyboard control package built successfully.'
+Write-Host 'Autonomous StableGyro control package built successfully.'
 Get-FileHash -Algorithm SHA256 -LiteralPath $outputs |
     Select-Object Path, Hash |
     Format-Table -AutoSize

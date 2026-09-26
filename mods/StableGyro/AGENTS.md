@@ -1,4 +1,4 @@
-# GyroKeyboardControl rules
+# StableGyro rules
 
 Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 
@@ -26,8 +26,8 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 [postphysics-pattern]: ../../docs/vehicle-and-hud-modding-patterns.md#post-physics-kinematic-correction
 [action-ui-pattern]: ../../docs/vehicle-and-hud-modding-patterns.md#discovering-voyages-standard-action-ui
 
-- The mod owns keyboard-control improvements for the stock Gyro. It includes
-  W/S integration of native TiltForwardInput, X reset and HUD
+- The mod owns control and flight-stability improvements for the stock Gyro.
+  It includes W/S integration of native TiltForwardInput, X reset and HUD
   hint, arcade altitude stabilization, and kinematic horizontal-velocity
   damping guided by the two-axis control intent in the vehicle's local frame.
   Neutral controls reject physics-injected horizontal speed growth before
@@ -47,9 +47,13 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   markers `-1`, `0`, and `1` as commands, clamp integrated pitch to
   `-0.9999..0.9999`, and reset helper plus native pitch state when the owning
   Gyro is not player controlled.
-- Build-GyroKeyboardControl.ps1 is the only public producer. It owns fingerprinting,
+- Build-StableGyro.ps1 is the only public producer. It owns fingerprinting,
   editor build, generation, cook, clean item-data extraction, surgical patching,
   packaging, verification, ZIP creation, and optional -Install.
+- `-Install` must preserve current values and comments in an existing
+  `StableGyro.ini`, remove explicitly retired keys, append missing canonical
+  keys, and hash-check the resulting settings file. Create it from canonical
+  defaults only when it does not exist.
 - Treat GAME_DERIVED_SOURCES.md as a hard fingerprint gate. Extract and patch
   a fresh current `DA_Item_Module_GyroCopter`; never commit extracted or cooked
   data. Keep the stock Gyro Blueprint at its original package identity. The mod
@@ -64,11 +68,11 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 
 ## Settings contract
 
-`Assets/GyroKeyboardControl.ini` is the canonical packaged INI and sole source
+`Assets/StableGyro.ini` is the canonical packaged INI and sole source
 of defaults, comments, order, and formatting. Comments occupy their own lines;
 inline comments after values are rejected because the runtime numeric parser
 would otherwise keep the baked default.
-`Settings/GyroKeyboardControl.settings.json` owns only the flat-section binding
+`Settings/StableGyro.settings.json` owns only the flat-section binding
 and validation metadata. For each option:
 
 - `id` is the generated C++ symbol;
@@ -79,8 +83,8 @@ and validation metadata. For each option:
 
 To add a setting, add the canonical value and adjacent comments to the INI,
 then add one schema entry with matching identities. Include
-`GyroKeyboardSettings.h` and use the existing
-`namespace Settings = GyroKeyboardSettings;` alias. The public producer creates
+`StableGyroSettings.h` and use the existing
+`namespace Settings = StableGyroSettings;` alias. The public producer creates
 the member, initializes it from the canonical default, and builds the BeginPlay
 INI loader. Do not call `AddMemberVariable` for the setting and do not edit the
 generated header. A consuming graph on `ModActor` reads the generated self-member
@@ -102,13 +106,13 @@ the configured numeric or boolean value; it names the self-member and its value
 pin, while the `VariableGet` output carries the runtime value. In the initial
 helper generator the equivalent helpers are named `Read`, `Pin`, and `Link`;
 the ownership and name contract is identical. After wiring the consumer, run
-only the public producer, `Build-GyroKeyboardControl.ps1`. It generates
-`Intermediate/GeneratedSettings/GyroKeyboardControlSettings.generated.h`,
+only the public producer, `Build-StableGyro.ps1`. It generates
+`Intermediate/GeneratedSettings/StableGyroSettings.generated.h`,
 validates the exact INI/schema key set, and rejects malformed defaults.
 
 To remove a setting, remove its INI entry, schema entry, and every consumer.
 If installed user files must be migrated, add only the exact old key and its
 exact canonical comment lines to the retired lists in
-`Update-GyroKeyboardSettings`. Installation preserves values for active keys,
+`Update-StableGyroSettings`. Installation preserves values for active keys,
 appends only missing canonical keys, and removes only those explicitly listed
 retired lines.

@@ -3,14 +3,14 @@
 // 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
 // The C++ generator is editor-only and never ships in the mod container.
 
-#include "GenerateGyroKeyboardModCommandlet.h"
+#include "GenerateStableGyroModCommandlet.h"
 
 #if WITH_EDITOR
 
 #include "ActorScanGraphNames.h"
 #include "BlueprintGraphNames.h"
-#include "GyroKeyboardAssetNames.h"
-#include "GyroKeyboardSettings.h"
+#include "StableGyroAssetNames.h"
+#include "StableGyroSettings.h"
 #include "TextSettingsGraphNames.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
@@ -44,11 +44,11 @@ namespace
 namespace P = BlueprintGraphNames::Pins;
 namespace Binary = BlueprintGraphNames::Pins::Binary;
 namespace Select = BlueprintGraphNames::Pins::Select;
-namespace Settings = GyroKeyboardSettings;
+namespace Settings = StableGyroSettings;
 
-constexpr TCHAR HelperPackage[] = TEXT("/Game/Mods/GyroKeyboardControl/ModActor");
+constexpr TCHAR HelperPackage[] = TEXT("/Game/Mods/StableGyro/ModActor");
 constexpr TCHAR HelperAsset[] = TEXT("ModActor");
-constexpr TCHAR GeneratorName[] = TEXT("GenerateGyroKeyboardMod");
+constexpr TCHAR GeneratorName[] = TEXT("GenerateStableGyroMod");
 constexpr TCHAR Neutral[] = TEXT("0.0");
 constexpr TCHAR Positive[] = TEXT("1.0");
 constexpr TCHAR Negative[] = TEXT("-1.0");
@@ -198,22 +198,22 @@ bool SaveAsset(UPackage* Package, UObject* Asset, const TCHAR* LongPackageName)
 
 UVoyageInputAction* CreateResetAction()
 {
-    UPackage* Package = CreatePackage(GyroKeyboardAssetNames::ResetActionPackageName);
+    UPackage* Package = CreatePackage(StableGyroAssetNames::ResetActionPackageName);
     UVoyageInputAction* Action = NewObject<UVoyageInputAction>(
-        Package, FName(GyroKeyboardAssetNames::ResetActionAssetName),
+        Package, FName(StableGyroAssetNames::ResetActionAssetName),
         RF_Public | RF_Standalone | RF_Transactional);
     if (!Action) return nullptr;
-    const FText Label = FText::FromString(GyroKeyboardAssetNames::ResetDisplayLabel);
+    const FText Label = FText::FromString(StableGyroAssetNames::ResetDisplayLabel);
     Action->Description = Label;
     Action->ActionDescription = Label;
     Action->ValueType = EInputActionValueType::Boolean;
     UPlayerMappableKeySettings* Settings = NewObject<UPlayerMappableKeySettings>(
         Action, NAME_None, RF_Public | RF_Transactional);
-    Settings->Name = FName(GyroKeyboardAssetNames::ResetMappingName);
+    Settings->Name = FName(StableGyroAssetNames::ResetMappingName);
     Settings->DisplayName = Label;
-    Settings->DisplayCategory = FText::FromString(GyroKeyboardAssetNames::VehicleInputCategory);
+    Settings->DisplayCategory = FText::FromString(StableGyroAssetNames::VehicleInputCategory);
     Action->SetPlayerMappableKeySettings(Settings);
-    return SaveAsset(Package, Action, GyroKeyboardAssetNames::ResetActionPackageName)
+    return SaveAsset(Package, Action, StableGyroAssetNames::ResetActionPackageName)
         ? Action : nullptr;
 }
 
@@ -246,7 +246,7 @@ void AddMapping(UInputMappingContext* Context, UInputAction* Action, const FKey 
     }
 }
 
-UInputMappingContext* CreateGyroKeyboardContext(UVoyageInputAction* ResetAction)
+UInputMappingContext* CreateStableGyroContext(UVoyageInputAction* ResetAction)
 {
     UInputAction* LookUp = CreatePlaceholder(GyroInputAssets::LookUp);
     UInputAction* LookRight = CreatePlaceholder(GyroInputAssets::LookRight);
@@ -552,7 +552,7 @@ bool AddTickGraph(UEdGraph* Graph)
 }
 }
 
-UGenerateGyroKeyboardModCommandlet::UGenerateGyroKeyboardModCommandlet()
+UGenerateStableGyroModCommandlet::UGenerateStableGyroModCommandlet()
 {
     IsClient = false;
     IsEditor = true;
@@ -560,7 +560,7 @@ UGenerateGyroKeyboardModCommandlet::UGenerateGyroKeyboardModCommandlet()
     ShowErrorCount = true;
 }
 
-int32 UGenerateGyroKeyboardModCommandlet::Main(const FString& Params)
+int32 UGenerateStableGyroModCommandlet::Main(const FString& Params)
 {
     if (FPackageName::DoesPackageExist(HelperPackage))
     {
@@ -568,7 +568,7 @@ int32 UGenerateGyroKeyboardModCommandlet::Main(const FString& Params)
         return 1;
     }
     UVoyageInputAction* ResetAction = CreateResetAction();
-    UInputMappingContext* GyroContext = CreateGyroKeyboardContext(ResetAction);
+    UInputMappingContext* GyroContext = CreateStableGyroContext(ResetAction);
     if (!ResetAction || !GyroContext)
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to generate Gyro reset action or keyboard context"));

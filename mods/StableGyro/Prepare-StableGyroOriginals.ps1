@@ -1,5 +1,5 @@
 # INTERNAL BUILD STAGE: extracts the base-game item data asset required by the
-# GyroKeyboard package while temporarily disabling and hash-restoring every
+# StableGyro package while temporarily disabling and hash-restoring every
 # additional IoStore container that could shadow the original.
 
 param(
@@ -36,7 +36,7 @@ $additionalContainers = @(
     Get-ChildItem -LiteralPath $paks -File -Filter '*.utoc' |
         Where-Object { $_.Name -ne 'global.utoc' -and $_.Name -notlike 'pakchunk*.utoc' }
 )
-$leftovers = @(Get-ChildItem -LiteralPath $paks -File -Filter '*.utoc.disabled-for-gyro-keyboard-extraction-*')
+$leftovers = @(Get-ChildItem -LiteralPath $paks -File -Filter '*.utoc.disabled-for-stable-gyro-extraction-*')
 if ($leftovers.Count -gt 0) {
     $names = ($leftovers.Name | Sort-Object) -join ', '
     throw "Unrestored UTOC files from an earlier interrupted extraction require manual recovery: $names"
@@ -47,7 +47,7 @@ $containerMoves = @(
     $additionalContainers | ForEach-Object {
         [pscustomobject]@{
             Original = $_.FullName
-            Disabled = $_.FullName + ".disabled-for-gyro-keyboard-extraction-$token"
+            Disabled = $_.FullName + ".disabled-for-stable-gyro-extraction-$token"
             Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
             Moved = $false
         }
@@ -106,7 +106,7 @@ if ($manifests.Count -ne 1) {
     throw "Expected exactly one extraction manifest; found $($manifests.Count)."
 }
 
-Write-Host 'Prepared fresh GyroKeyboard base-game inputs:'
+Write-Host 'Prepared fresh StableGyro base-game inputs:'
 $manifests | Sort-Object FullName | Select-Object -ExpandProperty DirectoryName
 if ($containerMoves.Count -gt 0) {
     Write-Host "Restored $($containerMoves.Count) additional IoStore container(s) with matching hashes."

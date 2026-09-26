@@ -2,9 +2,9 @@
 
 #include "CoreMinimal.h"
 
-namespace GyroKeyboardSettings
+namespace StableGyroSettings
 {
-inline constexpr TCHAR RelativePath[] = TEXT("Paks/GyroKeyboardControl.ini");
+inline constexpr TCHAR RelativePath[] = TEXT("Paks/StableGyro.ini");
 inline constexpr TCHAR Separator[] = TEXT("=");
 
 struct FNumericSetting
@@ -23,5 +23,5 @@ struct FBooleanSetting
     const TCHAR* Default;
 };
 
-#include "GyroKeyboardControlSettings.generated.h"
+#include "StableGyroSettings.generated.h"
 }

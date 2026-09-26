@@ -4,14 +4,14 @@
 #pragma once
 
 #include "Commandlets/Commandlet.h"
-#include "GenerateGyroKeyboardInheritanceCommandlet.generated.h"
+#include "GenerateStableGyroInheritanceCommandlet.generated.h"
 
 UCLASS()
-class GYROKEYBOARDGENERATOR_API UGenerateGyroKeyboardInheritanceCommandlet : public UCommandlet
+class STABLEGYROGENERATOR_API UGenerateStableGyroInheritanceCommandlet : public UCommandlet
 {
     GENERATED_BODY()
 
 public:
-    UGenerateGyroKeyboardInheritanceCommandlet();
+    UGenerateStableGyroInheritanceCommandlet();
     virtual int32 Main(const FString& Params) override;
 };
