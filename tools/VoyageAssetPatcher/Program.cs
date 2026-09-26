@@ -3,6 +3,7 @@ using UAssetAPI.ExportTypes;
 using UAssetAPI.PropertyTypes.Objects;
 using UAssetAPI.UnrealTypes;
 using UAssetAPI.Unversioned;
+using System.Text.Json;
 
 const string BreakBottomFilter = "break-bottom-action-filter";
 const string SwapHornToExit = "swap-forklift-horn-to-exit";
@@ -13,6 +14,7 @@ const string SetCableUpdaterTickInterval = "set-cable-updater-tick-interval";
 const string BreakCableUpdaterSuperIndex = "break-cable-updater-super-index";
 const string SwapHudIndicatorExistingControl = "swap-hud-indicator-existing-control";
 const string SwapDieselSocketComponentClass = "swap-diesel-socket-component-class";
+const string PatchItemDataAsset = "patch-item-data-asset";
 const string BottomWidgetName = "BP_DynamicPlayerInputHorizontalWidget_Bottom";
 const string FilterPropertyName = "bFilterByActionType";
 const string ForkliftCdoName = "Default__BP_Forklift_Possesable_C";
@@ -60,22 +62,24 @@ string[] DieselSocketTemplateNames =
 
 try
 {
-if ((args.Length != 4 && args.Length != 5) ||
+bool isItemPatch = args.Length > 0 && args[0] == PatchItemDataAsset;
+if ((!isItemPatch && args.Length != 4 && args.Length != 5) ||
+    (isItemPatch && args.Length != 6) ||
     args[0] is not (
         BreakBottomFilter or SwapHornToExit or SwapHudIndicatorSubclass or
         RoundtripUnchanged or ExportJson or SetCableUpdaterTickInterval or
         BreakCableUpdaterSuperIndex or SwapHudIndicatorExistingControl or
-        SwapDieselSocketComponentClass))
+        SwapDieselSocketComponentClass or PatchItemDataAsset))
 {
     Console.Error.WriteLine(
         "Usage: VoyageAssetPatcher <operation> <input.uasset> <mappings.usmap> " +
-        "<output.uasset> [UE5_7|UE5_8]");
+        "<output.uasset> [UE5_7|UE5_8] [item-patch.json]");
     Console.Error.WriteLine(
         $"Operations: {BreakBottomFilter}, {SwapHornToExit}, " +
         $"{SwapHudIndicatorSubclass}, {RoundtripUnchanged}, {ExportJson}, " +
         $"{SetCableUpdaterTickInterval}, {BreakCableUpdaterSuperIndex}, " +
         $"{SwapHudIndicatorExistingControl}, " +
-        $"{SwapDieselSocketComponentClass}");
+        $"{SwapDieselSocketComponentClass}, {PatchItemDataAsset}");
     return 2;
 }
 
@@ -83,7 +87,7 @@ string operation = args[0];
 string inputPath = Path.GetFullPath(args[1]);
 string mappingsPath = Path.GetFullPath(args[2]);
 string outputPath = Path.GetFullPath(args[3]);
-EngineVersion engineVersion = args.Length == 5
+EngineVersion engineVersion = args.Length >= 5
     ? args[4] switch
     {
         "UE5_7" => EngineVersion.VER_UE5_7,
@@ -179,6 +183,19 @@ if (operation == SwapDieselSocketComponentClass)
     Console.WriteLine(
         $"Patched: {StockSocketComponentPackageName}.{StockSocketComponentClassName}=" +
         $"{MarkerSocketComponentPackageName}.{MarkerSocketComponentClassName}");
+    Console.WriteLine($"Output: {outputPath}");
+    return 0;
+}
+if (operation == PatchItemDataAsset)
+{
+    string specificationPath = Path.GetFullPath(args[5]);
+    if (!File.Exists(specificationPath))
+        throw new FileNotFoundException("Item patch specification was not found.", specificationPath);
+    ItemPatchSpecification specification = JsonSerializer.Deserialize<ItemPatchSpecification>(
+        File.ReadAllText(specificationPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+        ?? throw new InvalidDataException("Item patch specification is empty.");
+    WriteItemDataAsset(asset, outputPath, mappings, engineVersion, specification);
+    Console.WriteLine($"Patched item data asset '{specification.ItemObjectName}' from its owned specification.");
     Console.WriteLine($"Output: {outputPath}");
     return 0;
 }
@@ -1032,6 +1049,158 @@ ObjectPropertyData RequireObjectProperty(NormalExport export, string name)
         ?? throw new InvalidDataException($"'{export.ObjectName}.{name}' is absent or not an ObjectPropertyData.");
 }
 
+void WriteItemDataAsset(UAsset target, string destinationUasset,
+    Usmap targetMappings, EngineVersion targetEngineVersion, ItemPatchSpecification specification)
+{
+    if (specification.SchemaVersion != 1)
+        throw new InvalidDataException("Unsupported item patch specification version.");
+    if (target.Exports.Count != specification.ExpectedExportCount ||
+        target.Exports.Count(export => export.ObjectName.ToString() == specification.ItemObjectName) != 1)
+        throw new InvalidDataException("Item package does not match the expected export contract.");
+
+    NormalExport item = target.Exports.OfType<NormalExport>()
+        .Single(export => export.ObjectName.ToString() == specification.ItemObjectName);
+    FloatPropertyData weight = item["Weight"] as FloatPropertyData
+        ?? throw new InvalidDataException("Item weight is missing.");
+    FloatPropertyData craftTime = item["CraftTime"] as FloatPropertyData
+        ?? throw new InvalidDataException("Item craft time is missing.");
+    FloatPropertyData craftEnergy = item["CraftElectricityCost"] as FloatPropertyData
+        ?? throw new InvalidDataException("Item craft energy is missing.");
+    IntPropertyData craftAmount = item["CraftAmount"] as IntPropertyData
+        ?? throw new InvalidDataException("Item craft amount is missing.");
+    MapPropertyData components = item["Components"] as MapPropertyData
+        ?? throw new InvalidDataException("Item component recipe is missing.");
+    TextPropertyData name = item["Name"] as TextPropertyData
+        ?? throw new InvalidDataException("Item name is missing.");
+    TextPropertyData description = item["Description"] as TextPropertyData
+        ?? throw new InvalidDataException("Item description is missing.");
+    ObjectPropertyData icon = RequireObjectProperty(item, "Icon");
+
+    if (weight.Value != specification.Expected.Weight ||
+        craftTime.Value != specification.Expected.CraftTime ||
+        craftEnergy.Value != specification.Expected.CraftElectricityCost ||
+        craftAmount.Value != specification.Expected.CraftAmount ||
+        components.Value.Count != specification.Expected.Components.Count ||
+        name.HistoryType != TextHistoryType.StringTableEntry ||
+        description.HistoryType != TextHistoryType.StringTableEntry ||
+        name.Value?.Value != specification.Expected.NameStringTableKey ||
+        description.Value?.Value != specification.Expected.DescriptionStringTableKey)
+        throw new InvalidDataException("Item scalar, text, or recipe preconditions changed.");
+
+    Import FindImport(AssetReference reference)
+    {
+        Import package = target.Imports.Single(import =>
+            import.ObjectName.ToString() == reference.Package);
+        Import asset = target.Imports.Single(import =>
+            import.ObjectName.ToString() == reference.Name &&
+            import.OuterIndex.Index == FPackageIndex.FromImport(target.Imports.IndexOf(package)).Index);
+        if (asset.ClassName.ToString() != reference.ClassName)
+            throw new InvalidDataException($"Import '{reference.Name}' has an unexpected class.");
+        return asset;
+    }
+
+    Import expectedIcon = FindImport(specification.Expected.Icon);
+    AssertImportName(target, icon, expectedIcon.ObjectName.ToString());
+
+    Dictionary<string, (ObjectPropertyData Property, IntPropertyData Amount)> componentEntries = new();
+    foreach (KeyValuePair<PropertyData, PropertyData> entry in components.Value)
+    {
+        if (entry.Key is not ObjectPropertyData material || !material.IsImport() ||
+            entry.Value is not IntPropertyData amount)
+            throw new InvalidDataException("Item recipe map has an unexpected entry type.");
+        string materialName = material.ToImport(target).ObjectName.ToString();
+        if (!componentEntries.TryAdd(materialName, (material, amount)))
+            throw new InvalidDataException($"Item recipe contains duplicate material '{materialName}'.");
+    }
+    foreach (RecipeComponent expected in specification.Expected.Components)
+    {
+        Import expectedImport = FindImport(expected.Material);
+        if (!componentEntries.TryGetValue(expectedImport.ObjectName.ToString(), out var entry) ||
+            entry.Amount.Value != expected.Amount)
+            throw new InvalidDataException($"Item recipe precondition failed for '{expected.Material.Name}'.");
+    }
+
+    FPackageIndex AddReplacementImport(AssetReference source, AssetReference replacement)
+    {
+        Import sourceAsset = FindImport(source);
+        Import sourcePackage = sourceAsset.OuterIndex.ToImport(target);
+        FPackageIndex packageIndex = target.AddImport(CloneImport(
+            sourcePackage, target, FPackageIndex.FromRawIndex(0), replacement.Package));
+        return target.AddImport(CloneImport(sourceAsset, target, packageIndex, replacement.Name));
+    }
+
+    icon.Value = AddReplacementImport(specification.Expected.Icon, specification.Patch.Icon);
+    foreach (ComponentReplacement replacement in specification.Patch.ComponentReplacements)
+    {
+        Import source = FindImport(replacement.From);
+        if (!componentEntries.TryGetValue(source.ObjectName.ToString(), out var entry))
+            throw new InvalidDataException($"Recipe replacement source '{replacement.From.Name}' is absent.");
+        entry.Property.Value = AddReplacementImport(replacement.From, replacement.To);
+    }
+
+    craftTime.Value = specification.Patch.CraftTime;
+    craftAmount.Value = specification.Patch.CraftAmount;
+    foreach ((TextPropertyData property, ItemTextPatch text) in new[]
+    {
+        (name, specification.Patch.Name),
+        (description, specification.Patch.Description)
+    })
+    {
+        property.HistoryType = TextHistoryType.Base;
+        property.TableId = null;
+        property.Namespace = new FString("");
+        property.Value = new FString(text.Key);
+        property.CultureInvariantString = new FString(text.Text);
+    }
+
+    target.Write(destinationUasset);
+    UAsset written = new(destinationUasset, targetEngineVersion, targetMappings);
+    if (written.Exports.Count != specification.ExpectedExportCount ||
+        written.Imports.Count != target.Imports.Count)
+        throw new InvalidDataException("Patched item changed export/import counts on reopening.");
+    NormalExport writtenItem = written.Exports.OfType<NormalExport>()
+        .Single(export => export.ObjectName.ToString() == specification.ItemObjectName);
+    AssertImportName(written, RequireObjectProperty(writtenItem, "Icon"), specification.Patch.Icon.Name);
+    if (writtenItem["CraftTime"] is not FloatPropertyData writtenTime ||
+        writtenTime.Value != specification.Patch.CraftTime ||
+        writtenItem["CraftAmount"] is not IntPropertyData writtenAmount ||
+        writtenAmount.Value != specification.Patch.CraftAmount ||
+        writtenItem["Weight"] is not FloatPropertyData writtenWeight ||
+        writtenWeight.Value != specification.Expected.Weight ||
+        writtenItem["CraftElectricityCost"] is not FloatPropertyData writtenEnergy ||
+        writtenEnergy.Value != specification.Expected.CraftElectricityCost)
+        throw new InvalidDataException("Patched item scalar values changed on reopening.");
+    if (writtenItem["Name"] is not TextPropertyData writtenName ||
+        writtenName.HistoryType != TextHistoryType.Base ||
+        writtenName.CultureInvariantString?.Value != specification.Patch.Name.Text ||
+        writtenItem["Description"] is not TextPropertyData writtenDescription ||
+        writtenDescription.HistoryType != TextHistoryType.Base ||
+        writtenDescription.CultureInvariantString?.Value != specification.Patch.Description.Text)
+        throw new InvalidDataException("Patched item text changed on reopening.");
+
+    Dictionary<string, int> expectedFinalComponents = specification.Expected.Components.ToDictionary(
+        component => component.Material.Name, component => component.Amount);
+    foreach (ComponentReplacement replacement in specification.Patch.ComponentReplacements)
+    {
+        int amount = expectedFinalComponents[replacement.From.Name];
+        expectedFinalComponents.Remove(replacement.From.Name);
+        expectedFinalComponents.Add(replacement.To.Name, amount);
+    }
+    MapPropertyData writtenComponents = writtenItem["Components"] as MapPropertyData
+        ?? throw new InvalidDataException("Patched item recipe map was lost.");
+    if (writtenComponents.Value.Count != expectedFinalComponents.Count)
+        throw new InvalidDataException("Patched item recipe map has the wrong length.");
+    foreach (KeyValuePair<PropertyData, PropertyData> entry in writtenComponents.Value)
+    {
+        if (entry.Key is not ObjectPropertyData material || !material.IsImport() ||
+            entry.Value is not IntPropertyData amount ||
+            !expectedFinalComponents.Remove(
+                material.ToImport(written).ObjectName.ToString(), out int expectedAmount) ||
+            amount.Value != expectedAmount)
+            throw new InvalidDataException("Patched item recipe map changed on reopening.");
+    }
+}
+
 void AssertImportName(UAsset target, ObjectPropertyData property, string expectedName)
 {
     if (!property.IsImport())
@@ -1044,4 +1213,60 @@ void AssertImportName(UAsset target, ObjectPropertyData property, string expecte
         throw new InvalidDataException(
             $"'{property.Name}' expected import '{expectedName}', found '{actualName}'.");
     }
+}
+
+sealed class ItemPatchSpecification
+{
+    public int SchemaVersion { get; init; }
+    public required string ItemObjectName { get; init; }
+    public int ExpectedExportCount { get; init; }
+    public required ExpectedItemState Expected { get; init; }
+    public required ItemMutation Patch { get; init; }
+}
+
+sealed class ExpectedItemState
+{
+    public float Weight { get; init; }
+    public float CraftTime { get; init; }
+    public float CraftElectricityCost { get; init; }
+    public int CraftAmount { get; init; }
+    public required string NameStringTableKey { get; init; }
+    public required string DescriptionStringTableKey { get; init; }
+    public required AssetReference Icon { get; init; }
+    public required List<RecipeComponent> Components { get; init; }
+}
+
+sealed class ItemMutation
+{
+    public float CraftTime { get; init; }
+    public int CraftAmount { get; init; }
+    public required ItemTextPatch Name { get; init; }
+    public required ItemTextPatch Description { get; init; }
+    public required AssetReference Icon { get; init; }
+    public required List<ComponentReplacement> ComponentReplacements { get; init; }
+}
+
+sealed class ItemTextPatch
+{
+    public required string Key { get; init; }
+    public required string Text { get; init; }
+}
+
+sealed class RecipeComponent
+{
+    public required AssetReference Material { get; init; }
+    public int Amount { get; init; }
+}
+
+sealed class ComponentReplacement
+{
+    public required AssetReference From { get; init; }
+    public required AssetReference To { get; init; }
+}
+
+sealed class AssetReference
+{
+    public required string Package { get; init; }
+    public required string Name { get; init; }
+    public required string ClassName { get; init; }
 }

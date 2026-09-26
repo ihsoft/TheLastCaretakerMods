@@ -1272,7 +1272,10 @@ version-bound diagnostic transformations, including:
 - `break-cable-updater-super-index` creates an intentional bad-export-index
   crash marker for proving that exact stock package is loaded;
 - `swap-hud-indicator-existing-control` is a non-installable field-identity
-  control using an already imported widget class.
+  control using an already imported widget class;
+- `patch-item-data-asset` applies one owner-supplied JSON contract to a reviewed
+  Voyage item asset, asserting donor values before changing recipe, text and icon
+  imports and reopening the result.
 
 ```powershell
 .\tools\Invoke-VoyageAssetPatcher.ps1 `
@@ -1280,6 +1283,10 @@ version-bound diagnostic transformations, including:
   -InputAsset '<input.uasset>' `
   -OutputAsset '<new-output.uasset>'
 ```
+
+`patch-item-data-asset` additionally requires `-Specification <owned.json>`.
+The owning mod stores all item identities, expected donor values and mutations;
+the shared tool contains no product-specific item data.
 
 The input and its companion files must come from the matching game build, and
 the output must be a different path. See

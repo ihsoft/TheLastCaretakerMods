@@ -128,3 +128,11 @@ class import belongs to those two SCS components, their property types, SCS
 nodes, and templates change coherently while the original actor class and SCS
 ownership remain untouched. Reopen, `retoc verify`, independent CUE4Parse
 inspection, and a real-game marker result remain mandatory gates.
+
+The `patch-item-data-asset` operation accepts an owner-supplied JSON
+specification. The specification owns the item identity, export count, exact
+donor scalar/text/recipe/import preconditions and requested recipe, text and
+icon mutations. The shared patcher contains no mod-specific item identities or
+values. It adds replacement imports, writes only the requested properties, then
+reopens and verifies the complete result. A changed donor or game build must
+fail the preconditions and be revalidated by the owning mod.

@@ -10,7 +10,8 @@ param(
         'set-cable-updater-tick-interval',
         'break-cable-updater-super-index',
         'swap-hud-indicator-existing-control',
-        'swap-diesel-socket-component-class')]
+        'swap-diesel-socket-component-class',
+        'patch-item-data-asset')]
     [string]$Operation,
 
     [Parameter(Mandatory = $true)]
@@ -20,6 +21,8 @@ param(
     [string]$OutputAsset,
 
     [string]$Mappings,
+
+    [string]$Specification,
 
     [ValidateSet('UE5_7', 'UE5_8')]
     [string]$EngineVersion = 'UE5_8',
@@ -97,6 +100,21 @@ else {
     $mappingsPath = (Resolve-Path -LiteralPath $Mappings).Path
 }
 $mappingsSha256 = (Get-FileHash -LiteralPath $mappingsPath -Algorithm SHA256).Hash
+$specificationPath = $null
+$specificationSha256 = $null
+if ($Operation -ceq 'patch-item-data-asset') {
+    if ([string]::IsNullOrWhiteSpace($Specification)) {
+        throw 'patch-item-data-asset requires -Specification.'
+    }
+    $specificationPath = (Resolve-Path -LiteralPath $Specification).Path
+    if ([IO.Path]::GetExtension($specificationPath) -cne '.json') {
+        throw "Specification must be an exact lowercase .json file: $specificationPath"
+    }
+    $specificationSha256 = (Get-FileHash -LiteralPath $specificationPath -Algorithm SHA256).Hash
+}
+elseif (-not [string]::IsNullOrWhiteSpace($Specification)) {
+    throw '-Specification is valid only for patch-item-data-asset.'
+}
 
 if ([string]::IsNullOrWhiteSpace($EvidenceRoot)) {
     $EvidenceRoot = Join-Path $repositoryRoot 'artifacts\tool-runs'
@@ -109,8 +127,9 @@ $logPath = Join-Path $runRoot 'patcher.log'
 $savedPreference = $ErrorActionPreference
 try {
     $ErrorActionPreference = 'Continue'
-    & $binary.Path $Operation $inputPath $mappingsPath $outputPath `
-        $EngineVersion *> $logPath
+    $patcherArguments = @($Operation, $inputPath, $mappingsPath, $outputPath, $EngineVersion)
+    if ($null -ne $specificationPath) { $patcherArguments += $specificationPath }
+    & $binary.Path @patcherArguments *> $logPath
     $patcherExitCode = $LASTEXITCODE
 }
 finally {
@@ -154,6 +173,8 @@ $result = [pscustomobject][ordered]@{
     inputs = $inputRecords
     mappingsPath = $mappingsPath
     mappingsSha256 = $mappingsSha256
+    specificationPath = $specificationPath
+    specificationSha256 = $specificationSha256
     mappingManifestPath = if ($null -eq $mappingRecord) {
         $null
     }
