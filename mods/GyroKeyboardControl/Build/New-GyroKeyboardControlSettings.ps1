@@ -62,10 +62,10 @@ for ($lineIndex = 0; $lineIndex -lt $defaultIniLines.Count; $lineIndex++) {
     if ([string]::IsNullOrWhiteSpace($rawValue)) {
         throw "Empty default INI value on line $($lineIndex + 1): $key"
     }
-    $value = ($rawValue -split '\s+[\#;]', 2)[0].Trim()
-    if ([string]::IsNullOrWhiteSpace($value)) {
-        throw "Empty default INI value before inline comment on line $($lineIndex + 1): $key"
+    if ($rawValue -match '[#;]') {
+        throw "Inline comments are not supported on default INI line $($lineIndex + 1): $key"
     }
+    $value = $rawValue
     if ($iniValues.ContainsKey($key)) { throw "Duplicate setting key in default INI: $key" }
     $iniValues.Add($key, $value)
 }

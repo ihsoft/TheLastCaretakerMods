@@ -14,8 +14,19 @@ Releasing W or S keeps the current pitch value.
 
 PitchRampSeconds in GyroKeyboardControl.ini sets the time from zero to maximum
 pitch. Default: 3.0 seconds. Restart the game after editing the file.
+Put comments on their own lines; inline comments after values are invalid.
 
 AltitudeStabilizationVerticalDeceleration controls how quickly positive
 vertical speed is reduced after releasing Space at full throttle. Default:
-100.0 cm/s^2. The current altitude is held after the climb stops; horizontal
-velocity is preserved. Restart Voyage after editing the INI.
+100.0 cm/s^2. Physics-driven positive speed growth is rejected while braking,
+and all kinematic corrections run after the stock physics step. The current
+altitude is held after the climb stops; horizontal velocity is handled
+independently. Restart Voyage after editing the INI.
+
+HorizontalVelocityDecayAcceleration controls kinematic horizontal braking.
+With neutral controls, physics-injected horizontal speed growth is rejected and
+all horizontal drift decays. While W/S and/or A/D is tilted, the permitted
+direction comes from the controls relative to the Gyro; speed along it is
+preserved while sideways and opposing speed decays. The correction is an
+additive XY-only velocity delta and never rewrites vertical velocity. Default:
+150.0 cm/s^2.

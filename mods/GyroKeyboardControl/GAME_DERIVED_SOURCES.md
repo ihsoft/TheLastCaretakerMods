@@ -21,6 +21,12 @@ Current stock cooked assets establish:
 - W maps to IA_GyroCopterTiltForward, S maps to
   IA_GyroCopterTiltBackward, and both feed the native float
   TiltForwardInput;
+- A/D feed the native float `TiltInput`; the stock Blueprint combines it with
+  `TiltForwardInput` when rotating the `TiltControl` scene component;
+- the stock rotor target is pitch `-10 * TiltForwardInput`, roll
+  `10 * TiltInput`; `TiltControl.RelativeRotation` approaches it through
+  normalized `RLerp` with alpha `DeltaSeconds * 2`, so the live thrust vector
+  changes smoothly after either axis changes;
 - Gyro Blueprint bytecode consumes TiltForwardInput for forward/back pitch,
   camera response, and total-throttle calculations;
 - the game settings reader
@@ -74,8 +80,11 @@ proved the helper's reflection write reaches the live physics field and is not
 overwritten before force calculation. The later PropellerLift-scale candidate
   still produced no clearly visible height support in the user's test. The
   physical world-up-force experiment and both of its settings have since been
-  removed. The current candidate uses kinematic full-throttle altitude hold
-  with smooth positive-vertical-speed braking after Space release. On
-  2026-09-24 the user confirmed that both remaining settings work in the real
-  game: `PitchRampSeconds=3.0` and
-  `AltitudeStabilizationVerticalDeceleration=100.0`.
+  removed. The current implementation uses PostPhysics kinematic full-throttle
+  altitude hold with smooth positive-vertical-speed braking after Space release
+  plus horizontal damping driven by local control intent. On 2026-09-25 the
+  user confirmed the complete behavior works in the real game with effective
+  runtime defaults `PitchRampSeconds=3.0`,
+  `AltitudeStabilizationVerticalDeceleration=100.0`, and
+  `HorizontalVelocityDecayAcceleration=1500.0`. The current canonical default
+  lowers horizontal decay to `150.0`; that tuning still needs a game check.

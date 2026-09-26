@@ -3,14 +3,23 @@
 Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 
 - The mod owns keyboard-control improvements for the stock Gyro. The current
-  first phase is W/S integration of native TiltForwardInput, X reset, and the
-  standard X HUD hint. Do not alter altitude throttle, A/D roll, yaw, camera,
-  possession, physics tuning, save behavior, or other HUD/input behavior
-  without a new user request.
+  phase includes W/S integration of native TiltForwardInput, X reset and HUD
+  hint, arcade altitude stabilization, and kinematic horizontal-velocity
+  damping guided by the two-axis control intent in the vehicle's local frame.
+  Neutral controls reject physics-injected horizontal speed growth before
+  decay. Apply horizontal correction as an additive XY-only velocity delta;
+  never rewrite the full velocity vector or its Z component from the horizontal
+  path. The helper must tick in `TG_PostPhysics`, after the stock rotor/Chaos
+  force integration. During vertical braking, reject positive Vz growth above
+  the previous helper command before applying the configured constant-rate
+  deceleration. Do not alter A/D integration, yaw, camera, possession, save
+  behavior, or other HUD/input behavior without a new user request.
 - W increases, S decreases, and releasing both leaves the integrated value
   unchanged. X writes exact zero immediately.
 - `Assets/GyroKeyboardControl.ini` is the canonical packaged INI and sole
   source of setting defaults, comments, order, and formatting.
+  Comments must occupy their own lines; runtime parsing and build validation
+  reject inline comments after setting values.
   `Settings/GyroKeyboardControl.settings.json` owns only the flat-section key
   identity, runtime binding, type, and numeric range. Add or remove an option
   in both files, then wire only its consuming behavior by hand; never edit
@@ -29,5 +38,6 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   `IMC_GyroCopter_Keyboard`; the only added mapping is the mod-owned reset
   action on X. The child `GetProvidedActionsBP` must append reset to the stock
   Blueprint's returned actions so the conditional F cargo hint survives.
-- The mod is not gameplay-validated until the user tests both directions,
-  release hold, both limits, X, exit, and re-entry in the real game.
+- Gameplay validation covers pitch in both directions, release hold, both
+  limits, X, exit/re-entry, full-throttle altitude braking/hold, and horizontal
+  damping under climb, descent, neutral, directional, and reversing input.

@@ -64,6 +64,11 @@ const FName AltitudeBrakingActive(TEXT("AltitudeBrakingActive"));
 const FName LockedAltitude(TEXT("LockedAltitude"));
 const FName RootComponent(TEXT("RootComponent"));
 const FName TiltForwardInput(TEXT("TiltForwardInput"));
+const FName TiltInput(TEXT("TiltInput"));
+const FName PreviousCorrectedHorizontalVelocity(TEXT("PreviousCorrectedHorizontalVelocity"));
+const FName HorizontalVelocitySampleValid(TEXT("HorizontalVelocitySampleValid"));
+const FName PreviousCorrectedVerticalVelocity(TEXT("PreviousCorrectedVerticalVelocity"));
+const FName VerticalVelocitySampleValid(TEXT("VerticalVelocitySampleValid"));
 namespace Settings = GyroKeyboardSettings;
 
 namespace ArcadeAltitude
@@ -84,6 +89,18 @@ const FName VectorZ(TEXT("Z"));
 const FName BoneName(TEXT("BoneName"));
 const FName AddToCurrent(TEXT("bAddToCurrent"));
 const FName NewVelocity(TEXT("NewVel"));
+}
+
+namespace ArcadeHorizontal
+{
+constexpr TCHAR NeutralTolerance[] = TEXT("0.0001");
+constexpr TCHAR GrowthTolerance[] = TEXT("0.01");
+constexpr TCHAR ZeroVectorDefault[] = TEXT("(X=0.000000,Y=0.000000,Z=0.000000)");
+const FName Tolerance(TEXT("Tolerance"));
+const FName Current(TEXT("Current"));
+const FName Target(TEXT("Target"));
+const FName DeltaTime(TEXT("DeltaTime"));
+const FName InterpSpeed(TEXT("InterpSpeed"));
 }
 
 namespace PinNames
@@ -349,7 +366,302 @@ bool AddProvidedActionsBpOverride(UBlueprint* Blueprint, UInputAction* ResetActi
     return Ok;
 }
 
-bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
+bool AddHorizontalVelocityDamping(
+    UEdGraph* Graph,
+    UK2Node_Event* TickEvent,
+    UK2Node_DynamicCast* Gyro,
+    UK2Node_IfThenElse* Continuation,
+    UClass* GyroOwner)
+{
+    namespace P = BlueprintGraphNames::Pins;
+    namespace Binary = BlueprintGraphNames::Pins::Binary;
+
+    UK2Node_VariableGet* Root = AddRead(
+        Graph, RootComponent, AActor::StaticClass(), 7810, 660);
+    UK2Node_DynamicCast* PrimitiveRoot = NewObject<UK2Node_DynamicCast>(Graph);
+    PrimitiveRoot->TargetType = UPrimitiveComponent::StaticClass();
+    PrimitiveRoot->SetPurity(false);
+    FinishNode(PrimitiveRoot, Graph, 8040, 660);
+    UK2Node_CallFunction* LinearVelocity = AddCall(
+        Graph, UPrimitiveComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, GetPhysicsLinearVelocity), 8270, 660);
+    SetDefault(LinearVelocity, ArcadeAltitude::BoneName, ArcadeAltitude::NoBone);
+    UK2Node_CallFunction* BreakVelocity = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BreakVector), 8500, 920);
+    UK2Node_CallFunction* HorizontalVelocity = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector), 8730, 920);
+    SetDefault(HorizontalVelocity, ArcadeAltitude::VectorZ, ArcadeAltitude::Zero);
+
+    UK2Node_CallFunction* ActorForward = AddCall(
+        Graph, AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, GetActorForwardVector), 8270, 1120);
+    UK2Node_CallFunction* BreakActorForward = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BreakVector), 8500, 1120);
+    UK2Node_CallFunction* HorizontalActorForward = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector), 8730, 1120);
+    SetDefault(HorizontalActorForward, ArcadeAltitude::VectorZ, ArcadeAltitude::Zero);
+    UK2Node_CallFunction* NormalizedActorForward = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Vector_Normal2D), 8960, 1120);
+    UK2Node_CallFunction* ActorRight = AddCall(
+        Graph, AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, GetActorRightVector), 8270, 1320);
+    UK2Node_CallFunction* BreakActorRight = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BreakVector), 8500, 1320);
+    UK2Node_CallFunction* HorizontalActorRight = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector), 8730, 1320);
+    SetDefault(HorizontalActorRight, ArcadeAltitude::VectorZ, ArcadeAltitude::Zero);
+    UK2Node_CallFunction* NormalizedActorRight = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Vector_Normal2D), 8960, 1320);
+
+    UK2Node_VariableGet* ForwardTilt = AddRead(
+        Graph, TiltForwardInput, GyroOwner, 7810, 1540);
+    UK2Node_VariableGet* SideTilt = AddRead(
+        Graph, TiltInput, GyroOwner, 7810, 1660);
+    UK2Node_CallFunction* ControlTilt = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector), 8040, 1540);
+    SetDefault(ControlTilt, ArcadeAltitude::VectorZ, ArcadeAltitude::Zero);
+    UK2Node_CallFunction* ControlIsNeutral = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Vector_IsNearlyZero), 8270, 1540);
+    SetDefault(ControlIsNeutral, ArcadeHorizontal::Tolerance, ArcadeHorizontal::NeutralTolerance);
+    UK2Node_CallFunction* ForwardIntent = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_VectorFloat), 9190, 1120);
+    UK2Node_CallFunction* SideIntent = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_VectorFloat), 9190, 1320);
+    UK2Node_CallFunction* CombinedIntent = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_VectorVector), 9420, 1220);
+    UK2Node_CallFunction* NormalizedIntent = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Vector_Normal2D), 9650, 1220);
+    UK2Node_CallFunction* ZeroVector = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector), 8500, 1660);
+    SetDefault(ZeroVector, ArcadeAltitude::VectorX, ArcadeAltitude::Zero);
+    SetDefault(ZeroVector, ArcadeAltitude::VectorY, ArcadeAltitude::Zero);
+    SetDefault(ZeroVector, ArcadeAltitude::VectorZ, ArcadeAltitude::Zero);
+    UK2Node_CallFunction* EffectiveDirection = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectVector), 9880, 1420);
+
+    UK2Node_CallFunction* AlongTiltSpeed = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Dot_VectorVector), 9190, 920);
+    UK2Node_CallFunction* PositiveAlongTiltSpeed = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax), 9420, 920);
+    SetDefault(PositiveAlongTiltSpeed, Binary::RightOperand, ArcadeAltitude::Zero);
+    UK2Node_CallFunction* PreservedVelocity = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_VectorFloat), 9650, 920);
+    UK2Node_CallFunction* VelocityToDamp = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_VectorVector), 9880, 920);
+    UK2Node_CallFunction* DampedVelocity = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, VInterpTo_Constant), 10110, 920);
+    UK2Node_VariableGet* HorizontalAcceleration = AddRead(
+        Graph, Settings::HorizontalVelocityDecayAcceleration, nullptr, 9880, 1260);
+    UK2Node_CallFunction* NewHorizontalVelocity = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_VectorVector), 10340, 920);
+    UK2Node_CallFunction* VelocityCorrection = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_VectorVector), 10570, 920);
+    UK2Node_CallFunction* SetVelocity = AddCall(
+        Graph, UPrimitiveComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, SetPhysicsLinearVelocity), 10800, 660);
+    SetDefault(SetVelocity, ArcadeAltitude::BoneName, ArcadeAltitude::NoBone);
+    SetDefault(SetVelocity, ArcadeAltitude::AddToCurrent, ArcadeAltitude::Enabled);
+
+    UK2Node_VariableGet* PreviousVelocity = AddRead(
+        Graph, PreviousCorrectedHorizontalVelocity, nullptr, 8730, 1880);
+    UK2Node_VariableGet* SampleValid = AddRead(
+        Graph, HorizontalVelocitySampleValid, nullptr, 8730, 2020);
+    UK2Node_CallFunction* PreviousForComparison = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectVector), 8960, 1880);
+    UK2Node_CallFunction* ObservedSpeed = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, VSize), 9190, 2160);
+    UK2Node_CallFunction* PreviousSpeed = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, VSize), 9420, 2160);
+    UK2Node_CallFunction* PreviousSpeedWithTolerance = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        BlueprintGraphNames::MathFunctions::AddDouble, 9650, 2320);
+    SetDefault(PreviousSpeedWithTolerance,
+        Binary::RightOperand, ArcadeHorizontal::GrowthTolerance);
+    UK2Node_CallFunction* GrowthDetected = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble), 9880, 2160);
+    UK2Node_CallFunction* ValidGrowthDetected = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND), 10110, 2160);
+    UK2Node_CallFunction* NeutralGrowthDetected = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND), 10340, 2160);
+    UK2Node_CallFunction* VelocityAfterGrowthGuard = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectVector), 10570, 1880);
+    UK2Node_VariableSet* StoreCorrectedVelocity = AddWrite(
+        Graph, PreviousCorrectedHorizontalVelocity, 11260, 660);
+    UK2Node_VariableSet* MarkSampleValid = AddWrite(
+        Graph, HorizontalVelocitySampleValid, 11490, 660);
+    SetDefault(MarkSampleValid, HorizontalVelocitySampleValid, ArcadeAltitude::Enabled);
+
+    bool Ok = true;
+    Ok &= Connect(Gyro->GetValidCastPin(), RequirePin(PrimitiveRoot, P::Execute));
+    Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(Root, P::FunctionTarget));
+    Ok &= Connect(RequirePin(Root, RootComponent), PrimitiveRoot->GetCastSourcePin());
+    Ok &= Connect(PrimitiveRoot->GetValidCastPin(), RequirePin(LinearVelocity, P::Execute));
+    Ok &= Connect(PrimitiveRoot->GetCastResultPin(), RequirePin(LinearVelocity, P::FunctionTarget));
+    Ok &= Connect(RequirePin(LinearVelocity, P::Then), RequirePin(SetVelocity, P::Execute));
+    Ok &= Connect(RequirePin(LinearVelocity, P::ReturnValue),
+        RequirePin(BreakVelocity, ArcadeAltitude::InVector));
+    Ok &= Connect(RequirePin(BreakVelocity, ArcadeAltitude::VectorX),
+        RequirePin(HorizontalVelocity, ArcadeAltitude::VectorX));
+    Ok &= Connect(RequirePin(BreakVelocity, ArcadeAltitude::VectorY),
+        RequirePin(HorizontalVelocity, ArcadeAltitude::VectorY));
+
+    Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(ActorForward, P::FunctionTarget));
+    Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(ActorRight, P::FunctionTarget));
+    Ok &= Connect(RequirePin(ActorForward, P::ReturnValue),
+        RequirePin(BreakActorForward, ArcadeAltitude::InVector));
+    Ok &= Connect(RequirePin(BreakActorForward, ArcadeAltitude::VectorX),
+        RequirePin(HorizontalActorForward, ArcadeAltitude::VectorX));
+    Ok &= Connect(RequirePin(BreakActorForward, ArcadeAltitude::VectorY),
+        RequirePin(HorizontalActorForward, ArcadeAltitude::VectorY));
+    Ok &= Connect(RequirePin(HorizontalActorForward, P::ReturnValue),
+        RequirePin(NormalizedActorForward, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(ActorRight, P::ReturnValue),
+        RequirePin(BreakActorRight, ArcadeAltitude::InVector));
+    Ok &= Connect(RequirePin(BreakActorRight, ArcadeAltitude::VectorX),
+        RequirePin(HorizontalActorRight, ArcadeAltitude::VectorX));
+    Ok &= Connect(RequirePin(BreakActorRight, ArcadeAltitude::VectorY),
+        RequirePin(HorizontalActorRight, ArcadeAltitude::VectorY));
+    Ok &= Connect(RequirePin(HorizontalActorRight, P::ReturnValue),
+        RequirePin(NormalizedActorRight, Binary::LeftOperand));
+
+    Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(ForwardTilt, P::FunctionTarget));
+    Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(SideTilt, P::FunctionTarget));
+    Ok &= Connect(RequirePin(ForwardTilt, TiltForwardInput),
+        RequirePin(ControlTilt, ArcadeAltitude::VectorX));
+    Ok &= Connect(RequirePin(SideTilt, TiltInput),
+        RequirePin(ControlTilt, ArcadeAltitude::VectorY));
+    Ok &= Connect(RequirePin(ControlTilt, P::ReturnValue),
+        RequirePin(ControlIsNeutral, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(NormalizedActorForward, P::ReturnValue),
+        RequirePin(ForwardIntent, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(ForwardTilt, TiltForwardInput),
+        RequirePin(ForwardIntent, Binary::RightOperand));
+    Ok &= Connect(RequirePin(NormalizedActorRight, P::ReturnValue),
+        RequirePin(SideIntent, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(SideTilt, TiltInput),
+        RequirePin(SideIntent, Binary::RightOperand));
+    Ok &= Connect(RequirePin(ForwardIntent, P::ReturnValue),
+        RequirePin(CombinedIntent, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(SideIntent, P::ReturnValue),
+        RequirePin(CombinedIntent, Binary::RightOperand));
+    Ok &= Connect(RequirePin(CombinedIntent, P::ReturnValue),
+        RequirePin(NormalizedIntent, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(ZeroVector, P::ReturnValue),
+        RequirePin(EffectiveDirection, SelectPins::WhenTrue));
+    Ok &= Connect(RequirePin(NormalizedIntent, P::ReturnValue),
+        RequirePin(EffectiveDirection, SelectPins::WhenFalse));
+    Ok &= Connect(RequirePin(ControlIsNeutral, P::ReturnValue),
+        RequirePin(EffectiveDirection, SelectPins::Condition));
+
+    Ok &= Connect(RequirePin(VelocityAfterGrowthGuard, P::ReturnValue),
+        RequirePin(AlongTiltSpeed, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(EffectiveDirection, P::ReturnValue),
+        RequirePin(AlongTiltSpeed, Binary::RightOperand));
+    Ok &= Connect(RequirePin(AlongTiltSpeed, P::ReturnValue),
+        RequirePin(PositiveAlongTiltSpeed, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(EffectiveDirection, P::ReturnValue),
+        RequirePin(PreservedVelocity, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(PositiveAlongTiltSpeed, P::ReturnValue),
+        RequirePin(PreservedVelocity, Binary::RightOperand));
+    Ok &= Connect(RequirePin(VelocityAfterGrowthGuard, P::ReturnValue),
+        RequirePin(VelocityToDamp, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(PreservedVelocity, P::ReturnValue),
+        RequirePin(VelocityToDamp, Binary::RightOperand));
+    Ok &= Connect(RequirePin(VelocityToDamp, P::ReturnValue),
+        RequirePin(DampedVelocity, ArcadeHorizontal::Current));
+    Ok &= Connect(RequirePin(ZeroVector, P::ReturnValue),
+        RequirePin(DampedVelocity, ArcadeHorizontal::Target));
+    Ok &= Connect(RequirePin(TickEvent, P::DeltaSeconds),
+        RequirePin(DampedVelocity, ArcadeHorizontal::DeltaTime));
+    Ok &= Connect(RequirePin(HorizontalAcceleration,
+        Settings::HorizontalVelocityDecayAcceleration),
+        RequirePin(DampedVelocity, ArcadeHorizontal::InterpSpeed));
+    Ok &= Connect(RequirePin(PreservedVelocity, P::ReturnValue),
+        RequirePin(NewHorizontalVelocity, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(DampedVelocity, P::ReturnValue),
+        RequirePin(NewHorizontalVelocity, Binary::RightOperand));
+    Ok &= Connect(RequirePin(NewHorizontalVelocity, P::ReturnValue),
+        RequirePin(VelocityCorrection, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(HorizontalVelocity, P::ReturnValue),
+        RequirePin(VelocityCorrection, Binary::RightOperand));
+    Ok &= Connect(PrimitiveRoot->GetCastResultPin(), RequirePin(SetVelocity, P::FunctionTarget));
+    Ok &= Connect(RequirePin(VelocityCorrection, P::ReturnValue),
+        RequirePin(SetVelocity, ArcadeAltitude::NewVelocity));
+
+    Ok &= Connect(RequirePin(PreviousVelocity, PreviousCorrectedHorizontalVelocity),
+        RequirePin(PreviousForComparison, SelectPins::WhenTrue));
+    Ok &= Connect(RequirePin(HorizontalVelocity, P::ReturnValue),
+        RequirePin(PreviousForComparison, SelectPins::WhenFalse));
+    Ok &= Connect(RequirePin(SampleValid, HorizontalVelocitySampleValid),
+        RequirePin(PreviousForComparison, SelectPins::Condition));
+    Ok &= Connect(RequirePin(HorizontalVelocity, P::ReturnValue),
+        RequirePin(ObservedSpeed, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(PreviousForComparison, P::ReturnValue),
+        RequirePin(PreviousSpeed, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(PreviousSpeed, P::ReturnValue),
+        RequirePin(PreviousSpeedWithTolerance, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(ObservedSpeed, P::ReturnValue),
+        RequirePin(GrowthDetected, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(PreviousSpeedWithTolerance, P::ReturnValue),
+        RequirePin(GrowthDetected, Binary::RightOperand));
+    Ok &= Connect(RequirePin(SampleValid, HorizontalVelocitySampleValid),
+        RequirePin(ValidGrowthDetected, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(GrowthDetected, P::ReturnValue),
+        RequirePin(ValidGrowthDetected, Binary::RightOperand));
+    Ok &= Connect(RequirePin(ControlIsNeutral, P::ReturnValue),
+        RequirePin(NeutralGrowthDetected, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(ValidGrowthDetected, P::ReturnValue),
+        RequirePin(NeutralGrowthDetected, Binary::RightOperand));
+    Ok &= Connect(RequirePin(PreviousForComparison, P::ReturnValue),
+        RequirePin(VelocityAfterGrowthGuard, SelectPins::WhenTrue));
+    Ok &= Connect(RequirePin(HorizontalVelocity, P::ReturnValue),
+        RequirePin(VelocityAfterGrowthGuard, SelectPins::WhenFalse));
+    Ok &= Connect(RequirePin(NeutralGrowthDetected, P::ReturnValue),
+        RequirePin(VelocityAfterGrowthGuard, SelectPins::Condition));
+    Ok &= Connect(RequirePin(NewHorizontalVelocity, P::ReturnValue),
+        RequirePin(StoreCorrectedVelocity, PreviousCorrectedHorizontalVelocity));
+    Ok &= Connect(RequirePin(StoreCorrectedVelocity, P::Then),
+        RequirePin(MarkSampleValid, P::Execute));
+    Ok &= Connect(RequirePin(SetVelocity, P::Then),
+        RequirePin(StoreCorrectedVelocity, P::Execute));
+    Ok &= Connect(RequirePin(MarkSampleValid, P::Then),
+        RequirePin(Continuation, P::Execute));
+    return Ok;
+}
+
+bool AddArcadeAltitudeHold(
+    UBlueprint* Blueprint,
+    UClass* ThrottleOwner)
 {
     namespace P = BlueprintGraphNames::Pins;
     namespace Binary = BlueprintGraphNames::Pins::Binary;
@@ -418,6 +730,14 @@ bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
     UK2Node_VariableSet* StopBrakingWhenUncontrolled = AddWrite(
         Graph, AltitudeBrakingActive, 2290, -220);
     SetDefault(StopBrakingWhenUncontrolled, AltitudeBrakingActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ResetHorizontalSampleWhenUncontrolled = AddWrite(
+        Graph, HorizontalVelocitySampleValid, 2520, -220);
+    SetDefault(ResetHorizontalSampleWhenUncontrolled,
+        HorizontalVelocitySampleValid, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ResetVerticalSampleWhenUncontrolled = AddWrite(
+        Graph, VerticalVelocitySampleValid, 2750, -220);
+    SetDefault(ResetVerticalSampleWhenUncontrolled,
+        VerticalVelocitySampleValid, ArcadeAltitude::Disabled);
     UK2Node_VariableSet* ClearWhenIneligible = AddWrite(
         Graph, AltitudeLockActive, 1830, 580);
     SetDefault(ClearWhenIneligible, AltitudeLockActive, ArcadeAltitude::Disabled);
@@ -430,6 +750,10 @@ bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
     UK2Node_VariableSet* StopBrakingWhenIneligible = AddWrite(
         Graph, AltitudeBrakingActive, 2520, 580);
     SetDefault(StopBrakingWhenIneligible, AltitudeBrakingActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ResetVerticalSampleWhenIneligible = AddWrite(
+        Graph, VerticalVelocitySampleValid, 2750, 580);
+    SetDefault(ResetVerticalSampleWhenIneligible,
+        VerticalVelocitySampleValid, ArcadeAltitude::Disabled);
 
     UK2Node_VariableGet* IsLockActive = AddRead(
         Graph, AltitudeLockActive, nullptr, 1830, 940);
@@ -452,6 +776,10 @@ bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
     UK2Node_VariableSet* StopBrakingForSpace = AddWrite(
         Graph, AltitudeBrakingActive, 2750, 820);
     SetDefault(StopBrakingForSpace, AltitudeBrakingActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ResetVerticalSampleForSpace = AddWrite(
+        Graph, VerticalVelocitySampleValid, 2980, 820);
+    SetDefault(ResetVerticalSampleForSpace,
+        VerticalVelocitySampleValid, ArcadeAltitude::Disabled);
     UK2Node_VariableGet* WasSpaceHeld = AddRead(
         Graph, SpaceWasHeld, nullptr, 2980, 1740);
     UK2Node_IfThenElse* ReleaseStateBranch = FinishNode(
@@ -490,6 +818,10 @@ bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
     UK2Node_VariableSet* StopBrakingAfterExactActivation = AddWrite(
         Graph, AltitudeBrakingActive, 4360, 1740);
     SetDefault(StopBrakingAfterExactActivation, AltitudeBrakingActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ResetVerticalSampleForExact = AddWrite(
+        Graph, VerticalVelocitySampleValid, 3670, 1740);
+    SetDefault(ResetVerticalSampleForExact,
+        VerticalVelocitySampleValid, ArcadeAltitude::Disabled);
 
     UK2Node_VariableGet* BrakingRoot = AddRead(
         Graph, RootComponent, AActor::StaticClass(), 3900, 2100);
@@ -508,21 +840,37 @@ bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
         Graph, Settings::AltitudeStabilizationVerticalDeceleration, nullptr, 4820, 2280);
     UK2Node_CallFunction* BrakingStep = AddCall(Graph, UKismetMathLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble), 5050, 2280);
+    UK2Node_VariableGet* PreviousVerticalVelocity = AddRead(
+        Graph, PreviousCorrectedVerticalVelocity, nullptr, 4820, 2460);
+    UK2Node_VariableGet* VerticalSampleValid = AddRead(
+        Graph, VerticalVelocitySampleValid, nullptr, 4820, 2580);
+    UK2Node_CallFunction* ObservedOrPreviousMinimum = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMin), 5050, 2460);
+    UK2Node_CallFunction* VerticalVelocityBeforeBraking = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        BlueprintGraphNames::MathFunctions::SelectFloat, 5280, 2460);
     UK2Node_CallFunction* ReducedVerticalVelocity = AddCall(
         Graph, UKismetMathLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_DoubleDouble), 5280, 2160);
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_DoubleDouble), 5510, 2160);
     UK2Node_CallFunction* IsStillAscending = AddCall(Graph, UKismetMathLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble), 5510, 1980);
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble), 5740, 1980);
     SetDefault(IsStillAscending, Binary::RightOperand, ArcadeAltitude::Zero);
     UK2Node_IfThenElse* RemainingAscentBranch = FinishNode(
-        NewObject<UK2Node_IfThenElse>(Graph), Graph, 5740, 1980);
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 5970, 1980);
     UK2Node_CallFunction* ReducedVelocity = AddCall(Graph, UKismetMathLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector), 5740, 2220);
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector), 5970, 2220);
     UK2Node_CallFunction* SetReducedVelocity = AddCall(
         Graph, UPrimitiveComponent::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, SetPhysicsLinearVelocity), 5970, 1980);
+        GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, SetPhysicsLinearVelocity), 6200, 1980);
     SetDefault(SetReducedVelocity, ArcadeAltitude::BoneName, ArcadeAltitude::NoBone);
     SetDefault(SetReducedVelocity, ArcadeAltitude::AddToCurrent, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* StoreCorrectedVerticalVelocity = AddWrite(
+        Graph, PreviousCorrectedVerticalVelocity, 6430, 1980);
+    UK2Node_VariableSet* MarkVerticalSampleValid = AddWrite(
+        Graph, VerticalVelocitySampleValid, 6660, 1980);
+    SetDefault(MarkVerticalSampleValid,
+        VerticalVelocitySampleValid, ArcadeAltitude::Enabled);
 
     UK2Node_CallFunction* CurrentLocation = AddCall(Graph, AActor::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(AActor, K2_GetActorLocation), 2290, 1280);
@@ -565,11 +913,16 @@ bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
     bool Ok = true;
     Ok &= Connect(RequirePin(ControlledTail, P::Then), RequirePin(Gyro, P::Execute));
     Ok &= Connect(RequirePin(GetParent, P::ReturnValue), Gyro->GetCastSourcePin());
-    Ok &= Connect(Gyro->GetValidCastPin(), RequirePin(EligibilityBranch, P::Execute));
+    Ok &= AddHorizontalVelocityDamping(
+        Graph, TickEvent, Gyro, EligibilityBranch, ThrottleOwner);
     Ok &= Connect(RequirePin(ClearNativeTail, P::Then), RequirePin(ClearWhenUncontrolled, P::Execute));
     Ok &= Connect(RequirePin(ClearWhenUncontrolled, P::Then), RequirePin(ClearExactWhenUncontrolled, P::Execute));
     Ok &= Connect(RequirePin(ClearExactWhenUncontrolled, P::Then), RequirePin(ClearSpaceWhenUncontrolled, P::Execute));
     Ok &= Connect(RequirePin(ClearSpaceWhenUncontrolled, P::Then), RequirePin(StopBrakingWhenUncontrolled, P::Execute));
+    Ok &= Connect(RequirePin(StopBrakingWhenUncontrolled, P::Then),
+        RequirePin(ResetHorizontalSampleWhenUncontrolled, P::Execute));
+    Ok &= Connect(RequirePin(ResetHorizontalSampleWhenUncontrolled, P::Then),
+        RequirePin(ResetVerticalSampleWhenUncontrolled, P::Execute));
     Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(Throttle, P::FunctionTarget));
     Ok &= Connect(RequirePin(Throttle, CurrentThrottle), RequirePin(AtFullThrottle, Binary::LeftOperand));
     Ok &= Connect(RequirePin(Controller, P::ReturnValue), RequirePin(SpaceHeld, P::FunctionTarget));
@@ -578,6 +931,8 @@ bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
     Ok &= Connect(RequirePin(ClearWhenIneligible, P::Then), RequirePin(ClearExactWhenIneligible, P::Execute));
     Ok &= Connect(RequirePin(ClearExactWhenIneligible, P::Then), RequirePin(ClearSpaceWhenIneligible, P::Execute));
     Ok &= Connect(RequirePin(ClearSpaceWhenIneligible, P::Then), RequirePin(StopBrakingWhenIneligible, P::Execute));
+    Ok &= Connect(RequirePin(StopBrakingWhenIneligible, P::Then),
+        RequirePin(ResetVerticalSampleWhenIneligible, P::Execute));
     Ok &= Connect(RequirePin(EligibilityBranch, P::Then), RequirePin(LockStateBranch, P::Execute));
     Ok &= Connect(RequirePin(IsLockActive, AltitudeLockActive), RequirePin(LockStateBranch, P::Condition));
     Ok &= Connect(RequirePin(LockStateBranch, P::Else), RequirePin(InactiveSpaceBranch, P::Execute));
@@ -588,7 +943,10 @@ bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
     Ok &= Connect(RequirePin(SpaceModeBranch, P::Then), RequirePin(MarkSpaceHeld, P::Execute));
     Ok &= Connect(RequirePin(MarkSpaceHeld, P::Then), RequirePin(ClearExactForSpace, P::Execute));
     Ok &= Connect(RequirePin(ClearExactForSpace, P::Then), RequirePin(StopBrakingForSpace, P::Execute));
-    Ok &= Connect(RequirePin(StopBrakingForSpace, P::Then), RequirePin(RisingBranch, P::Execute));
+    Ok &= Connect(RequirePin(StopBrakingForSpace, P::Then),
+        RequirePin(ResetVerticalSampleForSpace, P::Execute));
+    Ok &= Connect(RequirePin(ResetVerticalSampleForSpace, P::Then),
+        RequirePin(RisingBranch, P::Execute));
     Ok &= Connect(RequirePin(SpaceModeBranch, P::Else), RequirePin(ExactHoldStateBranch, P::Execute));
     Ok &= Connect(RequirePin(IsExactHoldActive, AltitudeExactHoldActive), RequirePin(ExactHoldStateBranch, P::Condition));
     Ok &= Connect(RequirePin(ExactHoldStateBranch, P::Then), RequirePin(SetLocation, P::Execute));
@@ -618,17 +976,37 @@ bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
     Ok &= Connect(RequirePin(BrakingLinearVelocity, P::Then), RequirePin(RemainingAscentBranch, P::Execute));
     Ok &= Connect(RequirePin(VerticalDeceleration, Settings::AltitudeStabilizationVerticalDeceleration), RequirePin(BrakingStep, Binary::LeftOperand));
     Ok &= Connect(RequirePin(TickEvent, P::DeltaSeconds), RequirePin(BrakingStep, Binary::RightOperand));
-    Ok &= Connect(RequirePin(BreakBrakingVelocity, ArcadeAltitude::VectorZ), RequirePin(ReducedVerticalVelocity, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(BreakBrakingVelocity, ArcadeAltitude::VectorZ),
+        RequirePin(ObservedOrPreviousMinimum, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(PreviousVerticalVelocity, PreviousCorrectedVerticalVelocity),
+        RequirePin(ObservedOrPreviousMinimum, Binary::RightOperand));
+    Ok &= Connect(RequirePin(ObservedOrPreviousMinimum, P::ReturnValue),
+        RequirePin(VerticalVelocityBeforeBraking, SelectPins::WhenTrue));
+    Ok &= Connect(RequirePin(BreakBrakingVelocity, ArcadeAltitude::VectorZ),
+        RequirePin(VerticalVelocityBeforeBraking, SelectPins::WhenFalse));
+    Ok &= Connect(RequirePin(VerticalSampleValid, VerticalVelocitySampleValid),
+        RequirePin(VerticalVelocityBeforeBraking, SelectPins::Condition));
+    Ok &= Connect(RequirePin(VerticalVelocityBeforeBraking, P::ReturnValue),
+        RequirePin(ReducedVerticalVelocity, Binary::LeftOperand));
     Ok &= Connect(RequirePin(BrakingStep, P::ReturnValue), RequirePin(ReducedVerticalVelocity, Binary::RightOperand));
     Ok &= Connect(RequirePin(ReducedVerticalVelocity, P::ReturnValue), RequirePin(IsStillAscending, Binary::LeftOperand));
     Ok &= Connect(RequirePin(IsStillAscending, P::ReturnValue), RequirePin(RemainingAscentBranch, P::Condition));
-    Ok &= Connect(RequirePin(RemainingAscentBranch, P::Else), RequirePin(CaptureExactAltitude, P::Execute));
+    Ok &= Connect(RequirePin(RemainingAscentBranch, P::Else),
+        RequirePin(ResetVerticalSampleForExact, P::Execute));
+    Ok &= Connect(RequirePin(ResetVerticalSampleForExact, P::Then),
+        RequirePin(CaptureExactAltitude, P::Execute));
     Ok &= Connect(RequirePin(RemainingAscentBranch, P::Then), RequirePin(SetReducedVelocity, P::Execute));
     Ok &= Connect(RequirePin(BreakBrakingVelocity, ArcadeAltitude::VectorX), RequirePin(ReducedVelocity, ArcadeAltitude::VectorX));
     Ok &= Connect(RequirePin(BreakBrakingVelocity, ArcadeAltitude::VectorY), RequirePin(ReducedVelocity, ArcadeAltitude::VectorY));
     Ok &= Connect(RequirePin(ReducedVerticalVelocity, P::ReturnValue), RequirePin(ReducedVelocity, ArcadeAltitude::VectorZ));
     Ok &= Connect(BrakingPrimitiveRoot->GetCastResultPin(), RequirePin(SetReducedVelocity, P::FunctionTarget));
     Ok &= Connect(RequirePin(ReducedVelocity, P::ReturnValue), RequirePin(SetReducedVelocity, ArcadeAltitude::NewVelocity));
+    Ok &= Connect(RequirePin(SetReducedVelocity, P::Then),
+        RequirePin(StoreCorrectedVerticalVelocity, P::Execute));
+    Ok &= Connect(RequirePin(ReducedVerticalVelocity, P::ReturnValue),
+        RequirePin(StoreCorrectedVerticalVelocity, PreviousCorrectedVerticalVelocity));
+    Ok &= Connect(RequirePin(StoreCorrectedVerticalVelocity, P::Then),
+        RequirePin(MarkVerticalSampleValid, P::Execute));
     Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(CurrentLocation, P::FunctionTarget));
     Ok &= Connect(RequirePin(CurrentLocation, P::ReturnValue), RequirePin(BreakCurrentLocation, ArcadeAltitude::InVector));
     Ok &= Connect(RequirePin(BreakCurrentLocation, ArcadeAltitude::VectorX), RequirePin(LockedLocation, ArcadeAltitude::VectorX));
@@ -656,11 +1034,20 @@ bool AddArcadeAltitudeHold(UBlueprint* Blueprint, UClass* ThrottleOwner)
     return Ok;
 }
 
-bool SaveBlueprint(UPackage* Package, UBlueprint* Blueprint)
+bool SaveBlueprint(
+    UPackage* Package,
+    UBlueprint* Blueprint,
+    const ETickingGroup TickGroup = TG_MAX)
 {
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     FKismetEditorUtilities::CompileBlueprint(Blueprint);
     if (Blueprint->Status == BS_Error) return false;
+    if (TickGroup != TG_MAX)
+    {
+        AActor* ActorDefaults = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
+        if (!ActorDefaults) return false;
+        ActorDefaults->PrimaryActorTick.TickGroup = TickGroup;
+    }
     Package->MarkPackageDirty();
     const FString Filename = FPackageName::LongPackageNameToFilename(
         Package->GetName(), FPackageName::GetAssetPackageExtension());
@@ -710,6 +1097,9 @@ int32 UGenerateGyroKeyboardInheritanceCommandlet::Main(const FString& Params)
 
     FEdGraphPinType BoolType;
     BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+    FEdGraphPinType VectorType;
+    VectorType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+    VectorType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
     if (!FBlueprintEditorUtils::AddMemberVariable(
             Helper, AltitudeLockActive, BoolType, ArcadeAltitude::Disabled) ||
         !FBlueprintEditorUtils::AddMemberVariable(
@@ -720,8 +1110,19 @@ int32 UGenerateGyroKeyboardInheritanceCommandlet::Main(const FString& Params)
             Helper, AltitudeBrakingActive, BoolType, ArcadeAltitude::Disabled) ||
         !FBlueprintEditorUtils::AddMemberVariable(
             Helper, LockedAltitude, DoubleType, ArcadeAltitude::Zero) ||
+        !FBlueprintEditorUtils::AddMemberVariable(
+            Helper, PreviousCorrectedHorizontalVelocity,
+            VectorType, ArcadeHorizontal::ZeroVectorDefault) ||
+        !FBlueprintEditorUtils::AddMemberVariable(
+            Helper, HorizontalVelocitySampleValid, BoolType, ArcadeAltitude::Disabled) ||
+        !FBlueprintEditorUtils::AddMemberVariable(
+            Helper, PreviousCorrectedVerticalVelocity,
+            DoubleType, ArcadeAltitude::Zero) ||
+        !FBlueprintEditorUtils::AddMemberVariable(
+            Helper, VerticalVelocitySampleValid,
+            BoolType, ArcadeAltitude::Disabled) ||
         !AddArcadeAltitudeHold(Helper, Parent->GeneratedClass) ||
-        !SaveBlueprint(Helper->GetOutermost(), Helper)) return 1;
+        !SaveBlueprint(Helper->GetOutermost(), Helper, TG_PostPhysics)) return 1;
 
     UPackage* ReplacementPackage = CreatePackage(ChildPackage);
     UBlueprint* Replacement = FKismetEditorUtilities::CreateBlueprint(

@@ -17,6 +17,14 @@
       "type": "number",
       "minimum": 1.0,
       "maximum": 10000.0
+    },
+    {
+      "id": "HorizontalVelocityDecayAcceleration",
+      "runtimeName": "HorizontalVelocityDecayAcceleration",
+      "key": "HorizontalVelocityDecayAcceleration",
+      "type": "number",
+      "minimum": 1.0,
+      "maximum": 10000.0
     }
   ]
 }

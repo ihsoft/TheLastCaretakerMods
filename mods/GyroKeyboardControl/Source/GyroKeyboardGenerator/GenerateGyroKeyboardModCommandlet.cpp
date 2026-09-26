@@ -160,11 +160,20 @@ void Default(UEdGraphNode* Node, const FName Name, const TCHAR* Value)
     GetDefault<UEdGraphSchema_K2>()->TrySetDefaultValue(*Pin(Node, Name), Value);
 }
 
-bool SaveBlueprint(UPackage* Package, UBlueprint* Blueprint)
+bool SaveBlueprint(
+    UPackage* Package,
+    UBlueprint* Blueprint,
+    const ETickingGroup TickGroup = TG_MAX)
 {
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     FKismetEditorUtilities::CompileBlueprint(Blueprint);
     if (Blueprint->Status == BS_Error) return false;
+    if (TickGroup != TG_MAX)
+    {
+        AActor* ActorDefaults = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
+        if (!ActorDefaults) return false;
+        ActorDefaults->PrimaryActorTick.TickGroup = TickGroup;
+    }
     Package->MarkPackageDirty();
     const FString Filename = FPackageName::LongPackageNameToFilename(
         Package->GetName(), FPackageName::GetAssetPackageExtension());
@@ -596,8 +605,9 @@ int32 UGenerateGyroKeyboardModCommandlet::Main(const FString& Params)
         return 1;
     }
     UEdGraph* Graph = FBlueprintEditorUtils::FindEventGraph(Blueprint);
-    if (!Graph || !AddSettingsGraph(Graph) || !AddTickGraph(Graph) ||
-        !SaveBlueprint(Package, Blueprint))
+    if (!Graph || !AddSettingsGraph(Graph) ||
+        !AddTickGraph(Graph) ||
+        !SaveBlueprint(Package, Blueprint, TG_PostPhysics))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to generate Gyro pitch helper"));
         return 1;

@@ -19,4 +19,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GyroCopter")
     float TiltForwardInput = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GyroCopter")
+    float TiltInput = 0.0f;
+
 };
