@@ -36,6 +36,14 @@ one-sided altitude floor, and throttle below 100% disables stabilization.
 
 The helper runs in `TG_PostPhysics`: stock rotor and Chaos forces are integrated
 first, then the mod applies its kinematic vertical and horizontal corrections.
+Both corrections require the measured rotor speed to be at least
+`StabilizationMinimumPropellerVelocity` in the stock Blueprint's direct
+`PropellerVelocity` units. The default is `390.0`; accepted values are clamped
+to `0..100000`, and `0` disables this gate. Approximate reference values are
+`392` at 10% throttle, `784` at 20%, and `1176` at 30%. Below the threshold the
+helper clears its altitude-lock and velocity-sample state without changing
+location or velocity. This prevents the Gyro from being held against an
+obstacle after a rotor collision removes lift.
 
 Horizontal speed is damped kinematically at the rate configured by
 `HorizontalVelocityDecayAcceleration`, in cm/s^2. With both rotor-tilt axes

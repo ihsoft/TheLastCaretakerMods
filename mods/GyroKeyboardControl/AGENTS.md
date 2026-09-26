@@ -10,10 +10,14 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   decay. Apply horizontal correction as an additive XY-only velocity delta;
   never rewrite the full velocity vector or its Z component from the horizontal
   path. The helper must tick in `TG_PostPhysics`, after the stock rotor/Chaos
-  force integration. During vertical braking, reject positive Vz growth above
-  the previous helper command before applying the configured constant-rate
-  deceleration. Do not alter A/D integration, yaw, camera, possession, save
-  behavior, or other HUD/input behavior without a new user request.
+  force integration. Gate every kinematic horizontal or vertical stabilization
+  correction on the stock rotor's measured `PropellerVelocity`; below the
+  configured direct threshold, clear stabilization state and do not alter
+  position or velocity. During vertical braking, reject positive
+  Vz growth above the previous helper command before applying the configured
+  constant-rate deceleration. Do not alter A/D integration, yaw, camera,
+  possession, save behavior, or other HUD/input behavior without a new user
+  request.
 - W increases, S decreases, and releasing both leaves the integrated value
   unchanged. X writes exact zero immediately.
 - `Assets/GyroKeyboardControl.ini` is the canonical packaged INI and sole

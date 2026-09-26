@@ -11,6 +11,14 @@
       "maximum": 60.0
     },
     {
+      "id": "StabilizationMinimumPropellerVelocity",
+      "runtimeName": "StabilizationMinimumPropellerVelocity",
+      "key": "StabilizationMinimumPropellerVelocity",
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 100000.0
+    },
+    {
       "id": "AltitudeStabilizationVerticalDeceleration",
       "runtimeName": "AltitudeStabilizationVerticalDeceleration",
       "key": "AltitudeStabilizationVerticalDeceleration",

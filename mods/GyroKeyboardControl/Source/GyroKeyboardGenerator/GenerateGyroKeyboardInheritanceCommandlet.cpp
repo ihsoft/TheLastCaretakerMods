@@ -65,6 +65,7 @@ const FName LockedAltitude(TEXT("LockedAltitude"));
 const FName RootComponent(TEXT("RootComponent"));
 const FName TiltForwardInput(TEXT("TiltForwardInput"));
 const FName TiltInput(TEXT("TiltInput"));
+const FName PropellerVelocity(TEXT("PropellerVelocity"));
 const FName PreviousCorrectedHorizontalVelocity(TEXT("PreviousCorrectedHorizontalVelocity"));
 const FName HorizontalVelocitySampleValid(TEXT("HorizontalVelocitySampleValid"));
 const FName PreviousCorrectedVerticalVelocity(TEXT("PreviousCorrectedVerticalVelocity"));
@@ -370,6 +371,7 @@ bool AddHorizontalVelocityDamping(
     UEdGraph* Graph,
     UK2Node_Event* TickEvent,
     UK2Node_DynamicCast* Gyro,
+    UEdGraphPin* StartExecution,
     UK2Node_IfThenElse* Continuation,
     UClass* GyroOwner)
 {
@@ -522,7 +524,7 @@ bool AddHorizontalVelocityDamping(
     SetDefault(MarkSampleValid, HorizontalVelocitySampleValid, ArcadeAltitude::Enabled);
 
     bool Ok = true;
-    Ok &= Connect(Gyro->GetValidCastPin(), RequirePin(PrimitiveRoot, P::Execute));
+    Ok &= Connect(StartExecution, RequirePin(PrimitiveRoot, P::Execute));
     Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(Root, P::FunctionTarget));
     Ok &= Connect(RequirePin(Root, RootComponent), PrimitiveRoot->GetCastSourcePin());
     Ok &= Connect(PrimitiveRoot->GetValidCastPin(), RequirePin(LinearVelocity, P::Execute));
@@ -704,6 +706,16 @@ bool AddArcadeAltitudeHold(
     Gyro->SetPurity(false);
     FinishNode(Gyro, Graph, 7580, 680);
 
+    UK2Node_VariableGet* MeasuredRotorVelocity = AddRead(
+        Graph, PropellerVelocity, ThrottleOwner, 7810, 420);
+    UK2Node_VariableGet* MinimumRotorVelocity = AddRead(
+        Graph, Settings::StabilizationMinimumPropellerVelocity, nullptr, 8040, 540);
+    UK2Node_CallFunction* RotorIsFastEnough = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), 8270, 420);
+    UK2Node_IfThenElse* RotorGateBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 8500, 420);
+
     UK2Node_VariableGet* Throttle = AddRead(
         Graph, CurrentThrottle, ThrottleOwner, 7580, 940);
     UK2Node_CallFunction* AtFullThrottle = AddCall(Graph, UKismetMathLibrary::StaticClass(),
@@ -753,6 +765,28 @@ bool AddArcadeAltitudeHold(
     UK2Node_VariableSet* ResetVerticalSampleWhenIneligible = AddWrite(
         Graph, VerticalVelocitySampleValid, 2750, 580);
     SetDefault(ResetVerticalSampleWhenIneligible,
+        VerticalVelocitySampleValid, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ClearWhenRotorSlow = AddWrite(
+        Graph, AltitudeLockActive, 8730, 180);
+    SetDefault(ClearWhenRotorSlow, AltitudeLockActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ClearExactWhenRotorSlow = AddWrite(
+        Graph, AltitudeExactHoldActive, 8960, 180);
+    SetDefault(ClearExactWhenRotorSlow,
+        AltitudeExactHoldActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ClearSpaceWhenRotorSlow = AddWrite(
+        Graph, SpaceWasHeld, 9190, 180);
+    SetDefault(ClearSpaceWhenRotorSlow, SpaceWasHeld, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* StopBrakingWhenRotorSlow = AddWrite(
+        Graph, AltitudeBrakingActive, 9420, 180);
+    SetDefault(StopBrakingWhenRotorSlow,
+        AltitudeBrakingActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ResetHorizontalSampleWhenRotorSlow = AddWrite(
+        Graph, HorizontalVelocitySampleValid, 9650, 180);
+    SetDefault(ResetHorizontalSampleWhenRotorSlow,
+        HorizontalVelocitySampleValid, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ResetVerticalSampleWhenRotorSlow = AddWrite(
+        Graph, VerticalVelocitySampleValid, 9880, 180);
+    SetDefault(ResetVerticalSampleWhenRotorSlow,
         VerticalVelocitySampleValid, ArcadeAltitude::Disabled);
 
     UK2Node_VariableGet* IsLockActive = AddRead(
@@ -913,8 +947,31 @@ bool AddArcadeAltitudeHold(
     bool Ok = true;
     Ok &= Connect(RequirePin(ControlledTail, P::Then), RequirePin(Gyro, P::Execute));
     Ok &= Connect(RequirePin(GetParent, P::ReturnValue), Gyro->GetCastSourcePin());
+    Ok &= Connect(Gyro->GetValidCastPin(), RequirePin(RotorGateBranch, P::Execute));
+    Ok &= Connect(Gyro->GetCastResultPin(),
+        RequirePin(MeasuredRotorVelocity, P::FunctionTarget));
+    Ok &= Connect(RequirePin(MeasuredRotorVelocity, PropellerVelocity),
+        RequirePin(RotorIsFastEnough, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(MinimumRotorVelocity,
+        Settings::StabilizationMinimumPropellerVelocity),
+        RequirePin(RotorIsFastEnough, Binary::RightOperand));
+    Ok &= Connect(RequirePin(RotorIsFastEnough, P::ReturnValue),
+        RequirePin(RotorGateBranch, P::Condition));
     Ok &= AddHorizontalVelocityDamping(
-        Graph, TickEvent, Gyro, EligibilityBranch, ThrottleOwner);
+        Graph, TickEvent, Gyro, RequirePin(RotorGateBranch, P::Then),
+        EligibilityBranch, ThrottleOwner);
+    Ok &= Connect(RequirePin(RotorGateBranch, P::Else),
+        RequirePin(ClearWhenRotorSlow, P::Execute));
+    Ok &= Connect(RequirePin(ClearWhenRotorSlow, P::Then),
+        RequirePin(ClearExactWhenRotorSlow, P::Execute));
+    Ok &= Connect(RequirePin(ClearExactWhenRotorSlow, P::Then),
+        RequirePin(ClearSpaceWhenRotorSlow, P::Execute));
+    Ok &= Connect(RequirePin(ClearSpaceWhenRotorSlow, P::Then),
+        RequirePin(StopBrakingWhenRotorSlow, P::Execute));
+    Ok &= Connect(RequirePin(StopBrakingWhenRotorSlow, P::Then),
+        RequirePin(ResetHorizontalSampleWhenRotorSlow, P::Execute));
+    Ok &= Connect(RequirePin(ResetHorizontalSampleWhenRotorSlow, P::Then),
+        RequirePin(ResetVerticalSampleWhenRotorSlow, P::Execute));
     Ok &= Connect(RequirePin(ClearNativeTail, P::Then), RequirePin(ClearWhenUncontrolled, P::Execute));
     Ok &= Connect(RequirePin(ClearWhenUncontrolled, P::Then), RequirePin(ClearExactWhenUncontrolled, P::Execute));
     Ok &= Connect(RequirePin(ClearExactWhenUncontrolled, P::Then), RequirePin(ClearSpaceWhenUncontrolled, P::Execute));
@@ -1092,6 +1149,8 @@ int32 UGenerateGyroKeyboardInheritanceCommandlet::Main(const FString& Params)
     DoubleType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
     if (!FBlueprintEditorUtils::AddMemberVariable(
             Parent, CurrentThrottle, DoubleType, ArcadeAltitude::Zero)) return 1;
+    if (!FBlueprintEditorUtils::AddMemberVariable(
+            Parent, PropellerVelocity, DoubleType, ArcadeAltitude::Zero)) return 1;
     if (!AddEmptyProvidedActionsOverride(Parent)) return 1;
     if (!SaveBlueprint(ParentPackage, Parent)) return 1;
 

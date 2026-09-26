@@ -101,13 +101,16 @@ function Update-GyroKeyboardSettings {
     $retiredKeys = @(
         'AltitudeStabilizationDelaySeconds',
         'CompensateTiltLift',
-        'TiltLiftCompensationMultiplier'
+        'TiltLiftCompensationMultiplier',
+        'StabilizationMinimumRotorSpeedPercent'
     )
     $retiredComments = @(
         '# Absolute delay after releasing Space at full throttle before exact altitude hold activates.',
         '# A release below full throttle is ignored. Set to 0 for immediate activation. Clamped to 0..60 seconds.',
         '# Keep vertical rotor lift while pitch is tilted forward/back.',
-        '# Scale the separate world-up force: 0=none, 1=lost vertical component. Clamped to 0..5.'
+        '# Scale the separate world-up force: 0=none, 1=lost vertical component. Clamped to 0..5.',
+        '# Percent of the stock rotor''s physical maximum speed (0 disables the gate).',
+        '# Percent of the stock rotor''s normal 100% operating speed (0 disables the gate).'
     )
     $retiredKeySet = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
     $retiredCommentSet = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)

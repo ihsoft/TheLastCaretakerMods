@@ -42,6 +42,18 @@ Current stock cooked assets establish:
 - stock lift is `TiltControl.UpVector * PropellerVelocity * PropellerLift *
   (1 - max(Altitude, 0) * LiftReductionByHeight)`, with `PropellerLift=75` and
   forward/back target pitch `-10 degrees * TiltForwardInput`;
+- stock `UpdatePropeller` writes `PropellerVelocity` as the magnitude of the
+  rotor's physical angular velocity in radians per second multiplied by `50`;
+  the rotor body overrides its maximum angular velocity to `360000` degrees per
+  second, but this is only a Chaos safety cap and is far above its normal
+  operating speed. The stock physical root overrides its mass to `300 kg`.
+  With `PropellerLift=75`, the confirmed near-sea-level hover at ordinary 100%
+  throttle corresponds approximately to
+  `PropellerVelocity = 300 * 980 / 75 = 3920`. Assuming the stock near-linear
+  steady-state response gives approximate references `392`, `784`, and `1176`
+  at 10%, 20%, and 30% throttle. The stabilization gate intentionally consumes
+  a direct `PropellerVelocity` threshold so its tuning does not depend on a
+  guessed maximum;
 - stock `GetTotalThrottle` adds raw `abs(ThrottleInput)` on top of
   `CurrentThrottle`, so held Space can increase PhysicalEnergy production even
   when CurrentThrottle is already clamped to 1. Gameplay testing established

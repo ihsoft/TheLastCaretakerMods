@@ -16,6 +16,13 @@ PitchRampSeconds in GyroKeyboardControl.ini sets the time from zero to maximum
 pitch. Default: 3.0 seconds. Restart the game after editing the file.
 Put comments on their own lines; inline comments after values are invalid.
 
+StabilizationMinimumPropellerVelocity sets the minimum measured rotor speed at
+which altitude and horizontal stabilization may operate, in the stock
+PropellerVelocity units. Default: 390.0. Approximate references: 392 at 10%
+throttle, 784 at 20%, and 1176 at 30%. Below the threshold, the mod does not
+change position or velocity and clears stabilization state. Set 0 to disable
+this gate.
+
 AltitudeStabilizationVerticalDeceleration controls how quickly positive
 vertical speed is reduced after releasing Space at full throttle. Default:
 100.0 cm/s^2. Physics-driven positive speed growth is rejected while braking,
