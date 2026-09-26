@@ -137,7 +137,7 @@ Assert-RejectedSpecification -Name 'unknown-field-rejected' -Value $unknownField
 $wrongSoftType = Copy-SpecificationObject $sourceSpecification
 $wrongSoftType.patch.softObjectReferences[0].property = 'Name'
 Assert-RejectedSpecification -Name 'soft-object-type-rejected' -Value $wrongSoftType `
-    -Pattern 'not a SoftObjectPropertyData'
+    -Pattern 'not a\s+SoftObjectPropertyData'
 
 $wrongMapContent = Copy-SpecificationObject $sourceSpecification
 $wrongMapContent.patch.clearNameObjectMaps[0].expectedEntries[0].objectName += '_Mismatch'
@@ -149,7 +149,7 @@ $duplicateTarget.patch.softObjectReferences = @(
     $duplicateTarget.patch.softObjectReferences[0],
     (Copy-SpecificationObject $duplicateTarget.patch.softObjectReferences[0]))
 Assert-RejectedSpecification -Name 'duplicate-target-rejected' -Value $duplicateTarget `
-    -Pattern 'targeted more than once'
+    -Pattern 'targeted\s+more than\s+once'
 
 $conflictingRecipe = Copy-SpecificationObject $sourceSpecification
 $firstMaterial = Copy-SpecificationObject $conflictingRecipe.expected.components[0].material
@@ -159,7 +159,7 @@ $conflictingRecipe.patch.componentReplacements = @(
         to = Copy-SpecificationObject $firstMaterial
     })
 Assert-RejectedSpecification -Name 'recipe-conflict-rejected' -Value $conflictingRecipe `
-    -Pattern 'mutually exclusive'
+    -Pattern 'mutually\s+exclusive'
 
 [pscustomobject][ordered]@{
     status = 'passed'
