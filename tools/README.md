@@ -149,6 +149,7 @@ container and evidence, without installation.
 | Publish or validate the Inspector executable | `Publish-VoyageAssetInspectorBinary.ps1`, `Get-VoyageAssetInspectorBinary.ps1` | Stable single-file EXE; validated source/dependency/binary identity |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Publish or reuse canonical retoc | `Publish-RetocBinary.ps1` | Stable `.tools/bin/retoc.exe` plus hash/provenance manifest |
+| Extract the reviewed stock `AssetRegistry.bin` | `Extract-VoyageAssetRegistry.ps1` | Fingerprint-gated registry, hashes and retained ignored logs |
 | Get mappings for the installed game | `Get-VoyageMappings.ps1` | Path to the matching reviewed and validated tracked `.usmap` |
 | Generate mappings after a confirmed game update | `New-VoyageMappings.ps1` | One-shot running-game readiness wait, jmap dump, manifest, and validation |
 | Publish or reuse canonical jmap | `Publish-JmapBinary.ps1` | Stable `.tools/bin/jmap_dumper.exe` plus hash/provenance manifest |
@@ -806,6 +807,34 @@ it does not install anything or replace the canonical binary. Synthetic retoc
 unit tests separately exercise broken unselected containers, duplicates,
 missing paths, empty selection, version mismatch, and unchanged directory
 priority. Passing these checks is not gameplay validation.
+
+### 4. Extract the reviewed stock AssetRegistry
+
+Use the dedicated extractor only when a consumer needs the complete stock
+`Voyage/AssetRegistry.bin` from the encrypted stock PAK:
+
+```powershell
+.\tools\Extract-VoyageAssetRegistry.ps1 `
+  -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage' `
+  -ExpectedExecutableSha256 '<fresh fingerprint SHA-256>' `
+  -UnrealPak 'K:\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealPak.exe' `
+  -OutputRoot '.\artifacts\asset-registry\fresh-run'
+```
+
+The current implementation deliberately supports only the reviewed Steam build
+`25191271` executable fingerprint. It fails closed if the executable hash, key
+callback RVA or instruction layout, encrypted PAK footer/index layout, decrypted
+index SHA-1, registry match count, or extracted file shape differs. A successful
+result returns `registryPath`, registry length and SHA-256, stock PAK SHA-256,
+and the list/extraction log paths.
+
+The output directory contains the extracted game registry, diagnostic logs and
+a generated `CryptoKeys.json` needed by `UnrealPak`. Keep the complete output
+below ignored `artifacts/`. Never commit or package the key or logs, and never
+commit the raw extracted registry or promote it as a source input. A consumer
+may separately rebuild and package a modified registry only under its own
+fingerprint, provenance and readback gates. A new game fingerprint requires a
+separately reviewed extractor update; do not weaken the existing gates.
 
 ## Specialized tools
 
