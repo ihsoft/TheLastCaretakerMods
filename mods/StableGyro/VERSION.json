@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "current": {
-    "modVersion": "v2",
+    "modVersion": "v1",
     "testedGame": {
       "gameVersion": null,
       "steamBuildId": "25191271",
