@@ -2,10 +2,10 @@
 
 ## Proven runtime contracts
 
-- The weapon is constructed through the game's module/fabricator path by
-  replacing the Cyclone leaf Blueprint and item-data packages. This stock
-  virtual package identity is required even though all other owned packages use
-  `/Game/Mods/Railgun/...`.
+- The weapon uses the game's module/fabricator path. Its actor, UI and runtime
+  packages remain under `/Game/Mods/Railgun/...`; primary Item and Skill data
+  assets use mod-unique names inside the current game's confirmed AssetManager
+  scan roots. The release must not override stock Cyclone packages.
 - The built shell is a `VoyageModuleActor` with tagged model components,
   placement collision, dynamic collision and an electric socket linked to its
   module component.
@@ -36,20 +36,114 @@
 - Dismantling after exit is supported and must not leave the coordinator with a
   stale actor reference.
 
-## Compatibility limits
+## Primary assets and research
 
-- Native mirrors and reconstructed Blueprint contracts are bound to the game
-  fingerprint enforced by `Build-Railgun.ps1`. A changed fingerprint requires
-  revalidation before cooking or compatibility claims.
-- Generated packages use tagged properties. Unversioned native-child output is
-  rejected because partial mirrors do not define a complete shipping ABI.
-- The mod is currently single-player validated. Save persistence and multiplayer
-  behavior are not established.
+- The actor is `/Game/Mods/Railgun/Module/BP_Module_Railgun`; the coordinator
+  discovers that exact owned class. Its `VoyageModuleComponent.ItemAsset` points
+  to `/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01`. The gun item
+  is cloned from the current stock module donor, receives the owned icon,
+  actor reference and temporary one-Alloy-Frame recipe, and has donor production
+  metadata removed.
+- One Tier-19 `Railgun` skill owns exactly two item references: the independent
+  gun and the authored ammunition. The skill identity is
+  `/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun`; its dedicated research icon
+  is under `/Game/Mods/Railgun`.
+- A complete current-game AssetRegistry with Railgun's primary entries is
+  packaged. This is an accepted interim registry override, not a composable
+  solution for multiple mods replacing the same registry.
+- On Steam build `25191271`, the stock `DefaultGame.ini` scans `Skill` below
+  `/Game/Data/Assets/Skill` and `Item` below `/Game/Data/Assets`. Registry
+  membership alone is insufficient for discovery outside those roots.
+- User validation of `build-20260926-083231` confirmed discovery, research
+  unlocking both recipes, and independent gun construction, firing and
+  dismantling. Pre-research recipe absence was also tested.
+- `EVoyageSkillUnlockMethod::Never` hid the skill and left its recipes unavailable
+  in the tested pre-research save while the assets remained registered and
+  packaged. Revoking existing unlocks and persistence under `Never` were not
+  tested. The hiding experiment is no longer enabled.
 
-## Reasonable design hypotheses
+## Authored ammunition contract
 
+The stable identity remains
+`/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod`, despite the historical suffix.
+The current item is generated from scratch as one `VoyageItemAmmo` export; it
+is not a full Sniper Rod clone or a stock Rod package override. Sniper Rod is
+still the fingerprint-matched donor for package serialization and stock drop
+configuration.
+
+The tested output contains exactly 16 top-level serialized properties:
+`Caliber`, `Icon`, `Category`, `CategoryAsset`, `Quality`, `Weight`, `CraftTime`,
+`CraftElectricityCost`, `CraftAmount`, `CraftFilter`, `Components`,
+`DropVariations`, `DroppedActor`, `MaxDropCount`, `Name`, `Description`.
+This is the smallest tested baseline, not proof that every remaining property
+is indispensable.
+
+| Setting | Current owned value |
+| --- | --- |
+| Name | Railgun Kinetic Rounds |
+| Description | Armor-piercing kinetic rounds. No explosives, just mass and velocity. |
+| Caliber / native tooltip | `45.0` / `45mm` |
+| Quality | Common |
+| Weight | `3.9` per round; six-round cassette displays `23.4 kg` |
+| Craft amount / time | `6` rounds / `6` seconds |
+| Craft electricity cost / filter | `5` native units / `3` |
+| Recipe | Iron `2`, Copper `2`, Plastic `1` |
+| MaxDropCount | `50`; the tested batch yields one box of six rounds |
+
+The primary icon is mod-owned. Drop configuration uses the stock ammo box and
+`BP_DynamicMeshActor`. `WeaponData`, all projectile subexports, bullet/case
+fields, stock SFX/VFX, damage-type references, `SecondaryIcon` and `ScalePerItem`
+are absent. Imports are limited to the native item class/CDO, ammo category,
+recipe materials and owned icon. These omissions are validated for fabrication
+and pickup, not for firing this item through a stock sniper rifle.
+
+After cook, the shared patcher matches this one item's package serialization
+to the exact stock Sniper Rod donor: unversioned property stream and matching
+header/resolved custom versions (14 entries on this fingerprint). Tagged
+output had registered and displayed but failed to produce a usable pickup.
+The successful rewrite changed several metadata fields together; it does not
+isolate one causal bit. See the shared
+[serialization contract](../../docs/voyage-cooked-asset-toolchain.md#package-serialization-is-a-separate-compatibility-contract).
+
+General consumer findings and limitations, including output grouping and
+native caliber defaults, live in
+[item fabrication and pickup](../../docs/voyage-item-fabrication-and-pickup.md).
+The independent scan-to-vault unlock mechanism is documented in
+[scanning and recipe unlocks](../../docs/voyage-scanning-and-recipe-unlocks.md).
+
+## Current game-validated checkpoint
+
+`build-20260927-051706` is the working, non-final baseline for the 16-property
+ammo item. User gameplay confirmation covers fabrication and pickup, including
+one box containing six rounds. The earlier gun/research validation remains
+separate; this ammo reduction is not a new test of every weapon interaction.
+
+- Steam build: `25191271`; parser profile: `UE5_8`.
+- Executable SHA-256:
+  `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
+- Release evidence: `artifacts/railgun/build-20260927-051706/release-manifest.json`.
+- Installation evidence:
+  `artifacts/installations/Railgun/20260927-051947-build-20260927-051706-5ec70a9e/install-manifest.json`.
+- These ignored manifests identify the tested dirty-source artifact; they are
+  evidence and rollback pointers, never required source inputs for a rebuild.
+
+## Compatibility limits and deferred work
+
+- Native mirrors, scan roots and reconstructed contracts are fingerprint-bound.
+  A changed game fingerprint requires revalidation before cooking or making
+  compatibility claims.
+- Generated packages use tagged properties for partial mirrors. The ammo item
+  is the sole bounded post-cook conversion exception; it is reopened before
+  packaging. Do not convert unrelated native-child assets by analogy.
+- The mod is single-player validated. Save/reload, multiplayer, and distinct
+  cable or operator-entry scenarios remain unvalidated.
 - Ammunition instances in the GLB can later represent remaining rounds, but no
-  ammunition inventory contract is implemented yet.
-- Visual projectile effects, muzzle effects and richer audio can be added without
-  changing hit resolution, provided the validated direct-attack path remains the
-  authority.
+  ammunition inventory consumption contract is implemented yet. Successful
+  ammo fabrication does not establish that firing consumes these items.
+- A shared registry mod with hidden, typed placeholders and separate consumer
+  overrides is deferred until the Railgun foundation is complete. The `Never`
+  experiment does not validate cross-mod overriding, slot allocation or load
+  precedence; do not implement that architecture as part of this checkpoint.
+- Visual projectile effects, muzzle effects and richer audio can be added
+  without changing hit resolution, provided the validated direct-attack path
+  remains the authority.

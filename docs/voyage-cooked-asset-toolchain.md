@@ -191,6 +191,50 @@ all were binary-equal. The changed-save canary for
 `Duration = 1`. These results validate the tested layouts and workflow, not
 arbitrary structural edits to every asset.
 
+## Package serialization is a separate compatibility contract
+
+Matching export classes and decoded property values does not establish runtime
+equivalence. Package flags, property-stream encoding, object/legacy versions
+and resolved custom versions form a separate contract with the game reader.
+Successful registration, UI display or parser reopen alone does not prove
+that a gameplay consumer can use the reconstructed package.
+
+The bounded gameplay evidence is an authored, single-export `VoyageItemAmmo`
+on Steam build `25191271`, executable SHA-256
+`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`:
+the tagged candidate registered and displayed but did not produce a usable
+fabricated pickup. After donor-matched reserialization, the user confirmed
+fabrication and pickup. The successful package used the stock Sniper Rod's
+unversioned property stream and package contract, including the resolved
+14-entry custom-version container (`FFortniteMainBranchObjectVersion = 225`).
+The original evidence is release `build-20260927-005653`; the current reduced,
+game-validated successor is recorded in
+[Railgun architecture](../mods/Railgun/ARCHITECTURE.md). Fabrication and pickup
+consumer boundaries are covered in
+[item fabrication and pickup](voyage-item-fabrication-and-pickup.md).
+
+This establishes the importance of the serialization contract for that tested
+asset. It does **not** isolate one flag or custom version as the sole cause,
+prove that all tagged Voyage packages fail, or authorize bulk conversion of
+other assets. The operation changes several metadata fields together; exact
+entry counts and values must come from the matching donor and reviewed
+mappings, not become universal hard-coded constants.
+
+Do not flip `IsUnversioned` / `PKG_UnversionedProperties` in a header or exported
+JSON and assume the payload has been converted. Use a parsed rewrite that
+encodes the property stream consistently with the selected schema and version
+contract. The general `match-package-serialization` operation was introduced
+in `2042b0e`; its supported donor/input/output and verification contract is
+owned by the [patcher documentation](../tools/VoyageAssetPatcher/README.md).
+
+For this workflow, require a fingerprint-matched exact donor and reviewed
+mappings, preserve the target identity and intended object graph, rewrite to
+a separate output, then reopen and compare the serialization metadata and
+intended semantics. Container verification and a real-game test of the actual
+consumer remain mandatory higher gates. Reopen verifies reader/writer
+consistency, not gameplay compatibility; do not silently fall back to a
+header-only edit when conversion fails.
+
 ## Known boundaries
 
 - Source audit of installed Unreal 5.8.2 (CL 56702186, compatible CL

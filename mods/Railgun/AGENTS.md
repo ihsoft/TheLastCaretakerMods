@@ -24,8 +24,12 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
 - The generated station uses the common Voyage vehicle entry/exit path, a
   stationary nonphysical root, owned camera/input/HUD, tagged properties and an
   explicit interaction provider. Preserve those contracts when changing logic.
-- Construction intentionally overrides the stock Cyclone leaf package required
-  by the game's fabricator. Product-owned assets use `/Game/Mods/Railgun/...`.
+- The gun actor, UI and demand-loaded graphics use product-owned
+  `/Game/Mods/Railgun/...` identities. Primary assets must additionally live
+  below the current game's confirmed AssetManager scan roots: the gun item
+  below `/Game/Data/Assets` and the research skill below
+  `/Game/Data/Assets/Skill`. Keep their names mod-unique and never ship a stock
+  Cyclone package override.
 - The released container is exactly `Railgun_P` plus its autoload sidecar and
   optional user settings. Editor mirrors and generator binaries are never
   shipped.

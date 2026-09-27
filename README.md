@@ -64,6 +64,15 @@ inputs are still fingerprint-gated and must be reviewed after an update.
 - `dist/` — optional generated release output; it may not exist in a clean
   checkout.
 
+## Shared game research
+
+- [Item fabrication and pickup](docs/voyage-item-fabrication-and-pickup.md) —
+  separate registration, serialization and drop contracts; tested ammo
+  dependencies, output grouping and numeric caliber defaults.
+- [Scanning and recipe unlocks](docs/voyage-scanning-and-recipe-unlocks.md) —
+  the stock Replica Scanner completion path, item flags and vault grants;
+  fingerprint-bound static findings and runtime validation limits.
+
 ## Current focus
 
 `DonkLiftKeyboardControl` implements persistent, smoothed keyboard throttle and
