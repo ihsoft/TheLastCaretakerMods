@@ -1,20 +1,31 @@
-// HAND-RECONSTRUCTED GAME API MIRROR: The Last Caretaker Steam build 23962331
-// (Unreal Engine 5.7.4; VoyageSteam-Win64-Shipping.exe SHA-256
-// 6A9AE86E5CE5D7D1B6555F579091AAB1E0E67FF7A96276FA2570052F99102E8D).
-// Revalidate with ../../../../tools/Get-VoyageBuildFingerprint.ps1 and current
-// mappings after a game update. Editor-only: never package this definition.
+// HAND-RECONSTRUCTED GAME API MIRROR: Steam 25191271 / UE5.8 parser target;
+// executable SHA-256 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+// Method: reviewed Items mapping plus native UHT AddItem/CanAddItem records
+// (AddItem params at 0x14991ABA0) and the shipping AddItem implementation.
+// Revalidate on fingerprint change. Editor-only: never package this definition.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/SceneComponent.h"
+#include "VoyageFabricatorComponent.h"
 #include "VoyageBaseInventoryComponent.generated.h"
 
-// Signature-only class identity used by InteractiveInterface. Current
-// mappings prove SceneComponent as the native parent and 35 own properties.
-// No instance of this incomplete mirror is created or serialized by Railgun.
+// Read-only Items field revalidated against the Steam 25191271 mapping.
+// The game owns this component; no mirror instance is created or serialized.
 UCLASS(BlueprintType, ClassGroup = (Voyage))
 class VOYAGE_API UVoyageBaseInventoryComponent : public USceneComponent
 {
     GENERATED_BODY()
+public:
+    UPROPERTY(BlueprintReadOnly) TMap<int32, FVoyageItemSerialize> Items;
+
+    // Editor signatures only. Cooked calls dispatch to the game's functions;
+    // neither this stub implementation nor a mirror instance is shipped.
+    UFUNCTION(BlueprintCallable, Category="RailgunProbe")
+    int32 AddItem(UVoyageItem* NewItem, const FVoyageItemData& InItemData,
+        bool bAllowStacking = true, bool bNotifyChanged = true) { return 0; }
+
+    UFUNCTION(BlueprintPure, Category="RailgunProbe")
+    bool CanAddItem(UVoyageItem* NewItem) const { return false; }
 };

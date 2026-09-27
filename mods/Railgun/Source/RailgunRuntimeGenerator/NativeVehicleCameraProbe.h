@@ -10,7 +10,7 @@ inline const FName AllowField = GET_MEMBER_NAME_CHECKED(AVoyageVehiclePawn, bAll
 inline const FName ModeField = GET_MEMBER_NAME_CHECKED(AVoyageVehiclePawn, bFirstPersonCamera);
 inline const FName ModeText(TEXT("NativeFirstPersonModeText"));
 inline const FName RequestedText(TEXT("NativeRequestedFovText"));
-inline const FVector2D PanelSize(730.0f, 290.0f);
+inline const FVector2D PanelSize(1100.0f, 380.0f);
 inline constexpr TCHAR Refused[] = TEXT("HC24 CAMERA STOP: missing camera/flag/FOV prerequisite. Entry blocked.");
 inline constexpr TCHAR ModeYes[] = TEXT("Station first-person flag: YES (verify viewpoint visually)");
 inline constexpr TCHAR ModeNo[] = TEXT("Station first-person flag: NO (game changed requested mode)");

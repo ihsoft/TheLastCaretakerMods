@@ -12,7 +12,7 @@ inline const FName CollisionBefore(TEXT("StationCollisionBefore"));
 inline const FName RotationBefore(TEXT("StationRotationBefore"));
 inline const FName EntryLocal(TEXT("StationEntryLocal"));
 inline const FName AnchorStart(TEXT("StationAnchorStart"));
-inline constexpr TCHAR ClassPath[] = TEXT("/Game/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New.BP_Module_WindTurbine_Medium_New_C");
+inline constexpr TCHAR ClassPath[] = TEXT("/Game/Mods/Railgun/Module/BP_Module_Railgun.BP_Module_Railgun_C");
 inline constexpr TCHAR RootName[] = TEXT("ModuleMountCollision");
 inline constexpr TCHAR Key[] = TEXT("F8");
 inline constexpr TCHAR Limit[] = TEXT("20.0");

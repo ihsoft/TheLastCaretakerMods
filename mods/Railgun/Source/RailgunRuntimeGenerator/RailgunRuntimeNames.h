@@ -15,8 +15,6 @@ inline constexpr TCHAR NativeHudYes[] = TEXT("HC18 HUD CALLBACK: YES | x5 | F8 E
 inline constexpr TCHAR NativeHudNo[] = TEXT("HC18 HUD CALLBACK: NO | x5 | F8 EXIT");
 inline constexpr TCHAR Package[] = TEXT("/Game/Mods/Railgun/Runtime/BP_RailgunCoordinator");
 inline constexpr TCHAR Asset[] = TEXT("BP_RailgunCoordinator");
-inline constexpr TCHAR HudPackage[] = TEXT("/Game/Mods/Railgun/Runtime/WBP_RailgunDiagnostics");
-inline constexpr TCHAR HudAsset[] = TEXT("WBP_RailgunDiagnostics");
 inline const FName HudInstance(TEXT("DiagnosticHUD"));
 inline const FName HudTree(TEXT("WidgetTree"));
 inline const FName HudCanvas(TEXT("DiagnosticCanvas"));

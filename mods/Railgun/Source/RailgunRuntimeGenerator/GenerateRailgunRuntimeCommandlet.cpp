@@ -22,6 +22,10 @@
 #include "Sound/SoundWave.h"
 #include "AssetImportTask.h"
 #include "AssetToolsModule.h"
+#include "AssetRegistry/AssetRegistryHelpers.h"
+#include "AssetRegistry/AssetRegistryState.h"
+#include "AssetRegistry/IAssetRegistry.h"
+#include "PluginBlueprintLibrary.h"
 #include "Factories/SoundFactory.h"
 #include "Factories/TextureFactory.h"
 #include "K2Node_CreateDelegate.h"
@@ -29,7 +33,14 @@
 #include "K2Node_MacroInstance.h"
 #include "VoyageDynamicPlayerInputWidget.h"
 #include "VoyageModuleComponent.h"
+#include "VoyageModuleActor.h"
 #include "VoyageBaseDataAsset.h"
+#include "VoyageItem.h"
+#include "VoyageSkill.h"
+#include "VoyageFabricatorComponent.h"
+#include "VoyageBaseInventoryComponent.h"
+#include "VoyageDynamicMeshActor.h"
+#include "InteractiveDetectorPointerComponent.h"
 #include "VoyageActorWidgetInterface.h"
 #include "VoyageVehiclePawn.h"
 #include "InteractiveObjectComponent.h"
@@ -84,6 +95,8 @@
 #include "K2Node_VariableSet.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetArrayLibrary.h"
+#include "Kismet/BlueprintMapLibrary.h"
+#include "Kismet/BlueprintSetLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetStringLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -91,8 +104,10 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/PackageName.h"
+#include "Misc/FileHelper.h"
 #include "HAL/FileManager.h"
 #include "UObject/SavePackage.h"
+#include "UObject/UnrealType.h"
 
 IMPLEMENT_MODULE(FDefaultModuleImpl, RailgunRuntimeGenerator)
 namespace P = BlueprintGraphNames::Pins;
@@ -136,6 +151,13 @@ public:
         checkf(Fn->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintPure),
             TEXT("Function is not Blueprint-callable: %s"), *Function.ToString());
         auto* Out = NewObject<UK2Node_CallFunction>(Graph); Out->SetFromFunction(Fn);
+        return Node(Out);
+    }
+    UK2Node_CallArrayFunction* ArrayCall(FName Function)
+    {
+        auto* Fn = UKismetArrayLibrary::StaticClass()->FindFunctionByName(Function);
+        checkf(Fn, TEXT("Missing reflected array function %s"), *Function.ToString());
+        auto* Out = NewObject<UK2Node_CallArrayFunction>(Graph); Out->SetFromFunction(Fn);
         return Node(Out);
     }
     void Exec(UEdGraphNode* In)
@@ -244,6 +266,26 @@ void AddVariable(UBlueprint* BP, FName Name, FName Category, UObject* Type = nul
     FEdGraphPinType PinType; PinType.PinCategory = Category; PinType.PinSubCategoryObject = Type;
     if (Category == UEdGraphSchema_K2::PC_Real) PinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
     check(FBlueprintEditorUtils::AddMemberVariable(BP, Name, PinType));
+}
+
+void AddArrayVariable(UBlueprint* BP, FName Name, FName Category, UObject* Type)
+{
+    FEdGraphPinType PinType;
+    PinType.PinCategory = Category;
+    PinType.PinSubCategoryObject = Type;
+    PinType.ContainerType = EPinContainerType::Array;
+    check(FBlueprintEditorUtils::AddMemberVariable(BP, Name, PinType));
+}
+
+void SetSingleObjectArrayDefault(UObject* Object, FName PropertyName, UObject* Value)
+{
+    auto* Property = FindFProperty<FArrayProperty>(Object->GetClass(), PropertyName);
+    check(Property);
+    auto* Inner = CastFieldChecked<FObjectPropertyBase>(Property->Inner);
+    FScriptArrayHelper Values(Property, Property->ContainerPtrToValuePtr<void>(Object));
+    Values.EmptyValues();
+    const int32 Index = Values.AddValue();
+    Inner->SetObjectPropertyValue(Values.GetRawPtr(Index), Value);
 }
 
 void AddText(UWidgetBlueprint* BP, UVerticalBox* Rows, FName Name, const TCHAR* Text, int Row)
@@ -525,6 +567,7 @@ namespace
 #include "ContextEntryProbe.h"
 #include "RailgunShot.h"
 #include "DedicatedStationProbe.h"
+#include "RailgunAmmo.h"
 #include "ContextStationCoordinator.h"
 }
 
@@ -535,12 +578,272 @@ UGenerateRailgunRuntimeCommandlet::UGenerateRailgunRuntimeCommandlet()
 
 int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
 {
+    if (FParse::Param(*Params, TEXT("PatchStockRegistry")))
+    {
+        constexpr int32 ExpectedRegistryVersion = 24;
+        constexpr int32 RegistryVersionOffset = 16;
+        constexpr int32 RegistryFilterOffset = 20;
+        FString StockFile;
+        FString OutputFile;
+        if (!FParse::Value(*Params, TEXT("StockRegistry="), StockFile) ||
+            !FParse::Value(*Params, TEXT("OutputRegistry="), OutputFile) ||
+            !FPaths::FileExists(StockFile) || StockFile == OutputFile)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PatchStockRegistry requires distinct StockRegistry and OutputRegistry paths"));
+            return 1;
+        }
+        TArray<uint8> StockBytes;
+        if (!FFileHelper::LoadFileToArray(StockBytes, *StockFile) ||
+            StockBytes.Num() < RegistryFilterOffset + static_cast<int32>(sizeof(int32)))
+        {
+            UE_LOG(LogTemp, Error, TEXT("Cannot read complete stock registry header"));
+            return 1;
+        }
+        int32 StockVersion = -1;
+        int32 StockFilter = -1;
+        FMemory::Memcpy(&StockVersion, StockBytes.GetData() + RegistryVersionOffset, sizeof(int32));
+        FMemory::Memcpy(&StockFilter, StockBytes.GetData() + RegistryFilterOffset, sizeof(int32));
+        if (StockVersion != ExpectedRegistryVersion || StockFilter != 1)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Unreviewed stock registry header version=%d filter=%d"), StockVersion, StockFilter);
+            return 1;
+        }
+        FAssetRegistryState Registry;
+        {
+            TUniquePtr<FArchive> Input(IFileManager::Get().CreateFileReader(*StockFile));
+            if (!Input || !Registry.Load(*Input) || Input->IsError())
+            {
+                UE_LOG(LogTemp, Error, TEXT("Cannot load complete stock AssetRegistry.bin"));
+                return 1;
+            }
+        }
+        FAssetRegistrySerializationOptions Options(UE::AssetRegistry::ESerializationTarget::ForDevelopment);
+        const FString NoopFile = OutputFile + TEXT(".noop");
+        {
+            TUniquePtr<FArchive> Noop(IFileManager::Get().CreateFileWriter(*NoopFile));
+            if (!Noop)
+            {
+                UE_LOG(LogTemp, Error, TEXT("Cannot create stock registry no-op output"));
+                return 1;
+            }
+            Noop->SetFilterEditorOnly(true);
+            if (!Registry.Save(*Noop, Options) || Noop->IsError())
+            {
+                UE_LOG(LogTemp, Error, TEXT("Stock registry no-op serialization failed"));
+                return 1;
+            }
+        }
+        TArray<uint8> NoopBytes;
+        if (!FFileHelper::LoadFileToArray(NoopBytes, *NoopFile) ||
+            NoopBytes.Num() < RegistryFilterOffset + static_cast<int32>(sizeof(int32)))
+        {
+            UE_LOG(LogTemp, Error, TEXT("Cannot read no-op registry header"));
+            return 1;
+        }
+        int32 NoopVersion = -1;
+        int32 NoopFilter = -1;
+        FMemory::Memcpy(&NoopVersion, NoopBytes.GetData() + RegistryVersionOffset, sizeof(int32));
+        FMemory::Memcpy(&NoopFilter, NoopBytes.GetData() + RegistryFilterOffset, sizeof(int32));
+        if (NoopVersion != StockVersion || NoopFilter != StockFilter)
+        {
+            UE_LOG(LogTemp, Error, TEXT("No-op registry header differs: version=%d filter=%d"), NoopVersion, NoopFilter);
+            return 1;
+        }
+        FAssetRegistryState NoopRegistry;
+        if (!FAssetRegistryState::LoadFromDisk(*NoopFile, FAssetRegistryLoadOptions(), NoopRegistry) ||
+            NoopRegistry.GetNumAssets() != Registry.GetNumAssets())
+        {
+            UE_LOG(LogTemp, Error, TEXT("No-op registry cannot be reopened or asset count differs"));
+            return 1;
+        }
+        TArray<FString> DumpFields { TEXT("All"), TEXT("Tag") };
+        TArray<FString> StockDump;
+        TArray<FString> NoopDump;
+        Registry.Dump(DumpFields, StockDump, 0);
+        NoopRegistry.Dump(DumpFields, NoopDump, 0);
+        if (StockDump != NoopDump)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Stock registry no-op semantic dump differs: originalPages=%d outputPages=%d"),
+                StockDump.Num(), NoopDump.Num());
+            return 1;
+        }
+        UE_LOG(LogTemp, Display, TEXT("STOCK REGISTRY NO-OP SEMANTIC DUMP MATCH originalBytes=%d outputBytes=%d assets=%d"),
+            StockBytes.Num(), NoopBytes.Num(), Registry.GetNumAssets());
+        const int32 OriginalCount = Registry.GetNumAssets();
+        const FAssetData* Stock = Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockAmmoPath));
+        const FAssetData* Existing = Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath));
+        const FAssetData* StockGun = Registry.GetAssetByObjectPath(
+            FSoftObjectPath(RailgunAmmo::StockGunItemPath));
+        const FAssetData* ExistingGun = Registry.GetAssetByObjectPath(
+            FSoftObjectPath(RailgunAmmo::GunItemObjectPath));
+        const FAssetData* StockSkill = Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockSkillPath));
+        const FAssetData* ExistingSkill = Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath));
+        if (!Stock || Existing || !StockGun || ExistingGun || !StockSkill || ExistingSkill ||
+            OriginalCount < 1000 ||
+            StockSkill->AssetClassPath.GetAssetName() != FName(TEXT("VoyageSkill")))
+        {
+            UE_LOG(LogTemp, Error, TEXT("Stock registry control missing, test asset already present, or registry incomplete: assets=%d"), OriginalCount);
+            return 1;
+        }
+        const FName ClonePackage(RailgunAmmo::FullClonePackage);
+        const FName CloneAsset(RailgunAmmo::FullCloneAsset);
+        FAssetData* Clone = new FAssetData(*Stock);
+        Clone->PackageName = ClonePackage;
+        Clone->PackagePath = FName(RailgunAmmo::FullClonePackagePath);
+        Clone->AssetName = CloneAsset;
+        FAssetDataTagMap CloneTags = Clone->TagsAndValues.CopyMap();
+        CloneTags.Add(FPrimaryAssetId::PrimaryAssetNameTag, CloneAsset.ToString());
+        Clone->SetTagsAndAssetBundles(MoveTemp(CloneTags));
+        const FPrimaryAssetId StockId = Stock->GetPrimaryAssetId();
+        const FPrimaryAssetId CloneId = Clone->GetPrimaryAssetId();
+        const FPrimaryAssetId ExpectedCloneId(RailgunAmmo::PrimaryAssetTypeName, CloneAsset);
+        if (!StockId.IsValid() || CloneId != ExpectedCloneId)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Clone primary ID mismatch: stock=%s clone=%s expected=%s"),
+                *StockId.ToString(), *CloneId.ToString(), *ExpectedCloneId.ToString());
+            delete Clone;
+            return 1;
+        }
+        Registry.AddAssetData(Clone);
+        if (const FAssetPackageData* StockPackage = Registry.GetAssetPackageData(Stock->PackageName))
+        {
+            *Registry.CreateOrGetAssetPackageData(ClonePackage) = *StockPackage;
+        }
+        const FName GunPackage(RailgunAmmo::GunItemPackage);
+        const FName GunAsset(RailgunAmmo::GunItemAsset);
+        FAssetData* GunClone = new FAssetData(*StockGun);
+        GunClone->PackageName = GunPackage;
+        GunClone->PackagePath = FName(RailgunAmmo::GunItemPackagePath);
+        GunClone->AssetName = GunAsset;
+        FAssetDataTagMap GunTags = GunClone->TagsAndValues.CopyMap();
+        GunTags.Add(FPrimaryAssetId::PrimaryAssetNameTag, GunAsset.ToString());
+        GunClone->SetTagsAndAssetBundles(MoveTemp(GunTags));
+        const FPrimaryAssetId StockGunId = StockGun->GetPrimaryAssetId();
+        const FPrimaryAssetId ExpectedGunId(RailgunAmmo::PrimaryAssetTypeName, GunAsset);
+        if (!StockGunId.IsValid() || GunClone->GetPrimaryAssetId() != ExpectedGunId)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Gun primary ID mismatch: stock=%s clone=%s expected=%s"),
+                *StockGunId.ToString(), *GunClone->GetPrimaryAssetId().ToString(),
+                *ExpectedGunId.ToString());
+            delete GunClone;
+            return 1;
+        }
+        Registry.AddAssetData(GunClone);
+        if (const FAssetPackageData* StockGunPackage =
+            Registry.GetAssetPackageData(StockGun->PackageName))
+        {
+            *Registry.CreateOrGetAssetPackageData(GunPackage) = *StockGunPackage;
+        }
+        const FName SkillPackage(RailgunAmmo::SkillPackage);
+        const FName SkillAsset(RailgunAmmo::SkillAsset);
+        FAssetData* SkillClone = new FAssetData(*StockSkill);
+        SkillClone->PackageName = SkillPackage;
+        SkillClone->PackagePath = FName(RailgunAmmo::SkillPackagePath);
+        SkillClone->AssetName = SkillAsset;
+        FAssetDataTagMap SkillTags = SkillClone->TagsAndValues.CopyMap();
+        SkillTags.Add(FPrimaryAssetId::PrimaryAssetNameTag, SkillAsset.ToString());
+        SkillClone->SetTagsAndAssetBundles(MoveTemp(SkillTags));
+        const FPrimaryAssetId StockSkillId = StockSkill->GetPrimaryAssetId();
+        const FPrimaryAssetId ExpectedSkillId(StockSkillId.PrimaryAssetType, SkillAsset);
+        if (!StockSkillId.IsValid() || SkillClone->GetPrimaryAssetId() != ExpectedSkillId)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Skill primary ID mismatch: stock=%s clone=%s expected=%s"),
+                *StockSkillId.ToString(), *SkillClone->GetPrimaryAssetId().ToString(), *ExpectedSkillId.ToString());
+            delete SkillClone;
+            return 1;
+        }
+        Registry.AddAssetData(SkillClone);
+        if (const FAssetPackageData* StockSkillPackage = Registry.GetAssetPackageData(StockSkill->PackageName))
+        {
+            *Registry.CreateOrGetAssetPackageData(SkillPackage) = *StockSkillPackage;
+        }
+        if (Registry.GetNumAssets() != OriginalCount + 3 ||
+            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockAmmoPath)) ||
+            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath)) ||
+            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockGunItemPath)) ||
+            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::GunItemObjectPath)) ||
+            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockSkillPath)) ||
+            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath)))
+        {
+            UE_LOG(LogTemp, Error,
+                TEXT("Stock registry gun/ammo/skill clone invariant failed before serialization"));
+            return 1;
+        }
+        {
+            TUniquePtr<FArchive> Output(IFileManager::Get().CreateFileWriter(*OutputFile));
+            if (!Output)
+            {
+                UE_LOG(LogTemp, Error, TEXT("Cannot create patched complete AssetRegistry.bin"));
+                return 1;
+            }
+            Output->SetFilterEditorOnly(true);
+            if (!Registry.Save(*Output, Options) || Output->IsError())
+            {
+                UE_LOG(LogTemp, Error, TEXT("Cannot serialize patched complete AssetRegistry.bin"));
+                return 1;
+            }
+        }
+        TArray<uint8> PatchedBytes;
+        int32 PatchedVersion = -1;
+        int32 PatchedFilter = -1;
+        if (!FFileHelper::LoadFileToArray(PatchedBytes, *OutputFile) ||
+            PatchedBytes.Num() < RegistryFilterOffset + static_cast<int32>(sizeof(int32)))
+        {
+            UE_LOG(LogTemp, Error, TEXT("Cannot read patched registry header"));
+            return 1;
+        }
+        FMemory::Memcpy(&PatchedVersion, PatchedBytes.GetData() + RegistryVersionOffset, sizeof(int32));
+        FMemory::Memcpy(&PatchedFilter, PatchedBytes.GetData() + RegistryFilterOffset, sizeof(int32));
+        if (PatchedVersion != StockVersion || PatchedFilter != StockFilter)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Patched registry header differs: version=%d filter=%d"),
+                PatchedVersion, PatchedFilter);
+            return 1;
+        }
+        FAssetRegistryState Reopened;
+        if (!FAssetRegistryState::LoadFromDisk(*OutputFile, FAssetRegistryLoadOptions(), Reopened) ||
+            Reopened.GetNumAssets() != OriginalCount + 3 ||
+            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockAmmoPath)) ||
+            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath)) ||
+            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockGunItemPath)) ||
+            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::GunItemObjectPath)) ||
+            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockSkillPath)) ||
+            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath)))
+        {
+            UE_LOG(LogTemp, Error,
+                TEXT("Patched registry reopen/count/gun/ammo/skill verification failed"));
+            return 1;
+        }
+        const FAssetData* ReopenedSkill = Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath));
+        const FAssetData* ReopenedItem = Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath));
+        const FAssetData* ReopenedGun = Reopened.GetAssetByObjectPath(
+            FSoftObjectPath(RailgunAmmo::GunItemObjectPath));
+        if (ReopenedSkill->GetPrimaryAssetId() != ExpectedSkillId ||
+            ReopenedSkill->AssetClassPath != StockSkill->AssetClassPath ||
+            ReopenedItem->GetPrimaryAssetId() != ExpectedCloneId ||
+            ReopenedItem->AssetClassPath != Stock->AssetClassPath ||
+            ReopenedGun->GetPrimaryAssetId() != ExpectedGunId ||
+            ReopenedGun->AssetClassPath != StockGun->AssetClassPath)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Patched registry primary IDs or native classes changed on reopening"));
+            return 1;
+        }
+        UE_LOG(LogTemp, Display,
+            TEXT("STOCK REGISTRY PATCH VERIFIED original=%d patched=%d gun=%s ammo=%s skill=%s skillId=%s"),
+            OriginalCount, Reopened.GetNumAssets(), RailgunAmmo::GunItemObjectPath,
+            RailgunAmmo::FullClonePath, RailgunAmmo::SkillObjectPath,
+            *ExpectedSkillId.ToString());
+        return 0;
+    }
     if (FParse::Param(*Params, DedicatedStationNames::VerifySwitch))
     {
-        TArray<const TCHAR*> VerifyPackages {N::Package, N::HudPackage, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
+        TArray<const TCHAR*> VerifyPackages {N::Package, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
             RailgunInputNames::LookYaw, RailgunInputNames::LookPitch, RailgunInputNames::Exit, RailgunInputNames::Zoom, RailgunInputNames::Fire, Shot::Package,
             ShotAudio::Package, ZoomTest::MaskPackage, EnergyHud::ChargingPackage, EnergyHud::OfflinePackage, EnergyHud::ReadyPackage,
-            RailgunInputNames::Keyboard, RailgunInputNames::Context};
+            RailgunInputNames::Keyboard, RailgunInputNames::Context,
+            RailgunAmmo::AmmoIconPackage, RailgunAmmo::GunIconPackage,
+            RailgunAmmo::SkillIconPackage, RailgunAmmo::FullClonePackage,
+            RailgunAmmo::SkillPackage};
         for (const TCHAR* Package : VerifyPackages)
         {
             FString Relative(Package); check(Relative.RemoveFromStart(DedicatedStationNames::GamePrefix));
@@ -554,6 +857,17 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     }
     const bool Dedicated = FParse::Param(*Params, DedicatedStationNames::DedicatedSwitch);
     checkf(Dedicated, TEXT("HC24 runtime emission is rejected; use DedicatedStation only"));
+    FString StockRegistryFile;
+    checkf(FParse::Value(*Params, TEXT("StockRegistry="), StockRegistryFile) && FPaths::FileExists(StockRegistryFile),
+        TEXT("DedicatedStation requires the current game's stock registry"));
+    FAssetRegistryState StockResearchRegistry;
+    checkf(FAssetRegistryState::LoadFromDisk(*StockRegistryFile, FAssetRegistryLoadOptions(), StockResearchRegistry),
+        TEXT("Cannot read the current game's stock registry for skill identity"));
+    const FAssetData* StockResearchSkill = StockResearchRegistry.GetAssetByObjectPath(
+        FSoftObjectPath(RailgunAmmo::StockSkillPath));
+    checkf(StockResearchSkill && StockResearchSkill->GetPrimaryAssetId().IsValid(),
+        TEXT("Stock Sniper Rod skill is absent from the current game's primary asset registry"));
+    const FPrimaryAssetType SkillType = StockResearchSkill->GetPrimaryAssetId().PrimaryAssetType;
     FString ShotSoundFile;
     checkf(FParse::Value(*Params, ShotAudio::SourceArgument, ShotSoundFile) && FPaths::FileExists(ShotSoundFile),
         TEXT("Missing shot sound source: %s"), *ShotSoundFile);
@@ -574,66 +888,20 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
         EnergyHud::OfflinePackage, EnergyHud::OfflineAsset, false);
     EnergyHud::ReadyTexture = ImportRequiredTexture(EnergyHud::ReadySourceArgument,
         EnergyHud::ReadyPackage, EnergyHud::ReadyAsset, false);
+    UTexture2D* AmmoIcon = ImportRequiredTexture(RailgunAmmo::AmmoIconSourceArgument,
+        RailgunAmmo::AmmoIconPackage, RailgunAmmo::AmmoIconAsset, true);
+    ImportRequiredTexture(RailgunAmmo::GunIconSourceArgument,
+        RailgunAmmo::GunIconPackage, RailgunAmmo::GunIconAsset, true);
+    UTexture2D* SkillIcon = ImportRequiredTexture(RailgunAmmo::SkillIconSourceArgument,
+        RailgunAmmo::SkillIconPackage, RailgunAmmo::SkillIconAsset, true);
+    UVoyageSkill* RailgunSkill = CreateRailgunResearchSkill(SkillIcon, AmmoIcon, SkillType);
+    checkf(RailgunSkill->Type == SkillType && RailgunSkill->Items.Num() == 2 &&
+        RailgunSkill->Unlock.UnlockMethod == EVoyageSkillUnlockMethod::Tier &&
+        RailgunSkill->Unlock.Cost == RailgunAmmo::SkillResearchCost &&
+        RailgunSkill->Unlock.Requirement == RailgunAmmo::SkillTierRequirement,
+        TEXT("Generated Railgun research skill has the wrong unlock method, items, requirement, cost, or declared primary type"));
     Shot::Class=CreateRailgunShot();
     UClass* StationClass = CreateDedicatedStation();
-    UPackage* HudPackage = CreatePackage(N::HudPackage);
-    auto* Hud = CastChecked<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(UUserWidget::StaticClass(),
-        HudPackage, FName(N::HudAsset), BPTYPE_Normal, UWidgetBlueprint::StaticClass(), UWidgetBlueprintGeneratedClass::StaticClass()));
-    if (!Hud->WidgetTree) Hud->WidgetTree = NewObject<UWidgetTree>(Hud, N::HudTree);
-    auto* Canvas = Hud->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), N::HudCanvas);
-    Hud->WidgetTree->RootWidget = Canvas;
-    auto* Border = Hud->WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), N::HudBorder);
-    Border->SetBrushColor(N::HudBackground); Border->SetPadding(FMargin(N::HudPadding));
-    Border->SetVisibility(ESlateVisibility::HitTestInvisible);
-    auto* Slot = Canvas->AddChildToCanvas(Border);
-    Slot->SetAnchors(FAnchors(N::HudAnchor.X, N::HudAnchor.Y)); Slot->SetAlignment(N::HudAnchor);
-    Slot->SetPosition(N::HudOffset); Slot->SetSize(NativeCameraNames::PanelSize);
-    auto* Rows = Hud->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), N::HudRows);
-    Border->SetContent(Rows);
-    AddText(Hud, Rows, N::Title, DedicatedStationNames::Title, 0);
-    AddText(Hud, Rows, N::Current, N::EmptyText, 2);
-    AddText(Hud, Rows, N::Control, N::EmptyText, 3);
-    AddText(Hud, Rows, N::Clock, N::EmptyText, 4);
-    AddText(Hud, Rows, N::Drift, N::EmptyText, 5);
-    AddText(Hud, Rows, N::Physics, N::EmptyText, 6);
-    AddText(Hud, Rows, NativeCameraNames::RequestedText, N::EmptyText, 7);
-    AddText(Hud, Rows, NativeCameraNames::ModeText, N::EmptyText, 8);
-    auto* Scope = Hud->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), H::ScopePanel);
-    Scope->bIsVariable = true; Scope->SetVisibility(ESlateVisibility::Collapsed);
-    auto* ScopeSlot = Canvas->AddChildToCanvas(Scope);
-    ScopeSlot->SetAnchors(FAnchors(O::ReticleCenter.X, O::ReticleCenter.Y));
-    ScopeSlot->SetAlignment(FVector2D(O::ReticleCenter.X, 0.0f)); ScopeSlot->SetSize(H::TargetSize); ScopeSlot->SetPosition(H::TargetOffset);
-    AddText(Hud, Scope, Range::TargetName, N::EmptyText, 0);
-    AddText(Hud, Scope, Range::TargetRange, N::EmptyText, 1);
-    AddText(Hud, Scope, H::ScopeFooter, H::Footer, 2);
-    for (UWidget* Child : Scope->GetAllChildren())
-    {
-        auto* Label = CastChecked<UTextBlock>(Child); auto Font = Label->GetFont(); Font.Size = H::TargetFontSize; Label->SetFont(Font);
-        Label->SetColorAndOpacity(FSlateColor(FLinearColor::White)); Label->SetJustification(ETextJustify::Center);
-        Label->SetShadowColorAndOpacity(FLinearColor::Black); Label->SetShadowOffset(H::ShadowOffset);
-    }
-    auto* Notice = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), N::FreezeStatus);
-    Notice->bIsVariable = true; Notice->SetText(FText::FromString(DedicatedStationNames::Ready)); Notice->SetVisibility(ESlateVisibility::HitTestInvisible);
-    auto NoticeFont = Notice->GetFont(); NoticeFont.Size = H::NoticeFontSize; Notice->SetFont(NoticeFont); Notice->SetJustification(ETextJustify::Center);
-    Notice->SetShadowColorAndOpacity(FLinearColor::Black); Notice->SetShadowOffset(H::ShadowOffset);
-    auto* NoticeSlot = Canvas->AddChildToCanvas(Notice); NoticeSlot->SetAnchors(FAnchors(H::NoticeAnchor.X, H::NoticeAnchor.Y));
-    NoticeSlot->SetAlignment(H::NoticeAnchor); NoticeSlot->SetSize(H::NoticeSize); NoticeSlot->SetPosition(H::NoticeOffset);
-    auto* Reticle = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), O::Reticle);
-    Reticle->bIsVariable = true; Reticle->SetText(FText::FromString(O::ReticleText));
-    auto ReticleFont = Reticle->GetFont(); ReticleFont.Size = O::ReticleFontSize; Reticle->SetFont(ReticleFont);
-    Reticle->SetJustification(ETextJustify::Center); Reticle->SetVisibility(ESlateVisibility::Collapsed);
-    auto* ReticleSlot = Canvas->AddChildToCanvas(Reticle);
-    ReticleSlot->SetAnchors(FAnchors(O::ReticleCenter.X, O::ReticleCenter.Y));
-    ReticleSlot->SetAlignment(O::ReticleCenter); ReticleSlot->SetSize(O::ReticleSize);
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud);
-    FKismetEditorUtilities::CompileBlueprint(Hud);
-    if (Hud->Status == BS_Error) return 1;
-    auto* HudCDO = CastChecked<UUserWidget>(Hud->GeneratedClass->GetDefaultObject());
-    HudCDO->SetIsFocusable(false); HudCDO->SetVisibility(ESlateVisibility::HitTestInvisible);
-    const FString HudFilename = FPackageName::LongPackageNameToFilename(N::HudPackage, FPackageName::GetAssetPackageExtension());
-    IFileManager::Get().MakeDirectory(*FPaths::GetPath(HudFilename), true);
-    FSavePackageArgs HudSave; HudSave.TopLevelFlags = RF_Public | RF_Standalone; HudSave.SaveFlags = SAVE_NoError;
-    if (!UPackage::SavePackage(HudPackage, Hud, *HudFilename, HudSave)) return 1;
     UPackage* Package = CreatePackage(N::Package);
     UBlueprint* BP = FKismetEditorUtilities::CreateBlueprint(APawn::StaticClass(), Package, FName(N::Asset),
         BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
@@ -661,7 +929,6 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     AddVariable(BP, Aim::Yaw, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, Aim::Pitch, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, O::CharacterHidden, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, N::HudInstance, UEdGraphSchema_K2::PC_Object, Hud->GeneratedClass);
     AddVariable(BP, N::Age, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, N::OriginalPawn, UEdGraphSchema_K2::PC_Object, ACharacter::StaticClass());
     AddVariable(BP, S::Held, UEdGraphSchema_K2::PC_Boolean);
@@ -683,14 +950,14 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     for (FName Flag : {V::Occupied, V::Attempted, V::ExitSent, V::PreparedFlag})
         AddVariable(BP, Flag, UEdGraphSchema_K2::PC_Boolean);
     FKismetEditorUtilities::CompileBlueprint(BP);
-    BuildContextCoordinator(BP, Hud->GeneratedClass, StationClass);
+    BuildContextCoordinator(BP, StationClass);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
     if (BP->Status == BS_Error) return 1;
     auto* CDO = CastChecked<AActor>(BP->GeneratedClass->GetDefaultObject());
     CDO->PrimaryActorTick.bCanEverTick = true; CDO->PrimaryActorTick.bStartWithTickEnabled = true;
     CDO->PrimaryActorTick.TickGroup = TG_PostPhysics;
-    CDO->PrimaryActorTick.TickInterval = CE::ScanInterval; CDO->SetActorEnableCollision(false);
+    CDO->PrimaryActorTick.TickInterval = CE::CoordinatorTickInterval; CDO->SetActorEnableCollision(false);
     auto* PawnCDO = CastChecked<APawn>(CDO);
     PawnCDO->AutoPossessPlayer = EAutoReceiveInput::Disabled;
     PawnCDO->AutoPossessAI = EAutoPossessAI::Disabled;

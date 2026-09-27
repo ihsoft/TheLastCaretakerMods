@@ -25,6 +25,10 @@ struct VOYAGE_API FVoyageAttack
     UPROPERTY(BlueprintReadWrite) TSubclassOf<UVoyageDamageType> DamageTypeClass;
     UPROPERTY(BlueprintReadWrite) float Damage = 0;
     UPROPERTY(BlueprintReadWrite) float DamageVariance = 0;
+    UPROPERTY(BlueprintReadWrite) float Velocity = 0;
+    UPROPERTY(BlueprintReadWrite) float MaxRange = 0;
+    UPROPERTY(BlueprintReadWrite) float InnerRadius = 0;
+    UPROPERTY(BlueprintReadWrite) float OuterRadius = 0;
     UPROPERTY(BlueprintReadWrite) float ImpulseOverride = 0;
     UPROPERTY(BlueprintReadWrite) ECombatAttackType AttackType = ECombatAttackType::Unknown;
     UPROPERTY(BlueprintReadWrite) FHitResult Hit;

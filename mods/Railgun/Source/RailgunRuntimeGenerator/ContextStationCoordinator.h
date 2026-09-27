@@ -1,4 +1,5 @@
 #pragma once
+#include "AssetLoadingGraphNames.h"
 // Engine-only autoload manager. Exact shell class; no shell event or mutation.
 UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values)
 {
@@ -87,33 +88,20 @@ void ContextPrepareStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     ContextSet(G, Station, StationClass, CE::Ready, nullptr, N::True);
 }
 
-void BuildContextCoordinator(UBlueprint* BP, UClass* HudClass, UClass* StationClass)
+void BuildContextCoordinator(UBlueprint* BP, UClass* StationClass)
 {
     AddVariable(BP, CE::ModelEntry, UEdGraphSchema_K2::PC_Object, UBoxComponent::StaticClass());
     AddVariable(BP, CE::ShellClass, UEdGraphSchema_K2::PC_Class, AActor::StaticClass());
     AddVariable(BP, CE::EntryAction, UEdGraphSchema_K2::PC_Object, UInputAction::StaticClass());
     AddVariable(BP, CE::FoundPair, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, CE::ProviderSeen, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, CE::CallbackSeen, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, CE::Spawned, UEdGraphSchema_K2::PC_Real);
     FKismetEditorUtilities::CompileBlueprint(BP);
     UEdGraph* Graph = BP->UbergraphPages[0]; const auto Defaults = Graph->Nodes; for (UEdGraphNode* Node : Defaults) Node->DestroyNode();
-    FGraph G(Graph, HudClass);
+    FGraph G(Graph, nullptr);
     auto* Tick = NewObject<UK2Node_Event>(Graph); Tick->EventReference.SetExternalMember(BlueprintGraphNames::Events::ActorReceiveTick, AActor::StaticClass());
     Tick->bOverrideFunction = true; G.Node(Tick); G.Tail = G.Pin(Tick, P::Then);
     G.Branch(ObserveCall(G, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, HasAuthority), OpticalSelf(G)));
     auto* Player = G.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, GetPlayerController));
     G.Branch(G.Valid(G.Pin(Player, P::ReturnValue))); G.Write(S::Controller, G.Pin(Player, P::ReturnValue));
-    auto* HasHud = G.Branch(G.Valid(G.Read(N::HudInstance))); auto* ReadyHud = G.Tail;
-    G.Tail = G.Pin(HasHud, P::Else);
-    auto* Create = G.Call(UWidgetBlueprintLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidgetBlueprintLibrary, Create));
-    G.Pin(Create, E::WidgetType)->DefaultObject = HudClass; G.Link(G.Read(S::Controller), G.Pin(Create, E::OwningPlayer)); G.Exec(Create);
-    auto* HudCast = NewObject<UK2Node_DynamicCast>(Graph); HudCast->TargetType = HudClass; HudCast->SetPurity(false); G.Node(HudCast);
-    G.Link(G.Tail, G.Pin(HudCast, P::Execute)); G.Link(G.Pin(Create, P::ReturnValue), HudCast->GetCastSourcePin()); G.Tail = HudCast->GetValidCastPin();
-    G.Write(N::HudInstance, HudCast->GetCastResultPin());
-    // Keep legacy diagnostic sink private: never attach its panel/instructions
-    // to the viewport. Station selection and action hints have their own HUD.
-    G.Tail = ReadyHud;
     auto* ClassValid = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, IsValidClass));
     G.Link(G.Read(CE::ShellClass), G.Pin(ClassValid, P::Class));
     auto* Loaded = G.Branch(G.Pin(ClassValid, P::ReturnValue)); auto* LoadedTail = G.Tail; G.Tail = G.Pin(Loaded, P::Else);
@@ -127,7 +115,6 @@ void BuildContextCoordinator(UBlueprint* BP, UClass* HudClass, UClass* StationCl
     auto* ClassCast = NewObject<UK2Node_ClassDynamicCast>(Graph); ClassCast->TargetType = AActor::StaticClass(); ClassCast->SetPurity(false); G.Node(ClassCast);
     G.Link(G.Tail, G.Pin(ClassCast, P::Execute)); G.Link(G.Pin(Load, P::ReturnValue), ClassCast->GetCastSourcePin()); G.Tail = ClassCast->GetValidCastPin();
     G.Write(CE::ShellClass, ClassCast->GetCastResultPin()); StationMerge(G, {G.Tail, LoadedTail});
-    G.Text(N::FreezeStatus, CE::PreparedStatus); G.Write(CE::Spawned, nullptr, N::Zero);
     auto* Shells = G.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, GetAllActorsOfClass));
     G.Link(G.Read(CE::ShellClass), G.Pin(Shells, E::ActorClass)); G.Exec(Shells);
     auto* Outer = ContextLoop(G, G.Pin(Shells, CE::OutActors)); auto* Shell = G.Pin(Outer, CE::ArrayElement);
@@ -141,20 +128,8 @@ void BuildContextCoordinator(UBlueprint* BP, UClass* HudClass, UClass* StationCl
     [[maybe_unused]] constexpr auto OwnerSignature = static_cast<AActor* (AActor::*)() const>(&AActor::GetOwner);
     auto* Owner = ObserveCall(G, AActor::StaticClass(), ActorScanGraphNames::GetActorOwner, Candidate);
     G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), Owner, Shell)); G.Write(CE::FoundPair, nullptr, N::True);
-    auto* Cast = NewObject<UK2Node_DynamicCast>(Graph); Cast->TargetType = StationClass; Cast->SetPurity(false); G.Node(Cast);
-    G.Link(G.Tail, G.Pin(Cast, P::Execute)); G.Link(Candidate, Cast->GetCastSourcePin()); G.Tail = Cast->GetValidCastPin();
-    auto* Station = Cast->GetCastResultPin();
-    // Sticky ANY aggregation; never label the last enumerated station as target.
-    G.Write(CE::ProviderSeen, G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR),
-        G.Read(CE::ProviderSeen), ReadNativeInputField(G, Station, StationClass, CE::ProviderSeen)));
-    G.Write(CE::CallbackSeen, G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR),
-        G.Read(CE::CallbackSeen), ReadNativeInputField(G, Station, StationClass, CE::CallbackSeen)));
-    G.Branch(ReadNativeInputField(G, Station, StationClass, CE::Ready));
-    auto* Increment = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble));
-    G.Link(G.Read(CE::Spawned), G.Pin(Increment, P::Binary::LeftOperand)); G.Default(Increment, P::Binary::RightOperand, CE::One); G.Write(CE::Spawned, G.Pin(Increment, P::ReturnValue));
     G.Tail = G.Pin(Inner, CE::Completed);
     G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool), G.Read(CE::FoundPair), N::False)); ContextPrepareStation(G, StationClass, Shell);
-    G.Tail = G.Pin(Outer, CE::Completed); G.Number(N::Clock, CE::CountLabel, G.Read(CE::Spawned));
-    G.BooleanText(N::Current, G.Read(CE::ProviderSeen), CE::ProviderYes, CE::ProviderNo);
-    G.BooleanText(N::Control, G.Read(CE::CallbackSeen), CE::CallbackYes, CE::CallbackNo);
+    G.Tail = G.Pin(Outer, CE::Completed);
+
 }

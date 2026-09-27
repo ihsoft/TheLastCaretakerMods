@@ -54,6 +54,7 @@ inline constexpr TCHAR ProviderNo[] = TEXT("Entry provider observed (ANY, sticky
 inline constexpr TCHAR CallbackYes[] = TEXT("Entry callback observed (ANY, sticky): YES");
 inline constexpr TCHAR CallbackNo[] = TEXT("Entry callback observed (ANY, sticky): NO");
 inline constexpr float ScanInterval = 1.0f;
+inline constexpr float CoordinatorTickInterval = 0.0f;
 // Runtime geometry is copied from the shell's manifest-authored entry reference.
 inline const FVector BoxExtent(1.0f, 1.0f, 1.0f);
 inline const FVector BoxOffset = FVector::ZeroVector;
