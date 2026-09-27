@@ -1276,7 +1276,10 @@ version-bound diagnostic transformations, including:
   control using an already imported widget class;
 - `patch-item-data-asset` applies one owner-supplied JSON contract to a reviewed
   Voyage item asset, asserting donor values before changing recipe, text and icon
-  imports and reopening the result.
+  imports and reopening the result;
+- `match-package-serialization` converts a parsed target to an exact
+  unversioned donor's package/header version contract while preserving and
+  reopening the target's own object graph.
 
 ```powershell
 .\tools\Invoke-VoyageAssetPatcher.ps1 `
@@ -1288,6 +1291,8 @@ version-bound diagnostic transformations, including:
 `patch-item-data-asset` additionally requires `-Specification <owned.json>`.
 The owning mod stores all item identities, expected donor values and mutations;
 the shared tool contains no product-specific item data.
+`match-package-serialization` additionally requires
+`-DonorAsset <exact-donor.uasset>`.
 
 The input and its companion files must come from the matching game build, and
 the output must be a different path. See

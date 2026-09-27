@@ -11,7 +11,8 @@ param(
         'break-cable-updater-super-index',
         'swap-hud-indicator-existing-control',
         'swap-diesel-socket-component-class',
-        'patch-item-data-asset')]
+        'patch-item-data-asset',
+        'match-package-serialization')]
     [string]$Operation,
 
     [Parameter(Mandatory = $true)]
@@ -23,6 +24,8 @@ param(
     [string]$Mappings,
 
     [string]$Specification,
+
+    [string]$DonorAsset,
 
     [ValidateSet('UE5_7', 'UE5_8')]
     [string]$EngineVersion = 'UE5_8',
@@ -102,6 +105,8 @@ else {
 $mappingsSha256 = (Get-FileHash -LiteralPath $mappingsPath -Algorithm SHA256).Hash
 $specificationPath = $null
 $specificationSha256 = $null
+$donorPath = $null
+$donorRecords = @()
 if ($Operation -ceq 'patch-item-data-asset') {
     if ([string]::IsNullOrWhiteSpace($Specification)) {
         throw 'patch-item-data-asset requires -Specification.'
@@ -114,6 +119,33 @@ if ($Operation -ceq 'patch-item-data-asset') {
 }
 elseif (-not [string]::IsNullOrWhiteSpace($Specification)) {
     throw '-Specification is valid only for patch-item-data-asset.'
+}
+if ($Operation -ceq 'match-package-serialization') {
+    if ([string]::IsNullOrWhiteSpace($DonorAsset)) {
+        throw 'match-package-serialization requires -DonorAsset.'
+    }
+    $donorPath = (Resolve-Path -LiteralPath $DonorAsset).Path
+    if ([IO.Path]::GetExtension($donorPath) -cne '.uasset') {
+        throw "DonorAsset must be an exact lowercase .uasset file: $donorPath"
+    }
+    $donorBase = Join-Path ([IO.Path]::GetDirectoryName($donorPath)) (
+        [IO.Path]::GetFileNameWithoutExtension($donorPath))
+    $donorRecords = @(
+        foreach ($extension in @('.uasset', '.uexp', '.ubulk', '.uptnl')) {
+            $candidate = $donorBase + $extension
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                $item = Get-Item -LiteralPath $candidate
+                [pscustomobject][ordered]@{
+                    path = $item.FullName
+                    size = $item.Length
+                    sha256 = (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash
+                }
+            }
+        }
+    )
+}
+elseif (-not [string]::IsNullOrWhiteSpace($DonorAsset)) {
+    throw '-DonorAsset is valid only for match-package-serialization.'
 }
 
 if ([string]::IsNullOrWhiteSpace($EvidenceRoot)) {
@@ -129,6 +161,7 @@ try {
     $ErrorActionPreference = 'Continue'
     $patcherArguments = @($Operation, $inputPath, $mappingsPath, $outputPath, $EngineVersion)
     if ($null -ne $specificationPath) { $patcherArguments += $specificationPath }
+    if ($null -ne $donorPath) { $patcherArguments += $donorPath }
     & $binary.Path @patcherArguments *> $logPath
     $patcherExitCode = $LASTEXITCODE
 }
@@ -175,6 +208,8 @@ $result = [pscustomobject][ordered]@{
     mappingsSha256 = $mappingsSha256
     specificationPath = $specificationPath
     specificationSha256 = $specificationSha256
+    donorPath = $donorPath
+    donorInputs = $donorRecords
     mappingManifestPath = if ($null -eq $mappingRecord) {
         $null
     }

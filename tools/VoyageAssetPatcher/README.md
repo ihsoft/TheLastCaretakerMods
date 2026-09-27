@@ -137,6 +137,15 @@ values. It adds replacement imports, writes only the requested properties, then
 reopens and verifies the complete result. A changed donor or game build must
 fail the preconditions and be revalidated by the owning mod.
 
+The `match-package-serialization` operation converts one parsed target package
+to the serialization metadata of an exact unversioned donor. It copies the
+legacy/object versions, licensee version, package GUID, package flags, package
+source and resolved custom-version container while preserving the target
+package identity, imports, exports, export classes and property names. The
+output is reopened and all of those postconditions are checked. This operation
+requires `-DonorAsset <exact-donor.uasset>`; it does not copy donor exports or
+payload values, and independent semantic/container/runtime gates still apply.
+
 The schema also supports three bounded item operations without becoming a
 general reflection editor:
 

@@ -1,6 +1,7 @@
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.PropertyTypes.Objects;
+using UAssetAPI.PropertyTypes.Structs;
 using UAssetAPI.UnrealTypes;
 using UAssetAPI.Unversioned;
 using System.Text.Json;
@@ -16,6 +17,7 @@ const string BreakCableUpdaterSuperIndex = "break-cable-updater-super-index";
 const string SwapHudIndicatorExistingControl = "swap-hud-indicator-existing-control";
 const string SwapDieselSocketComponentClass = "swap-diesel-socket-component-class";
 const string PatchItemDataAsset = "patch-item-data-asset";
+const string MatchPackageSerialization = "match-package-serialization";
 const string BottomWidgetName = "BP_DynamicPlayerInputHorizontalWidget_Bottom";
 const string FilterPropertyName = "bFilterByActionType";
 const string ForkliftCdoName = "Default__BP_Forklift_Possesable_C";
@@ -64,23 +66,26 @@ string[] DieselSocketTemplateNames =
 try
 {
 bool isItemPatch = args.Length > 0 && args[0] == PatchItemDataAsset;
-if ((!isItemPatch && args.Length != 4 && args.Length != 5) ||
-    (isItemPatch && args.Length != 6) ||
+bool isSerializationMatch = args.Length > 0 && args[0] == MatchPackageSerialization;
+if ((!isItemPatch && !isSerializationMatch && args.Length != 4 && args.Length != 5) ||
+    ((isItemPatch || isSerializationMatch) && args.Length != 6) ||
     args[0] is not (
         BreakBottomFilter or SwapHornToExit or SwapHudIndicatorSubclass or
         RoundtripUnchanged or ExportJson or SetCableUpdaterTickInterval or
         BreakCableUpdaterSuperIndex or SwapHudIndicatorExistingControl or
-        SwapDieselSocketComponentClass or PatchItemDataAsset))
+        SwapDieselSocketComponentClass or PatchItemDataAsset or
+        MatchPackageSerialization))
 {
     Console.Error.WriteLine(
         "Usage: VoyageAssetPatcher <operation> <input.uasset> <mappings.usmap> " +
-        "<output.uasset> [UE5_7|UE5_8] [item-patch.json]");
+        "<output.uasset> [UE5_7|UE5_8] [donor.uasset|item-patch.json]");
     Console.Error.WriteLine(
         $"Operations: {BreakBottomFilter}, {SwapHornToExit}, " +
         $"{SwapHudIndicatorSubclass}, {RoundtripUnchanged}, {ExportJson}, " +
         $"{SetCableUpdaterTickInterval}, {BreakCableUpdaterSuperIndex}, " +
         $"{SwapHudIndicatorExistingControl}, " +
-        $"{SwapDieselSocketComponentClass}, {PatchItemDataAsset}");
+        $"{SwapDieselSocketComponentClass}, {PatchItemDataAsset}, " +
+        $"{MatchPackageSerialization}");
     return 2;
 }
 
@@ -204,6 +209,18 @@ if (operation == PatchItemDataAsset)
     Console.WriteLine($"Output: {outputPath}");
     return 0;
 }
+if (operation == MatchPackageSerialization)
+{
+    string donorPath = Path.GetFullPath(args[5]);
+    if (!File.Exists(donorPath))
+        throw new FileNotFoundException("Serialization donor asset was not found.", donorPath);
+    WritePackageSerializationMatch(
+        asset, inputPath, donorPath, outputPath, mappings, engineVersion);
+    Console.WriteLine("Matched package serialization metadata to the donor.");
+    Console.WriteLine($"Donor: {donorPath}");
+    Console.WriteLine($"Output: {outputPath}");
+    return 0;
+}
 
 switch (operation)
 {
@@ -230,6 +247,135 @@ catch (Exception exception)
 {
     Console.Error.WriteLine($"{exception.GetType().FullName}: {exception.Message}");
     return 1;
+}
+
+void WritePackageSerializationMatch(
+    UAsset target,
+    string sourceUasset,
+    string donorUasset,
+    string destinationUasset,
+    Usmap targetMappings,
+    EngineVersion targetEngineVersion)
+{
+    UAsset donor = new(donorUasset, targetEngineVersion, targetMappings);
+    if (target.IsUnversioned || target.HasUnversionedProperties)
+        throw new InvalidDataException(
+            "Serialization target is already unversioned; refusing an ambiguous conversion.");
+    if (!donor.IsUnversioned || !donor.HasUnversionedProperties)
+        throw new InvalidDataException(
+            "Serialization donor must use unversioned properties.");
+    if (donor.CustomVersionContainer is null || donor.CustomVersionContainer.Count == 0)
+        throw new InvalidDataException(
+            "Serialization donor has no resolved custom-version metadata.");
+
+    string sourceFolderName = target.FolderName.Value;
+    int sourceExportCount = target.Exports.Count;
+    int sourceImportCount = target.Imports.Count;
+    string[] sourceExportNames = target.Exports
+        .Select(export => export.ObjectName.ToString())
+        .ToArray();
+    string[][] sourcePropertyNames = target.Exports
+        .Select(export => export is NormalExport normal
+            ? normal.Data.Select(property => property.Name.ToString()).ToArray()
+            : [])
+        .ToArray();
+
+    target.LegacyFileVersion = donor.LegacyFileVersion;
+    target.IsUnversioned = donor.IsUnversioned;
+    target.ObjectVersion = donor.ObjectVersion;
+    target.ObjectVersionUE5 = donor.ObjectVersionUE5;
+    target.FileVersionLicenseeUE = donor.FileVersionLicenseeUE;
+    target.PackageGuid = donor.PackageGuid;
+    target.PackageFlags = donor.PackageFlags;
+    target.PackageSource = donor.PackageSource;
+    target.CustomVersionContainer = donor.CustomVersionContainer
+        .Select(version => (CustomVersion)version.Clone())
+        .ToList();
+
+    foreach (NormalExport normal in target.Exports.OfType<NormalExport>())
+        foreach (PropertyData property in normal.Data)
+            NormalizeEnumValuesForUnversioned(target, property);
+
+    target.SetSerializationEngineVersion(targetEngineVersion);
+    target.Write(destinationUasset);
+
+    UAsset written = new(destinationUasset, targetEngineVersion, targetMappings);
+    UAsset original = new(sourceUasset, targetEngineVersion, targetMappings);
+    if (!written.IsUnversioned || !written.HasUnversionedProperties ||
+        written.LegacyFileVersion != donor.LegacyFileVersion ||
+        written.ObjectVersion != donor.ObjectVersion ||
+        written.ObjectVersionUE5 != donor.ObjectVersionUE5 ||
+        written.FileVersionLicenseeUE != donor.FileVersionLicenseeUE ||
+        written.PackageGuid != donor.PackageGuid ||
+        written.PackageFlags != donor.PackageFlags ||
+        written.PackageSource != donor.PackageSource)
+        throw new InvalidDataException(
+            "Written package serialization metadata does not match the donor.");
+    if (written.FolderName.Value != sourceFolderName ||
+        written.Exports.Count != sourceExportCount ||
+        written.Imports.Count != sourceImportCount)
+        throw new InvalidDataException(
+            "Serialization conversion changed package identity or object counts.");
+
+    string[] writtenExportNames = written.Exports
+        .Select(export => export.ObjectName.ToString())
+        .ToArray();
+    if (!sourceExportNames.SequenceEqual(writtenExportNames, StringComparer.Ordinal))
+        throw new InvalidDataException(
+            "Serialization conversion changed export identities.");
+    for (int index = 0; index < written.Exports.Count; index++)
+    {
+        if (written.Exports[index] is NormalExport writtenNormal &&
+            !sourcePropertyNames[index].SequenceEqual(
+                writtenNormal.Data.Select(property => property.Name.ToString()),
+                StringComparer.Ordinal))
+            throw new InvalidDataException(
+                $"Serialization conversion changed properties of export '{writtenExportNames[index]}'.");
+        if (written.Exports[index].ClassIndex.Index != original.Exports[index].ClassIndex.Index)
+            throw new InvalidDataException(
+                $"Serialization conversion changed the class of export '{writtenExportNames[index]}'.");
+    }
+
+    string[] donorVersions = donor.CustomVersionContainer
+        .Select(version => $"{version.Key:B}:{version.Version}")
+        .ToArray();
+    string[] writtenVersions = written.CustomVersionContainer
+        .Select(version => $"{version.Key:B}:{version.Version}")
+        .ToArray();
+    if (!donorVersions.SequenceEqual(writtenVersions, StringComparer.Ordinal))
+        throw new InvalidDataException(
+            "Written custom-version container does not match the donor.");
+}
+
+void NormalizeEnumValuesForUnversioned(UAsset target, PropertyData property)
+{
+    if (property is EnumPropertyData enumProperty &&
+        enumProperty.EnumType?.Value?.Value is string enumType &&
+        enumProperty.Value?.Value?.Value is string enumValue &&
+        enumValue.StartsWith(enumType + "::", StringComparison.Ordinal))
+    {
+        enumProperty.Value = FName.DefineDummy(
+            target, enumValue.Substring(enumType.Length + 2));
+    }
+
+    switch (property)
+    {
+        case StructPropertyData structure:
+            foreach (PropertyData child in structure.Value)
+                NormalizeEnumValuesForUnversioned(target, child);
+            break;
+        case ArrayPropertyData array:
+            foreach (PropertyData child in array.Value)
+                NormalizeEnumValuesForUnversioned(target, child);
+            break;
+        case MapPropertyData map:
+            foreach (KeyValuePair<PropertyData, PropertyData> entry in map.Value)
+            {
+                NormalizeEnumValuesForUnversioned(target, entry.Key);
+                NormalizeEnumValuesForUnversioned(target, entry.Value);
+            }
+            break;
+    }
 }
 
 void BreakBottomActionFilter(UAsset target)
