@@ -164,6 +164,76 @@ function EmptyAmmoZeroComparisons($Statements) {
         }
     }
 }
+function ChargeTextColorAssignments($Statements) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject] -or
+            $statement.Token -cne 'EX_Context') {
+            continue
+        }
+        $targetLeaves = @(JsonStringLeaves $statement.ObjectExpression)
+        $callLeaves = @(JsonStringLeaves $statement.ContextExpression)
+        if (-not ($targetLeaves -ccontains 'RailgunChargeText') -or
+            -not ($callLeaves -ccontains
+                "Class'TextBlock:SetColorAndOpacity'")) {
+            continue
+        }
+        $parameters = @($statement.ContextExpression.Parameters)
+        Require ($parameters.Count -eq 1 -and
+            $parameters[0].Token -ceq 'EX_StructConst' -and
+            $parameters[0].Struct.ObjectName -ceq "Class'SlateColor'") `
+            'Charge text color call has an unexpected SlateColor shape.'
+        $linearColor = $parameters[0].Properties[0]
+        Require ($linearColor.Token -ceq 'EX_StructConst' -and
+            $linearColor.Struct.ObjectName -ceq "Class'LinearColor'") `
+            'Charge text tint does not contain a LinearColor.'
+        [pscustomobject]@{
+            StatementIndex = [int]$statement.StatementIndex
+            Values = @($linearColor.Properties | ForEach-Object {
+                [double]$_.Value
+            })
+        }
+    }
+}
+function ChargeRadialProgressColorAssignments($Statements) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject] -or
+            $statement.Token -cne 'EX_Context') {
+            continue
+        }
+        $targetLeaves = @(JsonStringLeaves $statement.ObjectExpression)
+        $callLeaves = @(JsonStringLeaves $statement.ContextExpression)
+        if (-not ($targetLeaves -ccontains 'RailgunChargeRadial') -or
+            -not ($callLeaves -ccontains
+                "Class'RadialSlider:SetSliderProgressColor'")) {
+            continue
+        }
+        $parameters = @($statement.ContextExpression.Parameters)
+        Require ($parameters.Count -eq 1 -and
+            $parameters[0].Token -ceq 'EX_StructConst' -and
+            $parameters[0].Struct.ObjectName -ceq "Class'LinearColor'") `
+            'Charge radial progress color call has an unexpected shape.'
+        [pscustomobject]@{
+            StatementIndex = [int]$statement.StatementIndex
+            Values = @($parameters[0].Properties | ForEach-Object {
+                [double]$_.Value
+            })
+        }
+    }
+}
+function InsufficientChargeComparisons($Statements) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject] -or
+            $statement.Token -cne 'EX_LetBool') {
+            continue
+        }
+        $expressionLeaves = @(JsonStringLeaves $statement.Expression)
+        if (($expressionLeaves -ccontains
+                "Class'KismetMathLibrary:Less_DoubleDouble'") -and
+            ($expressionLeaves -ccontains 'RailgunChargeAmount')) {
+            $statement
+        }
+    }
+}
 $shell = @(Read-Candidate '/Game/Mods/Railgun/Module/BP_Module_Railgun')
 $shellFunctions = @($shell | Where-Object { $_.Type -eq 'Function' })
 $expectedShellFunctions = @(
@@ -299,6 +369,60 @@ $emptyAmmoZeroComparisons = @(
 )
 Require ($emptyAmmoZeroComparisons.Count -eq 6) `
     'Every HUD empty-magazine tint must use an exact zero-count comparison.'
+$chargeTextColors = @(ChargeTextColorAssignments $hudUbergraph[0].ScriptBytecode)
+Require ($chargeTextColors.Count -eq 3) `
+    'HUD must set charge text colors for invalid, charging and ready paths.'
+$insufficientChargeTextColors = @($chargeTextColors | Where-Object {
+    $_.Values.Count -eq 4 -and $_.Values[0] -eq 1.0 -and
+    $_.Values[1] -eq 0.25 -and $_.Values[2] -eq 0.25 -and
+    $_.Values[3] -eq 0.3
+})
+Require ($insufficientChargeTextColors.Count -eq 1) `
+    'HUD must tint insufficient charge text subtle red.'
+$readyChargeTextColors = @($chargeTextColors | Where-Object {
+    $_.Values.Count -eq 4 -and $_.Values[0] -eq 1.0 -and
+    $_.Values[1] -eq 1.0 -and $_.Values[2] -eq 1.0 -and
+    $_.Values[3] -eq 1.0
+})
+Require ($readyChargeTextColors.Count -eq 2) `
+    'HUD must keep invalid and sufficient charge text opaque white.'
+$chargeRadialProgressColors = @(
+    ChargeRadialProgressColorAssignments $hudUbergraph[0].ScriptBytecode
+)
+Require ($chargeRadialProgressColors.Count -eq 3) `
+    'HUD must set charge ring colors for invalid, charging and ready paths.'
+$insufficientChargeRingColors = @($chargeRadialProgressColors | Where-Object {
+    $_.Values.Count -eq 4 -and $_.Values[0] -eq 1.0 -and
+    $_.Values[1] -eq 0.25 -and $_.Values[2] -eq 0.25 -and
+    $_.Values[3] -eq 0.3
+})
+Require ($insufficientChargeRingColors.Count -eq 1) `
+    'HUD must tint the insufficient charge ring subtle red.'
+$readyChargeRingColors = @($chargeRadialProgressColors | Where-Object {
+    $_.Values.Count -eq 4 -and $_.Values[0] -eq 1.0 -and
+    $_.Values[1] -eq 1.0 -and $_.Values[2] -eq 1.0 -and
+    $_.Values[3] -eq 1.0
+})
+Require ($readyChargeRingColors.Count -eq 2) `
+    'HUD must keep invalid and sufficient charge rings opaque white.'
+$insufficientChargeComparisons = @(
+    InsufficientChargeComparisons $hudUbergraph[0].ScriptBytecode
+)
+Require ($insufficientChargeComparisons.Count -eq 1) `
+    'Charge text tint must use one exact current-charge threshold comparison.'
+foreach ($requiredChargeTintGuard in @(
+    "Class'VoyageModuleComponent:HasSocketConnection'",
+    "Class'VoyageModuleComponent:HasPower'",
+    "Class'KismetMathLibrary:BooleanAND'"
+)) {
+    Require ($hudUbergraphStrings -ccontains $requiredChargeTintGuard) `
+        ('Charge tint capability guard missing: ' + $requiredChargeTintGuard)
+}
+Require (-not ($hudUbergraphStrings -ccontains
+    "Class'RadialSlider:SetSliderBarColor'")) `
+    'Insufficient-charge tint must not alter the radial gauge background.'
+Require (-not ($hudUbergraphStrings -ccontains 'SliderProgressColor')) `
+    'Ammo indicators must not inherit the dynamic charge ring color.'
 $ammoActivationThresholds = @(AmmoActivationThresholds $hudUbergraph[0])
 Require (@(Compare-Object -ReferenceObject @(5,4,3,2,1,0) `
     -DifferenceObject $ammoActivationThresholds -SyncWindow 0).Count -eq 0) `
@@ -776,5 +900,5 @@ $skillIcon = @(Read-Candidate '/Game/Mods/Railgun/Research/T_RailgunSkill')
 $skillTexture = @($skillIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunSkill' })
 Require ($skillTexture.Count -eq 1 -and $skillTexture[0].SizeX -eq 256 -and $skillTexture[0].SizeY -eq 256) 'Railgun skill icon must be 256x256.'
 $reportPath = Join-Path $output 'validation.json'
-[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped radial-color ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; material parameter presence and reviewed stock parent; complete Railgun item with Alloy Frame recipe, owned actor/icon and cleared production metadata; one complete VoyageItemAmmo export with the stock Rod item fields except its nested-export ProjectileTemplate; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; material parameter presence and reviewed stock parent; complete Railgun item with Alloy Frame recipe, owned actor/icon and cleared production metadata; one complete VoyageItemAmmo export with the stock Rod item fields except its nested-export ProjectileTemplate; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 [pscustomobject]@{status='passed';reportPath=$reportPath}

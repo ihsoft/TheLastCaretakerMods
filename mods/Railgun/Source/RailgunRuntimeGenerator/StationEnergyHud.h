@@ -46,6 +46,10 @@ inline constexpr float ChargeGaugeFontSize = 14.0f;
 inline const FLinearColor ChargeGaugeBarColor(1.0f, 1.0f, 1.0f, 0.2f);
 inline const FLinearColor ChargeGaugeProgressColor = FLinearColor::White;
 inline const FLinearColor EmptyAmmoTint(1.0f, 0.25f, 0.25f, 0.3f);
+inline constexpr TCHAR ReadyChargeTextColor[] =
+    TEXT("(SpecifiedColor=(R=1.000000,G=1.000000,B=1.000000,A=1.000000),ColorUseRule=UseColor_Specified)");
+inline constexpr TCHAR InsufficientChargeTextColor[] =
+    TEXT("(SpecifiedColor=(R=1.000000,G=0.250000,B=0.250000,A=0.300000),ColorUseRule=UseColor_Specified)");
 inline constexpr float AmmoIndicatorHeight = 30.0f;
 inline constexpr float AmmoIndicatorGap = 6.0f;
 inline constexpr float AmmoIndicatorTextGap = 5.0f;
@@ -82,6 +86,7 @@ inline const FName DivisorPin(TEXT("Divisor"));
 inline const FName RemainderPin(TEXT("Remainder"));
 inline const FName DoubleInputPin(TEXT("InDouble"));
 inline const FName RadialValuePin(TEXT("InValue"));
+inline const FName SliderProgressColorPin(TEXT("InValue"));
 inline const FName NumericValuePin(TEXT("Value"));
 inline const FName UseGroupingPin(TEXT("bUseGrouping"));
 inline const FName MinimumFractionalDigitsPin(TEXT("MinimumFractionalDigits"));
@@ -126,9 +131,6 @@ void UpdateStationAmmoHud(FGraph& G, UEdGraphPin* Station,
     UEdGraphPin* Count = ReadNativeInputField(G,
         Module->GetCastResultPin(), RailgunModuleClass,
         RailgunInventoryShared::LastVisualCount);
-    UEdGraphPin* ActiveColor = ReadNativeInputField(G,
-        G.Read(ChargeRadial), URadialSlider::StaticClass(),
-        GET_MEMBER_NAME_CHECKED(URadialSlider, SliderProgressColor));
     UEdGraphPin* FaintColor = ReadNativeInputField(G,
         G.Read(ChargeRadial), URadialSlider::StaticClass(),
         GET_MEMBER_NAME_CHECKED(URadialSlider, SliderBarColor));
@@ -149,7 +151,8 @@ void UpdateStationAmmoHud(FGraph& G, UEdGraphPin* Station,
             Count, *FString::FromInt(ActivationThreshold));
         auto* Tint = G.Call(UKismetMathLibrary::StaticClass(),
             GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectColor));
-        G.Link(ActiveColor, G.Pin(Tint, P::Select::WhenTrue));
+        G.Default(Tint, P::Select::WhenTrue,
+            *ChargeGaugeProgressColor.ToString());
         G.Link(InactiveColor, G.Pin(Tint, P::Select::WhenFalse));
         G.Link(Active, G.Pin(Tint, P::Select::Condition));
         auto* SetColor = G.Call(UImage::StaticClass(),
@@ -225,6 +228,63 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
     G.Link(G.Read(EnergyHud::ChargeRadial), G.Pin(SetRadialValue, P::FunctionTarget));
     G.Link(G.Pin(FractionAsFloat, P::ReturnValue), G.Pin(SetRadialValue, EnergyHud::RadialValuePin)); G.Exec(SetRadialValue);
     G.Write(EnergyHud::ChargeInitialized, nullptr, N::True);
+
+    auto SetChargeColors = [&](const TCHAR* TextColor,
+        const FLinearColor& ProgressColor)
+    {
+        auto* SetTextColor = G.Call(UTextBlock::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UTextBlock, SetColorAndOpacity));
+        G.Link(G.Read(EnergyHud::ChargeText),
+            G.Pin(SetTextColor, P::FunctionTarget));
+        G.Default(SetTextColor, EnergyHud::ColorAndOpacityPin, TextColor);
+        G.Exec(SetTextColor);
+        auto* SetProgressColor = G.Call(URadialSlider::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(URadialSlider,
+                SetSliderProgressColor));
+        G.Link(G.Read(EnergyHud::ChargeRadial),
+            G.Pin(SetProgressColor, P::FunctionTarget));
+        G.Default(SetProgressColor, EnergyHud::SliderProgressColorPin,
+            *ProgressColor.ToString());
+        G.Exec(SetProgressColor);
+    };
+    UEdGraphPin* InsufficientCharge = G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Less_DoubleDouble),
+        CurrentCharge, RequiredEnergyAmount(G, FullCharge));
+    UEdGraphPin* ChargeModule = ReadNativeInputField(
+        G, Station, StationClass, Charge::Module);
+    auto* ChargeModuleValid = G.Branch(G.Valid(ChargeModule));
+    UEdGraphPin* ValidChargeModuleTail = G.Tail;
+    G.Tail = G.Pin(ChargeModuleValid, P::Else);
+    SetChargeColors(EnergyHud::ReadyChargeTextColor,
+        EnergyHud::ChargeGaugeProgressColor);
+    UEdGraphPin* InvalidChargeModuleTail = G.Tail;
+    G.Tail = ValidChargeModuleTail;
+    UEdGraphPin* Connected = ObserveCall(G,
+        UVoyageModuleComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent,
+            HasSocketConnection), ChargeModule);
+    UEdGraphPin* Powered = ObserveCall(G,
+        UVoyageModuleComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, HasPower),
+        ChargeModule);
+    auto* CanCharge = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND));
+    G.Link(Connected, G.Pin(CanCharge, P::Binary::LeftOperand));
+    G.Link(Powered, G.Pin(CanCharge, P::Binary::RightOperand));
+    auto* ShouldTint = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND));
+    G.Link(InsufficientCharge,
+        G.Pin(ShouldTint, P::Binary::LeftOperand));
+    G.Link(G.Pin(CanCharge, P::ReturnValue),
+        G.Pin(ShouldTint, P::Binary::RightOperand));
+    auto* TintCharge = G.Branch(G.Pin(ShouldTint, P::ReturnValue));
+    SetChargeColors(EnergyHud::InsufficientChargeTextColor,
+        EnergyHud::EmptyAmmoTint);
+    UEdGraphPin* InsufficientChargeTail = G.Tail;
+    G.Tail = G.Pin(TintCharge, P::Else);
+    SetChargeColors(EnergyHud::ReadyChargeTextColor,
+        EnergyHud::ChargeGaugeProgressColor);
+    StationMerge(G, {InvalidChargeModuleTail, InsufficientChargeTail, G.Tail});
 
     auto* DisplayCharge = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
         G.Pin(InitialFraction, P::ReturnValue), FullCharge);

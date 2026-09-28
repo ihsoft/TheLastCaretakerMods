@@ -145,26 +145,33 @@ General evidence and restrictions live in the shared
 The wide-view HUD displays six persistent cartridge icons
 above the existing charge text. It reads the module's event-maintained cached
 count after one guarded initial synchronization; the HUD does not enumerate or
-bind the inventory. The rightmost N icons use the radial progress color and the
-remaining positions use its faint bar color, matching the physical magazine
+bind the inventory. The rightmost N icons use opaque white and the remaining
+positions use the radial's faint bar color, matching the physical magazine
 while empty slots remain visible. At zero rounds, all six positions use a
-subtle red tint instead of the ordinary faint color.
+subtle red tint instead of the ordinary faint color. Ammo colors do not inherit
+the dynamic charge-ring color.
 The icon row and charge text form one centered block, and the existing optics
 gate hides that whole block together with the charge radial. The source image,
 crop, six-slot order, colors, cached-count path and absence of HUD inventory
 polling are statically validated. Real-game validation confirms placement,
 right-to-left updates, the zero-count tint and optics hiding.
 
+The charge text and filled part of the radial ring use the same subtle red tint
+only while stored energy is below one shot and the module is connected and
+powered. Invalid, disconnected, unpowered and shot-ready states use opaque
+white; the radial background color is never changed by this warning.
+
 ## Current game-validated checkpoint
 
-`build-20260928-065746` is the current model-structure checkpoint. Its model
+`build-20260928-081233` is the current HUD-state and model-structure checkpoint.
+Its model
 passes the six distinct, disjoint and nonempty cassette-subtree contract with
 all 36 render descendants covered by default hiding and propagated runtime
 visibility, while the six holders remain outside those subtrees. User gameplay
-confirmation for this candidate covers the new model rendering and its ammo
-visibility behavior. The earlier validated inventory, persistence and ammo-HUD
-contracts remain the foundation; this candidate did not repeat every historical
-test.
+confirmation covers the new model rendering, ammo visibility behavior, isolated
+zero-ammo warning, and charge warning across offline, insufficient and ready
+states. The earlier validated inventory and persistence contracts remain the
+foundation; this candidate did not repeat every historical test.
 The earlier 16-property ammo baseline established fabrication and pickup of one
 box with six rounds; gun/research validation remains separate. This checkpoint
 is not a new test of every weapon interaction.
@@ -172,9 +179,9 @@ is not a new test of every weapon interaction.
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Release evidence: `artifacts/railgun/build-20260928-065746/release-manifest.json`.
+- Release evidence: `artifacts/railgun/build-20260928-081233/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20260928-070119-build-20260928-065746-29803e11/install-manifest.json`.
+  `artifacts/installations/Railgun/20260928-081630-build-20260928-081233-b7b4eaf3/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 
