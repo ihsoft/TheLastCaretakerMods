@@ -54,7 +54,7 @@ if ($mapping.engineVersion -ne '5.8' -or $mapping.executableSha256 -cne $fingerp
 $previewGlb = Join-Path $evidence 'preview-source.glb'
 $requestPath = Join-Path $evidence 'request.json'
 $request = [ordered]@{ operation = 'MaterialGlb'; output = $previewGlb; materials = @($Materials); materialMode = $MaterialMode;
-    embedSourceArtifacts = $false; fingerprintPath = $fingerprintPath; mappingPath = $mapping.mappingsPath; mappingManifestPath = $mapping.manifestPath }
+    sourceArtifactPolicy = 'metadata-only'; fingerprintPath = $fingerprintPath; mappingPath = $mapping.mappingsPath; mappingManifestPath = $mapping.manifestPath }
 [IO.File]::WriteAllText($requestPath, ($request | ConvertTo-Json -Depth 5))
 Copy-Item -LiteralPath $manifestFile -Destination (Join-Path $evidence 'tool-manifest.json')
 $exportLog = Join-Path $evidence 'export.log'

@@ -49,7 +49,7 @@ def verify(path):
         if pipeline.get('schema') != 'voyage.material-pipeline/1' or pipeline.get('requestedMode') not in ('PbrApproximation', 'BakeReconstructed'):
             raise ValueError('Invalid material-pipeline contract')
         source_artifact_policy = pipeline.get('sourceArtifactPolicy', 'embedded')
-        if source_artifact_policy not in ('embedded', 'omitted-for-preview'):
+        if source_artifact_policy not in ('none', 'metadata-only', 'embedded', 'omitted-for-preview'):
             raise ValueError('Invalid source-artifact policy')
         for artifact in pipeline['sourceArtifacts']:
             source = artifact['Source']
@@ -64,6 +64,9 @@ def verify(path):
                 if digest != artifact['Sha256'] or dimensions != (artifact['Width'], artifact['Height']):
                     raise ValueError('Source-artifact hash/dimensions mismatch')
                 artifact_images.add(index)
+            elif artifact['Disposition'] == 'metadata-only':
+                if index is not None:
+                    raise ValueError('Metadata-only source artifact unexpectedly embeds an image')
             elif index is not None or not artifact['Error']:
                 raise ValueError('Invalid failed source artifact')
         for generated in pipeline['generatedImages']:
@@ -75,8 +78,9 @@ def verify(path):
             if not isinstance(index, int) or not 0 <= index < len(images) or images[index][0] != operation['OutputSha256']:
                 raise ValueError('Bake-output provenance mismatch')
             known_sources = {record['Source'] for record in evidence['textures']}
-            inputs_present = all(source in artifact_by_source for source in operation['InputTextures']) if source_artifact_policy == 'embedded' \
-                else not artifact_by_source and all(source in known_sources for source in operation['InputTextures'])
+            inputs_present = all(source in artifact_by_source for source in operation['InputTextures']) \
+                if source_artifact_policy in ('embedded', 'metadata-only') else \
+                not artifact_by_source and all(source in known_sources for source in operation['InputTextures'])
             if operation['Fidelity'] != 'reconstructed' or not inputs_present:
                 raise ValueError('Invalid bake operation')
     for record in evidence['textures']:

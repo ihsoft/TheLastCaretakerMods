@@ -45,9 +45,10 @@ source-only image archive is intentionally absent.
 one, the caller must ask rather than silently choosing:
 
 - `PbrApproximation` embeds only supported active PBR bindings.
-- `BakeReconstructed` applies supported cooked-parameter recipes and embeds every
-  decodable referenced `Texture2D` as a source artifact. This is not Unreal
-  engine-executed baking because cooked packages do not retain the editor graph.
+- `BakeReconstructed` applies supported cooked-parameter recipes, embeds only
+  active/baked PBR outputs, and records every referenced source texture as
+  metadata without copying its source pixels. This is not Unreal engine-executed
+  baking because cooked packages do not retain the editor graph.
 
 Consume the catalog tool's returned `packageListPath`; do not discover its cache
 internals. `M_` and `MI_` are useful naming filters, not proof of export type.
@@ -93,10 +94,11 @@ hashes and dimensions are validated independently.
   green-inverted glTF/OpenGL variant is embedded, not a second raw copy. Color
   maps marked linear are encoded to sRGB for color slots; data maps are not
   gamma-encoded. A known zero emission strength omits the emission map entirely.
-- In `BakeReconstructed`, every decodable referenced Texture2D is embedded once
-  as a source artifact, even when it is not composited into an active PBR slot.
-  Known recipes may additionally produce baked variants; source inputs remain
-  separately addressable through the machine manifest.
+- In `BakeReconstructed`, known recipes consume their source textures in memory
+  and embed only the resulting active PBR variants. Every referenced Texture2D
+  remains separately addressable through `materialPipeline.sourceArtifacts` with
+  `Disposition: metadata-only`, its consumers and any available decoded hash/
+  dimensions. Source pixels are not copied into the GLB by default.
 - SharpGLTF constructs/writes/reads back glTF 2.0. One named, UV-mapped 1m sample
   panel per requested material ensures materials survive ordinary Blender import.
   These panels are samples, not extracted game geometry. Assign imported materials
@@ -112,8 +114,8 @@ only declared known recipes; world-aligned projection, unknown multi-layer blend
 damage/wetness formulas, runtime parameters, vertex effects, refraction, custom
 shaders and glyph/atlas logic are not reproduced. A material may therefore
 import as a flat swatch; unsupported texture paths/parameters remain only as
-machine-readable unresolved layers; their decodable Texture2D inputs are embedded
-in reconstructed mode. "Used" means a known supported use
+machine-readable unresolved layers; their texture identities and consumers remain
+metadata-only in reconstructed mode. "Used" means a known supported use
 in the reconstructed PBR approximation, not proof of the original shader wiring.
 The raw shader bytecode and executable shader graph are not bundled. Unsupported
 texture types/decoders are reported; HDR-to-PNG quantization is disclosed per image.

@@ -127,7 +127,9 @@ explicit report omissions rather than implied GLB fidelity.
 Both model and material exporters require the caller to explicitly select
 `-MaterialMode PbrApproximation` or `-MaterialMode BakeReconstructed`; if the
 user did not choose, ask. Reconstructed bakes expose their complete machine contract at GLB root
-`extras.materialPipeline`, including source image artifacts and unresolved layers.
+`extras.materialPipeline`, including metadata-only source identities, bake inputs/
+outputs and unresolved layers; source pixels are not embedded unless they become
+an active or baked PBR output.
 Rendered material review uses `Export-VoyageMaterialPreview.ps1`: exact material
 list plus explicit material mode -> one Blender-rendered PNG of the exporter sample
 panels. Preview evidence omits source-only texture artifacts and writes no original

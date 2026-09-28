@@ -126,16 +126,19 @@ internal static class Program
             var model = scene.ToGltf2();
             MatchUsedImages(model, textureCache.Values);
             MatchBakeOutputs(model, reports);
-            var embedSourceArtifacts = request["embedSourceArtifacts"]?.GetValue<bool>() ?? true;
-            var sourceArtifacts = embedSourceArtifacts
-                ? EmbedSourceArtifacts(model, materialMode, textureSources, textureCache, reports)
-                : [];
+            var sourceArtifactPolicy = materialMode != "BakeReconstructed" ? "none" :
+                request["sourceArtifactPolicy"]?.GetValue<string>() ??
+                (request["embedSourceArtifacts"]?.GetValue<bool>() == true ? "embedded" : "metadata-only");
+            if (sourceArtifactPolicy is not ("none" or "metadata-only" or "embedded"))
+                throw new ArgumentException("sourceArtifactPolicy must be metadata-only or embedded for BakeReconstructed.");
+            var sourceArtifacts = DescribeSourceArtifacts(model, materialMode, sourceArtifactPolicy,
+                textureSources, textureCache, reports);
             var materialPipeline = new
             {
                 schema = "voyage.material-pipeline/1",
                 requestedMode = materialMode,
                 fidelity = materialMode == "BakeReconstructed" ? "reconstructed" : "approximate-pbr",
-                sourceArtifactPolicy = embedSourceArtifacts ? "embedded" : "omitted-for-preview",
+                sourceArtifactPolicy,
                 bakeOperations = reports.SelectMany(x => x.BakeOperations),
                 generatedImages = textureCache.Values.SelectMany(x => x.Variants.Select(v => new
                 {
@@ -163,10 +166,10 @@ internal static class Program
                 parserSha256 = Hash(typeof(DefaultFileProvider).Assembly.Location),
                 stockContainers = fingerprint["containers"]!.AsArray().Where(x => StockProvider.IsStock(x!["name"]!.GetValue<string>())).Select(x => x!.DeepClone()).ToArray(),
                 materials = reports, textures = textureCache.Values, materialPipeline,
-                note = materialMode == "BakeReconstructed" && embedSourceArtifacts
+                note = materialMode == "BakeReconstructed" && sourceArtifactPolicy == "embedded"
                     ? "One UV sample panel per material; known cooked-parameter recipes are reconstructed. All decodable Texture2D inputs are embedded as machine-indexed source artifacts."
                     : materialMode == "BakeReconstructed"
-                    ? "One UV sample panel per material; known cooked-parameter recipes are reconstructed. Source-only artifacts are omitted for lightweight rendered preview."
+                    ? "One UV sample panel per material; known cooked-parameter recipes are reconstructed. Input and unresolved texture identities are retained as metadata; their source pixels are not embedded."
                     : "One UV sample panel per material; glTF PBR is a named-parameter approximation. Only used texture variants are embedded." };
             model.Extras = JsonSerializer.SerializeToNode(evidence, JsonOptions);
             var pending = Path.Combine(Directory.GetCurrentDirectory(), "pending.glb");
@@ -459,10 +462,10 @@ internal static class Program
         }
         foreach (var source in report.Textures.Values.Distinct().Where(p => !report.Bindings.ContainsValue(p)))
             report.SkippedTextures.TryAdd(source, materialMode == "BakeReconstructed"
-                ? "Not composited into the PBR result; raw source is retained in materialPipeline.sourceArtifacts when decodable."
+                ? "Not composited into the PBR result; source identity and consumers are retained in materialPipeline.sourceArtifacts without source pixels."
                 : "No supported unambiguous active PBR binding; image omitted.");
         report.Warnings.Add(materialMode == "BakeReconstructed"
-            ? "PBR roles are inferred from names. All decodable Texture2D inputs are additionally retained as machine-indexed source artifacts."
+            ? "PBR roles are inferred from names. Referenced Texture2D identities remain machine-indexed metadata; only active or baked outputs are embedded by default."
             : "PBR roles are inferred from unambiguous parameter/texture names. Unused resources are listed only; no image payload is kept for them.");
         return builder;
     }
@@ -501,7 +504,7 @@ internal static class Program
         }
     }
 
-    static List<TextureArtifactRecord> EmbedSourceArtifacts(ModelRoot model, string materialMode,
+    static List<TextureArtifactRecord> DescribeSourceArtifacts(ModelRoot model, string materialMode, string policy,
         IReadOnlyDictionary<string, UUnrealMaterial> textureSources, IDictionary<string, TextureRecord> textureCache,
         IReadOnlyCollection<MaterialRecord> reports)
     {
@@ -509,28 +512,41 @@ internal static class Program
         if (materialMode != "BakeReconstructed") return result;
         foreach (var pair in textureSources.OrderBy(x => x.Key, StringComparer.Ordinal))
         {
-            if (!textureCache.TryGetValue(pair.Key, out var texture)) textureCache[pair.Key] = texture = Decode(pair.Value);
+            textureCache.TryGetValue(pair.Key, out var texture);
+            var texture2d = pair.Value as UTexture2D;
             var artifact = new TextureArtifactRecord
             {
                 Source = pair.Key,
-                Sha256 = texture.Sha256,
-                Width = texture.Width,
-                Height = texture.Height,
-                Format = texture.Format,
-                Srgb = texture.Srgb,
-                IsNormal = texture.IsNormal,
-                Error = texture.Error,
+                Sha256 = texture?.Sha256,
+                Width = texture?.Width ?? 0,
+                Height = texture?.Height ?? 0,
+                Format = texture?.Format ?? texture2d?.Format.ToString(),
+                Srgb = texture?.Srgb ?? texture2d?.SRGB ?? false,
+                IsNormal = texture?.IsNormal ?? texture2d?.IsNormalMap ?? false,
+                Error = texture?.Error,
                 Consumers = reports.SelectMany(material => material.Textures.Where(x => x.Value == pair.Key)
                     .Select(x => new TextureConsumerRecord { Material = material.Source, Parameter = x.Key })).ToArray()
             };
-            if (texture.Png != null)
+            if (policy == "embedded")
             {
-                var image = model.UseImage(new MemoryImage(texture.Png));
-                image.Name ??= pair.Key.Split('/')[^1].Split('.')[0] + "_source";
-                artifact.ImageIndex = image.LogicalIndex;
-                artifact.Disposition = "embedded-source";
+                if (texture == null) textureCache[pair.Key] = texture = Decode(pair.Value);
+                artifact.Sha256 = texture.Sha256;
+                artifact.Width = texture.Width;
+                artifact.Height = texture.Height;
+                artifact.Format = texture.Format;
+                artifact.Srgb = texture.Srgb;
+                artifact.IsNormal = texture.IsNormal;
+                artifact.Error = texture.Error;
+                if (texture.Png != null)
+                {
+                    var image = model.UseImage(new MemoryImage(texture.Png));
+                    image.Name ??= pair.Key.Split('/')[^1].Split('.')[0] + "_source";
+                    artifact.ImageIndex = image.LogicalIndex;
+                    artifact.Disposition = "embedded-source";
+                }
+                else artifact.Disposition = "decode-failed";
             }
-            else artifact.Disposition = "decode-failed";
+            else artifact.Disposition = "metadata-only";
             result.Add(artifact);
         }
         return result;

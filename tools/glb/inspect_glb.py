@@ -76,6 +76,9 @@ def inspect(path):
         require(pipeline.get('schema') == 'voyage.material-pipeline/1', 'Unsupported material-pipeline schema')
         mode = pipeline.get('requestedMode')
         require(mode in ('PbrApproximation', 'BakeReconstructed'), 'Invalid material-pipeline mode')
+        artifact_policy = pipeline.get('sourceArtifactPolicy', 'embedded')
+        require(artifact_policy in ('none', 'metadata-only', 'embedded', 'omitted-for-preview'),
+                'Invalid source-artifact policy')
         artifacts = pipeline.get('sourceArtifacts', [])
         generated = pipeline.get('generatedImages', [])
         operations = pipeline.get('bakeOperations', [])
@@ -93,6 +96,8 @@ def inspect(path):
                 require(content.startswith(b'\x89PNG\r\n\x1a\n') and len(content) >= 24, 'Source artifact is not PNG')
                 width, height = struct.unpack_from('>II', content, 16)
                 require((width, height) == (artifact.get('Width'), artifact.get('Height')), 'Source-artifact dimensions mismatch')
+            elif artifact.get('Disposition') == 'metadata-only':
+                require(index is None, 'Metadata-only source artifact unexpectedly embeds an image')
             else:
                 require(index is None and artifact.get('Error'), 'Non-embedded source artifact lacks error evidence')
             require(all(isinstance(c.get('Parameter'), str) and c.get('Material') for c in artifact.get('Consumers', [])),
@@ -113,6 +118,7 @@ def inspect(path):
         require(texture_images | referenced_images == set(range(len(doc.get('images', [])))),
                 'GLB image lacks PBR or material-pipeline provenance')
         pipeline_summary = dict(schema=pipeline['schema'], requestedMode=mode,
+                                sourceArtifactPolicy=artifact_policy,
                                 bakeOperations=len(operations), generatedImages=len(generated),
                                 sourceArtifacts=len(artifacts), unresolvedLayers=len(unresolved))
     types = {5120:'i1', 5121:'u1', 5122:'<i2', 5123:'<u2', 5125:'<u4', 5126:'<f4'}
