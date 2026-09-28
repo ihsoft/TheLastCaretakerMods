@@ -191,10 +191,12 @@ internal static class Program
     internal static bool IsColorPreviewCandidate(TextureRecord texture, IEnumerable<string> parameters)
     {
         if (texture.Png == null || texture.IsNormal || !texture.Srgb) return false;
-        var excluded = new[] { "normal", "mask", "orm", "orh", "roughness", "metallic", "specular",
+        var excluded = new[] { "normal", "mask", "roughness", "metallic", "specular",
             "occlusion", "height", "displacement", "opacity" };
         var evidence = parameters.Append(texture.Source.Split('/')[^1].Split('.')[0]).Select(Normalize);
-        return !evidence.Any(value => excluded.Any(value.Contains));
+        return !evidence.Any(value => excluded.Any(value.Contains) ||
+            value.StartsWith("orm", StringComparison.Ordinal) || value.EndsWith("orm", StringComparison.Ordinal) ||
+            value.StartsWith("orh", StringComparison.Ordinal) || value.EndsWith("orh", StringComparison.Ordinal));
     }
 
     static int ExportColorTexturePreview(StockProvider provider, string[] assets, string output, int thumbnailSize,

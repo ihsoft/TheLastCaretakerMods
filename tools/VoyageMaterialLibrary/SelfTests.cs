@@ -31,6 +31,8 @@ internal static class SelfTests
         Check(flipped.GetPixel(0, 0) == new SKColor(30, 175, 220, 255), "normal convention");
         Check(Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_PaintedMetal_BC.T_PaintedMetal_BC", Srgb = true, Png = png }, ["BaseColorT"]),
             "preview includes color texture");
+        Check(Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_White_Color.T_White_Color", Srgb = true, Png = png }, ["Color Map"]),
+            "color map must not be mistaken for ORM data");
         Check(!Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_PaintedMetal_N.T_PaintedMetal_N", Srgb = false, IsNormal = true, Png = png }, ["NormalT"]),
             "preview excludes normal texture");
         Check(!Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_DirtMask_M.T_DirtMask_M", Srgb = true, Png = png }, ["WorldAlignedTextureMask"]),
