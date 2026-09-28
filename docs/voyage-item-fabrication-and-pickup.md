@@ -74,6 +74,38 @@ these actual gameplay consumers.
 
 ## Filtered module inventories: refinery reference
 
+### Inventory change notifications
+
+On the fingerprint above, `VoyageBaseInventoryComponent` declares reflected
+multicast delegates including `OnInventoryChanged`, `OnInventoryAdd`,
+`OnInventoryRemove` and `OnInventorySlotChanged`. These are not absent merely
+because a mod's partial editor mirror does not declare them.
+The stock `BP_Module_DieselGenerator` Blueprint obtains the internal inventory,
+checks validity, and adds its parameterless `Sequencer inventory changed`
+callback to `OnInventoryChanged`. That initialization path also explicitly
+calls `Update Visualizations`. Thus a stock Blueprint subscription exists;
+periodic polling is not required merely to bridge native-to-Blueprint access.
+The mapping alone does not establish the delegate's signature type name or
+every broadcast site. A consumer must still verify quantity-change coverage,
+initial synchronization and save/load lifecycle, and avoid duplicate bindings.
+
+The stock serialized delegate reference resolves to
+`/Script/Voyage.InventoryDelegate__DelegateSignature`; its callback has no
+parameters. The delegate property owner is
+`/Script/Voyage.VoyageBaseInventoryComponent`. In the Diesel Refinery,
+`ReceiveBeginPlay` performs the binding and initial visualization update.
+The exact inherited `/Script/Voyage.PersistentInterface:OnPersistentActorPostLoad`
+event (integer `Version` parameter) defers a visualization update with
+`DelayUntilNextTick`; that post-load branch does not itself rebind the delegate.
+Railgun subsequently validated this event-driven pattern in the game for
+stack additions/removals, deposit-all, independent gun instances, and empty
+or partial inventories across save/load. The owning
+[checkpoint](../mods/Railgun/ARCHITECTURE.md#current-game-validated-checkpoint)
+records the release and installation evidence. These tested paths do not
+establish every native broadcast site or other modules' lifecycle contracts.
+
+### Component and interaction contract
+
 Static inspection on the fingerprint above identifies the displayed Diesel
 Refinery as `/Game/Blueprints/Modules/Generators/BP_Module_DieselGenerator`;
 Portable Petrol Refinery is `BP_Module_PetrolGenerator_Portable` in the same
