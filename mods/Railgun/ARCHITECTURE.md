@@ -121,6 +121,18 @@ The mass budget is six times the item's actual weight (currently 23.4).
 The existing `ReceiveBeginPlay` chain calls native `SetMaxWeightLimit` to
 initialize effective capacity; serialized defaults alone were insufficient.
 
+The model binds six ordered cassette roots explicitly in `model-source.json`;
+their render descendants are hidden by default. Each gun instance binds a
+parameterless callback to its owned inventory's native `OnInventoryChanged`
+multicast delegate. The callback sums `ItemCount` only for the exact Railgun
+ammunition asset, clamps presentation to six, and updates the six cassette
+subtrees only when that count changes. `ReceiveBeginPlay` performs an initial
+forced synchronization after binding. The exact inherited persistent post-load
+event performs another forced synchronization on the next tick, without
+duplicating the binding. This presentation path does not mutate inventory
+state, hide neighboring ammo-bin geometry, or depend on an operator entering
+the gun.
+
 The model's `AmmoMagazine_6Slot` anchor carries the reference, interaction
 provider and attached query box specified by `model-source.json`. Part 100
 opens the stock container overlay. The exact inherited
@@ -132,19 +144,20 @@ General evidence and restrictions live in the shared
 
 ## Current game-validated checkpoint
 
-`build-20260927-234904` is the working, non-final inventory checkpoint. User
-gameplay confirmation covers magazine behavior, the six-round capacity limit,
-diagnostic removal and persistence through save/load. The earlier 16-property
-ammo baseline established fabrication and pickup of one box with six rounds;
-gun/research validation remains separate. This inventory checkpoint is not a
-new test of every weapon interaction.
+`build-20260928-044641` is the working, non-final inventory and cassette-visual
+checkpoint. User gameplay confirmation covers the six-round capacity limit,
+event-driven cassette updates for stack additions and removals, deposit-all,
+independent gun instances, and empty/partial persistence through save/load.
+The earlier 16-property ammo baseline established fabrication and pickup of one
+box with six rounds; gun/research validation remains separate. This checkpoint
+is not a new test of every weapon interaction.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Release evidence: `artifacts/railgun/build-20260927-234904/release-manifest.json`.
+- Release evidence: `artifacts/railgun/build-20260928-044641/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20260927-235200-build-20260927-234904-9680093e/install-manifest.json`.
+  `artifacts/installations/Railgun/20260928-044858-build-20260928-044641-09a9236e/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 

@@ -24,6 +24,13 @@ inline constexpr TCHAR CollisionNodeKey[] = TEXT("node");
 inline constexpr TCHAR SizeKey[] = TEXT("sizeCm");
 inline constexpr TCHAR CenterKey[] = TEXT("centerCm");
 inline constexpr TCHAR AmmoKey[] = TEXT("ammoInstances");
+inline constexpr TCHAR AmmoCassetteSuffix[] = TEXT("_AmmoCassette");
+inline constexpr TCHAR AmmoBinSuffix[] = TEXT("_AmmoBin");
+inline constexpr TCHAR AmmoCaseMarker[] = TEXT("_Case");
+inline constexpr TCHAR AmmoCopperBandMarker[] = TEXT("_CopperBand_");
+inline constexpr TCHAR AmmoFinMarker[] = TEXT("_Fin_");
+inline constexpr TCHAR AmmoProjectileMarker[] = TEXT("_Projectile");
+inline constexpr TCHAR AmmoSupportCollarMarker[] = TEXT("_SupportCollar_");
 inline constexpr TCHAR NameKey[] = TEXT("name");
 inline constexpr TCHAR ParentKey[] = TEXT("parent");
 inline constexpr TCHAR MeshKey[] = TEXT("mesh");
@@ -34,6 +41,7 @@ inline constexpr TCHAR ComponentsKey[] = TEXT("components");
 inline constexpr TCHAR PackagesKey[] = TEXT("packages");
 inline constexpr TCHAR CollisionKey[] = TEXT("collisionMesh");
 inline constexpr TCHAR RolesKey[] = TEXT("roles");
+inline constexpr TCHAR HiddenInGameKey[] = TEXT("hiddenInGame");
 
 inline TArray<TSharedPtr<FJsonValue>> VectorJson(const FVector& V)
 {
@@ -72,8 +80,61 @@ inline int32 Generate()
     for (const TCHAR* Key : {RootKey, BaseKey, YawKey, PitchKey, SightKey, MuzzleKey})
         if (!Actors.Contains(Roles->GetStringField(Key))) { UE_LOG(LogTemp, Error, TEXT("Missing GLB role %s"), Key); return 1; }
     const TArray<TSharedPtr<FJsonValue>>* AmmoInstances = nullptr;
-    if (Roles->TryGetArrayField(AmmoKey, AmmoInstances))
-        for (const auto& Value : *AmmoInstances) if (!Actors.Contains(Value->AsString())) return 1;
+    if (!Roles->TryGetArrayField(AmmoKey, AmmoInstances) ||
+        AmmoInstances->Num() != RailgunModelContract::AmmoCassetteRoots.Num())
+    {
+        UE_LOG(LogTemp, Error, TEXT("nodes.ammoInstances must bind exactly six ordered cassette roots"));
+        return 1;
+    }
+    TSet<AActor*> AmmoRoots;
+    TSet<AActor*> AmmoRenderDescendants;
+    for (int32 Index = 0; Index < AmmoInstances->Num(); ++Index)
+    {
+        FString RootName;
+        if (!(*AmmoInstances)[Index]->TryGetString(RootName) ||
+            RootName != RailgunModelContract::AmmoCassetteRoots[Index].ToString())
+        {
+            UE_LOG(LogTemp, Error, TEXT("Ammo cassette order differs from the shared model contract"));
+            return 1;
+        }
+        AActor* AmmoRoot = Actors.FindRef(RootName);
+        if (!AmmoRoot || AmmoRoots.Contains(AmmoRoot)) return 1;
+        AmmoRoots.Add(AmmoRoot);
+        const FString SlotName = RootName.LeftChop(FCString::Strlen(AmmoCassetteSuffix));
+        AActor* Slot = Actors.FindRef(SlotName);
+        AActor* Bin = Actors.FindRef(SlotName + AmmoBinSuffix);
+        if (!Slot || AmmoRoot->GetAttachParentActor() != Slot || !Bin ||
+            Bin->GetAttachParentActor() != Slot ||
+            !Cast<UStaticMeshComponent>(Bin->GetRootComponent()))
+        {
+            UE_LOG(LogTemp, Error, TEXT("Ammo cassette/bin sibling contract failed for %s"), *SlotName);
+            return 1;
+        }
+        bool HasCase = false, HasCopperBand = false, HasFin = false;
+        bool HasProjectile = false, HasSupportCollar = false;
+        int32 RenderDescendantCount = 0;
+        for (const auto& Pair : Actors)
+        {
+            AActor* Descendant = Pair.Value;
+            AActor* Parent = Descendant->GetAttachParentActor();
+            while (Parent && Parent != AmmoRoot) Parent = Parent->GetAttachParentActor();
+            if (Parent != AmmoRoot ||
+                !Cast<UStaticMeshComponent>(Descendant->GetRootComponent())) continue;
+            ++RenderDescendantCount;
+            AmmoRenderDescendants.Add(Descendant);
+            HasCase |= Pair.Key.Contains(AmmoCaseMarker);
+            HasCopperBand |= Pair.Key.Contains(AmmoCopperBandMarker);
+            HasFin |= Pair.Key.Contains(AmmoFinMarker);
+            HasProjectile |= Pair.Key.Contains(AmmoProjectileMarker);
+            HasSupportCollar |= Pair.Key.Contains(AmmoSupportCollarMarker);
+        }
+        if (RenderDescendantCount == 0 || !HasCase || !HasCopperBand || !HasFin ||
+            !HasProjectile || !HasSupportCollar)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Incomplete ammo render subtree: %s"), *RootName);
+            return 1;
+        }
+    }
     AActor* ModelRoot = Actors.FindChecked(Roles->GetStringField(RootKey));
     AActor* Base = Actors.FindChecked(Roles->GetStringField(BaseKey));
     FString PowerAnchorName;
@@ -245,6 +306,8 @@ inline int32 Generate()
             {
                 auto* Target = CastChecked<UStaticMeshComponent>(Component);
                 Target->SetStaticMesh(SourceMesh->GetStaticMesh());
+                if (AmmoRenderDescendants.Contains(Actor))
+                    Target->SetHiddenInGame(true);
                 MeshPath = SourceMesh->GetStaticMesh()->GetPathName();
                 for (int32 Slot = 0; Slot < SourceMesh->GetNumMaterials(); ++Slot) Target->SetMaterial(Slot, SourceMesh->GetMaterial(Slot));
                 Target->SetCollisionProfileName(Actor == CollisionActor ? RailgunAssetNames::BlockAllDynamicCollisionProfileName : RailgunAssetNames::NoCollisionProfileName);
@@ -258,6 +321,7 @@ inline int32 Generate()
             auto Entry = MakeShared<FJsonObject>(); Entry->SetStringField(NameKey, Name);
             Entry->SetStringField(ParentKey, Actor == ModelRoot ? RailgunAssetNames::ModuleMountRootName.ToString() : Parent->GetActorLabel());
             Entry->SetStringField(MeshKey, MeshPath);
+            Entry->SetBoolField(HiddenInGameKey, Component->bHiddenInGame);
             Entry->SetArrayField(LocationKey, VectorJson(Component->GetRelativeLocation()));
             const auto R = Component->GetRelativeRotation(); Entry->SetArrayField(RotationKey, VectorJson(FVector(R.Pitch, R.Yaw, R.Roll)));
             Entry->SetArrayField(ScaleKey, VectorJson(Component->GetRelativeScale3D()));

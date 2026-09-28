@@ -21,8 +21,30 @@ inline const FName ItemParameter(TEXT("Item"));
 inline const FName IsValidParameter(TEXT("bIsValid"));
 inline const FName PartIdParameter(TEXT("PartId"));
 inline const FName NewMaxWeightLimitParameter(TEXT("NewMaxWeightLimit"));
+inline const FName SyncVisuals(TEXT("SyncRailgunAmmoVisuals"));
+inline const FName InventoryChangedCallback(TEXT("OnRailgunAmmoInventoryChanged"));
+inline const FName OnInventoryChanged(TEXT("OnInventoryChanged"));
+inline const FName OnPersistentActorPostLoad(TEXT("OnPersistentActorPostLoad"));
+inline constexpr TCHAR InventoryDelegateSignaturePath[] =
+    TEXT("/Script/Voyage.InventoryDelegate__DelegateSignature");
+inline const FName VisualCount(TEXT("RailgunAmmoVisualCount"));
+inline const FName LastVisualCount(TEXT("RailgunAmmoLastVisualCount"));
+inline const FName Items(TEXT("Items"));
+inline const FName TargetMap(TEXT("TargetMap"));
+inline const FName Values(TEXT("Values"));
+inline const FName SerializedItem(TEXT("Item"));
+inline const FName SerializedData(TEXT("Data"));
+inline const FName ItemCount(TEXT("ItemCount"));
+inline const FName NewHidden(TEXT("NewHidden"));
+inline const FName PropagateToChildren(TEXT("bPropagateToChildren"));
+inline const FName SetHiddenInGame(TEXT("SetHiddenInGame"));
+inline constexpr TCHAR Zero[] = TEXT("0");
+inline constexpr TCHAR InvalidVisualCount[] = TEXT("-1");
+inline constexpr TCHAR MaximumVisualCount[] = TEXT("6");
 inline constexpr int32 InventoryPartId = 100;
 }
+
+UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values);
 
 UEdGraph* AddRailgunInterfaceFunction(UBlueprint* BP, UClass* Interface,
     const FName FunctionName, bool RequireInheritedInterface)
@@ -121,6 +143,163 @@ void AddRailgunInventoryLimitInitialization(UBlueprint* BP)
     G.Link(AuthoredLimit,
         G.Pin(SetLimit, RailgunInventory::NewMaxWeightLimitParameter));
     G.Exec(SetLimit);
+    G.Write(RailgunInventory::LastVisualCount, nullptr,
+        RailgunInventory::InvalidVisualCount);
+
+    auto* DelegateProperty = FindFProperty<FMulticastDelegateProperty>(
+        UVoyageBaseInventoryComponent::StaticClass(),
+        RailgunInventory::OnInventoryChanged);
+    check(DelegateProperty && DelegateProperty->SignatureFunction &&
+        DelegateProperty->SignatureFunction->GetPathName() ==
+            RailgunInventory::InventoryDelegateSignaturePath);
+    auto* Callback = G.Node(NewObject<UK2Node_CreateDelegate>(Graph));
+    auto* Remove = NewObject<UK2Node_RemoveDelegate>(Graph);
+    Remove->SetFromProperty(DelegateProperty, false,
+        UVoyageBaseInventoryComponent::StaticClass());
+    G.Node(Remove);
+    auto* Add = NewObject<UK2Node_AddDelegate>(Graph);
+    Add->SetFromProperty(DelegateProperty, false,
+        UVoyageBaseInventoryComponent::StaticClass());
+    G.Node(Add);
+    G.Link(Inventory, G.Pin(Remove, P::FunctionTarget));
+    G.Link(Inventory, G.Pin(Add, P::FunctionTarget));
+    G.Link(Callback->GetDelegateOutPin(), Remove->GetDelegatePin());
+    G.Link(Callback->GetDelegateOutPin(), Add->GetDelegatePin());
+    Callback->SetFunction(RailgunInventory::InventoryChangedCallback);
+    G.Exec(Remove);
+    G.Exec(Add);
+    auto* Sync = G.Call(BP->GeneratedClass, RailgunInventory::SyncVisuals);
+    G.Exec(Sync);
+}
+
+void AddRailgunAmmoVisualSync(UBlueprint* BP)
+{
+    using namespace RailgunInventory;
+    UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(BP, SyncVisuals,
+        UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(
+        BP, Graph, false, static_cast<UClass*>(nullptr));
+    UK2Node_FunctionEntry* Entry = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node)) Entry = Candidate;
+    check(Entry);
+    Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
+
+    FGraph G(Graph, nullptr);
+    G.Tail = G.Pin(Entry, P::Then);
+    UEdGraphPin* Inventory = G.Read(InventoryComponent);
+    G.Branch(G.Valid(Inventory));
+    G.Write(VisualCount, nullptr, Zero);
+
+    UEdGraphPin* InventoryItems = ReadNativeInputField(G, Inventory,
+        UVoyageBaseInventoryComponent::StaticClass(), Items);
+    auto* MapValues = G.Call(UBlueprintMapLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UBlueprintMapLibrary, Map_Values));
+    G.Link(InventoryItems, G.Pin(MapValues, TargetMap));
+    G.Exec(MapValues);
+    auto* Loop = ContextLoop(G, G.Pin(MapValues, Values));
+    auto* Record = NewObject<UK2Node_BreakStruct>(Graph);
+    Record->StructType = FVoyageItemSerialize::StaticStruct();
+    G.Node(Record);
+    UEdGraphPin* RecordInput = nullptr;
+    for (UEdGraphPin* Pin : Record->Pins)
+        if (Pin->Direction == EGPD_Input) { check(!RecordInput); RecordInput = Pin; }
+    check(RecordInput);
+    G.Link(G.Pin(Loop, CE::ArrayElement), RecordInput);
+    G.Branch(G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject),
+        G.Pin(Record, SerializedItem), G.Read(AcceptedAmmo)));
+    auto* Data = NewObject<UK2Node_BreakStruct>(Graph);
+    Data->StructType = FVoyageItemData::StaticStruct();
+    G.Node(Data);
+    UEdGraphPin* DataInput = nullptr;
+    for (UEdGraphPin* Pin : Data->Pins)
+        if (Pin->Direction == EGPD_Input) { check(!DataInput); DataInput = Pin; }
+    check(DataInput);
+    G.Link(G.Pin(Record, SerializedData), DataInput);
+    G.Write(VisualCount, G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_IntInt),
+        G.Read(VisualCount), G.Pin(Data, ItemCount)));
+
+    G.Tail = G.Pin(Loop, CE::Completed);
+    auto* Clamp = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Clamp));
+    G.Link(G.Read(VisualCount), G.Pin(Clamp, P::Value));
+    G.Default(Clamp, P::Min, Zero);
+    G.Default(Clamp, P::Max, MaximumVisualCount);
+    UEdGraphPin* ClampedCount = G.Pin(Clamp, P::ReturnValue);
+    G.Branch(G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, NotEqual_IntInt),
+        ClampedCount, G.Read(LastVisualCount)));
+    G.Write(LastVisualCount, ClampedCount);
+    for (int32 Index = 0;
+        Index < RailgunModelContract::AmmoCassetteRoots.Num(); ++Index)
+    {
+        auto* Hidden = G.Call(UKismetMathLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, LessEqual_IntInt));
+        G.Link(ClampedCount, G.Pin(Hidden, P::Binary::LeftOperand));
+        G.Default(Hidden, P::Binary::RightOperand, *FString::FromInt(Index));
+        auto* SetHidden = G.Call(USceneComponent::StaticClass(),
+            SetHiddenInGame);
+        G.Link(G.Read(RailgunModelContract::AmmoCassetteRoots[Index]),
+            G.Pin(SetHidden, P::FunctionTarget));
+        G.Link(G.Pin(Hidden, P::ReturnValue), G.Pin(SetHidden, NewHidden));
+        G.Default(SetHidden, PropagateToChildren, N::True);
+        G.Exec(SetHidden);
+    }
+}
+
+void AddRailgunAmmoVisualCallback(UBlueprint* BP)
+{
+    using namespace RailgunInventory;
+    check(BP && BP->GeneratedClass);
+    UFunction* SyncFunction = BP->GeneratedClass->FindFunctionByName(SyncVisuals);
+    check(SyncFunction && SyncFunction->GetOuterUClass() == BP->GeneratedClass);
+    auto* DelegateProperty = FindFProperty<FMulticastDelegateProperty>(
+        UVoyageBaseInventoryComponent::StaticClass(), OnInventoryChanged);
+    check(DelegateProperty && DelegateProperty->SignatureFunction &&
+        DelegateProperty->SignatureFunction->GetPathName() ==
+            InventoryDelegateSignaturePath &&
+        DelegateProperty->SignatureFunction->NumParms == 0);
+    UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(BP,
+        InventoryChangedCallback, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(BP, Graph, true,
+        DelegateProperty->SignatureFunction.Get());
+    UK2Node_FunctionEntry* Entry = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node)) Entry = Candidate;
+    }
+    check(Entry);
+    Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
+    FGraph G(Graph, nullptr);
+    G.Tail = G.Pin(Entry, P::Then);
+    auto* Sync = G.Call(BP->GeneratedClass, SyncVisuals);
+    G.Exec(Sync);
+}
+
+void AddRailgunAmmoVisualPostLoad(UBlueprint* BP)
+{
+    using namespace RailgunInventory;
+    check(BP && BP->UbergraphPages.Num() == 1 && BP->GeneratedClass);
+    UClass* Interface = UPersistentInterface::StaticClass();
+    UFunction* Function = Interface->FindFunctionByName(OnPersistentActorPostLoad);
+    check(Function && Function->GetOuterUClass() == Interface &&
+        BP->ParentClass->ImplementsInterface(Interface));
+    UEdGraph* Graph = BP->UbergraphPages[0];
+    FGraph G(Graph, nullptr);
+    auto* PostLoad = NewObject<UK2Node_Event>(Graph);
+    PostLoad->EventReference.SetExternalMember(OnPersistentActorPostLoad, Interface);
+    PostLoad->bOverrideFunction = true;
+    G.Node(PostLoad);
+    G.Tail = G.Pin(PostLoad, P::Then);
+    auto* Delay = G.Call(UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, DelayUntilNextTick));
+    G.Exec(Delay);
+    G.Write(LastVisualCount, nullptr, InvalidVisualCount);
+    auto* Sync = G.Call(BP->GeneratedClass, SyncVisuals);
+    G.Exec(Sync);
 }
 
 void AddRailgunInventoryValidator(UBlueprint* BP)
@@ -183,6 +362,8 @@ void ConfigureRailgunInventory(UVoyageItemAmmo* Ammo)
 
     AddVariable(BP, AcceptedAmmo, UEdGraphSchema_K2::PC_Object,
         UVoyageItem::StaticClass());
+    AddVariable(BP, VisualCount, UEdGraphSchema_K2::PC_Int);
+    AddVariable(BP, LastVisualCount, UEdGraphSchema_K2::PC_Int);
     USimpleConstructionScript* SCS = BP->SimpleConstructionScript;
     check(SCS);
     USCS_Node* InventoryReferenceNode = nullptr;
@@ -236,10 +417,16 @@ void ConfigureRailgunInventory(UVoyageItemAmmo* Ammo)
 
     AddRailgunInventoryValidator(BP);
     AddRailgunInventoryInteraction(BP);
+    AddRailgunAmmoVisualSync(BP);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass);
+    AddRailgunAmmoVisualCallback(BP);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
     check(BP->Status != BS_Error && BP->GeneratedClass);
     AddRailgunInventoryLimitInitialization(BP);
+    AddRailgunAmmoVisualPostLoad(BP);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
     check(BP->Status != BS_Error && BP->GeneratedClass);

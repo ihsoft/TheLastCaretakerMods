@@ -14,4 +14,12 @@ inline const FName EntryTag(TEXT("Railgun.Model.Entry"));
 inline const FName EntryComponent(TEXT("RailgunEntryReference"));
 inline const FName InventoryTag(TEXT("Railgun.Model.Inventory"));
 inline const FName InventoryComponent(TEXT("RailgunInventoryReference"));
+inline const TArray<FName> AmmoCassetteRoots {
+    TEXT("Slot_01_AmmoCassette"),
+    TEXT("Slot_02_AmmoCassette"),
+    TEXT("Slot_03_AmmoCassette"),
+    TEXT("Slot_04_AmmoCassette"),
+    TEXT("Slot_05_AmmoCassette"),
+    TEXT("Slot_06_AmmoCassette")
+};
 }

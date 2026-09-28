@@ -7,7 +7,15 @@
     "pitch": "PITCH",
     "sight": "Muzzle",
     "muzzle": "Muzzle",
-    "powerSocketAnchor": "ElectricalSocket_Reference"
+    "powerSocketAnchor": "ElectricalSocket_Reference",
+    "ammoInstances": [
+      "Slot_01_AmmoCassette",
+      "Slot_02_AmmoCassette",
+      "Slot_03_AmmoCassette",
+      "Slot_04_AmmoCassette",
+      "Slot_05_AmmoCassette",
+      "Slot_06_AmmoCassette"
+    ]
   },
   "entryInteraction": {
     "node": "BASE",

@@ -1,6 +1,7 @@
 // HAND-RECONSTRUCTED GAME API MIRROR: Steam 25191271 / UE5.8 parser target;
 // executable SHA-256 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
-// Method: reviewed mapping for the authored container configuration fields.
+// Method: reviewed mapping for the authored container configuration fields and
+// the read-only Items map, plus the game-validated Railgun pickup probe.
 // Revalidate on fingerprint change. Editor-only: never package this definition.
 
 #pragma once
@@ -9,6 +10,8 @@
 #include "Components/SceneComponent.h"
 #include "VoyageFabricatorComponent.h"
 #include "VoyageBaseInventoryComponent.generated.h"
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FInventoryDelegate);
 
 UENUM()
 enum class EVoyageInventoryType : uint8
@@ -31,6 +34,10 @@ class VOYAGE_API UVoyageBaseInventoryComponent : public USceneComponent
 {
     GENERATED_BODY()
 public:
+    // Read-only Steam 25191271 runtime contents. The generated graph reads the
+    // map to drive presentation; it never mutates or serializes this field.
+    UPROPERTY(BlueprintReadOnly) TMap<int32, FVoyageItemSerialize> Items;
+    UPROPERTY(BlueprintAssignable) FInventoryDelegate OnInventoryChanged;
     UPROPERTY() EVoyageInventoryType Type = EVoyageInventoryType::Undefined;
     UPROPERTY() TArray<EVoyageItemCategory> AcceptedItemCategories;
     UPROPERTY() EVoyageInventoryAccessType Access = EVoyageInventoryAccessType::None;

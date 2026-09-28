@@ -44,7 +44,8 @@ $shell = @(Read-Candidate '/Game/Mods/Railgun/Module/BP_Module_Railgun')
 $shellFunctions = @($shell | Where-Object { $_.Type -eq 'Function' })
 $expectedShellFunctions = @(
     'ExecuteUbergraph_BP_Module_Railgun','InteractGetInventory',
-    'ReceiveBeginPlay','ValidateItem'
+    'OnPersistentActorPostLoad','OnRailgunAmmoInventoryChanged',
+    'ReceiveBeginPlay','SyncRailgunAmmoVisuals','ValidateItem'
 )
 Require (@(Compare-Object -ReferenceObject $expectedShellFunctions `
     -DifferenceObject @($shellFunctions.Name) -CaseSensitive).Count -eq 0) `
@@ -101,6 +102,52 @@ Require ($ubergraphStrings -ccontains
     'BeginPlay must call the native weight-limit setter.'
 Require ($ubergraphStrings -ccontains 'MaxWeightLimit') `
     'Native weight-limit setter must receive the authored component limit.'
+Require ($ubergraphStrings -ccontains 'SyncRailgunAmmoVisuals') `
+    'Inventory lifecycle must invoke the owned ammo-visual sync function.'
+foreach ($requiredDelegateReference in @(
+    'OnInventoryChanged','OnRailgunAmmoInventoryChanged',
+    "Class'InventoryDelegate__DelegateSignature'",
+    'EX_AddMulticastDelegate','EX_RemoveMulticastDelegate',
+    "Class'KismetSystemLibrary:DelayUntilNextTick'"
+)) {
+    Require ($ubergraphStrings -ccontains $requiredDelegateReference) `
+        ('Ammo-visual event reference missing: ' + $requiredDelegateReference)
+}
+$inventoryChanged = @($shellFunctions | Where-Object {
+    $_.Name -ceq 'OnRailgunAmmoInventoryChanged'
+})
+Require ($inventoryChanged.Count -eq 1 -and
+    -not ($inventoryChanged[0].PSObject.Properties.Name -ccontains
+        'ChildProperties') -and
+    (@(JsonStringLeaves $inventoryChanged[0]) -ccontains
+        'SyncRailgunAmmoVisuals')) `
+    'Ammo-visual callback must be parameterless and invoke the owned sync function.'
+$postLoad = @($shellFunctions | Where-Object {
+    $_.Name -ceq 'OnPersistentActorPostLoad'
+})
+Require ($postLoad.Count -eq 1 -and
+    $postLoad[0].SuperStruct.ObjectName -ceq
+        "Class'PersistentInterface:OnPersistentActorPostLoad'") `
+    'Post-load refresh must override the exact inherited Voyage interface event.'
+$shellStrings = @(JsonStringLeaves $shell)
+Require (-not ($shellStrings -ccontains 'RailgunAmmoVisualSyncElapsed')) `
+    'Removed ammo-visual polling accumulator was serialized.'
+$syncVisuals = @($shellFunctions | Where-Object {
+    $_.Name -ceq 'SyncRailgunAmmoVisuals'
+})
+Require ($syncVisuals.Count -eq 1) 'Expected one ammo-visual sync function.'
+$syncVisualStrings = @(JsonStringLeaves $syncVisuals[0])
+foreach ($requiredVisualReference in @(
+    'RailgunAmmoInventory','AcceptedRailgunAmmo','Items','ItemCount',
+    "Class'BlueprintMapLibrary:Map_Values'",
+    "Class'KismetMathLibrary:Add_IntInt'",
+    "Class'KismetMathLibrary:Clamp'",
+    "Class'KismetMathLibrary:NotEqual_IntInt'",
+    "Class'SceneComponent:SetHiddenInGame'"
+)) {
+    Require ($syncVisualStrings -ccontains $requiredVisualReference) `
+        ('Ammo-visual sync reference missing: ' + $requiredVisualReference)
+}
 $module = @($shell | Where-Object { $_.Name -ceq 'ModuleComponent' })
 Require ($module.Count -eq 1 -and $module[0].Type -ceq 'VoyageModuleComponent') 'Native buffer module missing.'
 Require (@(PropertyNames $module[0]) -contains 'ItemAsset') 'Module ItemAsset missing.'
@@ -238,6 +285,45 @@ Require (@($inventoryReference[0].Properties.ComponentTags) -ccontains
     'Railgun.Model.Inventory') 'Inventory interaction reference tag missing.'
 Require ($inventoryReference[0].Properties.BodyInstance.CollisionEnabled -ceq
     'ECollisionEnabled::NoCollision') 'Inventory interaction reference must not collide.'
+$expectedAmmoRoots = @(
+    'Slot_01_AmmoCassette','Slot_02_AmmoCassette','Slot_03_AmmoCassette',
+    'Slot_04_AmmoCassette','Slot_05_AmmoCassette','Slot_06_AmmoCassette'
+)
+Require (@(Compare-Object -ReferenceObject $expectedAmmoRoots `
+    -DifferenceObject @($inventory.roles.ammoInstances) `
+    -CaseSensitive -SyncWindow 0).Count -eq 0) `
+    'Ordered ammo cassette role binding mismatch.'
+foreach ($ammoRoot in $expectedAmmoRoots) {
+    $slot = $ammoRoot.Substring(0,7)
+    $bin = $slot + '_AmmoBin'
+    Require-Child $slot $ammoRoot
+    Require-Child $slot $bin
+    $binComponent = @($shell | Where-Object {
+        $_.Name -ceq ($bin + '_GEN_VARIABLE')
+    })
+    Require ($binComponent.Count -eq 1 -and
+        $binComponent[0].Type -ceq 'StaticMeshComponent') `
+        ('Ammo bin was removed with its cassette: ' + $bin)
+    Require (-not ((PropertyNames $binComponent[0]) -contains 'bHiddenInGame') -or
+        -not $binComponent[0].Properties.bHiddenInGame) `
+        ('Ammo bin must stay visible: ' + $bin)
+    $descendants = @($inventory.components | Where-Object {
+        $_.parent -ceq $ammoRoot
+    })
+    Require ($descendants.Count -gt 0) `
+        ('Ammo cassette has no render descendants: ' + $ammoRoot)
+    foreach ($descendant in $descendants) {
+        Require ($descendant.mesh -and $descendant.hiddenInGame) `
+            ('Ammo render descendant is not default-hidden: ' + $descendant.name)
+        $component = @($shell | Where-Object {
+            $_.Name -ceq ($descendant.name + '_GEN_VARIABLE')
+        })
+        Require ($component.Count -eq 1 -and
+            $component[0].Properties.bHiddenInGame) `
+            ('Cooked ammo render descendant is not default-hidden: ' +
+                $descendant.name)
+    }
+}
 for ($i=0; $i -lt 3; $i++) {
     $axis = @('X','Y','Z')[$i]
     Require ([Math]::Abs($inventoryReference[0].Properties.RelativeLocation.$axis -
@@ -406,5 +492,5 @@ $skillIcon = @(Read-Candidate '/Game/Mods/Railgun/Research/T_RailgunSkill')
 $skillTexture = @($skillIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunSkill' })
 Require ($skillTexture.Count -eq 1 -and $skillTexture[0].SizeX -eq 256 -and $skillTexture[0].SizeY -eq 256) 'Railgun skill icon must be 256x256.'
 $reportPath = Join-Path $output 'validation.json'
-[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; material parameter presence and reviewed stock parent; complete Railgun item with Alloy Frame recipe, owned actor/icon and cleared production metadata; one complete VoyageItemAmmo export with the stock Rod item fields except its nested-export ProjectileTemplate; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; material parameter presence and reviewed stock parent; complete Railgun item with Alloy Frame recipe, owned actor/icon and cleared production metadata; one complete VoyageItemAmmo export with the stock Rod item fields except its nested-export ProjectileTemplate; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 [pscustomobject]@{status='passed';reportPath=$reportPath}
