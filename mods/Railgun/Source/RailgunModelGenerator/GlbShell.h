@@ -26,11 +26,6 @@ inline constexpr TCHAR CenterKey[] = TEXT("centerCm");
 inline constexpr TCHAR AmmoKey[] = TEXT("ammoInstances");
 inline constexpr TCHAR AmmoCassetteSuffix[] = TEXT("_AmmoCassette");
 inline constexpr TCHAR AmmoBinSuffix[] = TEXT("_AmmoBin");
-inline constexpr TCHAR AmmoCaseMarker[] = TEXT("_Case");
-inline constexpr TCHAR AmmoCopperBandMarker[] = TEXT("_CopperBand_");
-inline constexpr TCHAR AmmoFinMarker[] = TEXT("_Fin_");
-inline constexpr TCHAR AmmoProjectileMarker[] = TEXT("_Projectile");
-inline constexpr TCHAR AmmoSupportCollarMarker[] = TEXT("_SupportCollar_");
 inline constexpr TCHAR NameKey[] = TEXT("name");
 inline constexpr TCHAR ParentKey[] = TEXT("parent");
 inline constexpr TCHAR MeshKey[] = TEXT("mesh");
@@ -88,6 +83,15 @@ inline int32 Generate()
     }
     TSet<AActor*> AmmoRoots;
     TSet<AActor*> AmmoRenderDescendants;
+    const auto IsDescendantOf = [](AActor* Candidate, AActor* Ancestor)
+    {
+        for (AActor* Parent = Candidate ? Candidate->GetAttachParentActor() : nullptr;
+            Parent; Parent = Parent->GetAttachParentActor())
+        {
+            if (Parent == Ancestor) return true;
+        }
+        return false;
+    };
     for (int32 Index = 0; Index < AmmoInstances->Num(); ++Index)
     {
         FString RootName;
@@ -99,6 +103,16 @@ inline int32 Generate()
         }
         AActor* AmmoRoot = Actors.FindRef(RootName);
         if (!AmmoRoot || AmmoRoots.Contains(AmmoRoot)) return 1;
+        for (AActor* ExistingRoot : AmmoRoots)
+        {
+            if (IsDescendantOf(AmmoRoot, ExistingRoot) ||
+                IsDescendantOf(ExistingRoot, AmmoRoot))
+            {
+                UE_LOG(LogTemp, Error,
+                    TEXT("Ammo cassette roots overlap: %s"), *RootName);
+                return 1;
+            }
+        }
         AmmoRoots.Add(AmmoRoot);
         const FString SlotName = RootName.LeftChop(FCString::Strlen(AmmoCassetteSuffix));
         AActor* Slot = Actors.FindRef(SlotName);
@@ -110,8 +124,12 @@ inline int32 Generate()
             UE_LOG(LogTemp, Error, TEXT("Ammo cassette/bin sibling contract failed for %s"), *SlotName);
             return 1;
         }
-        bool HasCase = false, HasCopperBand = false, HasFin = false;
-        bool HasProjectile = false, HasSupportCollar = false;
+        if (IsDescendantOf(Slot, AmmoRoot) || IsDescendantOf(Bin, AmmoRoot))
+        {
+            UE_LOG(LogTemp, Error,
+                TEXT("Ammo holder entered hidden cassette subtree: %s"), *SlotName);
+            return 1;
+        }
         int32 RenderDescendantCount = 0;
         for (const auto& Pair : Actors)
         {
@@ -120,18 +138,19 @@ inline int32 Generate()
             while (Parent && Parent != AmmoRoot) Parent = Parent->GetAttachParentActor();
             if (Parent != AmmoRoot ||
                 !Cast<UStaticMeshComponent>(Descendant->GetRootComponent())) continue;
+            if (AmmoRenderDescendants.Contains(Descendant))
+            {
+                UE_LOG(LogTemp, Error,
+                    TEXT("Ammo render descendant belongs to multiple cassette roots: %s"),
+                    *Pair.Key);
+                return 1;
+            }
             ++RenderDescendantCount;
             AmmoRenderDescendants.Add(Descendant);
-            HasCase |= Pair.Key.Contains(AmmoCaseMarker);
-            HasCopperBand |= Pair.Key.Contains(AmmoCopperBandMarker);
-            HasFin |= Pair.Key.Contains(AmmoFinMarker);
-            HasProjectile |= Pair.Key.Contains(AmmoProjectileMarker);
-            HasSupportCollar |= Pair.Key.Contains(AmmoSupportCollarMarker);
         }
-        if (RenderDescendantCount == 0 || !HasCase || !HasCopperBand || !HasFin ||
-            !HasProjectile || !HasSupportCollar)
+        if (RenderDescendantCount == 0)
         {
-            UE_LOG(LogTemp, Error, TEXT("Incomplete ammo render subtree: %s"), *RootName);
+            UE_LOG(LogTemp, Error, TEXT("Ammo cassette has no render subtree: %s"), *RootName);
             return 1;
         }
     }

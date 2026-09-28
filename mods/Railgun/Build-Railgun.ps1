@@ -153,6 +153,7 @@ $scopeOverlay = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/Scop
 $chargingStatusIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/ScopeOverlay/ChargingStatusIcon.png')).Path
 $offlineStatusIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/ScopeOverlay/OfflineStatusIcon.png')).Path
 $readyStatusIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/ScopeOverlay/ReadyStatusIcon.png')).Path
+$ammoIndicator = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/HUD/RailgunAmmoIndicator.png')).Path
 $ammoIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/Fabricator/RailgunAmmoIcon.png')).Path
 $gunIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/Fabricator/RailgunIcon.png')).Path
 $skillIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/Skill/RailgunSkill.png')).Path
@@ -163,7 +164,7 @@ $stockRegistry = & (Join-Path $repo 'tools/Extract-VoyageAssetRegistry.ps1') `
     -UnrealPak $unrealPak -OutputRoot (Join-Path $output 'stock-registry')
 if ($stockRegistry.status -cne 'passed') { throw 'Stock registry extraction failed.' }
 Invoke-NativeStage 'generate-inputs' $editor @($project,'-run=GenerateRailgunInputs','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-inputs-unreal.log')))
-Invoke-NativeStage 'generate-runtime' $editor @($project,'-run=GenerateRailgunRuntime','-DedicatedStation',('-StockRegistry=' + $stockRegistry.registryPath),('-ShotSound=' + $shotSound),('-ScopeOverlay=' + $scopeOverlay),('-ChargingStatusIcon=' + $chargingStatusIcon),('-OfflineStatusIcon=' + $offlineStatusIcon),('-ReadyStatusIcon=' + $readyStatusIcon),('-AmmoIcon=' + $ammoIcon),('-GunIcon=' + $gunIcon),('-SkillIcon=' + $skillIcon),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-runtime-unreal.log')))
+Invoke-NativeStage 'generate-runtime' $editor @($project,'-run=GenerateRailgunRuntime','-DedicatedStation',('-StockRegistry=' + $stockRegistry.registryPath),('-ShotSound=' + $shotSound),('-ScopeOverlay=' + $scopeOverlay),('-ChargingStatusIcon=' + $chargingStatusIcon),('-OfflineStatusIcon=' + $offlineStatusIcon),('-ReadyStatusIcon=' + $readyStatusIcon),('-AmmoIndicator=' + $ammoIndicator),('-AmmoIcon=' + $ammoIcon),('-GunIcon=' + $gunIcon),('-SkillIcon=' + $skillIcon),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-runtime-unreal.log')))
 $packages += @(
     '/Game/Mods/Railgun/Inputs/IA_RailgunLookYaw',
     '/Game/Mods/Railgun/Inputs/IA_RailgunLookPitch',
@@ -178,6 +179,7 @@ $packages += @(
     '/Game/Mods/Railgun/Station/T_RailgunStatusCharging',
     '/Game/Mods/Railgun/Station/T_RailgunStatusOffline',
     '/Game/Mods/Railgun/Station/T_RailgunStatusReady',
+    '/Game/Mods/Railgun/Station/T_RailgunAmmoIndicator',
     '/Game/Mods/Railgun/Station/BP_RailgunTestShot',
     '/Game/Mods/Railgun/Station/S_RailgunShotBlast',
     '/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod',

@@ -72,6 +72,9 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Components/Border.h"
 #include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
+#include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
 #include "Components/TextBlock.h"
 #include "Components/PrimitiveComponent.h"
 #include "SlateFontInfoBlueprintLibrary.h"
@@ -846,6 +849,7 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
         TArray<const TCHAR*> VerifyPackages {N::Package, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
             RailgunInputNames::LookYaw, RailgunInputNames::LookPitch, RailgunInputNames::Exit, RailgunInputNames::Zoom, RailgunInputNames::Fire, Shot::Package,
             ShotAudio::Package, ZoomTest::MaskPackage, EnergyHud::ChargingPackage, EnergyHud::OfflinePackage, EnergyHud::ReadyPackage,
+            EnergyHud::AmmoIndicatorPackage,
             RailgunInputNames::Keyboard, RailgunInputNames::Context,
             RailgunAmmo::AmmoIconPackage, RailgunAmmo::GunIconPackage,
             RailgunAmmo::SkillIconPackage, RailgunAmmo::FullClonePackage,
@@ -894,6 +898,9 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
         EnergyHud::OfflinePackage, EnergyHud::OfflineAsset, false);
     EnergyHud::ReadyTexture = ImportRequiredTexture(EnergyHud::ReadySourceArgument,
         EnergyHud::ReadyPackage, EnergyHud::ReadyAsset, false);
+    EnergyHud::AmmoIndicatorTexture = ImportRequiredTexture(
+        EnergyHud::AmmoIndicatorSourceArgument, EnergyHud::AmmoIndicatorPackage,
+        EnergyHud::AmmoIndicatorAsset, true);
     UTexture2D* AmmoIcon = ImportRequiredTexture(RailgunAmmo::AmmoIconSourceArgument,
         RailgunAmmo::AmmoIconPackage, RailgunAmmo::AmmoIconAsset, true);
     ImportRequiredTexture(RailgunAmmo::GunIconSourceArgument,

@@ -323,6 +323,7 @@ UClass* CreateDedicatedStation()
     AddVariable(Hud, Hint::HintsReady, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(Hud, Hint::HintInstance, UEdGraphSchema_K2::PC_Object, UVoyageDynamicPlayerInputWidget::StaticClass());
     AddVariable(Hud, EnergyHud::ChargeInitialized, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(Hud, EnergyHud::AmmoInitialized, UEdGraphSchema_K2::PC_Boolean);
     auto* Canvas = Hud->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), N::HudCanvas); Canvas->bIsVariable = false;
     Hud->WidgetTree->RootWidget = Canvas;
     check(ZoomTest::OverlayTexture);
@@ -359,8 +360,8 @@ UClass* CreateDedicatedStation()
     ChargeRadial->bIsVariable = true;
     ChargeRadial->Value = 0.0f;
     ChargeRadial->WidgetStyle.BarThickness = EnergyHud::ChargeGaugeBarThickness;
-    ChargeRadial->SliderBarColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.2f);
-    ChargeRadial->SliderProgressColor = FLinearColor::White;
+    ChargeRadial->SliderBarColor = EnergyHud::ChargeGaugeBarColor;
+    ChargeRadial->SliderProgressColor = EnergyHud::ChargeGaugeProgressColor;
     ChargeRadial->ShowSliderHandle = false;
     ChargeRadial->ShowSliderHand = false;
     ChargeRadial->Locked = true;
@@ -371,17 +372,66 @@ UClass* CreateDedicatedStation()
     ChargeRadialSlot->SetAlignment(FVector2D(1.0f, 1.0f));
     ChargeRadialSlot->SetPosition(FVector2D(-EnergyHud::ChargeGaugeMargin, -EnergyHud::ChargeGaugeMargin));
     ChargeRadialSlot->SetSize(FVector2D(EnergyHud::ChargeGaugeSize, EnergyHud::ChargeGaugeSize));
+    check(EnergyHud::AmmoIndicatorTexture);
+    const float TextureWidth = EnergyHud::AmmoIndicatorTexture->Source.GetSizeX();
+    const float TextureHeight = EnergyHud::AmmoIndicatorTexture->Source.GetSizeY();
+    check(TextureWidth > EnergyHud::AmmoCropRight &&
+        TextureHeight > EnergyHud::AmmoCropBottom);
+    const float CropWidth = EnergyHud::AmmoCropRight - EnergyHud::AmmoCropLeft;
+    const float CropHeight = EnergyHud::AmmoCropBottom - EnergyHud::AmmoCropTop;
+    const FVector2D IndicatorSize(
+        EnergyHud::AmmoIndicatorHeight * CropWidth / CropHeight,
+        EnergyHud::AmmoIndicatorHeight);
+    const FBox2f IndicatorUv(
+        FVector2f(EnergyHud::AmmoCropLeft / TextureWidth,
+            EnergyHud::AmmoCropTop / TextureHeight),
+        FVector2f(EnergyHud::AmmoCropRight / TextureWidth,
+            EnergyHud::AmmoCropBottom / TextureHeight));
+    auto* ChargeBlock = Hud->WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), EnergyHud::ChargeBlock);
+    ChargeBlock->bIsVariable = true;
+    ChargeBlock->SetVisibility(ESlateVisibility::HitTestInvisible);
+    auto* AmmoRow = Hud->WidgetTree->ConstructWidget<UHorizontalBox>(
+        UHorizontalBox::StaticClass(), EnergyHud::AmmoIndicatorRow);
+    for (FName Field : EnergyHud::AmmoIndicators)
+    {
+        auto* Indicator = Hud->WidgetTree->ConstructWidget<UImage>(
+            UImage::StaticClass(), Field);
+        Indicator->bIsVariable = true;
+        Indicator->SetBrushFromTexture(EnergyHud::AmmoIndicatorTexture, false);
+        FSlateBrush Brush = Indicator->GetBrush();
+        Brush.ImageSize = IndicatorSize;
+        Brush.SetUVRegion(IndicatorUv);
+        Indicator->SetBrush(Brush);
+        Indicator->SetColorAndOpacity(EnergyHud::ChargeGaugeBarColor);
+        Indicator->SetVisibility(ESlateVisibility::HitTestInvisible);
+        auto* IndicatorSlot = AmmoRow->AddChildToHorizontalBox(Indicator);
+        IndicatorSlot->SetPadding(FMargin(
+            EnergyHud::AmmoIndicatorGap * 0.5f, 0.0f));
+        IndicatorSlot->SetHorizontalAlignment(HAlign_Center);
+        IndicatorSlot->SetVerticalAlignment(VAlign_Center);
+    }
+    auto* AmmoRowSlot = ChargeBlock->AddChildToVerticalBox(AmmoRow);
+    AmmoRowSlot->SetPadding(FMargin(
+        0.0f, 0.0f, 0.0f, EnergyHud::AmmoIndicatorTextGap));
+    AmmoRowSlot->SetHorizontalAlignment(HAlign_Center);
+    AmmoRowSlot->SetVerticalAlignment(VAlign_Center);
     auto* ChargeText = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), EnergyHud::ChargeText);
     ChargeText->bIsVariable = true;
     ChargeText->SetText(FText::FromString(EnergyHud::EmptyChargeDisplay));
     ChargeText->SetJustification(ETextJustify::Center);
     auto ChargeFont = ChargeText->GetFont(); ChargeFont.Size = EnergyHud::ChargeGaugeFontSize; ChargeText->SetFont(ChargeFont);
     ChargeText->SetVisibility(ESlateVisibility::HitTestInvisible);
-    auto* ChargeTextSlot = Canvas->AddChildToCanvas(ChargeText);
-    ChargeTextSlot->SetAnchors(FAnchors(1.0f, 1.0f));
-    ChargeTextSlot->SetAlignment(FVector2D(0.5f, 0.5f));
-    ChargeTextSlot->SetPosition(FVector2D(EnergyHud::ChargeGaugeCenterOffset, EnergyHud::ChargeGaugeCenterOffset));
-    ChargeTextSlot->SetAutoSize(true);
+    auto* ChargeTextSlot = ChargeBlock->AddChildToVerticalBox(ChargeText);
+    ChargeTextSlot->SetHorizontalAlignment(HAlign_Center);
+    ChargeTextSlot->SetVerticalAlignment(VAlign_Center);
+    auto* ChargeBlockSlot = Canvas->AddChildToCanvas(ChargeBlock);
+    ChargeBlockSlot->SetAnchors(FAnchors(1.0f, 1.0f));
+    ChargeBlockSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+    ChargeBlockSlot->SetPosition(FVector2D(
+        EnergyHud::ChargeGaugeCenterOffset,
+        EnergyHud::ChargeGaugeCenterOffset));
+    ChargeBlockSlot->SetAutoSize(true);
     auto AddScopeText = [&](FName Field, const TCHAR* Text, float Offset, bool Variable)
     {
         auto* Widget = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Field); Widget->bIsVariable = Variable;
@@ -489,7 +539,7 @@ UClass* CreateDedicatedStation()
     };
     auto SetWideChargeVisibility = [&](const TCHAR* Visibility)
     {
-        for (FName Field : {EnergyHud::ChargeRadial, EnergyHud::ChargeText})
+        for (FName Field : {EnergyHud::ChargeRadial, EnergyHud::ChargeBlock})
         {
             auto* Set = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
             HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Default(Set, OP::Visibility, Visibility); HG.Exec(Set);
@@ -501,6 +551,11 @@ UClass* CreateDedicatedStation()
     UpdateStationStatusHud(HG, Station->GetCastResultPin(), BP->GeneratedClass,
         ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, ZoomTest::Wide),
         ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Settings::StatusIconOpacity));
+    UBlueprint* RailgunModule = LoadObject<UBlueprint>(
+        nullptr, RailgunInventoryShared::ModuleObjectPath);
+    check(RailgunModule && RailgunModule->GeneratedClass);
+    UpdateStationAmmoHud(HG, Station->GetCastResultPin(), BP->GeneratedClass,
+        RailgunModule->GeneratedClass);
     UpdateStationEnergyHud(HG, Station->GetCastResultPin(), BP->GeneratedClass,
         HG.Pin(HudTick, EnergyHud::WidgetDeltaTimePin));
     AddStationHintConstruction(Hud);

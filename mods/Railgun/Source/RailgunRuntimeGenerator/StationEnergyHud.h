@@ -1,4 +1,5 @@
 #pragma once
+#include "RailgunInventoryNames.h"
 
 namespace EnergyHud
 {
@@ -7,7 +8,14 @@ inline const FName Power(TEXT("RailgunEnergyPower"));
 inline const FName Progress(TEXT("RailgunEnergyProgress")), Rate(TEXT("RailgunEnergyRate"));
 inline const FName ChargeRadial(TEXT("RailgunChargeRadial"));
 inline const FName ChargeText(TEXT("RailgunChargeText"));
+inline const FName ChargeBlock(TEXT("RailgunChargeBlock"));
+inline const FName AmmoIndicatorRow(TEXT("RailgunAmmoIndicatorRow"));
 inline const FName ChargeInitialized(TEXT("RailgunChargeInitialized"));
+inline const FName AmmoInitialized(TEXT("RailgunAmmoHudInitialized"));
+inline const TArray<FName> AmmoIndicators {
+    TEXT("RailgunAmmoIndicator01"), TEXT("RailgunAmmoIndicator02"),
+    TEXT("RailgunAmmoIndicator03"), TEXT("RailgunAmmoIndicator04"),
+    TEXT("RailgunAmmoIndicator05"), TEXT("RailgunAmmoIndicator06")};
 inline const FName StatusCharging(TEXT("RailgunStatusCharging"));
 inline const FName StatusOffline(TEXT("RailgunStatusOffline"));
 inline const FName StatusReady(TEXT("RailgunStatusReady"));
@@ -20,9 +28,14 @@ inline constexpr TCHAR ReadyAsset[] = TEXT("T_RailgunStatusReady");
 inline constexpr TCHAR ChargingSourceArgument[] = TEXT("ChargingStatusIcon=");
 inline constexpr TCHAR OfflineSourceArgument[] = TEXT("OfflineStatusIcon=");
 inline constexpr TCHAR ReadySourceArgument[] = TEXT("ReadyStatusIcon=");
+inline constexpr TCHAR AmmoIndicatorPackage[] =
+    TEXT("/Game/Mods/Railgun/Station/T_RailgunAmmoIndicator");
+inline constexpr TCHAR AmmoIndicatorAsset[] = TEXT("T_RailgunAmmoIndicator");
+inline constexpr TCHAR AmmoIndicatorSourceArgument[] = TEXT("AmmoIndicator=");
 inline UTexture2D* ChargingTexture = nullptr;
 inline UTexture2D* OfflineTexture = nullptr;
 inline UTexture2D* ReadyTexture = nullptr;
+inline UTexture2D* AmmoIndicatorTexture = nullptr;
 inline constexpr float DiagnosticLeft = 24.0f;
 inline constexpr float StatusOffsetY = -190.0f;
 inline constexpr float ChargeGaugeSize = 150.0f;
@@ -30,6 +43,16 @@ inline constexpr float ChargeGaugeMargin = 20.0f;
 inline constexpr float ChargeGaugeCenterOffset = -(ChargeGaugeMargin + ChargeGaugeSize * 0.5f);
 inline constexpr float ChargeGaugeBarThickness = 20.0f;
 inline constexpr float ChargeGaugeFontSize = 14.0f;
+inline const FLinearColor ChargeGaugeBarColor(1.0f, 1.0f, 1.0f, 0.2f);
+inline const FLinearColor ChargeGaugeProgressColor = FLinearColor::White;
+inline const FLinearColor EmptyAmmoTint(1.0f, 0.25f, 0.25f, 0.3f);
+inline constexpr float AmmoIndicatorHeight = 30.0f;
+inline constexpr float AmmoIndicatorGap = 6.0f;
+inline constexpr float AmmoIndicatorTextGap = 5.0f;
+inline constexpr float AmmoCropLeft = 548.0f;
+inline constexpr float AmmoCropTop = 372.0f;
+inline constexpr float AmmoCropRight = 706.0f;
+inline constexpr float AmmoCropBottom = 895.0f;
 inline constexpr float ConnectionOffset = 400.0f;
 inline constexpr float PowerOffset = 428.0f;
 inline constexpr float ProgressOffset = 456.0f;
@@ -70,6 +93,73 @@ inline const FName DeltaTimePin(TEXT("DeltaTime"));
 inline const FName WidgetDeltaTimePin(TEXT("InDeltaTime"));
 inline const FName InterpSpeedPin(TEXT("InterpSpeed"));
 inline const FName FloatInputPin(TEXT("InFloat"));
+inline const FName ColorAndOpacityPin(TEXT("InColorAndOpacity"));
+}
+
+void UpdateStationAmmoHud(FGraph& G, UEdGraphPin* Station,
+    UClass* StationClass, UClass* RailgunModuleClass)
+{
+    using namespace EnergyHud;
+    UEdGraphPin* Anchor = ReadNativeInputField(
+        G, Station, StationClass, S::Anchor);
+    G.Branch(G.Valid(Anchor));
+    auto* Railgun = ObserveCall(G, UActorComponent::StaticClass(),
+        ActorScanGraphNames::GetActorOwner, Anchor);
+    auto* Module = NewObject<UK2Node_DynamicCast>(G.Graph);
+    Module->TargetType = RailgunModuleClass;
+    Module->SetPurity(true);
+    G.Node(Module);
+    G.Link(Railgun, Module->GetCastSourcePin());
+    G.Branch(G.Valid(Module->GetCastResultPin()));
+
+    auto* Initialized = G.Branch(G.Read(AmmoInitialized));
+    UEdGraphPin* AlreadyInitialized = G.Tail;
+    G.Tail = G.Pin(Initialized, P::Else);
+    auto* InitialSync = G.Call(
+        RailgunModuleClass, RailgunInventoryShared::SyncVisuals);
+    G.Link(Module->GetCastResultPin(),
+        G.Pin(InitialSync, P::FunctionTarget));
+    G.Exec(InitialSync);
+    G.Write(AmmoInitialized, nullptr, N::True);
+    StationMerge(G, {AlreadyInitialized, G.Tail});
+
+    UEdGraphPin* Count = ReadNativeInputField(G,
+        Module->GetCastResultPin(), RailgunModuleClass,
+        RailgunInventoryShared::LastVisualCount);
+    UEdGraphPin* ActiveColor = ReadNativeInputField(G,
+        G.Read(ChargeRadial), URadialSlider::StaticClass(),
+        GET_MEMBER_NAME_CHECKED(URadialSlider, SliderProgressColor));
+    UEdGraphPin* FaintColor = ReadNativeInputField(G,
+        G.Read(ChargeRadial), URadialSlider::StaticClass(),
+        GET_MEMBER_NAME_CHECKED(URadialSlider, SliderBarColor));
+    UEdGraphPin* Empty = G.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_IntInt),
+        Count, N::Zero);
+    auto* InactiveTint = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectColor));
+    G.Default(InactiveTint, P::Select::WhenTrue, *EmptyAmmoTint.ToString());
+    G.Link(FaintColor, G.Pin(InactiveTint, P::Select::WhenFalse));
+    G.Link(Empty, G.Pin(InactiveTint, P::Select::Condition));
+    UEdGraphPin* InactiveColor = G.Pin(InactiveTint, P::ReturnValue);
+    for (int32 Index = 0; Index < AmmoIndicators.Num(); ++Index)
+    {
+        const int32 ActivationThreshold = AmmoIndicators.Num() - Index - 1;
+        UEdGraphPin* Active = G.Compare(
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_IntInt),
+            Count, *FString::FromInt(ActivationThreshold));
+        auto* Tint = G.Call(UKismetMathLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectColor));
+        G.Link(ActiveColor, G.Pin(Tint, P::Select::WhenTrue));
+        G.Link(InactiveColor, G.Pin(Tint, P::Select::WhenFalse));
+        G.Link(Active, G.Pin(Tint, P::Select::Condition));
+        auto* SetColor = G.Call(UImage::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UImage, SetColorAndOpacity));
+        G.Link(G.Read(AmmoIndicators[Index]),
+            G.Pin(SetColor, P::FunctionTarget));
+        G.Link(G.Pin(Tint, P::ReturnValue),
+            G.Pin(SetColor, ColorAndOpacityPin));
+        G.Exec(SetColor);
+    }
 }
 
 // Diagnostic values come from the railgun module, not the possessed station.

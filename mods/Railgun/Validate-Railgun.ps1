@@ -15,6 +15,8 @@ $skillDiscoveryRoot = '/Game/Data/Assets/Skill'
 $gunItemPackage = '/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01'
 $skillPackage = '/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun'
 $ammoPackage = '/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod'
+$hudPackage = '/Game/Mods/Railgun/Station/WBP_RailgunHUD'
+$ammoIndicatorPackage = '/Game/Mods/Railgun/Station/T_RailgunAmmoIndicator'
 function Read-Candidate([string]$Query) {
     $result = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') -Query $Query -Source Mod -ModContainer $Container -AsJson) | ConvertFrom-Json
     $script:evidence += $result
@@ -37,6 +39,128 @@ function JsonStringLeaves($Value) {
     if ($Value -is [pscustomobject]) {
         foreach ($property in $Value.PSObject.Properties) {
             JsonStringLeaves $property.Value
+        }
+    }
+}
+function VisibilityTargets($Value) {
+    if ($null -eq $Value) { return }
+    if ($Value -is [array]) {
+        foreach ($entry in $Value) { VisibilityTargets $entry }
+        return
+    }
+    if ($Value -isnot [pscustomobject]) { return }
+    $names = @($Value.PSObject.Properties.Name)
+    if (($names -ccontains 'Token') -and $Value.Token -ceq 'EX_Context' -and
+        ($names -ccontains 'ContextExpression') -and
+        $null -ne $Value.ContextExpression -and
+        (@($Value.ContextExpression.PSObject.Properties.Name) -ccontains 'Function') -and
+        $Value.ContextExpression.Function -ceq 'SetVisibility' -and
+        ($names -ccontains 'ObjectExpression') -and
+        $null -ne $Value.ObjectExpression -and
+        (@($Value.ObjectExpression.PSObject.Properties.Name) -ccontains 'Variable') -and
+        $null -ne $Value.ObjectExpression.Variable -and
+        $null -ne $Value.ObjectExpression.Variable.Property) {
+        [string]$Value.ObjectExpression.Variable.Property.Name
+    }
+    foreach ($property in $Value.PSObject.Properties) {
+        VisibilityTargets $property.Value
+    }
+}
+function AmmoActivationThresholds($Value) {
+    if ($null -eq $Value) { return }
+    if ($Value -is [array]) {
+        foreach ($entry in $Value) { AmmoActivationThresholds $entry }
+        return
+    }
+    if ($Value -isnot [pscustomobject]) { return }
+    $names = @($Value.PSObject.Properties.Name)
+    if (($names -ccontains 'Expression') -and
+        $null -ne $Value.Expression -and
+        (@(JsonStringLeaves $Value.Expression) -ccontains
+            'RailgunAmmoLastVisualCount') -and
+        (@(JsonStringLeaves $Value.Expression) -ccontains
+            "Class'KismetMathLibrary:Greater_IntInt'")) {
+        $thresholds = @($Value.Expression.Parameters | Where-Object {
+            $_.Token -ceq 'EX_IntConst'
+        })
+        Require ($thresholds.Count -eq 1) `
+            'Ammo indicator comparison has an unexpected threshold shape.'
+        [int]$thresholds[0].Value
+        return
+    }
+    foreach ($property in $Value.PSObject.Properties) {
+        AmmoActivationThresholds $property.Value
+    }
+}
+function EmptyAmmoTintAssignments($Statements) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject]) { continue }
+        $statementNames = @($statement.PSObject.Properties.Name)
+        if (-not ($statementNames -ccontains 'Token') -or
+            -not ($statementNames -ccontains 'Variable') -or
+            -not ($statementNames -ccontains 'Expression')) {
+            continue
+        }
+        $variableLeaves = @(JsonStringLeaves $statement.Variable)
+        $expressionLeaves = @(JsonStringLeaves $statement.Expression)
+        if ($statement.Token -cne 'EX_Let' -or
+            $null -eq $statement.Variable -or
+            $null -eq $statement.Expression -or
+            -not ($variableLeaves -ccontains
+                'CallFunc_SelectColor_ReturnValue') -or
+            -not ($expressionLeaves -ccontains
+                "Class'KismetMathLibrary:SelectColor'")) {
+            continue
+        }
+        $parameters = @($statement.Expression.Parameters)
+        if ($parameters.Count -eq 3) {
+            $tint = $parameters[0]
+            $tintValues = @($tint.Properties | ForEach-Object { [double]$_.Value })
+            $fallbackLeaves = @(JsonStringLeaves $parameters[1])
+            $conditionLeaves = @(JsonStringLeaves $parameters[2])
+            if ($tint.Token -ceq 'EX_StructConst' -and
+                $tint.Struct.ObjectName -ceq "Class'LinearColor'" -and
+                $tintValues.Count -eq 4 -and
+                $tintValues[0] -eq 1.0 -and
+                $tintValues[1] -eq 0.25 -and
+                $tintValues[2] -eq 0.25 -and
+                $tintValues[3] -eq 0.3 -and
+                $fallbackLeaves -ccontains 'RailgunChargeRadial' -and
+                $fallbackLeaves -ccontains 'SliderBarColor' -and
+                $conditionLeaves -ccontains
+                    'CallFunc_EqualEqual_IntInt_ReturnValue') {
+                $statement
+            }
+        }
+    }
+}
+function EmptyAmmoZeroComparisons($Statements) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject]) { continue }
+        $statementNames = @($statement.PSObject.Properties.Name)
+        if (-not ($statementNames -ccontains 'Token') -or
+            -not ($statementNames -ccontains 'Variable') -or
+            -not ($statementNames -ccontains 'Expression')) {
+            continue
+        }
+        $variableLeaves = @(JsonStringLeaves $statement.Variable)
+        $expressionLeaves = @(JsonStringLeaves $statement.Expression)
+        if ($statement.Token -cne 'EX_LetBool' -or
+            $null -eq $statement.Variable -or
+            $null -eq $statement.Expression -or
+            -not ($variableLeaves -ccontains
+                'CallFunc_EqualEqual_IntInt_ReturnValue') -or
+            -not ($expressionLeaves -ccontains
+                "Class'KismetMathLibrary:EqualEqual_IntInt'")) {
+            continue
+        }
+        $parameters = @($statement.Expression.Parameters)
+        if ($parameters.Count -eq 2 -and
+            (@(JsonStringLeaves $parameters[0]) -ccontains
+                'RailgunAmmoLastVisualCount') -and
+            $parameters[1].Token -ceq 'EX_IntConst' -and
+            [int]$parameters[1].Value -eq 0) {
+            $statement
         }
     }
 }
@@ -148,6 +272,137 @@ foreach ($requiredVisualReference in @(
     Require ($syncVisualStrings -ccontains $requiredVisualReference) `
         ('Ammo-visual sync reference missing: ' + $requiredVisualReference)
 }
+$hud = @(Read-Candidate $hudPackage)
+$hudFunctions = @($hud | Where-Object { $_.Type -ceq 'Function' })
+$hudUbergraph = @($hudFunctions | Where-Object {
+    $_.Name -ceq 'ExecuteUbergraph_WBP_RailgunHUD'
+})
+Require ($hudUbergraph.Count -eq 1) 'Expected one Railgun HUD ubergraph.'
+$hudUbergraphStrings = @(JsonStringLeaves $hudUbergraph[0])
+Require (@($hudUbergraphStrings | Where-Object {
+    $_ -ceq 'SyncRailgunAmmoVisuals'
+}).Count -eq 1) 'HUD must perform exactly one guarded initial ammo sync.'
+Require ($hudUbergraphStrings -ccontains 'RailgunAmmoHudInitialized') `
+    'HUD initial ammo-sync guard is missing.'
+Require ($hudUbergraphStrings -ccontains 'RailgunAmmoLastVisualCount') `
+    'HUD does not read the event-maintained ammo count cache.'
+Require (@($hudUbergraphStrings | Where-Object {
+    $_ -ceq "Class'Image:SetColorAndOpacity'"
+}).Count -eq 6) 'HUD must tint exactly six persistent ammo indicators.'
+$emptyAmmoTintAssignments = @(
+    EmptyAmmoTintAssignments $hudUbergraph[0].ScriptBytecode
+)
+Require ($emptyAmmoTintAssignments.Count -eq 6) `
+    'HUD must apply the subtle red empty-magazine tint to all six indicators.'
+$emptyAmmoZeroComparisons = @(
+    EmptyAmmoZeroComparisons $hudUbergraph[0].ScriptBytecode
+)
+Require ($emptyAmmoZeroComparisons.Count -eq 6) `
+    'Every HUD empty-magazine tint must use an exact zero-count comparison.'
+$ammoActivationThresholds = @(AmmoActivationThresholds $hudUbergraph[0])
+Require (@(Compare-Object -ReferenceObject @(5,4,3,2,1,0) `
+    -DifferenceObject $ammoActivationThresholds -SyncWindow 0).Count -eq 0) `
+    'HUD ammo indicators must activate from right to left.'
+foreach ($forbiddenHudInventoryReference in @(
+    'Items', "Class'BlueprintMapLibrary:Map_Values'", 'OnInventoryChanged'
+)) {
+    Require (-not ($hudUbergraphStrings -ccontains
+        $forbiddenHudInventoryReference)) `
+        ('HUD must not poll or bind inventory data directly: ' +
+            $forbiddenHudInventoryReference)
+}
+$visibilityTargets = @(VisibilityTargets $hudUbergraph[0])
+Require (@($visibilityTargets | Where-Object {
+    $_ -ceq 'RailgunChargeRadial'
+}).Count -eq 2) 'Wide/optics visibility gate does not own the charge radial.'
+Require (@($visibilityTargets | Where-Object {
+    $_ -ceq 'RailgunChargeBlock'
+}).Count -eq 2) 'Wide/optics visibility gate does not own the charge block.'
+Require (@($visibilityTargets | Where-Object {
+    $_ -ceq 'RailgunChargeText'
+}).Count -eq 0) 'Charge text has a duplicate direct visibility gate.'
+$indicatorNames = @(
+    'RailgunAmmoIndicator01','RailgunAmmoIndicator02',
+    'RailgunAmmoIndicator03','RailgunAmmoIndicator04',
+    'RailgunAmmoIndicator05','RailgunAmmoIndicator06'
+)
+$indicators = @($hud | Where-Object {
+    $_.Type -ceq 'Image' -and $indicatorNames -ccontains $_.Name
+})
+Require (@(Compare-Object -ReferenceObject $indicatorNames `
+    -DifferenceObject @($indicators.Name) -CaseSensitive).Count -eq 0) `
+    'HUD ammo-indicator identity set differs from the six-slot contract.'
+$chargeRadial = @($hud | Where-Object {
+    $_.Type -ceq 'RadialSlider' -and $_.Name -ceq 'RailgunChargeRadial'
+})
+Require ($chargeRadial.Count -eq 1) 'HUD charge radial is missing or duplicated.'
+$faintColor = $chargeRadial[0].Properties.SliderBarColor
+foreach ($indicatorName in $indicatorNames) {
+    $indicator = @($indicators | Where-Object { $_.Name -ceq $indicatorName })
+    Require ($indicator.Count -eq 1 -and
+        $indicator[0].Properties.Visibility -ceq
+            'ESlateVisibility::HitTestInvisible') `
+        ('Ammo indicator is not persistent: ' + $indicatorName)
+    $brush = $indicator[0].Properties.Brush
+    Require ($brush.ResourceObject.ObjectPath -ceq
+        ($ammoIndicatorPackage + '.0')) `
+        ('Ammo indicator texture mismatch: ' + $indicatorName)
+    Require ([Math]::Abs([double]$brush.ImageSize.Y - 30.0) -lt 0.0001 -and
+        [Math]::Abs([double]$brush.UVRegion.Min.X - (548.0 / 1254.0)) -lt
+            0.000001 -and
+        [Math]::Abs([double]$brush.UVRegion.Min.Y - (372.0 / 1254.0)) -lt
+            0.000001 -and
+        [Math]::Abs([double]$brush.UVRegion.Max.X - (706.0 / 1254.0)) -lt
+            0.000001 -and
+        [Math]::Abs([double]$brush.UVRegion.Max.Y - (895.0 / 1254.0)) -lt
+            0.000001) ('Ammo indicator crop/size mismatch: ' + $indicatorName)
+    $color = $indicator[0].Properties.ColorAndOpacity
+    Require ([Math]::Abs([double]$color.R - [double]$faintColor.R) -lt 0.000001 -and
+        [Math]::Abs([double]$color.G - [double]$faintColor.G) -lt 0.000001 -and
+        [Math]::Abs([double]$color.B - [double]$faintColor.B) -lt 0.000001 -and
+        [Math]::Abs([double]$color.A - [double]$faintColor.A) -lt 0.000001) `
+        ('Ammo indicator faint color differs from radial bar: ' + $indicatorName)
+}
+$ammoRowSlots = @($hud | Where-Object {
+    $_.Type -ceq 'HorizontalBoxSlot' -and
+    $_.Outer.ObjectName -ceq
+        "HorizontalBox'WBP_RailgunHUD_C:WidgetTree.RailgunAmmoIndicatorRow'"
+} | Sort-Object Name)
+Require ($ammoRowSlots.Count -eq 6) 'Ammo indicator row must retain six slots.'
+for ($index = 0; $index -lt $indicatorNames.Count; $index++) {
+    Require ($ammoRowSlots[$index].Properties.Content.ObjectName.EndsWith(
+        '.' + $indicatorNames[$index] + "'", [StringComparison]::Ordinal) -and
+        [Math]::Abs([double]$ammoRowSlots[$index].Properties.Padding.Left - 3.0) -lt
+            0.0001 -and
+        [Math]::Abs([double]$ammoRowSlots[$index].Properties.Padding.Right - 3.0) -lt
+            0.0001) 'Ammo indicator row order/gap mismatch.'
+}
+$chargeBlockSlots = @($hud | Where-Object {
+    $_.Type -ceq 'VerticalBoxSlot' -and
+    $_.Outer.ObjectName -ceq
+        "VerticalBox'WBP_RailgunHUD_C:WidgetTree.RailgunChargeBlock'"
+} | Sort-Object Name)
+Require ($chargeBlockSlots.Count -eq 2 -and
+    $chargeBlockSlots[0].Properties.Content.ObjectName.EndsWith(
+        ".RailgunAmmoIndicatorRow'", [StringComparison]::Ordinal) -and
+    $chargeBlockSlots[1].Properties.Content.ObjectName.EndsWith(
+        ".RailgunChargeText'", [StringComparison]::Ordinal) -and
+    [Math]::Abs([double]$chargeBlockSlots[0].Properties.Padding.Bottom - 5.0) -lt
+        0.0001) 'Ammo row and charge text vertical layout mismatch.'
+$chargeText = @($hud | Where-Object {
+    $_.Type -ceq 'TextBlock' -and $_.Name -ceq 'RailgunChargeText'
+})
+Require ($chargeText.Count -eq 1 -and
+    $chargeText[0].Properties.Text.SourceString -ceq '0.0 KWh' -and
+    [Math]::Abs([double]$chargeText[0].Properties.Font.Size - 14.0) -lt 0.0001) `
+    'Existing charge text presentation changed.'
+$ammoIndicatorTexture = @(Read-Candidate $ammoIndicatorPackage)
+Require ($ammoIndicatorTexture.Count -eq 1 -and
+    $ammoIndicatorTexture[0].Type -ceq 'Texture2D' -and
+    [int]$ammoIndicatorTexture[0].SizeX -eq 1254 -and
+    [int]$ammoIndicatorTexture[0].SizeY -eq 1254 -and
+    $ammoIndicatorTexture[0].PixelFormat -ceq 'PF_B8G8R8A8') `
+    'Ammo indicator texture dimensions or format changed.'
 $module = @($shell | Where-Object { $_.Name -ceq 'ModuleComponent' })
 Require ($module.Count -eq 1 -and $module[0].Type -ceq 'VoyageModuleComponent') 'Native buffer module missing.'
 Require (@(PropertyNames $module[0]) -contains 'ItemAsset') 'Module ItemAsset missing.'
@@ -289,10 +544,26 @@ $expectedAmmoRoots = @(
     'Slot_01_AmmoCassette','Slot_02_AmmoCassette','Slot_03_AmmoCassette',
     'Slot_04_AmmoCassette','Slot_05_AmmoCassette','Slot_06_AmmoCassette'
 )
+function Get-InventoryComponent([string]$Name) {
+    return @($inventory.components | Where-Object { $_.name -ceq $Name })
+}
+function Test-InventoryDescendant([object]$Component, [string]$AncestorName) {
+    $parentName = [string]$Component.parent
+    $visited = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    while (-not [string]::IsNullOrEmpty($parentName)) {
+        if ($parentName -ceq $AncestorName) { return $true }
+        if (-not $visited.Add($parentName)) { return $false }
+        $parent = @(Get-InventoryComponent $parentName)
+        if ($parent.Count -ne 1) { return $false }
+        $parentName = [string]$parent[0].parent
+    }
+    return $false
+}
 Require (@(Compare-Object -ReferenceObject $expectedAmmoRoots `
     -DifferenceObject @($inventory.roles.ammoInstances) `
     -CaseSensitive -SyncWindow 0).Count -eq 0) `
     'Ordered ammo cassette role binding mismatch.'
+$ammoRenderOwners = @{}
 foreach ($ammoRoot in $expectedAmmoRoots) {
     $slot = $ammoRoot.Substring(0,7)
     $bin = $slot + '_AmmoBin'
@@ -308,12 +579,25 @@ foreach ($ammoRoot in $expectedAmmoRoots) {
         -not $binComponent[0].Properties.bHiddenInGame) `
         ('Ammo bin must stay visible: ' + $bin)
     $descendants = @($inventory.components | Where-Object {
-        $_.parent -ceq $ammoRoot
+        Test-InventoryDescendant $_ $ammoRoot
     })
-    Require ($descendants.Count -gt 0) `
+    Require (-not (@($descendants.name) -ccontains $slot) -and
+        -not (@($descendants.name) -ccontains $bin)) `
+        ('Ammo holder entered hidden cassette subtree: ' + $ammoRoot)
+    foreach ($otherRoot in $expectedAmmoRoots) {
+        if ($otherRoot -ceq $ammoRoot) { continue }
+        Require (-not (@($descendants.name) -ccontains $otherRoot)) `
+            ('Ammo cassette roots overlap: ' + $ammoRoot + ' / ' + $otherRoot)
+    }
+    $renderDescendants = @($descendants | Where-Object { $_.mesh })
+    Require ($renderDescendants.Count -gt 0) `
         ('Ammo cassette has no render descendants: ' + $ammoRoot)
-    foreach ($descendant in $descendants) {
-        Require ($descendant.mesh -and $descendant.hiddenInGame) `
+    foreach ($descendant in $renderDescendants) {
+        Require (-not $ammoRenderOwners.ContainsKey([string]$descendant.name)) `
+            ('Ammo render descendant belongs to multiple cassette roots: ' +
+                $descendant.name)
+        $ammoRenderOwners[[string]$descendant.name] = $ammoRoot
+        Require ($descendant.hiddenInGame) `
             ('Ammo render descendant is not default-hidden: ' + $descendant.name)
         $component = @($shell | Where-Object {
             $_.Name -ceq ($descendant.name + '_GEN_VARIABLE')
@@ -492,5 +776,5 @@ $skillIcon = @(Read-Candidate '/Game/Mods/Railgun/Research/T_RailgunSkill')
 $skillTexture = @($skillIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunSkill' })
 Require ($skillTexture.Count -eq 1 -and $skillTexture[0].SizeX -eq 256 -and $skillTexture[0].SizeY -eq 256) 'Railgun skill icon must be 256x256.'
 $reportPath = Join-Path $output 'validation.json'
-[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; material parameter presence and reviewed stock parent; complete Railgun item with Alloy Frame recipe, owned actor/icon and cleared production metadata; one complete VoyageItemAmmo export with the stock Rod item fields except its nested-export ProjectileTemplate; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped radial-color ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; material parameter presence and reviewed stock parent; complete Railgun item with Alloy Frame recipe, owned actor/icon and cleared production metadata; one complete VoyageItemAmmo export with the stock Rod item fields except its nested-export ProjectileTemplate; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 [pscustomobject]@{status='passed';reportPath=$reportPath}

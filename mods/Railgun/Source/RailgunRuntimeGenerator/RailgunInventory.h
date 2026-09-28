@@ -1,10 +1,10 @@
 #pragma once
 #include "../../RailgunModelContract.h"
+#include "RailgunInventoryNames.h"
 
 namespace RailgunInventory
 {
-inline constexpr TCHAR ModuleObjectPath[] =
-    TEXT("/Game/Mods/Railgun/Module/BP_Module_Railgun.BP_Module_Railgun");
+using RailgunInventoryShared::ModuleObjectPath;
 inline constexpr TCHAR ContainerOverlayPackage[] =
     TEXT("/Game/Data/UI/OverlayWidgets/DA_Widget_Container");
 inline constexpr TCHAR ContainerOverlayAsset[] = TEXT("DA_Widget_Container");
@@ -21,14 +21,14 @@ inline const FName ItemParameter(TEXT("Item"));
 inline const FName IsValidParameter(TEXT("bIsValid"));
 inline const FName PartIdParameter(TEXT("PartId"));
 inline const FName NewMaxWeightLimitParameter(TEXT("NewMaxWeightLimit"));
-inline const FName SyncVisuals(TEXT("SyncRailgunAmmoVisuals"));
+using RailgunInventoryShared::SyncVisuals;
 inline const FName InventoryChangedCallback(TEXT("OnRailgunAmmoInventoryChanged"));
 inline const FName OnInventoryChanged(TEXT("OnInventoryChanged"));
 inline const FName OnPersistentActorPostLoad(TEXT("OnPersistentActorPostLoad"));
 inline constexpr TCHAR InventoryDelegateSignaturePath[] =
     TEXT("/Script/Voyage.InventoryDelegate__DelegateSignature");
 inline const FName VisualCount(TEXT("RailgunAmmoVisualCount"));
-inline const FName LastVisualCount(TEXT("RailgunAmmoLastVisualCount"));
+using RailgunInventoryShared::LastVisualCount;
 inline const FName Items(TEXT("Items"));
 inline const FName TargetMap(TEXT("TargetMap"));
 inline const FName Values(TEXT("Values"));

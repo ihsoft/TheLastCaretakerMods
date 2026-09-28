@@ -142,12 +142,27 @@ remain separate. Temporary inventory diagnostic widgets and state are absent.
 General evidence and restrictions live in the shared
 [filtered inventory contract](../../docs/voyage-item-fabrication-and-pickup.md#filtered-module-inventories-refinery-reference).
 
+The wide-view HUD displays six persistent cartridge icons
+above the existing charge text. It reads the module's event-maintained cached
+count after one guarded initial synchronization; the HUD does not enumerate or
+bind the inventory. The rightmost N icons use the radial progress color and the
+remaining positions use its faint bar color, matching the physical magazine
+while empty slots remain visible. At zero rounds, all six positions use a
+subtle red tint instead of the ordinary faint color.
+The icon row and charge text form one centered block, and the existing optics
+gate hides that whole block together with the charge radial. The source image,
+crop, six-slot order, colors, cached-count path and absence of HUD inventory
+polling are statically validated. Real-game validation confirms placement,
+right-to-left updates, the zero-count tint and optics hiding.
+
 ## Current game-validated checkpoint
 
-`build-20260928-044641` is the working, non-final inventory and cassette-visual
+`build-20260928-064458` is the working inventory, cassette-visual and ammo-HUD
 checkpoint. User gameplay confirmation covers the six-round capacity limit,
 event-driven cassette updates for stack additions and removals, deposit-all,
-independent gun instances, and empty/partial persistence through save/load.
+independent gun instances, empty/partial persistence through save/load, and
+the six-position HUD including right-to-left fill, empty red tint and optics
+hiding.
 The earlier 16-property ammo baseline established fabrication and pickup of one
 box with six rounds; gun/research validation remains separate. This checkpoint
 is not a new test of every weapon interaction.
@@ -155,9 +170,9 @@ is not a new test of every weapon interaction.
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Release evidence: `artifacts/railgun/build-20260928-044641/release-manifest.json`.
+- Release evidence: `artifacts/railgun/build-20260928-064458/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20260928-044858-build-20260928-044641-09a9236e/install-manifest.json`.
+  `artifacts/installations/Railgun/20260928-064829-build-20260928-064458-7d344a08/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 
