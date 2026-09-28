@@ -34,9 +34,12 @@ internal static class Program
             var request = JsonNode.Parse(File.ReadAllText(args[0]))!;
             string Str(string key) => request[key]!.GetValue<string>();
             var output = Path.GetFullPath(Str("output"));
-            if (File.Exists(output)) throw new IOException("Output exists; choose a fresh GLB path.");
-            var materialMode = Str("materialMode");
-            if (materialMode is not ("PbrApproximation" or "BakeReconstructed"))
+            if (File.Exists(output)) throw new IOException("Output exists; choose a fresh output path.");
+            var operation = request["operation"]?.GetValue<string>() ?? "MaterialGlb";
+            if (operation is not ("MaterialGlb" or "ColorTexturePreview"))
+                throw new ArgumentException("operation must be MaterialGlb or ColorTexturePreview.");
+            var materialMode = operation == "MaterialGlb" ? Str("materialMode") : "ColorTexturePreview";
+            if (operation == "MaterialGlb" && materialMode is not ("PbrApproximation" or "BakeReconstructed"))
                 throw new ArgumentException("materialMode must be PbrApproximation or BakeReconstructed.");
             var assets = request["materials"]!.AsArray().Select(x => x!.GetValue<string>()).ToArray();
             ValidateAssets(assets);
@@ -58,6 +61,9 @@ internal static class Program
             using var provider = new StockProvider(new DirectoryInfo(Path.Combine(gameRoot, "Voyage/Content/Paks")));
             provider.MappingsContainer = new FileUsmapTypeMappingsProvider(Str("mappingPath"));
             provider.Initialize(); provider.Mount(); provider.PostMount(); provider.LoadVirtualPaths();
+            if (operation == "ColorTexturePreview")
+                return ExportColorTexturePreview(provider, assets, output,
+                    request["thumbnailSize"]?.GetValue<int>() ?? 512, build, exeHash, Str("mappingPath"));
             var textureCache = new Dictionary<string, TextureRecord>(StringComparer.Ordinal);
             var textureSources = new Dictionary<string, UUnrealMaterial>(StringComparer.Ordinal);
             var reports = new List<MaterialRecord>();
@@ -181,6 +187,113 @@ internal static class Program
             assets.Any(x => !Regex.IsMatch(x, @"^/(Game|Engine|[A-Za-z0-9_]+)/[A-Za-z0-9_ /-]+$") || x.Trim() != x))
             throw new ArgumentException("Use 1..128 unique exact /Game/... (or plugin mount) material package paths, no object suffix, wildcard or traversal.");
     }
+
+    internal static bool IsColorPreviewCandidate(TextureRecord texture, IEnumerable<string> parameters)
+    {
+        if (texture.Png == null || texture.IsNormal || !texture.Srgb) return false;
+        var excluded = new[] { "normal", "mask", "orm", "orh", "roughness", "metallic", "specular",
+            "occlusion", "height", "displacement", "opacity" };
+        var evidence = parameters.Append(texture.Source.Split('/')[^1].Split('.')[0]).Select(Normalize);
+        return !evidence.Any(value => excluded.Any(value.Contains));
+    }
+
+    static int ExportColorTexturePreview(StockProvider provider, string[] assets, string output, int thumbnailSize,
+        string build, string exeHash, string mappingPath)
+    {
+        if (Path.GetExtension(output) != ".png") throw new ArgumentException("Color preview output must be .png.");
+        if (thumbnailSize < 128 || thumbnailSize > 1024) throw new ArgumentOutOfRangeException(nameof(thumbnailSize), "thumbnailSize must be 128..1024.");
+        var sources = new Dictionary<string, PreviewTextureSource>(StringComparer.Ordinal);
+        foreach (var asset in assets)
+        {
+            var material = provider.LoadPackage(asset).GetExports().OfType<UMaterialInterface>().SingleOrDefault()
+                ?? throw new InvalidDataException($"Not one Material/MaterialInstance: {asset}");
+            var parameters = new CMaterialParams2();
+            material.GetParams(parameters, EMaterialDepth.AllLayers);
+            foreach (var pair in parameters.Textures.OrderBy(x => x.Key, StringComparer.Ordinal))
+            {
+                var path = pair.Value.GetPathName();
+                if (!sources.TryGetValue(path, out var source))
+                    sources[path] = source = new PreviewTextureSource { Texture = pair.Value };
+                source.Consumers.Add(new TextureConsumerRecord { Material = asset, Parameter = pair.Key });
+            }
+        }
+        var decoded = sources.OrderBy(x => x.Key, StringComparer.Ordinal).Select(entry =>
+        {
+            var texture = Decode(entry.Value.Texture);
+            var parameters = entry.Value.Consumers.Select(x => x.Parameter).Distinct(StringComparer.Ordinal).ToArray();
+            return new PreviewTextureEntry { Texture = texture, Consumers = entry.Value.Consumers.ToArray(),
+                Included = IsColorPreviewCandidate(texture, parameters),
+                Disposition = PreviewDisposition(texture, parameters) };
+        }).ToArray();
+        var selected = decoded.Where(x => x.Included).ToArray();
+        if (selected.Length == 0) throw new InvalidDataException("No color textures remained after normal/mask/data filtering.");
+        var columns = Math.Min(3, selected.Length);
+        var rows = (selected.Length + columns - 1) / columns;
+        const int padding = 16;
+        const int labelHeight = 56;
+        var tileWidth = thumbnailSize + padding * 2;
+        var tileHeight = thumbnailSize + labelHeight + padding * 2;
+        using var sheet = new SKBitmap(columns * tileWidth, rows * tileHeight, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var canvas = new SKCanvas(sheet);
+        canvas.Clear(new SKColor(24, 27, 32, 255));
+        using var imagePaint = new SKPaint { IsAntialias = true, FilterQuality = SKFilterQuality.High };
+        using var textPaint = new SKPaint { IsAntialias = true, Color = SKColors.White, TextSize = 18 };
+        using var detailPaint = new SKPaint { IsAntialias = true, Color = new SKColor(170, 178, 190), TextSize = 14 };
+        for (var i = 0; i < selected.Length; i++)
+        {
+            var entry = selected[i];
+            using var bitmap = SKBitmap.Decode(entry.Texture.Png!) ?? throw new InvalidDataException("Decoded preview PNG could not be reopened.");
+            var cellX = (i % columns) * tileWidth + padding;
+            var cellY = (i / columns) * tileHeight + padding;
+            var scale = Math.Min((float)thumbnailSize / bitmap.Width, (float)thumbnailSize / bitmap.Height);
+            var width = Math.Max(1, (int)MathF.Round(bitmap.Width * scale));
+            var height = Math.Max(1, (int)MathF.Round(bitmap.Height * scale));
+            var destination = new SKRect(cellX + (thumbnailSize - width) / 2f, cellY + (thumbnailSize - height) / 2f,
+                cellX + (thumbnailSize + width) / 2f, cellY + (thumbnailSize + height) / 2f);
+            canvas.DrawBitmap(bitmap, destination, imagePaint);
+            var name = entry.Texture.Source.Split('/')[^1].Split('.')[0];
+            canvas.DrawText(TrimLabel(name, 48), cellX, cellY + thumbnailSize + 24, textPaint);
+            canvas.DrawText($"{entry.Texture.Width}x{entry.Texture.Height}  {entry.Texture.Format}",
+                cellX, cellY + thumbnailSize + 47, detailPaint);
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+        using (var image = SKImage.FromBitmap(sheet))
+        using (var data = image.Encode(SKEncodedImageFormat.Png, 92))
+        using (var stream = File.Create(output)) data.SaveTo(stream);
+        var report = new
+        {
+            schema = "voyage.material-color-preview/1",
+            status = "preview",
+            steamBuildId = build,
+            executableSha256 = exeHash,
+            mappingSha256 = Hash(mappingPath),
+            exporterSha256 = Hash(typeof(Program).Assembly.Location),
+            parserSha256 = Hash(typeof(DefaultFileProvider).Assembly.Location),
+            materials = assets,
+            policy = new { include = "sRGB color Texture2D", exclude = "normal, mask and linear data textures", originalsWritten = false },
+            preview = new { path = output, sha256 = Hash(output), width = sheet.Width, height = sheet.Height, thumbnailSize },
+            textures = selected.Select(x => new { x.Texture.Source, x.Texture.Width, x.Texture.Height, x.Texture.Format,
+                x.Texture.Srgb, x.Texture.IsNormal, x.Texture.Sha256, x.Consumers }),
+            excluded = decoded.Where(x => !x.Included).Select(x => new { x.Texture.Source, x.Texture.Width, x.Texture.Height,
+                x.Texture.Format, x.Texture.Srgb, x.Texture.IsNormal, x.Texture.Error, x.Disposition, x.Consumers })
+        };
+        var reportPath = Path.Combine(Directory.GetCurrentDirectory(), "preview-report.json");
+        File.WriteAllText(reportPath, JsonSerializer.Serialize(report, JsonOptions));
+        Console.WriteLine(JsonSerializer.Serialize(new { status = "preview", previewPath = output, sha256 = Hash(output),
+            materialCount = assets.Length, colorTextureCount = selected.Length, excludedTextureCount = decoded.Length - selected.Length,
+            width = sheet.Width, height = sheet.Height, originalsWritten = false, reportPath }));
+        return 0;
+    }
+
+    static string PreviewDisposition(TextureRecord texture, IEnumerable<string> parameters)
+    {
+        if (texture.Png == null) return "decode-failed";
+        if (texture.IsNormal || parameters.Any(x => Normalize(x).Contains("normal"))) return "excluded-normal";
+        if (!texture.Srgb) return "excluded-linear-data";
+        return "excluded-mask-or-data-name";
+    }
+
+    static string TrimLabel(string value, int limit) => value.Length <= limit ? value : value[..(limit - 1)] + "…";
 
     static TextureRecord Decode(UUnrealMaterial source)
     {
@@ -507,6 +620,18 @@ internal sealed class TextureConsumerRecord
 {
     public string Material { get; set; } = "";
     public string Parameter { get; set; } = "";
+}
+internal sealed class PreviewTextureSource
+{
+    public UUnrealMaterial Texture { get; set; } = null!;
+    public List<TextureConsumerRecord> Consumers { get; } = [];
+}
+internal sealed class PreviewTextureEntry
+{
+    public TextureRecord Texture { get; set; } = new();
+    public TextureConsumerRecord[] Consumers { get; set; } = [];
+    public bool Included { get; set; }
+    public string Disposition { get; set; } = "";
 }
 internal sealed class TextureRecord
 {

@@ -128,6 +128,9 @@ Both model and material exporters require the caller to explicitly select
 `-MaterialMode PbrApproximation` or `-MaterialMode BakeReconstructed`; if the
 user did not choose, ask. Reconstructed bakes expose their complete machine contract at GLB root
 `extras.materialPipeline`, including source image artifacts and unresolved layers.
+Color-only dependency review uses `Export-VoyageMaterialTexturePreview.ps1`:
+exact material list -> one reduced contact-sheet PNG, excluding normals,
+masks and linear PBR data without writing original decoded textures.
 Source-only conversion/preview is outside game-tool coverage; extraction/build
 operations retain the normal game provenance gates.
 
@@ -146,6 +149,7 @@ container and evidence, without installation.
 | Find, list, or structurally inspect cooked assets | `Inspect-VoyageAsset.ps1` | Paths, JSON exports, Blueprint pseudocode, or mapping reports |
 | Export one stock StaticMesh or Blueprint default assembly | `Export-VoyageModelGlb.ps1` | Self-contained GLB with static hierarchy, transforms, bounded PBR materials and explicit omissions |
 | Export an exact batch of stock materials | `Export-VoyageMaterialsGlb.ps1` | Self-contained sample-panel GLB with inherited parameters, used textures and PBR approximation report |
+| Preview only color textures referenced by stock materials | `Export-VoyageMaterialTexturePreview.ps1` | Reduced contact-sheet PNG; normals/masks/data excluded; no original texture files written |
 | Publish or validate the Inspector executable | `Publish-VoyageAssetInspectorBinary.ps1`, `Get-VoyageAssetInspectorBinary.ps1` | Stable single-file EXE; validated source/dependency/binary identity |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Publish or reuse canonical retoc | `Publish-RetocBinary.ps1` | Stable `.tools/bin/retoc.exe` plus hash/provenance manifest |

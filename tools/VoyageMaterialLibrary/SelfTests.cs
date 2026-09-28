@@ -29,6 +29,14 @@ internal static class SelfTests
         var png = data.ToArray();
         using var flipped = SKBitmap.Decode(Program.FlipNormalGreen(png));
         Check(flipped.GetPixel(0, 0) == new SKColor(30, 175, 220, 255), "normal convention");
+        Check(Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_PaintedMetal_BC.T_PaintedMetal_BC", Srgb = true, Png = png }, ["BaseColorT"]),
+            "preview includes color texture");
+        Check(!Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_PaintedMetal_N.T_PaintedMetal_N", Srgb = false, IsNormal = true, Png = png }, ["NormalT"]),
+            "preview excludes normal texture");
+        Check(!Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_DirtMask_M.T_DirtMask_M", Srgb = true, Png = png }, ["WorldAlignedTextureMask"]),
+            "preview excludes named mask even when marked sRGB");
+        Check(!Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_PaintedMetal_ORM.T_PaintedMetal_ORM", Srgb = false, Png = png }, ["PM_SpecularMasks"]),
+            "preview excludes linear data texture");
         var record = new MaterialRecord { Source = "/Game/Test/M_A", Name = "M_A" };
         record.Textures["BaseColor"] = "color";
         record.Textures["Normal"] = "normal";
