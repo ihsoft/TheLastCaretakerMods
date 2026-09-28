@@ -28,7 +28,7 @@ $modelDirectory = Join-Path $PSScriptRoot 'Assets/Model'
 $modelPath = Join-Path $modelDirectory 'model-source.json'
 $model = Get-Content -LiteralPath $modelPath -Raw | ConvertFrom-Json
 $modelFields = @($model.PSObject.Properties.Name | Sort-Object)
-$expectedModelFields = @('entryInteraction','fabricatorCollision','nodes','schemaVersion')
+$expectedModelFields = @('entryInteraction','fabricatorCollision','inventoryInteraction','nodes','schemaVersion')
 if ($model.schemaVersion -ne 1 -or (Compare-Object $modelFields $expectedModelFields)) { throw 'Unsupported Railgun model registry.' }
 $glbPath = [IO.Path]::GetFullPath((Join-Path $modelDirectory 'Railgun.glb'))
 if (-not (Test-Path -LiteralPath $glbPath -PathType Leaf)) { throw "GLB not found: $glbPath" }

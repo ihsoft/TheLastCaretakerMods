@@ -39,6 +39,8 @@
 #include "VoyageSkill.h"
 #include "VoyageFabricatorComponent.h"
 #include "VoyageBaseInventoryComponent.h"
+#include "VoyageInventoryWeightLimitedComponent.h"
+#include "VoyageInventoryItemValidatorInterface.h"
 #include "VoyageDynamicMeshActor.h"
 #include "InteractiveDetectorPointerComponent.h"
 #include "VoyageActorWidgetInterface.h"
@@ -568,6 +570,7 @@ namespace
 #include "RailgunShot.h"
 #include "DedicatedStationProbe.h"
 #include "RailgunAmmo.h"
+#include "RailgunInventory.h"
 #include "ContextStationCoordinator.h"
 }
 
@@ -900,6 +903,7 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
         RailgunSkill->Unlock.Cost == RailgunAmmo::SkillResearchCost &&
         RailgunSkill->Unlock.Requirement == RailgunAmmo::SkillTierRequirement,
         TEXT("Generated Railgun research skill has the wrong unlock method, items, requirement, cost, or declared primary type"));
+    ConfigureRailgunInventory(CastChecked<UVoyageItemAmmo>(RailgunSkill->Items[1]));
     Shot::Class=CreateRailgunShot();
     UClass* StationClass = CreateDedicatedStation();
     UPackage* Package = CreatePackage(N::Package);

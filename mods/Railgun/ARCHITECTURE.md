@@ -111,19 +111,40 @@ native caliber defaults, live in
 The independent scan-to-vault unlock mechanism is documented in
 [scanning and recipe unlocks](../../docs/voyage-scanning-and-recipe-unlocks.md).
 
+## Magazine inventory
+
+The persistent gun module owns `RailgunAmmoInventory`, a native
+`VoyageInventoryWeightLimitedComponent`. Its actor validator accepts only a
+valid reference to the owned ammo item; the validator's inventory argument may
+be the player's source inventory and is not compared to the module inventory.
+The mass budget is six times the item's actual weight (currently 23.4).
+The existing `ReceiveBeginPlay` chain calls native `SetMaxWeightLimit` to
+initialize effective capacity; serialized defaults alone were insufficient.
+
+The model's `AmmoMagazine_6Slot` anchor carries the reference, interaction
+provider and attached query box specified by `model-source.json`. Part 100
+opens the stock container overlay. The exact inherited
+`InteractiveInterface.InteractGetInventory` override returns
+`ModuleComponent.GetInternalInventory()`. Socket and operator interactions
+remain separate. Temporary inventory diagnostic widgets and state are absent.
+General evidence and restrictions live in the shared
+[filtered inventory contract](../../docs/voyage-item-fabrication-and-pickup.md#filtered-module-inventories-refinery-reference).
+
 ## Current game-validated checkpoint
 
-`build-20260927-051706` is the working, non-final baseline for the 16-property
-ammo item. User gameplay confirmation covers fabrication and pickup, including
-one box containing six rounds. The earlier gun/research validation remains
-separate; this ammo reduction is not a new test of every weapon interaction.
+`build-20260927-234904` is the working, non-final inventory checkpoint. User
+gameplay confirmation covers magazine behavior, the six-round capacity limit,
+diagnostic removal and persistence through save/load. The earlier 16-property
+ammo baseline established fabrication and pickup of one box with six rounds;
+gun/research validation remains separate. This inventory checkpoint is not a
+new test of every weapon interaction.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Release evidence: `artifacts/railgun/build-20260927-051706/release-manifest.json`.
+- Release evidence: `artifacts/railgun/build-20260927-234904/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20260927-051947-build-20260927-051706-5ec70a9e/install-manifest.json`.
+  `artifacts/installations/Railgun/20260927-235200-build-20260927-234904-9680093e/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 
@@ -135,8 +156,8 @@ separate; this ammo reduction is not a new test of every weapon interaction.
 - Generated packages use tagged properties for partial mirrors. The ammo item
   is the sole bounded post-cook conversion exception; it is reopened before
   packaging. Do not convert unrelated native-child assets by analogy.
-- The mod is single-player validated. Save/reload, multiplayer, and distinct
-  cable or operator-entry scenarios remain unvalidated.
+- The mod is single-player validated, including magazine save/reload.
+  Multiplayer and distinct cable or operator-entry scenarios remain unvalidated.
 - Ammunition instances in the GLB can later represent remaining rounds, but no
   ammunition inventory consumption contract is implemented yet. Successful
   ammo fabrication does not establish that firing consumes these items.

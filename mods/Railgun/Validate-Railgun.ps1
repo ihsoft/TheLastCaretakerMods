@@ -14,6 +14,7 @@ $itemDiscoveryRoot = '/Game/Data/Assets'
 $skillDiscoveryRoot = '/Game/Data/Assets/Skill'
 $gunItemPackage = '/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01'
 $skillPackage = '/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun'
+$ammoPackage = '/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod'
 function Read-Candidate([string]$Query) {
     $result = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') -Query $Query -Source Mod -ModContainer $Container -AsJson) | ConvertFrom-Json
     $script:evidence += $result
@@ -26,11 +27,80 @@ function Require([bool]$Condition, [string]$Message) { if (-not $Condition) { th
 function PropertyNames($Value) {
     if ($Value.PSObject.Properties.Name -contains 'Properties') { @($Value.Properties.PSObject.Properties.Name) }
 }
+function JsonStringLeaves($Value) {
+    if ($null -eq $Value) { return }
+    if ($Value -is [string]) { $Value; return }
+    if ($Value -is [array]) {
+        foreach ($entry in $Value) { JsonStringLeaves $entry }
+        return
+    }
+    if ($Value -is [pscustomobject]) {
+        foreach ($property in $Value.PSObject.Properties) {
+            JsonStringLeaves $property.Value
+        }
+    }
+}
 $shell = @(Read-Candidate '/Game/Mods/Railgun/Module/BP_Module_Railgun')
-Require (@($shell | Where-Object { $_.Type -eq 'Function' }).Count -eq 0) 'Shell must not contain executable Blueprint functions.'
+$shellFunctions = @($shell | Where-Object { $_.Type -eq 'Function' })
+$expectedShellFunctions = @(
+    'ExecuteUbergraph_BP_Module_Railgun','InteractGetInventory',
+    'ReceiveBeginPlay','ValidateItem'
+)
+Require (@(Compare-Object -ReferenceObject $expectedShellFunctions `
+    -DifferenceObject @($shellFunctions.Name) -CaseSensitive).Count -eq 0) `
+    'Shell inventory function set differs from the approved contract.'
 $class = @($shell | Where-Object { $_.Type -eq 'BlueprintGeneratedClass' })
 Require ($class.Count -eq 1) 'Expected one generated class.'
 Require ($class[0].SuperStruct.ObjectName -ceq "Class'VoyageModuleActor'") 'Shell native parent mismatch.'
+$interactiveInterface = @($class[0].Interfaces | Where-Object {
+    $_.Class.ObjectName -ceq "Class'InteractiveInterface'"
+})
+Require ($interactiveInterface.Count -eq 0) `
+    'InteractiveInterface must be inherited from VoyageModuleActor, not reimplemented.'
+$validatorInterface = @($class[0].Interfaces | Where-Object {
+    $_.Class.ObjectName -ceq "Class'VoyageInventoryItemValidatorInterface'"
+})
+Require ($validatorInterface.Count -eq 1 -and $validatorInterface[0].bImplementedByK2) `
+    'Railgun validator interface binding mismatch.'
+$validateItem = @($shellFunctions | Where-Object { $_.Name -ceq 'ValidateItem' })
+Require ($validateItem.Count -eq 1) 'Expected one Railgun item validator.'
+$validateItemStrings = @(JsonStringLeaves $validateItem[0])
+foreach ($requiredValidatorReference in @(
+    "Class'KismetSystemLibrary:IsValid'",
+    "Class'KismetMathLibrary:EqualEqual_ObjectObject'",
+    "Class'KismetMathLibrary:BooleanAND'",
+    'AcceptedRailgunAmmo'
+)) {
+    Require ($validateItemStrings -ccontains $requiredValidatorReference) `
+        ('Railgun exact-item validator reference missing: ' + $requiredValidatorReference)
+}
+Require (-not ($validateItemStrings -ccontains 'RailgunAmmoInventory')) `
+    'Railgun item validator must not require one inventory instance.'
+$interactGetInventory = @($shellFunctions | Where-Object {
+    $_.Name -ceq 'InteractGetInventory'
+})
+Require ($interactGetInventory.Count -eq 1 -and
+    $interactGetInventory[0].SuperStruct.ObjectName -ceq
+        "Class'InteractiveInterface:InteractGetInventory'") `
+    'InteractGetInventory must override the exact inherited Voyage interface function.'
+$interactGetInventoryStrings = @(JsonStringLeaves $interactGetInventory[0])
+Require ($interactGetInventoryStrings -ccontains
+    "Class'VoyageModuleComponent:GetInternalInventory'") `
+    'InteractGetInventory must return the native module inventory.'
+$beginPlay = @($shellFunctions | Where-Object { $_.Name -ceq 'ReceiveBeginPlay' })
+Require ($beginPlay.Count -eq 1 -and
+    $beginPlay[0].SuperStruct.ObjectName -ceq "Class'Actor:ReceiveBeginPlay'") `
+    'Inventory limit initialization must use the exact Actor BeginPlay event.'
+$ubergraph = @($shellFunctions | Where-Object {
+    $_.Name -ceq 'ExecuteUbergraph_BP_Module_Railgun'
+})
+Require ($ubergraph.Count -eq 1) 'Expected one Railgun module ubergraph.'
+$ubergraphStrings = @(JsonStringLeaves $ubergraph[0])
+Require ($ubergraphStrings -ccontains
+    "Class'VoyageInventoryWeightLimitedComponent:SetMaxWeightLimit'") `
+    'BeginPlay must call the native weight-limit setter.'
+Require ($ubergraphStrings -ccontains 'MaxWeightLimit') `
+    'Native weight-limit setter must receive the authored component limit.'
 $module = @($shell | Where-Object { $_.Name -ceq 'ModuleComponent' })
 Require ($module.Count -eq 1 -and $module[0].Type -ceq 'VoyageModuleComponent') 'Native buffer module missing.'
 Require (@(PropertyNames $module[0]) -contains 'ItemAsset') 'Module ItemAsset missing.'
@@ -46,6 +116,83 @@ Require ($energy.bAutoStartModule -and $energy.bAcceptResourceOffer -and $energy
 Require ($energy.bAcceptResourceOfferOff) 'Empty/unpowered receiver cannot recover.'
 Require ($module[0].Properties.SocketCustomTarget.ComponentProperty -ceq 'ElectricSocket') 'Electric socket target mismatch.'
 Require ($module[0].Properties.bUseSocketCustomTarget -eq $true) 'Custom socket target disabled.'
+$ammoInventory = @($shell | Where-Object {
+    $_.Name -ceq 'RailgunAmmoInventory_GEN_VARIABLE' -and
+    $_.Type -ceq 'VoyageInventoryWeightLimitedComponent'
+})
+Require ($ammoInventory.Count -eq 1) 'Railgun weight-limited ammo inventory missing.'
+$ammoInventoryProperties = $ammoInventory[0].Properties
+Require ($ammoInventoryProperties.Type -ceq 'EVoyageInventoryType::Container') `
+    'Railgun ammo inventory is not a container.'
+Require (@($ammoInventoryProperties.AcceptedItemCategories).Count -eq 1 -and
+    @($ammoInventoryProperties.AcceptedItemCategories)[0] -ceq 'EVoyageItemCategory::Ammo') `
+    'Railgun ammo inventory category prefilter mismatch.'
+Require ($ammoInventoryProperties.Access -ceq 'EVoyageInventoryAccessType::ReadWrite') `
+    'Railgun ammo inventory must be read/write.'
+Require (-not $ammoInventoryProperties.bAllowFiltering -and
+    -not $ammoInventoryProperties.bAllowNearbyQueries -and
+    -not $ammoInventoryProperties.bAutoCloseHudWhenEmpty) `
+    'Railgun ammo inventory UI/query defaults mismatch.'
+Require (@($ammoInventoryProperties.DepositAllCategoryFilter).Count -eq 1 -and
+    $ammoInventoryProperties.DepositAllCategoryFilter[0].ObjectPath -ceq
+        '/Game/Data/Assets/ItemCategories/DA_ItemCategory_Ammo.0') `
+    'Railgun ammo inventory deposit-all category mismatch.'
+Require ([Math]::Abs($ammoInventoryProperties.MaxWeightLimit - 23.4) -lt 0.00001 -and
+    -not $ammoInventoryProperties.bAllowBeyondWeightLimit) `
+    'Railgun ammo inventory must hold at most six 3.9-weight rounds.'
+$ammoInteraction = @($shell | Where-Object {
+    $_.Name -ceq 'RailgunAmmoInventoryInteraction_GEN_VARIABLE' -and
+    $_.Type -ceq 'InteractiveObjectComponent'
+})
+Require ($ammoInteraction.Count -eq 1) 'Railgun ammo inventory interaction missing.'
+Require ($ammoInteraction[0].Properties.InteractType -ceq 'FVoyageInteractType::WidgetOverlay' -and
+    $ammoInteraction[0].Properties.PartId -eq 100 -and
+    $ammoInteraction[0].Properties.OverlayWidget.ObjectPath -ceq
+        '/Game/Data/UI/OverlayWidgets/DA_Widget_Container.0') `
+    'Railgun ammo inventory interaction contract mismatch.'
+$ammoQuery = @($shell | Where-Object {
+    $_.Name -ceq 'RailgunAmmoInventoryQuery_GEN_VARIABLE' -and
+    $_.Type -ceq 'BoxComponent'
+})
+Require ($ammoQuery.Count -eq 1) 'Railgun ammo inventory query box missing.'
+$ammoQueryProperties = $ammoQuery[0].Properties
+Require ($ammoQueryProperties.BodyInstance.CollisionProfileName -ceq 'Interactive' -and
+    $ammoQueryProperties.BodyInstance.ObjectType -ceq 'ECC_GameTraceChannel2') `
+    'Railgun ammo inventory query profile mismatch.'
+Require (-not $ammoQueryProperties.bGenerateOverlapEvents) `
+    'Railgun ammo inventory query must not generate overlaps.'
+$expectedInteractionResponses = @(
+    'WorldStatic','WorldDynamic','Pawn','Visibility','Camera','PhysicsBody',
+    'Vehicle','Destructible','Interact','Interactive','LocatorVolume',
+    'LocationVolume','WaterBody','Tentacle','TentacleOverlap'
+)
+$queryResponses = @($ammoQueryProperties.BodyInstance.CollisionResponses.ResponseArray)
+Require ($queryResponses.Count -eq $expectedInteractionResponses.Count) `
+    'Railgun ammo inventory query response count mismatch.'
+foreach ($channel in $expectedInteractionResponses) {
+    $response = @($queryResponses | Where-Object { $_.Channel -ceq $channel })
+    $expectedResponse = if ($channel -ceq 'Interact') { 'ECR_Block' } else { 'ECR_Ignore' }
+    Require ($response.Count -eq 1 -and $response[0].Response -ceq $expectedResponse) `
+        ('Railgun ammo inventory query response mismatch: ' + $channel)
+}
+$shellDefault = @($shell | Where-Object { $_.Name -ceq 'Default__BP_Module_Railgun_C' })
+Require ($shellDefault.Count -eq 1 -and
+    $shellDefault[0].Properties.AcceptedRailgunAmmo.ObjectPath -ceq ($ammoPackage + '.0')) `
+    'Railgun validator does not bind the exact owned ammo asset.'
+$diagnosticFields = @(
+    'RailgunInventoryValidateCount','RailgunInventoryProbeHud',
+    'RailgunInventoryLastOpenSummary','RailgunInventoryLastOpenDetails',
+    'RailgunInventoryLastValidateSummary','RailgunInventoryLastValidateDetails'
+)
+$shellDefaultFields = @($shellDefault[0].Properties.PSObject.Properties.Name)
+foreach ($diagnosticField in $diagnosticFields) {
+    Require (-not ($shellDefaultFields -ccontains $diagnosticField)) `
+        ('Temporary inventory diagnostic field remains: ' + $diagnosticField)
+}
+$shellStrings = @(JsonStringLeaves $shell)
+Require (-not ($shellStrings -ccontains
+    '/Game/Mods/Railgun/Diagnostics/WBP_RailgunInventoryProbe')) `
+    'Temporary inventory diagnostic widget reference remains.'
 foreach ($name in @('Electric_GEN_VARIABLE','ElectricSocket_GEN_VARIABLE')) {
     Require (@($shell | Where-Object { $_.Type -eq 'SCS_Node' -and $_.Properties.InternalVariableName -ceq ($name -replace '_GEN_VARIABLE$','') }).Count -eq 1) ('Missing power component: ' + $name)
 }
@@ -75,6 +222,34 @@ $entry = @($shell | Where-Object { $_.Name -ceq 'RailgunEntryReference_GEN_VARIA
 Require ($entry.Count -eq 1 -and $entry[0].Type -ceq 'BoxComponent') 'Missing entry reference box.'
 Require (@($entry[0].Properties.ComponentTags) -ccontains 'Railgun.Model.Entry') 'Entry reference tag missing.'
 Require ($entry[0].Properties.BodyInstance.CollisionEnabled -ceq 'ECollisionEnabled::NoCollision') 'Entry reference must not collide.'
+$inventoryInteractionConfig = $inventory.inventoryInteraction
+Require ($inventoryInteractionConfig.node -ceq 'AmmoMagazine_6Slot') `
+    'Inventory interaction must be anchored to the magazine node.'
+Require-Child $inventoryInteractionConfig.node 'RailgunInventoryReference'
+Require-Child 'RailgunInventoryReference' 'RailgunAmmoInventoryInteraction'
+Require-Child 'RailgunAmmoInventoryInteraction' 'RailgunAmmoInventoryQuery'
+$inventoryReference = @($shell | Where-Object {
+    $_.Name -ceq 'RailgunInventoryReference_GEN_VARIABLE'
+})
+Require ($inventoryReference.Count -eq 1 -and
+    $inventoryReference[0].Type -ceq 'BoxComponent') `
+    'Missing inventory interaction reference box.'
+Require (@($inventoryReference[0].Properties.ComponentTags) -ccontains
+    'Railgun.Model.Inventory') 'Inventory interaction reference tag missing.'
+Require ($inventoryReference[0].Properties.BodyInstance.CollisionEnabled -ceq
+    'ECollisionEnabled::NoCollision') 'Inventory interaction reference must not collide.'
+for ($i=0; $i -lt 3; $i++) {
+    $axis = @('X','Y','Z')[$i]
+    Require ([Math]::Abs($inventoryReference[0].Properties.RelativeLocation.$axis -
+        $inventoryInteractionConfig.centerCm[$i]) -lt 0.0001) `
+        ('Inventory interaction center mismatch: ' + $axis)
+    Require ([Math]::Abs($inventoryReference[0].Properties.BoxExtent.$axis * 2.0 -
+        $inventoryInteractionConfig.sizeCm[$i]) -lt 0.0001) `
+        ('Inventory interaction size mismatch: ' + $axis)
+    Require ([Math]::Abs($ammoQueryProperties.BoxExtent.$axis -
+        $inventoryReference[0].Properties.BoxExtent.$axis) -lt 0.0001) `
+        ('Inventory query/reference extent mismatch: ' + $axis)
+}
 for ($i=0; $i -lt 3; $i++) {
     $axis = @('X','Y','Z')[$i]
     $center = 0.0
@@ -181,7 +356,7 @@ Require ($gunProperties.Description.SourceString -ceq 'A long-range electromagne
 $gunIcon = @(Read-Candidate '/Game/Mods/Railgun/Fabricator/T_RailgunIcon')
 $gunTexture = @($gunIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunIcon' })
 Require ($gunTexture.Count -eq 1 -and $gunTexture[0].SizeX -eq 256 -and $gunTexture[0].SizeY -eq 256) 'Railgun icon must be 256x256.'
-$ammo = @(Read-Candidate '/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod')
+$ammo = @(Read-Candidate $ammoPackage)
 $ammoItem = @($ammo | Where-Object { $_.Type -ceq 'VoyageItemAmmo' -and $_.Name -ceq 'DA_Ammo_Railgun_FullRod' })
 Require ($ammo.Count -eq 1 -and $ammoItem.Count -eq 1) 'Expected exactly one complete VoyageItemAmmo export.'
 $ammoProperties = $ammoItem[0].Properties
@@ -231,5 +406,5 @@ $skillIcon = @(Read-Candidate '/Game/Mods/Railgun/Research/T_RailgunSkill')
 $skillTexture = @($skillIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunSkill' })
 Require ($skillTexture.Count -eq 1 -and $skillTexture[0].SizeX -eq 256 -and $skillTexture[0].SizeY -eq 256) 'Railgun skill icon must be 256x256.'
 $reportPath = Join-Path $output 'validation.json'
-[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned shell-only native parent, zero Blueprint functions, exact discovered ItemAsset, confirmed Item and Skill AssetManager scan roots, no unreviewed native template values, auto-weld, inventory-matched component hierarchy and transforms, no operator references, simple collision preserved; material parameter presence and reviewed stock parent; complete Railgun item with Alloy Frame recipe, owned actor/icon and cleared production metadata; one complete VoyageItemAmmo export with the stock Rod item fields except its nested-export ProjectileTemplate; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; material parameter presence and reviewed stock parent; complete Railgun item with Alloy Frame recipe, owned actor/icon and cleared production metadata; one complete VoyageItemAmmo export with the stock Rod item fields except its nested-export ProjectileTemplate; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 [pscustomobject]@{status='passed';reportPath=$reportPath}

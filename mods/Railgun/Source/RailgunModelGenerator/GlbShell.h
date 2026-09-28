@@ -19,6 +19,7 @@ inline constexpr TCHAR MuzzleKey[] = TEXT("muzzle");
 inline constexpr TCHAR PowerSocketAnchorKey[] = TEXT("powerSocketAnchor");
 inline constexpr TCHAR FabricatorKey[] = TEXT("fabricatorCollision");
 inline constexpr TCHAR EntryKey[] = TEXT("entryInteraction");
+inline constexpr TCHAR InventoryInteractionKey[] = TEXT("inventoryInteraction");
 inline constexpr TCHAR CollisionNodeKey[] = TEXT("node");
 inline constexpr TCHAR SizeKey[] = TEXT("sizeCm");
 inline constexpr TCHAR CenterKey[] = TEXT("centerCm");
@@ -145,6 +146,33 @@ inline int32 Generate()
     }
     if (EntryAncestor != Base || !EntryParent->GetActorScale3D().Equals(FVector::OneVector, 0.0001))
     { UE_LOG(LogTemp, Error, TEXT("Entry interaction must follow a stationary unit-scale node under BASE")); return 1; }
+    const auto InventoryInteractionConfig = Registry->GetObjectField(InventoryInteractionKey);
+    AActor* InventoryParent = Actors.FindRef(
+        InventoryInteractionConfig->GetStringField(CollisionNodeKey));
+    FVector InventoryInteractionSize, InventoryInteractionCenter;
+    if (!InventoryParent ||
+        !ReadVector(InventoryInteractionConfig, SizeKey, InventoryInteractionSize) ||
+        !ReadVector(InventoryInteractionConfig, CenterKey, InventoryInteractionCenter) ||
+        InventoryInteractionSize.GetMin() <= 0)
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Inventory interaction requires a model node, finite center and positive full size in Unreal cm"));
+        return 1;
+    }
+    AActor* InventoryAncestor = InventoryParent;
+    while (InventoryAncestor && InventoryAncestor != Base)
+    {
+        if (InventoryAncestor == Actors.FindChecked(Roles->GetStringField(YawKey)) ||
+            InventoryAncestor == Actors.FindChecked(Roles->GetStringField(PitchKey))) break;
+        InventoryAncestor = InventoryAncestor->GetAttachParentActor();
+    }
+    if (InventoryAncestor != Base ||
+        !InventoryParent->GetActorScale3D().Equals(FVector::OneVector, 0.0001))
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Inventory interaction must follow a stationary unit-scale node under BASE"));
+        return 1;
+    }
     UStaticMesh* CollisionMesh = CastChecked<UStaticMeshComponent>(CollisionActor->GetRootComponent())->GetStaticMesh();
     int32 CollisionUses = 0;
     for (const auto& Pair : Actors) if (auto* C = Cast<UStaticMeshComponent>(Pair.Value->GetRootComponent())) if (C->GetStaticMesh() == CollisionMesh) ++CollisionUses;
@@ -245,6 +273,17 @@ inline int32 Generate()
     EntryTemplate->SetCollisionProfileName(RailgunAssetNames::NoCollisionProfileName);
     EntryTemplate->SetGenerateOverlapEvents(false);
     EntryTemplate->ComponentTags.Add(RailgunModelContract::EntryTag);
+    auto* InventoryReference = AddChildNode(SCS, Nodes.FindChecked(InventoryParent),
+        UBoxComponent::StaticClass(), RailgunModelContract::InventoryComponent);
+    auto* InventoryReferenceTemplate = CastChecked<UBoxComponent>(
+        InventoryReference->ComponentTemplate);
+    InventoryReferenceTemplate->SetRelativeLocation(InventoryInteractionCenter);
+    InventoryReferenceTemplate->SetBoxExtent(InventoryInteractionSize * 0.5);
+    InventoryReferenceTemplate->SetCollisionProfileName(
+        RailgunAssetNames::NoCollisionProfileName);
+    InventoryReferenceTemplate->SetGenerateOverlapEvents(false);
+    InventoryReferenceTemplate->ComponentTags.Add(
+        RailgunModelContract::InventoryTag);
     if (!CompileGeneratedBlueprint(BP)) return 1;
     UVoyageModuleComponent* Module = CastChecked<AVoyageModuleActor>(BP->GeneratedClass->GetDefaultObject())->ModuleComponent;
     if (!Module || Module->GetClass() != UVoyageModuleComponent::StaticClass()) return 1;
@@ -276,6 +315,7 @@ inline int32 Generate()
     Inventory->SetArrayField(PackagesKey, Packages); Inventory->SetArrayField(ComponentsKey, ComponentEvidence);
     Inventory->SetObjectField(FabricatorKey, CollisionConfig);
     Inventory->SetObjectField(EntryKey, EntryConfig);
+    Inventory->SetObjectField(InventoryInteractionKey, InventoryInteractionConfig);
     Inventory->SetStringField(CollisionKey, CollisionMesh->GetOutermost()->GetName()); Inventory->SetObjectField(RolesKey, Roles);
     FString Json; FJsonSerializer::Serialize(Inventory, TJsonWriterFactory<>::Create(&Json));
     if (!FFileHelper::SaveStringToFile(Json, *FPaths::Combine(FPaths::ProjectDir(), InventoryFile))) return 1;

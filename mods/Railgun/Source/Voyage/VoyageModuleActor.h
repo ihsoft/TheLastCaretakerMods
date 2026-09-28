@@ -6,6 +6,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "InteractiveInterface.h"
 #include "VoyageModuleActor.generated.h"
 
 class UVoyageDestructibleObjectComponent;
@@ -13,7 +14,7 @@ class UVoyageModuleComponent;
 class UVoyagePersistentActorComponent;
 
 UCLASS(Blueprintable)
-class VOYAGE_API AVoyageModuleActor : public AActor
+class VOYAGE_API AVoyageModuleActor : public AActor, public IInteractiveInterface
 {
     GENERATED_BODY()
 

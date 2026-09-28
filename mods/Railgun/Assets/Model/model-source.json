@@ -14,6 +14,11 @@
     "centerCm": [-135, 0, 90],
     "sizeCm": [40, 60, 60]
   },
+  "inventoryInteraction": {
+    "node": "AmmoMagazine_6Slot",
+    "centerCm": [-18, 0, 0],
+    "sizeCm": [80, 70, 54]
+  },
   "fabricatorCollision": {
     "node": "Foundation_BottomPlate__Gray",
     "sizeCm": [

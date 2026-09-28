@@ -12,4 +12,6 @@ inline const FName SightTag(TEXT("Railgun.Model.Sight"));
 inline const FName SightComponent(TEXT("RailgunSight"));
 inline const FName EntryTag(TEXT("Railgun.Model.Entry"));
 inline const FName EntryComponent(TEXT("RailgunEntryReference"));
+inline const FName InventoryTag(TEXT("Railgun.Model.Inventory"));
+inline const FName InventoryComponent(TEXT("RailgunInventoryReference"));
 }

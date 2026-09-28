@@ -71,3 +71,105 @@ output count and grouping, loot transfer, and presentation. Save/load and
 multiplayer require their own tests. Retain a known-good artifact before a
 change; parser reopen and container verification remain lower gates than
 these actual gameplay consumers.
+
+## Filtered module inventories: refinery reference
+
+Static inspection on the fingerprint above identifies the displayed Diesel
+Refinery as `/Game/Blueprints/Modules/Generators/BP_Module_DieselGenerator`;
+Portable Petrol Refinery is `BP_Module_PetrolGenerator_Portable` in the same
+directory. These are inventory references, not donors for fuel-conversion
+behavior in an ammunition container.
+
+Both have an SCS `VoyageInventoryWeightLimitedComponent` with these serialized
+settings: `Type=Container`, `Access=ReadWrite`, `bAllowBeyondWeightLimit=false`,
+`AcceptedItemCategories=[Organic]`, `bAllowFiltering=false`,
+`DepositAllCategoryFilter=[DA_ItemCategory_Organic]`,
+`bAllowNearbyQueries=false`, and `bAutoCloseHudWhenEmpty=false`.
+The weight component derives from `VoyageBaseInventoryComponent` and exposes
+float `MaxWeightLimit` separately from the base's integer `Capacity`.
+Do not mistake an inventory slot limit for an item-count or mass limit.
+
+The Diesel Refinery actor also implements the native
+`/Script/Voyage.VoyageInventoryItemValidatorInterface`. Its Blueprint event is
+`ValidateItem(VoyageBaseInventoryComponent* Inventory, VoyageItem* Item,
+bool& bIsValid)`; the stock body returns whether `Item.Category` is Organic.
+This provides a concrete candidate for item-identity filtering in another
+module. `DepositAllCategoryFilter` must not be assumed to be an exact-item
+acceptance rule; the inspected stock object uses both category settings and
+the validator interface.
+
+A subsequent Railgun runtime probe established an important argument boundary:
+the actor's `ValidateItem` was called with the player's `WeightInventory` and
+the exact accepted ammo object. An added `Inventory == module-owned inventory`
+condition returned false and rejected that call even though item identity
+matched. Do not assume this argument is always the destination container.
+For an actor-specific item whitelist, compare the item identity without that
+destination-pointer assumption, as the stock refinery predicate also ignores
+the inventory argument. This observation does not establish every native call
+site or prove that changing the predicate alone fixes all transfer failures.
+
+Diagnostic state must also be owned explicitly: creating a new overlay on every
+validator call covers earlier observations with fresh default text. An apparent
+unsampled open event in that topmost widget is not evidence that the event never
+ran. Reuse bounded diagnostic UI, preserve independent event samples, and never
+make the gameplay return path depend on successful diagnostic widget creation.
+
+The Diesel Refinery's `InteractiveObjectComponent` uses `WidgetOverlay`,
+`PartId=100`, and `/Game/Data/UI/OverlayWidgets/DA_Widget_Container`.
+Its SCS node owns a child `BoxComponent` (`Box1`): the serialized collision
+profile is `Interactive`, object type is `ECC_GameTraceChannel2`, and the
+`Interact` response is `Block`. The scene interaction component is not itself
+a ray-hit shape. Preserve both the acquisition shape and its attachment to
+the interaction provider; an overlay reference and part ID alone are not a
+complete stock interaction assembly.
+`InteractGetInventory` returns `ModuleComponent.GetInternalInventory()` for
+that part. The inventory is a component of the persistent module actor, not
+of an operator pawn. In its setup path, when over-limit storage is disabled,
+the actor calls `SetMaxWeightLimit` with the component's `MaxWeightLimit`.
+
+Runtime Railgun evidence subsequently distinguished object identity from
+effective capacity: the returned and authored inventories were the same live
+`VoyageInventoryWeightLimitedComponent`, its direct `MaxWeightLimit` read was
+`23.400002`, but the UI showed `100 kg` and accepted more than six 3.9-unit
+items. Item-only validation had restored successful transfer. Therefore neither
+the wrong-inventory hypothesis nor float display noise explains that entire
+capacity discrepancy.
+
+Bounded native inspection on the same fingerprint confirms that
+`SetMaxWeightLimit` stores the base field and then runs a separate recomputation:
+it initializes another internal value from that field and adds entries from a
+modifier collection. Direct serialized property assignment does not execute
+that setter path. The stock setup call is consequently meaningful and must not
+be dropped as an apparent redundant assignment. User gameplay confirmation of
+Railgun `build-20260927-093742` established that calling the native setter from
+the module actor's `ReceiveBeginPlay` fixes the prior 100-kg/effective-capacity
+problem. This implementation reuses the existing event path and neither clears
+nor recreates the inventory. It does not implement a separate post-load hook.
+The UI/admission consumers of the derived value have not been independently
+traced here. Do not write native offsets or destroy excess inventory contents
+when applying a lower limit.
+
+The diagnostic-free implementation was subsequently game-validated, including
+inventory persistence through save/load. Its release evidence is
+`artifacts/railgun/build-20260927-234904/release-manifest.json`; installation
+evidence is
+`artifacts/installations/Railgun/20260927-235200-build-20260927-234904-9680093e/install-manifest.json`.
+The coder relayed user confirmation of magazine behavior, the capacity limit,
+diagnostic removal and persistence. This does not enumerate every possible
+batch/single-transfer boundary or validate other modules by analogy.
+
+The stock assembly and bounded Railgun runtime results do not validate every
+replacement or deposit route. A mod must still verify native inventory
+discovery, validator dispatch for every supported deposit route, interaction
+selection, and save/load of the actual instance. A weight budget calculated as
+six times the item's actual weight (23.4 for six 3.9-unit items) needs boundary
+tests: six at once, six one by one, 5+1, rejection of a seventh, removal and
+refill. Floating-point rounding and native partial-transfer behavior have not
+been established by this static inspection. Never silently accept extra items
+or discard rejected ones to compensate for a failed boundary test.
+
+Reproduce with `Get-VoyageAssetSummary.ps1` for the exact refinery's components
+and `ValidateItem` function, `Get-VoyageAssetJson.ps1` for component defaults and
+implemented interfaces, and `Inspect-VoyageAsset.ps1` for bounded pseudocode and
+the `VoyageBaseInventoryComponent` / `VoyageInventoryWeightLimitedComponent`
+mapping queries. Raw evidence remains under ignored artifacts.

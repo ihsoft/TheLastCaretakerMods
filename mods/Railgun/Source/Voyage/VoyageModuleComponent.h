@@ -11,6 +11,7 @@
 #include "ModuleConfigData.h"
 #include "ModuleResourceType.h"
 #include "VoyageModuleComponent.generated.h"
+class UVoyageBaseInventoryComponent;
 UCLASS(BlueprintType)
 class VOYAGE_API UVoyageModuleComponent : public UActorComponent
 {
@@ -38,6 +39,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category="RailgunReadOnly")
     double GetResourceAmount(EModuleResourceType Type) const { return 0; }
+
+    UFUNCTION(BlueprintPure, Category="RailgunInventory")
+    UVoyageBaseInventoryComponent* GetInternalInventory() const { return nullptr; }
 
     UFUNCTION(BlueprintCallable, Category="RailgunEnergy")
     bool RemoveResource(EModuleResourceType Type, double RemoveAmount, EModuleResourceRemovalType RemovalType) { return false; }

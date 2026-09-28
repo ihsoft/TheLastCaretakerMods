@@ -39,7 +39,7 @@ All mod-owned inputs live below this directory:
 
 - `Assets\Model\Railgun.glb` is the current user-authored model. Replace this
   file to revise geometry or materials without changing the build contract.
-- `Assets\Model\model-source.json` maps stable node roles and the two explicit
+- `Assets\Model\model-source.json` maps stable node roles and explicit
   interaction/collision boxes. It contains no revision metadata or stored hash.
 - `Assets\Railgun_Shot_Blast.wav` is the shot sound.
 - `Assets\Railgun.ini` is the distributable template and source of defaults,

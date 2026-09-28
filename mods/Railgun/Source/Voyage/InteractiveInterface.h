@@ -8,6 +8,7 @@
 #include "Components/SceneComponent.h"
 #include "GameFramework/Pawn.h"
 #include "InteractiveInterface.generated.h"
+class UVoyageBaseInventoryComponent;
 UINTERFACE(BlueprintType)
 class VOYAGE_API UInteractiveInterface : public UInterface { GENERATED_BODY() };
 class VOYAGE_API IInteractiveInterface
@@ -16,4 +17,7 @@ class VOYAGE_API IInteractiveInterface
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interaction")
     bool GetInteractiveProvidedActions(APawn* MyCharacter, USceneComponent* Component, TArray<FPlayerInputInterfaceAction>& OutActions);
+
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interaction")
+    UVoyageBaseInventoryComponent* InteractGetInventory(APawn* MyCharacter, int32 PartId);
 };
