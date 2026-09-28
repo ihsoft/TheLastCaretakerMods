@@ -21,6 +21,10 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
 - The live model has the stable path `Assets/Model/Railgun.glb`. Model logic
   binds stable roles and explicit boxes from `Assets/Model/model-source.json`;
   do not hard-code vertex topology, offsets or incidental Blender object order.
+  Validate behavior-critical structure, not decorative detail names or counts.
+  Inventory visuals require six distinct mapped groups with nonempty render
+  subtrees, all included in hide/show control while holders stay unaffected;
+  the internal mesh composition may change without changing this contract.
 - The generated station uses the common Voyage vehicle entry/exit path, a
   stationary nonphysical root, owned camera/input/HUD, tagged properties and an
   explicit interaction provider. Preserve those contracts when changing logic.

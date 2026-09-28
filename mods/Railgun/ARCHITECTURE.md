@@ -157,12 +157,14 @@ right-to-left updates, the zero-count tint and optics hiding.
 
 ## Current game-validated checkpoint
 
-`build-20260928-064458` is the working inventory, cassette-visual and ammo-HUD
-checkpoint. User gameplay confirmation covers the six-round capacity limit,
-event-driven cassette updates for stack additions and removals, deposit-all,
-independent gun instances, empty/partial persistence through save/load, and
-the six-position HUD including right-to-left fill, empty red tint and optics
-hiding.
+`build-20260928-065746` is the current model-structure checkpoint. Its model
+passes the six distinct, disjoint and nonempty cassette-subtree contract with
+all 36 render descendants covered by default hiding and propagated runtime
+visibility, while the six holders remain outside those subtrees. User gameplay
+confirmation for this candidate covers the new model rendering and its ammo
+visibility behavior. The earlier validated inventory, persistence and ammo-HUD
+contracts remain the foundation; this candidate did not repeat every historical
+test.
 The earlier 16-property ammo baseline established fabrication and pickup of one
 box with six rounds; gun/research validation remains separate. This checkpoint
 is not a new test of every weapon interaction.
@@ -170,9 +172,9 @@ is not a new test of every weapon interaction.
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Release evidence: `artifacts/railgun/build-20260928-064458/release-manifest.json`.
+- Release evidence: `artifacts/railgun/build-20260928-065746/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20260928-064829-build-20260928-064458-7d344a08/install-manifest.json`.
+  `artifacts/installations/Railgun/20260928-070119-build-20260928-065746-29803e11/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 
