@@ -48,6 +48,9 @@ def verify(path):
     if schema == 3:
         if pipeline.get('schema') != 'voyage.material-pipeline/1' or pipeline.get('requestedMode') not in ('PbrApproximation', 'BakeReconstructed'):
             raise ValueError('Invalid material-pipeline contract')
+        source_artifact_policy = pipeline.get('sourceArtifactPolicy', 'embedded')
+        if source_artifact_policy not in ('embedded', 'omitted-for-preview'):
+            raise ValueError('Invalid source-artifact policy')
         for artifact in pipeline['sourceArtifacts']:
             source = artifact['Source']
             if source in artifact_by_source:
@@ -71,7 +74,10 @@ def verify(path):
             index = operation['OutputImageIndex']
             if not isinstance(index, int) or not 0 <= index < len(images) or images[index][0] != operation['OutputSha256']:
                 raise ValueError('Bake-output provenance mismatch')
-            if operation['Fidelity'] != 'reconstructed' or not all(source in artifact_by_source for source in operation['InputTextures']):
+            known_sources = {record['Source'] for record in evidence['textures']}
+            inputs_present = all(source in artifact_by_source for source in operation['InputTextures']) if source_artifact_policy == 'embedded' \
+                else not artifact_by_source and all(source in known_sources for source in operation['InputTextures'])
+            if operation['Fidelity'] != 'reconstructed' or not inputs_present:
                 raise ValueError('Invalid bake operation')
     for record in evidence['textures']:
         if record['Error'] is not None:

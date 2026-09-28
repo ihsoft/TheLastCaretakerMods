@@ -125,12 +125,17 @@ internal static class Program
             }
             var model = scene.ToGltf2();
             MatchUsedImages(model, textureCache.Values);
-            var sourceArtifacts = EmbedSourceArtifacts(model, materialMode, textureSources, textureCache, reports);
+            MatchBakeOutputs(model, reports);
+            var embedSourceArtifacts = request["embedSourceArtifacts"]?.GetValue<bool>() ?? true;
+            var sourceArtifacts = embedSourceArtifacts
+                ? EmbedSourceArtifacts(model, materialMode, textureSources, textureCache, reports)
+                : [];
             var materialPipeline = new
             {
                 schema = "voyage.material-pipeline/1",
                 requestedMode = materialMode,
                 fidelity = materialMode == "BakeReconstructed" ? "reconstructed" : "approximate-pbr",
+                sourceArtifactPolicy = embedSourceArtifacts ? "embedded" : "omitted-for-preview",
                 bakeOperations = reports.SelectMany(x => x.BakeOperations),
                 generatedImages = textureCache.Values.SelectMany(x => x.Variants.Select(v => new
                 {
@@ -158,8 +163,10 @@ internal static class Program
                 parserSha256 = Hash(typeof(DefaultFileProvider).Assembly.Location),
                 stockContainers = fingerprint["containers"]!.AsArray().Where(x => StockProvider.IsStock(x!["name"]!.GetValue<string>())).Select(x => x!.DeepClone()).ToArray(),
                 materials = reports, textures = textureCache.Values, materialPipeline,
-                note = materialMode == "BakeReconstructed"
+                note = materialMode == "BakeReconstructed" && embedSourceArtifacts
                     ? "One UV sample panel per material; known cooked-parameter recipes are reconstructed. All decodable Texture2D inputs are embedded as machine-indexed source artifacts."
+                    : materialMode == "BakeReconstructed"
+                    ? "One UV sample panel per material; known cooked-parameter recipes are reconstructed. Source-only artifacts are omitted for lightweight rendered preview."
                     : "One UV sample panel per material; glTF PBR is a named-parameter approximation. Only used texture variants are embedded." };
             model.Extras = JsonSerializer.SerializeToNode(evidence, JsonOptions);
             var pending = Path.Combine(Directory.GetCurrentDirectory(), "pending.glb");
@@ -350,14 +357,16 @@ internal static class Program
             report.Bindings[key + "Factor"] = values[0].Key + " (named scalar; shader operation not evaluated)";
             return Math.Clamp(values[0].Value, 0, 1);
         }
-        var baseColor = Select("baseColor", "basecolor", "basecolortexture", "albedo", "diffuse", "diffusetexture", "pmdiffuse");
+        var baseColor = Select("baseColor", "basecolor", "basecolortexture", "colormap", "albedo", "diffuse", "diffusetexture", "pmdiffuse");
         var normal = Select("normal", "normal", "normalmap", "normaltexture", "pmnormals");
         var orm = Select("ORM", "orm", "occlusionroughnessmetallic", "occlusionroughnessmetallictexture");
+        var roughness = materialMode == "BakeReconstructed" && orm == null
+            ? Select("roughness", "roughnessmap", "roughnesstexture") : null;
         var strength = parameters.Scalars.Where(x => new[] { "emissivestrength", "emissivestrenght", "emissiveintensity" }.Contains(Normalize(x.Key))).ToArray();
         var emissionValue = strength.Length == 1 && float.IsFinite(strength[0].Value) ? Math.Max(0, strength[0].Value) : 1;
         var emissive = emissionValue > 0 ? Select("emissive", "emissive", "emissivetexture", "emissivecolor") : null;
         if (emissionValue == 0) report.Warnings.Add("Emission is disabled by named scalar; its texture is neither decoded nor embedded.");
-        builder.WithBaseColor(Vector4.One).WithMetallicRoughness(Scalar("metallic", orm != null ? 1 : 0), Scalar("roughness", orm != null ? 1 : .8f));
+        builder.WithBaseColor(Vector4.One).WithMetallicRoughness(Scalar("metallic", orm != null ? 1 : 0), Scalar("roughness", orm != null || roughness != null ? 1 : .8f));
         if (baseColor != null)
         {
             var baseColorPng = ColorPng(baseColor);
@@ -417,14 +426,31 @@ internal static class Program
             builder.WithMetallicRoughness(image).WithOcclusion(image);
             report.Warnings.Add("ORM inferred by explicit name: R=occlusion, G=roughness, B=metallic; shader wiring is not proven.");
         }
+        else if (roughness != null)
+        {
+            var packed = PackRoughness(roughness.Png!);
+            var image = UsedImage(roughness, "ORM", packed, "pack-roughness-to-g");
+            builder.WithMetallicRoughness(image).WithOcclusion(image);
+            report.BakeOperations.Add(new BakeOperationRecord
+            {
+                Id = report.Name + ":ORM:roughness-map",
+                Material = report.Source,
+                OutputRole = "ORM",
+                Algorithm = "R=1 (occlusion), G=roughness source red, B=0 (metallic)",
+                InputTextures = [roughness.Source],
+                OutputSha256 = Convert.ToHexString(SHA256.HashData(packed)),
+                Fidelity = "reconstructed"
+            });
+            report.Warnings.Add("Standalone Roughness Map packed into glTF ORM: R=1, G=source red, B=0.");
+        }
         if (emissive != null)
         {
             builder.WithEmissive(UsedImage(emissive, "emissive", ColorPng(emissive), emissive.Srgb ? "none" : "linear-to-sRGB"),
                 new Vector3(Math.Min(emissionValue, 1)), Math.Max(emissionValue, 1));
             if (strength.Length == 1) report.Bindings["emissiveStrength"] = strength[0].Key + " (named scalar)";
         }
-        var color = parameters.Colors.Where(x => new[] { "basecolor", "basecolour", "colortint" }.Contains(Normalize(x.Key))).ToArray();
-        var disableTint = parameters.Switches.Any(p => Normalize(p.Key) == "usecolortint" && !p.Value);
+        var color = parameters.Colors.Where(x => new[] { "basecolor", "basecolour", "colortint", "tint" }.Contains(Normalize(x.Key))).ToArray();
+        var disableTint = parameters.Switches.Any(p => new[] { "usecolortint", "usetint" }.Contains(Normalize(p.Key)) && !p.Value);
         if (color.Length == 1 && !disableTint)
         {
             var c = color[0].Value;
@@ -466,6 +492,15 @@ internal static class Program
             throw new InvalidDataException("An embedded image has no used-variant provenance.");
     }
 
+    static void MatchBakeOutputs(ModelRoot model, IEnumerable<MaterialRecord> reports)
+    {
+        foreach (var operation in reports.SelectMany(x => x.BakeOperations))
+        {
+            var image = model.LogicalImages.Single(x => Convert.ToHexString(SHA256.HashData(x.Content.Content.ToArray())) == operation.OutputSha256);
+            operation.OutputImageIndex = image.LogicalIndex;
+        }
+    }
+
     static List<TextureArtifactRecord> EmbedSourceArtifacts(ModelRoot model, string materialMode,
         IReadOnlyDictionary<string, UUnrealMaterial> textureSources, IDictionary<string, TextureRecord> textureCache,
         IReadOnlyCollection<MaterialRecord> reports)
@@ -497,11 +532,6 @@ internal static class Program
             }
             else artifact.Disposition = "decode-failed";
             result.Add(artifact);
-        }
-        foreach (var operation in reports.SelectMany(x => x.BakeOperations))
-        {
-            var image = model.LogicalImages.Single(x => Convert.ToHexString(SHA256.HashData(x.Content.Content.ToArray())) == operation.OutputSha256);
-            operation.OutputImageIndex = image.LogicalIndex;
         }
         return result;
     }
@@ -564,6 +594,7 @@ internal static class Program
         using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
         return data.ToArray();
     }
+    internal static byte[] PackRoughness(byte[] png) => Transform(png, color => new SKColor(255, color.Red, 0, 255));
     internal static MeshBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> Swatch(MaterialBuilder material, string name)
     {
         var mesh = new MeshBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(name);

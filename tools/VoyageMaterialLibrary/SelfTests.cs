@@ -29,6 +29,8 @@ internal static class SelfTests
         var png = data.ToArray();
         using var flipped = SKBitmap.Decode(Program.FlipNormalGreen(png));
         Check(flipped.GetPixel(0, 0) == new SKColor(30, 175, 220, 255), "normal convention");
+        using var packedRoughness = SKBitmap.Decode(Program.PackRoughness(png));
+        Check(packedRoughness.GetPixel(0, 0) == new SKColor(255, 30, 0, 255), "standalone roughness packed to ORM green");
         Check(Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_PaintedMetal_BC.T_PaintedMetal_BC", Srgb = true, Png = png }, ["BaseColorT"]),
             "preview includes color texture");
         Check(Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_White_Color.T_White_Color", Srgb = true, Png = png }, ["Color Map"]),
@@ -79,6 +81,14 @@ internal static class SelfTests
                 referenced.Add(json.RootElement.GetProperty("textures")[textureIndex.GetInt32()].GetProperty("source").GetInt32());
         Check(referenced.Count == roundtrip.LogicalImages.Count, "no orphan images");
         Check(textures["normal"].Variants.Count == 1 && textures["normal"].Variants[0].Transform == "invert-green", "only converted normal retained");
+        var automotive = new MaterialRecord { Name = "automotive" };
+        automotive.Textures["Color Map"] = "color";
+        var automotiveParameters = new CMaterialParams2();
+        automotiveParameters.Colors["Tint"] = new CUE4Parse.UE4.Objects.Core.Math.FLinearColor(.016f, .016f, .016f, 1);
+        automotiveParameters.Switches["Use Tint"] = true;
+        var automotiveMaterial = Program.MakeMaterial(automotive, automotiveParameters, Resolve, "BakeReconstructed");
+        Check(automotive.Bindings["baseColor"] == "color" && automotive.Bindings.ContainsKey("baseColorFactor"),
+            "reconstructed automotive material uses Color Map and Tint");
         record.Textures["Albedo"] = "secondColor";
         textures["secondColor"] = new TextureRecord { Source = "secondColor", Srgb = true, Png = png };
         var ambiguous = new MaterialRecord { Name = "ambiguous" };

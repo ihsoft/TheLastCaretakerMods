@@ -5,11 +5,11 @@ identities and produces **one self-contained GLB**. It does not change the game,
 install containers, edit models, or invoke Unreal. Outputs remain under ignored
 `artifacts/`; extracted textures/materials are not Git source inputs.
 
-`../Export-VoyageMaterialTexturePreview.ps1` accepts the same exact material
-identities and produces one reduced contact-sheet PNG containing color textures
-only. It excludes normal maps, masks and linear data textures, writes no original
-texture files, and records included/excluded dependencies in a machine-readable
-evidence report.
+`../Export-VoyageMaterialPreview.ps1` accepts the same exact material identities,
+builds lightweight sample-panel GLB evidence with the selected material mode, and
+renders that reconstructed/approximate material result to one PNG through Blender.
+Source-only texture artifacts are not embedded and original decoded textures are
+not written separately.
 
 ## Normal use (Windows PowerShell 5.1)
 
@@ -21,23 +21,25 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageMater
   -OutputPath artifacts/material-export/my-materials.glb
 ```
 
-Color-only preview:
+Rendered material preview:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageMaterialTexturePreview.ps1 `
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageMaterialPreview.ps1 `
   -MaterialsFile tools/VoyageMaterialLibrary/socket-materials.example.json `
-  -ThumbnailSize 512 `
-  -OutputPath artifacts/material-export/my-material-colors-preview.png
+  -MaterialMode BakeReconstructed `
+  -OutputPath artifacts/material-export/my-material-preview.png
 ```
 
-The preview tool keeps only decoded `sRGB` Texture2D dependencies that are not
-normal maps and whose parameter/source names do not identify masks or PBR data
-(ORM/ORH, roughness, metallic, specular, occlusion, height, displacement or
-opacity). Shared textures are deduplicated. The PNG contains scaled thumbnails
-and labels; full-resolution decoded PNGs remain in memory and are never written.
-The sibling `.png.evidence/preview-report.json` records source dimensions, hashes,
-consumers, exclusions and provenance. Output must be a fresh PNG under
-`artifacts/`; `-ThumbnailSize` is 128..1024 and defaults to 512.
+The preview tool requires the same explicit `-MaterialMode` choice as GLB export.
+It invokes the published material exporter, omits the reconstructed mode's source
+artifact archive, retains only images actually bound to the sample materials, and
+renders the resulting GLB with Blender 5.0 or newer. The sibling `.png.evidence/`
+contains the lightweight source GLB, exporter report, hashes and Blender log.
+This is a material preview of the documented bounded reconstruction, not a view of
+raw texture dependencies and not an Unreal-rendered shader.
+The GLB machine manifest marks `sourceArtifactPolicy: omitted-for-preview`; bake
+inputs remain named and provenance-bound in the texture records, while the large
+source-only image archive is intentionally absent.
 
 `-MaterialMode` is deliberately required. If the user's request does not select
 one, the caller must ask rather than silently choosing:
