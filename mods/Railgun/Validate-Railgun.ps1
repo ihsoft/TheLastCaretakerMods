@@ -107,8 +107,10 @@ function EmptyAmmoTintAssignments($Statements) {
         if ($statement.Token -cne 'EX_Let' -or
             $null -eq $statement.Variable -or
             $null -eq $statement.Expression -or
-            -not ($variableLeaves -ccontains
-                'CallFunc_SelectColor_ReturnValue') -or
+            @($variableLeaves | Where-Object {
+                $_.StartsWith('CallFunc_SelectColor_ReturnValue',
+                    [StringComparison]::Ordinal)
+            }).Count -ne 1 -or
             -not ($expressionLeaves -ccontains
                 "Class'KismetMathLibrary:SelectColor'")) {
             continue
@@ -128,8 +130,10 @@ function EmptyAmmoTintAssignments($Statements) {
                 $tintValues[3] -eq 0.3 -and
                 $fallbackLeaves -ccontains 'RailgunChargeRadial' -and
                 $fallbackLeaves -ccontains 'SliderBarColor' -and
-                $conditionLeaves -ccontains
-                    'CallFunc_EqualEqual_IntInt_ReturnValue') {
+                @($conditionLeaves | Where-Object {
+                    $_.StartsWith('CallFunc_EqualEqual_IntInt_ReturnValue',
+                        [StringComparison]::Ordinal)
+                }).Count -eq 1) {
                 $statement
             }
         }
@@ -149,8 +153,10 @@ function EmptyAmmoZeroComparisons($Statements) {
         if ($statement.Token -cne 'EX_LetBool' -or
             $null -eq $statement.Variable -or
             $null -eq $statement.Expression -or
-            -not ($variableLeaves -ccontains
-                'CallFunc_EqualEqual_IntInt_ReturnValue') -or
+            @($variableLeaves | Where-Object {
+                $_.StartsWith('CallFunc_EqualEqual_IntInt_ReturnValue',
+                    [StringComparison]::Ordinal)
+            }).Count -ne 1 -or
             -not ($expressionLeaves -ccontains
                 "Class'KismetMathLibrary:EqualEqual_IntInt'")) {
             continue
@@ -161,6 +167,84 @@ function EmptyAmmoZeroComparisons($Statements) {
                 'RailgunAmmoLastVisualCount') -and
             $parameters[1].Token -ceq 'EX_IntConst' -and
             [int]$parameters[1].Value -eq 0) {
+            $statement
+        }
+    }
+}
+function ScopeAmmoTintAssignments($Statements) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject]) { continue }
+        $statementNames = @($statement.PSObject.Properties.Name)
+        if (-not ($statementNames -ccontains 'Token') -or
+            -not ($statementNames -ccontains 'Expression') -or
+            $statement.Token -cne 'EX_Let' -or
+            $null -eq $statement.Expression -or
+            -not (@(JsonStringLeaves $statement.Expression) -ccontains
+                "Class'KismetMathLibrary:SelectColor'")) {
+            continue
+        }
+        $parameters = @($statement.Expression.Parameters)
+        if ($parameters.Count -ne 3 -or
+            $parameters[0].Token -cne 'EX_StructConst') {
+            continue
+        }
+        $active = @($parameters[0].Properties | ForEach-Object {
+            [double]$_.Value
+        })
+        $inactiveLeaves = @(JsonStringLeaves $parameters[1])
+        $conditionLeaves = @(JsonStringLeaves $parameters[2])
+        if ($active.Count -eq 4 -and
+            [Math]::Abs($active[0] - 0.65) -lt 0.000001 -and
+            [Math]::Abs($active[1] - 0.95) -lt 0.000001 -and
+            [Math]::Abs($active[2] - 1.0) -lt 0.000001 -and
+            [Math]::Abs($active[3] - 0.65) -lt 0.000001 -and
+            @($inactiveLeaves | Where-Object {
+                $_.StartsWith('CallFunc_SelectColor_ReturnValue',
+                    [StringComparison]::Ordinal)
+            }).Count -eq 1 -and
+            @($conditionLeaves | Where-Object {
+                $_.StartsWith('CallFunc_Greater_IntInt_ReturnValue',
+                    [StringComparison]::Ordinal)
+            }).Count -eq 1) {
+            $statement
+        }
+    }
+}
+function ScopeEmptyAmmoTintAssignments($Statements) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject] -or
+            $statement.Token -cne 'EX_Let' -or
+            $null -eq $statement.Expression -or
+            -not (@(JsonStringLeaves $statement.Expression) -ccontains
+                "Class'KismetMathLibrary:SelectColor'")) {
+            continue
+        }
+        $parameters = @($statement.Expression.Parameters)
+        if ($parameters.Count -ne 3 -or
+            $parameters[0].Token -cne 'EX_StructConst' -or
+            $parameters[1].Token -cne 'EX_StructConst') {
+            continue
+        }
+        $empty = @($parameters[0].Properties | ForEach-Object {
+            [double]$_.Value
+        })
+        $inactive = @($parameters[1].Properties | ForEach-Object {
+            [double]$_.Value
+        })
+        $conditionLeaves = @(JsonStringLeaves $parameters[2])
+        if ($empty.Count -eq 4 -and $inactive.Count -eq 4 -and
+            [Math]::Abs($empty[0] - 1.0) -lt 0.000001 -and
+            [Math]::Abs($empty[1] - 0.25) -lt 0.000001 -and
+            [Math]::Abs($empty[2] - 0.25) -lt 0.000001 -and
+            [Math]::Abs($empty[3] - 0.3) -lt 0.000001 -and
+            [Math]::Abs($inactive[0] - 0.65) -lt 0.000001 -and
+            [Math]::Abs($inactive[1] - 0.95) -lt 0.000001 -and
+            [Math]::Abs($inactive[2] - 1.0) -lt 0.000001 -and
+            [Math]::Abs($inactive[3] - 0.22) -lt 0.000001 -and
+            @($conditionLeaves | Where-Object {
+                $_.StartsWith('CallFunc_EqualEqual_IntInt_ReturnValue',
+                    [StringComparison]::Ordinal)
+            }).Count -eq 1) {
             $statement
         }
     }
@@ -630,7 +714,7 @@ Require ($hudUbergraphStrings -ccontains 'RailgunAmmoLastVisualCount') `
     'HUD does not read the event-maintained ammo count cache.'
 Require (@($hudUbergraphStrings | Where-Object {
     $_ -ceq "Class'Image:SetColorAndOpacity'"
-}).Count -eq 6) 'HUD must tint exactly six persistent ammo indicators.'
+}).Count -eq 12) 'HUD must tint exactly six wide and six scope ammo indicators.'
 $emptyAmmoTintAssignments = @(
     EmptyAmmoTintAssignments $hudUbergraph[0].ScriptBytecode
 )
@@ -639,8 +723,18 @@ Require ($emptyAmmoTintAssignments.Count -eq 6) `
 $emptyAmmoZeroComparisons = @(
     EmptyAmmoZeroComparisons $hudUbergraph[0].ScriptBytecode
 )
-Require ($emptyAmmoZeroComparisons.Count -eq 6) `
+Require ($emptyAmmoZeroComparisons.Count -eq 12) `
     'Every HUD empty-magazine tint must use an exact zero-count comparison.'
+$scopeAmmoTintAssignments = @(
+    ScopeAmmoTintAssignments $hudUbergraph[0].ScriptBytecode
+)
+Require ($scopeAmmoTintAssignments.Count -eq 6) `
+    'Scope ammo indicators must use the independent blue active/inactive tints.'
+$scopeEmptyAmmoTintAssignments = @(
+    ScopeEmptyAmmoTintAssignments $hudUbergraph[0].ScriptBytecode
+)
+Require ($scopeEmptyAmmoTintAssignments.Count -eq 6) `
+    'Scope ammo indicators must use the wide HUD red tint only at zero rounds.'
 $chargeTextColors = @(ChargeTextColorAssignments $hudUbergraph[0].ScriptBytecode)
 Require ($chargeTextColors.Count -eq 3) `
     'HUD must set charge text colors for invalid, charging and ready paths.'
@@ -688,9 +782,9 @@ Require (-not ($hudUbergraphStrings -ccontains
 Require (-not ($hudUbergraphStrings -ccontains 'SliderProgressColor')) `
     'Ammo indicators must not inherit the dynamic charge ring color.'
 $ammoActivationThresholds = @(AmmoActivationThresholds $hudUbergraph[0])
-Require (@(Compare-Object -ReferenceObject @(5,4,3,2,1,0) `
+Require (@(Compare-Object -ReferenceObject @(5,4,3,2,1,0,5,4,3,2,1,0) `
     -DifferenceObject $ammoActivationThresholds -SyncWindow 0).Count -eq 0) `
-    'HUD ammo indicators must activate from right to left.'
+    'Wide and scope ammo indicators must activate from right to left.'
 foreach ($forbiddenHudInventoryReference in @(
     'Items', "Class'BlueprintMapLibrary:Map_Values'", 'OnInventoryChanged'
 )) {
@@ -709,6 +803,9 @@ Require (@($visibilityTargets | Where-Object {
 Require (@($visibilityTargets | Where-Object {
     $_ -ceq 'RailgunChargeText'
 }).Count -eq 0) 'Charge text has a duplicate direct visibility gate.'
+Require (@($visibilityTargets | Where-Object {
+    $_ -ceq 'RailgunScopeAmmoIndicatorRow'
+}).Count -eq 2) 'Wide/optics visibility gate does not own the scope ammo row.'
 $indicatorNames = @(
     'RailgunAmmoIndicator01','RailgunAmmoIndicator02',
     'RailgunAmmoIndicator03','RailgunAmmoIndicator04',
@@ -751,6 +848,45 @@ foreach ($indicatorName in $indicatorNames) {
         [Math]::Abs([double]$color.A - [double]$faintColor.A) -lt 0.000001) `
         ('Ammo indicator faint color differs from radial bar: ' + $indicatorName)
 }
+$scopeIndicatorNames = @(
+    'RailgunScopeAmmoIndicator01','RailgunScopeAmmoIndicator02',
+    'RailgunScopeAmmoIndicator03','RailgunScopeAmmoIndicator04',
+    'RailgunScopeAmmoIndicator05','RailgunScopeAmmoIndicator06'
+)
+$scopeIndicators = @($hud | Where-Object {
+    $_.Type -ceq 'Image' -and $scopeIndicatorNames -ccontains $_.Name
+})
+Require (@(Compare-Object -ReferenceObject $scopeIndicatorNames `
+    -DifferenceObject @($scopeIndicators.Name) -CaseSensitive).Count -eq 0) `
+    'Scope ammo-indicator identity set differs from the six-slot contract.'
+foreach ($indicatorName in $scopeIndicatorNames) {
+    $indicator = @($scopeIndicators | Where-Object {
+        $_.Name -ceq $indicatorName
+    })
+    Require ($indicator.Count -eq 1 -and
+        $indicator[0].Properties.Visibility -ceq
+            'ESlateVisibility::HitTestInvisible') `
+        ('Scope ammo indicator is not persistent: ' + $indicatorName)
+    $brush = $indicator[0].Properties.Brush
+    Require ($brush.ResourceObject.ObjectPath -ceq
+        ($ammoIndicatorPackage + '.0') -and
+        [Math]::Abs([double]$brush.ImageSize.Y - 38.0) -lt 0.0001 -and
+        [Math]::Abs([double]$brush.UVRegion.Min.X - (548.0 / 1254.0)) -lt
+            0.000001 -and
+        [Math]::Abs([double]$brush.UVRegion.Min.Y - (372.0 / 1254.0)) -lt
+            0.000001 -and
+        [Math]::Abs([double]$brush.UVRegion.Max.X - (706.0 / 1254.0)) -lt
+            0.000001 -and
+        [Math]::Abs([double]$brush.UVRegion.Max.Y - (895.0 / 1254.0)) -lt
+            0.000001) `
+        ('Scope ammo indicator crop/size mismatch: ' + $indicatorName)
+    $color = $indicator[0].Properties.ColorAndOpacity
+    Require ([Math]::Abs([double]$color.R - 0.65) -lt 0.000001 -and
+        [Math]::Abs([double]$color.G - 0.95) -lt 0.000001 -and
+        [Math]::Abs([double]$color.B - 1.0) -lt 0.000001 -and
+        [Math]::Abs([double]$color.A - 0.22) -lt 0.000001) `
+        ('Scope ammo indicator initial tint mismatch: ' + $indicatorName)
+}
 $ammoRowSlots = @($hud | Where-Object {
     $_.Type -ceq 'HorizontalBoxSlot' -and
     $_.Outer.ObjectName -ceq
@@ -765,6 +901,75 @@ for ($index = 0; $index -lt $indicatorNames.Count; $index++) {
         [Math]::Abs([double]$ammoRowSlots[$index].Properties.Padding.Right - 3.0) -lt
             0.0001) 'Ammo indicator row order/gap mismatch.'
 }
+$scopeAmmoRowSlots = @($hud | Where-Object {
+    $_.Type -ceq 'HorizontalBoxSlot' -and
+    $_.Outer.ObjectName -ceq
+        "HorizontalBox'WBP_RailgunHUD_C:WidgetTree.RailgunScopeAmmoIndicatorRow'"
+} | Sort-Object Name)
+Require ($scopeAmmoRowSlots.Count -eq 6) `
+    'Scope ammo indicator row must retain six slots.'
+for ($index = 0; $index -lt $scopeIndicatorNames.Count; $index++) {
+    Require ($scopeAmmoRowSlots[$index].Properties.Content.ObjectName.EndsWith(
+        '.' + $scopeIndicatorNames[$index] + "'", [StringComparison]::Ordinal) -and
+        [Math]::Abs([double]$scopeAmmoRowSlots[$index].Properties.Padding.Left - 7.0) -lt
+            0.0001 -and
+        [Math]::Abs([double]$scopeAmmoRowSlots[$index].Properties.Padding.Right - 7.0) -lt
+        0.0001) 'Scope ammo indicator row order/gap mismatch.'
+}
+$scopeAmmoRow = @($hud | Where-Object {
+    $_.Type -ceq 'HorizontalBox' -and
+    $_.Name -ceq 'RailgunScopeAmmoIndicatorRow'
+})
+Require ($scopeAmmoRow.Count -eq 1 -and
+    $scopeAmmoRow[0].Properties.Visibility -ceq
+        'ESlateVisibility::Collapsed') `
+    'Scope ammo row must start hidden until the optics gate shows it.'
+$scopeAmmoCanvasSlot = @($hud | Where-Object {
+    $_.Type -ceq 'CanvasPanelSlot' -and
+    $_.Properties.Content.ObjectName.EndsWith(
+        ".RailgunScopeAmmoIndicatorRow'", [StringComparison]::Ordinal)
+})
+Require ($scopeAmmoCanvasSlot.Count -eq 1) `
+    'Scope ammo row must have exactly one canvas slot.'
+$scopeAmmoLayout = $scopeAmmoCanvasSlot[0].Properties.LayoutData
+Require ($scopeAmmoCanvasSlot[0].Properties.bAutoSize -and
+    [Math]::Abs([double]$scopeAmmoLayout.Offsets.Top - -252.0) -lt 0.0001 -and
+    [Math]::Abs([double]$scopeAmmoLayout.Anchors.Minimum.X - 0.5) -lt 0.0001 -and
+    [Math]::Abs([double]$scopeAmmoLayout.Anchors.Minimum.Y - 0.5) -lt 0.0001 -and
+    [Math]::Abs([double]$scopeAmmoLayout.Anchors.Maximum.X - 0.5) -lt 0.0001 -and
+    [Math]::Abs([double]$scopeAmmoLayout.Anchors.Maximum.Y - 0.5) -lt 0.0001 -and
+    [Math]::Abs([double]$scopeAmmoLayout.Alignment.X - 0.5) -lt 0.0001 -and
+    [Math]::Abs([double]$scopeAmmoLayout.Alignment.Y - 0.5) -lt 0.0001) `
+    'Scope ammo row is not mathematically centered in the scope coordinate system.'
+$scopeStatusIcons = @($hud | Where-Object {
+    $_.Type -ceq 'Image' -and $_.Name -in @(
+        'RailgunStatusCharging','RailgunStatusOffline','RailgunStatusReady')
+})
+Require ($scopeStatusIcons.Count -eq 3) `
+    'Scope energy-status icon set differs from the approved contract.'
+foreach ($statusIcon in $scopeStatusIcons) {
+    Require ([Math]::Abs([double]$statusIcon.Properties.Brush.ImageSize.Y - 54.0) -lt
+        0.0001) 'Existing scope energy indicator height changed.'
+}
+$statusCanvasSlots = @($hud | Where-Object {
+    $_.Type -ceq 'CanvasPanelSlot' -and
+    $_.Properties.Content.ObjectName -match
+        '\.RailgunStatus(Charging|Offline|Ready)''$'
+})
+Require ($statusCanvasSlots.Count -eq 3) `
+    'Scope energy-status canvas layout is incomplete.'
+foreach ($statusSlot in $statusCanvasSlots) {
+    $statusLayout = $statusSlot.Properties.LayoutData
+    Require ([Math]::Abs([double]$statusLayout.Offsets.Top - -190.0) -lt 0.0001 -and
+        [Math]::Abs([double]$statusLayout.Anchors.Minimum.X - 0.5) -lt 0.0001 -and
+        [Math]::Abs([double]$statusLayout.Anchors.Minimum.Y - 0.5) -lt 0.0001 -and
+        [Math]::Abs([double]$statusLayout.Alignment.X - 0.5) -lt 0.0001 -and
+        [Math]::Abs([double]$statusLayout.Alignment.Y - 0.5) -lt 0.0001) `
+        'Existing scope energy-status layout changed.'
+}
+$visibleScopeGap = (-190.0 - 54.0 * 0.5) - (-252.0 + 38.0 * 0.5)
+Require ([Math]::Abs($visibleScopeGap - 16.0) -lt 0.0001) `
+    'Scope ammo/energy visible gap differs from the fixed 70-percent layout.'
 $chargeBlockSlots = @($hud | Where-Object {
     $_.Type -ceq 'VerticalBoxSlot' -and
     $_.Outer.ObjectName -ceq

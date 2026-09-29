@@ -10,12 +10,17 @@ inline const FName ChargeRadial(TEXT("RailgunChargeRadial"));
 inline const FName ChargeText(TEXT("RailgunChargeText"));
 inline const FName ChargeBlock(TEXT("RailgunChargeBlock"));
 inline const FName AmmoIndicatorRow(TEXT("RailgunAmmoIndicatorRow"));
+inline const FName ScopeAmmoIndicatorRow(TEXT("RailgunScopeAmmoIndicatorRow"));
 inline const FName ChargeInitialized(TEXT("RailgunChargeInitialized"));
 inline const FName AmmoInitialized(TEXT("RailgunAmmoHudInitialized"));
 inline const TArray<FName> AmmoIndicators {
     TEXT("RailgunAmmoIndicator01"), TEXT("RailgunAmmoIndicator02"),
     TEXT("RailgunAmmoIndicator03"), TEXT("RailgunAmmoIndicator04"),
     TEXT("RailgunAmmoIndicator05"), TEXT("RailgunAmmoIndicator06")};
+inline const TArray<FName> ScopeAmmoIndicators {
+    TEXT("RailgunScopeAmmoIndicator01"), TEXT("RailgunScopeAmmoIndicator02"),
+    TEXT("RailgunScopeAmmoIndicator03"), TEXT("RailgunScopeAmmoIndicator04"),
+    TEXT("RailgunScopeAmmoIndicator05"), TEXT("RailgunScopeAmmoIndicator06")};
 inline const FName StatusCharging(TEXT("RailgunStatusCharging"));
 inline const FName StatusOffline(TEXT("RailgunStatusOffline"));
 inline const FName StatusReady(TEXT("RailgunStatusReady"));
@@ -53,6 +58,15 @@ inline constexpr TCHAR InsufficientChargeTextColor[] =
 inline constexpr float AmmoIndicatorHeight = 30.0f;
 inline constexpr float AmmoIndicatorGap = 6.0f;
 inline constexpr float AmmoIndicatorTextGap = 5.0f;
+// Fixed authored HUD metric: rounded 70% of the current 54px scope energy
+// indicator.
+// Do not derive this from either texture so future source-art changes cannot
+// resize the scope ammunition row implicitly.
+inline constexpr float ScopeAmmoIndicatorHeight = 38.0f;
+inline constexpr float ScopeAmmoIndicatorGap = 14.0f;
+inline constexpr float ScopeAmmoIndicatorOffsetY = -252.0f;
+inline const FLinearColor ScopeAmmoActiveTint(0.65f, 0.95f, 1.0f, 0.65f);
+inline const FLinearColor ScopeAmmoInactiveTint(0.65f, 0.95f, 1.0f, 0.22f);
 inline constexpr float AmmoCropLeft = 548.0f;
 inline constexpr float AmmoCropTop = 372.0f;
 inline constexpr float AmmoCropRight = 706.0f;
@@ -143,6 +157,15 @@ void UpdateStationAmmoHud(FGraph& G, UEdGraphPin* Station,
     G.Link(FaintColor, G.Pin(InactiveTint, P::Select::WhenFalse));
     G.Link(Empty, G.Pin(InactiveTint, P::Select::Condition));
     UEdGraphPin* InactiveColor = G.Pin(InactiveTint, P::ReturnValue);
+    auto* ScopeInactiveTint = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectColor));
+    G.Default(ScopeInactiveTint, P::Select::WhenTrue,
+        *EmptyAmmoTint.ToString());
+    G.Default(ScopeInactiveTint, P::Select::WhenFalse,
+        *ScopeAmmoInactiveTint.ToString());
+    G.Link(Empty, G.Pin(ScopeInactiveTint, P::Select::Condition));
+    UEdGraphPin* ScopeInactiveColor =
+        G.Pin(ScopeInactiveTint, P::ReturnValue);
     for (int32 Index = 0; Index < AmmoIndicators.Num(); ++Index)
     {
         const int32 ActivationThreshold = AmmoIndicators.Num() - Index - 1;
@@ -158,6 +181,27 @@ void UpdateStationAmmoHud(FGraph& G, UEdGraphPin* Station,
         auto* SetColor = G.Call(UImage::StaticClass(),
             GET_FUNCTION_NAME_CHECKED(UImage, SetColorAndOpacity));
         G.Link(G.Read(AmmoIndicators[Index]),
+            G.Pin(SetColor, P::FunctionTarget));
+        G.Link(G.Pin(Tint, P::ReturnValue),
+            G.Pin(SetColor, ColorAndOpacityPin));
+        G.Exec(SetColor);
+    }
+    for (int32 Index = 0; Index < ScopeAmmoIndicators.Num(); ++Index)
+    {
+        const int32 ActivationThreshold =
+            ScopeAmmoIndicators.Num() - Index - 1;
+        UEdGraphPin* Active = G.Compare(
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_IntInt),
+            Count, *FString::FromInt(ActivationThreshold));
+        auto* Tint = G.Call(UKismetMathLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectColor));
+        G.Default(Tint, P::Select::WhenTrue,
+            *ScopeAmmoActiveTint.ToString());
+        G.Link(ScopeInactiveColor, G.Pin(Tint, P::Select::WhenFalse));
+        G.Link(Active, G.Pin(Tint, P::Select::Condition));
+        auto* SetColor = G.Call(UImage::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UImage, SetColorAndOpacity));
+        G.Link(G.Read(ScopeAmmoIndicators[Index]),
             G.Pin(SetColor, P::FunctionTarget));
         G.Link(G.Pin(Tint, P::ReturnValue),
             G.Pin(SetColor, ColorAndOpacityPin));

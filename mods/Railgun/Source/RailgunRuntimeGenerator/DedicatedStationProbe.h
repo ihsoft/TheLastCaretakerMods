@@ -437,6 +437,37 @@ UClass* CreateDedicatedStation()
         EnergyHud::ChargeGaugeCenterOffset,
         EnergyHud::ChargeGaugeCenterOffset));
     ChargeBlockSlot->SetAutoSize(true);
+    const FVector2D ScopeIndicatorSize(
+        EnergyHud::ScopeAmmoIndicatorHeight * CropWidth / CropHeight,
+        EnergyHud::ScopeAmmoIndicatorHeight);
+    auto* ScopeAmmoRow = Hud->WidgetTree->ConstructWidget<UHorizontalBox>(
+        UHorizontalBox::StaticClass(), EnergyHud::ScopeAmmoIndicatorRow);
+    ScopeAmmoRow->bIsVariable = true;
+    ScopeAmmoRow->SetVisibility(ESlateVisibility::Collapsed);
+    for (FName Field : EnergyHud::ScopeAmmoIndicators)
+    {
+        auto* Indicator = Hud->WidgetTree->ConstructWidget<UImage>(
+            UImage::StaticClass(), Field);
+        Indicator->bIsVariable = true;
+        Indicator->SetBrushFromTexture(EnergyHud::AmmoIndicatorTexture, false);
+        FSlateBrush Brush = Indicator->GetBrush();
+        Brush.ImageSize = ScopeIndicatorSize;
+        Brush.SetUVRegion(IndicatorUv);
+        Indicator->SetBrush(Brush);
+        Indicator->SetColorAndOpacity(EnergyHud::ScopeAmmoInactiveTint);
+        Indicator->SetVisibility(ESlateVisibility::HitTestInvisible);
+        auto* IndicatorSlot = ScopeAmmoRow->AddChildToHorizontalBox(Indicator);
+        IndicatorSlot->SetPadding(FMargin(
+            EnergyHud::ScopeAmmoIndicatorGap * 0.5f, 0.0f));
+        IndicatorSlot->SetHorizontalAlignment(HAlign_Center);
+        IndicatorSlot->SetVerticalAlignment(VAlign_Center);
+    }
+    auto* ScopeAmmoRowSlot = Canvas->AddChildToCanvas(ScopeAmmoRow);
+    ScopeAmmoRowSlot->SetAnchors(FAnchors(0.5f, 0.5f));
+    ScopeAmmoRowSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+    ScopeAmmoRowSlot->SetPosition(FVector2D(
+        0.0f, EnergyHud::ScopeAmmoIndicatorOffsetY));
+    ScopeAmmoRowSlot->SetAutoSize(true);
     auto AddScopeText = [&](FName Field, const TCHAR* Text, float Offset, bool Variable)
     {
         auto* Widget = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Field); Widget->bIsVariable = Variable;
@@ -531,7 +562,8 @@ UClass* CreateDedicatedStation()
     auto* WideHud = HG.Branch(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, ZoomTest::Wide));
     auto SetOpticalVisibility = [&](const TCHAR* Visibility)
     {
-        for (FName Field : {ZoomTest::Mask, Range::TargetName, Range::TargetRange})
+        for (FName Field : {ZoomTest::Mask, Range::TargetName,
+            Range::TargetRange, EnergyHud::ScopeAmmoIndicatorRow})
         {
             auto* Set = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
             HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Default(Set, OP::Visibility, Visibility); HG.Exec(Set);
