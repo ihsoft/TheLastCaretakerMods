@@ -139,10 +139,10 @@ files.
 Material-only exchange uses `Export-VoyageMaterialPack.ps1`: one exact material
 plus explicit material mode -> one validated `<MaterialName>.materialpack.zip`
 with a fixed sphere preview, reconstructed PBR maps, complete parameter/binding/
-omission metadata, and only semantically bound skipped-effect source images. It
-contains no mesh or GLB payload. Source masks use lossless WebP and source normals
-use PNG; large meaningful skipped inputs can still dominate archive size, and
-every inclusion has a machine-readable reason.
+omission metadata, and no mesh or GLB payload. Its default `MetadataOnly` source
+policy keeps all source identities without source pixels; opt-in `Reconstructable`
+adds only semantically bound skipped-effect images. Source masks use lossless WebP
+and source normals use PNG, and every inclusion has a machine-readable reason.
 Source-only conversion/preview is outside game-tool coverage; extraction/build
 operations retain the normal game provenance gates.
 
@@ -162,7 +162,7 @@ container and evidence, without installation.
 | Export one stock StaticMesh or Blueprint default assembly | `Export-VoyageModelGlb.ps1` | Self-contained GLB with static hierarchy, transforms, bounded PBR materials and explicit omissions |
 | Export an exact batch of stock materials | `Export-VoyageMaterialsGlb.ps1` | Self-contained sample-panel GLB with inherited parameters, used textures and PBR approximation report |
 | Render a preview of reconstructed/approximate stock materials | `Export-VoyageMaterialPreview.ps1` | Blender-rendered sample-panel PNG; lightweight GLB evidence; no source-artifact archive or original texture files |
-| Export one stock material for material-only exchange | `Export-VoyageMaterialPack.ps1` | Validated `.materialpack.zip`; fixed WebP preview, baked PBR maps, parameter/provenance manifest, selected skipped-effect sources, no geometry |
+| Export one stock material for material-only exchange | `Export-VoyageMaterialPack.ps1` | Validated `.materialpack.zip`; fixed WebP preview, baked PBR maps, parameter/provenance manifest, default metadata-only or opt-in reconstructable source policy, no geometry |
 | Publish or validate the Inspector executable | `Publish-VoyageAssetInspectorBinary.ps1`, `Get-VoyageAssetInspectorBinary.ps1` | Stable single-file EXE; validated source/dependency/binary identity |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Publish or reuse canonical retoc | `Publish-RetocBinary.ps1` | Stable `.tools/bin/retoc.exe` plus hash/provenance manifest |

@@ -77,7 +77,7 @@ internal static partial class Program
     }
 
     static int ExportMaterialPackStage(StockProvider provider, string[] assets, string output, string materialMode,
-        string build, string exeHash, string mappingPath)
+        SourceTexturePolicy sourceTexturePolicy, string build, string exeHash, string mappingPath)
     {
         if (assets.Length != 1) throw new ArgumentException("MaterialPackStage exports exactly one material.");
         if (Directory.Exists(output) || File.Exists(output)) throw new IOException("Material pack stage exists; choose a fresh path.");
@@ -119,7 +119,8 @@ internal static partial class Program
             "pbr/emissive.webp", true);
 
         var render = JsonSerializer.SerializeToNode(report.RenderState, JsonOptions)!.AsObject();
-        var sourceEntries = DescribePackSources(report, reconstruction.Parameters, textureSources, textureCache, sourceDirectory);
+        var sourceEntries = DescribePackSources(report, reconstruction.Parameters, textureSources, textureCache, sourceDirectory,
+            sourceTexturePolicy);
         var skippedEffects = report.SkippedTextures.OrderBy(x => x.Key, StringComparer.Ordinal).Select(entry => new
         {
             texture = entry.Key,
@@ -129,6 +130,7 @@ internal static partial class Program
         var manifest = new JsonObject
         {
             ["schemaVersion"] = 1,
+            ["sourceTexturePolicy"] = sourceTexturePolicy.ToString(),
             ["material"] = new JsonObject
             {
                 ["name"] = report.Name,
@@ -180,6 +182,7 @@ internal static partial class Program
             schema = "voyage.material-pack-stage/1",
             status = textureCache.Values.Any(x => x.Error != null) ? "partial-textures" : "staged",
             materialMode,
+            sourceTexturePolicy = sourceTexturePolicy.ToString(),
             material = report.Source,
             stagePath = output,
             manifestPath,
@@ -189,7 +192,8 @@ internal static partial class Program
             includedSourceTextureCount = sourceEntries.Count(x => x.included)
         };
         File.WriteAllText(reportPath, JsonSerializer.Serialize(new { result, report, sourceTextures = sourceEntries }, JsonOptions));
-        Console.WriteLine(JsonSerializer.Serialize(new { result.status, result.materialMode, result.material, result.stagePath,
+        Console.WriteLine(JsonSerializer.Serialize(new { result.status, result.materialMode, result.sourceTexturePolicy,
+            result.material, result.stagePath,
             result.manifestPath, result.previewSourceGlb, result.pbrMaps, result.sourceTextureCount,
             result.includedSourceTextureCount, reportPath }));
         return 0;
@@ -229,7 +233,7 @@ internal static partial class Program
 
     static PackSourceTexture[] DescribePackSources(MaterialRecord report, CMaterialParams2 parameters,
         IReadOnlyDictionary<string, UUnrealMaterial> textureSources, IDictionary<string, TextureRecord> textureCache,
-        string sourceDirectory)
+        string sourceDirectory, SourceTexturePolicy sourceTexturePolicy)
     {
         var active = report.Bindings.Values.Where(x => x.StartsWith('/')).ToHashSet(StringComparer.Ordinal);
         active.UnionWith(report.BakeOperations.SelectMany(x => x.InputTextures));
@@ -239,40 +243,52 @@ internal static partial class Program
         {
             var roles = report.Textures.Where(x => x.Value == pair.Key).Select(x => x.Key).OrderBy(x => x, StringComparer.Ordinal).ToArray();
             var entry = new PackSourceTexture { role = roles.FirstOrDefault() ?? "Unknown", roles = roles, packagePath = pair.Key };
+            entry.affectsSkippedEffect = report.SkippedTextures.ContainsKey(pair.Key);
             if (active.Contains(pair.Key))
-                entry.reason = "Visual contribution is represented by the baked PBR outputs; source pixels are not duplicated.";
+                entry.selectionReason = "Visual contribution is represented by the baked PBR outputs; source pixels are not duplicated.";
             else if (pair.Value is not UTexture2D)
-                entry.reason = "Referenced asset is not a decodable Texture2D; retained as metadata only.";
-            else if (!IsImportantSkippedSource(pair.Key, roles, parameters, out var inclusionReason))
-                entry.reason = inclusionReason;
+                entry.selectionReason = "Referenced asset is not a decodable Texture2D; retained as metadata only.";
             else
             {
-                if (!textureCache.TryGetValue(pair.Key, out var texture)) textureCache[pair.Key] = texture = Decode(pair.Value);
+                entry.reconstructableCandidate = IsImportantSkippedSource(pair.Key, roles, parameters, out var selectionReason);
+                entry.selectionReason = selectionReason;
+            }
+            TextureRecord? texture = null;
+            if (entry.reconstructableCandidate)
+            {
+                if (!textureCache.TryGetValue(pair.Key, out texture)) textureCache[pair.Key] = texture = Decode(pair.Value);
                 entry.decodedSourceSha256 = texture.Sha256;
                 entry.width = texture.Width;
                 entry.height = texture.Height;
                 entry.format = texture.Format;
                 entry.colorSpace = texture.Srgb ? "sRGB" : "linear";
-                if (texture.Png == null) entry.reason = "Important skipped-effect input was selected, but texture decoding failed: " + texture.Error;
-                else
+            }
+            if (sourceTexturePolicy == SourceTexturePolicy.MetadataOnly)
+                entry.reason = "Source pixel data omitted by MetadataOnly export policy.";
+            else if (!entry.reconstructableCandidate)
+                entry.reason = entry.selectionReason;
+            else if (texture!.Png == null)
+                entry.reason = "Important skipped-effect input was selected, but texture decoding failed: " + texture.Error;
+            else
+            {
+                Directory.CreateDirectory(sourceDirectory);
+                var storedBytes = texture.Png;
+                if (!texture.IsNormal) storedBytes = EncodeWebpLossless(storedBytes);
+                var extension = texture.IsNormal ? ".png" : ".webp";
+                var pixelHash = Convert.ToHexString(SHA256.HashData(storedBytes));
+                if (!storedByHash.TryGetValue(pixelHash, out var relative))
                 {
-                    Directory.CreateDirectory(sourceDirectory);
-                    var storedBytes = texture.IsNormal ? texture.Png : EncodeWebpLossless(texture.Png);
-                    var extension = texture.IsNormal ? ".png" : ".webp";
-                    var pixelHash = Convert.ToHexString(SHA256.HashData(storedBytes));
-                    if (!storedByHash.TryGetValue(pixelHash, out var relative))
-                    {
-                        var leaf = Regex.Replace(pair.Key.Split('/')[^1].Split('.')[0], "[^A-Za-z0-9_.-]", "_");
-                        relative = "source/" + leaf + "-" + Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(pair.Key)))[..8] + extension;
-                        File.WriteAllBytes(Path.Combine(sourceDirectory, relative["source/".Length..]), storedBytes);
-                        storedByHash[pixelHash] = relative;
-                    }
-                    entry.included = true;
-                    entry.file = relative;
-                    entry.sha256 = pixelHash;
-                    entry.storageEncoding = texture.IsNormal ? "PNG lossless" : "WebP lossless";
-                    entry.reason = "Skipped layered/effect input carries visual information not represented by the baked PBR outputs.";
+                    var leaf = Regex.Replace(pair.Key.Split('/')[^1].Split('.')[0], "[^A-Za-z0-9_.-]", "_");
+                    relative = "source/" + leaf + "-" + Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(pair.Key)))[..8] + extension;
+                    File.WriteAllBytes(Path.Combine(sourceDirectory, relative["source/".Length..]), storedBytes);
+                    storedByHash[pixelHash] = relative;
                 }
+                entry.included = true;
+                entry.file = relative;
+                entry.sha256 = pixelHash;
+                entry.storageEncoding = texture.IsNormal ? "PNG lossless" : "WebP lossless";
+                entry.reason = "Required to reproduce skipped or unreconstructed effect parameters: " +
+                    string.Join(", ", roles) + ".";
             }
             result.Add(entry);
         }
@@ -312,6 +328,16 @@ internal static partial class Program
         }
         reason = "Recognized skipped layered-effect input selected for preservation.";
         return true;
+    }
+
+    internal static SourceTexturePolicy ParseSourceTexturePolicy(string value)
+    {
+        return value switch
+        {
+            "MetadataOnly" => SourceTexturePolicy.MetadataOnly,
+            "Reconstructable" => SourceTexturePolicy.Reconstructable,
+            _ => throw new ArgumentException("sourceTexturePolicy must be MetadataOnly or Reconstructable.")
+        };
     }
 
     static JsonObject ParameterManifest(CMaterialParams2 parameters)
@@ -422,6 +448,7 @@ internal static partial class Program
         if (manifest["schemaVersion"]?.GetValue<int>() != 1) throw new InvalidDataException("Unsupported material-pack schema.");
         foreach (var section in new[] { "material", "renderState", "pbr", "parameters", "textureBindings", "sourceTextures", "reconstruction", "uv", "preview", "provenance" })
             if (manifest[section] == null) throw new InvalidDataException("Missing manifest section: " + section);
+        var sourceTexturePolicy = ParseSourceTexturePolicy(manifest["sourceTexturePolicy"]?.GetValue<string>() ?? "Reconstructable");
         var material = manifest["material"]!.AsObject();
         var materialName = material["name"]!.GetValue<string>();
         var materialSource = material["source"]!.GetValue<string>();
@@ -456,10 +483,15 @@ internal static partial class Program
                     !(file.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))))
                 throw new InvalidDataException("Invalid source texture payload contract.");
         }
+        if (sourceTexturePolicy == SourceTexturePolicy.MetadataOnly &&
+            manifest["sourceTextures"]!.AsArray().Any(x => x!["included"]!.GetValue<bool>()))
+            throw new InvalidDataException("MetadataOnly material pack contains source texture pixels.");
         var inventory = manifest["files"]?.AsArray() ?? throw new InvalidDataException("Missing file inventory.");
         var records = inventory.Select(x => x!.AsObject()).ToDictionary(x => x["path"]!.GetValue<string>(), StringComparer.Ordinal);
         if (!records.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(expected.Where(x => x != "manifest.json")))
             throw new InvalidDataException("File inventory does not match archive payload.");
+        if (records.Values.GroupBy(x => x["sha256"]!.GetValue<string>(), StringComparer.Ordinal).Any(x => x.Count() > 1))
+            throw new InvalidDataException("Duplicate image payloads are stored more than once.");
         foreach (var role in new[] { "baseColor", "normal", "orm", "emissive", "opacity" })
         {
             if (pbr[role] is not JsonObject entry) continue;
@@ -492,6 +524,7 @@ internal static partial class Program
         var sources = manifest["sourceTextures"]!.AsArray();
         var result = new { status = "verified", materialPack = fullPath, material = materialSource,
             materialMode = manifest["reconstruction"]!["mode"]!.GetValue<string>(), pbrMaps,
+            sourceTexturePolicy = sourceTexturePolicy.ToString(),
             sourceTextures = sources.Count, includedSourceTextures = sources.Count(x => x!["included"]!.GetValue<bool>()),
             entries = names.Length, bytes = new FileInfo(fullPath).Length, sha256 = Hash(fullPath) };
         Console.WriteLine(JsonSerializer.Serialize(result));
@@ -536,6 +569,12 @@ internal static partial class Program
 
 internal sealed record MaterialReconstruction(MaterialRecord Report, CMaterialParams2 Parameters, MaterialBuilder Builder);
 
+internal enum SourceTexturePolicy
+{
+    MetadataOnly,
+    Reconstructable
+}
+
 internal sealed class PackSourceTexture
 {
     public string role { get; set; } = "";
@@ -551,4 +590,7 @@ internal sealed class PackSourceTexture
     public string? format { get; set; }
     public string? colorSpace { get; set; }
     public string? storageEncoding { get; set; }
+    public bool affectsSkippedEffect { get; set; }
+    public bool reconstructableCandidate { get; set; }
+    public string selectionReason { get; set; } = "";
 }

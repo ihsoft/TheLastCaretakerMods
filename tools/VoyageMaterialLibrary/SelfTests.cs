@@ -53,6 +53,16 @@ internal static class SelfTests
             "material pack keeps unrelated parent inputs as metadata only");
         Check(!Program.IsImportantSkippedSource("/Game/T_DirtMask_M.T_DirtMask_M", ["T_DirtMask_M"], new CMaterialParams2(), out _),
             "material pack does not treat inherited texture-name bindings as active skipped effects");
+        Check(Program.ParseSourceTexturePolicy("MetadataOnly") == SourceTexturePolicy.MetadataOnly,
+            "material pack parses MetadataOnly source policy");
+        Check(Program.ParseSourceTexturePolicy("Reconstructable") == SourceTexturePolicy.Reconstructable,
+            "material pack parses Reconstructable source policy");
+        var invalidSourcePolicyRejected = false;
+        try { Program.ParseSourceTexturePolicy("All"); } catch (ArgumentException) { invalidSourcePolicyRejected = true; }
+        Check(invalidSourcePolicyRejected, "material pack rejects unknown source policy");
+        var numericSourcePolicyRejected = false;
+        try { Program.ParseSourceTexturePolicy("0"); } catch (ArgumentException) { numericSourcePolicyRejected = true; }
+        Check(numericSourcePolicyRejected, "material pack rejects numeric source policy");
         var record = new MaterialRecord { Source = "/Game/Test/M_A", Name = "M_A" };
         record.Textures["BaseColor"] = "color";
         record.Textures["Normal"] = "normal";
@@ -129,6 +139,7 @@ internal static class SelfTests
         var packManifest = new
         {
             schemaVersion = 1,
+            sourceTexturePolicy = "MetadataOnly",
             material = new { name = "MI_Test", source = "/Game/Test/MI_Test", parents = Array.Empty<string>() },
             renderState = new { blendMode = "BLEND_Opaque", shadingModel = "MSM_DefaultLit", twoSided = false, opacityMaskClipValue = (float?)null },
             pbr = new { baseColorFactor = new[] { 1, 1, 1, 1 }, metallicFactor = 0, roughnessFactor = 1,

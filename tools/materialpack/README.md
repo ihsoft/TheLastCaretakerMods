@@ -8,3 +8,8 @@ material from the exporter's transient evidence GLB with the fixed
 `voyage.material-sphere/1` recipe. The manifest-gated `VoyageMaterialLibrary`
 binary owns staging, deterministic ZIP assembly and readback validation. The final
 archive never contains the transient GLB or any geometry.
+
+`-SourceTextures MetadataOnly|Reconstructable` controls source image payloads.
+`MetadataOnly` is the compact default and preserves all source identities and
+classification metadata without adding `source/` files. `Reconstructable` is
+opt-in and adds only source images selected for skipped layered effects.

@@ -43,6 +43,9 @@ internal static partial class Program
             var materialMode = operation is "MaterialGlb" or "MaterialPackStage" ? Str("materialMode") : "ColorTexturePreview";
             if (operation is "MaterialGlb" or "MaterialPackStage" && materialMode is not ("PbrApproximation" or "BakeReconstructed"))
                 throw new ArgumentException("materialMode must be PbrApproximation or BakeReconstructed.");
+            var sourceTexturePolicy = operation == "MaterialPackStage"
+                ? ParseSourceTexturePolicy(request["sourceTexturePolicy"]?.GetValue<string>() ?? "MetadataOnly")
+                : SourceTexturePolicy.MetadataOnly;
             var assets = request["materials"]!.AsArray().Select(x => x!.GetValue<string>()).ToArray();
             ValidateAssets(assets);
             var fingerprint = JsonNode.Parse(File.ReadAllText(Str("fingerprintPath")))!;
@@ -67,7 +70,7 @@ internal static partial class Program
                 return ExportColorTexturePreview(provider, assets, output,
                     request["thumbnailSize"]?.GetValue<int>() ?? 512, build, exeHash, Str("mappingPath"));
             if (operation == "MaterialPackStage")
-                return ExportMaterialPackStage(provider, assets, output, materialMode, build, exeHash, Str("mappingPath"));
+                return ExportMaterialPackStage(provider, assets, output, materialMode, sourceTexturePolicy, build, exeHash, Str("mappingPath"));
             var textureCache = new Dictionary<string, TextureRecord>(StringComparer.Ordinal);
             var textureSources = new Dictionary<string, UUnrealMaterial>(StringComparer.Ordinal);
             var reports = new List<MaterialRecord>();

@@ -42,6 +42,7 @@ Material-only exchange:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageMaterialPack.ps1 `
   -Material /Game/AssetSets/CoreModularPieces/Decorations/Materials/MI_Deco_Ext_DamagedMetal `
   -MaterialMode BakeReconstructed `
+  -SourceTextures MetadataOnly `
   -OutputPath artifacts/material-export/MI_Deco_Ext_DamagedMetal.materialpack.zip
 ```
 
@@ -49,7 +50,8 @@ The filename is fixed by the material identity. Output must be a fresh path belo
 repository `artifacts/`. One call exports exactly one material; callers that need
 several packs invoke the same black-box entry point once per identity. As with GLB
 and preview export, the caller must explicitly choose `PbrApproximation` or
-`BakeReconstructed`.
+`BakeReconstructed`. `-SourceTextures MetadataOnly|Reconstructable` independently
+controls source pixel payloads and defaults to compact `MetadataOnly`.
 
 ## MaterialPack schema and payload policy
 
@@ -62,13 +64,16 @@ lossless WebP; normal and ORM remain lossless PNG with OpenGL normal convention
 and R/G/B = occlusion/roughness/metallic.
 
 A missing PBR image means the scalar/factor is authoritative; uniform placeholder
-textures are not invented. Every referenced source texture has metadata. Source
-pixels are included only when an explicit semantic parameter identifies a known
-skipped effect (damage, mask, world/object projection, rust, dirt, wear, height,
-POM or a similar bounded category), it is not explicitly disabled, and it is not
-a default/fallback or merely an inherited texture-name binding. Selected source
-masks use lossless WebP; selected source normals use PNG. Active/baked inputs are
-not duplicated. Multiple identities with identical stored bytes share one file.
+textures are not invented. Every referenced source texture has metadata, including
+its roles, package identity, skipped-effect relationship, reconstructable-candidate
+classification and selection reason. `MetadataOnly` never adds `source/` payloads.
+In `Reconstructable`, source pixels are included only when an explicit semantic
+parameter identifies a known skipped effect (damage, mask, world/object projection,
+rust, dirt, wear, height, POM or a similar bounded category), it is not explicitly
+disabled, and it is not a default/fallback or merely an inherited texture-name
+binding. Selected source masks use lossless WebP; selected source normals use PNG.
+Active/baked inputs are not duplicated. Multiple identities with identical stored
+bytes share one file.
 
 The pack is assembled deterministically and then reopened by the published binary.
 Readback rejects unsafe/case-colliding ZIP paths, unreferenced files, geometry,
