@@ -17,11 +17,15 @@ $null = New-Item -ItemType Directory -Path $output
 $settingsSchema = Join-Path $PSScriptRoot 'Settings/Railgun.settings.json'
 $settingsDefaults = Join-Path $PSScriptRoot 'Assets/Railgun.ini'
 $settingsGenerator = Join-Path $PSScriptRoot 'Build/New-RailgunSettings.ps1'
-$generatedSettingsDirectory = Join-Path $output 'generated-settings'
+$generatedSettingsDirectory = Join-Path $PSScriptRoot 'Intermediate/GeneratedSettings'
+$generatedSettingsEvidenceDirectory = Join-Path $output 'generated-settings'
+$null = New-Item -ItemType Directory -Path $generatedSettingsDirectory -Force
+$null = New-Item -ItemType Directory -Path $generatedSettingsEvidenceDirectory
 $generatedSettingsHeader = Join-Path $generatedSettingsDirectory 'StationSettings.generated.h'
 $generatedSettingsIni = Join-Path $generatedSettingsDirectory 'Railgun.ini'
 & $settingsGenerator -SchemaPath $settingsSchema -DefaultIniPath $settingsDefaults -HeaderPath $generatedSettingsHeader -IniPath $generatedSettingsIni
-[Environment]::SetEnvironmentVariable('RAILGUN_GENERATED_SETTINGS_DIR', $generatedSettingsDirectory, 'Process')
+Copy-Item -LiteralPath $generatedSettingsHeader,$generatedSettingsIni `
+    -Destination $generatedSettingsEvidenceDirectory
 $sourcePaths = @('mods/Railgun','tools/UnrealEditorGeneratorCommon/Public')
 $sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
 $modelDirectory = Join-Path $PSScriptRoot 'Assets/Model'

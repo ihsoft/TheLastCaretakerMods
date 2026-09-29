@@ -31,6 +31,9 @@
   one displayed `KWh` to 1000 native electricity amount units; module demand
   remains expressed in W and is derived from the configured charge time in
   addition to standby demand.
+- Loss of the module power connection discharges stored energy to zero at the
+  configured `OfflineDischargeKW` rate. The default is `10` kW; zero disables
+  offline discharge. This setting is independent of normal standby demand.
 - Shot audio is cooked as a `SoundWave`; its volume multiplier is read from
   `Railgun.ini`. The accepted baseline is 600 percent.
 - Dismantling after exit is supported and must not leave the coordinator with a
@@ -142,6 +145,26 @@ remain separate. Temporary inventory diagnostic widgets and state are absent.
 General evidence and restrictions live in the shared
 [filtered inventory contract](../../docs/voyage-item-fabrication-and-pickup.md#filtered-module-inventories-refinery-reference).
 
+The fire path treats the owned native inventory as authority; neither the
+six-slot model state nor the HUD count cache can authorize a shot. It resolves
+the exact accepted Railgun ammunition, captures a live occupied slot, verifies
+that slot's exact item and positive count, and creates a deferred inactive shot
+before spending resources. The input request is claimed before native calls
+that may dispatch delegates. Native exact energy removal runs first, followed
+without a latent gap by native `RemoveItem` for one round with notifications
+enabled. Only a return value of one finishes the projectile, updates successful
+shot charge state and plays audio. Empty inventory or insufficient charge
+therefore produces no projectile, sound, damage, ammo debit or energy debit;
+automatic charging remains independent of magazine state.
+
+If the ammo debit rejects after energy was removed, the graph uses native
+`AddResource` as bounded compensation, verifies both the accepted delta and the
+live restored balance within a small double tolerance, then destroys the
+deferred actor. A compensation mismatch permanently disables firing for that
+operator instance and emits one diagnostic log message. This is explicit
+fail-closed compensation, not a claim of transactional atomicity across the two
+native APIs.
+
 The wide-view HUD displays six persistent cartridge icons
 above the existing charge text. It reads the module's event-maintained cached
 count after one guarded initial synchronization; the HUD does not enumerate or
@@ -157,31 +180,32 @@ polling are statically validated. Real-game validation confirms placement,
 right-to-left updates, the zero-count tint and optics hiding.
 
 The charge text and filled part of the radial ring use the same subtle red tint
-only while stored energy is below one shot and the module is connected and
-powered. Invalid, disconnected, unpowered and shot-ready states use opaque
-white; the radial background color is never changed by this warning.
+whenever stored energy is below one shot. Shot-ready and invalid states use
+opaque white; the radial background color is never changed by this warning.
+When power is disconnected, configurable offline discharge eventually moves a
+previously shot-ready gun into the red incomplete-charge state.
 
 ## Current game-validated checkpoint
 
-`build-20260928-081233` is the current HUD-state and model-structure checkpoint.
-Its model
+`build-20260929-061751` is the current firing, power-state, HUD-state and
+model-structure checkpoint. Its model
 passes the six distinct, disjoint and nonempty cassette-subtree contract with
 all 36 render descendants covered by default hiding and propagated runtime
 visibility, while the six holders remain outside those subtrees. User gameplay
 confirmation covers the new model rendering, ammo visibility behavior, isolated
-zero-ammo warning, and charge warning across offline, insufficient and ready
-states. The earlier validated inventory and persistence contracts remain the
-foundation; this candidate did not repeat every historical test.
+zero-ammo warning, one-round firing debit, rejection without ammunition or
+charge, charge warning across offline, insufficient and ready states, 10 kW
+offline discharge, and persistence. The earlier validated inventory and
+fabrication contracts remain the foundation.
 The earlier 16-property ammo baseline established fabrication and pickup of one
-box with six rounds; gun/research validation remains separate. This checkpoint
-is not a new test of every weapon interaction.
+box with six rounds; gun/research validation remains separate.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Release evidence: `artifacts/railgun/build-20260928-081233/release-manifest.json`.
+- Release evidence: `artifacts/railgun/build-20260929-061751/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20260928-081630-build-20260928-081233-b7b4eaf3/install-manifest.json`.
+  `artifacts/installations/Railgun/20260929-062140-build-20260929-061751-4e3ca500/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 
@@ -195,9 +219,10 @@ is not a new test of every weapon interaction.
   packaging. Do not convert unrelated native-child assets by analogy.
 - The mod is single-player validated, including magazine save/reload.
   Multiplayer and distinct cable or operator-entry scenarios remain unvalidated.
-- Ammunition instances in the GLB can later represent remaining rounds, but no
-  ammunition inventory consumption contract is implemented yet. Successful
-  ammo fabrication does not establish that firing consumes these items.
+- Native one-round consumption and ordinary ammunition/energy rejection gates
+  are game-validated. The bounded energy-compensation failure branch is
+  structurally validated; its exceptional native rejection path has not been
+  induced in game.
 - A shared registry mod with hidden, typed placeholders and separate consumer
   overrides is deferred until the Railgun foundation is complete. The `Never`
   experiment does not validate cross-mod overriding, slot allocation or load

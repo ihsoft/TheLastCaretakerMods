@@ -1,5 +1,7 @@
 #pragma once
 #include "../../RailgunModelContract.h"
+#include "RailgunInventoryNames.h"
+#include "VoyageBaseInventoryComponent.h"
 #include "VoyageModuleComponent.h"
 #include "StationEnergy.h"
 // Native swept projectile with a single direct-hit combat submission.
@@ -10,6 +12,9 @@ inline constexpr TCHAR Speed[] = TEXT("200000.0"), Range[] = TEXT("99999.0"), Li
 inline const FName Body(TEXT("ShotCollision")), Move(TEXT("ShotMovement"));
 inline const FName Start(TEXT("ShotOrigin")), Direction(TEXT("ShotDirection")), Done(TEXT("ShotDone"));
 inline const FName SpawnedThisPress(TEXT("ShotSpawnedThisPress"));
+inline const FName RefundFaulted(TEXT("ShotRefundFaulted"));
+inline const FName EnergyBeforeDebit(TEXT("ShotEnergyBeforeDebit"));
+inline const FName AmmoSlot(TEXT("ShotAmmoSlot"));
 inline const FName Railgun(TEXT("ShotRailgun")), Operator(TEXT("ShotOperator")), Station(TEXT("ShotStation"));
 inline const FName LifePin(TEXT("InLifespan")), HitEvent(TEXT("ReceiveHit"));
 inline const FName Other(TEXT("Other")), Velocity(TEXT("Velocity")), Sweep(TEXT("bSweepCollision"));
@@ -18,6 +23,18 @@ inline const FName Updated(TEXT("NewUpdatedComponent")), Reset(TEXT("bReset"));
 inline const FName IgnoreActor(TEXT("Actor")), ShouldIgnore(TEXT("bShouldIgnore"));
 inline const FName Prerequisite(TEXT("PrerequisiteActor")), Transform(TEXT("T"));
 inline const FName Location(TEXT("Location")), ActorRotation(TEXT("Rotation"));
+inline const FName Slot(TEXT("Slot")), OutItemData(TEXT("OutItemData"));
+inline const FName Item(TEXT("Item")), Data(TEXT("Data")), ItemCount(TEXT("ItemCount"));
+inline const FName Count(TEXT("Count")), PreferredSlot(TEXT("PreferredSlot"));
+inline const FName Notify(TEXT("bNotify"));
+inline const FName PrintText(TEXT("InString")), PrintToScreen(TEXT("bPrintToScreen"));
+inline const FName PrintToLog(TEXT("bPrintToLog")), PrintDuration(TEXT("Duration"));
+inline constexpr TCHAR One[] = TEXT("1");
+inline constexpr TCHAR NoSlot[] = TEXT("-1");
+inline constexpr TCHAR RefundTolerance[] = TEXT("0.001");
+inline constexpr TCHAR RefundDiagnosticSeconds[] = TEXT("10.0");
+inline constexpr TCHAR RefundFailureText[] =
+    TEXT("Railgun shot aborted: energy refund mismatch; firing disabled for this gun session");
 inline UClass* Class=nullptr;
 }
 namespace ShotAttack
@@ -47,6 +64,45 @@ inline USoundWave* Wave = nullptr;
 }
 bool SaveDedicatedAsset(UObject* Asset);
 UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values);
+
+UEdGraphPin* WithinShotTolerance(FGraph& G, UEdGraphPin* Actual,
+    UEdGraphPin* Expected)
+{
+    UEdGraphPin* Lower = EnergyMath(G,
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_DoubleDouble),
+        Expected, Shot::RefundTolerance);
+    UEdGraphPin* Upper = EnergyMath(G,
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble),
+        Expected, Shot::RefundTolerance);
+    UEdGraphPin* AboveLower = G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            GreaterEqual_DoubleDouble), Actual, Lower);
+    UEdGraphPin* BelowUpper = G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            LessEqual_DoubleDouble), Actual, Upper);
+    return G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
+        AboveLower, BelowUpper);
+}
+
+void DestroyDeferredShot(FGraph& G, UEdGraphPin* Actor)
+{
+    G.Branch(G.Valid(Actor));
+    auto* Destroy = G.Call(AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, K2_DestroyActor));
+    G.Link(Actor, G.Pin(Destroy, P::FunctionTarget));
+    G.Exec(Destroy);
+}
+
+void ReportRefundFailure(FGraph& G)
+{
+    auto* Print = G.Call(UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, PrintString));
+    G.Default(Print, Shot::PrintText, Shot::RefundFailureText);
+    G.Default(Print, Shot::PrintToScreen, N::False);
+    G.Default(Print, Shot::PrintToLog, N::True);
+    G.Default(Print, Shot::PrintDuration, Shot::RefundDiagnosticSeconds);
+    G.Exec(Print);
+}
 USoundWave* ImportShotSound(const FString& Filename)
 {
     auto* Task = NewObject<UAssetImportTask>();
@@ -184,37 +240,133 @@ UClass* CreateRailgunShot()
     check(SaveDedicatedAsset(BP)); return BP->GeneratedClass;
 }
 
-void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail)
+void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail,
+    UEdGraphPin* OfflineDischargeKW)
 {
     // Independent tick branch: charging continues with nobody operating the gun.
-    G.Tail = TickTail; UpdateAutomaticCharge(G, DeltaSeconds);
+    G.Tail = TickTail;
+    UpdateAutomaticCharge(G, DeltaSeconds, OfflineDischargeKW);
     auto* Event=NewObject<UK2Node_EnhancedInputAction>(G.Graph); Event->InputAction=LoadObject<UInputAction>(nullptr,RailgunInputNames::Fire); check(Event->InputAction); G.Node(Event); G.Tail=G.Pin(Event,DS::Started);
     G.Branch(ObserveCall(G,APawn::StaticClass(),GET_FUNCTION_NAME_CHECKED(APawn,IsPlayerControlled),OpticalSelf(G)));
     FindEnergyModule(G);
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        EqualEqual_BoolBool), G.Read(Shot::RefundFaulted), N::False));
     // A premature press is ignored, never queued for a later automatic shot.
     G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
         EnergyAmount(G), RequiredEnergyAmount(G)));
     G.Write(Shot::SpawnedThisPress,nullptr,N::False); // no cooldown; each Started is independent
     G.Branch(G.Valid(G.Read(S::Anchor)));
     auto* Railgun=ObserveCall(G,UActorComponent::StaticClass(),OP::ComponentOwner,G.Read(S::Anchor));
+    auto* ModuleBlueprint = LoadObject<UBlueprint>(nullptr,
+        RailgunInventoryShared::ModuleObjectPath);
+    check(ModuleBlueprint && ModuleBlueprint->GeneratedClass);
+    UClass* ModuleClass = ModuleBlueprint->GeneratedClass;
+    auto* ModuleActor = NewObject<UK2Node_DynamicCast>(G.Graph);
+    ModuleActor->TargetType = ModuleClass;
+    ModuleActor->SetPurity(false);
+    G.Node(ModuleActor);
+    G.Link(G.Tail, G.Pin(ModuleActor, P::Execute));
+    G.Link(Railgun, ModuleActor->GetCastSourcePin());
+    G.Tail = ModuleActor->GetValidCastPin();
+    UEdGraphPin* TypedRailgun = ModuleActor->GetCastResultPin();
     auto* Find=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,GetComponentsByTag));
-    G.Link(Railgun,G.Pin(Find,P::FunctionTarget)); G.Pin(Find,OP::ComponentClass)->DefaultObject=USceneComponent::StaticClass(); G.Default(Find,ActorScanGraphNames::ComponentTag,*RailgunModelContract::MuzzleTag.ToString());
+    G.Link(TypedRailgun,G.Pin(Find,P::FunctionTarget)); G.Pin(Find,OP::ComponentClass)->DefaultObject=USceneComponent::StaticClass(); G.Default(Find,ActorScanGraphNames::ComponentTag,*RailgunModelContract::MuzzleTag.ToString());
     auto* Loop=ContextLoop(G,G.Pin(Find,P::ReturnValue));
     auto* Cast=NewObject<UK2Node_DynamicCast>(G.Graph); Cast->TargetType=USceneComponent::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
     G.Link(G.Tail,G.Pin(Cast,P::Execute)); G.Link(G.Pin(Loop,CE::ArrayElement),Cast->GetCastSourcePin()); G.Tail=Cast->GetValidCastPin();
     auto* Already=G.Branch(G.Read(Shot::SpawnedThisPress)); G.Tail=G.Pin(Already,P::Else); // one shot even if duplicate muzzle tags exist
-    G.Branch(DebitEnergy(G, RequiredEnergyAmount(G))); // no free shot if native atomic withdrawal fails
-    // Claim this request before spawn/cast can fail, including duplicate tags.
-    G.Write(Shot::SpawnedThisPress, nullptr, N::True);
-    G.Write(Charge::Sampled, nullptr, N::False);
-    G.Write(Charge::Energy, nullptr, N::Zero); G.Write(Charge::Previous, nullptr, N::Zero); G.Write(Charge::Rate, nullptr, N::Zero);
-    SetEnergyDemand(G, true);
+    auto* GetInventory = G.Call(UVoyageModuleComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, GetInternalInventory));
+    G.Link(G.Read(Charge::Module), G.Pin(GetInventory, P::FunctionTarget));
+    UEdGraphPin* Inventory = G.Pin(GetInventory, P::ReturnValue);
+    G.Branch(G.Valid(Inventory));
+    auto* GetLastSlot = G.Call(UVoyageBaseInventoryComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageBaseInventoryComponent,
+            GetLastOccupiedSlot));
+    G.Link(Inventory, G.Pin(GetLastSlot, P::FunctionTarget));
+    UEdGraphPin* LastSlot = G.Pin(GetLastSlot, P::ReturnValue);
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        Greater_IntInt), LastSlot, Shot::NoSlot));
+    G.Write(Shot::AmmoSlot, LastSlot);
+    auto* GetSlot = G.Call(UVoyageBaseInventoryComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageBaseInventoryComponent, GetSlot));
+    G.Link(Inventory, G.Pin(GetSlot, P::FunctionTarget));
+    G.Link(G.Read(Shot::AmmoSlot), G.Pin(GetSlot, Shot::Slot));
+    G.Branch(G.Pin(GetSlot, P::ReturnValue));
+    auto* Record = NewObject<UK2Node_BreakStruct>(G.Graph);
+    Record->StructType = FVoyageItemSerialize::StaticStruct();
+    G.Node(Record);
+    UEdGraphPin* RecordInput = nullptr;
+    for (UEdGraphPin* Pin : Record->Pins)
+        if (Pin->Direction == EGPD_Input) { check(!RecordInput); RecordInput = Pin; }
+    check(RecordInput);
+    G.Link(G.Pin(GetSlot, Shot::OutItemData), RecordInput);
+    UEdGraphPin* AcceptedAmmo = ReadNativeInputField(G, TypedRailgun, ModuleClass,
+        RailgunInventoryShared::AcceptedAmmo);
+    G.Branch(G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            EqualEqual_ObjectObject),
+        G.Pin(Record, Shot::Item), AcceptedAmmo));
+    auto* Data = NewObject<UK2Node_BreakStruct>(G.Graph);
+    Data->StructType = FVoyageItemData::StaticStruct();
+    G.Node(Data);
+    UEdGraphPin* DataInput = nullptr;
+    for (UEdGraphPin* Pin : Data->Pins)
+        if (Pin->Direction == EGPD_Input) { check(!DataInput); DataInput = Pin; }
+    check(DataInput);
+    G.Link(G.Pin(Record, Shot::Data), DataInput);
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        GreaterEqual_IntInt), G.Pin(Data, Shot::ItemCount), Shot::One));
     auto* Location=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentLocation),Cast->GetCastResultPin());
     auto* Rotation=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentRotation),Cast->GetCastResultPin());
     auto* Transform=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,MakeTransform)); G.Link(Location,G.Pin(Transform,E::Location)); G.Link(Rotation,G.Pin(Transform,Shot::ActorRotation)); G.Default(Transform,E::Scale,N::UnitScale);
     auto* Spawn=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,BeginDeferredActorSpawnFromClass)); G.Pin(Spawn,E::ActorClass)->DefaultObject=Shot::Class; G.Link(G.Pin(Transform,P::ReturnValue),G.Pin(Spawn,P::SpawnTransform)); G.Default(Spawn,E::CollisionHandling,N::AlwaysSpawn); G.Exec(Spawn);
     auto* Typed=NewObject<UK2Node_DynamicCast>(G.Graph); Typed->TargetType=Shot::Class; Typed->SetPurity(false); G.Node(Typed); G.Link(G.Tail,G.Pin(Typed,P::Execute)); G.Link(G.Pin(Spawn,P::ReturnValue),Typed->GetCastSourcePin()); G.Tail=Typed->GetValidCastPin();
-    ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Railgun,Railgun);
+    UEdGraphPin* DeferredReady = G.Tail;
+    G.Tail = Typed->GetInvalidCastPin();
+    DestroyDeferredShot(G, G.Pin(Spawn, P::ReturnValue));
+    G.Tail = DeferredReady;
+    // Claim before either native debit can dispatch a reentrant delegate.
+    G.Write(Shot::SpawnedThisPress, nullptr, N::True);
+    G.Write(Shot::EnergyBeforeDebit, EnergyAmount(G));
+    auto* EnergyDebited = G.Branch(DebitEnergy(G,
+        RequiredEnergyAmount(G)));
+    UEdGraphPin* EnergyDebitedTail = G.Tail;
+    G.Tail = G.Pin(EnergyDebited, P::Else);
+    DestroyDeferredShot(G, G.Pin(Spawn, P::ReturnValue));
+    G.Tail = EnergyDebitedTail;
+    auto* RemoveAmmo = G.Call(UVoyageBaseInventoryComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageBaseInventoryComponent, RemoveItem));
+    G.Link(Inventory, G.Pin(RemoveAmmo, P::FunctionTarget));
+    G.Link(AcceptedAmmo, G.Pin(RemoveAmmo, Shot::Item));
+    G.Default(RemoveAmmo, Shot::Count, Shot::One);
+    G.Link(G.Read(Shot::AmmoSlot), G.Pin(RemoveAmmo, Shot::PreferredSlot));
+    G.Default(RemoveAmmo, Shot::Notify, N::True);
+    G.Exec(RemoveAmmo);
+    auto* AmmoRemoved = G.Branch(G.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_IntInt),
+        G.Pin(RemoveAmmo, P::ReturnValue), Shot::One));
+    UEdGraphPin* AmmoRemovedTail = G.Tail;
+    G.Tail = G.Pin(AmmoRemoved, P::Else);
+    UEdGraphPin* RefundedAmount = CreditEnergy(G, RequiredEnergyAmount(G));
+    UEdGraphPin* AcceptedRefund = WithinShotTolerance(G, RefundedAmount,
+        RequiredEnergyAmount(G));
+    UEdGraphPin* RestoredBalance = WithinShotTolerance(G, EnergyAmount(G),
+        G.Read(Shot::EnergyBeforeDebit));
+    auto* RefundValid = G.Branch(G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
+        AcceptedRefund, RestoredBalance));
+    UEdGraphPin* RefundValidTail = G.Tail;
+    G.Tail = G.Pin(RefundValid, P::Else);
+    G.Write(Shot::RefundFaulted, nullptr, N::True);
+    ReportRefundFailure(G);
+    StationMerge(G, {RefundValidTail, G.Tail});
+    DestroyDeferredShot(G, G.Pin(Spawn, P::ReturnValue));
+    G.Tail = AmmoRemovedTail;
+    G.Write(Charge::Sampled, nullptr, N::False);
+    G.Write(Charge::Energy, nullptr, N::Zero); G.Write(Charge::Previous, nullptr, N::Zero); G.Write(Charge::Rate, nullptr, N::Zero);
+    SetEnergyDemand(G, true);
+    ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Railgun,TypedRailgun);
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Operator,G.Read(N::OriginalPawn));
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Station,OpticalSelf(G));
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,ShotAttack::Controller,ObserveCall(G,APawn::StaticClass(),ShotAttack::GetController,OpticalSelf(G)));

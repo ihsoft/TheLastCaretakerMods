@@ -7,13 +7,16 @@ inline const FName Energy(TEXT("RailgunChargeAmount")), Previous(TEXT("RailgunPr
 inline const FName Rate(TEXT("RailgunChargeKW"));
 inline const FName ConfiguredEnergyKWh(TEXT("RailgunFullChargeEnergyKWh"));
 inline const FName ConfiguredTimeSeconds(TEXT("RailgunFullChargeTimeSeconds"));
-inline const FName Type(TEXT("Type")), RemoveAmount(TEXT("RemoveAmount")), RemovalType(TEXT("RemovalType"));
+inline const FName Type(TEXT("Type")), RemoveAmount(TEXT("RemoveAmount")),
+    AddAmount(TEXT("AddAmount")), RemovalType(TEXT("RemovalType"));
 inline const FName Input(TEXT("InAcceptanceFilter")), Capacity(TEXT("InMaxResourceAmount")), Idle(TEXT("InConsumptionON"));
 inline constexpr TCHAR Electricity[] = TEXT("Electricity"), ExactRemoval[] = TEXT("ConsumptionAfterModifiers");
 inline constexpr TCHAR IdleW[] = TEXT("1000.0");
 inline constexpr TCHAR IdleCapacityAmount[] = TEXT("1.0");
 inline constexpr TCHAR GameResourceUnitsPerKWh[] = TEXT("1000.0");
 inline constexpr TCHAR WattsPerResourceUnit[] = TEXT("1000.0");
+inline constexpr TCHAR WattsPerKilowatt[] = TEXT("1000.0");
+inline constexpr TCHAR SecondsPerHour[] = TEXT("3600.0");
 }
 // Public tuning and HUD values use the game's displayed KWh scale. The module stores
 // 1000 native electricity amount units per displayed KWh, while custom demand
@@ -45,6 +48,21 @@ UEdGraphPin* ChargingInputW(FGraph& G)
     auto* NetChargeW = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble),
         ChargeInput, G.Read(Charge::ConfiguredTimeSeconds));
     return EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble), NetChargeW, Charge::IdleW);
+}
+UEdGraphPin* OfflineDrainAmount(FGraph& G, UEdGraphPin* DeltaSeconds,
+    UEdGraphPin* StoredEnergy, UEdGraphPin* OfflineDischargeKW)
+{
+    UEdGraphPin* OfflineDischargeW = EnergyMath(G,
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
+        OfflineDischargeKW, Charge::WattsPerKilowatt);
+    auto* OfflineEnergySeconds = G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
+        DeltaSeconds, OfflineDischargeW);
+    UEdGraphPin* OfflineEnergyAmount = EnergyMath(G,
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble),
+        OfflineEnergySeconds, Charge::SecondsPerHour);
+    return G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMin),
+        StoredEnergy, OfflineEnergyAmount);
 }
 UEdGraphPin* FindEnergyModule(FGraph& G)
 {
@@ -82,11 +100,47 @@ UEdGraphPin* DebitEnergy(FGraph& G, UEdGraphPin* Amount = nullptr)
     G.Link(Amount ? Amount : RequiredEnergyAmount(G), G.Pin(Debit, Charge::RemoveAmount));
     G.Exec(Debit); return G.Pin(Debit, P::ReturnValue);
 }
-void UpdateAutomaticCharge(FGraph& G, UEdGraphPin* DeltaSeconds)
+UEdGraphPin* CreditEnergy(FGraph& G, UEdGraphPin* Amount)
+{
+    auto* Credit = G.Call(UVoyageModuleComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, AddResource));
+    G.Link(G.Read(Charge::Module), G.Pin(Credit, P::FunctionTarget));
+    G.Default(Credit, Charge::Type, Charge::Electricity);
+    G.Link(Amount, G.Pin(Credit, Charge::AddAmount));
+    G.Exec(Credit);
+    return G.Pin(Credit, P::ReturnValue);
+}
+void UpdateAutomaticCharge(FGraph& G, UEdGraphPin* DeltaSeconds,
+    UEdGraphPin* OfflineDischargeKW)
 {
     G.Write(Charge::Rate, nullptr, N::Zero);
     FindEnergyModule(G);
     G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble), DeltaSeconds, N::Zero));
+    UEdGraphPin* Connected = ObserveCall(G,
+        UVoyageModuleComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent,
+            HasSocketConnection), G.Read(Charge::Module));
+    UEdGraphPin* Powered = ObserveCall(G,
+        UVoyageModuleComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, HasPower),
+        G.Read(Charge::Module));
+    auto* HasSupply = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND));
+    G.Link(Connected, G.Pin(HasSupply, P::Binary::LeftOperand));
+    G.Link(Powered, G.Pin(HasSupply, P::Binary::RightOperand));
+    auto* Supply = G.Branch(G.Pin(HasSupply, P::ReturnValue));
+    UEdGraphPin* SuppliedTail = G.Tail;
+    G.Tail = G.Pin(Supply, P::Else);
+    UEdGraphPin* StoredEnergy = EnergyMath(G,
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax),
+        EnergyAmount(G), N::Zero);
+    auto* HasStoredEnergy = G.Branch(G.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble),
+        StoredEnergy, N::Zero));
+    DebitEnergy(G, OfflineDrainAmount(G, DeltaSeconds, StoredEnergy,
+        OfflineDischargeKW));
+    StationMerge(G, {G.Tail, G.Pin(HasStoredEnergy, P::Else)});
+    StationMerge(G, {SuppliedTail, G.Tail});
     auto* Positive = EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax), EnergyAmount(G), N::Zero);
     G.Write(Charge::Energy, G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMin),
         Positive, RequiredEnergyAmount(G)));

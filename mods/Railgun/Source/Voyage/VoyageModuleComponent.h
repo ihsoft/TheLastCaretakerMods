@@ -46,6 +46,10 @@ public:
     UFUNCTION(BlueprintCallable, Category="RailgunEnergy")
     bool RemoveResource(EModuleResourceType Type, double RemoveAmount, EModuleResourceRemovalType RemovalType) { return false; }
 
+    // Returns the amount accepted after native capacity correction.
+    UFUNCTION(BlueprintCallable, Category="RailgunEnergy")
+    double AddResource(EModuleResourceType Type, double AddAmount) { return 0; }
+
     UFUNCTION(BlueprintCallable, Category="RailgunEnergy")
     void SetCustomConsumption(double InAcceptanceFilter, double InMaxResourceAmount, double InConsumptionON) {}
 };

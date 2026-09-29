@@ -232,7 +232,9 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     SetZoom(false);
     G.Tail = G.Pin(Wide, P::Else); SetZoom(true);
 
-    AddRailgunFire(G, G.Pin(Tick, P::DeltaSeconds), SafetyAndEnergy->GetThenPinGivenIndex(1));
+    AddRailgunFire(G, G.Pin(Tick, P::DeltaSeconds),
+        SafetyAndEnergy->GetThenPinGivenIndex(1),
+        G.Read(Settings::OfflineDischarge));
     // Real Enhanced Input events on the possessed station, not observer key polling.
     auto ActionNode = [&](const TCHAR* Package, FName Trigger)
     {
@@ -270,6 +272,9 @@ UClass* CreateDedicatedStation()
     auto* BP = FKismetEditorUtilities::CreateBlueprint(AVoyageVehiclePawn::StaticClass(), CreatePackage(DS::OperatorPackage),
         *FPackageName::GetLongPackageAssetName(DS::OperatorPackage), BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
     AddVariable(BP, Shot::SpawnedThisPress, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, Shot::RefundFaulted, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, Shot::EnergyBeforeDebit, UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP, Shot::AmmoSlot, UEdGraphSchema_K2::PC_Int);
     AddVariable(BP, Charge::Sampled, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, Charge::Module, UEdGraphSchema_K2::PC_Object, UVoyageModuleComponent::StaticClass());
     for (FName Field : {Charge::Energy, Charge::Previous, Charge::Rate}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);

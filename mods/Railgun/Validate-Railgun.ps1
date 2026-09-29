@@ -15,6 +15,7 @@ $skillDiscoveryRoot = '/Game/Data/Assets/Skill'
 $gunItemPackage = '/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01'
 $skillPackage = '/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun'
 $ammoPackage = '/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod'
+$operatorPackage = '/Game/Mods/Railgun/Station/BP_RailgunOperator'
 $hudPackage = '/Game/Mods/Railgun/Station/WBP_RailgunHUD'
 $ammoIndicatorPackage = '/Game/Mods/Railgun/Station/T_RailgunAmmoIndicator'
 function Read-Candidate([string]$Query) {
@@ -234,6 +235,98 @@ function InsufficientChargeComparisons($Statements) {
         }
     }
 }
+function NativeContextCallIndexes($Statements, [string]$ObjectName) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject] -or
+            -not ($statement.PSObject.Properties.Name -ccontains 'Expression') -or
+            $null -eq $statement.Expression -or
+            $statement.Expression.Token -cne 'EX_Context' -or
+            -not ($statement.Expression.PSObject.Properties.Name -ccontains
+                'ContextExpression')) {
+            continue
+        }
+        $context = $statement.Expression.ContextExpression
+        if ($null -eq $context -or
+            -not ($context.PSObject.Properties.Name -ccontains 'Function')) {
+            continue
+        }
+        $function = $context.Function
+        if ($function -is [pscustomobject] -and
+            $function.ObjectName -ceq $ObjectName) {
+            [int]$statement.StatementIndex
+        }
+    }
+}
+function DirectFunctionCalls($Statements, [string]$ObjectName) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject]) { continue }
+        foreach ($containerName in @('Expression', 'ContextExpression')) {
+            if (-not ($statement.PSObject.Properties.Name -ccontains
+                $containerName)) {
+                continue
+            }
+            $container = $statement.$containerName
+            if ($null -eq $container -or
+                -not ($container.PSObject.Properties.Name -ccontains
+                    'Function')) {
+                continue
+            }
+            $function = $container.Function
+            if ($function -is [pscustomobject] -and
+                $function.ObjectName -ceq $ObjectName) {
+                $statement
+            }
+        }
+    }
+}
+function StatementIndexesContaining($Statements, [string]$Value) {
+    foreach ($statement in @($Statements)) {
+        if (@(JsonStringLeaves $statement) -ccontains $Value) {
+            [int]$statement.StatementIndex
+        }
+    }
+}
+function RemoveAmmoResultGates($Statements) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject] -or
+            $statement.Token -cne 'EX_LetBool') {
+            continue
+        }
+        $expressionProperty = $statement.PSObject.Properties['Expression']
+        if ($null -eq $expressionProperty -or
+            $null -eq $expressionProperty.Value) {
+            continue
+        }
+        $expression = $expressionProperty.Value
+        if ((@(JsonStringLeaves $expression) -ccontains
+                "Class'KismetMathLibrary:EqualEqual_IntInt'") -and
+            (@(JsonStringLeaves $expression) -ccontains
+                'CallFunc_RemoveItem_ReturnValue') -and
+            @($expression.Parameters | Where-Object {
+                $_.Token -ceq 'EX_IntConst' -and [int]$_.Value -eq 1
+            }).Count -eq 1) {
+            $statement
+        }
+    }
+}
+function ShotClaimAssignments($Statements) {
+    foreach ($statement in @($Statements)) {
+        if ($statement -isnot [pscustomobject] -or
+            $statement.Token -cne 'EX_LetBool') {
+            continue
+        }
+        $expressionProperty = $statement.PSObject.Properties['Expression']
+        if ($null -eq $expressionProperty -or
+            $null -eq $expressionProperty.Value) {
+            continue
+        }
+        if ((@(JsonStringLeaves $statement.Variable) -ccontains
+                'ShotSpawnedThisPress') -and
+            $expressionProperty.Value.Token -ceq 'EX_True') {
+            $statement
+        }
+    }
+}
 $shell = @(Read-Candidate '/Game/Mods/Railgun/Module/BP_Module_Railgun')
 $shellFunctions = @($shell | Where-Object { $_.Type -eq 'Function' })
 $expectedShellFunctions = @(
@@ -342,6 +435,185 @@ foreach ($requiredVisualReference in @(
     Require ($syncVisualStrings -ccontains $requiredVisualReference) `
         ('Ammo-visual sync reference missing: ' + $requiredVisualReference)
 }
+$operator = @(Read-Candidate $operatorPackage)
+$operatorFunctions = @($operator | Where-Object { $_.Type -ceq 'Function' })
+$operatorUbergraph = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'ExecuteUbergraph_BP_RailgunOperator'
+})
+Require ($operatorUbergraph.Count -eq 1) 'Expected one Railgun operator ubergraph.'
+$operatorStatements = @($operatorUbergraph[0].ScriptBytecode)
+$operatorStrings = @(JsonStringLeaves $operatorUbergraph[0])
+foreach ($requiredFireReference in @(
+    'ShotSpawnedThisPress','ShotRefundFaulted','ShotEnergyBeforeDebit',
+    'ShotAmmoSlot','AcceptedRailgunAmmo','ItemCount',
+    "Class'VoyageModuleComponent:GetInternalInventory'",
+    "Class'VoyageBaseInventoryComponent:GetLastOccupiedSlot'",
+    "Class'VoyageBaseInventoryComponent:GetSlot'",
+    "Class'VoyageModuleComponent:RemoveResource'",
+    "Class'VoyageBaseInventoryComponent:RemoveItem'",
+    "Class'VoyageModuleComponent:AddResource'",
+    "Class'GameplayStatics:BeginDeferredActorSpawnFromClass'",
+    "Class'GameplayStatics:FinishSpawningActor'",
+    "Class'GameplayStatics:PlaySoundAtLocation'",
+    'K2_DestroyActor',
+    "Class'KismetSystemLibrary:PrintString'"
+)) {
+    Require ($operatorStrings -ccontains $requiredFireReference) `
+        ('Railgun fire contract reference missing: ' + $requiredFireReference)
+}
+foreach ($forbiddenFireReference in @(
+    'Items','RailgunAmmoLastVisualCount','AddItem'
+)) {
+    Require (-not ($operatorStrings -ccontains $forbiddenFireReference)) `
+        ('Railgun fire must not use presentation state or direct mutation: ' +
+            $forbiddenFireReference)
+}
+$removeEnergyCallIndexes = @(NativeContextCallIndexes $operatorStatements `
+    "Class'VoyageModuleComponent:RemoveResource'")
+$removeAmmoCallIndexes = @(NativeContextCallIndexes $operatorStatements `
+    "Class'VoyageBaseInventoryComponent:RemoveItem'")
+$refundCallIndexes = @(NativeContextCallIndexes $operatorStatements `
+    "Class'VoyageModuleComponent:AddResource'")
+Require ($removeEnergyCallIndexes.Count -eq 2) `
+    'Railgun operator must contain one shot debit and one offline idle drain.'
+$offlineDrainStatements = @($operatorStatements | Where-Object {
+    if ($_ -isnot [pscustomobject] -or
+        -not ($_.PSObject.Properties.Name -ccontains 'Expression') -or
+        $null -eq $_.Expression -or
+        $_.Expression.Token -cne 'EX_Context' -or
+        -not ($_.Expression.PSObject.Properties.Name -ccontains
+            'ContextExpression')) {
+        return $false
+    }
+    $context = $_.Expression.ContextExpression
+    if ($null -eq $context -or
+        -not ($context.PSObject.Properties.Name -ccontains 'Function') -or
+        $context.Function -isnot [pscustomobject] -or
+        $context.Function.ObjectName -cne
+            "Class'VoyageModuleComponent:RemoveResource'" -or
+        @($context.Parameters).Count -ne 3) {
+        return $false
+    }
+    $amount = $context.Parameters[1]
+    $amount.Token -ceq 'EX_LocalVariable' -and
+        $amount.Variable.Property.Name -clike
+            'CallFunc_FMin_ReturnValue*'
+})
+Require ($offlineDrainStatements.Count -eq 1) `
+    'Offline idle drain must debit the amount capped by stored energy.'
+$offlineDrainMath = @($operatorStatements | Where-Object {
+    if ($_ -isnot [pscustomobject] -or
+        -not ($_.PSObject.Properties.Name -ccontains 'Expression') -or
+        $null -eq $_.Expression -or
+        $_.Expression.Token -cne 'EX_CallMath' -or
+        -not ($_.Expression.PSObject.Properties.Name -ccontains
+            'Function') -or
+        $_.Expression.Function -isnot [pscustomobject] -or
+        $_.Expression.Function.ObjectName -cne
+            "Class'KismetMathLibrary:Divide_DoubleDouble'") {
+        return $false
+    }
+    @($_.Expression.Parameters | Where-Object {
+        $_.Token -ceq 'EX_DoubleConst' -and
+        [Math]::Abs([double]$_.Value - 3600.0) -lt 0.000001
+    }).Count -eq 1
+})
+Require ($offlineDrainMath.Count -eq 1 -and
+    ($operatorStrings -ccontains
+        "Class'VoyageModuleComponent:HasSocketConnection'") -and
+    ($operatorStrings -ccontains "Class'VoyageModuleComponent:HasPower'") -and
+    ($operatorStrings -ccontains 'RailgunOfflineDischargeKW')) `
+    'Offline idle drain must use supply state and convert W-seconds to stored energy.'
+Require ($removeAmmoCallIndexes.Count -eq 1) `
+    'Railgun fire must contain exactly one native ammo debit.'
+Require ($refundCallIndexes.Count -eq 1) `
+    'Railgun fire must contain exactly one bounded energy refund path.'
+$removeAmmoStatement = @($operatorStatements | Where-Object {
+    [int]$_.StatementIndex -eq [int]$removeAmmoCallIndexes[0]
+})
+Require ($removeAmmoStatement.Count -eq 1) `
+    'Native ammo debit statement could not be resolved.'
+$removeAmmoParameters = @(
+    $removeAmmoStatement[0].Expression.ContextExpression.Parameters
+)
+Require ($removeAmmoParameters.Count -eq 4 -and
+    (@(JsonStringLeaves $removeAmmoParameters[0]) -ccontains
+        'AcceptedRailgunAmmo') -and
+    $removeAmmoParameters[1].Token -ceq 'EX_IntConst' -and
+    [int]$removeAmmoParameters[1].Value -eq 1 -and
+    (@(JsonStringLeaves $removeAmmoParameters[2]) -ccontains
+        'ShotAmmoSlot') -and
+    $removeAmmoParameters[3].Token -ceq 'EX_True') `
+    'Native ammo debit must use exact owned ammo, quantity one, captured slot and notifications.'
+$removeAmmoResultGates = @(RemoveAmmoResultGates $operatorStatements)
+Require ($removeAmmoResultGates.Count -eq 1) `
+    'Railgun fire must gate success on RemoveItem returning exactly one.'
+$shotDeferredCalls = @(DirectFunctionCalls $operatorStatements `
+    "Class'GameplayStatics:BeginDeferredActorSpawnFromClass'" | Where-Object {
+        @(JsonStringLeaves $_) -ccontains
+            "BlueprintGeneratedClass'BP_RailgunTestShot_C'"
+    })
+Require ($shotDeferredCalls.Count -eq 1) `
+    'Railgun fire must preflight exactly one deferred shot actor.'
+$claimAssignments = @(ShotClaimAssignments $operatorStatements)
+Require ($claimAssignments.Count -eq 1) `
+    'Railgun fire must claim each input request exactly once.'
+$finishIndexes = @(StatementIndexesContaining $operatorStatements `
+    "Class'GameplayStatics:FinishSpawningActor'" | Where-Object {
+        $_ -gt [int]$removeAmmoResultGates[0].StatementIndex
+    } | Sort-Object)
+$audioIndexes = @(StatementIndexesContaining $operatorStatements `
+    "Class'GameplayStatics:PlaySoundAtLocation'" | Where-Object {
+        $_ -gt [int]$removeAmmoResultGates[0].StatementIndex
+    } | Sort-Object)
+$getSlotIndexes = @(StatementIndexesContaining $operatorStatements `
+    "Class'VoyageBaseInventoryComponent:GetSlot'")
+Require ($finishIndexes.Count -ge 1 -and $audioIndexes.Count -ge 1 -and
+    $getSlotIndexes.Count -ge 1) `
+    'Railgun fire ordering evidence is incomplete.'
+$shotBeginIndex = [int]$shotDeferredCalls[0].StatementIndex
+$claimIndex = [int]$claimAssignments[0].StatementIndex
+$removeAmmoIndex = [int]$removeAmmoCallIndexes[0]
+$shotEnergyCallIndexes = @($removeEnergyCallIndexes | Where-Object {
+    [int]$_ -gt $claimIndex -and [int]$_ -lt $removeAmmoIndex
+})
+Require ($shotEnergyCallIndexes.Count -eq 1) `
+    'Railgun fire must contain exactly one native energy debit after its claim.'
+$removeEnergyIndex = [int]$shotEnergyCallIndexes[0]
+$offlineDrainCallIndexes = @(
+    $offlineDrainStatements | ForEach-Object { [int]$_.StatementIndex }
+)
+Require ($offlineDrainCallIndexes.Count -eq 1 -and
+    [int]$offlineDrainCallIndexes[0] -ne $removeEnergyIndex) `
+    'Offline idle drain and shot energy debit must remain distinct.'
+$removeAmmoGateIndex = [int]$removeAmmoResultGates[0].StatementIndex
+$shotFinishIndex = [int]$finishIndexes[0]
+$shotAudioIndex = [int]$audioIndexes[0]
+$refundIndex = [int]$refundCallIndexes[0]
+Require ((($getSlotIndexes | Measure-Object -Maximum).Maximum) -lt
+        $shotBeginIndex -and
+    $shotBeginIndex -lt $claimIndex -and
+    $claimIndex -lt $removeEnergyIndex -and
+    $removeEnergyIndex -lt $removeAmmoIndex -and
+    $removeAmmoIndex -lt $removeAmmoGateIndex -and
+    $removeAmmoGateIndex -lt $shotFinishIndex -and
+    $shotFinishIndex -lt $shotAudioIndex -and
+    $shotAudioIndex -lt $refundIndex) `
+    'Railgun fire must preflight, claim, debit both resources and only then activate the shot.'
+$shotDestroyIndexes = @(StatementIndexesContaining $operatorStatements `
+    'K2_DestroyActor' | Where-Object {
+        $_ -gt $shotBeginIndex -and $_ -lt ($refundIndex + 1000)
+    })
+Require ($shotDestroyIndexes.Count -eq 3) `
+    'Railgun fire must destroy the deferred shot on cast, energy and ammo failure paths.'
+$refundBalanceReads = @(StatementIndexesContaining $operatorStatements `
+    "Class'VoyageModuleComponent:GetResourceAmount'" | Where-Object {
+        $_ -gt $refundIndex -and $_ -lt ($refundIndex + 1000)
+    })
+Require ($refundBalanceReads.Count -ge 1 -and
+    @($operatorStrings | Where-Object { $_ -ceq 'ShotEnergyBeforeDebit' }).Count -ge 2 -and
+    @($operatorStrings | Where-Object { $_ -ceq 'ShotRefundFaulted' }).Count -ge 2) `
+    'Energy compensation must verify the restored live balance and fail closed.'
 $hud = @(Read-Candidate $hudPackage)
 $hudFunctions = @($hud | Where-Object { $_.Type -ceq 'Function' })
 $hudUbergraph = @($hudFunctions | Where-Object {
@@ -410,14 +682,6 @@ $insufficientChargeComparisons = @(
 )
 Require ($insufficientChargeComparisons.Count -eq 1) `
     'Charge text tint must use one exact current-charge threshold comparison.'
-foreach ($requiredChargeTintGuard in @(
-    "Class'VoyageModuleComponent:HasSocketConnection'",
-    "Class'VoyageModuleComponent:HasPower'",
-    "Class'KismetMathLibrary:BooleanAND'"
-)) {
-    Require ($hudUbergraphStrings -ccontains $requiredChargeTintGuard) `
-        ('Charge tint capability guard missing: ' + $requiredChargeTintGuard)
-}
 Require (-not ($hudUbergraphStrings -ccontains
     "Class'RadialSlider:SetSliderBarColor'")) `
     'Insufficient-charge tint must not alter the radial gauge background.'

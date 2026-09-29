@@ -5,15 +5,15 @@
 namespace RailgunInventory
 {
 using RailgunInventoryShared::ModuleObjectPath;
+using RailgunInventoryShared::InventoryComponent;
+using RailgunInventoryShared::AcceptedAmmo;
 inline constexpr TCHAR ContainerOverlayPackage[] =
     TEXT("/Game/Data/UI/OverlayWidgets/DA_Widget_Container");
 inline constexpr TCHAR ContainerOverlayAsset[] = TEXT("DA_Widget_Container");
 inline constexpr TCHAR InventoryPartIdLiteral[] = TEXT("100");
-inline const FName InventoryComponent(TEXT("RailgunAmmoInventory"));
 inline const FName InteractionComponent(TEXT("RailgunAmmoInventoryInteraction"));
 inline const FName InteractionQueryComponent(TEXT("RailgunAmmoInventoryQuery"));
 inline const FName InteractionCollisionProfile(TEXT("Interactive"));
-inline const FName AcceptedAmmo(TEXT("AcceptedRailgunAmmo"));
 inline const FName ModuleComponent(TEXT("ModuleComponent"));
 inline const FName ValidateItem(TEXT("ValidateItem"));
 inline const FName InteractGetInventory(TEXT("InteractGetInventory"));

@@ -259,25 +259,7 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
         EnergyHud::ChargeGaugeProgressColor);
     UEdGraphPin* InvalidChargeModuleTail = G.Tail;
     G.Tail = ValidChargeModuleTail;
-    UEdGraphPin* Connected = ObserveCall(G,
-        UVoyageModuleComponent::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent,
-            HasSocketConnection), ChargeModule);
-    UEdGraphPin* Powered = ObserveCall(G,
-        UVoyageModuleComponent::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, HasPower),
-        ChargeModule);
-    auto* CanCharge = G.Call(UKismetMathLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND));
-    G.Link(Connected, G.Pin(CanCharge, P::Binary::LeftOperand));
-    G.Link(Powered, G.Pin(CanCharge, P::Binary::RightOperand));
-    auto* ShouldTint = G.Call(UKismetMathLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND));
-    G.Link(InsufficientCharge,
-        G.Pin(ShouldTint, P::Binary::LeftOperand));
-    G.Link(G.Pin(CanCharge, P::ReturnValue),
-        G.Pin(ShouldTint, P::Binary::RightOperand));
-    auto* TintCharge = G.Branch(G.Pin(ShouldTint, P::ReturnValue));
+    auto* TintCharge = G.Branch(InsufficientCharge);
     SetChargeColors(EnergyHud::InsufficientChargeTextColor,
         EnergyHud::EmptyAmmoTint);
     UEdGraphPin* InsufficientChargeTail = G.Tail;

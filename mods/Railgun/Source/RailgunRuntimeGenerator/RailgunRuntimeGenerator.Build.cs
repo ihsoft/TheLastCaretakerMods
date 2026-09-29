@@ -5,11 +5,10 @@ public class RailgunRuntimeGenerator : ModuleRules
     public RailgunRuntimeGenerator(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-        string GeneratedSettingsDirectory = System.Environment.GetEnvironmentVariable("RAILGUN_GENERATED_SETTINGS_DIR");
-        if (string.IsNullOrWhiteSpace(GeneratedSettingsDirectory))
-        {
+        string GeneratedSettingsDirectory = Path.GetFullPath(Path.Combine(
+            ModuleDirectory, "../../Intermediate/GeneratedSettings"));
+        if (!Directory.Exists(GeneratedSettingsDirectory))
             throw new BuildException("Railgun settings were not generated. Build through Build-Railgun.ps1.");
-        }
         PrivateIncludePaths.Add(Path.GetFullPath(GeneratedSettingsDirectory));
         PrivateIncludePaths.Add(Path.GetFullPath(Path.Combine(ModuleDirectory,
             "../../../../tools/UnrealEditorGeneratorCommon/Public")));

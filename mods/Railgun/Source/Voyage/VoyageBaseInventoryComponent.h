@@ -46,4 +46,22 @@ public:
     UPROPERTY() TSet<TObjectPtr<UVoyageItemCategoryAsset>> DepositAllCategoryFilter;
     UPROPERTY() bool bAllowNearbyQueries = true;
     UPROPERTY() bool bAutoCloseHudWhenEmpty = true;
+
+    // Steam25191271 native inventory access used by the generated fire graph.
+    // RemoveItem returns the number of items actually removed.
+    UFUNCTION(BlueprintPure, Category="RailgunInventory")
+    int32 GetLastOccupiedSlot() const { return -1; }
+
+    UFUNCTION(BlueprintPure, Category="RailgunInventory")
+    bool GetSlot(int32 Slot, FVoyageItemSerialize& OutItemData) const
+    {
+        return false;
+    }
+
+    UFUNCTION(BlueprintCallable, Category="RailgunInventory")
+    int32 RemoveItem(UVoyageItem* Item, int32 Count, int32 PreferredSlot,
+        bool bNotify)
+    {
+        return 0;
+    }
 };
