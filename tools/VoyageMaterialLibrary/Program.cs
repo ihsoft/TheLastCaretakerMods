@@ -32,6 +32,8 @@ internal static partial class Program
             if (args.Length == 2 && args[0] == "--self-test") return SelfTests.Run(args[1]);
             if (args.Length == 3 && args[0] == "--finalize-material-pack") return FinalizeMaterialPack(args[1], args[2]);
             if (args.Length == 2 && args[0] == "--verify-material-pack") return VerifyMaterialPack(args[1]);
+            if (args.Length == 2 && args[0] == "--finalize-material-bundle") return FinalizeMaterialBundle(args[1]);
+            if (args.Length == 2 && args[0] == "--verify-material-bundle") return VerifyMaterialBundle(args[1]);
             if (args.Length != 1) throw new ArgumentException("Usage: VoyageMaterialLibrary <request.json>");
             var request = JsonNode.Parse(File.ReadAllText(args[0]))!;
             string Str(string key) => request[key]!.GetValue<string>();
@@ -46,6 +48,9 @@ internal static partial class Program
             var sourceTexturePolicy = operation == "MaterialPackStage"
                 ? ParseSourceTexturePolicy(request["sourceTexturePolicy"]?.GetValue<string>() ?? "MetadataOnly")
                 : SourceTexturePolicy.MetadataOnly;
+            var materialPackProfile = operation == "MaterialPackStage"
+                ? ParseMaterialPackProfile(request["profile"]?.GetValue<string>() ?? "Full")
+                : MaterialPackProfile.Full;
             var assets = request["materials"]!.AsArray().Select(x => x!.GetValue<string>()).ToArray();
             ValidateAssets(assets);
             var fingerprint = JsonNode.Parse(File.ReadAllText(Str("fingerprintPath")))!;
@@ -70,7 +75,8 @@ internal static partial class Program
                 return ExportColorTexturePreview(provider, assets, output,
                     request["thumbnailSize"]?.GetValue<int>() ?? 512, build, exeHash, Str("mappingPath"));
             if (operation == "MaterialPackStage")
-                return ExportMaterialPackStage(provider, assets, output, materialMode, sourceTexturePolicy, build, exeHash, Str("mappingPath"));
+                return ExportMaterialPackStage(provider, assets, output, materialMode, materialPackProfile,
+                    sourceTexturePolicy, build, exeHash, Str("mappingPath"));
             var textureCache = new Dictionary<string, TextureRecord>(StringComparer.Ordinal);
             var textureSources = new Dictionary<string, UUnrealMaterial>(StringComparer.Ordinal);
             var reports = new List<MaterialRecord>();

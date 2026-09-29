@@ -143,6 +143,12 @@ omission metadata, and no mesh or GLB payload. Its default `MetadataOnly` source
 policy keeps all source identities without source pixels; opt-in `Reconstructable`
 adds only semantically bound skipped-effect images. Source masks use lossless WebP
 and source normals use PNG, and every inclusion has a machine-readable reason.
+`-Profile Full` preserves original baked resolution; `AnalysisCompact` limits PBR
+maps to 512x1024, uses lossless WebP and forces metadata-only source handling;
+`Reconstructable` preserves full resolution and enables the selective source policy.
+Batch analysis uses `Export-VoyageMaterialBundle.ps1`: one validated
+`<BundleName>.materialbundle.zip` with per-material manifests/previews and SHA-256
+content-addressed PBR payloads shared across the batch.
 Source-only conversion/preview is outside game-tool coverage; extraction/build
 operations retain the normal game provenance gates.
 
@@ -163,6 +169,7 @@ container and evidence, without installation.
 | Export an exact batch of stock materials | `Export-VoyageMaterialsGlb.ps1` | Self-contained sample-panel GLB with inherited parameters, used textures and PBR approximation report |
 | Render a preview of reconstructed/approximate stock materials | `Export-VoyageMaterialPreview.ps1` | Blender-rendered sample-panel PNG; lightweight GLB evidence; no source-artifact archive or original texture files |
 | Export one stock material for material-only exchange | `Export-VoyageMaterialPack.ps1` | Validated `.materialpack.zip`; fixed WebP preview, baked PBR maps, parameter/provenance manifest, default metadata-only or opt-in reconstructable source policy, no geometry |
+| Export compact stock materials for analysis | `Export-VoyageMaterialBundle.ps1` | Validated `.materialbundle.zip`; per-material manifests/previews, 512x1024 maximum lossless PBR, cross-material content deduplication, no source pixels or geometry |
 | Publish or validate the Inspector executable | `Publish-VoyageAssetInspectorBinary.ps1`, `Get-VoyageAssetInspectorBinary.ps1` | Stable single-file EXE; validated source/dependency/binary identity |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Publish or reuse canonical retoc | `Publish-RetocBinary.ps1` | Stable `.tools/bin/retoc.exe` plus hash/provenance manifest |

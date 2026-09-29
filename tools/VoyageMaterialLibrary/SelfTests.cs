@@ -63,6 +63,19 @@ internal static class SelfTests
         var numericSourcePolicyRejected = false;
         try { Program.ParseSourceTexturePolicy("0"); } catch (ArgumentException) { numericSourcePolicyRejected = true; }
         Check(numericSourcePolicyRejected, "material pack rejects numeric source policy");
+        Check(Program.ParseMaterialPackProfile("Full") == MaterialPackProfile.Full &&
+            Program.ParseMaterialPackProfile("AnalysisCompact") == MaterialPackProfile.AnalysisCompact &&
+            Program.ParseMaterialPackProfile("Reconstructable") == MaterialPackProfile.Reconstructable,
+            "material pack parses quality profiles");
+        using var normalSource = new SKBitmap(4, 8);
+        normalSource.Erase(new SKColor(128, 128, 255, 255));
+        using var normalSourceData = normalSource.Encode(SKEncodedImageFormat.Png, 100);
+        using var compactNormal = SKBitmap.Decode(Program.ResizeAnalysisImage(normalSourceData.ToArray(), true, 2, 4));
+        Check(compactNormal.Width == 2 && compactNormal.Height == 4, "analysis normal preserves aspect ratio and bounds");
+        var compactPixel = compactNormal.GetPixel(0, 0);
+        var compactVector = new Vector3(compactPixel.Red / 127.5f - 1, compactPixel.Green / 127.5f - 1,
+            compactPixel.Blue / 127.5f - 1);
+        Check(Math.Abs(compactVector.Length() - 1) < .02f, "analysis normal is renormalized");
         var record = new MaterialRecord { Source = "/Game/Test/M_A", Name = "M_A" };
         record.Textures["BaseColor"] = "color";
         record.Textures["Normal"] = "normal";

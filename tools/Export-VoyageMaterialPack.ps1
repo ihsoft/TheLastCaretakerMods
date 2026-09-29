@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true)][string]$Material,
     [Parameter(Mandatory = $true)][string]$OutputPath,
     [ValidateSet('PbrApproximation', 'BakeReconstructed')][string]$MaterialMode,
+    [ValidateSet('Full', 'AnalysisCompact', 'Reconstructable')][string]$Profile = 'Full',
     [ValidateSet('MetadataOnly', 'Reconstructable')][string]$SourceTextures = 'MetadataOnly',
     [string]$BlenderPath = 'K:\Program Files\Blender Foundation\Blender 5.2\blender.exe',
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage'
@@ -11,6 +12,15 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ([string]::IsNullOrWhiteSpace($MaterialMode)) {
     throw 'Choose -MaterialMode PbrApproximation or BakeReconstructed. The caller must ask which material representation is wanted when it was not specified.'
+}
+if ($Profile -ceq 'AnalysisCompact' -and $SourceTextures -cne 'MetadataOnly') {
+    throw 'AnalysisCompact requires -SourceTextures MetadataOnly.'
+}
+if ($Profile -ceq 'Reconstructable') {
+    if ($PSBoundParameters.ContainsKey('SourceTextures') -and $SourceTextures -cne 'Reconstructable') {
+        throw 'Reconstructable profile requires -SourceTextures Reconstructable.'
+    }
+    $SourceTextures = 'Reconstructable'
 }
 if ($Material -notmatch '^/(Game|Engine|[A-Za-z0-9_]+)/[A-Za-z0-9_ /-]+$' -or $Material.Trim() -cne $Material) {
     throw 'Supply one exact material package path, not an object suffix, wildcard or fragment.'
@@ -66,7 +76,7 @@ if ($mapping.engineVersion -ne '5.8' -or $mapping.executableSha256 -cne $fingerp
 $stage = Join-Path $evidence 'stage'
 $requestPath = Join-Path $evidence 'request.json'
 $request = [ordered]@{ operation = 'MaterialPackStage'; output = $stage; materials = @($Material); materialMode = $MaterialMode;
-    sourceTexturePolicy = $SourceTextures;
+    profile = $Profile; sourceTexturePolicy = $SourceTextures;
     fingerprintPath = $fingerprintPath; mappingPath = $mapping.mappingsPath; mappingManifestPath = $mapping.manifestPath }
 [IO.File]::WriteAllText($requestPath, ($request | ConvertTo-Json -Depth 5))
 Copy-Item -LiteralPath $manifestFile -Destination (Join-Path $evidence 'tool-manifest.json')
@@ -76,7 +86,8 @@ if ($export.ExitCode -ne 0) { throw "Material-pack staging failed (exit $($expor
 $exportLine = @($export.Output -split '\r?\n' | Where-Object { $_.Trim() })[-1]
 $exportResult = $exportLine | ConvertFrom-Json
 if ($exportResult.stagePath -cne $stage -or $exportResult.material -cne $Material -or
-    $exportResult.sourceTexturePolicy -cne $SourceTextures -or -not (Test-Path -LiteralPath $exportResult.previewSourceGlb)) {
+    $exportResult.profile -cne $Profile -or $exportResult.sourceTexturePolicy -cne $SourceTextures -or
+    -not (Test-Path -LiteralPath $exportResult.previewSourceGlb)) {
     throw 'Material-pack stage result mismatch.'
 }
 
@@ -97,7 +108,7 @@ $verify = Invoke-CapturedProcess $exporter ('--verify-material-pack "' + $output
 if ($verify.ExitCode -ne 0) { throw "Material-pack validation failed (exit $($verify.ExitCode)); evidence: $evidence" }
 $verified = @($verify.Output -split '\r?\n' | Where-Object { $_.Trim() })[-1] | ConvertFrom-Json
 if ($verified.status -cne 'verified' -or $verified.material -cne $Material -or
-    $verified.sourceTexturePolicy -cne $SourceTextures -or
+    $verified.profile -cne $Profile -or $verified.sourceTexturePolicy -cne $SourceTextures -or
     (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash -cne $verified.sha256) { throw 'Material-pack validation/readback mismatch.' }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -114,7 +125,7 @@ if (-not $stageFull.StartsWith($evidencePrefix, [StringComparison]::OrdinalIgnor
 }
 Remove-Item -LiteralPath $stageFull -Recurse -Force
 $result = [ordered]@{ schema = 'voyage.material-pack-export/1'; status = 'exported'; materialMode = $MaterialMode;
-    sourceTexturePolicy = $SourceTextures;
+    profile = $Profile; sourceTexturePolicy = $SourceTextures;
     material = $Material; materialPackPath = $output; sha256 = $verified.sha256; bytes = $verified.bytes;
     pbrMaps = @($verified.pbrMaps); sourceTextureCount = $verified.sourceTextures;
     includedSourceTextureCount = $verified.includedSourceTextures; previewRecipe = 'voyage.material-sphere/1';

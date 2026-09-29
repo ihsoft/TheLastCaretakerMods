@@ -11,6 +11,9 @@ using CUE4Parse_Conversion.Options;
 using SharpGLTF.Materials;
 using SharpGLTF.Scenes;
 using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using SkiaSharp;
 
 namespace VoyageMaterialLibrary;
@@ -77,9 +80,13 @@ internal static partial class Program
     }
 
     static int ExportMaterialPackStage(StockProvider provider, string[] assets, string output, string materialMode,
-        SourceTexturePolicy sourceTexturePolicy, string build, string exeHash, string mappingPath)
+        MaterialPackProfile profile, SourceTexturePolicy sourceTexturePolicy, string build, string exeHash, string mappingPath)
     {
         if (assets.Length != 1) throw new ArgumentException("MaterialPackStage exports exactly one material.");
+        if (profile == MaterialPackProfile.AnalysisCompact && sourceTexturePolicy != SourceTexturePolicy.MetadataOnly)
+            throw new ArgumentException("AnalysisCompact requires MetadataOnly source textures.");
+        if (profile == MaterialPackProfile.Reconstructable && sourceTexturePolicy != SourceTexturePolicy.Reconstructable)
+            throw new ArgumentException("Reconstructable profile requires Reconstructable source textures.");
         if (Directory.Exists(output) || File.Exists(output)) throw new IOException("Material pack stage exists; choose a fresh path.");
         Directory.CreateDirectory(output);
         var pbrDirectory = Path.Combine(output, "pbr");
@@ -107,16 +114,20 @@ internal static partial class Program
             ["emissiveStrength"] = report.EmissiveStrength
         };
         AddPbrFile(pbr, textureCache.Values, "baseColor", "baseColor", Path.Combine(pbrDirectory, "basecolor.webp"),
-            "pbr/basecolor.webp", true);
-        AddPbrFile(pbr, textureCache.Values, "normal", "normal", Path.Combine(pbrDirectory, "normal.png"),
-            "pbr/normal.png", false, new JsonObject { ["convention"] = "OpenGL" });
-        AddPbrFile(pbr, textureCache.Values, "ORM", "orm", Path.Combine(pbrDirectory, "orm.png"),
-            "pbr/orm.png", false, new JsonObject
+            "pbr/basecolor.webp", true, profile);
+        var compact = profile == MaterialPackProfile.AnalysisCompact;
+        AddPbrFile(pbr, textureCache.Values, "normal", "normal",
+            Path.Combine(pbrDirectory, compact ? "normal.webp" : "normal.png"),
+            compact ? "pbr/normal.webp" : "pbr/normal.png", compact, profile,
+            new JsonObject { ["convention"] = "OpenGL" });
+        AddPbrFile(pbr, textureCache.Values, "ORM", "orm",
+            Path.Combine(pbrDirectory, compact ? "orm.webp" : "orm.png"),
+            compact ? "pbr/orm.webp" : "pbr/orm.png", compact, profile, new JsonObject
             {
                 ["channels"] = new JsonObject { ["R"] = "occlusion", ["G"] = "roughness", ["B"] = "metallic" }
             });
         AddPbrFile(pbr, textureCache.Values, "emissive", "emissive", Path.Combine(pbrDirectory, "emissive.webp"),
-            "pbr/emissive.webp", true);
+            "pbr/emissive.webp", true, profile);
 
         var render = JsonSerializer.SerializeToNode(report.RenderState, JsonOptions)!.AsObject();
         var sourceEntries = DescribePackSources(report, reconstruction.Parameters, textureSources, textureCache, sourceDirectory,
@@ -130,6 +141,7 @@ internal static partial class Program
         var manifest = new JsonObject
         {
             ["schemaVersion"] = 1,
+            ["profile"] = profile.ToString(),
             ["sourceTexturePolicy"] = sourceTexturePolicy.ToString(),
             ["material"] = new JsonObject
             {
@@ -182,6 +194,7 @@ internal static partial class Program
             schema = "voyage.material-pack-stage/1",
             status = textureCache.Values.Any(x => x.Error != null) ? "partial-textures" : "staged",
             materialMode,
+            profile = profile.ToString(),
             sourceTexturePolicy = sourceTexturePolicy.ToString(),
             material = report.Source,
             stagePath = output,
@@ -192,7 +205,8 @@ internal static partial class Program
             includedSourceTextureCount = sourceEntries.Count(x => x.included)
         };
         File.WriteAllText(reportPath, JsonSerializer.Serialize(new { result, report, sourceTextures = sourceEntries }, JsonOptions));
-        Console.WriteLine(JsonSerializer.Serialize(new { result.status, result.materialMode, result.sourceTexturePolicy,
+        Console.WriteLine(JsonSerializer.Serialize(new { result.status, result.materialMode, result.profile,
+            result.sourceTexturePolicy,
             result.material, result.stagePath,
             result.manifestPath, result.previewSourceGlb, result.pbrMaps, result.sourceTextureCount,
             result.includedSourceTextureCount, reportPath }));
@@ -200,11 +214,15 @@ internal static partial class Program
     }
 
     static void AddPbrFile(JsonObject pbr, IEnumerable<TextureRecord> textures, string variantRole, string manifestRole,
-        string output, string relative, bool webp, JsonObject? details = null)
+        string output, string relative, bool webp, MaterialPackProfile profile, JsonObject? details = null)
     {
         var variant = textures.SelectMany(x => x.Variants).SingleOrDefault(x => x.Role == variantRole);
         if (variant?.Data == null) return;
-        var bytes = webp ? EncodeWebpLossless(variant.Data) : variant.Data;
+        var originalDimensions = ImageDimensions(variant.Data);
+        var image = profile == MaterialPackProfile.AnalysisCompact
+            ? ResizeAnalysisImage(variant.Data, variantRole == "normal", 512, 1024)
+            : variant.Data;
+        var bytes = webp ? EncodeWebpLossless(image) : image;
         File.WriteAllBytes(output, bytes);
         var dimensions = ImageDimensions(bytes);
         details ??= new JsonObject();
@@ -213,6 +231,11 @@ internal static partial class Program
         details["sha256"] = Convert.ToHexString(SHA256.HashData(bytes));
         details["width"] = dimensions.Width;
         details["height"] = dimensions.Height;
+        if (profile == MaterialPackProfile.AnalysisCompact)
+        {
+            details["originalWidth"] = originalDimensions.Width;
+            details["originalHeight"] = originalDimensions.Height;
+        }
         if (webp) details["encoding"] = "WebP lossless";
         pbr[manifestRole] = details;
     }
@@ -223,6 +246,66 @@ internal static partial class Program
         using var stream = new MemoryStream();
         image.Save(stream, new WebpEncoder { FileFormat = WebpFileFormatType.Lossless });
         return stream.ToArray();
+    }
+
+    internal static byte[] ResizeAnalysisImage(byte[] png, bool normalMap, int maxWidth, int maxHeight)
+    {
+        using var source = SixLabors.ImageSharp.Image.Load<Rgba32>(png);
+        var scale = Math.Min(1d, Math.Min(maxWidth / (double)source.Width, maxHeight / (double)source.Height));
+        if (scale >= 1d) return png;
+        var width = Math.Max(1, (int)Math.Floor(source.Width * scale));
+        var height = Math.Max(1, (int)Math.Floor(source.Height * scale));
+        if (!normalMap)
+        {
+            using var resized = source.Clone(context => context.Resize(new ResizeOptions
+            {
+                Size = new SixLabors.ImageSharp.Size(width, height),
+                Mode = ResizeMode.Stretch,
+                Sampler = KnownResamplers.Lanczos3
+            }));
+            using var stream = new MemoryStream();
+            resized.Save(stream, new PngEncoder());
+            return stream.ToArray();
+        }
+
+        var sourcePixels = new Rgba32[source.Width * source.Height];
+        source.CopyPixelDataTo(sourcePixels);
+        var targetPixels = new Rgba32[width * height];
+        for (var y = 0; y < height; y++)
+        {
+            var y0 = y * source.Height / (double)height;
+            var y1 = (y + 1) * source.Height / (double)height;
+            for (var x = 0; x < width; x++)
+            {
+                var x0 = x * source.Width / (double)width;
+                var x1 = (x + 1) * source.Width / (double)width;
+                double nx = 0, ny = 0, nz = 0, alpha = 0, weightSum = 0;
+                for (var sy = (int)Math.Floor(y0); sy < Math.Ceiling(y1); sy++)
+                {
+                    var wy = Math.Min(sy + 1, y1) - Math.Max(sy, y0);
+                    for (var sx = (int)Math.Floor(x0); sx < Math.Ceiling(x1); sx++)
+                    {
+                        var wx = Math.Min(sx + 1, x1) - Math.Max(sx, x0);
+                        var weight = wx * wy;
+                        var pixel = sourcePixels[sy * source.Width + sx];
+                        nx += (pixel.R / 127.5 - 1) * weight;
+                        ny += (pixel.G / 127.5 - 1) * weight;
+                        nz += (pixel.B / 127.5 - 1) * weight;
+                        alpha += pixel.A * weight;
+                        weightSum += weight;
+                    }
+                }
+                var vector = new Vector3((float)(nx / weightSum), (float)(ny / weightSum), (float)(nz / weightSum));
+                vector = vector.LengthSquared() < 1e-12f ? Vector3.UnitZ : Vector3.Normalize(vector);
+                static byte EncodeNormal(float value) => (byte)Math.Clamp((int)Math.Round((value * .5f + .5f) * 255), 0, 255);
+                targetPixels[y * width + x] = new Rgba32(EncodeNormal(vector.X), EncodeNormal(vector.Y),
+                    EncodeNormal(vector.Z), (byte)Math.Clamp((int)Math.Round(alpha / weightSum), 0, 255));
+            }
+        }
+        using var target = SixLabors.ImageSharp.Image.LoadPixelData(targetPixels, width, height);
+        using var targetStream = new MemoryStream();
+        target.Save(targetStream, new PngEncoder());
+        return targetStream.ToArray();
     }
 
     static (int Width, int Height) ImageDimensions(byte[] data)
@@ -340,6 +423,17 @@ internal static partial class Program
         };
     }
 
+    internal static MaterialPackProfile ParseMaterialPackProfile(string value)
+    {
+        return value switch
+        {
+            "Full" => MaterialPackProfile.Full,
+            "AnalysisCompact" => MaterialPackProfile.AnalysisCompact,
+            "Reconstructable" => MaterialPackProfile.Reconstructable,
+            _ => throw new ArgumentException("profile must be Full, AnalysisCompact or Reconstructable.")
+        };
+    }
+
     static JsonObject ParameterManifest(CMaterialParams2 parameters)
     {
         var colors = new JsonObject();
@@ -448,7 +542,12 @@ internal static partial class Program
         if (manifest["schemaVersion"]?.GetValue<int>() != 1) throw new InvalidDataException("Unsupported material-pack schema.");
         foreach (var section in new[] { "material", "renderState", "pbr", "parameters", "textureBindings", "sourceTextures", "reconstruction", "uv", "preview", "provenance" })
             if (manifest[section] == null) throw new InvalidDataException("Missing manifest section: " + section);
+        var profile = ParseMaterialPackProfile(manifest["profile"]?.GetValue<string>() ?? "Full");
         var sourceTexturePolicy = ParseSourceTexturePolicy(manifest["sourceTexturePolicy"]?.GetValue<string>() ?? "Reconstructable");
+        if (profile == MaterialPackProfile.AnalysisCompact && sourceTexturePolicy != SourceTexturePolicy.MetadataOnly)
+            throw new InvalidDataException("AnalysisCompact requires MetadataOnly source textures.");
+        if (profile == MaterialPackProfile.Reconstructable && sourceTexturePolicy != SourceTexturePolicy.Reconstructable)
+            throw new InvalidDataException("Reconstructable profile requires Reconstructable source textures.");
         var material = manifest["material"]!.AsObject();
         var materialName = material["name"]!.GetValue<string>();
         var materialSource = material["source"]!.GetValue<string>();
@@ -464,8 +563,8 @@ internal static partial class Program
         if (pbr["baseColorFactor"]?.AsArray().Count != 4 || pbr["metallicFactor"] == null || pbr["roughnessFactor"] == null)
             throw new InvalidDataException("Invalid PBR factors.");
         ValidatePbrEntry(pbr, "baseColor", ".webp", "sRGB");
-        ValidatePbrEntry(pbr, "normal", ".png", "linear");
-        ValidatePbrEntry(pbr, "orm", ".png", "linear");
+        ValidatePbrEntry(pbr, "normal", profile == MaterialPackProfile.AnalysisCompact ? ".webp" : ".png", "linear");
+        ValidatePbrEntry(pbr, "orm", profile == MaterialPackProfile.AnalysisCompact ? ".webp" : ".png", "linear");
         ValidatePbrEntry(pbr, "emissive", ".webp", "sRGB");
         ValidatePbrEntry(pbr, "opacity", ".png", "linear");
         if (pbr["normal"] is JsonObject normal && normal["convention"]?.GetValue<string>() != "OpenGL")
@@ -500,6 +599,14 @@ internal static partial class Program
                 entry["width"]?.GetValue<int>() != records[file]["width"]?.GetValue<int>() ||
                 entry["height"]?.GetValue<int>() != records[file]["height"]?.GetValue<int>())
                 throw new InvalidDataException("PBR image provenance mismatch: " + role);
+            if (profile == MaterialPackProfile.AnalysisCompact)
+            {
+                var originalWidth = entry["originalWidth"]?.GetValue<int>() ?? 0;
+                var originalHeight = entry["originalHeight"]?.GetValue<int>() ?? 0;
+                if (entry["width"]!.GetValue<int>() > 512 || entry["height"]!.GetValue<int>() > 1024 ||
+                    originalWidth < entry["width"]!.GetValue<int>() || originalHeight < entry["height"]!.GetValue<int>())
+                    throw new InvalidDataException("Invalid AnalysisCompact dimensions: " + role);
+            }
         }
         foreach (var source in manifest["sourceTextures"]!.AsArray().Select(x => x!.AsObject()).Where(x => x["included"]!.GetValue<bool>()))
         {
@@ -519,11 +626,14 @@ internal static partial class Program
                 record["bytes"]?.GetValue<long>() != bytes.LongLength || record["width"]?.GetValue<int>() != dimensions.Width ||
                 record["height"]?.GetValue<int>() != dimensions.Height)
                 throw new InvalidDataException("File inventory mismatch: " + name);
+            if (profile == MaterialPackProfile.AnalysisCompact && pbr["normal"]?["file"]?.GetValue<string>() == name)
+                ValidateUnitNormals(bytes);
         }
         var pbrMaps = new[] { "baseColor", "normal", "orm", "emissive", "opacity" }.Where(x => pbr[x] != null).ToArray();
         var sources = manifest["sourceTextures"]!.AsArray();
         var result = new { status = "verified", materialPack = fullPath, material = materialSource,
             materialMode = manifest["reconstruction"]!["mode"]!.GetValue<string>(), pbrMaps,
+            profile = profile.ToString(),
             sourceTexturePolicy = sourceTexturePolicy.ToString(),
             sourceTextures = sources.Count, includedSourceTextures = sources.Count(x => x!["included"]!.GetValue<bool>()),
             entries = names.Length, bytes = new FileInfo(fullPath).Length, sha256 = Hash(fullPath) };
@@ -565,6 +675,19 @@ internal static partial class Program
             entry["colorSpace"]?.GetValue<string>() != colorSpace)
             throw new InvalidDataException("Invalid PBR file contract: " + role);
     }
+
+    static void ValidateUnitNormals(byte[] bytes)
+    {
+        using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(bytes);
+        var pixels = new Rgba32[image.Width * image.Height];
+        image.CopyPixelDataTo(pixels);
+        foreach (var pixel in pixels)
+        {
+            var vector = new Vector3(pixel.R / 127.5f - 1, pixel.G / 127.5f - 1, pixel.B / 127.5f - 1);
+            if (Math.Abs(vector.Length() - 1) > .02f)
+                throw new InvalidDataException("AnalysisCompact normal map contains a non-unit tangent-space vector.");
+        }
+    }
 }
 
 internal sealed record MaterialReconstruction(MaterialRecord Report, CMaterialParams2 Parameters, MaterialBuilder Builder);
@@ -572,6 +695,13 @@ internal sealed record MaterialReconstruction(MaterialRecord Report, CMaterialPa
 internal enum SourceTexturePolicy
 {
     MetadataOnly,
+    Reconstructable
+}
+
+internal enum MaterialPackProfile
+{
+    Full,
+    AnalysisCompact,
     Reconstructable
 }
 

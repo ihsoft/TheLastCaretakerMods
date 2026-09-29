@@ -17,6 +17,10 @@ no model, sample panel or GLB, and contains a fixed WebP sphere preview, final
 bounded PBR maps, machine-readable reconstruction metadata, and a conservative
 selection of source images for skipped layered effects.
 
+`../Export-VoyageMaterialBundle.ps1` exports 1..128 exact materials to one compact
+analysis bundle. Each material keeps its own manifest and preview, while final
+encoded PBR images are stored once by SHA-256 content identity.
+
 ## Normal use (Windows PowerShell 5.1)
 
 ```powershell
@@ -42,6 +46,7 @@ Material-only exchange:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageMaterialPack.ps1 `
   -Material /Game/AssetSets/CoreModularPieces/Decorations/Materials/MI_Deco_Ext_DamagedMetal `
   -MaterialMode BakeReconstructed `
+  -Profile Full `
   -SourceTextures MetadataOnly `
   -OutputPath artifacts/material-export/MI_Deco_Ext_DamagedMetal.materialpack.zip
 ```
@@ -51,7 +56,25 @@ repository `artifacts/`. One call exports exactly one material; callers that nee
 several packs invoke the same black-box entry point once per identity. As with GLB
 and preview export, the caller must explicitly choose `PbrApproximation` or
 `BakeReconstructed`. `-SourceTextures MetadataOnly|Reconstructable` independently
-controls source pixel payloads and defaults to compact `MetadataOnly`.
+controls source pixel payloads and defaults to `MetadataOnly`. `-Profile Full` is
+the backward-compatible default. `AnalysisCompact` requires `MetadataOnly`;
+`Reconstructable` requires the matching source policy.
+
+Compact batch analysis:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageMaterialBundle.ps1 `
+  -MaterialsFile artifacts/requests/painted-metal-candidates.json `
+  -BundleName PaintedMetalCandidates `
+  -MaterialMode BakeReconstructed `
+  -Profile AnalysisCompact `
+  -OutputPath artifacts/material-export/PaintedMetalCandidates.materialbundle.zip
+```
+
+The bundle wrapper supports `AnalysisCompact`; Full and Reconstructable remain
+single-material pack profiles. The final bundle contains `bundle.json`, one JSON
+and WebP preview per material, and shared `textures/<sha256>.webp` PBR payloads.
+It contains no source texture pixels, sample geometry or transient GLB.
 
 ## MaterialPack schema and payload policy
 
@@ -62,6 +85,12 @@ file inventory with hashes and dimensions. `preview.webp` uses the fixed
 `voyage.material-sphere/1` Blender recipe at 768x768. Base color and emission use
 lossless WebP; normal and ORM remain lossless PNG with OpenGL normal convention
 and R/G/B = occlusion/roughness/metallic.
+
+`AnalysisCompact` preserves aspect ratio, never upscales, and bounds each baked PBR
+map to 512x1024. BaseColor, Normal and ORM use lossless WebP. BaseColor remains
+sRGB; Normal and ORM remain linear. Normal reduction averages signed tangent-space
+vectors and renormalizes every output pixel after preserving the existing OpenGL
+Y convention. Compact manifests record both final and original dimensions.
 
 A missing PBR image means the scalar/factor is authoritative; uniform placeholder
 textures are not invented. Every referenced source texture has metadata, including
