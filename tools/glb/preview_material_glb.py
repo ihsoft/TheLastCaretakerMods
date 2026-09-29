@@ -158,7 +158,12 @@ scene.collection.objects.link(sheet_camera)
 sheet_camera.location = (0, 0, 10)
 sheet_camera.rotation_euler = (0, 0, 0)
 sheet_camera_data.type = 'ORTHO'
-sheet_camera_data.ortho_scale = rows * tile_aspect
+sheet_world_width = columns
+sheet_world_height = rows * tile_aspect
+sheet_fit_axis = 'horizontal' if sheet_world_width >= sheet_world_height else 'vertical'
+# Blender AUTO sensor fit interprets ortho_scale along the dominant camera-frame
+# axis. Match that axis so wide single-row sheets do not crop to the old height.
+sheet_camera_data.ortho_scale = sheet_world_width if sheet_fit_axis == 'horizontal' else sheet_world_height
 scene.camera = sheet_camera
 scene.world = bpy.data.worlds.new('ContactSheetWorld')
 scene.world.use_nodes = True
@@ -184,6 +189,8 @@ print('MATERIAL_PREVIEW_OK ' + json.dumps({
     'rows': rows,
     'tileWidth': tile_width,
     'tileHeight': tile_height,
+    'contactSheetFitAxis': sheet_fit_axis,
+    'contactSheetOrthoScale': sheet_camera_data.ortho_scale,
     'output': str(args.output.resolve()),
     'sourceUnchanged': True,
 }))

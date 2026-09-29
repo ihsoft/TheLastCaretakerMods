@@ -99,9 +99,13 @@ if ($renderExitCode -ne 0 -or -not (Test-Path -LiteralPath $output)) { throw "Ma
 $renderLine = @($renderText -split '\r?\n' | Where-Object { $_ -like 'MATERIAL_PREVIEW_OK *' })[-1]
 if (-not $renderLine) { throw 'Blender preview completion marker missing.' }
 $renderResult = $renderLine.Substring('MATERIAL_PREVIEW_OK '.Length) | ConvertFrom-Json
+$expectedFitAxis = if ($renderResult.columns -ge ($renderResult.rows * $renderResult.tileHeight / [double]$renderResult.tileWidth)) { 'horizontal' } else { 'vertical' }
+$expectedOrthoScale = if ($expectedFitAxis -ceq 'horizontal') { [double]$renderResult.columns } else { $renderResult.rows * $renderResult.tileHeight / [double]$renderResult.tileWidth }
 if ($renderResult.sourceSha256.ToUpperInvariant() -cne $exportResult.sha256 -or -not $renderResult.sourceUnchanged -or
     -not $renderResult.isolatedRenders -or $renderResult.columns -lt 1 -or $renderResult.columns -gt 6 -or
-    $renderResult.rows -ne [Math]::Ceiling($Materials.Count / [double]$renderResult.columns)) {
+    $renderResult.rows -ne [Math]::Ceiling($Materials.Count / [double]$renderResult.columns) -or
+    $renderResult.contactSheetFitAxis -cne $expectedFitAxis -or
+    [Math]::Abs([double]$renderResult.contactSheetOrthoScale - $expectedOrthoScale) -gt 0.0001) {
     throw 'Blender preview source/layout verification failed.'
 }
 $png = [IO.File]::ReadAllBytes($output)
@@ -113,7 +117,8 @@ $result = [ordered]@{ schema = 'voyage.material-preview/1'; status = 'preview'; 
     previewPath = $output; sha256 = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash; width = $width; height = $height;
     materialCount = $Materials.Count; sourceGlbPath = $previewGlb; sourceGlbSha256 = $exportResult.sha256;
     isolatedRenders = $true; lightingRecipe = $renderResult.lightingRecipe; columns = $renderResult.columns; rows = $renderResult.rows;
-    tileWidth = $renderResult.tileWidth; tileHeight = $renderResult.tileHeight;
+    tileWidth = $renderResult.tileWidth; tileHeight = $renderResult.tileHeight; contactSheetFitAxis = $renderResult.contactSheetFitAxis;
+    contactSheetOrthoScale = $renderResult.contactSheetOrthoScale;
     sourceArtifactsEmbedded = $false; originalsWritten = $false; exportReportPath = (Join-Path $evidence 'export-report.json'); materials = @($Materials) }
 [IO.File]::WriteAllText($reportPath, ($result | ConvertTo-Json -Depth 5))
 $result['reportPath'] = $reportPath
