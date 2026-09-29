@@ -20,7 +20,7 @@ using SkiaSharp;
 
 namespace VoyageMaterialLibrary;
 
-internal static class Program
+internal static partial class Program
 {
     internal static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
@@ -30,16 +30,18 @@ internal static class Program
         try
         {
             if (args.Length == 2 && args[0] == "--self-test") return SelfTests.Run(args[1]);
+            if (args.Length == 3 && args[0] == "--finalize-material-pack") return FinalizeMaterialPack(args[1], args[2]);
+            if (args.Length == 2 && args[0] == "--verify-material-pack") return VerifyMaterialPack(args[1]);
             if (args.Length != 1) throw new ArgumentException("Usage: VoyageMaterialLibrary <request.json>");
             var request = JsonNode.Parse(File.ReadAllText(args[0]))!;
             string Str(string key) => request[key]!.GetValue<string>();
             var output = Path.GetFullPath(Str("output"));
             if (File.Exists(output)) throw new IOException("Output exists; choose a fresh output path.");
             var operation = request["operation"]?.GetValue<string>() ?? "MaterialGlb";
-            if (operation is not ("MaterialGlb" or "ColorTexturePreview"))
-                throw new ArgumentException("operation must be MaterialGlb or ColorTexturePreview.");
-            var materialMode = operation == "MaterialGlb" ? Str("materialMode") : "ColorTexturePreview";
-            if (operation == "MaterialGlb" && materialMode is not ("PbrApproximation" or "BakeReconstructed"))
+            if (operation is not ("MaterialGlb" or "ColorTexturePreview" or "MaterialPackStage"))
+                throw new ArgumentException("operation must be MaterialGlb, ColorTexturePreview or MaterialPackStage.");
+            var materialMode = operation is "MaterialGlb" or "MaterialPackStage" ? Str("materialMode") : "ColorTexturePreview";
+            if (operation is "MaterialGlb" or "MaterialPackStage" && materialMode is not ("PbrApproximation" or "BakeReconstructed"))
                 throw new ArgumentException("materialMode must be PbrApproximation or BakeReconstructed.");
             var assets = request["materials"]!.AsArray().Select(x => x!.GetValue<string>()).ToArray();
             ValidateAssets(assets);
@@ -64,64 +66,18 @@ internal static class Program
             if (operation == "ColorTexturePreview")
                 return ExportColorTexturePreview(provider, assets, output,
                     request["thumbnailSize"]?.GetValue<int>() ?? 512, build, exeHash, Str("mappingPath"));
+            if (operation == "MaterialPackStage")
+                return ExportMaterialPackStage(provider, assets, output, materialMode, build, exeHash, Str("mappingPath"));
             var textureCache = new Dictionary<string, TextureRecord>(StringComparer.Ordinal);
             var textureSources = new Dictionary<string, UUnrealMaterial>(StringComparer.Ordinal);
             var reports = new List<MaterialRecord>();
             var scene = new SceneBuilder();
             foreach (var asset in assets)
             {
-                var material = provider.LoadPackage(asset).GetExports().OfType<UMaterialInterface>().SingleOrDefault()
-                    ?? throw new InvalidDataException($"Not one Material/MaterialInstance: {asset}");
-                var chain = new List<UUnrealMaterial>();
-                for (UUnrealMaterial? current = material; current != null; current = (current as UMaterialInstance)?.Parent)
-                {
-                    if (chain.Count >= 64 || chain.Any(x => x.GetPathName() == current.GetPathName()))
-                        throw new InvalidDataException($"Cyclic/too-deep material parent chain: {asset}");
-                    chain.Add(current);
-                }
-                if (chain[^1] is not UMaterial) throw new InvalidDataException($"Unresolved master material: {asset}");
-                var parameters = new CMaterialParams2();
-                material.GetParams(parameters, EMaterialDepth.AllLayers);
-                var report = new MaterialRecord { Source = asset, Name = asset.Split('/')[^1],
-                    Parents = chain.Skip(1).Select(x => x.GetPathName()).ToArray(),
-                    Parameters = JsonNode.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(parameters))! };
-                report.Warnings.Add(materialMode == "BakeReconstructed"
-                    ? "Reconstructed bake from cooked parameters and known recipes; the stripped Unreal expression graph is not executed."
-                    : "Approximation, not Unreal shader baking. Layer mixing, world/object coordinates, UV math, vertex data, animation and runtime effects are not evaluated.");
-                foreach (var pair in parameters.Textures.OrderBy(x => x.Key, StringComparer.Ordinal))
-                {
-                    var path = pair.Value.GetPathName();
-                    report.Textures[pair.Key] = path;
-                    textureSources.TryAdd(path, pair.Value);
-                }
-                TextureRecord Resolve(string path)
-                {
-                    if (!textureCache.TryGetValue(path, out var texture))
-                        textureCache[path] = texture = Decode(parameters.Textures.Values.First(t => t.GetPathName() == path));
-                    return texture;
-                }
-                var builder = MakeMaterial(report, parameters, Resolve, materialMode);
-                var master = (UMaterial)chain[^1];
-                var blend = master.BlendMode;
-                var twoSided = master.TwoSided;
-                var cutoff = master.OpacityMaskClipValue;
-                foreach (var instance in chain.AsEnumerable().Reverse().OfType<UMaterialInstance>())
-                {
-                    var overrides = instance.GetOrDefault<CUE4Parse.UE4.Assets.Objects.FStructFallback>("BasePropertyOverrides");
-                    if (overrides == null) continue;
-                    if (overrides.GetOrDefault<bool>("bOverride_BlendMode")) blend = overrides.GetOrDefault<EBlendMode>("BlendMode");
-                    if (overrides.GetOrDefault<bool>("bOverride_TwoSided")) twoSided = overrides.GetOrDefault<bool>("TwoSided");
-                    if (overrides.GetOrDefault<bool>("bOverride_OpacityMaskClipValue")) cutoff = overrides.GetOrDefault<float>("OpacityMaskClipValue");
-                }
-                builder.WithDoubleSide(twoSided);
-                if (blend == EBlendMode.BLEND_Masked) builder.WithAlpha(SharpGLTF.Materials.AlphaMode.MASK, Math.Clamp(cutoff, 0, 1));
-                else if (blend == EBlendMode.BLEND_Translucent) builder.WithAlpha(SharpGLTF.Materials.AlphaMode.BLEND);
-                if (blend != EBlendMode.BLEND_Opaque) report.Warnings.Add($"Unreal {blend}; opacity graph not evaluated. Mask/blend uses base-color alpha only; other blend modes stay opaque.");
-                report.RenderState = new { blend = blend.ToString(), twoSided, cutoff, masterShadingModel = master.ShadingModel.ToString() };
-                builder.Extras = JsonSerializer.SerializeToNode(report, JsonOptions);
-                var mesh = Swatch(builder, $"{reports.Count:D3}_{report.Name}");
+                var reconstruction = ReconstructMaterial(provider, asset, materialMode, textureCache, textureSources);
+                var mesh = Swatch(reconstruction.Builder, $"{reports.Count:D3}_{reconstruction.Report.Name}");
                 scene.AddRigidMesh(mesh, Matrix4x4.CreateTranslation((reports.Count % 4) * 1.4f, -(reports.Count / 4) * 1.4f, 0));
-                reports.Add(report);
+                reports.Add(reconstruction.Report);
             }
             var model = scene.ToGltf2();
             MatchUsedImages(model, textureCache.Values);
@@ -369,7 +325,9 @@ internal static class Program
         var emissionValue = strength.Length == 1 && float.IsFinite(strength[0].Value) ? Math.Max(0, strength[0].Value) : 1;
         var emissive = emissionValue > 0 ? Select("emissive", "emissive", "emissivetexture", "emissivecolor") : null;
         if (emissionValue == 0) report.Warnings.Add("Emission is disabled by named scalar; its texture is neither decoded nor embedded.");
-        builder.WithBaseColor(Vector4.One).WithMetallicRoughness(Scalar("metallic", orm != null ? 1 : 0), Scalar("roughness", orm != null || roughness != null ? 1 : .8f));
+        report.MetallicFactor = Scalar("metallic", orm != null ? 1 : 0);
+        report.RoughnessFactor = Scalar("roughness", orm != null || roughness != null ? 1 : .8f);
+        builder.WithBaseColor(Vector4.One).WithMetallicRoughness(report.MetallicFactor, report.RoughnessFactor);
         if (baseColor != null)
         {
             var baseColorPng = ColorPng(baseColor);
@@ -450,6 +408,8 @@ internal static class Program
         {
             builder.WithEmissive(UsedImage(emissive, "emissive", ColorPng(emissive), emissive.Srgb ? "none" : "linear-to-sRGB"),
                 new Vector3(Math.Min(emissionValue, 1)), Math.Max(emissionValue, 1));
+            report.EmissiveFactor = [Math.Min(emissionValue, 1), Math.Min(emissionValue, 1), Math.Min(emissionValue, 1)];
+            report.EmissiveStrength = Math.Max(emissionValue, 1);
             if (strength.Length == 1) report.Bindings["emissiveStrength"] = strength[0].Key + " (named scalar)";
         }
         var color = parameters.Colors.Where(x => new[] { "basecolor", "basecolour", "colortint", "tint" }.Contains(Normalize(x.Key))).ToArray();
@@ -457,7 +417,9 @@ internal static class Program
         if (color.Length == 1 && !disableTint)
         {
             var c = color[0].Value;
-            builder.WithBaseColor(Vector4.Clamp(new Vector4(c.R, c.G, c.B, 1), Vector4.Zero, Vector4.One));
+            var factor = Vector4.Clamp(new Vector4(c.R, c.G, c.B, 1), Vector4.Zero, Vector4.One);
+            report.BaseColorFactor = [factor.X, factor.Y, factor.Z, factor.W];
+            builder.WithBaseColor(factor);
             report.Bindings["baseColorFactor"] = color[0].Key + " (linear named tint; shader switch not evaluated)";
         }
         foreach (var source in report.Textures.Values.Distinct().Where(p => !report.Bindings.ContainsValue(p)))
@@ -474,7 +436,7 @@ internal static class Program
     {
         var hash = Convert.ToHexString(SHA256.HashData(png));
         if (!source.Variants.Any(v => v.Role == role && v.Sha256 == hash))
-            source.Variants.Add(new TextureVariant { Role = role, Transform = transform, Sha256 = hash });
+            source.Variants.Add(new TextureVariant { Role = role, Transform = transform, Sha256 = hash, Data = png });
         return ImageBuilder.From(new MemoryImage(png));
     }
 
@@ -630,6 +592,11 @@ internal sealed class MaterialRecord
     public string[] Parents { get; set; } = [];
     public JsonNode Parameters { get; set; } = new JsonObject();
     public object? RenderState { get; set; }
+    public float[] BaseColorFactor { get; set; } = [1, 1, 1, 1];
+    public float MetallicFactor { get; set; }
+    public float RoughnessFactor { get; set; } = .8f;
+    public float[] EmissiveFactor { get; set; } = [0, 0, 0];
+    public float EmissiveStrength { get; set; } = 1;
     public Dictionary<string, string> Textures { get; } = new();
     public Dictionary<string, string> Bindings { get; } = new();
     public Dictionary<string, string> SkippedTextures { get; } = new();
@@ -702,6 +669,7 @@ internal sealed class TextureVariant
     public string Transform { get; set; } = "";
     public string Sha256 { get; set; } = "";
     public int ImageIndex { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore] public byte[]? Data { get; set; }
 }
 internal sealed class StockProvider(DirectoryInfo directory) : DefaultFileProvider(directory,
     SearchOption.TopDirectoryOnly, new VersionContainer(EGame.GAME_UE5_8), StringComparer.OrdinalIgnoreCase)

@@ -41,6 +41,18 @@ internal static class SelfTests
             "preview excludes named mask even when marked sRGB");
         Check(!Program.IsColorPreviewCandidate(new TextureRecord { Source = "/Game/T_PaintedMetal_ORM.T_PaintedMetal_ORM", Srgb = false, Png = png }, ["PM_SpecularMasks"]),
             "preview excludes linear data texture");
+        var sourcePolicyParameters = new CMaterialParams2();
+        Check(Program.IsImportantSkippedSource("/Game/T_RustMask.T_RustMask", ["Rust Mask"], sourcePolicyParameters, out _),
+            "material pack includes recognized skipped rust masks");
+        sourcePolicyParameters.Switches["Use Rust"] = false;
+        Check(!Program.IsImportantSkippedSource("/Game/T_RustMask.T_RustMask", ["Rust Mask"], sourcePolicyParameters, out _),
+            "material pack excludes explicitly disabled effects");
+        Check(!Program.IsImportantSkippedSource("/Game/T_DefaultWhite.T_DefaultWhite", ["Damage Mask"], new CMaterialParams2(), out _),
+            "material pack excludes fallback pixels");
+        Check(!Program.IsImportantSkippedSource("/Game/T_GenericColor.T_GenericColor", ["Unknown Parent Input"], new CMaterialParams2(), out _),
+            "material pack keeps unrelated parent inputs as metadata only");
+        Check(!Program.IsImportantSkippedSource("/Game/T_DirtMask_M.T_DirtMask_M", ["T_DirtMask_M"], new CMaterialParams2(), out _),
+            "material pack does not treat inherited texture-name bindings as active skipped effects");
         var record = new MaterialRecord { Source = "/Game/Test/M_A", Name = "M_A" };
         record.Textures["BaseColor"] = "color";
         record.Textures["Normal"] = "normal";
@@ -105,6 +117,37 @@ internal static class SelfTests
         var plainModel = plainScene.ToGltf2();
         Program.MatchUsedImages(plainModel, []);
         Check(plainModel.LogicalImages.Count == 0, "parameter-only material needs no images");
+        var packStage = Path.Combine(outputDirectory, "material-pack-stage");
+        Directory.CreateDirectory(Path.Combine(packStage, "pbr"));
+        using var previewBitmap = new SKBitmap(768, 768);
+        previewBitmap.Erase(new SKColor(40, 50, 60));
+        using (var previewData = previewBitmap.Encode(SKEncodedImageFormat.Webp, 100))
+            File.WriteAllBytes(Path.Combine(packStage, "preview.webp"), previewData.ToArray());
+        var packBaseColor = Path.Combine(packStage, "pbr", "basecolor.webp");
+        using (var baseColorData = bitmap.Encode(SKEncodedImageFormat.Webp, 100))
+            File.WriteAllBytes(packBaseColor, baseColorData.ToArray());
+        var packManifest = new
+        {
+            schemaVersion = 1,
+            material = new { name = "MI_Test", source = "/Game/Test/MI_Test", parents = Array.Empty<string>() },
+            renderState = new { blendMode = "BLEND_Opaque", shadingModel = "MSM_DefaultLit", twoSided = false, opacityMaskClipValue = (float?)null },
+            pbr = new { baseColorFactor = new[] { 1, 1, 1, 1 }, metallicFactor = 0, roughnessFactor = 1,
+                baseColor = new { file = "pbr/basecolor.webp", colorSpace = "sRGB", sha256 = Program.Hash(packBaseColor), width = 2, height = 2 } },
+            parameters = new { colors = new { }, scalars = new { }, switches = new { } },
+            textureBindings = new { }, sourceTextures = Array.Empty<object>(),
+            uv = new { mode = "unknown", tiling = (float[]?)null, offset = (float[]?)null, rotationDegrees = (float?)null },
+            reconstruction = new { mode = "BakeReconstructed", bakeOperations = Array.Empty<object>(), warnings = new[] { "bounded" }, skippedEffects = Array.Empty<object>() },
+            preview = new { file = "preview.webp", recipe = "voyage.material-sphere/1", width = 768, height = 768, renderer = "Blender EEVEE", exposure = 0 },
+            provenance = new { steamBuildId = "test" }
+        };
+        File.WriteAllText(Path.Combine(packStage, "manifest.json"), JsonSerializer.Serialize(packManifest));
+        var packOne = Path.Combine(outputDirectory, "pack-one", "MI_Test.materialpack.zip");
+        var packTwo = Path.Combine(outputDirectory, "pack-two", "MI_Test.materialpack.zip");
+        Check(Program.FinalizeMaterialPack(packStage, packOne) == 0 && Program.VerifyMaterialPack(packOne) == 0,
+            "material-pack build/readback");
+        Check(Program.FinalizeMaterialPack(packStage, packTwo) == 0 && Program.VerifyMaterialPack(packTwo) == 0,
+            "material-pack second build/readback");
+        Check(Program.Hash(packOne) == Program.Hash(packTwo), "material-pack archive must be deterministic");
         Console.WriteLine(JsonSerializer.Serialize(new { status = "passed", checks, path }));
         return 0;
     }

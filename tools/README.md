@@ -131,9 +131,18 @@ user did not choose, ask. Reconstructed bakes expose their complete machine cont
 outputs and unresolved layers; source pixels are not embedded unless they become
 an active or baked PBR output.
 Rendered material review uses `Export-VoyageMaterialPreview.ps1`: exact material
-list plus explicit material mode -> one Blender-rendered PNG of the exporter sample
-panels. Preview evidence omits source-only texture artifacts and writes no original
-decoded texture files.
+list plus explicit material mode -> one Blender-rendered PNG contact sheet with at
+most six columns. Each material is rendered as an isolated tile with the same local
+camera and lighting recipe, so batch position does not change illumination. Preview
+evidence omits source-only texture artifacts and writes no original decoded texture
+files.
+Material-only exchange uses `Export-VoyageMaterialPack.ps1`: one exact material
+plus explicit material mode -> one validated `<MaterialName>.materialpack.zip`
+with a fixed sphere preview, reconstructed PBR maps, complete parameter/binding/
+omission metadata, and only semantically bound skipped-effect source images. It
+contains no mesh or GLB payload. Source masks use lossless WebP and source normals
+use PNG; large meaningful skipped inputs can still dominate archive size, and
+every inclusion has a machine-readable reason.
 Source-only conversion/preview is outside game-tool coverage; extraction/build
 operations retain the normal game provenance gates.
 
@@ -153,6 +162,7 @@ container and evidence, without installation.
 | Export one stock StaticMesh or Blueprint default assembly | `Export-VoyageModelGlb.ps1` | Self-contained GLB with static hierarchy, transforms, bounded PBR materials and explicit omissions |
 | Export an exact batch of stock materials | `Export-VoyageMaterialsGlb.ps1` | Self-contained sample-panel GLB with inherited parameters, used textures and PBR approximation report |
 | Render a preview of reconstructed/approximate stock materials | `Export-VoyageMaterialPreview.ps1` | Blender-rendered sample-panel PNG; lightweight GLB evidence; no source-artifact archive or original texture files |
+| Export one stock material for material-only exchange | `Export-VoyageMaterialPack.ps1` | Validated `.materialpack.zip`; fixed WebP preview, baked PBR maps, parameter/provenance manifest, selected skipped-effect sources, no geometry |
 | Publish or validate the Inspector executable | `Publish-VoyageAssetInspectorBinary.ps1`, `Get-VoyageAssetInspectorBinary.ps1` | Stable single-file EXE; validated source/dependency/binary identity |
 | Extract an exact cooked package for packaging or byte-level work | `Extract-VoyagePackage.ps1` | Legacy `.uasset/.uexp`, `scriptobjects.bin`, and provenance manifest |
 | Publish or reuse canonical retoc | `Publish-RetocBinary.ps1` | Stable `.tools/bin/retoc.exe` plus hash/provenance manifest |

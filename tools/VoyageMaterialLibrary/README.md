@@ -1,4 +1,4 @@
-# Voyage material library -> GLB
+# Voyage material library -> GLB, preview or MaterialPack
 
 `../Export-VoyageMaterialsGlb.ps1` accepts a batch of exact material package
 identities and produces **one self-contained GLB**. It does not change the game,
@@ -10,6 +10,12 @@ builds lightweight sample-panel GLB evidence with the selected material mode, an
 renders that reconstructed/approximate material result to one PNG through Blender.
 Source-only texture artifacts are not embedded and original decoded textures are
 not written separately.
+
+`../Export-VoyageMaterialPack.ps1` exports one exact material to one
+`<MaterialName>.materialpack.zip`. The archive is a material-only handoff: it has
+no model, sample panel or GLB, and contains a fixed WebP sphere preview, final
+bounded PBR maps, machine-readable reconstruction metadata, and a conservative
+selection of source images for skipped layered effects.
 
 ## Normal use (Windows PowerShell 5.1)
 
@@ -30,11 +36,62 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageMater
   -OutputPath artifacts/material-export/my-material-preview.png
 ```
 
+Material-only exchange:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageMaterialPack.ps1 `
+  -Material /Game/AssetSets/CoreModularPieces/Decorations/Materials/MI_Deco_Ext_DamagedMetal `
+  -MaterialMode BakeReconstructed `
+  -OutputPath artifacts/material-export/MI_Deco_Ext_DamagedMetal.materialpack.zip
+```
+
+The filename is fixed by the material identity. Output must be a fresh path below
+repository `artifacts/`. One call exports exactly one material; callers that need
+several packs invoke the same black-box entry point once per identity. As with GLB
+and preview export, the caller must explicitly choose `PbrApproximation` or
+`BakeReconstructed`.
+
+## MaterialPack schema and payload policy
+
+Schema `1` stores the Unreal identity and parent chain, render state, PBR factors
+and files, named colors/scalars/switches, resolved texture bindings, UV evidence,
+bake operations, warnings, skipped effects, game/tool provenance, and a complete
+file inventory with hashes and dimensions. `preview.webp` uses the fixed
+`voyage.material-sphere/1` Blender recipe at 768x768. Base color and emission use
+lossless WebP; normal and ORM remain lossless PNG with OpenGL normal convention
+and R/G/B = occlusion/roughness/metallic.
+
+A missing PBR image means the scalar/factor is authoritative; uniform placeholder
+textures are not invented. Every referenced source texture has metadata. Source
+pixels are included only when an explicit semantic parameter identifies a known
+skipped effect (damage, mask, world/object projection, rust, dirt, wear, height,
+POM or a similar bounded category), it is not explicitly disabled, and it is not
+a default/fallback or merely an inherited texture-name binding. Selected source
+masks use lossless WebP; selected source normals use PNG. Active/baked inputs are
+not duplicated. Multiple identities with identical stored bytes share one file.
+
+The pack is assembled deterministically and then reopened by the published binary.
+Readback rejects unsafe/case-colliding ZIP paths, unreferenced files, geometry,
+missing sections, mismatched hashes/dimensions, invalid PBR conventions, and source
+payloads without an inclusion reason. A temporary sample GLB exists only inside
+the fresh staging directory to feed Blender and is deleted after successful ZIP
+validation; it is never archived. No Python runtime is required.
+
+This format remains a bounded cooked-parameter reconstruction, not recovered
+Unreal shader bytecode. A small number of meaningful 4K skipped-effect inputs can
+still dominate archive size; their inclusion is deliberate and visible in
+`sourceTextures`, rather than an implicit archive of all parent dependencies.
+
 The preview tool requires the same explicit `-MaterialMode` choice as GLB export.
 It invokes the published material exporter, omits the reconstructed mode's source
 artifact archive, retains only images actually bound to the sample materials, and
 renders the resulting GLB with Blender 5.0 or newer. The sibling `.png.evidence/`
 contains the lightweight source GLB, exporter report, hashes and Blender log.
+Wide batch previews use at most six columns. Every material is rendered in
+isolation with the same local camera and fixed lighting recipe before its tile is
+placed into the contact sheet; edge materials therefore receive the same lighting
+as center materials. Labels alternate within their tiles: even 1-based list
+positions are above and odd positions below.
 This is a material preview of the documented bounded reconstruction, not a view of
 raw texture dependencies and not an Unreal-rendered shader.
 The GLB machine manifest marks `sourceArtifactPolicy: omitted-for-preview`; bake
@@ -161,7 +218,7 @@ manifest. Normal export validates publication and source hashes, never invokes
 PowerShell launch uses hidden native child with captured stdout/stderr. Decoders'
 temporary native files, if needed, are confined to the fresh evidence directory.
 
-Validator requires Python3.10+ and Pillow, decodes/verifies every embedded PNG,
+The GLB validator requires Python3.10+ and Pillow, decodes/verifies every embedded PNG,
 checks texture hashes/dimensions against provenance and material identities. For
 schema2 it also rejects orphan images/textures and a texture on disabled emission.
 Schema1 legacy archives remain readable, without the used-only guarantee. The
