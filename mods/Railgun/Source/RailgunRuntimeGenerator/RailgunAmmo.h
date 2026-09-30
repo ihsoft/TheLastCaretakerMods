@@ -35,7 +35,7 @@ inline constexpr TCHAR CopperPackage[] = TEXT("/Game/Data/Assets/Materials/DA_Ma
 inline constexpr TCHAR CopperAsset[] = TEXT("DA_Material_Copper");
 inline constexpr TCHAR PlasticPackage[] = TEXT("/Game/Data/Assets/Materials/DA_Material_Plastic");
 inline constexpr TCHAR PlasticAsset[] = TEXT("DA_Material_Plastic");
-inline constexpr TCHAR AmmoBoxObjectPath[] = TEXT("/Game/AssetSets/Items/Ammobox/SM_Ammobox_03.SM_Ammobox_03");
+inline constexpr TCHAR AmmoCassetteObjectPath[] = TEXT("/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette");
 inline constexpr TCHAR DroppedActorClassPath[] = TEXT("/Game/Blueprints/BP_DynamicMeshActor.BP_DynamicMeshActor_C");
 inline constexpr TCHAR AmmoDisplayName[] = TEXT("Railgun Kinetic Rounds");
 inline constexpr TCHAR AmmoDescription[] = TEXT("Armor-piercing kinetic rounds. No explosives, just mass and velocity.");
@@ -44,14 +44,14 @@ inline constexpr TCHAR SkillDescription[] = TEXT("Unlocks the Railgun and its lo
 inline constexpr float AmmoWeight = 3.9f;
 inline constexpr float AmmoCraftTime = 6.0f;
 inline constexpr float AmmoCraftElectricityCost = 5.0f;
-inline constexpr int32 AmmoCraftAmount = 6;
+inline constexpr int32 AmmoCraftAmount = 1;
 inline constexpr int32 InventoryRoundCapacity = 6;
 inline constexpr float InventoryWeightLimit = AmmoWeight * InventoryRoundCapacity;
 inline constexpr uint8 AmmoCraftFilter = 3;
-inline constexpr int32 IronAmount = 2;
-inline constexpr int32 CopperAmount = 2;
+inline constexpr int32 IronAmount = 1;
+inline constexpr int32 CopperAmount = 1;
 inline constexpr int32 PlasticAmount = 1;
-inline constexpr int32 AmmoMaxDropCount = 50;
+inline constexpr int32 AmmoMaxDropCount = 1;
 inline constexpr float AmmoCaliber = 45.0f;
 inline constexpr int32 SkillTierRequirement = 19;
 inline constexpr int32 SkillResearchCost = 0;
@@ -96,7 +96,8 @@ UVoyageItemAmmo* CreateRailgunAmmo(UTexture2D* AmmoIcon)
     Ammo->Components.Add(CreateRailgunReference<UVoyageItemMaterial>(CopperPackage, CopperAsset), CopperAmount);
     Ammo->Components.Add(CreateRailgunReference<UVoyageItemMaterial>(PlasticPackage, PlasticAsset), PlasticAmount);
     FVoyageItemDropVariation DropVariation;
-    DropVariation.RenderAsset = TSoftObjectPtr<UObject>(FSoftObjectPath(AmmoBoxObjectPath));
+    DropVariation.RenderAsset = TSoftObjectPtr<UObject>(
+        FSoftObjectPath(AmmoCassetteObjectPath));
     Ammo->DropVariations.Add(DropVariation);
     Ammo->DroppedActor = TSoftClassPtr<AActor>(FSoftObjectPath(DroppedActorClassPath));
     Ammo->Caliber = AmmoCaliber;

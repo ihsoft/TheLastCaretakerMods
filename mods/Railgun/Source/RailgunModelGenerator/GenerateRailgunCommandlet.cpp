@@ -104,6 +104,7 @@ USCS_Node* AddChildNode(
 }
 
 #include "GlbShell.h"
+#include "AmmoCassetteImport.h"
 
 UGenerateRailgunCommandlet::UGenerateRailgunCommandlet()
 {
@@ -152,6 +153,7 @@ int32 UGenerateRailgunCommandlet::Main(const FString& Params)
         FPackageName::DoesPackageExist(RailgunAssetNames::BaseMeshPackageName) ||
         FPackageName::DoesPackageExist(RailgunAssetNames::YawMeshPackageName) ||
         FPackageName::DoesPackageExist(RailgunAssetNames::PitchMeshPackageName) ||
+        FPackageName::DoesPackageExist(RailgunAmmoCassette::PackageName) ||
         (RailgunAssetNames::IncludeBaseGameLoadedConnectorReference &&
             FPackageName::DoesPackageExist(RailgunAssetNames::LoadedConnectorPackageName)) ||
         (RailgunAssetNames::UsesStockCameraDroneClass &&
@@ -162,6 +164,20 @@ int32 UGenerateRailgunCommandlet::Main(const FString& Params)
         return 1;
     }
 
-    return RailgunGlb::Generate();}
+    FString AmmoCassetteSource;
+    if (!FParse::Value(*Params, RailgunAmmoCassette::SourceArgument,
+        AmmoCassetteSource) || !FPaths::FileExists(AmmoCassetteSource))
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("GenerateRailgun requires -AmmoCassette=<owned GLB>"));
+        return 1;
+    }
+    const int32 ShellResult = RailgunGlb::Generate();
+    if (ShellResult != 0)
+    {
+        return ShellResult;
+    }
+    return RailgunAmmoCassette::Generate(AmmoCassetteSource);
+}
 
 #endif

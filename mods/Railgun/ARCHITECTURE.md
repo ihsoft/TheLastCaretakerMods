@@ -87,18 +87,34 @@ is indispensable.
 | Description | Armor-piercing kinetic rounds. No explosives, just mass and velocity. |
 | Caliber / native tooltip | `45.0` / `45mm` |
 | Quality | Common |
-| Weight | `3.9` per round; six-round cassette displays `23.4 kg` |
-| Craft amount / time | `6` rounds / `6` seconds |
+| Weight | `3.9` per round; the six-round magazine limit is `23.4 kg` |
+| Craft amount / time | `1` round / `6` seconds |
 | Craft electricity cost / filter | `5` native units / `3` |
-| Recipe | Iron `2`, Copper `2`, Plastic `1` |
-| MaxDropCount | `50`; the tested batch yields one box of six rounds |
+| Recipe | Iron `1`, Copper `1`, Plastic `1` |
+| MaxDropCount | `1`; each physical pickup represents one round |
 
-The primary icon is mod-owned. Drop configuration uses the stock ammo box and
-`BP_DynamicMeshActor`. `WeaponData`, all projectile subexports, bullet/case
+The primary icon is mod-owned. Drop configuration uses the owned merged mesh
+`/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette` and the
+native `BP_DynamicMeshActor`. `WeaponData`, all projectile subexports, bullet/case
 fields, stock SFX/VFX, damage-type references, `SecondaryIcon` and `ScalePerItem`
 are absent. Imports are limited to the native item class/CDO, ammo category,
-recipe materials and owned icon. These omissions are validated for fabrication
-and pickup, not for firing this item through a stock sniper rifle.
+recipe materials, owned icon and the owned drop-mesh dependencies. These
+omissions are validated for fabrication and pickup, not for firing this item
+through a stock sniper rifle.
+
+`Assets/Fabricator/RailgunAmmoCassette.glb` is a user-authored rigid source for
+one physical round. Its sibling `ammo-cassette-source.json` binds the current
+source hash to an inspection snapshot: eight nodes, six mesh instances, three
+mesh definitions, 1508 triangles, two materials and six embedded images, with
+no skin or animation. Those counts describe this source revision rather than a
+permanent topology contract. The dedicated Interchange adapter combines all
+current instances, preserves imported materials and textures, applies a simple
+box collision, and records the resulting packages and mesh readback in the
+build inventory. The current Unreal readback is 1504 triangles with bounds
+`6.56 x 6.56 x 54.65952 cm`; the source audit and imported readback are recorded
+separately because mesh building may remove degenerate source triangles. A
+future source revision must refresh the sibling contract and pass the same
+source-to-import checks; it need not retain decorative node names or counts.
 
 After cook, the shared patcher matches this one item's package serialization
 to the exact stock Sniper Rod donor: unversioned property stream and matching
@@ -187,25 +203,24 @@ previously shot-ready gun into the red incomplete-charge state.
 
 ## Current game-validated checkpoint
 
-`build-20260929-061751` is the current firing, power-state, HUD-state and
-model-structure checkpoint. Its model
+`build-20260930-221701` is the current firing, power-state, HUD-state,
+model-structure and single-round fabrication checkpoint. Its model
 passes the six distinct, disjoint and nonempty cassette-subtree contract with
 all 36 render descendants covered by default hiding and propagated runtime
 visibility, while the six holders remain outside those subtrees. User gameplay
 confirmation covers the new model rendering, ammo visibility behavior, isolated
 zero-ammo warning, one-round firing debit, rejection without ammunition or
 charge, charge warning across offline, insufficient and ready states, 10 kW
-offline discharge, and persistence. The earlier validated inventory and
-fabrication contracts remain the foundation.
-The earlier 16-property ammo baseline established fabrication and pickup of one
-box with six rounds; gun/research validation remains separate.
+offline discharge, persistence, one-round fabrication and the owned physical
+ammo cassette. The earlier validated inventory and firing contracts remain the
+foundation.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Release evidence: `artifacts/railgun/build-20260929-061751/release-manifest.json`.
+- Release evidence: `artifacts/railgun/build-20260930-221701/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20260929-062140-build-20260929-061751-4e3ca500/install-manifest.json`.
+  `artifacts/installations/Railgun/20260930-222108-build-20260930-221701-237fa395/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 

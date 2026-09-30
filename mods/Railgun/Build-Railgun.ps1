@@ -36,6 +36,21 @@ $expectedModelFields = @('entryInteraction','fabricatorCollision','inventoryInte
 if ($model.schemaVersion -ne 1 -or (Compare-Object $modelFields $expectedModelFields)) { throw 'Unsupported Railgun model registry.' }
 $glbPath = [IO.Path]::GetFullPath((Join-Path $modelDirectory 'Railgun.glb'))
 if (-not (Test-Path -LiteralPath $glbPath -PathType Leaf)) { throw "GLB not found: $glbPath" }
+$ammoCassettePath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'Assets/Fabricator/RailgunAmmoCassette.glb'))
+$ammoCassetteContractPath = Join-Path $PSScriptRoot 'Assets/Fabricator/ammo-cassette-source.json'
+if (-not (Test-Path -LiteralPath $ammoCassettePath -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $ammoCassetteContractPath -PathType Leaf)) {
+    throw 'Railgun ammo cassette source or its owned contract is missing.'
+}
+$ammoCassetteContract = Get-Content -LiteralPath $ammoCassetteContractPath -Raw | ConvertFrom-Json
+$ammoCassetteContractFields = @($ammoCassetteContract.PSObject.Properties.Name | Sort-Object)
+if ($ammoCassetteContract.schemaVersion -ne 1 -or
+    (Compare-Object $ammoCassetteContractFields @('audit','importReadback','schemaVersion','sha256','sourceFile')) -or
+    $ammoCassetteContract.sourceFile -cne 'RailgunAmmoCassette.glb' -or
+    (Get-FileHash -LiteralPath $ammoCassettePath -Algorithm SHA256).Hash -cne
+        $ammoCassetteContract.sha256) {
+    throw 'Railgun ammo cassette source differs from its reviewed contract.'
+}
 # The stable filename makes model replacement independent of revision names.
 # Build provenance hashes the actual file and rejects edits during a build.
 $sourcePaths += @($glbPath.Substring($repo.Length + 1).Replace('\','/'))
@@ -143,15 +158,42 @@ if (Test-Path -LiteralPath $content) {
 $ddc = [IO.Path]::GetFullPath($CacheRoot)
 [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'Process')
 $null = New-Item -ItemType Directory -Path $ddc -Force
-Invoke-NativeStage 'generate' $editor @($project,'-run=GenerateRailgun','-ShellOnly','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-unreal.log')))
+Invoke-NativeStage 'generate' $editor @($project,'-run=GenerateRailgun','-ShellOnly',('-AmmoCassette=' + $ammoCassettePath),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-unreal.log')))
 $inventoryPath = Join-Path $output 'model-inventory.json'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Saved/RailgunGlbInventory.json') -Destination $inventoryPath
 $inventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
 $packages = @($inventory.packages)
 if ($packages.Count -lt 2 -or @($packages | Where-Object {
     -not $_.StartsWith('/Game/Mods/Railgun/Visual/') -and
+    -not $_.StartsWith('/Game/Mods/Railgun/Fabricator/AmmoCassette/') -and
     $_ -cne '/Game/Mods/Railgun/Module/BP_Module_Railgun'
 }).Count) { throw 'GLB cook inventory escaped owned packages.' }
+$ammoCassetteInventory = $inventory.ammoCassette
+$ammoCassetteBounds = @($ammoCassetteInventory.boundsCm)
+$expectedUnrealBoundsCm = @($ammoCassetteContract.importReadback.boundsCm)
+if ($null -eq $ammoCassetteInventory -or
+    $ammoCassetteInventory.meshPackage -cne '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette' -or
+    $ammoCassetteInventory.objectPath -cne '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette' -or
+    [int]$ammoCassetteInventory.triangles -ne [int]$ammoCassetteContract.importReadback.triangles -or
+    [int]$ammoCassetteInventory.materialSlots -ne [int]$ammoCassetteContract.audit.materials -or
+    [int]$ammoCassetteInventory.collisionPrimitives -lt 1 -or
+    @($ammoCassetteInventory.materialPackages).Count -ne [int]$ammoCassetteContract.audit.materials -or
+    @($ammoCassetteInventory.texturePackages).Count -ne [int]$ammoCassetteContract.audit.embeddedImages -or
+    $ammoCassetteBounds.Count -ne 3) {
+    throw 'Imported Railgun ammo cassette differs from its current source contract.'
+}
+for ($axis = 0; $axis -lt 3; $axis++) {
+    if ([Math]::Abs([double]$ammoCassetteBounds[$axis] - $expectedUnrealBoundsCm[$axis]) -gt 0.1) {
+        throw 'Imported Railgun ammo cassette bounds/axis conversion differs from source.'
+    }
+}
+foreach ($dependencyPackage in @($ammoCassetteInventory.meshPackage) +
+    @($ammoCassetteInventory.materialPackages) +
+    @($ammoCassetteInventory.texturePackages)) {
+    if ($packages -cnotcontains $dependencyPackage) {
+        throw "Ammo cassette dependency is absent from cook inventory: $dependencyPackage"
+    }
+}
 $shotSound = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/Railgun_Shot_Blast.wav')).Path
 $scopeOverlay = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/ScopeOverlay/ScopeOverlay.png')).Path
 $chargingStatusIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/ScopeOverlay/ChargingStatusIcon.png')).Path
@@ -451,19 +493,33 @@ $expectedClonePropertyNames = @(
 )
 $clonePropertyDifferences = @(Compare-Object -ReferenceObject $expectedClonePropertyNames `
     -DifferenceObject $clonePropertyNames -CaseSensitive)
+$cloneComponentAmounts = @{}
+foreach ($component in @($cloneItems[0].Properties.Components)) {
+    $componentKey = [string]$component.Key
+    if ($componentKey -match "^VoyageItemMaterial'(.+)'$") {
+        $componentKey = $matches[1]
+    }
+    $cloneComponentAmounts[$componentKey] = [int]$component.Value
+}
 if ($cloneItems[0].Package -cne $newPackage -or
     $clonePropertyDifferences.Count -ne 0 -or
     $clonePropertyNames -ccontains 'WeaponData' -or
     $clonePropertyNames -ccontains 'ScalePerItem' -or
-    [int]$cloneItems[0].Properties.MaxDropCount -ne 50 -or
+    [int]$cloneItems[0].Properties.MaxDropCount -ne 1 -or
     [double]$cloneItems[0].Properties.Caliber -ne 45.0 -or
     $cloneItems[0].Properties.Icon.ObjectPath -cne '/Game/Mods/Railgun/Fabricator/T_RailgunAmmoIcon.0' -or
     $clonePropertyNames -ccontains 'SecondaryIcon' -or
     [double]$cloneItems[0].Properties.Weight -ne 3.9 -or
     $cloneItems[0].Properties.Quality -cne 'EVoyageItemQuality::Common' -or
     [double]$cloneItems[0].Properties.CraftTime -ne 6.0 -or
-    [int]$cloneItems[0].Properties.CraftAmount -ne 6 -or
+    [int]$cloneItems[0].Properties.CraftAmount -ne 1 -or
+    $cloneComponentAmounts.Count -ne 3 -or
+    $cloneComponentAmounts['/Game/Data/Assets/Materials/DA_Material_Iron.DA_Material_Iron'] -ne 1 -or
+    $cloneComponentAmounts['/Game/Data/Assets/Materials/DA_Material_Copper.DA_Material_Copper'] -ne 1 -or
+    $cloneComponentAmounts['/Game/Data/Assets/Materials/DA_Material_Plastic.DA_Material_Plastic'] -ne 1 -or
     @($cloneItems[0].Properties.DropVariations).Count -ne 1 -or
+    $cloneItems[0].Properties.DropVariations[0].RenderAsset.AssetPathName -cne
+        '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette' -or
     $cloneItems[0].Properties.DroppedActor.AssetPathName -cne '/Game/Blueprints/BP_DynamicMeshActor.BP_DynamicMeshActor_C' -or
     $cloneItems[0].Properties.Name.SourceString -cne 'Railgun Kinetic Rounds' -or
     $cloneItems[0].Properties.Description.SourceString -cne 'Armor-piercing kinetic rounds. No explosives, just mass and velocity.') {

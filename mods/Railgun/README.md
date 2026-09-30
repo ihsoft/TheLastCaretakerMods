@@ -41,6 +41,9 @@ All mod-owned inputs live below this directory:
   file to revise geometry or materials without changing the build contract.
 - `Assets\Model\model-source.json` maps stable node roles and explicit
   interaction/collision boxes. It contains no revision metadata or stored hash.
+- `Assets\Fabricator\RailgunAmmoCassette.glb` is the user-authored physical
+  single-round pickup model. Its sibling `ammo-cassette-source.json` binds the
+  current source revision to the import readback contract.
 - `Assets\Railgun_Shot_Blast.wav` is the shot sound.
 - `Assets\Railgun.ini` is the distributable template and source of defaults,
   comments, ordering and formatting. `Settings\Railgun.settings.json` adds the

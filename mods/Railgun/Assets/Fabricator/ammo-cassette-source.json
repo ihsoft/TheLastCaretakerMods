@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFile": "RailgunAmmoCassette.glb",
+  "sha256": "80A1684A20033DA77C74398E18A0E86A02DDEB7C2760C706B3172E242F63B94D",
+  "audit": {
+    "nodes": 8,
+    "meshInstances": 6,
+    "meshDefinitions": 3,
+    "triangles": 1508,
+    "materials": 2,
+    "embeddedImages": 6,
+    "skins": 0,
+    "animations": 0,
+    "boundsMeters": [0.0656, 0.5465952, 0.0656]
+  },
+  "importReadback": {
+    "triangles": 1504,
+    "boundsCm": [6.56, 6.56, 54.65952]
+  }
+}

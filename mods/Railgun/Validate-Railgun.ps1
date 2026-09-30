@@ -30,6 +30,13 @@ function Require([bool]$Condition, [string]$Message) { if (-not $Condition) { th
 function PropertyNames($Value) {
     if ($Value.PSObject.Properties.Name -contains 'Properties') { @($Value.Properties.PSObject.Properties.Name) }
 }
+function ArrayPropertyCount($Value, [string]$Name) {
+    if ($null -ne $Value -and
+        @($Value.PSObject.Properties.Name) -ccontains $Name) {
+        return @($Value.$Name).Count
+    }
+    return 0
+}
 function JsonStringLeaves($Value) {
     if ($null -eq $Value) { return }
     if ($Value -is [string]) { $Value; return }
@@ -1104,6 +1111,35 @@ foreach ($name in @('PersistentComponent','DestructibleObjectComponent')) {
 $dynamic = @($shell | Where-Object { $_.Type -ceq 'VoyageDynamicCollisionComponent' })
 Require ($dynamic.Count -eq 1 -and $dynamic[0].Properties.bAutoWeld -eq $true) 'Missing auto-weld.'
 $inventory = Get-Content -LiteralPath $ModelInventory -Raw | ConvertFrom-Json
+$ammoCassetteContract = Get-Content -LiteralPath (Join-Path $PSScriptRoot `
+    'Assets/Fabricator/ammo-cassette-source.json') -Raw | ConvertFrom-Json
+$ammoCassetteInventory = $inventory.ammoCassette
+Require ($ammoCassetteInventory.meshPackage -ceq `
+    '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette') `
+    'Ammo cassette mesh package mismatch.'
+Require ($ammoCassetteInventory.objectPath -ceq `
+    '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette') `
+    'Ammo cassette object path mismatch.'
+Require ([int]$ammoCassetteInventory.triangles -eq `
+    [int]$ammoCassetteContract.importReadback.triangles) `
+    'Merged ammo cassette triangle readback changed for the bound source.'
+Require ([int]$ammoCassetteInventory.materialSlots -eq `
+    [int]$ammoCassetteContract.audit.materials) `
+    'Ammo cassette material-slot count mismatch.'
+Require ([int]$ammoCassetteInventory.collisionPrimitives -gt 0) `
+    'Ammo cassette has no simple collision.'
+Require (@($ammoCassetteInventory.materialPackages).Count -eq `
+    [int]$ammoCassetteContract.audit.materials) `
+    'Ammo cassette material package count mismatch.'
+Require (@($ammoCassetteInventory.texturePackages).Count -eq `
+    [int]$ammoCassetteContract.audit.embeddedImages) `
+    'Ammo cassette texture package count mismatch.'
+foreach ($package in @($ammoCassetteInventory.meshPackage) +
+    @($ammoCassetteInventory.materialPackages) +
+    @($ammoCassetteInventory.texturePackages)) {
+    Require (@($inventory.packages) -ccontains $package) `
+        ('Ammo cassette cook dependency is absent: ' + $package)
+}
 function Require-Child([string]$ParentName, [string]$ChildName) {
     $parent = @($shell | Where-Object { $_.Type -ceq 'SCS_Node' -and $_.Properties.InternalVariableName -ceq $ParentName })
     $child = @($shell | Where-Object { $_.Type -ceq 'SCS_Node' -and $_.Properties.InternalVariableName -ceq $ChildName })
@@ -1273,7 +1309,27 @@ for ($i=0; $i -lt 3; $i++) {
     Require ([Math]::Abs($boxes[0].Center.$axis - $config.centerCm[$i]) -lt 0.001) 'Fabricator collision center mismatch.'
 }
 Require ($body[0].Properties.CollisionTraceFlag -cin @('ECollisionTraceFlag::CTF_UseSimpleAsComplex','CTF_UseSimpleAsComplex')) 'Fabricator collision mode changed.'
-foreach ($package in @($inventory.packages | Where-Object { $_ -like '*/Materials/*' })) {
+$ammoCassetteMesh = @(Read-Candidate $ammoCassetteInventory.meshPackage)
+$ammoCassetteStaticMesh = @($ammoCassetteMesh | Where-Object { $_.Type -ceq 'StaticMesh' })
+$ammoCassetteBody = @($ammoCassetteMesh | Where-Object { $_.Type -ceq 'BodySetup' })
+Require ($ammoCassetteStaticMesh.Count -eq 1 -and $ammoCassetteBody.Count -eq 1) `
+    'Cooked ammo cassette mesh or BodySetup is missing.'
+$ammoCassetteAggGeom = $ammoCassetteBody[0].Properties.AggGeom
+$ammoCassetteSimpleCollisionCount =
+    (ArrayPropertyCount $ammoCassetteAggGeom 'BoxElems') +
+    (ArrayPropertyCount $ammoCassetteAggGeom 'SphereElems') +
+    (ArrayPropertyCount $ammoCassetteAggGeom 'SphylElems') +
+    (ArrayPropertyCount $ammoCassetteAggGeom 'ConvexElems')
+Require ($ammoCassetteSimpleCollisionCount -gt 0) `
+    'Cooked ammo cassette has no simple collision primitives.'
+if (@($ammoCassetteBody[0].Properties.PSObject.Properties.Name) -ccontains
+    'CollisionTraceFlag') {
+    Require ($ammoCassetteBody[0].Properties.CollisionTraceFlag -cnotmatch `
+        'UseComplexAsSimple') 'Ammo cassette collision became complex-only.'
+}
+foreach ($package in @(@($inventory.packages | Where-Object {
+    $_ -like '*/Materials/*'
+}) + @($ammoCassetteInventory.materialPackages) | Sort-Object -Unique)) {
     $exports = @(Read-Candidate $package)
     $material = @($exports | Where-Object { $_.Type -ceq 'MaterialInstanceConstant' })
     Require ($material.Count -eq 1) ('Expected imported material: ' + $package)
@@ -1291,6 +1347,11 @@ foreach ($package in @($inventory.packages | Where-Object { $_ -like '*/Material
     Require $hasPbrData ('Importer lost PBR parameters: ' + $package)
     Require ($material[0].Properties.Parent.ObjectPath -like '/InterchangeAssets/gltf/MaterialInstances/MI_Default_Opaque.*') 'Unreviewed material parent; check against stock and source before shipping.'
     $materialEvidence += [pscustomobject]@{package=$package;parent=$material[0].Properties.Parent.ObjectPath}
+}
+foreach ($package in @($ammoCassetteInventory.texturePackages)) {
+    $textureExports = @(Read-Candidate $package)
+    Require (@($textureExports | Where-Object { $_.Type -ceq 'Texture2D' }).Count -eq 1) `
+        ('Expected one cooked ammo cassette texture: ' + $package)
 }
 $gun = @(Read-Candidate $gunItemPackage)
 $gunItem = @($gun | Where-Object { $_.Type -ceq 'VoyageItem' -and $_.Name -ceq 'DA_Item_Module_RailgunCannonMk01' })
@@ -1332,7 +1393,7 @@ $expectedAmmoPropertyNames = @(
 Require (@(Compare-Object -ReferenceObject $expectedAmmoPropertyNames -DifferenceObject $ammoPropertyNames -CaseSensitive).Count -eq 0) 'Ammo serialized top-level property set differs from the approved Railgun contract.'
 Require ($ammoPropertyNames -cnotcontains 'WeaponData') 'Removed ammo weapon data was serialized.'
 Require ($ammoPropertyNames -cnotcontains 'ScalePerItem') 'Removed ammo scale-per-item was serialized.'
-Require ($ammoProperties.MaxDropCount -eq 50) 'Ammo max-drop count mismatch.'
+Require ($ammoProperties.MaxDropCount -eq 1) 'Ammo max-drop count mismatch.'
 Require ([Math]::Abs($ammoProperties.Caliber - 45.0) -lt 0.000001) 'Ammo caliber mismatch.'
 Require ($ammoPropertyNames -cnotcontains 'SecondaryIcon') 'Removed ammo secondary icon was serialized.'
 Require ($ammoPropertyNames -cnotcontains 'MaxStackCount') 'Authored ammo must retain the native MaxStackCount default.'
@@ -1343,10 +1404,10 @@ Require ($ammoProperties.Quality -ceq 'EVoyageItemQuality::Common') 'Ammo qualit
 Require ([Math]::Abs($ammoProperties.Weight - 3.9) -lt 0.000001) 'Ammo mass mismatch.'
 Require ([Math]::Abs($ammoProperties.CraftTime - 6.0) -lt 0.000001) 'Ammo craft time mismatch.'
 Require ([Math]::Abs($ammoProperties.CraftElectricityCost - 5.0) -lt 0.000001) 'Ammo craft energy mismatch.'
-Require ($ammoProperties.CraftAmount -eq 6 -and $ammoProperties.CraftFilter -eq 3) 'Ammo fabrication contract mismatch.'
+Require ($ammoProperties.CraftAmount -eq 1 -and $ammoProperties.CraftFilter -eq 3) 'Ammo fabrication contract mismatch.'
 $expectedComponents = @{
-    "/Game/Data/Assets/Materials/DA_Material_Iron.DA_Material_Iron" = 2
-    "/Game/Data/Assets/Materials/DA_Material_Copper.DA_Material_Copper" = 2
+    "/Game/Data/Assets/Materials/DA_Material_Iron.DA_Material_Iron" = 1
+    "/Game/Data/Assets/Materials/DA_Material_Copper.DA_Material_Copper" = 1
     "/Game/Data/Assets/Materials/DA_Material_Plastic.DA_Material_Plastic" = 1
 }
 Require (@($ammoProperties.Components).Count -eq $expectedComponents.Count) 'Ammo component count mismatch.'
@@ -1357,7 +1418,9 @@ foreach ($component in @($ammoProperties.Components)) {
     Require ($component.Value -eq $expectedComponents[$key]) ('Ammo component amount mismatch: ' + $key)
 }
 Require (@($ammoProperties.DropVariations).Count -eq 1) 'Ammo drop variation mismatch.'
-Require ($ammoProperties.DropVariations[0].RenderAsset.AssetPathName -ceq '/Game/AssetSets/Items/Ammobox/SM_Ammobox_03.SM_Ammobox_03') 'Ammo drop mesh mismatch.'
+Require ($ammoProperties.DropVariations[0].RenderAsset.AssetPathName -ceq `
+    '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette') `
+    'Ammo drop mesh mismatch.'
 Require ($ammoProperties.DroppedActor.AssetPathName -ceq '/Game/Blueprints/BP_DynamicMeshActor.BP_DynamicMeshActor_C') 'Ammo dropped actor mismatch.'
 Require ($ammoProperties.Name.SourceString -ceq 'Railgun Kinetic Rounds') 'Ammo name mismatch.'
 Require ($ammoProperties.Description.SourceString -ceq

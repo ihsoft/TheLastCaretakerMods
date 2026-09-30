@@ -25,6 +25,7 @@ public class RailgunModelGenerator : ModuleRules
             "InputCore",
             "InterchangeEngine",
             "InterchangeCore",
+            "InterchangePipelines",
             "Json",
             "KismetCompiler",
             "MeshConversion",
