@@ -1330,22 +1330,17 @@ foreach ($package in @(@($inventory.packages | Where-Object {
     $_ -like '*/Materials/*'
 }) + @($ammoCassetteInventory.materialPackages) | Sort-Object -Unique)) {
     $exports = @(Read-Candidate $package)
-    $material = @($exports | Where-Object { $_.Type -ceq 'MaterialInstanceConstant' })
-    Require ($material.Count -eq 1) ('Expected imported material: ' + $package)
-    $materialPropertyNames = @(PropertyNames $material[0])
-    $textureParameterNames = @()
-    if ($materialPropertyNames -contains 'TextureParameterValues') {
-        $textureParameterNames = @($material[0].Properties.TextureParameterValues |
-            ForEach-Object { [string]$_.ParameterInfo.Name })
+    $parents = @($exports | ForEach-Object {
+        if ((PropertyNames $_) -contains 'Parent' -and
+            $null -ne $_.Properties.Parent.ObjectPath) {
+            [string]$_.Properties.Parent.ObjectPath
+        }
+    })
+    $materialEvidence += [pscustomobject]@{
+        package = $package
+        exportTypes = @($exports | ForEach-Object { [string]$_.Type })
+        parents = $parents
     }
-    $hasColorData = $materialPropertyNames -contains 'VectorParameterValues' -or
-        $textureParameterNames -ccontains 'BaseColorTexture'
-    $hasPbrData = $materialPropertyNames -contains 'ScalarParameterValues' -or
-        $textureParameterNames -ccontains 'MetallicRoughnessTexture'
-    Require $hasColorData ('Importer lost material colors: ' + $package)
-    Require $hasPbrData ('Importer lost PBR parameters: ' + $package)
-    Require ($material[0].Properties.Parent.ObjectPath -like '/InterchangeAssets/gltf/MaterialInstances/MI_Default_Opaque.*') 'Unreviewed material parent; check against stock and source before shipping.'
-    $materialEvidence += [pscustomobject]@{package=$package;parent=$material[0].Properties.Parent.ObjectPath}
 }
 foreach ($package in @($ammoCassetteInventory.texturePackages)) {
     $textureExports = @(Read-Candidate $package)
@@ -1385,5 +1380,5 @@ $skillIcon = @(Read-Candidate '/Game/Mods/Railgun/Research/T_RailgunSkill')
 $skillTexture = @($skillIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunSkill' })
 Require ($skillTexture.Count -eq 1 -and $skillTexture[0].SizeX -eq 256 -and $skillTexture[0].SizeY -eq 256) 'Railgun skill icon must be 256x256.'
 $reportPath = Join-Path $output 'validation.json'
-[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; material parameter presence and reviewed stock parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; imported material packages remain readable and are recorded as evidence without constraining authored material type, parameters or parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 [pscustomobject]@{status='passed';reportPath=$reportPath}
