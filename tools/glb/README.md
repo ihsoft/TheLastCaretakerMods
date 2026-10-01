@@ -73,17 +73,6 @@ linear PBR inputs. Missing textures must stay explicit, not silently synthesized
 
 ## Collection policy / pending capabilities
 
-### Railgun native-import verification
-
-`verify_harpoon_import.py --source-audit <inspect_glb JSON> --inventory
-<RailgunGlbInventory JSON> --semantic <Validate-Railgun validation.json>` compares
-all rigid model-node local transforms after glTF-to-Unreal axis/unit conversion,
-hierarchy, mesh presence, and cooked untextured base-color/emissive/metallic/
-roughness factors. Requires Python3.10+ and NumPy. It reads evidence only and
-does not import or rewrite assets. It rejects textures/animations; shader
-appearance and gameplay still require a game test. Omitted factor overrides
-use glTF defaults and require the reviewed stock native parent.
-
 Railgun's `Build-Railgun.ps1` imports GLB through native Interchange and emits
 a derived component/package inventory. Placement, construction and operator/optics
 are game-validated; save persistence and multiplayer are not. The reusable parser

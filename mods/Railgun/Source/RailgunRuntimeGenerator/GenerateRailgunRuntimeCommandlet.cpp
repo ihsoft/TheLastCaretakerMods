@@ -570,7 +570,6 @@ namespace
 #include "StationFixationProbe.h"
 #include "StationNativeHudProbe.h"
 #include "NativeVehicleProbe.h"
-#include "ForkliftEntryProbe.h"
 #include "StationActionHints.h"
 #include "ContextEntryProbe.h"
 #include "RailgunShot.h"
