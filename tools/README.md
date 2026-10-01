@@ -94,11 +94,6 @@ PowerShell wrappers. Keep real-task samples and their limits in
 
 ## Choose a tool
 
-For the standard electrical socket's geometry-only planning reference, see
-[VoyageMeshReference](VoyageMeshReference/README.md): stock mesh LOD0, approximate
-colors, Blender/GLB and readback checks. Not full Unreal-material/Nanite export;
-validated target/build and limits are in its README.
-
 The Railgun producer accepts `-CacheRoot`; its local default is
 `P:\UnrealCache\TheLastCaretakerMods\UE5.8` (Zen in its `Zen` subdirectory).
 This is process-scoped selection, not a global cache migration or cleanup.

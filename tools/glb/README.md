@@ -18,7 +18,6 @@ uses Python 3.10+ and does not require launching Blender.
 | Direct render of actual GLB | preview_glb.py | Blender built-in glTF importer; PNG, no source rewrite |
 | Render imported GLB materials as labeled swatches | preview_material_glb.py | Blender built-in glTF importer; identical UV spheres and controlled lighting; PNG, no source rewrite |
 | Convert editable Blender hierarchy to GLB | export_blender_glb.py | Blender built-in exporter, source hash/geometry/material readback |
-| Extract original game socket geometry | ../VoyageMeshReference | Fingerprinted stock-only LOD0; approximate palette; original UVs/pivot |
 | Extract a stock model or Blueprint default assembly | ../Export-VoyageModelGlb.ps1 | [Exact asset -> self-contained GLB](../VoyageModelExporter/README.md); static hierarchy/transforms, ordinary render geometry, bounded PBR materials and explicit omissions |
 | Extract a material library from game | ../Export-VoyageMaterialsGlb.ps1 | [Batch exact paths -> GLB](../VoyageMaterialLibrary/README.md); active/baked PBR images, metadata-only source identities, inherited parameters and omissions report |
 | Verify extracted material library | verify_material_library.py | Python3.10+, Pillow; embedded PNG/hash/dimension/provenance checks; schema2 rejects unbound images |

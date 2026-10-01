@@ -136,24 +136,13 @@ Final public batch took 48.35s; SHA256
 B60CD07CDCF5C4B09A8794B776EE6B3C03B47A9817FC11D86F98FB930A05949D.
 
 GLB-first model workflow is now a direct user requirement. Keep reusable GLB
-inspection/conversion/preview tools and the stock mesh reference reader; extend
+inspection/conversion/preview tools and the stock model exporter; extend
 texture/material extraction when a real asset request needs it. The current
 catalog is tools/glb/README.md. Do not confuse the prior rejection of speculative
 model pipeline expansion with a ban on these requested utilities. Harpoon V1
 is a local GLB baseline, not yet supported by the old OBJ shell build bridge;
 consumer migration belongs to the model/gameplay owners. No full Unreal shader
 or texture conversion is currently claimed.
-
-Model-owned socket export, 2026-09-15 UTC: real request narrowed to original
-electrical socket geometry with approximate colors. Public fingerprint/mapping
-covered 2 operations; raw geometry extraction was an uncovered third (2/3 at entry).
-JSON tools omit raw positions/indices. Narrow tools/VoyageMeshReference reader now
-tested on one stock socket LOD0, Steam25191271, with 2932 triangles/3 slots and GLB
-readback. Blender assembly/render/conversion is source-only, excluded from metric.
-No evidence for arbitrary meshes; full materials/textures/Nanite remain deferred.
-Do not restore a broad model pipeline. Method/limits in its README. Development
-cost: SDK config permission retry, CUE API adjustment, duplicate-face preservation;
-no game build/install/shared producer changes. Future adoption remains unmeasured.
 
 This file contains only unresolved cross-cutting pipeline work. Current public
 interfaces and commands live in [`tools/README.md`](../tools/README.md), accepted
