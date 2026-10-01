@@ -44,6 +44,15 @@ All mod-owned inputs live below this directory:
 - `Assets\Fabricator\RailgunAmmoCassette.glb` is the user-authored physical
   single-round pickup model. Its sibling `ammo-cassette-source.json` binds the
   current source revision to the import readback contract.
+- `Assets\Fabricator\railgun-ammo-item.json`,
+  `Assets\Fabricator\railgun-item.json` and
+  `Assets\Skill\railgun-skill.json` are the editable authoritative serialized
+  sources for the ammo, gun item and research skill.
+  `Assets\data-assets-contract.json` binds their package/native identities and
+  owns one shared game, mapping, writer and revalidation gate for the complete
+  set. It does not freeze editable gameplay or display values. The build writes
+  all three JSON files directly as staged packages; it does not read, copy or
+  patch stock asset packages.
 - `Assets\Railgun_Shot_Blast.wav` is the shot sound.
 - `Assets\Railgun.ini` is the distributable template and source of defaults,
   comments, ordering and formatting. `Settings\Railgun.settings.json` adds the

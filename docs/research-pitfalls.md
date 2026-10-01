@@ -303,7 +303,7 @@ no-op или неверную архитектуру. Цель — не повт
   exception, а не поломку CLR. Для наших повторявшихся диалогов журнал
   `.NET Runtime` показал ожидаемые `InvalidDataException`,
   `DirectoryNotFoundException` и LINQ assertion failures из
-  `VoyageAssetPatcher`/`VoyageAssetInspector`, а не runtime fault. CLI tools
+  прежних asset tools и `VoyageAssetInspector`, а не runtime fault. CLI tools
   должны перехватывать верхнеуровневое exception, печатать краткую ошибку и
   возвращать exit code `1`, чтобы диагностический отказ не выглядел как crash
   самого `.NET`.

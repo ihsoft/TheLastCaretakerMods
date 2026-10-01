@@ -353,10 +353,11 @@ void AddRailgunInventoryInteraction(UBlueprint* BP)
     G.Link(G.Pin(Part, P::Else), G.Pin(EmptyResult, P::Execute));
 }
 
-void ConfigureRailgunInventory(UVoyageItemAmmo* Ammo)
+void ConfigureRailgunInventory(UVoyageItemAmmo* Ammo,
+    UVoyageItemCategoryAsset* AmmoCategoryAsset, float AmmoWeightKg)
 {
     using namespace RailgunInventory;
-    check(Ammo && Ammo->Category == EVoyageItemCategory::Ammo && Ammo->CategoryAsset);
+    check(Ammo && AmmoCategoryAsset && AmmoWeightKg > 0.0f);
     UBlueprint* BP = LoadObject<UBlueprint>(nullptr, ModuleObjectPath);
     check(BP && BP->ParentClass == AVoyageModuleActor::StaticClass());
 
@@ -388,10 +389,11 @@ void ConfigureRailgunInventory(UVoyageItemAmmo* Ammo)
     Inventory->AcceptedItemCategories.Add(EVoyageItemCategory::Ammo);
     Inventory->Access = EVoyageInventoryAccessType::ReadWrite;
     Inventory->bAllowFiltering = false;
-    Inventory->DepositAllCategoryFilter.Add(Ammo->CategoryAsset);
+    Inventory->DepositAllCategoryFilter.Add(AmmoCategoryAsset);
     Inventory->bAllowNearbyQueries = false;
     Inventory->bAutoCloseHudWhenEmpty = false;
-    Inventory->MaxWeightLimit = RailgunAmmo::InventoryWeightLimit;
+    Inventory->MaxWeightLimit =
+        AmmoWeightKg * static_cast<float>(RailgunAmmo::InventoryRoundCapacity);
     Inventory->bAllowBeyondWeightLimit = false;
 
     USCS_Node* InteractionNode = SCS->CreateNode(

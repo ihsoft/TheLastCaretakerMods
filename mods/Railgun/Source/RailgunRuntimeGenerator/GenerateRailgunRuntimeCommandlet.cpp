@@ -867,17 +867,10 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     }
     const bool Dedicated = FParse::Param(*Params, DedicatedStationNames::DedicatedSwitch);
     checkf(Dedicated, TEXT("HC24 runtime emission is rejected; use DedicatedStation only"));
-    FString StockRegistryFile;
-    checkf(FParse::Value(*Params, TEXT("StockRegistry="), StockRegistryFile) && FPaths::FileExists(StockRegistryFile),
-        TEXT("DedicatedStation requires the current game's stock registry"));
-    FAssetRegistryState StockResearchRegistry;
-    checkf(FAssetRegistryState::LoadFromDisk(*StockRegistryFile, FAssetRegistryLoadOptions(), StockResearchRegistry),
-        TEXT("Cannot read the current game's stock registry for skill identity"));
-    const FAssetData* StockResearchSkill = StockResearchRegistry.GetAssetByObjectPath(
-        FSoftObjectPath(RailgunAmmo::StockSkillPath));
-    checkf(StockResearchSkill && StockResearchSkill->GetPrimaryAssetId().IsValid(),
-        TEXT("Stock Sniper Rod skill is absent from the current game's primary asset registry"));
-    const FPrimaryAssetType SkillType = StockResearchSkill->GetPrimaryAssetId().PrimaryAssetType;
+    float AmmoWeightKg = 0.0f;
+    checkf(FParse::Value(*Params, RailgunAmmo::AmmoWeightSourceArgument,
+        AmmoWeightKg) && AmmoWeightKg > 0.0f,
+        TEXT("DedicatedStation requires a positive ammo weight from the owned JSON"));
     FString ShotSoundFile;
     checkf(FParse::Value(*Params, ShotAudio::SourceArgument, ShotSoundFile) && FPaths::FileExists(ShotSoundFile),
         TEXT("Missing shot sound source: %s"), *ShotSoundFile);
@@ -901,19 +894,18 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     EnergyHud::AmmoIndicatorTexture = ImportRequiredTexture(
         EnergyHud::AmmoIndicatorSourceArgument, EnergyHud::AmmoIndicatorPackage,
         EnergyHud::AmmoIndicatorAsset, true);
-    UTexture2D* AmmoIcon = ImportRequiredTexture(RailgunAmmo::AmmoIconSourceArgument,
+    ImportRequiredTexture(RailgunAmmo::AmmoIconSourceArgument,
         RailgunAmmo::AmmoIconPackage, RailgunAmmo::AmmoIconAsset, true);
     ImportRequiredTexture(RailgunAmmo::GunIconSourceArgument,
         RailgunAmmo::GunIconPackage, RailgunAmmo::GunIconAsset, true);
-    UTexture2D* SkillIcon = ImportRequiredTexture(RailgunAmmo::SkillIconSourceArgument,
+    ImportRequiredTexture(RailgunAmmo::SkillIconSourceArgument,
         RailgunAmmo::SkillIconPackage, RailgunAmmo::SkillIconAsset, true);
-    UVoyageSkill* RailgunSkill = CreateRailgunResearchSkill(SkillIcon, AmmoIcon, SkillType);
-    checkf(RailgunSkill->Type == SkillType && RailgunSkill->Items.Num() == 2 &&
-        RailgunSkill->Unlock.UnlockMethod == EVoyageSkillUnlockMethod::Tier &&
-        RailgunSkill->Unlock.Cost == RailgunAmmo::SkillResearchCost &&
-        RailgunSkill->Unlock.Requirement == RailgunAmmo::SkillTierRequirement,
-        TEXT("Generated Railgun research skill has the wrong unlock method, items, requirement, cost, or declared primary type"));
-    ConfigureRailgunInventory(CastChecked<UVoyageItemAmmo>(RailgunSkill->Items[1]));
+    UVoyageItemAmmo* Ammo = CreateRailgunAmmoReference();
+    CreateRailgunSkillReference();
+    UVoyageItemCategoryAsset* AmmoCategory =
+        CreateRailgunReference<UVoyageItemCategoryAsset>(
+            RailgunAmmo::AmmoCategoryPackage, RailgunAmmo::AmmoCategoryAsset);
+    ConfigureRailgunInventory(Ammo, AmmoCategory, AmmoWeightKg);
     Shot::Class=CreateRailgunShot();
     UClass* StationClass = CreateDedicatedStation();
     UPackage* Package = CreatePackage(N::Package);

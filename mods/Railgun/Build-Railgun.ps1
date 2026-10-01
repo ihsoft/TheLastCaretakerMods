@@ -38,9 +38,17 @@ $glbPath = [IO.Path]::GetFullPath((Join-Path $modelDirectory 'Railgun.glb'))
 if (-not (Test-Path -LiteralPath $glbPath -PathType Leaf)) { throw "GLB not found: $glbPath" }
 $ammoCassettePath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'Assets/Fabricator/RailgunAmmoCassette.glb'))
 $ammoCassetteContractPath = Join-Path $PSScriptRoot 'Assets/Fabricator/ammo-cassette-source.json'
+$ammoItemJsonPath = Join-Path $PSScriptRoot 'Assets/Fabricator/railgun-ammo-item.json'
+$skillJsonPath = Join-Path $PSScriptRoot 'Assets/Skill/railgun-skill.json'
+$gunJsonPath = Join-Path $PSScriptRoot 'Assets/Fabricator/railgun-item.json'
+$dataAssetContractPath = Join-Path $PSScriptRoot 'Assets/data-assets-contract.json'
 if (-not (Test-Path -LiteralPath $ammoCassettePath -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $ammoCassetteContractPath -PathType Leaf)) {
-    throw 'Railgun ammo cassette source or its owned contract is missing.'
+    -not (Test-Path -LiteralPath $ammoCassetteContractPath -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $ammoItemJsonPath -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $skillJsonPath -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $gunJsonPath -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $dataAssetContractPath -PathType Leaf)) {
+    throw 'Railgun item/skill source or the shared data-asset contract is missing.'
 }
 $ammoCassetteContract = Get-Content -LiteralPath $ammoCassetteContractPath -Raw | ConvertFrom-Json
 $ammoCassetteContractFields = @($ammoCassetteContract.PSObject.Properties.Name | Sort-Object)
@@ -51,6 +59,104 @@ if ($ammoCassetteContract.schemaVersion -ne 1 -or
         $ammoCassetteContract.sha256) {
     throw 'Railgun ammo cassette source differs from its reviewed contract.'
 }
+function Read-OwnedAssetJson([string]$JsonPath, $Contract,
+    [string]$Label) {
+    $contractFields = @($contract.PSObject.Properties.Name | Sort-Object)
+    $expectedJsonPath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot $contract.sourceFile))
+    if ((Compare-Object $contractFields @('class','object','package','sourceFile')) -or
+        $expectedJsonPath -cne [IO.Path]::GetFullPath($JsonPath)) {
+        throw "$Label entry has an unsupported identity schema or source path."
+    }
+    $source = Get-Content -LiteralPath $JsonPath -Raw | ConvertFrom-Json
+    $primaryExports = @($source.Exports | Where-Object {
+        $_.ObjectName -ceq $contract.object
+    })
+    if ($source.FolderName -cne $contract.package -or $primaryExports.Count -ne 1 -or
+        @($source.Exports | Where-Object { $_.'$type' -like '*RawExport*' }).Count -ne 0) {
+        throw "$Label JSON has the wrong package identity, primary export, or a RawExport."
+    }
+    $classIndex = [int]$primaryExports[0].ClassIndex
+    $classImportIndex = -$classIndex - 1
+    if ($classIndex -ge 0 -or $classImportIndex -lt 0 -or
+        $classImportIndex -ge @($source.Imports).Count -or
+        $source.Imports[$classImportIndex].ObjectName -cne $contract.class) {
+        throw "$Label JSON primary export has the wrong native class."
+    }
+    $nullPackageImports = @($source.Imports | Where-Object {
+        [string]::IsNullOrEmpty([string]$_.PackageName)
+    })
+    if ($nullPackageImports.Count -ne 0) {
+        $names = @($nullPackageImports | ForEach-Object { [string]$_.ObjectName })
+        throw "$Label JSON has imports with null PackageName: $($names -join ', ')."
+    }
+    [pscustomobject]@{contract=$contract;source=$source;primary=$primaryExports[0]}
+}
+$dataAssetContract = Get-Content -LiteralPath $dataAssetContractPath -Raw |
+    ConvertFrom-Json
+$dataAssetContractFields = @($dataAssetContract.PSObject.Properties.Name |
+    Sort-Object)
+$serializationFields = @($dataAssetContract.serialization.PSObject.Properties.Name |
+    Sort-Object)
+$expectedAssetSources = @(
+    'Assets/Fabricator/railgun-ammo-item.json',
+    'Assets/Fabricator/railgun-item.json',
+    'Assets/Skill/railgun-skill.json'
+)
+$actualAssetSources = @($dataAssetContract.assets | ForEach-Object {
+    [string]$_.sourceFile
+} | Sort-Object)
+if ($dataAssetContract.schemaVersion -ne 1 -or
+    (Compare-Object $dataAssetContractFields @(
+        'assets','revalidateWhen','schemaVersion','serialization')) -or
+    (Compare-Object $serializationFields @(
+        'engineVersion','executableSha256','mappingSha256','steamBuildId',
+        'uassetApiCommit','uassetGuiCommit','uassetGuiSha256')) -or
+    (Compare-Object $actualAssetSources @($expectedAssetSources | Sort-Object)) -or
+    @($dataAssetContract.assets).Count -ne $expectedAssetSources.Count) {
+    throw 'Railgun shared data-asset contract has an unsupported schema or asset set.'
+}
+$serializationContract = $dataAssetContract.serialization
+function Get-OwnedAssetContract([string]$SourceFile) {
+    $matches = @($dataAssetContract.assets | Where-Object {
+        $_.sourceFile -ceq $SourceFile
+    })
+    if ($matches.Count -ne 1) {
+        throw "Railgun data-asset contract entry is missing or duplicated: $SourceFile"
+    }
+    $matches[0]
+}
+function ConvertTo-ComparableExportsJson($Exports) {
+    $normalized = @($Exports | ForEach-Object {
+        $export = [ordered]@{}
+        foreach ($property in $_.PSObject.Properties) {
+            # The writer recomputes this physical file position. It is not
+            # authored UObject data and may change while semantics stay equal.
+            if ($property.Name -cne 'SerialOffset') {
+                $export[$property.Name] = $property.Value
+            }
+        }
+        [pscustomobject]$export
+    })
+    $normalized | ConvertTo-Json -Depth 100 -Compress
+}
+$ammoItemAsset = Read-OwnedAssetJson $ammoItemJsonPath `
+    (Get-OwnedAssetContract 'Assets/Fabricator/railgun-ammo-item.json') `
+    'Railgun ammo'
+$ammoItemSource = $ammoItemAsset.source
+$ammoWeightProperties = @($ammoItemAsset.primary.Data | Where-Object {
+    $_.Name -ceq 'Weight'
+})
+if ($ammoWeightProperties.Count -ne 1 -or
+    [double]$ammoWeightProperties[0].Value -le 0.0) {
+    throw 'Railgun ammo JSON requires one positive Weight for the six-round magazine limit.'
+}
+$ammoWeightKg = [double]$ammoWeightProperties[0].Value
+$skillAsset = Read-OwnedAssetJson $skillJsonPath `
+    (Get-OwnedAssetContract 'Assets/Skill/railgun-skill.json') 'Railgun skill'
+$skillSource = $skillAsset.source
+$gunAsset = Read-OwnedAssetJson $gunJsonPath `
+    (Get-OwnedAssetContract 'Assets/Fabricator/railgun-item.json') 'Railgun item'
+$gunSource = $gunAsset.source
 # The stable filename makes model replacement independent of revision names.
 # Build provenance hashes the actual file and rejects edits during a build.
 $sourcePaths += @($glbPath.Substring($repo.Length + 1).Replace('\','/'))
@@ -66,6 +172,14 @@ $sourceHashes = @(Get-RailgunSourceHashes)
 $fingerprint = (& (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -OutputPath (Join-Path $output 'fingerprint.json')) | ConvertFrom-Json
 if ([string]$fingerprint.steam.buildId -cne '25191271' -or $fingerprint.executable.sha256 -cne '747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B') { throw 'Railgun game provenance mismatch.' }
 $mapping = & (Join-Path $repo 'tools/Get-VoyageMappings.ps1')
+if ([string]$serializationContract.steamBuildId -cne
+        [string]$fingerprint.steam.buildId -or
+    $serializationContract.executableSha256 -cne
+        $fingerprint.executable.sha256 -or
+    $serializationContract.engineVersion -cne $mapping.engineVersion -or
+    $serializationContract.mappingSha256 -cne $mapping.sha256) {
+    throw 'Railgun data-asset contract does not match the selected game and mapping.'
+}
 $engineVersion = Get-Content -LiteralPath (Join-Path $engine 'Build/Build.version') -Raw | ConvertFrom-Json
 if ($engineVersion.MajorVersion -ne 5 -or $engineVersion.MinorVersion -ne 8 -or $engineVersion.PatchVersion -ne 2) { throw 'Railgun requires reviewed editor 5.8.2.' }
 
@@ -210,7 +324,9 @@ $stockRegistry = & (Join-Path $repo 'tools/Extract-VoyageAssetRegistry.ps1') `
     -UnrealPak $unrealPak -OutputRoot (Join-Path $output 'stock-registry')
 if ($stockRegistry.status -cne 'passed') { throw 'Stock registry extraction failed.' }
 Invoke-NativeStage 'generate-inputs' $editor @($project,'-run=GenerateRailgunInputs','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-inputs-unreal.log')))
-Invoke-NativeStage 'generate-runtime' $editor @($project,'-run=GenerateRailgunRuntime','-DedicatedStation',('-StockRegistry=' + $stockRegistry.registryPath),('-ShotSound=' + $shotSound),('-ScopeOverlay=' + $scopeOverlay),('-ChargingStatusIcon=' + $chargingStatusIcon),('-OfflineStatusIcon=' + $offlineStatusIcon),('-ReadyStatusIcon=' + $readyStatusIcon),('-AmmoIndicator=' + $ammoIndicator),('-AmmoIcon=' + $ammoIcon),('-GunIcon=' + $gunIcon),('-SkillIcon=' + $skillIcon),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-runtime-unreal.log')))
+$ammoWeightText = $ammoWeightKg.ToString(
+    'R', [Globalization.CultureInfo]::InvariantCulture)
+Invoke-NativeStage 'generate-runtime' $editor @($project,'-run=GenerateRailgunRuntime','-DedicatedStation',('-AmmoWeightKg=' + $ammoWeightText),('-ShotSound=' + $shotSound),('-ScopeOverlay=' + $scopeOverlay),('-ChargingStatusIcon=' + $chargingStatusIcon),('-OfflineStatusIcon=' + $offlineStatusIcon),('-ReadyStatusIcon=' + $readyStatusIcon),('-AmmoIndicator=' + $ammoIndicator),('-AmmoIcon=' + $ammoIcon),('-GunIcon=' + $gunIcon),('-SkillIcon=' + $skillIcon),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-runtime-unreal.log')))
 $packages += @(
     '/Game/Mods/Railgun/Inputs/IA_RailgunLookYaw',
     '/Game/Mods/Railgun/Inputs/IA_RailgunLookPitch',
@@ -242,26 +358,16 @@ $packages = @($packages | Sort-Object -Unique)
 Invoke-NativeStage 'cook' $editor @($project,'-run=cook','-targetplatform=Windows','-SkipZenStore','-CookSinglePackageNoRefs',('-Package=' + ($packages -join '+')),'-ini:Game:[/Script/UnrealEd.ProjectPackagingSettings]:bShareMaterialShaderCode=False','-ini:Engine:[/Script/WindowsTargetPlatform.WindowsTargetSettings]:D3D12TargetedShaderFormats=PCD3D_SM6,D3D11TargetedShaderFormats=PCD3D_SM5','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'cook-unreal.log')))
 Invoke-NativeStage 'verify-tagged' $editor @($project,'-run=GenerateRailgun','-VerifyTagged','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'verify-tagged-unreal.log')))
 Invoke-NativeStage 'verify-runtime-tagged' $editor @($project,'-run=GenerateRailgunRuntime','-VerifyTagged','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'verify-runtime-tagged-unreal.log')))
-$gunDonor = & (Join-Path $repo 'tools/Extract-VoyagePackage.ps1') -Filter 'Data/Assets/Modules/DA_Item_Module_WindTurbineMedium.uasset' -RetocEngineVersion UE5_8 -OutputRoot (Join-Path $output 'gun-item-original')
-$gunDonorEvidence = Get-Content -LiteralPath $gunDonor.manifestPath -Raw | ConvertFrom-Json
-if ($gunDonorEvidence.source -cne 'Game' -or
-    $gunDonorEvidence.steamBuildId -cne [string]$fingerprint.steam.buildId -or
-    $gunDonorEvidence.executableSha256 -cne $fingerprint.executable.sha256) {
-    throw 'Gun item donor source provenance mismatch.'
-}
-$rodDonor = & (Join-Path $repo 'tools/Extract-VoyagePackage.ps1') `
-    -Filter 'Data/Assets/Ammo/DA_Ammo_Bolt_Sniper_Rod.uasset' `
-    -RetocEngineVersion UE5_8 -OutputRoot (Join-Path $output 'rod-original')
-$rodDonorEvidence = Get-Content -LiteralPath $rodDonor.manifestPath -Raw | ConvertFrom-Json
-if ($rodDonorEvidence.source -cne 'Game' -or
-    $rodDonorEvidence.steamBuildId -cne [string]$fingerprint.steam.buildId -or
-    $rodDonorEvidence.executableSha256 -cne $fingerprint.executable.sha256) {
-    throw 'Sniper Rod serialization donor source provenance mismatch.'
-}
 $retoc = Join-Path $repo '.tools/bin/retoc.exe'
-if ((Get-FileHash -LiteralPath $retoc -Algorithm SHA256).Hash -cne $gunDonorEvidence.retocSha256 -or
-    $rodDonorEvidence.retocSha256 -cne $gunDonorEvidence.retocSha256) {
-    throw 'retoc identity changed between donor extractions.'
+$retocManifestPath = Join-Path $repo '.tools/bin/retoc.manifest.json'
+if (-not (Test-Path -LiteralPath $retoc -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $retocManifestPath -PathType Leaf)) {
+    throw 'Canonical retoc or its publication manifest is missing.'
+}
+$retocManifest = Get-Content -LiteralPath $retocManifestPath -Raw | ConvertFrom-Json
+if ((Get-FileHash -LiteralPath $retoc -Algorithm SHA256).Hash -cne
+    $retocManifest.executableSha256) {
+    throw 'Canonical retoc differs from its publication manifest.'
 }
 $loose = Join-Path $output 'loose'
 $assetRelatives = @($packages | ForEach-Object { $_.Replace('/Game/', 'Voyage/Content/') })
@@ -280,37 +386,69 @@ foreach ($assetRelative in $assetRelatives) {
 $cloneRelative = 'Voyage/Content/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod'
 $newName = 'DA_Ammo_Railgun_FullRod'
 $newPackage = '/Game/Data/Assets/Ammo/' + $newName
-$latin1 = [Text.Encoding]::GetEncoding(28591)
+$skillRelative = 'Voyage/Content/Data/Assets/Skill/Railgun/DA_Skill_Railgun'
+$skillPackage = '/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun'
 
 if (-not $newPackage.StartsWith($itemDiscoveryRoot + '/', [StringComparison]::Ordinal)) {
     throw 'Railgun ammo escaped the confirmed Item AssetManager discovery root.'
 }
 $cloneTarget = Join-Path $loose $cloneRelative
-$rodSource = Join-Path $rodDonor.outputPath `
-    'Voyage/Content/Data/Assets/Ammo/DA_Ammo_Bolt_Sniper_Rod.uasset'
-$serializedAmmo = Join-Path $output 'serialized-ammo/DA_Ammo_Railgun_FullRod.uasset'
-$ammoSerialization = & (Join-Path $repo 'tools/Invoke-VoyageAssetPatcher.ps1') `
-    -Operation match-package-serialization -InputAsset ($cloneTarget + '.uasset') `
-    -DonorAsset $rodSource -OutputAsset $serializedAmmo `
-    -Mappings $mapping.mappingsPath -EngineVersion UE5_8 `
-    -EvidenceRoot (Join-Path $output 'patcher-evidence')
-if ($ammoSerialization.status -cne 'completed' -or
-    -not (Test-Path -LiteralPath ([IO.Path]::ChangeExtension($serializedAmmo, '.uexp')) `
-        -PathType Leaf)) {
-    throw 'Railgun ammo did not adopt the Sniper Rod package serialization contract.'
+$uassetGui = Join-Path $repo '.tools/bin/UAssetGUI.exe'
+$uassetGuiManifestPath = Join-Path $repo '.tools/bin/UAssetGUI.manifest.json'
+if (-not (Test-Path -LiteralPath $uassetGui -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $uassetGuiManifestPath -PathType Leaf)) {
+    throw 'Canonical UAssetGUI or its publication manifest is missing.'
 }
-Copy-Item -LiteralPath $serializedAmmo -Destination ($cloneTarget + '.uasset') -Force
-Copy-Item -LiteralPath ([IO.Path]::ChangeExtension($serializedAmmo, '.uexp')) `
-    -Destination ($cloneTarget + '.uexp') -Force
+$uassetGuiManifest = Get-Content -LiteralPath $uassetGuiManifestPath -Raw | ConvertFrom-Json
+if ($uassetGuiManifest.guiCommit -cne $serializationContract.uassetGuiCommit -or
+    $uassetGuiManifest.apiCommit -cne $serializationContract.uassetApiCommit -or
+    $uassetGuiManifest.executableSha256 -cne
+        $serializationContract.uassetGuiSha256 -or
+    (Get-FileHash -LiteralPath $uassetGui -Algorithm SHA256).Hash -cne
+        $serializationContract.uassetGuiSha256) {
+    throw 'Canonical UAssetGUI/API writer differs from the Railgun data-asset contract.'
+}
+$authoredAmmoDirectory = Join-Path $output 'json-authored-ammo'
+$null = New-Item -ItemType Directory -Path $authoredAmmoDirectory
+$authoredAmmo = Join-Path $authoredAmmoDirectory 'DA_Ammo_Railgun_FullRod.uasset'
+$ammoWrite = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
+    -Executable $uassetGui -Arguments @(
+        '--portable','fromjson',$ammoItemJsonPath,$authoredAmmo,
+        $mapping.mappingsPath,[string]$serializationContract.engineVersion) `
+    -MemoryLimitMB 2048 -TimeoutSeconds 45
+$authoredAmmoExport = [IO.Path]::ChangeExtension($authoredAmmo, '.uexp')
+if ($ammoWrite.status -cne 'passed' -or
+    -not (Test-Path -LiteralPath $authoredAmmo -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $authoredAmmoExport -PathType Leaf)) {
+    throw 'Direct JSON authoring did not produce the complete Railgun ammo package.'
+}
+Copy-Item -LiteralPath $authoredAmmo -Destination ($cloneTarget + '.uasset') -Force
+Copy-Item -LiteralPath $authoredAmmoExport -Destination ($cloneTarget + '.uexp') -Force
 $ammoReadbackPath = Join-Path $output 'ammo-import-readback.json'
-$ammoReadback = & (Join-Path $repo 'tools/Invoke-VoyageAssetPatcher.ps1') `
-    -Operation export-json -InputAsset ($cloneTarget + '.uasset') `
-    -OutputAsset $ammoReadbackPath -Mappings $mapping.mappingsPath `
-    -EngineVersion UE5_8 -EvidenceRoot (Join-Path $output 'patcher-evidence')
-if ($ammoReadback.status -cne 'completed') {
+$ammoReadback = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
+    -Executable $uassetGui -Arguments @(
+        '--portable','tojson',($cloneTarget + '.uasset'),$ammoReadbackPath,
+        [string]$serializationContract.engineVersion,$mapping.mappingsPath) `
+    -MemoryLimitMB 2048 -TimeoutSeconds 45
+if ($ammoReadback.status -cne 'passed' -or
+    -not (Test-Path -LiteralPath $ammoReadbackPath -PathType Leaf)) {
     throw 'Railgun ammo import readback failed.'
 }
 $ammoReadbackData = Get-Content -LiteralPath $ammoReadbackPath -Raw | ConvertFrom-Json
+foreach ($field in @('ObjectVersion','ObjectVersionUE5','CustomVersionContainer','NameMap','Imports')) {
+    if (($ammoItemSource.$field | ConvertTo-Json -Depth 100 -Compress) -cne
+        ($ammoReadbackData.$field | ConvertTo-Json -Depth 100 -Compress)) {
+        throw "Direct JSON ammo readback changed $field."
+    }
+}
+if ((ConvertTo-ComparableExportsJson $ammoItemSource.Exports) -cne
+        (ConvertTo-ComparableExportsJson $ammoReadbackData.Exports) -or
+    $ammoReadbackData.LegacyFileVersion -ne $ammoItemSource.LegacyFileVersion -or
+    [bool]$ammoReadbackData.IsUnversioned -ne [bool]$ammoItemSource.IsUnversioned -or
+    $ammoReadbackData.FolderName -cne $ammoItemSource.FolderName -or
+    @($ammoReadbackData.Exports | Where-Object { $_.'$type' -like '*RawExport*' }).Count -ne 0) {
+    throw 'Direct JSON ammo readback changed the authored payload or package contract.'
+}
 $ammoImportNames = @($ammoReadbackData.Imports | ForEach-Object { [string]$_.ObjectName })
 $removedImpactSoundPackage = `
     '/Game/Audio/SFX/Player/Pla_Weapons/Pla_Wpn_Boltgun/CUE_Pla_Wpn_BoltGun_Impact_Hard'
@@ -359,70 +497,103 @@ if ($remainingDamageTypeImports.Count -ne 0) {
     throw 'Removed Railgun ammo DamageTypeClass remains in the package import table.'
 }
 
-# Preserve the complete four-export stock module-item layout while moving its
-# primary identity to a mod-unique name inside the game's Item discovery root.
-$gunSource = Join-Path $gunDonor.outputPath 'Voyage/Content/Data/Assets/Modules/DA_Item_Module_WindTurbineMedium'
+$skillTarget = Join-Path $loose $skillRelative
+$authoredSkillDirectory = Join-Path $output 'json-authored-skill'
+$null = New-Item -ItemType Directory -Path $authoredSkillDirectory
+$authoredSkill = Join-Path $authoredSkillDirectory 'DA_Skill_Railgun.uasset'
+$skillWrite = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
+    -Executable $uassetGui -Arguments @(
+        '--portable','fromjson',$skillJsonPath,$authoredSkill,
+        $mapping.mappingsPath,[string]$serializationContract.engineVersion) `
+    -MemoryLimitMB 2048 -TimeoutSeconds 45
+$authoredSkillExport = [IO.Path]::ChangeExtension($authoredSkill, '.uexp')
+if ($skillWrite.status -cne 'passed' -or
+    -not (Test-Path -LiteralPath $authoredSkill -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $authoredSkillExport -PathType Leaf)) {
+    throw 'Direct JSON authoring did not produce the complete Railgun skill package.'
+}
+Copy-Item -LiteralPath $authoredSkill -Destination ($skillTarget + '.uasset') -Force
+Copy-Item -LiteralPath $authoredSkillExport -Destination ($skillTarget + '.uexp') -Force
+$skillReadbackPath = Join-Path $output 'skill-import-readback.json'
+$skillReadback = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
+    -Executable $uassetGui -Arguments @(
+        '--portable','tojson',($skillTarget + '.uasset'),$skillReadbackPath,
+        [string]$serializationContract.engineVersion,$mapping.mappingsPath) `
+    -MemoryLimitMB 2048 -TimeoutSeconds 45
+if ($skillReadback.status -cne 'passed' -or
+    -not (Test-Path -LiteralPath $skillReadbackPath -PathType Leaf)) {
+    throw 'Railgun skill import readback failed.'
+}
+$skillReadbackData = Get-Content -LiteralPath $skillReadbackPath -Raw | ConvertFrom-Json
+foreach ($field in @('ObjectVersion','ObjectVersionUE5','CustomVersionContainer','NameMap','Imports')) {
+    if (($skillSource.$field | ConvertTo-Json -Depth 100 -Compress) -cne
+        ($skillReadbackData.$field | ConvertTo-Json -Depth 100 -Compress)) {
+        throw "Direct JSON skill readback changed $field."
+    }
+}
+if ((ConvertTo-ComparableExportsJson $skillSource.Exports) -cne
+        (ConvertTo-ComparableExportsJson $skillReadbackData.Exports) -or
+    $skillReadbackData.LegacyFileVersion -ne $skillSource.LegacyFileVersion -or
+    [bool]$skillReadbackData.IsUnversioned -ne [bool]$skillSource.IsUnversioned -or
+    $skillReadbackData.FolderName -cne $skillSource.FolderName -or
+    @($skillReadbackData.Exports | Where-Object {
+        $_.'$type' -like '*RawExport*'
+    }).Count -ne 0) {
+    throw 'Direct JSON skill readback changed the authored payload or package contract.'
+}
+
+# Preserve the complete working four-export item graph from the editable JSON.
 $gunRelative = 'Voyage/Content/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01'
 $gunTarget = Join-Path $loose $gunRelative
 $null = New-Item -ItemType Directory -Path (Split-Path -Parent $gunTarget) -Force
-$oldGunName = 'DA_Item_Module_WindTurbineMedium'
 $newGunName = 'DA_Item_Module_RailgunCannonMk01'
-$oldGunPackage = '/Game/Data/Assets/Modules/' + $oldGunName
 $newGunPackage = '/Game/Data/Assets/Modules/' + $newGunName
 if (-not $newGunPackage.StartsWith($itemDiscoveryRoot + '/', [StringComparison]::Ordinal)) {
     throw 'Railgun item escaped the confirmed Item AssetManager discovery root.'
 }
-if ($oldGunName.Length -ne $newGunName.Length -or
-    $oldGunPackage.Length -ne $newGunPackage.Length) {
-    throw 'Railgun item clone requires equal-length identities.'
+$authoredGunDirectory = Join-Path $output 'json-authored-gun'
+$null = New-Item -ItemType Directory -Path $authoredGunDirectory
+$authoredGun = Join-Path $authoredGunDirectory ($newGunName + '.uasset')
+$gunWrite = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
+    -Executable $uassetGui -Arguments @(
+        '--portable','fromjson',$gunJsonPath,$authoredGun,
+        $mapping.mappingsPath,[string]$serializationContract.engineVersion) `
+    -MemoryLimitMB 2048 -TimeoutSeconds 45
+$authoredGunExport = [IO.Path]::ChangeExtension($authoredGun, '.uexp')
+if ($gunWrite.status -cne 'passed' -or
+    -not (Test-Path -LiteralPath $authoredGun -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $authoredGunExport -PathType Leaf)) {
+    throw 'Direct JSON authoring did not produce the complete Railgun item package.'
 }
-$gunHeaderBytes = [IO.File]::ReadAllBytes($gunSource + '.uasset')
-$gunExportBytes = [IO.File]::ReadAllBytes($gunSource + '.uexp')
-$gunHeaderText = $latin1.GetString($gunHeaderBytes)
-$gunExportText = $latin1.GetString($gunExportBytes)
-$gunNameMatches = [regex]::Matches($gunHeaderText, [regex]::Escape($oldGunName))
-$gunPackageMatches = [regex]::Matches($gunHeaderText, [regex]::Escape($oldGunPackage))
-if ($gunNameMatches.Count -ne 3 -or $gunPackageMatches.Count -ne 2 -or
-    $gunExportText.Contains($oldGunName) -or $gunHeaderText.Contains($newGunName) -or
-    $gunExportText.Contains($newGunName)) {
-    throw 'Railgun item clone identity layout changed; no byte patch applied.'
+Copy-Item -LiteralPath $authoredGun -Destination ($gunTarget + '.uasset') -Force
+Copy-Item -LiteralPath $authoredGunExport -Destination ($gunTarget + '.uexp') -Force
+$gunReadbackPath = Join-Path $output 'gun-import-readback.json'
+$gunReadback = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
+    -Executable $uassetGui -Arguments @(
+        '--portable','tojson',($gunTarget + '.uasset'),$gunReadbackPath,
+        [string]$serializationContract.engineVersion,$mapping.mappingsPath) `
+    -MemoryLimitMB 2048 -TimeoutSeconds 45
+if ($gunReadback.status -cne 'passed' -or
+    -not (Test-Path -LiteralPath $gunReadbackPath -PathType Leaf)) {
+    throw 'Railgun item import readback failed.'
 }
-$gunPackageReplacement = [Text.Encoding]::ASCII.GetBytes($newGunPackage)
-foreach ($match in $gunPackageMatches) {
-    [Array]::Copy($gunPackageReplacement, 0, $gunHeaderBytes, $match.Index,
-        $gunPackageReplacement.Length)
+$gunReadbackData = Get-Content -LiteralPath $gunReadbackPath -Raw | ConvertFrom-Json
+foreach ($field in @('ObjectVersion','ObjectVersionUE5','CustomVersionContainer','NameMap','Imports')) {
+    if (($gunSource.$field | ConvertTo-Json -Depth 100 -Compress) -cne
+        ($gunReadbackData.$field | ConvertTo-Json -Depth 100 -Compress)) {
+        throw "Direct JSON Railgun item readback changed $field."
+    }
 }
-$gunHeaderText = $latin1.GetString($gunHeaderBytes)
-$gunNameMatches = [regex]::Matches($gunHeaderText, [regex]::Escape($oldGunName))
-if ($gunNameMatches.Count -ne 1) {
-    throw 'Railgun item clone standalone identity layout changed.'
+if ((ConvertTo-ComparableExportsJson $gunSource.Exports) -cne
+        (ConvertTo-ComparableExportsJson $gunReadbackData.Exports) -or
+    $gunReadbackData.LegacyFileVersion -ne $gunSource.LegacyFileVersion -or
+    [bool]$gunReadbackData.IsUnversioned -ne [bool]$gunSource.IsUnversioned -or
+    $gunReadbackData.FolderName -cne $gunSource.FolderName -or
+    @($gunReadbackData.Exports | Where-Object {
+        $_.'$type' -like '*RawExport*'
+    }).Count -ne 0) {
+    throw 'Direct JSON Railgun item readback changed the package contract.'
 }
-$gunReplacement = [Text.Encoding]::ASCII.GetBytes($newGunName)
-foreach ($match in $gunNameMatches) {
-    [Array]::Copy($gunReplacement, 0, $gunHeaderBytes, $match.Index, $gunReplacement.Length)
-}
-$patchedGunText = $latin1.GetString($gunHeaderBytes)
-if ($patchedGunText.Contains($oldGunName) -or
-    [regex]::Matches($patchedGunText, [regex]::Escape($newGunName)).Count -ne 3 -or
-    [regex]::Matches($patchedGunText, [regex]::Escape($newGunPackage)).Count -ne 2) {
-    throw 'Railgun item clone identity postcondition failed.'
-}
-[IO.File]::WriteAllBytes($gunTarget + '.uasset', $gunHeaderBytes)
-Copy-Item -LiteralPath ($gunSource + '.uexp') -Destination ($gunTarget + '.uexp')
-$patchedGun = Join-Path $output 'patched-gun-item/DA_Item_Module_RailgunCannonMk01.uasset'
-$gunPatchSpecification = Join-Path $PSScriptRoot 'Build/railgun-item-patch.json'
-$gunPatch = & (Join-Path $repo 'tools/Invoke-VoyageAssetPatcher.ps1') `
-    -Operation patch-item-data-asset -InputAsset ($gunTarget + '.uasset') `
-    -OutputAsset $patchedGun -Mappings $mapping.mappingsPath -EngineVersion UE5_8 `
-    -Specification $gunPatchSpecification `
-    -EvidenceRoot (Join-Path $output 'patcher-evidence')
-if ($gunPatch.status -cne 'completed' -or
-    -not (Test-Path -LiteralPath ([IO.Path]::ChangeExtension($patchedGun, '.uexp')) -PathType Leaf)) {
-    throw 'The complete Railgun module-item clone was not patched and reopened successfully.'
-}
-Copy-Item -LiteralPath $patchedGun -Destination ($gunTarget + '.uasset') -Force
-Copy-Item -LiteralPath ([IO.Path]::ChangeExtension($patchedGun, '.uexp')) `
-    -Destination ($gunTarget + '.uexp') -Force
 $assetRelatives += $gunRelative
 if ($assetRelatives -contains
         'Voyage/Content/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New' -or
@@ -430,7 +601,31 @@ if ($assetRelatives -contains
         'Voyage/Content/Data/Assets/Skill/Weapons/Ammo/DA_Skill_Railgun_Ammo_Test') {
     throw 'Release inventory still contains a stock Cyclone override or obsolete ammo skill.'
 }
-Copy-Item -LiteralPath (Join-Path $gunDonor.outputPath 'scriptobjects.bin') -Destination (Join-Path $loose 'scriptobjects.bin')
+$globalUtoc = Join-Path $fingerprint.gameRoot 'Voyage/Content/Paks/global.utoc'
+$globalUcas = [IO.Path]::ChangeExtension($globalUtoc, '.ucas')
+if (-not (Test-Path -LiteralPath $globalUtoc -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $globalUcas -PathType Leaf)) {
+    throw 'Current-game global IoStore metadata is missing.'
+}
+$scriptObjectsInput = @(
+    [pscustomobject]@{path=$globalUtoc;sha256=(Get-FileHash -LiteralPath $globalUtoc -Algorithm SHA256).Hash},
+    [pscustomobject]@{path=$globalUcas;sha256=(Get-FileHash -LiteralPath $globalUcas -Algorithm SHA256).Hash}
+)
+$scriptObjectsDirectory = Join-Path $output 'scriptobjects-only'
+$null = New-Item -ItemType Directory -Path $scriptObjectsDirectory
+$scriptObjectsRun = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
+    -Executable $retoc -Arguments @(
+        'to-legacy','--version','UE5_8','--no-assets','--no-shaders',
+        $globalUtoc,$scriptObjectsDirectory) -TimeoutSeconds 60 -MemoryLimitMB 1024
+$scriptObjectsFiles = @(Get-ChildItem -LiteralPath $scriptObjectsDirectory -File -Recurse)
+if ($scriptObjectsRun.status -cne 'passed' -or $scriptObjectsFiles.Count -ne 1 -or
+    $scriptObjectsFiles[0].Name -cne 'scriptobjects.bin') {
+    throw 'Metadata-only extraction did not produce exactly one scriptobjects.bin.'
+}
+$scriptObjectsSha256 = (Get-FileHash -LiteralPath $scriptObjectsFiles[0].FullName `
+    -Algorithm SHA256).Hash
+Copy-Item -LiteralPath $scriptObjectsFiles[0].FullName `
+    -Destination (Join-Path $loose 'scriptobjects.bin')
 $payload = Join-Path $output 'payload'
 $null = New-Item -ItemType Directory -Path $payload
 $stem = 'Railgun_P'
@@ -482,70 +677,31 @@ if ($verify.status -ne 'passed' -or -not $verify.packageSetMatches) { throw 'Con
 $cloneInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') $cloneRelative -Source Mod -ModContainer $container -AsJson) | ConvertFrom-Json
 $cloneExports = Get-Content -LiteralPath $cloneInspection.jsonPath -Raw | ConvertFrom-Json
 $cloneItems = @($cloneExports | Where-Object { $_.Type -ceq 'VoyageItemAmmo' -and $_.Name -ceq $newName })
-if ($cloneExports.Count -ne 1 -or $cloneItems.Count -ne 1) {
-    throw 'Railgun ammo must contain exactly one complete VoyageItemAmmo export.'
-}
-$clonePropertyNames = @($cloneItems[0].Properties.PSObject.Properties.Name)
-$expectedClonePropertyNames = @(
-    'Caliber','Icon','Category','CategoryAsset','Quality','Weight','CraftTime',
-    'CraftElectricityCost','CraftAmount','CraftFilter','Components','DropVariations',
-    'DroppedActor','MaxDropCount','Name','Description'
-)
-$clonePropertyDifferences = @(Compare-Object -ReferenceObject $expectedClonePropertyNames `
-    -DifferenceObject $clonePropertyNames -CaseSensitive)
-$cloneComponentAmounts = @{}
-foreach ($component in @($cloneItems[0].Properties.Components)) {
-    $componentKey = [string]$component.Key
-    if ($componentKey -match "^VoyageItemMaterial'(.+)'$") {
-        $componentKey = $matches[1]
-    }
-    $cloneComponentAmounts[$componentKey] = [int]$component.Value
+if ($cloneItems.Count -ne 1) {
+    throw 'Railgun ammo primary export is missing or duplicated.'
 }
 if ($cloneItems[0].Package -cne $newPackage -or
-    $clonePropertyDifferences.Count -ne 0 -or
-    $clonePropertyNames -ccontains 'WeaponData' -or
-    $clonePropertyNames -ccontains 'ScalePerItem' -or
-    [int]$cloneItems[0].Properties.MaxDropCount -ne 1 -or
-    [double]$cloneItems[0].Properties.Caliber -ne 45.0 -or
-    $cloneItems[0].Properties.Icon.ObjectPath -cne '/Game/Mods/Railgun/Fabricator/T_RailgunAmmoIcon.0' -or
-    $clonePropertyNames -ccontains 'SecondaryIcon' -or
-    [double]$cloneItems[0].Properties.Weight -ne 3.9 -or
-    $cloneItems[0].Properties.Quality -cne 'EVoyageItemQuality::Common' -or
-    [double]$cloneItems[0].Properties.CraftTime -ne 6.0 -or
-    [int]$cloneItems[0].Properties.CraftAmount -ne 1 -or
-    $cloneComponentAmounts.Count -ne 3 -or
-    $cloneComponentAmounts['/Game/Data/Assets/Materials/DA_Material_Iron.DA_Material_Iron'] -ne 1 -or
-    $cloneComponentAmounts['/Game/Data/Assets/Materials/DA_Material_Copper.DA_Material_Copper'] -ne 1 -or
-    $cloneComponentAmounts['/Game/Data/Assets/Materials/DA_Material_Plastic.DA_Material_Plastic'] -ne 1 -or
-    @($cloneItems[0].Properties.DropVariations).Count -ne 1 -or
-    $cloneItems[0].Properties.DropVariations[0].RenderAsset.AssetPathName -cne
-        '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette' -or
+    $cloneItems[0].Properties.Category -cne 'EVoyageItemCategory::Ammo' -or
+    [Math]::Abs([double]$cloneItems[0].Properties.Weight - $ammoWeightKg) -gt 0.00001 -or
+    @($cloneItems[0].Properties.DropVariations | Where-Object {
+        $_.RenderAsset.AssetPathName -ceq
+            '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette'
+    }).Count -lt 1 -or
     $cloneItems[0].Properties.DroppedActor.AssetPathName -cne '/Game/Blueprints/BP_DynamicMeshActor.BP_DynamicMeshActor_C' -or
-    $cloneItems[0].Properties.Name.SourceString -cne 'Railgun Kinetic Rounds' -or
-    $cloneItems[0].Properties.Description.SourceString -cne 'Armor-piercing kinetic rounds. No explosives, just mass and velocity.') {
-    throw 'Complete one-export Railgun ammo did not survive strict inspection.'
+    $null -eq $cloneItems[0].Properties.Components) {
+    throw 'Railgun ammo lost a runtime identity, inventory, fabrication, or pickup contract.'
 }
 $gunInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') $gunRelative -Source Mod -ModContainer $container -AsJson) | ConvertFrom-Json
 $gunExports = Get-Content -LiteralPath $gunInspection.jsonPath -Raw | ConvertFrom-Json
 $gunItems = @($gunExports | Where-Object { $_.Type -ceq 'VoyageItem' -and $_.Name -ceq $newGunName })
-if ($gunExports.Count -ne 4 -or $gunItems.Count -ne 1 -or
+if ($gunItems.Count -ne 1 -or
     $gunItems[0].Package -cne $newGunPackage -or
-    $gunItems[0].Properties.Icon.ObjectPath -cne '/Game/Mods/Railgun/Fabricator/T_RailgunIcon.0' -or
-    @($gunItems[0].Properties.Components).Count -ne 1 -or
-    $gunItems[0].Properties.Components[0].Key -notmatch 'DA_Part_AlloyFrame' -or
-    [int]$gunItems[0].Properties.Components[0].Value -ne 1 -or
-    @($gunItems[0].Properties.properties).Count -ne 0 -or
+    $gunItems[0].Properties.Category -cne 'EVoyageItemCategory::Module' -or
     $gunItems[0].Properties.DroppedActor.AssetPathName -cne
         '/Game/Mods/Railgun/Module/BP_Module_Railgun.BP_Module_Railgun_C' -or
-    [double]$gunItems[0].Properties.CraftTime -ne 10.0 -or
-    [double]$gunItems[0].Properties.CraftElectricityCost -ne 5.0 -or
-    [double]$gunItems[0].Properties.Weight -ne 89.7 -or
-    -not [bool]$gunItems[0].Properties.bIsDismantlable -or
-    -not [bool]$gunItems[0].Properties.bIsRepairable) {
-    throw 'Railgun item did not survive independent complete-clone inspection.'
+    $null -eq $gunItems[0].Properties.Components) {
+    throw 'Railgun item lost its primary identity, module actor, or fabrication contract.'
 }
-$skillPackage = '/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun'
-$skillRelative = 'Voyage/Content/Data/Assets/Skill/Railgun/DA_Skill_Railgun'
 if (-not $skillPackage.StartsWith($skillDiscoveryRoot + '/', [StringComparison]::Ordinal) -or
     -not $newGunPackage.StartsWith($itemDiscoveryRoot + '/', [StringComparison]::Ordinal) -or
     -not $newPackage.StartsWith($itemDiscoveryRoot + '/', [StringComparison]::Ordinal)) {
@@ -557,15 +713,11 @@ $skillAssets = @($skillExports | Where-Object { $_.Type -ceq 'VoyageSkill' -and 
 if ($skillAssets.Count -ne 1) { throw 'Railgun research skill asset is missing or duplicated.' }
 $skillItems = @($skillAssets[0].Properties.Items | ForEach-Object { [string]$_.ObjectPath })
 if ($skillAssets[0].Package -cne $skillPackage -or
-    $skillAssets[0].Properties.Unlock.UnlockMethod -cne 'EVoyageSkillUnlockMethod::Tier' -or
-    [int]$skillAssets[0].Properties.Unlock.Requirement -ne 19 -or
-    (($skillAssets[0].Properties.Unlock.PSObject.Properties.Name -contains 'Cost') -and
-        [int]$skillAssets[0].Properties.Unlock.Cost -ne 0) -or
-    $skillAssets[0].Properties.Icon.ObjectPath -cne '/Game/Mods/Railgun/Research/T_RailgunSkill.0' -or
+    $skillAssets[0].Properties.Type.Name -cne 'Skill' -or
     $skillItems.Count -ne 2 -or
     @($skillItems | Where-Object { $_.StartsWith($newGunPackage + '.', [StringComparison]::Ordinal) }).Count -ne 1 -or
     @($skillItems | Where-Object { $_.StartsWith($newPackage + '.', [StringComparison]::Ordinal) }).Count -ne 1) {
-    throw 'Railgun research skill is not the exact Tier-19 unlock for gun and ammo.'
+    throw 'Railgun research skill lost its primary type or gun/ammo unlock references.'
 }
 $semantic = & (Join-Path $PSScriptRoot 'Validate-Railgun.ps1') -Container $container -OutputRoot (Join-Path $output 'semantic') -ModelInventory $inventoryPath
 if ($semantic.status -ne 'passed') { throw 'Railgun semantic validation failed.' }
@@ -585,11 +737,23 @@ if ((& git -C $repo rev-parse HEAD).Trim() -cne $sourceCommit) { throw 'Reposito
 $provenance = [ordered]@{
     schemaVersion=1;mod='Railgun';version=$version;createdAtUtc=[DateTime]::UtcNow.ToString('o');
     sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;
-    gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';retocSha256=$gunDonorEvidence.retocSha256;
+    gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';retocSha256=$retocManifest.executableSha256;
     gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId;executableSha256=$fingerprint.executable.sha256};
     validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, GLB module actor, operator, inputs, HUD, shot audio and autoload coordinator';
     mappingSha256=$mapping.sha256;verificationReport=$verify.reportPath;packagingReport=$pack.reportPath;semanticReport=$semantic.reportPath;
-    ammoSerializationReport=$ammoSerialization.logPath;ammoSerializationPatcherSha256=$ammoSerialization.patcherBinarySha256;
+    ammoSourceJson=$ammoItemJsonPath;ammoSourceJsonSha256=(Get-FileHash -LiteralPath $ammoItemJsonPath -Algorithm SHA256).Hash;
+    ammoWriterReport=$ammoWrite.reportPath;ammoReadbackReport=$ammoReadback.reportPath;
+    dataAssetContract=$dataAssetContractPath;dataAssetContractSha256=(Get-FileHash -LiteralPath $dataAssetContractPath -Algorithm SHA256).Hash;
+    dataAssetSerialization=$serializationContract;
+    ammoWriterSha256=$serializationContract.uassetGuiSha256;
+    skillSourceJson=$skillJsonPath;skillSourceJsonSha256=(Get-FileHash -LiteralPath $skillJsonPath -Algorithm SHA256).Hash;
+    skillWriterReport=$skillWrite.reportPath;skillReadbackReport=$skillReadback.reportPath;
+    skillWriterSha256=$serializationContract.uassetGuiSha256;
+    gunSourceJson=$gunJsonPath;gunSourceJsonSha256=(Get-FileHash -LiteralPath $gunJsonPath -Algorithm SHA256).Hash;
+    gunWriterReport=$gunWrite.reportPath;gunReadbackReport=$gunReadback.reportPath;
+    gunWriterSha256=$serializationContract.uassetGuiSha256;
+    scriptObjectsInput=$scriptObjectsInput;scriptObjectsReport=$scriptObjectsRun.reportPath;
+    scriptObjectsSha256=$scriptObjectsSha256;
 }
 $provenance | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'build-provenance.json') -Encoding UTF8
 $releaseSourcePaths = @($sourcePaths | ForEach-Object { [IO.Path]::GetFullPath((Join-Path $repo $_)) })

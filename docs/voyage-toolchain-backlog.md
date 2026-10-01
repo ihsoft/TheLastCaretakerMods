@@ -376,7 +376,7 @@ not pending experiments or automatic requests to extend the toolchain.
 - Common schema-2 release-manifest producer and manifest-gated install/restore:
   documented in `tools/README.md` and the cooked-asset toolchain checkpoint.
 - Canonical manifest-validated binaries for retoc, jmap, UAssetAPI, CUE4Parse,
-  UAssetGUI, VoyageAssetInspector, VoyageAssetPatcher, and
+  UAssetGUI, VoyageAssetInspector, and
   VoyageExecutableInspector: current identities live in the cooked-asset
   toolchain document and sibling ignored publish manifests.
 - Shared-index/ref race: Git mutation semaphore and exact-path commit wrapper in

@@ -184,7 +184,6 @@ container and evidence, without installation.
 | Publish or reuse canonical CUE4Parse | `Publish-Cue4ParseBinary.ps1` | Stable managed `.tools/bin/CUE4Parse/` library bundle |
 | Prepare reviewed UAssetAPI source for development | `Prepare-UAssetApiVoyageUe58.ps1` | Exact source snapshot for deliberate fork/API investigation |
 | Publish the validated compact UAssetGUI executable | `Publish-UAssetGuiBinary.ps1` | Stable ignored `.tools/bin/UAssetGUI.exe` |
-| Publish or resolve the surgical Voyage asset patcher | `Publish-VoyageAssetPatcherBinary.ps1`, `Get-VoyageAssetPatcherBinary.ps1` | Manifest-validated single-file `.tools/bin/VoyageAssetPatcher.exe` |
 | Publish or resolve the native executable inspector | `Publish-VoyageExecutableInspectorBinary.ps1`, `Get-VoyageExecutableInspectorBinary.ps1` | Manifest-validated single-file `.tools/bin/VoyageExecutableInspector.exe` |
 | Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/bin/UAssetGUI.exe stress-open` | Incremental per-asset JSONL plus parse/binary-equality summary |
 | Build, cook and package an existing mod release | [Release producers](#release-producers) | Route to the owning mod's documented orchestrator; no generic rebuild recipe |
@@ -194,10 +193,16 @@ container and evidence, without installation.
 | Restore/remove a common release installation | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded predecessor restoration and recovery evidence |
 | Install/remove one unchanged package canary | `Install-VoyageUnchangedProbe.ps1`, `Remove-VoyageUnchangedProbe.ps1` | Current-fingerprint and exact-hash guarded runtime roundtrip test |
 | Locate native names, references, or correlated member offsets | `Invoke-VoyageExecutableInspector.ps1` | Compact fingerprinted result plus retained read-only executable report |
-| Reproduce one of the existing surgical cooked-asset probes | `Invoke-VoyageAssetPatcher.ps1` | Manifest-validated patcher, reviewed current mapping, compact output hashes, and full log path |
-| Validate an extended owner-supplied item patch specification | `Test-VoyageItemPatchSpecification.ps1` | Positive write/reopen plus fail-closed schema, type, content, duplicate-target and conflict checks |
 | Discover which Blueprint editor APIs Unreal Python exposes | `Inspect-UnrealBlueprintApi.py` | `Saved/BlueprintApi.txt` in an Unreal project |
 | Reuse semantic C++ names while generating Blueprint graphs | `UnrealEditorGeneratorCommon` | Header-only build-time helpers; not a command-line tool |
+
+When an existing producer needs only the current game's `scriptobjects.bin`,
+invoke the published retoc through `Invoke-VoyageBoundedTool.ps1` with
+`to-legacy --version UE5_8 --no-assets --no-shaders <GameRoot>\Voyage\Content\Paks\global.utoc <fresh-output-directory>`.
+The output directory must contain exactly one `scriptobjects.bin`. Record the
+input `global.utoc`/`global.ucas` hashes, bounded-run report and output hash as
+per-build provenance; the output hash is evidence for that build, not a fixed
+cross-version constant.
 
 `VoyageAssetInspector` is the CUE4Parse backend used by
 `Inspect-VoyageAsset.ps1`. Prefer the PowerShell wrapper because it adds the
@@ -395,8 +400,8 @@ under ignored `artifacts/tests/installation-status-*/`.
 - Do not inspect the registry or run jmap during normal work. Call
   `Get-VoyageMappings.ps1`; regenerate only when it reports that the installed
   fingerprint has no matching reviewed entry.
-- C# tools currently target .NET 10. Normal `VoyageAssetPatcher`,
-  `VoyageAssetInspector`, and `VoyageExecutableInspector` calls resolve their
+- C# tools currently target .NET 10. Normal `VoyageAssetInspector` and
+  `VoyageExecutableInspector` calls resolve their
   manifest-validated single-file executables under `.tools/bin/`; they never
   restore or build. Asset-tool source projects reference the canonical
   UAssetAPI and CUE4Parse bundles, and their override properties exist only for
@@ -1310,67 +1315,6 @@ run the Windows PowerShell regression:
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File .\tools\Test-VoyageExecutableInspectorBinary.ps1
 ```
-
-### `VoyageAssetPatcher`
-
-This is not a general-purpose asset editor. It preserves assertion-heavy,
-version-bound diagnostic transformations, including:
-
-- `break-bottom-action-filter` proves ownership of the native bottom HUD row;
-- `swap-forklift-horn-to-exit` probes the standard-action producer path;
-- `swap-hud-indicator-subclass` appends a distinct marker-class import and
-  changes only the original HUD CDO's indicator class reference/dependency;
-- `roundtrip-unchanged` separates writer normalization from a requested patch;
-- `set-cable-updater-tick-interval` extends only the exact current
-  `BP_VoyageCableUpdater` CDO with a one-second TickInterval marker;
-- `break-cable-updater-super-index` creates an intentional bad-export-index
-  crash marker for proving that exact stock package is loaded;
-- `swap-hud-indicator-existing-control` is a non-installable field-identity
-  control using an already imported widget class;
-- `patch-item-data-asset` applies one owner-supplied JSON contract to a reviewed
-  Voyage item asset, asserting donor values before changing recipe, text and icon
-  imports and reopening the result;
-- `match-package-serialization` converts a parsed target to an exact
-  unversioned donor's package/header version contract while preserving and
-  reopening the target's own object graph.
-
-```powershell
-.\tools\Invoke-VoyageAssetPatcher.ps1 `
-  -Operation break-bottom-action-filter `
-  -InputAsset '<input.uasset>' `
-  -OutputAsset '<new-output.uasset>'
-```
-
-`patch-item-data-asset` additionally requires `-Specification <owned.json>`.
-The owning mod stores all item identities, expected donor values and mutations;
-the shared tool contains no product-specific item data.
-`match-package-serialization` additionally requires
-`-DonorAsset <exact-donor.uasset>`.
-
-The input and its companion files must come from the matching game build, and
-the output must be a different path. See
-[`VoyageAssetPatcher/README.md`](VoyageAssetPatcher/README.md) for the required
-UAssetAPI checkpoint and the exact assertions of each operation. Normal builds
-use canonical `.tools/bin/UAssetAPI/`; normal execution calls
-`Invoke-VoyageAssetPatcher.ps1`, which resolves the published EXE and current
-reviewed mapping, refuses an existing output, retains the detailed log, and
-returns compact file hashes. An explicit mapping is intended for a reviewed
-legacy/diagnostic case; UE5_7 requires one. Pass
-`-p:UAssetApiProject=<path>` only while deliberately developing and validating
-a replacement UAssetAPI checkpoint.
-
-Publish after an intentional committed source or accepted dependency change,
-then run the Windows PowerShell regression:
-
-```powershell
-.\tools\Publish-VoyageAssetPatcherBinary.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\tools\Test-VoyageAssetPatcherBinary.ps1
-```
-
-The optional final engine selector defaults to `UE5_7` only for preserved
-legacy operations. Current Voyage assets must pass `UE5_8`; the patcher uses
-that one explicit value for the initial read and every verification reopen.
 
 ### `Inspect-UnrealBlueprintApi.py`
 

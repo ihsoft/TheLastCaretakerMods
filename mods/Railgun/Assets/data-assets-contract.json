@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "sourceFile": "Assets/Fabricator/railgun-ammo-item.json",
+      "package": "/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod",
+      "object": "DA_Ammo_Railgun_FullRod",
+      "class": "VoyageItemAmmo"
+    },
+    {
+      "sourceFile": "Assets/Fabricator/railgun-item.json",
+      "package": "/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01",
+      "object": "DA_Item_Module_RailgunCannonMk01",
+      "class": "VoyageItem"
+    },
+    {
+      "sourceFile": "Assets/Skill/railgun-skill.json",
+      "package": "/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun",
+      "object": "DA_Skill_Railgun",
+      "class": "VoyageSkill"
+    }
+  ],
+  "serialization": {
+    "engineVersion": "5.8",
+    "uassetGuiCommit": "df18b5fd0d263d78fdb0cd5f49de1ee5cf6a9520",
+    "uassetGuiSha256": "42837CD279A78DF57B537020A0169C5D2259A4570D3B62F4B96852F0F5C27F96",
+    "uassetApiCommit": "21c982fa8f04e12d5d216fdf330a2f206e81156f",
+    "mappingSha256": "E25620FB2D0674B26A3E4EF059AC2C5AF58E28CE1B4F07307860F7FADB9A0F68",
+    "steamBuildId": "25191271",
+    "executableSha256": "747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B"
+  },
+  "revalidateWhen": "The game fingerprint, reviewed mapping, UAssetAPI JSON schema, UAssetGUI/API writer checkpoint, native asset identity, required runtime references, or serialized format changes."
+}

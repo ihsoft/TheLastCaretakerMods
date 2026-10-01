@@ -1,0 +1,521 @@
+{
+  "$type": "UAssetAPI.UAsset, UAssetAPI",
+  "Info": "Serialized with UAssetAPI v2.0.0 (21c982f)",
+  "NameMap": [
+    "/Script/CoreUObject",
+    "/Script/Voyage",
+    "ArrayProperty",
+    "ByteProperty",
+    "Description",
+    "EnumProperty",
+    "EVoyageSkillUnlockMethod",
+    "EVoyageSkillUnlockMethod::Tier",
+    "Icon",
+    "IntProperty",
+    "Items",
+    "Name",
+    "NameProperty",
+    "None",
+    "ObjectProperty",
+    "PrimaryAssetType",
+    "Requirement",
+    "Skill",
+    "StructProperty",
+    "TextProperty",
+    "Type",
+    "Unlock",
+    "UnlockMethod",
+    "VoyageSkillUnlock",
+    "DA_Skill_Railgun",
+    "/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun",
+    "Package",
+    "Class",
+    "VoyageSkill",
+    "/Game/Mods/Railgun/Research/T_RailgunSkill",
+    "/Script/Engine",
+    "Texture2D",
+    "T_RailgunSkill",
+    "/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01",
+    "VoyageItem",
+    "DA_Item_Module_RailgunCannonMk01",
+    "/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod",
+    "VoyageItemAmmo",
+    "DA_Ammo_Railgun_FullRod",
+    "Default__VoyageSkill"
+  ],
+  "CustomSerializationFlags": "None",
+  "UseSeparateBulkDataFiles": true,
+  "IsUnversioned": false,
+  "FileVersionLicenseeUE": 0,
+  "GameSpecificOverride": "None",
+  "ObjectVersion": "VER_UE4_CORRECT_LICENSEE_FLAG",
+  "ObjectVersionUE5": "IMPORT_TYPE_HIERARCHIES",
+  "CustomVersionContainer": [
+    {
+      "$type": "UAssetAPI.CustomVersion, UAssetAPI",
+      "Name": null,
+      "Key": "{601D1886-AC64-4F84-AA16-D3DE0DEAC7D6}",
+      "FriendlyName": "FFortniteMainBranchObjectVersion",
+      "Version": 268,
+      "IsSerialized": true
+    },
+    {
+      "$type": "UAssetAPI.CustomVersion, UAssetAPI",
+      "Name": null,
+      "Key": "{E4B068ED-F494-42E9-A231-DA0B2E46BB41}",
+      "FriendlyName": "FEditorObjectVersion",
+      "Version": 40,
+      "IsSerialized": true
+    }
+  ],
+  "SoftObjectPathList": [],
+  "GatherableTextData": null,
+  "Exports": [
+    {
+      "$type": "UAssetAPI.ExportTypes.NormalExport, UAssetAPI",
+      "Data": [
+        {
+          "$type": "UAssetAPI.PropertyTypes.Structs.StructPropertyData, UAssetAPI",
+          "StructType": "VoyageSkillUnlock",
+          "SerializeNone": true,
+          "StructGUID": "{00000000-0000-0000-0000-000000000000}",
+          "SerializationControl": "NoExtension",
+          "Operation": "None",
+          "Name": "Unlock",
+          "ArrayIndex": 0,
+          "PropertyGuid": null,
+          "IsZero": false,
+          "PropertyTagFlags": "None",
+          "PropertyTypeName": [
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "StructProperty",
+              "InnerCount": 1
+            },
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "VoyageSkillUnlock",
+              "InnerCount": 1
+            },
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "/Script/Voyage",
+              "InnerCount": 0
+            }
+          ],
+          "PropertyTagExtensions": "NoExtension",
+          "Value": [
+            {
+              "$type": "UAssetAPI.PropertyTypes.Objects.EnumPropertyData, UAssetAPI",
+              "EnumType": "EVoyageSkillUnlockMethod",
+              "InnerType": "EVoyageSkillUnlockMethod",
+              "Name": "UnlockMethod",
+              "ArrayIndex": 0,
+              "PropertyGuid": null,
+              "IsZero": false,
+              "PropertyTagFlags": "None",
+              "PropertyTypeName": [
+                {
+                  "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+                  "Name": "EnumProperty",
+                  "InnerCount": 2
+                },
+                {
+                  "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+                  "Name": "EVoyageSkillUnlockMethod",
+                  "InnerCount": 1
+                },
+                {
+                  "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+                  "Name": "/Script/Voyage",
+                  "InnerCount": 0
+                },
+                {
+                  "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+                  "Name": "ByteProperty",
+                  "InnerCount": 0
+                }
+              ],
+              "PropertyTagExtensions": "NoExtension",
+              "Value": "EVoyageSkillUnlockMethod::Tier"
+            },
+            {
+              "$type": "UAssetAPI.PropertyTypes.Objects.IntPropertyData, UAssetAPI",
+              "Name": "Requirement",
+              "ArrayIndex": 0,
+              "PropertyGuid": null,
+              "IsZero": false,
+              "PropertyTagFlags": "None",
+              "PropertyTypeName": [
+                {
+                  "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+                  "Name": "IntProperty",
+                  "InnerCount": 0
+                }
+              ],
+              "PropertyTagExtensions": "NoExtension",
+              "Value": 19
+            }
+          ]
+        },
+        {
+          "$type": "UAssetAPI.PropertyTypes.Objects.ArrayPropertyData, UAssetAPI",
+          "ArrayType": "ObjectProperty",
+          "Name": "Items",
+          "ArrayIndex": 0,
+          "PropertyGuid": null,
+          "IsZero": false,
+          "PropertyTagFlags": "None",
+          "PropertyTypeName": [
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "ArrayProperty",
+              "InnerCount": 1
+            },
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "ObjectProperty",
+              "InnerCount": 0
+            }
+          ],
+          "PropertyTagExtensions": "NoExtension",
+          "Value": [
+            {
+              "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+              "Name": "0",
+              "ArrayIndex": 0,
+              "PropertyGuid": null,
+              "IsZero": false,
+              "PropertyTagFlags": "None",
+              "PropertyTypeName": null,
+              "PropertyTagExtensions": "NoExtension",
+              "Value": -7
+            },
+            {
+              "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+              "Name": "1",
+              "ArrayIndex": 0,
+              "PropertyGuid": null,
+              "IsZero": false,
+              "PropertyTagFlags": "None",
+              "PropertyTypeName": null,
+              "PropertyTagExtensions": "NoExtension",
+              "Value": -8
+            }
+          ]
+        },
+        {
+          "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+          "Name": "Icon",
+          "ArrayIndex": 0,
+          "PropertyGuid": null,
+          "IsZero": false,
+          "PropertyTagFlags": "None",
+          "PropertyTypeName": [
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "ObjectProperty",
+              "InnerCount": 0
+            }
+          ],
+          "PropertyTagExtensions": "NoExtension",
+          "Value": -6
+        },
+        {
+          "$type": "UAssetAPI.PropertyTypes.Structs.StructPropertyData, UAssetAPI",
+          "StructType": "PrimaryAssetType",
+          "SerializeNone": true,
+          "StructGUID": "{00000000-0000-0000-0000-000000000000}",
+          "SerializationControl": "NoExtension",
+          "Operation": "None",
+          "Name": "Type",
+          "ArrayIndex": 0,
+          "PropertyGuid": null,
+          "IsZero": false,
+          "PropertyTagFlags": "None",
+          "PropertyTypeName": [
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "StructProperty",
+              "InnerCount": 1
+            },
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "PrimaryAssetType",
+              "InnerCount": 1
+            },
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "/Script/CoreUObject",
+              "InnerCount": 0
+            }
+          ],
+          "PropertyTagExtensions": "NoExtension",
+          "Value": [
+            {
+              "$type": "UAssetAPI.PropertyTypes.Objects.NamePropertyData, UAssetAPI",
+              "Name": "Name",
+              "ArrayIndex": 0,
+              "PropertyGuid": null,
+              "IsZero": false,
+              "PropertyTagFlags": "None",
+              "PropertyTypeName": [
+                {
+                  "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+                  "Name": "NameProperty",
+                  "InnerCount": 0
+                }
+              ],
+              "PropertyTagExtensions": "NoExtension",
+              "Value": "Skill"
+            }
+          ]
+        },
+        {
+          "$type": "UAssetAPI.PropertyTypes.Objects.TextPropertyData, UAssetAPI",
+          "Flags": 0,
+          "HistoryType": "Base",
+          "Namespace": "",
+          "CultureInvariantString": "Railgun",
+          "SourceFmt": null,
+          "Arguments": null,
+          "ArgumentsData": null,
+          "TransformType": "ToLower",
+          "SourceValue": null,
+          "FormatOptions": null,
+          "TargetCulture": null,
+          "Name": "Name",
+          "ArrayIndex": 0,
+          "PropertyGuid": null,
+          "IsZero": false,
+          "PropertyTagFlags": "None",
+          "PropertyTypeName": [
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "TextProperty",
+              "InnerCount": 0
+            }
+          ],
+          "PropertyTagExtensions": "NoExtension",
+          "Value": "1844C6A44ACC3EBFDFE3CBA9F0A46CC7"
+        },
+        {
+          "$type": "UAssetAPI.PropertyTypes.Objects.TextPropertyData, UAssetAPI",
+          "Flags": 0,
+          "HistoryType": "Base",
+          "Namespace": "",
+          "CultureInvariantString": "Unlocks the Railgun and its long-range kinetic ammunition.",
+          "SourceFmt": null,
+          "Arguments": null,
+          "ArgumentsData": null,
+          "TransformType": "ToLower",
+          "SourceValue": null,
+          "FormatOptions": null,
+          "TargetCulture": null,
+          "Name": "Description",
+          "ArrayIndex": 0,
+          "PropertyGuid": null,
+          "IsZero": false,
+          "PropertyTagFlags": "None",
+          "PropertyTypeName": [
+            {
+              "$type": "UAssetAPI.UnrealTypes.FPropertyTypeNameNode, UAssetAPI",
+              "Name": "TextProperty",
+              "InnerCount": 0
+            }
+          ],
+          "PropertyTagExtensions": "NoExtension",
+          "Value": "EF07BD4D4DBAA088FB2B90B4091E118C"
+        }
+      ],
+      "ObjectGuid": null,
+      "SerializationControl": "NoExtension",
+      "Operation": "None",
+      "HasLeadingFourNullBytes": false,
+      "ObjectName": "DA_Skill_Railgun",
+      "OuterIndex": 0,
+      "ClassIndex": -1,
+      "SuperIndex": 0,
+      "TemplateIndex": -9,
+      "ObjectFlags": "RF_Public, RF_Standalone",
+      "SerialSize": 555,
+      "SerialOffset": 1852,
+      "ScriptSerializationStartOffset": 0,
+      "ScriptSerializationEndOffset": 555,
+      "bForcedExport": false,
+      "bNotForClient": false,
+      "bNotForServer": false,
+      "PackageGuid": "{00000000-0000-0000-0000-000000000000}",
+      "IsInheritedInstance": false,
+      "PackageFlags": "PKG_None",
+      "bNotAlwaysLoadedForEditorGame": false,
+      "bIsAsset": false,
+      "GeneratePublicHash": false,
+      "SerializationBeforeSerializationDependencies": [],
+      "CreateBeforeSerializationDependencies": [
+        -7,
+        -8,
+        -6
+      ],
+      "SerializationBeforeCreateDependencies": [
+        -1,
+        -9
+      ],
+      "CreateBeforeCreateDependencies": [],
+      "Extras": ""
+    }
+  ],
+  "SearchableNames": null,
+  "ImportTypeHierarchies": null,
+  "MetaData": null,
+  "Thumbnails": null,
+  "WorldTileInfo": null,
+  "AppendedNullBytes": 0,
+  "OtherAssetsFailedToAccess": [],
+  "LegacyFileVersion": -9,
+  "DataResourceVersion": "Invalid",
+  "DataResources": null,
+  "UsesEventDrivenLoader": true,
+  "WillSerializeNameHashes": true,
+  "Imports": [
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "VoyageSkill",
+      "OuterIndex": -5,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Class",
+      "PackageName": "VoyageSkill",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "/Game/Mods/Railgun/Research/T_RailgunSkill",
+      "OuterIndex": 0,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Package",
+      "PackageName": "/Game/Mods/Railgun/Research/T_RailgunSkill",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01",
+      "OuterIndex": 0,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Package",
+      "PackageName": "/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod",
+      "OuterIndex": 0,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Package",
+      "PackageName": "/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "/Script/Voyage",
+      "OuterIndex": 0,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Package",
+      "PackageName": "/Script/Voyage",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "T_RailgunSkill",
+      "OuterIndex": -2,
+      "ClassPackage": "/Script/Engine",
+      "ClassName": "Texture2D",
+      "PackageName": "T_RailgunSkill",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "DA_Item_Module_RailgunCannonMk01",
+      "OuterIndex": -3,
+      "ClassPackage": "/Script/Voyage",
+      "ClassName": "VoyageItem",
+      "PackageName": "DA_Item_Module_RailgunCannonMk01",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "DA_Ammo_Railgun_FullRod",
+      "OuterIndex": -4,
+      "ClassPackage": "/Script/Voyage",
+      "ClassName": "VoyageItemAmmo",
+      "PackageName": "DA_Ammo_Railgun_FullRod",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "Default__VoyageSkill",
+      "OuterIndex": -5,
+      "ClassPackage": "/Script/Voyage",
+      "ClassName": "VoyageSkill",
+      "PackageName": "Default__VoyageSkill",
+      "bImportOptional": false
+    }
+  ],
+  "DependsMap": [
+    []
+  ],
+  "SoftPackageReferenceList": null,
+  "AssetRegistryDependencyDataOffset": -1,
+  "AssetRegistryRecords": [],
+  "ImportBits": null,
+  "SoftPackageBits": null,
+  "ExtraPackageDependencies": null,
+  "BulkData": null,
+  "AdditionalFiles": "wYMqng==",
+  "Trailer": null,
+  "Generations": [
+    {
+      "$type": "UAssetAPI.FGenerationInfo, UAssetAPI",
+      "ExportCount": 1,
+      "NameCount": 40
+    }
+  ],
+  "PackageGuid": "{00000000-0000-0000-0000-000000000000}",
+  "PersistentGuid": "{00000000-0000-0000-0000-000000000000}",
+  "RecordedEngineVersion": {
+    "$type": "UAssetAPI.FEngineVersion, UAssetAPI",
+    "Major": 0,
+    "Minor": 0,
+    "Patch": 0,
+    "Changelist": 0,
+    "Branch": null
+  },
+  "RecordedCompatibleWithEngineVersion": {
+    "$type": "UAssetAPI.FEngineVersion, UAssetAPI",
+    "Major": 0,
+    "Minor": 0,
+    "Patch": 0,
+    "Changelist": 0,
+    "Branch": null
+  },
+  "ChunkIDs": [],
+  "PackageSource": 0,
+  "FolderName": "/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun",
+  "LocalizationId": null,
+  "SoftObjectPathsCount": 0,
+  "SoftObjectPathsOffset": 1352,
+  "SearchableNamesOffset": 0,
+  "ThumbnailTableOffset": 0,
+  "ImportTypeHierarchiesCount": 0,
+  "ImportTypeHierarchiesOffset": 0,
+  "SavedHash": "AAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  "CompressionFlags": 0,
+  "AdditionalPackagesToCook": [],
+  "NamesReferencedFromExportDataCount": 26,
+  "PayloadTocOffset": -1,
+  "DataResourceOffset": -1,
+  "doWeHaveAssetRegistryData": true,
+  "doWeHaveWorldTileInfo": false,
+  "PackageFlags": "PKG_Cooked, PKG_RequiresLocalizationGather, PKG_FilterEditorOnly",
+  "HasUnversionedProperties": false,
+  "IsFilterEditorOnly": true
+}

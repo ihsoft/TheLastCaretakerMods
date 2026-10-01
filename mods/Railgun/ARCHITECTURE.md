@@ -43,14 +43,15 @@
 
 - The actor is `/Game/Mods/Railgun/Module/BP_Module_Railgun`; the coordinator
   discovers that exact owned class. Its `VoyageModuleComponent.ItemAsset` points
-  to `/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01`. The gun item
-  is cloned from the current stock module donor, receives the owned icon,
-  actor reference and temporary one-Alloy-Frame recipe, and has donor production
-  metadata removed.
+  to `/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01`. The complete
+  gun item object graph is authored in
+  `Assets/Fabricator/railgun-item.json` and written directly to the staged
+  package; no stock item package is copied or patched.
 - One Tier-19 `Railgun` skill owns exactly two item references: the independent
   gun and the authored ammunition. The skill identity is
   `/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun`; its dedicated research icon
-  is under `/Game/Mods/Railgun`.
+  is under `/Game/Mods/Railgun`. Its complete serialized source is
+  `Assets/Skill/railgun-skill.json`, not a generated mutation of a stock skill.
 - A complete current-game AssetRegistry with Railgun's primary entries is
   packaged. This is an accepted interim registry override, not a composable
   solution for multiple mods replacing the same registry.
@@ -69,17 +70,19 @@
 
 The stable identity remains
 `/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod`, despite the historical suffix.
-The current item is generated from scratch as one `VoyageItemAmmo` export; it
-is not a full Sniper Rod clone or a stock Rod package override. Sniper Rod is
-still the fingerprint-matched donor for package serialization and stock drop
-configuration.
+The current item is authored as one `VoyageItemAmmo` export in
+`Assets/Fabricator/railgun-ammo-item.json`; it is not a full Sniper Rod clone
+or a stock Rod package override. The generator emits only an editor/cook
+placeholder at the same identity so the research skill can reference it. The
+packaged ammo object graph and values come only from the owned JSON.
 
-The tested output contains exactly 16 top-level serialized properties:
+The current game-validated ammo baseline contains 16 top-level serialized properties:
 `Caliber`, `Icon`, `Category`, `CategoryAsset`, `Quality`, `Weight`, `CraftTime`,
 `CraftElectricityCost`, `CraftAmount`, `CraftFilter`, `Components`,
 `DropVariations`, `DroppedActor`, `MaxDropCount`, `Name`, `Description`.
-This is the smallest tested baseline, not proof that every remaining property
-is indispensable.
+This is a current value snapshot, not a build schema or whitelist. Native
+properties may be added to or removed from the owned JSON when required; the
+producer validates serialization, identity and required runtime references.
 
 | Setting | Current owned value |
 | --- | --- |
@@ -116,12 +119,18 @@ separately because mesh building may remove degenerate source triangles. A
 future source revision must refresh the sibling contract and pass the same
 source-to-import checks; it need not retain decorative node names or counts.
 
-After cook, the shared patcher matches this one item's package serialization
-to the exact stock Sniper Rod donor: unversioned property stream and matching
-header/resolved custom versions (14 entries on this fingerprint). Tagged
-output had registered and displayed but failed to produce a usable pickup.
-The successful rewrite changed several metadata fields together; it does not
-isolate one causal bit. See the shared
+After cook, the reviewed UAssetGUI/UAssetAPI writer converts the three owned
+JSON sources directly to staged `.uasset`/`.uexp` packages using UE 5.8.
+`Assets/data-assets-contract.json` owns their individual package/native
+identities plus one shared game, mapping, writer and revalidation gate for the
+complete set. Every import carries explicit
+`PackageName=None`; leaving
+that field null is not equivalent under the reviewed filtered-import writer.
+The build reopens the result and compares versions, custom versions, name map,
+imports and complete export graph against the JSON used for that build before
+packaging. The skill and gun item use the same direct writer/readback contract;
+their current tagged/unversioned formats and object graphs are preserved by
+their editable JSON rather than hard-coded count gates. See the shared
 [serialization contract](../../docs/voyage-cooked-asset-toolchain.md#package-serialization-is-a-separate-compatibility-contract).
 
 General consumer findings and limitations, including output grouping and
@@ -136,7 +145,9 @@ The persistent gun module owns `RailgunAmmoInventory`, a native
 `VoyageInventoryWeightLimitedComponent`. Its actor validator accepts only a
 valid reference to the owned ammo item; the validator's inventory argument may
 be the player's source inventory and is not compared to the module inventory.
-The mass budget is six times the item's actual weight (currently 23.4).
+The mass budget is six times the item's current JSON-authored weight (currently
+23.4 kg). Changing the ammo weight in JSON changes the generated magazine limit
+without a C++ balance constant.
 The existing `ReceiveBeginPlay` chain calls native `SetMaxWeightLimit` to
 initialize effective capacity; serialized defaults alone were insufficient.
 

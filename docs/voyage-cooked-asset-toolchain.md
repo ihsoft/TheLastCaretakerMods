@@ -40,11 +40,6 @@ The accepted UE 5.8 checkpoint is:
 - canonical managed CUE4Parse at `.tools/bin/CUE4Parse/CUE4Parse.dll`, size
   `4,025,344` bytes and SHA-256
   `F304981BAD4C53D209DFDABA9EB65A01D825572E543A04914BEBFD3538DCF4FD`;
-- canonical VoyageAssetPatcher at `.tools/bin/VoyageAssetPatcher.exe`, size
-  `5,556,137` bytes and SHA-256
-  `4298009F9034E9F5D93BFF343ED9613D35F1F501EB7F4B6AAB5A390EDDBBA1A9`,
-  built from patcher source checkpoint `9d32697` and accepted UAssetAPI
-  `21c982f`;
 - canonical VoyageExecutableInspector at
   `.tools/bin/VoyageExecutableInspector.exe`, size `196,700` bytes and SHA-256
   `3A33483362EF5BA122C370C76322A6A4012BEB298D58A07C67CD6045A2F6C718`,
@@ -87,10 +82,6 @@ Use the wrappers listed in `tools/README.md`:
   `Get-VoyageAssetInspectorBinary.ps1`. Runtime paths check provenance and never
   build or restore. The framework-dependent EXE requires .NET 10 and external
   reviewed mappings; source/dependency changes invalidate it, not a new query;
-- run normal surgical patch operations through `Invoke-VoyageAssetPatcher.ps1`,
-  which resolves the current mapping and validated executable; publish the EXE
-  through `Publish-VoyageAssetPatcherBinary.ps1` only after an intentional
-  committed patcher or accepted UAssetAPI change;
 - run native name, address, and member-offset correlation through
   `Invoke-VoyageExecutableInspector.ps1`; it resolves the validated EXE and
   returns compact fingerprinted evidence while retaining the detailed report.
@@ -221,19 +212,12 @@ entry counts and values must come from the matching donor and reviewed
 mappings, not become universal hard-coded constants.
 
 Do not flip `IsUnversioned` / `PKG_UnversionedProperties` in a header or exported
-JSON and assume the payload has been converted. Use a parsed rewrite that
-encodes the property stream consistently with the selected schema and version
-contract. The general `match-package-serialization` operation was introduced
-in `2042b0e`; its supported donor/input/output and verification contract is
-owned by the [patcher documentation](../tools/VoyageAssetPatcher/README.md).
-
-For this workflow, require a fingerprint-matched exact donor and reviewed
-mappings, preserve the target identity and intended object graph, rewrite to
-a separate output, then reopen and compare the serialization metadata and
-intended semantics. Container verification and a real-game test of the actual
-consumer remain mandatory higher gates. Reopen verifies reader/writer
-consistency, not gameplay compatibility; do not silently fall back to a
-header-only edit when conversion fails.
+JSON and assume the payload has been converted. Author the complete package JSON
+with the intended property stream, stored object/custom versions and reviewed
+mapping, then write and reopen it with the canonical UAssetGUI/UAssetAPI writer.
+Compare serialization metadata and intended semantics before container
+verification and a real-game test of the actual consumer. Reopen verifies
+reader/writer consistency, not gameplay compatibility.
 
 ## Known boundaries
 

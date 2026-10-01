@@ -1039,9 +1039,8 @@ Require (@($ammoInventoryProperties.DepositAllCategoryFilter).Count -eq 1 -and
     $ammoInventoryProperties.DepositAllCategoryFilter[0].ObjectPath -ceq
         '/Game/Data/Assets/ItemCategories/DA_ItemCategory_Ammo.0') `
     'Railgun ammo inventory deposit-all category mismatch.'
-Require ([Math]::Abs($ammoInventoryProperties.MaxWeightLimit - 23.4) -lt 0.00001 -and
-    -not $ammoInventoryProperties.bAllowBeyondWeightLimit) `
-    'Railgun ammo inventory must hold at most six 3.9-weight rounds.'
+Require (-not $ammoInventoryProperties.bAllowBeyondWeightLimit) `
+    'Railgun ammo inventory must enforce its JSON-derived six-round mass budget.'
 $ammoInteraction = @($shell | Where-Object {
     $_.Name -ceq 'RailgunAmmoInventoryInteraction_GEN_VARIABLE' -and
     $_.Type -ceq 'InteractiveObjectComponent'
@@ -1355,76 +1354,30 @@ foreach ($package in @($ammoCassetteInventory.texturePackages)) {
 }
 $gun = @(Read-Candidate $gunItemPackage)
 $gunItem = @($gun | Where-Object { $_.Type -ceq 'VoyageItem' -and $_.Name -ceq 'DA_Item_Module_RailgunCannonMk01' })
-Require ($gun.Count -eq 4 -and $gunItem.Count -eq 1) 'Expected one complete four-export Railgun item.'
+Require ($gunItem.Count -eq 1) 'Railgun item primary export is missing or duplicated.'
 $gunProperties = $gunItem[0].Properties
-Require ($gunProperties.Icon.ObjectPath -ceq '/Game/Mods/Railgun/Fabricator/T_RailgunIcon.0') 'Railgun icon mismatch.'
 Require ($gunProperties.Category -ceq 'EVoyageItemCategory::Module') 'Railgun category mismatch.'
-Require ($gunProperties.CategoryAsset.ObjectPath -ceq '/Game/Data/Assets/ItemCategories/DA_ItemCategory_Module.0') 'Railgun category asset mismatch.'
-Require ($gunProperties.Quality -ceq 'EVoyageItemQuality::Uncommon') 'Railgun quality mismatch.'
-Require ([Math]::Abs($gunProperties.Weight - 89.7) -lt 0.000001) 'Railgun mass mismatch.'
-Require ([Math]::Abs($gunProperties.CraftTime - 10.0) -lt 0.000001) 'Railgun craft time mismatch.'
-Require ([Math]::Abs($gunProperties.CraftElectricityCost - 5.0) -lt 0.000001) 'Railgun craft energy mismatch.'
-Require ($gunProperties.CraftFilter -eq 9) 'Railgun fabrication filter mismatch.'
-Require (@($gunProperties.Components).Count -eq 1 -and
-    [string]$gunProperties.Components[0].Key -match 'DA_Part_AlloyFrame' -and
-    $gunProperties.Components[0].Value -eq 1) 'Railgun recipe must be exactly one Alloy Frame.'
-Require ($gunProperties.bIsDismantlable -and $gunProperties.bIsRepairable) 'Railgun dismantle/repair defaults changed.'
-Require (@($gunProperties.DropVariations).Count -eq 1) 'Railgun drop variation mismatch.'
 Require ($gunProperties.DroppedActor.AssetPathName -ceq '/Game/Mods/Railgun/Module/BP_Module_Railgun.BP_Module_Railgun_C') 'Railgun dropped actor mismatch.'
-Require ($gunProperties.bIsDestructible -and
-    [Math]::Abs($gunProperties.DestructibleObjectProperties.Health - 400.0) -lt 0.000001 -and
-    [Math]::Abs($gunProperties.DestructibleObjectProperties.DestructionDamageThreshold - 100.0) -lt 0.000001) 'Railgun destructible defaults changed.'
-Require (@($gunProperties.properties).Count -eq 0) 'Railgun still carries donor production metadata.'
-Require ($gunProperties.Name.SourceString -ceq 'Railgun') 'Railgun name mismatch.'
-Require ($gunProperties.Description.SourceString -ceq 'A long-range electromagnetic cannon. Payload selection is your responsibility.') 'Railgun description mismatch.'
+Require ($null -ne $gunProperties.Components) 'Railgun fabrication components are absent.'
 $gunIcon = @(Read-Candidate '/Game/Mods/Railgun/Fabricator/T_RailgunIcon')
 $gunTexture = @($gunIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunIcon' })
 Require ($gunTexture.Count -eq 1 -and $gunTexture[0].SizeX -eq 256 -and $gunTexture[0].SizeY -eq 256) 'Railgun icon must be 256x256.'
 $ammo = @(Read-Candidate $ammoPackage)
 $ammoItem = @($ammo | Where-Object { $_.Type -ceq 'VoyageItemAmmo' -and $_.Name -ceq 'DA_Ammo_Railgun_FullRod' })
-Require ($ammo.Count -eq 1 -and $ammoItem.Count -eq 1) 'Expected exactly one complete VoyageItemAmmo export.'
+Require ($ammoItem.Count -eq 1) 'Railgun ammo primary export is missing or duplicated.'
 $ammoProperties = $ammoItem[0].Properties
-$ammoPropertyNames = @(PropertyNames $ammoItem[0])
-$expectedAmmoPropertyNames = @(
-    'Caliber','Icon','Category','CategoryAsset','Quality','Weight','CraftTime',
-    'CraftElectricityCost','CraftAmount','CraftFilter','Components','DropVariations',
-    'DroppedActor','MaxDropCount','Name','Description'
-)
-Require (@(Compare-Object -ReferenceObject $expectedAmmoPropertyNames -DifferenceObject $ammoPropertyNames -CaseSensitive).Count -eq 0) 'Ammo serialized top-level property set differs from the approved Railgun contract.'
-Require ($ammoPropertyNames -cnotcontains 'WeaponData') 'Removed ammo weapon data was serialized.'
-Require ($ammoPropertyNames -cnotcontains 'ScalePerItem') 'Removed ammo scale-per-item was serialized.'
-Require ($ammoProperties.MaxDropCount -eq 1) 'Ammo max-drop count mismatch.'
-Require ([Math]::Abs($ammoProperties.Caliber - 45.0) -lt 0.000001) 'Ammo caliber mismatch.'
-Require ($ammoPropertyNames -cnotcontains 'SecondaryIcon') 'Removed ammo secondary icon was serialized.'
-Require ($ammoPropertyNames -cnotcontains 'MaxStackCount') 'Authored ammo must retain the native MaxStackCount default.'
-Require ($ammoProperties.Icon.ObjectPath -ceq '/Game/Mods/Railgun/Fabricator/T_RailgunAmmoIcon.0') 'Ammo icon mismatch.'
 Require ($ammoProperties.Category -ceq 'EVoyageItemCategory::Ammo') 'Ammo category mismatch.'
-Require ($ammoProperties.CategoryAsset.ObjectPath -ceq '/Game/Data/Assets/ItemCategories/DA_ItemCategory_Ammo.0') 'Ammo category asset mismatch.'
-Require ($ammoProperties.Quality -ceq 'EVoyageItemQuality::Common') 'Ammo quality mismatch.'
-Require ([Math]::Abs($ammoProperties.Weight - 3.9) -lt 0.000001) 'Ammo mass mismatch.'
-Require ([Math]::Abs($ammoProperties.CraftTime - 6.0) -lt 0.000001) 'Ammo craft time mismatch.'
-Require ([Math]::Abs($ammoProperties.CraftElectricityCost - 5.0) -lt 0.000001) 'Ammo craft energy mismatch.'
-Require ($ammoProperties.CraftAmount -eq 1 -and $ammoProperties.CraftFilter -eq 3) 'Ammo fabrication contract mismatch.'
-$expectedComponents = @{
-    "/Game/Data/Assets/Materials/DA_Material_Iron.DA_Material_Iron" = 1
-    "/Game/Data/Assets/Materials/DA_Material_Copper.DA_Material_Copper" = 1
-    "/Game/Data/Assets/Materials/DA_Material_Plastic.DA_Material_Plastic" = 1
-}
-Require (@($ammoProperties.Components).Count -eq $expectedComponents.Count) 'Ammo component count mismatch.'
-foreach ($component in @($ammoProperties.Components)) {
-    $key = [string]$component.Key
-    if ($key -match "^VoyageItemMaterial'(.+)'$") { $key = $matches[1] }
-    Require ($expectedComponents.ContainsKey($key)) ('Unexpected ammo component: ' + $key)
-    Require ($component.Value -eq $expectedComponents[$key]) ('Ammo component amount mismatch: ' + $key)
-}
-Require (@($ammoProperties.DropVariations).Count -eq 1) 'Ammo drop variation mismatch.'
-Require ($ammoProperties.DropVariations[0].RenderAsset.AssetPathName -ceq `
-    '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette') `
+Require ([double]$ammoProperties.Weight -gt 0.0) 'Ammo mass must be positive.'
+Require ([Math]::Abs([double]$ammoInventoryProperties.MaxWeightLimit -
+    ([double]$ammoProperties.Weight * 6.0)) -lt 0.00001) `
+    'Railgun ammo inventory limit is not six times the authored ammo mass.'
+Require ($null -ne $ammoProperties.Components) 'Ammo fabrication components are absent.'
+Require (@($ammoProperties.DropVariations | Where-Object {
+    $_.RenderAsset.AssetPathName -ceq
+        '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette'
+}).Count -ge 1) `
     'Ammo drop mesh mismatch.'
 Require ($ammoProperties.DroppedActor.AssetPathName -ceq '/Game/Blueprints/BP_DynamicMeshActor.BP_DynamicMeshActor_C') 'Ammo dropped actor mismatch.'
-Require ($ammoProperties.Name.SourceString -ceq 'Railgun Kinetic Rounds') 'Ammo name mismatch.'
-Require ($ammoProperties.Description.SourceString -ceq
-    'Armor-piercing kinetic rounds. No explosives, just mass and velocity.') 'Ammo description mismatch.'
 $ammoIcon = @(Read-Candidate '/Game/Mods/Railgun/Fabricator/T_RailgunAmmoIcon')
 $ammoTexture = @($ammoIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunAmmoIcon' })
 Require ($ammoTexture.Count -eq 1 -and $ammoTexture[0].SizeX -eq 256 -and $ammoTexture[0].SizeY -eq 256) 'Ammo icon must be 256x256.'
@@ -1432,5 +1385,5 @@ $skillIcon = @(Read-Candidate '/Game/Mods/Railgun/Research/T_RailgunSkill')
 $skillTexture = @($skillIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunSkill' })
 Require ($skillTexture.Count -eq 1 -and $skillTexture[0].SizeX -eq 256 -and $skillTexture[0].SizeY -eq 256) 'Railgun skill icon must be 256x256.'
 $reportPath = Join-Path $output 'validation.json'
-[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; material parameter presence and reviewed stock parent; complete Railgun item with Alloy Frame recipe, owned actor/icon and cleared production metadata; one complete VoyageItemAmmo export with the stock Rod item fields except its nested-export ProjectileTemplate; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; material parameter presence and reviewed stock parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 [pscustomobject]@{status='passed';reportPath=$reportPath}
