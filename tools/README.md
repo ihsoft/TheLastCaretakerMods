@@ -124,7 +124,10 @@ Both model and material exporters require the caller to explicitly select
 user did not choose, ask. Reconstructed bakes expose their complete machine contract at GLB root
 `extras.materialPipeline`, including metadata-only source identities, bake inputs/
 outputs and unresolved layers; source pixels are not embedded unless they become
-an active or baked PBR output.
+an active or baked PBR output. `BakeReconstructed` automatically applies the
+portable cooked-parameter contract for `M_StackedMaterial_Opaque`: neutralized
+micro-albedo plus the instance `BaseColor`, `MicroTiling`, and bounded roughness;
+its mesh-specific block atlas and view-dependent effects remain explicit metadata.
 Rendered material review uses `Export-VoyageMaterialPreview.ps1`: exact material
 list plus explicit material mode -> one Blender-rendered PNG contact sheet with at
 most six columns. Each material is rendered as an isolated tile with the same local

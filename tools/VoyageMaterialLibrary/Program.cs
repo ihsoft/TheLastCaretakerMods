@@ -22,6 +22,8 @@ namespace VoyageMaterialLibrary;
 
 internal static partial class Program
 {
+    const string StackedOpaqueMaterialParent =
+        "/Game/AssetSets/Items/Materials/Stacks/Materials/Parent/M_StackedMaterial_Opaque.M_StackedMaterial_Opaque";
     internal static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -296,6 +298,8 @@ internal static partial class Program
         string materialMode = "PbrApproximation")
     {
         var builder = new MaterialBuilder(report.Name).WithMetallicRoughnessShader();
+        var bakeStackedOpaque = materialMode == "BakeReconstructed" &&
+            report.Parents.Contains(StackedOpaqueMaterialParent, StringComparer.Ordinal);
         TextureRecord? Select(string role, params string[] aliases)
         {
             var candidates = report.Textures.Where(p => aliases.Contains(Normalize(p.Key)))
@@ -325,6 +329,14 @@ internal static partial class Program
             report.Bindings[key + "Factor"] = values[0].Key + " (named scalar; shader operation not evaluated)";
             return Math.Clamp(values[0].Value, 0, 1);
         }
+        float NamedScalar(string key, float fallback)
+        {
+            var values = parameters.Scalars.Where(x => Normalize(x.Key) == key).ToArray();
+            return values.Length == 1 && float.IsFinite(values[0].Value) ? values[0].Value : fallback;
+        }
+        var color = parameters.Colors.Where(x => new[] { "basecolor", "basecolour", "colortint", "tint" }.Contains(Normalize(x.Key))).ToArray();
+        var disableTint = parameters.Switches.Any(p => new[] { "usecolortint", "usetint" }.Contains(Normalize(p.Key)) && !p.Value);
+        var microTiling = Math.Clamp(NamedScalar("microtiling", 1), .125f, 64);
         var baseColor = Select("baseColor", "basecolor", "basecolortexture", "colormap", "albedo", "diffuse", "diffusetexture", "pmdiffuse");
         var normal = Select("normal", "normal", "normalmap", "normaltexture", "pmnormals");
         var orm = Select("ORM", "orm", "occlusionroughnessmetallic", "occlusionroughnessmetallictexture");
@@ -341,6 +353,28 @@ internal static partial class Program
         {
             var baseColorPng = ColorPng(baseColor);
             var baseColorTransform = baseColor.Srgb ? "none" : "linear-to-sRGB";
+            if (bakeStackedOpaque)
+            {
+                baseColorPng = BakeStackedBaseColor(baseColor, microTiling);
+                baseColorTransform = $"stacked-opaque-linear-luminance:micro-tiling={microTiling:R}";
+                report.BakeOperations.Add(new BakeOperationRecord
+                {
+                    Id = report.Name + ":baseColor:stacked-opaque",
+                    Material = report.Source,
+                    OutputRole = "baseColor",
+                    Algorithm = "linear luminance(BaseColorTexture), repeated by MicroTiling; BaseColor remains the glTF factor",
+                    InputTextures = [baseColor.Source],
+                    Parameters = new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["MicroTiling"] = microTiling.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                        ["BaseColorFactor"] = color.Length == 1 ? LinearColorHex(new Vector3(color[0].Value.R, color[0].Value.G, color[0].Value.B)) : "unresolved"
+                    },
+                    OutputSha256 = Convert.ToHexString(SHA256.HashData(baseColorPng)),
+                    Fidelity = "reconstructed"
+                });
+                report.Bindings["stackedOpaqueParent"] = StackedOpaqueMaterialParent;
+                report.Warnings.Add("M_StackedMaterial_Opaque reconstructed as portable PBR: inherited micro color is luminance-only and BaseColor supplies material hue; mesh-specific BlockMasks remain metadata.");
+            }
             var maskPaths = report.Textures.Where(x => Normalize(x.Key) == "colormask")
                 .Select(x => x.Value).Distinct(StringComparer.Ordinal).ToArray();
             var maskChannels = new List<(string Name, int Component, Vector3 Color)>();
@@ -387,12 +421,62 @@ internal static partial class Program
         }
         if (normal != null)
         {
-            builder.WithNormal(UsedImage(normal, "normal", FlipNormalGreen(normal.Png!), "invert-green"));
+            var normalPng = bakeStackedOpaque ? TilePng(normal.Png!, microTiling) : normal.Png!;
+            normalPng = FlipNormalGreen(normalPng);
+            builder.WithNormal(UsedImage(normal, "normal", normalPng,
+                bakeStackedOpaque ? $"micro-tiling={microTiling:R};invert-green" : "invert-green"));
+            if (bakeStackedOpaque)
+                report.BakeOperations.Add(new BakeOperationRecord
+                {
+                    Id = report.Name + ":normal:stacked-opaque",
+                    Material = report.Source,
+                    OutputRole = "normal",
+                    Algorithm = "repeat tangent-space normal by MicroTiling; invert green from Unreal/DirectX to glTF/OpenGL",
+                    InputTextures = [normal.Source],
+                    Parameters = new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["MicroTiling"] = microTiling.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+                    },
+                    OutputSha256 = Convert.ToHexString(SHA256.HashData(normalPng)),
+                    Fidelity = "reconstructed"
+                });
             report.Warnings.Add("Normal Y inverted from Unreal/DirectX to glTF/OpenGL; only the converted image is embedded.");
         }
         if (orm != null)
         {
-            var image = UsedImage(orm, "ORM", orm.Png!, "none");
+            var ormPng = orm.Png!;
+            var ormTransform = "none";
+            if (bakeStackedOpaque)
+            {
+                var useMicroRoughness = !parameters.Switches.Any(x => Normalize(x.Key) == "usemicroroughness" && !x.Value);
+                var roughnessMin = Math.Clamp(NamedScalar("roughnessmin", .2f), 0, 1);
+                var roughnessMax = Math.Clamp(NamedScalar("roughnessmax", .7f), 0, 1);
+                if (roughnessMin > roughnessMax) (roughnessMin, roughnessMax) = (roughnessMax, roughnessMin);
+                var mainRoughness = Math.Clamp(NamedScalar("mainroughness", .3f), 0, 1);
+                ormPng = BakeStackedOrm(orm.Png!, microTiling, useMicroRoughness, roughnessMin, roughnessMax, mainRoughness);
+                ormTransform = $"stacked-opaque-roughness:micro-tiling={microTiling:R}";
+                report.BakeOperations.Add(new BakeOperationRecord
+                {
+                    Id = report.Name + ":ORM:stacked-opaque",
+                    Material = report.Source,
+                    OutputRole = "ORM",
+                    Algorithm = useMicroRoughness
+                        ? "repeat ORM by MicroTiling; remap G from 0..1 to RoughnessMin..RoughnessMax"
+                        : "repeat ORM by MicroTiling; replace G with MainRoughness",
+                    InputTextures = [orm.Source],
+                    Parameters = new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["MicroTiling"] = microTiling.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                        ["UseMicroRoughness"] = useMicroRoughness.ToString(),
+                        ["RoughnessMin"] = roughnessMin.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                        ["RoughnessMax"] = roughnessMax.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                        ["MainRoughness"] = mainRoughness.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+                    },
+                    OutputSha256 = Convert.ToHexString(SHA256.HashData(ormPng)),
+                    Fidelity = "reconstructed"
+                });
+            }
+            var image = UsedImage(orm, "ORM", ormPng, ormTransform);
             builder.WithMetallicRoughness(image).WithOcclusion(image);
             report.Warnings.Add("ORM inferred by explicit name: R=occlusion, G=roughness, B=metallic; shader wiring is not proven.");
         }
@@ -421,8 +505,6 @@ internal static partial class Program
             report.EmissiveStrength = Math.Max(emissionValue, 1);
             if (strength.Length == 1) report.Bindings["emissiveStrength"] = strength[0].Key + " (named scalar)";
         }
-        var color = parameters.Colors.Where(x => new[] { "basecolor", "basecolour", "colortint", "tint" }.Contains(Normalize(x.Key))).ToArray();
-        var disableTint = parameters.Switches.Any(p => new[] { "usecolortint", "usetint" }.Contains(Normalize(p.Key)) && !p.Value);
         if (color.Length == 1 && !disableTint)
         {
             var c = color[0].Value;
@@ -560,6 +642,64 @@ internal static partial class Program
         baseBitmap.Pixels = basePixels;
         using var data = baseBitmap.Encode(SKEncodedImageFormat.Png, 100);
         return data.ToArray();
+    }
+    internal static byte[] BakeStackedBaseColor(TextureRecord source, float tiling)
+    {
+        using var bitmap = SKBitmap.Decode(source.Png!) ?? throw new InvalidDataException("Stacked Base Color PNG decode failed.");
+        var input = bitmap.Pixels;
+        var output = new SKColor[input.Length];
+        for (var y = 0; y < bitmap.Height; y++)
+            for (var x = 0; x < bitmap.Width; x++)
+            {
+                var pixel = input[TiledPixelIndex(x, y, bitmap.Width, bitmap.Height, tiling)];
+                var linear = new Vector3(source.Srgb ? SrgbToLinear(pixel.Red) : pixel.Red / 255f,
+                    source.Srgb ? SrgbToLinear(pixel.Green) : pixel.Green / 255f,
+                    source.Srgb ? SrgbToLinear(pixel.Blue) : pixel.Blue / 255f);
+                var luminance = Vector3.Dot(linear, new Vector3(.2126f, .7152f, .0722f));
+                var value = LinearToSrgb(luminance);
+                output[y * bitmap.Width + x] = new SKColor(value, value, value, pixel.Alpha);
+            }
+        bitmap.Pixels = output;
+        using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
+    }
+    internal static byte[] BakeStackedOrm(byte[] png, float tiling, bool useMicroRoughness,
+        float roughnessMin, float roughnessMax, float mainRoughness)
+    {
+        using var bitmap = SKBitmap.Decode(png) ?? throw new InvalidDataException("Stacked ORM PNG decode failed.");
+        var input = bitmap.Pixels;
+        var output = new SKColor[input.Length];
+        for (var y = 0; y < bitmap.Height; y++)
+            for (var x = 0; x < bitmap.Width; x++)
+            {
+                var pixel = input[TiledPixelIndex(x, y, bitmap.Width, bitmap.Height, tiling)];
+                var roughness = useMicroRoughness
+                    ? roughnessMin + (roughnessMax - roughnessMin) * (pixel.Green / 255f)
+                    : mainRoughness;
+                output[y * bitmap.Width + x] = new SKColor(pixel.Red,
+                    (byte)Math.Clamp((int)MathF.Round(255 * roughness), 0, 255), pixel.Blue, pixel.Alpha);
+            }
+        bitmap.Pixels = output;
+        using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
+    }
+    internal static byte[] TilePng(byte[] png, float tiling)
+    {
+        using var bitmap = SKBitmap.Decode(png) ?? throw new InvalidDataException("Tiled PNG decode failed.");
+        var input = bitmap.Pixels;
+        var output = new SKColor[input.Length];
+        for (var y = 0; y < bitmap.Height; y++)
+            for (var x = 0; x < bitmap.Width; x++)
+                output[y * bitmap.Width + x] = input[TiledPixelIndex(x, y, bitmap.Width, bitmap.Height, tiling)];
+        bitmap.Pixels = output;
+        using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
+    }
+    static int TiledPixelIndex(int x, int y, int width, int height, float tiling)
+    {
+        var sourceX = Math.Min(width - 1, (int)MathF.Floor((x / (float)width * tiling % 1) * width));
+        var sourceY = Math.Min(height - 1, (int)MathF.Floor((y / (float)height * tiling % 1) * height));
+        return sourceY * width + sourceX;
     }
     static float SrgbToLinear(byte value)
     {

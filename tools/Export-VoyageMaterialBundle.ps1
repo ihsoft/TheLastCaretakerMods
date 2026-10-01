@@ -15,15 +15,19 @@ if ([string]::IsNullOrWhiteSpace($MaterialMode)) {
     throw 'Choose -MaterialMode PbrApproximation or BakeReconstructed.'
 }
 if ($PSCmdlet.ParameterSetName -ceq 'File') {
-    $Materials = @(Get-Content -LiteralPath $MaterialsFile -Raw | ConvertFrom-Json)
+    $loadedMaterials = Get-Content -LiteralPath $MaterialsFile -Raw | ConvertFrom-Json
+    $Materials = @()
+    foreach ($loadedMaterial in $loadedMaterials) {
+        $Materials += [string]$loadedMaterial
+    }
 }
 $Materials = @($Materials)
 if ($Materials.Count -lt 1 -or $Materials.Count -gt 128 -or @($Materials | Select-Object -Unique).Count -ne $Materials.Count) {
     throw 'Supply 1..128 unique exact material package paths.'
 }
-foreach ($material in $Materials) {
-    if ($material -notmatch '^/(Game|Engine|[A-Za-z0-9_]+)/[A-Za-z0-9_ /-]+$' -or $material.Trim() -cne $material) {
-        throw "Invalid exact material package path: $material"
+foreach ($materialPath in $Materials) {
+    if ($materialPath -notmatch '^/(Game|Engine|[A-Za-z0-9_]+)/[A-Za-z0-9_ /-]+$' -or $materialPath.Trim() -cne $materialPath) {
+        throw "Invalid exact material package path: $materialPath"
     }
 }
 if ($BundleName -notmatch '^[A-Za-z0-9_.-]+$' -or $BundleName -in '.', '..') {
@@ -43,15 +47,15 @@ $packsDirectory = Join-Path $evidence 'packs'
 [void](New-Item -ItemType Directory -Path $packsDirectory)
 $packPaths = @()
 $packResults = @()
-foreach ($material in $Materials) {
-    $name = $material.Split('/')[-1]
+foreach ($materialPath in $Materials) {
+    $name = $materialPath.Split('/')[-1]
     $packPath = Join-Path $packsDirectory ($name + '.materialpack.zip')
-    $packText = (& (Join-Path $PSScriptRoot 'Export-VoyageMaterialPack.ps1') -Material $material -MaterialMode $MaterialMode `
+    $packText = (& (Join-Path $PSScriptRoot 'Export-VoyageMaterialPack.ps1') -Material $materialPath -MaterialMode $MaterialMode `
         -Profile $Profile -SourceTextures MetadataOnly -OutputPath $packPath -BlenderPath $BlenderPath -GameRoot $GameRoot) -join [Environment]::NewLine
     $packResult = $packText | ConvertFrom-Json
     if ($packResult.status -cne 'exported' -or $packResult.profile -cne 'AnalysisCompact' -or
         $packResult.sourceTexturePolicy -cne 'MetadataOnly' -or $packResult.includedSourceTextureCount -ne 0) {
-        throw "AnalysisCompact material pack failed contract verification: $material"
+        throw "AnalysisCompact material pack failed contract verification: $materialPath"
     }
     $packPaths += $packPath
     $packResults += $packResult

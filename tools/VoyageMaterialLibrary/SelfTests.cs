@@ -124,6 +124,36 @@ internal static class SelfTests
         var automotiveMaterial = Program.MakeMaterial(automotive, automotiveParameters, Resolve, "BakeReconstructed");
         Check(automotive.Bindings["baseColor"] == "color" && automotive.Bindings.ContainsKey("baseColorFactor"),
             "reconstructed automotive material uses Color Map and Tint");
+        var stacked = new MaterialRecord
+        {
+            Source = "/Game/Test/MI_Stacked",
+            Name = "MI_Stacked",
+            Parents = ["/Game/AssetSets/Items/Materials/Stacks/Materials/Parent/M_StackedMaterial_Opaque.M_StackedMaterial_Opaque"]
+        };
+        stacked.Textures["BaseColorTexture"] = "stacked-color";
+        stacked.Textures["MicroNormal"] = "stacked-normal";
+        stacked.Textures["MicroORM"] = "stacked-orm";
+        var stackedTextures = stacked.Textures.Values.ToDictionary(x => x,
+            x => new TextureRecord { Source = x, Srgb = x == "stacked-color", Png = png, Width = 2, Height = 2 });
+        var stackedParameters = new CMaterialParams2();
+        stackedParameters.Colors["BaseColor"] = new CUE4Parse.UE4.Objects.Core.Math.FLinearColor(.8f, .8f, .8f, 1);
+        stackedParameters.Scalars["MicroTiling"] = 2;
+        stackedParameters.Scalars["RoughnessMin"] = .2f;
+        stackedParameters.Scalars["RoughnessMax"] = .4f;
+        stackedParameters.Switches["UseMicroRoughness?"] = true;
+        Program.MakeMaterial(stacked, stackedParameters, source => stackedTextures[source], "BakeReconstructed");
+        Check(stacked.BakeOperations.Count == 3 && stacked.BakeOperations.Select(x => x.OutputRole)
+            .OrderBy(x => x).SequenceEqual(new[] { "baseColor", "normal", "ORM" }.OrderBy(x => x)),
+            "stacked opaque bake records portable base color, normal and ORM operations");
+        using var stackedBaseColor = SKBitmap.Decode(stackedTextures["stacked-color"].Variants.Single().Data);
+        var stackedColorPixel = stackedBaseColor.GetPixel(0, 0);
+        Check(stackedColorPixel.Red == stackedColorPixel.Green && stackedColorPixel.Green == stackedColorPixel.Blue,
+            "stacked opaque bake removes inherited micro-texture chroma before BaseColor tint");
+        using var stackedOrm = SKBitmap.Decode(stackedTextures["stacked-orm"].Variants.Single().Data);
+        Check(Math.Abs(stackedOrm.GetPixel(0, 0).Green / 255f - (.2f + .2f * (80 / 255f))) < .01f,
+            "stacked opaque bake remaps micro roughness to configured bounds");
+        Check(stacked.Bindings["baseColorFactor"].StartsWith("BaseColor", StringComparison.Ordinal),
+            "stacked opaque bake preserves material hue as glTF BaseColor factor");
         record.Textures["Albedo"] = "secondColor";
         textures["secondColor"] = new TextureRecord { Source = "secondColor", Srgb = true, Png = png };
         var ambiguous = new MaterialRecord { Name = "ambiguous" };

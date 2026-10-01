@@ -141,6 +141,16 @@ one, the caller must ask rather than silently choosing:
   metadata without copying its source pixels. This is not Unreal engine-executed
   baking because cooked packages do not retain the editor graph.
 
+`BakeReconstructed` recognizes instances of `M_StackedMaterial_Opaque` without a
+separate caller mode. It converts the inherited colored micro-albedo to linear
+luminance, retains `BaseColor` as the portable material hue, repeats the micro
+base-color/normal/ORM inputs by `MicroTiling`, and remaps ORM roughness through
+`RoughnessMin`/`RoughnessMax` (or `MainRoughness` when micro roughness is off).
+Those transformations are listed in `bakeOperations`. `BlockMasks` remains a
+source identity because it is a UV atlas for the stock stack meshes rather than
+a transferable material texture; view-dependent chromatic/diffraction behavior
+also remains an explicit skipped effect.
+
 Consume the catalog tool's returned `packageListPath`; do not discover its cache
 internals. `M_` and `MI_` are useful naming filters, not proof of export type.
 Exporter resolves and checks Material/MaterialInstance types. Convert catalog
