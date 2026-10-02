@@ -72,6 +72,33 @@ multiplayer require their own tests. Retain a known-good artifact before a
 change; parser reopen and container verification remain lower gates than
 these actual gameplay consumers.
 
+## JSON authoring boundary
+
+For the tested Railgun setup, the complete owned UAssetAPI/UAssetGUI JSON is
+the source of truth for the ammo item's object graph and values. The reviewed
+[UAssetAPI `21c982f` writer](voyage-json-save-checkpoint.md#serialization-contract)
+writes it directly to loose `.uasset/.uexp` with reviewed mappings and an
+explicit `UE5_8` serialization hint; no stock donor or post-write patcher is
+used. The writer does not add hidden balance overrides. Stored object and
+custom versions remain part of the authored package-format contract rather
+than a runtime dependency on another item.
+
+The producer reopens the package and compares serialization metadata, imports,
+name map and the complete export graph against the current JSON, rather than
+enforcing historical property or import counts. This direct-JSON route is
+game-validated for the tested setup recorded in the owning
+[Railgun architecture](../mods/Railgun/ARCHITECTURE.md#current-game-validated-checkpoint),
+not for arbitrary future edits; packaging, reference resolution and affected
+gameplay consumers retain their own gates.
+
+For this filtered UE5.8 import layout, encode an unset import `PackageName` as
+the explicit FName `"None"`, not JSON `null`. In the reviewed writer, a null
+FName can serialize as name-map index zero, which is not guaranteed to resolve
+to `None`. A repeated stable binary roundtrip can therefore preserve an
+incorrect first write; semantic readback must compare against the authored
+JSON. Do not generalize this to byte-identical `.uasset` JSON roundtrips: fields
+such as name-map hashes can be recomputed by the writer.
+
 ## Filtered module inventories: refinery reference
 
 ### Inventory change notifications
@@ -103,6 +130,36 @@ or partial inventories across save/load. The owning
 [checkpoint](../mods/Railgun/ARCHITECTURE.md#current-game-validated-checkpoint)
 records the release and installation evidence. These tested paths do not
 establish every native broadcast site or other modules' lifecycle contracts.
+
+### Native removal and compensating resource additions
+
+Bounded native inspection on the fingerprint above establishes that
+`VoyageBaseInventoryComponent.RemoveItem` returns the number actually removed,
+not the remaining inventory or the unfulfilled request. The weight-limited
+subclass uses the same implementation. For a request of one item, return `1`
+means success and `0` means nothing was removed. The requested slot is preferred,
+not exclusive: removal can continue through other matching-item slots. Preserve
+the notification-enabled call path when visual consumers subscribe to inventory
+changes; do not directly mutate the serialized item map or a HUD count.
+
+`VoyageModuleComponent.AddResource` returns the accepted resource delta, not
+the new balance. Its native adjustment path can clamp the resulting resource
+amount to a capacity-derived limit (unless its bypass branch applies).
+Consequently, adding back a debit is not an unconditional rollback contract:
+check the returned delta and the actual resource balance against the captured
+pre-debit value, with an appropriate numeric tolerance.
+
+These are static native contracts, not proof of an atomic inventory/energy
+transaction or of a complete weapon firing path. A consumer must validate
+prerequisites before spending, prevent reentrant double spending, handle failed
+debits and compensation explicitly, and obtain gameplay validation. Do not
+transplant executable addresses into runtime code.
+
+Reproduce by locating the reflected native registration with
+`Invoke-VoyageExecutableInspector.ps1`, then following the bounded thunk,
+constructor/vtable and implementation with `Inspect-VoyageNativeMemberAccess.py`.
+Static evidence is retained below ignored
+`artifacts/railgun/ammo-fire-native-20260928/`; revalidate on a changed fingerprint.
 
 ### Component and interaction contract
 
