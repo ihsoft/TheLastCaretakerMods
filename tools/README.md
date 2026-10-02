@@ -189,6 +189,7 @@ container and evidence, without installation.
 | Validate or install an already-built standalone IoStore release | `Install-VoyageRelease.ps1` | Manifest-gated install plan or recoverable installation evidence |
 | Verify one IoStore container and its expected package set | `Test-VoyageContainer.ps1` | Bounded integrity check, package inventory, exact-set differences and file hashes |
 | Restore/remove a common release installation | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded predecessor restoration and recovery evidence |
+| Regression-test Git mutation coordination | [`Test-RepositoryGitCoordination.ps1`](repository-git-coordination.md#regression-test) | PowerShell 5.1 semaphore and isolated fixture-repository checks |
 | Locate native names, references, or correlated member offsets | `Invoke-VoyageExecutableInspector.ps1` | Compact fingerprinted result plus retained read-only executable report |
 | Reuse semantic C++ names while generating Blueprint graphs | `UnrealEditorGeneratorCommon` | Header-only build-time helpers; not a command-line tool |
 

@@ -39,3 +39,25 @@ The semaphore intentionally does not serialize builds, tests, read-only
 research, or edits to explicitly disjoint owned paths. This keeps the fix
 focused on the demonstrated shared-index/ref race instead of disabling useful
 parallel work.
+
+## Regression test
+
+Run the parameterless regression with Windows PowerShell 5.1 and Git available
+on `PATH`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File tools\Test-RepositoryGitCoordination.ps1
+```
+
+The test removes and recreates the fixed ignored directory
+`artifacts/tests/repository-git-coordination`, so do not run two instances at
+the same time. Its two hidden worker processes contend for the real
+repository `git-transaction` mutex and assert that their lock intervals do not
+overlap; the test may therefore wait for or briefly compete with ordinary
+repository commits.
+
+The main repository index and `HEAD` are not changed. All Git mutations occur
+in a separate fixture repository below the test directory. That fixture checks
+an exact-path commit, preservation of an unrelated worktree change, rejection
+of an occupied index, and explicit `-UseExistingIndex` recovery.
