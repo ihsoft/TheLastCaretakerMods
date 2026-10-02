@@ -1082,6 +1082,13 @@ file is backed up first. Reflection readiness and the dumper both have bounded
 timeouts. A partial run and its logs remain under `artifacts/` for
 diagnosis instead of being promoted.
 
+The standalone dumper can be sensitive to live object state. On Steam build
+`25191271`, a loaded-save capture ended with an unexpected null pointer while
+the unchanged reviewed dumper succeeded from the main menu. This does not prove
+which object caused the failure. Retain the failed attempt, return to the main
+menu and retry once before changing dumper source; promote only output that
+passes the normal mapping and fingerprint gates.
+
 ### `VoyageMappingsDumper`
 
 This temporary UE4SS mod is the fallback when the standalone jmap path itself

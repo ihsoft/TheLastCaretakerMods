@@ -174,13 +174,9 @@ Passing a lower level never implies a higher one:
    game;
 9. the requested runtime behavior is tested in the real game.
 
-The preceding e362030 / 6b5ead3 checkpoint passed all `27/27` upstream binary-roundtrip
-tests. A stress run over `Voyage/Content/Blueprints` attempted `1067` assets:
-`1057` were clean, `10` were reviewed opaque/numeric notices, `0` failed, and
-all were binary-equal. The changed-save canary for
-`BP_ToolAbility_Maintenance_Dismantle` loaded in the game and applied
-`Duration = 1`. These results validate the tested layouts and workflow, not
-arbitrary structural edits to every asset.
+The accepted writer passed broad unchanged-asset regression and a changed-save
+canary. That evidence validates the tested layouts and workflow, not arbitrary
+structural edits to every asset.
 
 ## Package serialization is a separate compatibility contract
 
@@ -190,26 +186,19 @@ and resolved custom versions form a separate contract with the game reader.
 Successful registration, UI display or parser reopen alone does not prove
 that a gameplay consumer can use the reconstructed package.
 
-The bounded gameplay evidence is an authored, single-export `VoyageItemAmmo`
-on Steam build `25191271`, executable SHA-256
-`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`:
-the tagged candidate registered and displayed but did not produce a usable
-fabricated pickup. After donor-matched reserialization, the user confirmed
-fabrication and pickup. The successful package used the stock Sniper Rod's
-unversioned property stream and package contract, including the resolved
-14-entry custom-version container (`FFortniteMainBranchObjectVersion = 225`).
-The original evidence is release `build-20260927-005653`; the current reduced,
-game-validated successor is recorded in
-[Railgun architecture](../mods/Railgun/ARCHITECTURE.md). Fabrication and pickup
-consumer boundaries are covered in
+For the fingerprint-bound Railgun ammunition consumer, registration and UI
+display were insufficient when the package-format contract was wrong. The
+game-validated item is authored directly from owned JSON and preserves its
+reviewed unversioned property stream, object versions and custom-version
+container. The current contract and validation scope live in
+[Railgun architecture](../mods/Railgun/ARCHITECTURE.md); fabrication and pickup
+consumer boundaries live in
 [item fabrication and pickup](voyage-item-fabrication-and-pickup.md).
 
-This establishes the importance of the serialization contract for that tested
-asset. It does **not** isolate one flag or custom version as the sole cause,
-prove that all tagged Voyage packages fail, or authorize bulk conversion of
-other assets. The operation changes several metadata fields together; exact
-entry counts and values must come from the matching donor and reviewed
-mappings, not become universal hard-coded constants.
+This does **not** prove that all tagged Voyage packages fail or authorize bulk
+conversion of other assets. Treat serialization as an asset-specific contract
+derived from reviewed source metadata and mappings, not as a universal list of
+flags or fixed entry counts.
 
 Do not flip `IsUnversioned` / `PKG_UnversionedProperties` in a header or exported
 JSON and assume the payload has been converted. Author the complete package JSON
@@ -238,27 +227,14 @@ reader/writer consistency, not gameplay compatibility.
   Thus the selected version owns the import-layout hint, not every serializer
   branch. Do not describe this as unconditional cross-engine Save conversion.
 
-- The promoted JSON/engine-selection checkpoint fixes the confirmed
-  full-JSON failure; the user confirmed the rebuilt gui-review-build candidate
-  works in interactive GUI testing on 2026-09-04 (exact identity in backlog).
-  API changes address the
-  full-JSON path. Per user decision, `SpecifiedEngineVersion` is runtime-only
-  and ignored on JSON read/write, including old candidate JSON containing it.
-  JSON-open restores the original object/custom versions without applying an
-  engine hint. Every binary GUI Save sets the current dropdown selection through
-  SetSerializationEngineVersion immediately before Write. CLI `fromjson` can
-  supply a final explicit version; Voyage JSON callers must supply UE5_8 before
-  writing. The setter preserves original object/custom versions; UNKNOWN leaves
-  the current runtime hint unchanged.
-  This does not implement general cross-engine asset/schema migration.
-- The same checkpoint adds retoc `UE5_8` and forwards the actual GUI selection
-  to IoStore extraction instead of hardcoding `UE5_7`. UE5.8 uses the expanded
-  import writer; UE5.7, older versions and unspecified library callers restore
-  upstream writer bytes. Both validated filtered layouts remain readable.
-  Fresh Dismantle output at UE5.7 matched upstream `885a8da` byte-for-byte;
-  UE5.8 matched the previous canonical `234f4e5`. The four producer/profile cases packaged
-  and verified successfully. This proves the tested serialization boundary,
-  not arbitrary runtime compatibility or a native UE5.7 Voyage fixture.
+- `SpecifiedEngineVersion` is runtime-only and ignored on JSON read/write.
+  JSON retains stored object/custom versions, while every binary GUI save and
+  API JSON write must apply an explicit serialization hint immediately before
+  `Write`. Voyage uses `UE5_8`. This is not general cross-engine schema migration.
+- UAssetGUI forwards its selected profile to retoc. `UE5_8` uses the expanded
+  Voyage import layout; UE5.7, older profiles and unspecified library callers
+  preserve the upstream writer layout. The accepted tools read both reviewed
+  layouts, but that does not establish arbitrary runtime compatibility.
 - Full JSON intentionally omits API `OverrideNameMapHashes`. No-op JSON
   roundtrips can therefore recompute name hashes even after the version fix.
   Tests distinguish raw-export/schema errors, original object/custom versions,
@@ -271,47 +247,25 @@ reader/writer consistency, not gameplay compatibility.
   warning followed by an out-of-range outer index can instead indicate a
   misread legacy import table; suppressing the warning or dropping references
   would not repair it.
-- retoc fork `234f4e5` changed filtered `FObjectImport` reading and writing to
-  include `PackageName` unconditionally. Upstream `885a8da` omits it when
-  editor-only data is filtered. Their loose legacy outputs are therefore not
-  interchangeable. A fresh single-package Dismantle experiment on the accepted
-  Steam `25056839` fingerprint reproduced the reported `18 / 226` panic when
-  upstream extraction was read by the fork. Both same-binary roundtrips
-  packaged exactly one asset and passed container verification; the reverse
-  mixed roundtrip also panicked (`18 / 251`). This is packaging evidence only.
-  Keep extraction, editing, and packaging layout contracts consistent; do not
-  infer the producer from the shared CLI version `0.1.5`. Promoted retoc 49b7721 repairs cross-layout reading; the preceding failure is historical evidence for the fix.
+- Filtered legacy imports may omit or retain `FObjectImport.PackageName`.
+  Loose outputs from writers using different layouts are not interchangeable
+  with readers that assume only one stride. Accepted retoc `49b7721` validates
+  and reads both reviewed layouts. Keep extraction, editing and packaging
+  profiles consistent, and do not infer the producer from the shared CLI
+  version string alone.
 - A successful `retoc verify`, parse, cook, or container load is not gameplay
   validation.
-- The previous retoc `234f4e5` is Voyage-checkpoint evidence, not a passing
-  upstream-regression-suite claim: the UE5.4 lamp fixture exposed an infinite
-  Outer traversal after a misread import table, ending in a 128-GiB allocation
-  request. The candidate rejects null/out-of-range/name/cyclic references with
-  contextual errors and determines import stride from checked table boundaries
-  and count. Filtered records may omit or retain PackageName; unfiltered records
-  must retain it. Unknown sizes fail closed, with no speculative version retry.
-  Its UE5_8 writer remains byte-identical for tested Voyage input; the
-  explicit UE5_7 writer now matches upstream as described above. Reading both
-  layouts does not make older upstream readers accept expanded UE5_8 output.
+- Import traversal must reject null, out-of-range, invalid-name and cyclic
+  references with bounded contextual errors. Determine import stride from
+  checked table boundaries and counts; unknown layouts fail closed without a
+  speculative version retry. Unfiltered records retain `PackageName`. Reading
+  both filtered layouts does not make older readers accept expanded UE5.8 output.
 - Source legacy version and target IoStore version are separate contracts.
-  The upstream test reused unversioned UE5.6 fixtures for UE5.7 but passed the
-  target's version to the source reader. UE5.7 adds ImportTypeHierarchies in the
-  legacy summary, so that assumption misaligned subsequent fields. The repaired
-  harness keeps source fallback 1017 and target 1018, preserving all original
-  structural/payload assertions. It tests 5.6-source/5.7-target compatibility,
-  not native UE5.7 legacy fixtures. The earlier candidate passed 28/28;
-  the engine-selection candidate passed 29/29 (evidence in the active backlog).
-- Fresh Dismantle conversion from upstream, canonical fork, and candidate
-  legacy output passes verify and exact single-asset inventory in the candidate.
-  Candidate to-legacy preserves the canonical .uasset, .uexp, and ScriptObjects
-  bytes. Cross-producer raw Zen differs only in CookedHeaderSize (22129 versus
-  21295), copied from each source header; all other bytes match. The version-bound
-  test verifies each stored value against the source before normalizing that
-  field in memory. This is not permission to ignore arbitrary offsets or
-  metadata in other comparisons. The candidate is not yet published or
-  game-validated; its evidence and approval gate remain in the backlog.
-  Further failing conversions use `Invoke-VoyageBoundedTool.ps1` with memory
-  and time limits; never repeat an unbounded allocation regression.
+  A source reader must use the source summary layout, while the target writer
+  uses the requested output profile. Do not reuse a target version as an
+  unproven source fallback or normalize differing header fields without an
+  explicit version-bound comparison contract. Run failing conversions through
+  `Invoke-VoyageBoundedTool.ps1`; never repeat an unbounded allocation failure.
 - `VerifyBinaryEquality()` and fully parsed exports are independent gates:
   `RawExport` can preserve unknown bytes while hiding a parse failure.
 - Legacy recovery can succeed at extraction while failing at property parsing.
@@ -323,31 +277,19 @@ reader/writer consistency, not gameplay compatibility.
   or schema compatibility from readable early properties. Current mappings
   and dependencies do not establish the old package's provenance. For current
   builds, change fresh fingerprint-matched stock assets and validate the result.
-- At the accepted API `6b5ead3` checkpoint, full-asset JSON deserialization
-  loses UAssetAPI's internal
-  `SpecifiedEngineVersion`. Both GUI JSON opening and CLI `fromjson` need an
-  explicit version-preservation contract; selecting UE 5.8 in the GUI does not
-  by itself prove that a JSON-created asset carries that contract. At API
-  `6b5ead3`, filtered import serialization uses that internal value to decide
-  whether to write `FObjectImport.PackageName`. A fresh
-  `BP_FabricationPlacementComponent` full-JSON unchanged roundtrip reproduced
-  malformed imports and 22 RawExports on Steam `25056839`. Direct binary
-  unchanged save was byte-identical. Reapplying `SetEngineVersion(VER_UE5_8)`
-  after JSON import restored parsing, but also resets custom versions and did
-  not preserve the original header bytes; it is diagnostic evidence, not an
-  accepted production fix. Preserve the exact original version metadata when
-  evaluating the repair candidate described above. A normal Save of a directly opened binary and a
-  Save of a full-JSON-imported asset are different paths.
+- A normal save of a directly opened binary and a save after full-JSON import
+  are different paths. JSON does not carry UAssetAPI's runtime-only engine
+  hint, so the writer must apply the explicit `UE5_8` serialization hint after
+  deserialization while preserving stored object/custom versions. Do not call
+  a broader engine-version setter that rewrites source metadata.
 - UE 5.8 filtered imports serialize `FObjectImport.PackageName`; older filtered
   fixtures do not. The API fix is deliberately gated on `VER_UE5_8`.
 - The game is UE `5.8.1`, while the available editor is UE `5.8.2`; loose
   `.uasset/.uexp` cooking requires the documented `-SkipZenStore` path.
-- Canonical retoc `234f4e5` historically uses its UE5_7 profile for this
-  Voyage checkpoint. The engine-gated candidate requires explicit UE5_8 for
-  Voyage's expanded legacy imports; UE5_7 deliberately chooses upstream
-  filtered-import output. Keep the binary checkpoint, selected profile and
-  extraction manifest together; the same profile name is not a cross-checkpoint
-  serialization guarantee. Use the wrapper's documented contract.
+- Keep the retoc binary identity, selected profile and extraction manifest
+  together. Accepted retoc `49b7721` uses explicit `UE5_8` for Voyage's
+  expanded imports, while `UE5_7` deliberately selects the upstream filtered
+  layout. A profile name alone is not a cross-checkpoint serialization guarantee.
 - The canonical CUE4Parse bundle is managed-only. Its publisher uses a
   temporary host to replace upstream `Microsoft.Bcl.Memory 9.0.0` with
   `10.0.11` without modifying the upstream checkout. NuGet can still print the

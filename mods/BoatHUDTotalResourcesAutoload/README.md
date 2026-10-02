@@ -34,9 +34,7 @@ decimal kWh. Each generated leaf copies the corresponding stock text's font,
 color, and text-transform policy before it is inserted.
 
 This composition avoids adding Tick state to the unversioned inherited Voyage
-HUD child. The remaining feature gates are recorded in
-[`../../docs/boat-hud-total-resources-backlog.md`](../../docs/boat-hud-total-resources-backlog.md);
-completed cooked-asset work is documented separately in
+HUD child. Shared cooked-asset contracts are documented separately in
 [`../../docs/voyage-cooked-asset-toolchain.md`](../../docs/voyage-cooked-asset-toolchain.md).
 
 ## Validation status

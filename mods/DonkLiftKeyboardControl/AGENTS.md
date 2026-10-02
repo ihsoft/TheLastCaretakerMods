@@ -8,12 +8,9 @@ contract and workflow detail.
 
 - Treat this Unreal project, `GAME_DERIVED_SOURCES.md`, and the latest
   game-validated Git checkpoint as the implementation of record.
-- Read `../../docs/donklift-autonomous-hud-backlog.md` after every context
-  compaction and before changing source or installed files. It records whether
-  the currently installed candidate is validated or still awaiting a test.
 - `README.md` documents generation and packaging. `README.txt` is the
   user-facing mod README.
-- Detailed evidence and historical failures live in
+- Durable negative findings live in
   `../../docs/game-architecture-observations.md` and
   `../../docs/research-pitfalls.md`. Do not restore an older control or HUD design
   when it disagrees with the current source without a new isolated experiment.
