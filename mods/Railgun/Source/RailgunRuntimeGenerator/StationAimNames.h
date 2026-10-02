@@ -1,6 +1,6 @@
 #pragma once
 
-// Mod-authored HC13 aiming frame; included after OpticalSelf.
+// Names for station-local yaw and pitch state.
 namespace StationAimNames
 {
 inline const FName Yaw(TEXT("RailgunLocalAimYaw"));

@@ -1,6 +1,6 @@
 #pragma once
 
-// Included after FGraph. Engine-only observation: NEVER writes player/boat state.
+// Invokes reflected Engine getters without writing player or boat state.
 UEdGraphPin* ObserveCall(FGraph& G, UClass* Owner, FName Function, UEdGraphPin* Target)
 {
     auto* Call = G.Call(Owner, Function);

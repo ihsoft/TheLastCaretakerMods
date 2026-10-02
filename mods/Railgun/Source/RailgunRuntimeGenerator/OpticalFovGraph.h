@@ -1,7 +1,6 @@
 #pragma once
 
-// Included after native field-reading helpers. HC24 changes the owned station's
-// camera only; never possesses the observer or mutates the character's camera.
+// Calculates the station optical FOV without possessing or mutating the character camera.
 namespace NativeCameraNames
 {
 inline constexpr TCHAR Refused[] = TEXT("HC24 CAMERA STOP: missing camera/flag/FOV prerequisite. Entry blocked.");

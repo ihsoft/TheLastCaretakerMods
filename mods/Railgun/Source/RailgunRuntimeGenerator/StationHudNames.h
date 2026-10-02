@@ -1,5 +1,6 @@
 #pragma once
 
+// Names and constants shared by station HUD graph construction.
 namespace StationHudNames
 {
 inline const FName ScopePanel(TEXT("RailgunScopePanel"));

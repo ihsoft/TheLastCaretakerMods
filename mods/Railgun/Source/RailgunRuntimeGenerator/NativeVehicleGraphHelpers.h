@@ -1,6 +1,7 @@
 #pragma once
 #include "AssetLoadingGraphNames.h"
 
+// Builds native station vehicle setup and input-reference guards.
 namespace NativeVehicleNames
 {
 inline const FName Vehicle(TEXT("NativeStation"));
@@ -92,4 +93,4 @@ void ConfigureCombinedOperatorPoint(FGraph& G)
     G.Require(G.Pin(HasTag, P::ReturnValue), V::Failed);
 }
 
-#include "NativeVehicleCameraProbe.h"
+#include "OpticalFovGraph.h"

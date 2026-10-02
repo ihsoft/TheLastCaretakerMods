@@ -1,6 +1,6 @@
 #pragma once
 
-// HC18 candidate02: prove native callback dispatch only. No native widget instance.
+// Builds the Voyage actor-widget interface graph for station HUD dispatch.
 void AddNativeStationHudInterface(UBlueprint* BP, UClass* ReturnedHud = nullptr)
 {
     UClass* Interface = UVoyageActorWidgetInterface::StaticClass();

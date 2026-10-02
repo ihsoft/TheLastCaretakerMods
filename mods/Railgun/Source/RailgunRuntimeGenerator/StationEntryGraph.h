@@ -1,5 +1,5 @@
 #pragma once
-// HC32: explicit Blueprint interface membership; HC31 acquisition/native entry unchanged.
+// Builds station entry callbacks and the interaction interface graph.
 namespace CE = ContextEntryNames;
 namespace DS = DedicatedStationNames;
 

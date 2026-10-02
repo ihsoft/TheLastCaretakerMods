@@ -279,14 +279,14 @@ void AddVariable(UBlueprint* BP, FName Name, FName Category, UObject* Type = nul
 
 namespace
 {
-#include "HelmObservationProbe.h"
-#include "StationFixationProbe.h"
-#include "StationNativeHudProbe.h"
-#include "NativeVehicleProbe.h"
+#include "GraphCallHelpers.h"
+#include "StationAttachmentGraph.h"
+#include "StationHudInterfaceGraph.h"
+#include "NativeVehicleGraphHelpers.h"
 #include "StationActionHints.h"
-#include "ContextEntryProbe.h"
+#include "StationEntryGraph.h"
 #include "RailgunShot.h"
-#include "DedicatedStationProbe.h"
+#include "DedicatedStationGenerator.h"
 #include "RailgunAmmo.h"
 #include "RailgunInventory.h"
 #include "ContextStationCoordinator.h"

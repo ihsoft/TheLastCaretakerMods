@@ -1,5 +1,6 @@
 #pragma once
 
+// Builds optical target/range tracing and HUD text graphs.
 namespace StationRangeNames
 {
 // Retain the existing widget/property identity; HC33 generalizes its contents.

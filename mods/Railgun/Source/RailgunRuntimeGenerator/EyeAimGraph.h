@@ -1,4 +1,6 @@
 #pragma once
+
+// Builds eye-origin and parallax aiming graphs for the dedicated station.
 namespace EyeAim
 {
 inline const FName Yaw(TEXT("RailgunEyeYaw"));

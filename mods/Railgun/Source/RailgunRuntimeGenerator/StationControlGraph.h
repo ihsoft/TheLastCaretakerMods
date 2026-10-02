@@ -1,6 +1,6 @@
 #pragma once
 
-// HC17: the autoload optical object is an Engine Pawn, not a physical vehicle.
+// Builds possession return and release graphs for the nonphysical station pawn.
 namespace StationControlNames
 {
 inline const FName Owned(TEXT("OwnsStationPossession"));

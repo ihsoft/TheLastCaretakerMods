@@ -1,6 +1,6 @@
 #pragma once
 
-// Included after StationMerge. HC12 view session plus HC13 local aim frame.
+// Builds optical view switching, reticle, and release graphs.
 namespace OpticalProbeNames
 {
 inline const FName Camera(TEXT("StationOpticalCamera"));
@@ -30,10 +30,10 @@ UEdGraphPin* OpticalSelf(FGraph& G)
 {
     auto* Node = G.Node(NewObject<UK2Node_Self>(G.Graph)); return G.Pin(Node, P::FunctionTarget);
 }
-#include "StationAimProbe.h"
-#include "StationRangeProbe.h"
-#include "StationHudProbe.h"
-#include "StationControlProbe.h"
+#include "StationAimNames.h"
+#include "StationRangeGraph.h"
+#include "StationHudNames.h"
+#include "StationControlGraph.h"
 
 UEdGraphPin* OpticalView(FGraph& G)
 {

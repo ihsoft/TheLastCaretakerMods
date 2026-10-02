@@ -2,6 +2,8 @@
 #include "../../RailgunModelContract.h"
 #include "StationSettings.h"
 #include "StationEnergyHud.h"
+
+// Builds the dedicated stationary railgun pawn and its HUD, input, and model graphs.
 namespace ZoomTest
 {
 inline const FName Wide(TEXT("RailgunWideView"));
@@ -115,7 +117,7 @@ void DedicatedAim(FGraph& G)
     G.Tail = Work->GetThenPinGivenIndex(1);
 }
 
-#include "ParallaxProbe.h"
+#include "EyeAimGraph.h"
 
 void BuildDedicatedStationGraph(UBlueprint* BP)
 {

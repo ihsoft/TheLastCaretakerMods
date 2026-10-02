@@ -1,6 +1,6 @@
 #pragma once
 
-// Included after HelmObservationProbe for its Engine getter helpers, not its graph.
+// Builds station attachment, movement/collision ownership, and release graphs.
 namespace StationProbeNames
 {
 inline const FName Held(TEXT("OwnsStationFixation"));
@@ -75,7 +75,7 @@ void StationMerge(FGraph& G, const TArray<UEdGraphPin*>& Paths)
     G.Tail = G.Pin(Join, P::Then);
 }
 
-#include "StationOpticsProbe.h"
+#include "StationOpticsGraph.h"
 
 void ReleaseStation(FGraph& G)
 {
