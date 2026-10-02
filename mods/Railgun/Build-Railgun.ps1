@@ -42,12 +42,15 @@ $ammoItemJsonPath = Join-Path $PSScriptRoot 'Assets/Fabricator/railgun-ammo-item
 $skillJsonPath = Join-Path $PSScriptRoot 'Assets/Skill/railgun-skill.json'
 $gunJsonPath = Join-Path $PSScriptRoot 'Assets/Fabricator/railgun-item.json'
 $dataAssetContractPath = Join-Path $PSScriptRoot 'Assets/data-assets-contract.json'
+$registryMetadataGenerator = Join-Path $PSScriptRoot `
+    'Build/New-RailgunRegistryMetadata.ps1'
 if (-not (Test-Path -LiteralPath $ammoCassettePath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $ammoCassetteContractPath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $ammoItemJsonPath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $skillJsonPath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $gunJsonPath -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $dataAssetContractPath -PathType Leaf)) {
+    -not (Test-Path -LiteralPath $dataAssetContractPath -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $registryMetadataGenerator -PathType Leaf)) {
     throw 'Railgun item/skill source or the shared data-asset contract is missing.'
 }
 $ammoCassetteContract = Get-Content -LiteralPath $ammoCassetteContractPath -Raw | ConvertFrom-Json
@@ -105,9 +108,9 @@ $expectedAssetSources = @(
 $actualAssetSources = @($dataAssetContract.assets | ForEach-Object {
     [string]$_.sourceFile
 } | Sort-Object)
-if ($dataAssetContract.schemaVersion -ne 1 -or
+if ($dataAssetContract.schemaVersion -ne 2 -or
     (Compare-Object $dataAssetContractFields @(
-        'assets','revalidateWhen','schemaVersion','serialization')) -or
+        'assets','registry','revalidateWhen','schemaVersion','serialization')) -or
     (Compare-Object $serializationFields @(
         'engineVersion','executableSha256','mappingSha256','steamBuildId',
         'uassetApiCommit','uassetGuiCommit','uassetGuiSha256')) -or
@@ -319,10 +322,6 @@ $gunIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/Fabricato
 $skillIcon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/Skill/RailgunSkill.png')).Path
 $unrealPak = Join-Path $engine 'Binaries/Win64/UnrealPak.exe'
 if (-not (Test-Path -LiteralPath $unrealPak -PathType Leaf)) { throw 'UnrealPak is missing.' }
-$stockRegistry = & (Join-Path $repo 'tools/Extract-VoyageAssetRegistry.ps1') `
-    -GameRoot $fingerprint.gameRoot -ExpectedExecutableSha256 $fingerprint.executable.sha256 `
-    -UnrealPak $unrealPak -OutputRoot (Join-Path $output 'stock-registry')
-if ($stockRegistry.status -cne 'passed') { throw 'Stock registry extraction failed.' }
 Invoke-NativeStage 'generate-inputs' $editor @($project,'-run=GenerateRailgunInputs','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-inputs-unreal.log')))
 $ammoWeightText = $ammoWeightKg.ToString(
     'R', [Globalization.CultureInfo]::InvariantCulture)
@@ -595,6 +594,16 @@ if ((ConvertTo-ComparableExportsJson $gunSource.Exports) -cne
     throw 'Direct JSON Railgun item readback changed the package contract.'
 }
 $assetRelatives += $gunRelative
+$registryMetadata = Join-Path $output 'railgun-registry-metadata.json'
+$registryMetadataResult = & $registryMetadataGenerator `
+    -ContractPath $dataAssetContractPath `
+    -AssetJsonPath @($ammoReadbackPath,$gunReadbackPath,$skillReadbackPath) `
+    -OutputPath $registryMetadata
+if ($registryMetadataResult.status -cne 'passed' -or
+    $registryMetadataResult.assetCount -ne 3 -or
+    -not (Test-Path -LiteralPath $registryMetadata -PathType Leaf)) {
+    throw 'Railgun registry metadata generation failed.'
+}
 if ($assetRelatives -contains
         'Voyage/Content/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New' -or
     $assetRelatives -contains
@@ -636,18 +645,16 @@ $containerPak = [IO.Path]::ChangeExtension($container, '.pak')
 $resolvedContainerPak = [IO.Path]::GetFullPath($containerPak)
 if (-not $resolvedContainerPak.StartsWith($output + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
     -not (Test-Path -LiteralPath $resolvedContainerPak -PathType Leaf)) { throw 'retoc did not create the expected owned PAK.' }
-# Write only the three Railgun primary records. The stock registry is a
-# fingerprinted metadata donor/control and is never shipped.
+# Write only the three Railgun primary records from generated owned metadata.
 $pluginRegistry = Join-Path $output 'RailgunCatalogue-AssetRegistry.bin'
 Invoke-NativeStage 'write-plugin-registry' $editor @(
     $project,'-run=GenerateRailgunRuntime','-WritePluginRegistry',
-    ('-StockRegistry=' + $stockRegistry.registryPath),
+    ('-RegistryMetadata=' + $registryMetadata),
     ('-OutputRegistry=' + $pluginRegistry),'-unattended','-nop4','-nosplash',
     '-nullrhi',('-abslog=' + (Join-Path $output 'write-plugin-registry-unreal.log')))
 if (-not (Test-Path -LiteralPath $pluginRegistry -PathType Leaf) -or
-    (Get-Item -LiteralPath $pluginRegistry).Length -lt 1024 -or
-    (Get-Item -LiteralPath $pluginRegistry).Length -ge $stockRegistry.registryLength) {
-    throw 'Owned-entry plugin registry is missing or has an invalid size.'
+    (Get-Item -LiteralPath $pluginRegistry).Length -le 0) {
+    throw 'Owned-entry plugin registry is missing or empty.'
 }
 $registryResponse = Join-Path $output 'registry-response.txt'
 $registryPak = Join-Path $output 'Railgun_P.registry.pak'
@@ -770,6 +777,8 @@ $provenance = [ordered]@{
     scriptObjectsSha256=$scriptObjectsSha256;
     primaryAssetRegistry=$pluginRegistry;
     primaryAssetRegistrySha256=(Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash;
+    primaryAssetRegistryMetadata=$registryMetadata;
+    primaryAssetRegistryMetadataSha256=(Get-FileHash -LiteralPath $registryMetadata -Algorithm SHA256).Hash;
     primaryAssetRegistryWriterLog=(Join-Path $output 'write-plugin-registry-unreal.log');
     contentPluginDescriptor=$descriptorSource;
     contentPluginDescriptorSha256=(Get-FileHash -LiteralPath $descriptorSource -Algorithm SHA256).Hash;

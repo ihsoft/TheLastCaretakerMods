@@ -54,9 +54,10 @@
   `Assets/Skill/railgun-skill.json`, not a generated mutation of a stock skill.
 - The PAK carries an owned-entry registry with exactly the gun, ammunition and
   skill records at `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`. A loose
-  content-only descriptor enables that plugin registry. The stock registry is
-  used during generation only as a fingerprinted metadata donor/control;
-  `Voyage/AssetRegistry.bin` is never packaged or replaced.
+  content-only descriptor enables that plugin registry. The records are built
+  from the owned UAssetAPI JSON readbacks plus the explicit class/deployment
+  policy in `Assets/data-assets-contract.json`; `Voyage/AssetRegistry.bin` is
+  neither read nor packaged or replaced.
 - On Steam build `25191271`, the stock `DefaultGame.ini` scans `Skill` below
   `/Game/Data/Assets/Skill` and `Item` below `/Game/Data/Assets`. Registry
   membership alone is insufficient for discovery outside those roots.
@@ -216,20 +217,26 @@ previously shot-ready gun into the red incomplete-charge state.
 
 ## Current game-validated checkpoint
 
-`build-20261002-205216` is the current source-built checkpoint. It packages the
-three-record plugin-local registry and loose content-plugin descriptor through
-the normal producer. The user tested the installed artifact and reported that
+`build-20261002-donor-free-03` is the current source-built checkpoint. Its
+three-record plugin-local registry is derived solely from owned package
+readbacks and the explicit registry policy, then reopened and compared
+field-for-field. The user tested the installed artifact and reported that
 everything works; this general confirmation is not evidence of additional
 individually enumerated scenarios.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Release evidence: `artifacts/railgun/build-20261002-205216/release-manifest.json`.
+- Release evidence:
+  `artifacts/railgun/build-20261002-donor-free-03/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20261002-205733-build-20261002-205216-6af5a2f2/install-manifest.json`.
+  `artifacts/installations/Railgun/20261002-233550-build-20261002-donor-free-03-91616adb/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
+- The user also confirmed this plugin-local registry remains additive while
+  `VoyageAssetPool_P` supplies a global registry override. This removes that
+  mod as an isolation requirement for Railgun, but does not establish safety
+  for arbitrary registry overrides or duplicate primary-asset identities.
 
 The preceding `build-20260930-221701` remains scoped behavioral evidence for
 the six distinct cassette subtrees and their 36 covered render descendants,
@@ -253,10 +260,9 @@ current checkpoint.
   are game-validated. The bounded energy-compensation failure branch is
   structurally validated; its exceptional native rejection path has not been
   induced in game.
-- A shared registry mod with hidden, typed placeholders and separate consumer
-  overrides is deferred until the Railgun foundation is complete. The `Never`
-  experiment does not validate cross-mod overriding, slot allocation or load
-  precedence; do not implement that architecture as part of this checkpoint.
+- Railgun neither requires nor uses a shared placeholder registry pool. Shared
+  allocation rules, duplicate-ID ownership and precedence between conflicting
+  records are outside its supported contract.
 - Visual projectile effects, muzzle effects and richer audio can be added
   without changing hit resolution, provided the validated direct-attack path
   remains the authority.

@@ -112,7 +112,10 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/PackageName.h"
 #include "Misc/FileHelper.h"
+#include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 #include "UObject/SavePackage.h"
 #include "UObject/UnrealType.h"
 
@@ -124,8 +127,173 @@ namespace N = RailgunRuntimeNames;
 namespace
 {
 constexpr TCHAR WritePluginRegistrySwitch[] = TEXT("WritePluginRegistry");
-constexpr TCHAR StockRegistryArgument[] = TEXT("StockRegistry=");
+constexpr TCHAR RegistryMetadataArgument[] = TEXT("RegistryMetadata=");
 constexpr TCHAR OutputRegistryArgument[] = TEXT("OutputRegistry=");
+constexpr int32 ExpectedRegistryVersion = 24;
+constexpr int32 RegistryVersionOffset = 16;
+constexpr int32 RegistryFilterOffset = 20;
+namespace RegistryJson
+{
+constexpr TCHAR SchemaVersion[] = TEXT("schemaVersion");
+constexpr TCHAR FormatVersion[] = TEXT("formatVersion");
+constexpr TCHAR FilterEditorOnly[] = TEXT("filterEditorOnly");
+constexpr TCHAR Assets[] = TEXT("assets");
+constexpr TCHAR PackageName[] = TEXT("packageName");
+constexpr TCHAR PackagePath[] = TEXT("packagePath");
+constexpr TCHAR AssetName[] = TEXT("assetName");
+constexpr TCHAR ObjectPath[] = TEXT("objectPath");
+constexpr TCHAR OptionalOuterPath[] = TEXT("optionalOuterPath");
+constexpr TCHAR AssetClassPath[] = TEXT("assetClassPath");
+constexpr TCHAR Tags[] = TEXT("tags");
+constexpr TCHAR ChunkIds[] = TEXT("chunkIds");
+constexpr TCHAR PackageFlags[] = TEXT("packageFlags");
+constexpr TCHAR AssetBundles[] = TEXT("assetBundles");
+constexpr TCHAR VoyageClassPackage[] = TEXT("/Script/Voyage");
+constexpr TCHAR ObjectSeparator[] = TEXT(".");
+}
+
+struct FRegistryAssetDefinition
+{
+    FName PackageName;
+    FName PackagePath;
+    FName AssetName;
+    FName ObjectPath;
+    FTopLevelAssetPath AssetClassPath;
+    FName OptionalOuterPath;
+    FAssetDataTagMap Tags;
+    TArray<int32> ChunkIds;
+    uint32 PackageFlags = 0;
+};
+
+bool ReadRegistryMetadata(const FString& FileName,
+    TArray<FRegistryAssetDefinition>& Definitions)
+{
+    FString Text;
+    TSharedPtr<FJsonObject> Root;
+    if (!FFileHelper::LoadFileToString(Text, *FileName) ||
+        !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root) ||
+        !Root.IsValid() || Root->GetIntegerField(RegistryJson::SchemaVersion) != 1 ||
+        Root->GetIntegerField(RegistryJson::FormatVersion) != ExpectedRegistryVersion ||
+        !Root->GetBoolField(RegistryJson::FilterEditorOnly))
+    {
+        return false;
+    }
+    const TArray<TSharedPtr<FJsonValue>>& Assets =
+        Root->GetArrayField(RegistryJson::Assets);
+    if (Assets.Num() != 3)
+    {
+        return false;
+    }
+    TSet<FName> ObjectPaths;
+    for (const TSharedPtr<FJsonValue>& Value : Assets)
+    {
+        const TSharedPtr<FJsonObject> Asset = Value->AsObject();
+        if (!Asset.IsValid())
+        {
+            return false;
+        }
+        FRegistryAssetDefinition Definition;
+        Definition.PackageName = FName(Asset->GetStringField(RegistryJson::PackageName));
+        Definition.PackagePath = FName(Asset->GetStringField(RegistryJson::PackagePath));
+        Definition.AssetName = FName(Asset->GetStringField(RegistryJson::AssetName));
+        Definition.ObjectPath = FName(Asset->GetStringField(RegistryJson::ObjectPath));
+        Definition.OptionalOuterPath =
+            FName(Asset->GetStringField(RegistryJson::OptionalOuterPath));
+        const FString ClassPath = Asset->GetStringField(RegistryJson::AssetClassPath);
+        FString ClassPackage;
+        FString ClassName;
+        if (Definition.PackageName.IsNone() || Definition.PackagePath.IsNone() ||
+            Definition.AssetName.IsNone() || Definition.ObjectPath.IsNone() ||
+            !Definition.OptionalOuterPath.IsNone() ||
+            !ClassPath.Split(RegistryJson::ObjectSeparator, &ClassPackage, &ClassName,
+                ESearchCase::CaseSensitive, ESearchDir::FromEnd) ||
+            ClassPackage != RegistryJson::VoyageClassPackage || ClassName.IsEmpty() ||
+            Definition.ObjectPath != FName(Definition.PackageName.ToString() +
+                RegistryJson::ObjectSeparator + Definition.AssetName.ToString()) ||
+            Definition.PackagePath != FName(FPackageName::GetLongPackagePath(
+                Definition.PackageName.ToString())) || ObjectPaths.Contains(Definition.ObjectPath))
+        {
+            return false;
+        }
+        ObjectPaths.Add(Definition.ObjectPath);
+        Definition.AssetClassPath = FTopLevelAssetPath(FName(ClassPackage), FName(ClassName));
+        const TSharedPtr<FJsonObject> Tags = Asset->GetObjectField(RegistryJson::Tags);
+        if (!Tags.IsValid())
+        {
+            return false;
+        }
+        for (const TPair<FString, TSharedPtr<FJsonValue>>& Tag : Tags->Values)
+        {
+            FString TagValue;
+            if (!Tag.Value.IsValid() || !Tag.Value->TryGetString(TagValue))
+            {
+                return false;
+            }
+            Definition.Tags.Add(FName(Tag.Key), MoveTemp(TagValue));
+        }
+        const TArray<TSharedPtr<FJsonValue>>& ChunkIds =
+            Asset->GetArrayField(RegistryJson::ChunkIds);
+        if (ChunkIds.Num() != 1 || ChunkIds[0]->AsNumber() != 0.0)
+        {
+            return false;
+        }
+        Definition.ChunkIds.Add(0);
+        const double PackageFlags = Asset->GetNumberField(RegistryJson::PackageFlags);
+        if (PackageFlags < 0.0 || PackageFlags > MAX_uint32 ||
+            PackageFlags != FMath::FloorToDouble(PackageFlags))
+        {
+            return false;
+        }
+        Definition.PackageFlags = static_cast<uint32>(PackageFlags);
+        if (Asset->GetArrayField(RegistryJson::AssetBundles).Num() != 0 ||
+            Definition.Tags.FindRef(FPrimaryAssetId::PrimaryAssetNameTag) !=
+                Definition.AssetName.ToString() ||
+            Definition.Tags.FindRef(FPrimaryAssetId::PrimaryAssetTypeTag).IsEmpty())
+        {
+            return false;
+        }
+        Definitions.Add(MoveTemp(Definition));
+    }
+    return Definitions.Num() == 3;
+}
+
+bool MatchesRegistryDefinition(const FAssetData& Asset,
+    const FRegistryAssetDefinition& Definition)
+{
+    const FAssetData::FChunkArrayView ActualChunkIds = Asset.GetChunkIDs();
+    if (Asset.PackageName != Definition.PackageName ||
+        Asset.PackagePath != Definition.PackagePath ||
+        Asset.AssetName != Definition.AssetName ||
+        Asset.GetObjectPathString() != Definition.ObjectPath.ToString() ||
+        Asset.AssetClassPath != Definition.AssetClassPath ||
+        Asset.GetOptionalOuterPathName() != Definition.OptionalOuterPath ||
+        Asset.PackageFlags != Definition.PackageFlags ||
+        ActualChunkIds.Num() != Definition.ChunkIds.Num() ||
+        Asset.TaggedAssetBundles.IsValid())
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < ActualChunkIds.Num(); ++Index)
+    {
+        if (ActualChunkIds[Index] != Definition.ChunkIds[Index])
+        {
+            return false;
+        }
+    }
+    const FAssetDataTagMap ActualTags = Asset.TagsAndValues.CopyMap();
+    if (ActualTags.Num() != Definition.Tags.Num())
+    {
+        return false;
+    }
+    for (const TPair<FName, FString>& Expected : Definition.Tags)
+    {
+        if (ActualTags.FindRef(Expected.Key) != Expected.Value)
+        {
+            return false;
+        }
+    }
+    return true;
+}
 
 class FGraph
 {
@@ -306,146 +474,45 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     const bool bWritePluginRegistry = FParse::Param(*Params, WritePluginRegistrySwitch);
     if (bWritePluginRegistry)
     {
-        constexpr int32 ExpectedRegistryVersion = 24;
-        constexpr int32 RegistryVersionOffset = 16;
-        constexpr int32 RegistryFilterOffset = 20;
-        FString StockFile;
+        FString MetadataFile;
         FString OutputFile;
-        if (!FParse::Value(*Params, StockRegistryArgument, StockFile) ||
+        if (!FParse::Value(*Params, RegistryMetadataArgument, MetadataFile) ||
             !FParse::Value(*Params, OutputRegistryArgument, OutputFile) ||
-            !FPaths::FileExists(StockFile) || StockFile == OutputFile)
-        {
-            UE_LOG(LogTemp, Error, TEXT("Registry writing requires distinct StockRegistry and OutputRegistry paths"));
-            return 1;
-        }
-        TArray<uint8> StockBytes;
-        if (!FFileHelper::LoadFileToArray(StockBytes, *StockFile) ||
-            StockBytes.Num() < RegistryFilterOffset + static_cast<int32>(sizeof(int32)))
-        {
-            UE_LOG(LogTemp, Error, TEXT("Cannot read complete stock registry header"));
-            return 1;
-        }
-        int32 StockVersion = -1;
-        int32 StockFilter = -1;
-        FMemory::Memcpy(&StockVersion, StockBytes.GetData() + RegistryVersionOffset, sizeof(int32));
-        FMemory::Memcpy(&StockFilter, StockBytes.GetData() + RegistryFilterOffset, sizeof(int32));
-        if (StockVersion != ExpectedRegistryVersion || StockFilter != 1)
-        {
-            UE_LOG(LogTemp, Error, TEXT("Unreviewed stock registry header version=%d filter=%d"), StockVersion, StockFilter);
-            return 1;
-        }
-        FAssetRegistryState Registry;
-        {
-            TUniquePtr<FArchive> Input(IFileManager::Get().CreateFileReader(*StockFile));
-            if (!Input || !Registry.Load(*Input) || Input->IsError())
-            {
-                UE_LOG(LogTemp, Error, TEXT("Cannot load complete stock AssetRegistry.bin"));
-                return 1;
-            }
-        }
-        FAssetRegistrySerializationOptions Options(UE::AssetRegistry::ESerializationTarget::ForDevelopment);
-        const int32 OriginalCount = Registry.GetNumAssets();
-        FAssetRegistryState PluginRegistry;
-        const FAssetData* Stock = Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockAmmoPath));
-        const FAssetData* Existing = Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath));
-        const FAssetData* StockGun = Registry.GetAssetByObjectPath(
-            FSoftObjectPath(RailgunAmmo::StockGunItemPath));
-        const FAssetData* ExistingGun = Registry.GetAssetByObjectPath(
-            FSoftObjectPath(RailgunAmmo::GunItemObjectPath));
-        const FAssetData* StockSkill = Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockSkillPath));
-        const FAssetData* ExistingSkill = Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath));
-        if (!Stock || Existing || !StockGun || ExistingGun || !StockSkill || ExistingSkill ||
-            OriginalCount < 1000 ||
-            StockSkill->AssetClassPath.GetAssetName() != FName(TEXT("VoyageSkill")))
-        {
-            UE_LOG(LogTemp, Error, TEXT("Stock registry control missing, test asset already present, or registry incomplete: assets=%d"), OriginalCount);
-            return 1;
-        }
-        const FName ClonePackage(RailgunAmmo::FullClonePackage);
-        const FName CloneAsset(RailgunAmmo::FullCloneAsset);
-        FAssetData* Clone = new FAssetData(*Stock);
-        Clone->PackageName = ClonePackage;
-        Clone->PackagePath = FName(RailgunAmmo::FullClonePackagePath);
-        Clone->AssetName = CloneAsset;
-        FAssetDataTagMap CloneTags = Clone->TagsAndValues.CopyMap();
-        CloneTags.Add(FPrimaryAssetId::PrimaryAssetNameTag, CloneAsset.ToString());
-        Clone->SetTagsAndAssetBundles(MoveTemp(CloneTags));
-        const FPrimaryAssetId StockId = Stock->GetPrimaryAssetId();
-        const FPrimaryAssetId CloneId = Clone->GetPrimaryAssetId();
-        const FPrimaryAssetId ExpectedCloneId(RailgunAmmo::PrimaryAssetTypeName, CloneAsset);
-        if (!StockId.IsValid() || CloneId != ExpectedCloneId)
-        {
-            UE_LOG(LogTemp, Error, TEXT("Clone primary ID mismatch: stock=%s clone=%s expected=%s"),
-                *StockId.ToString(), *CloneId.ToString(), *ExpectedCloneId.ToString());
-            delete Clone;
-            return 1;
-        }
-        PluginRegistry.AddAssetData(Clone);
-        if (const FAssetPackageData* StockPackage = Registry.GetAssetPackageData(Stock->PackageName))
-        {
-            *PluginRegistry.CreateOrGetAssetPackageData(ClonePackage) = *StockPackage;
-        }
-        const FName GunPackage(RailgunAmmo::GunItemPackage);
-        const FName GunAsset(RailgunAmmo::GunItemAsset);
-        FAssetData* GunClone = new FAssetData(*StockGun);
-        GunClone->PackageName = GunPackage;
-        GunClone->PackagePath = FName(RailgunAmmo::GunItemPackagePath);
-        GunClone->AssetName = GunAsset;
-        FAssetDataTagMap GunTags = GunClone->TagsAndValues.CopyMap();
-        GunTags.Add(FPrimaryAssetId::PrimaryAssetNameTag, GunAsset.ToString());
-        GunClone->SetTagsAndAssetBundles(MoveTemp(GunTags));
-        const FPrimaryAssetId StockGunId = StockGun->GetPrimaryAssetId();
-        const FPrimaryAssetId ExpectedGunId(RailgunAmmo::PrimaryAssetTypeName, GunAsset);
-        if (!StockGunId.IsValid() || GunClone->GetPrimaryAssetId() != ExpectedGunId)
-        {
-            UE_LOG(LogTemp, Error, TEXT("Gun primary ID mismatch: stock=%s clone=%s expected=%s"),
-                *StockGunId.ToString(), *GunClone->GetPrimaryAssetId().ToString(),
-                *ExpectedGunId.ToString());
-            delete GunClone;
-            return 1;
-        }
-        PluginRegistry.AddAssetData(GunClone);
-        if (const FAssetPackageData* StockGunPackage =
-            Registry.GetAssetPackageData(StockGun->PackageName))
-        {
-            *PluginRegistry.CreateOrGetAssetPackageData(GunPackage) = *StockGunPackage;
-        }
-        const FName SkillPackage(RailgunAmmo::SkillPackage);
-        const FName SkillAsset(RailgunAmmo::SkillAsset);
-        FAssetData* SkillClone = new FAssetData(*StockSkill);
-        SkillClone->PackageName = SkillPackage;
-        SkillClone->PackagePath = FName(RailgunAmmo::SkillPackagePath);
-        SkillClone->AssetName = SkillAsset;
-        FAssetDataTagMap SkillTags = SkillClone->TagsAndValues.CopyMap();
-        SkillTags.Add(FPrimaryAssetId::PrimaryAssetNameTag, SkillAsset.ToString());
-        SkillClone->SetTagsAndAssetBundles(MoveTemp(SkillTags));
-        const FPrimaryAssetId StockSkillId = StockSkill->GetPrimaryAssetId();
-        const FPrimaryAssetId ExpectedSkillId(StockSkillId.PrimaryAssetType, SkillAsset);
-        if (!StockSkillId.IsValid() || SkillClone->GetPrimaryAssetId() != ExpectedSkillId)
-        {
-            UE_LOG(LogTemp, Error, TEXT("Skill primary ID mismatch: stock=%s clone=%s expected=%s"),
-                *StockSkillId.ToString(), *SkillClone->GetPrimaryAssetId().ToString(), *ExpectedSkillId.ToString());
-            delete SkillClone;
-            return 1;
-        }
-        PluginRegistry.AddAssetData(SkillClone);
-        if (const FAssetPackageData* StockSkillPackage = Registry.GetAssetPackageData(StockSkill->PackageName))
-        {
-            *PluginRegistry.CreateOrGetAssetPackageData(SkillPackage) = *StockSkillPackage;
-        }
-        if (Registry.GetNumAssets() != OriginalCount || PluginRegistry.GetNumAssets() != 3 ||
-            PluginRegistry.GetNumPackages() != 3 ||
-            !PluginRegistry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath)) ||
-            !PluginRegistry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::GunItemObjectPath)) ||
-            !PluginRegistry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath)))
+            !FPaths::FileExists(MetadataFile) || MetadataFile == OutputFile)
         {
             UE_LOG(LogTemp, Error,
-                TEXT("Plugin registry gun/ammo/skill invariant failed before serialization"));
+                TEXT("Registry writing requires distinct RegistryMetadata and OutputRegistry paths"));
             return 1;
         }
-        TArray<FString> DumpFields { TEXT("All"), TEXT("Tag") };
-        TArray<FString> PluginDump;
-        PluginRegistry.Dump(DumpFields, PluginDump, 0);
+        TArray<FRegistryAssetDefinition> Definitions;
+        if (!ReadRegistryMetadata(MetadataFile, Definitions))
+        {
+            UE_LOG(LogTemp, Error, TEXT("Cannot read exact Railgun registry metadata"));
+            return 1;
+        }
+        FAssetRegistrySerializationOptions Options(UE::AssetRegistry::ESerializationTarget::ForDevelopment);
+        FAssetRegistryState PluginRegistry;
+        for (const FRegistryAssetDefinition& Definition : Definitions)
+        {
+            FAssetData* Record = new FAssetData(Definition.PackageName,
+                Definition.PackagePath, Definition.AssetName, Definition.AssetClassPath,
+                Definition.Tags, Definition.ChunkIds, Definition.PackageFlags);
+            if (!MatchesRegistryDefinition(*Record, Definition) ||
+                !Record->GetPrimaryAssetId().IsValid())
+            {
+                UE_LOG(LogTemp, Error, TEXT("Generated registry record differs from metadata: %s"),
+                    *Definition.ObjectPath.ToString());
+                delete Record;
+                return 1;
+            }
+            PluginRegistry.AddAssetData(Record);
+        }
+        if (PluginRegistry.GetNumAssets() != Definitions.Num() ||
+            PluginRegistry.GetNumPackages() != Definitions.Num())
+        {
+            UE_LOG(LogTemp, Error, TEXT("Generated registry record count is invalid"));
+            return 1;
+        }
         {
             TUniquePtr<FArchive> Output(IFileManager::Get().CreateFileWriter(*OutputFile));
             if (!Output)
@@ -471,9 +538,9 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
         }
         FMemory::Memcpy(&OutputVersion, OutputBytes.GetData() + RegistryVersionOffset, sizeof(int32));
         FMemory::Memcpy(&OutputFilter, OutputBytes.GetData() + RegistryFilterOffset, sizeof(int32));
-        if (OutputVersion != StockVersion || OutputFilter != StockFilter)
+        if (OutputVersion != ExpectedRegistryVersion || OutputFilter != 1)
         {
-            UE_LOG(LogTemp, Error, TEXT("Plugin registry header differs: version=%d filter=%d"),
+            UE_LOG(LogTemp, Error, TEXT("Plugin registry writer profile differs: version=%d filter=%d"),
                 OutputVersion, OutputFilter);
             return 1;
         }
@@ -484,42 +551,29 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
             UE_LOG(LogTemp, Error, TEXT("Output registry cannot be reopened"));
             return 1;
         }
-        TArray<FString> ReopenedDump;
-        Reopened.Dump(DumpFields, ReopenedDump, 0);
-        const bool bDumpMatches = ReopenedDump == PluginDump;
-        if (Reopened.GetNumAssets() != 3 || Reopened.GetNumPackages() != 3 ||
-            !bDumpMatches ||
-            Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockAmmoPath)) ||
-            Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockGunItemPath)) ||
-            Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockSkillPath)) ||
-            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath)) ||
-            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::GunItemObjectPath)) ||
-            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath)))
+        if (Reopened.GetNumAssets() != Definitions.Num() ||
+            Reopened.GetNumPackages() != Definitions.Num())
         {
             UE_LOG(LogTemp, Error,
-                TEXT("Plugin registry reopen verification failed: assets=%d packages=%d dump=%d"),
-                Reopened.GetNumAssets(), Reopened.GetNumPackages(), bDumpMatches);
+                TEXT("Plugin registry reopen count failed: assets=%d packages=%d"),
+                Reopened.GetNumAssets(), Reopened.GetNumPackages());
             return 1;
         }
-        const FAssetData* ReopenedSkill = Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath));
-        const FAssetData* ReopenedItem = Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath));
-        const FAssetData* ReopenedGun = Reopened.GetAssetByObjectPath(
-            FSoftObjectPath(RailgunAmmo::GunItemObjectPath));
-        if (ReopenedSkill->GetPrimaryAssetId() != ExpectedSkillId ||
-            ReopenedSkill->AssetClassPath != StockSkill->AssetClassPath ||
-            ReopenedItem->GetPrimaryAssetId() != ExpectedCloneId ||
-            ReopenedItem->AssetClassPath != Stock->AssetClassPath ||
-            ReopenedGun->GetPrimaryAssetId() != ExpectedGunId ||
-            ReopenedGun->AssetClassPath != StockGun->AssetClassPath)
+        for (const FRegistryAssetDefinition& Definition : Definitions)
         {
-            UE_LOG(LogTemp, Error, TEXT("Plugin registry primary IDs or native classes changed on reopening"));
-            return 1;
+            const FAssetData* ReopenedAsset = Reopened.GetAssetByObjectPath(
+                FSoftObjectPath(Definition.ObjectPath.ToString()));
+            if (!ReopenedAsset || !MatchesRegistryDefinition(*ReopenedAsset, Definition))
+            {
+                UE_LOG(LogTemp, Error,
+                    TEXT("Plugin registry record changed on reopening: %s"),
+                    *Definition.ObjectPath.ToString());
+                return 1;
+            }
         }
         UE_LOG(LogTemp, Display,
-            TEXT("PLUGIN REGISTRY VERIFIED source=%d output=%d gun=%s ammo=%s skill=%s skillId=%s"),
-            OriginalCount, Reopened.GetNumAssets(), RailgunAmmo::GunItemObjectPath,
-            RailgunAmmo::FullClonePath, RailgunAmmo::SkillObjectPath,
-            *ExpectedSkillId.ToString());
+            TEXT("PLUGIN REGISTRY VERIFIED donorFree=1 output=%d metadata=%s"),
+            Reopened.GetNumAssets(), *MetadataFile);
         return 0;
     }
     if (FParse::Param(*Params, DedicatedStationNames::VerifySwitch))

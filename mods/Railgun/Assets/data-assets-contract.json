@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "assets": [
     {
       "sourceFile": "Assets/Fabricator/railgun-ammo-item.json",
@@ -20,6 +20,44 @@
       "class": "VoyageSkill"
     }
   ],
+  "registry": {
+    "formatVersion": 24,
+    "filterEditorOnly": true,
+    "chunkIds": [
+      0
+    ],
+    "versionRange": "(InitialVersion=(MajorVersion=0,MinorVersion=0,PatchVersion=0),bHasSunsetVersion=False,SunsetVersion=(MajorVersion=99999,MinorVersion=0,PatchVersion=0))",
+    "commonFallbacks": {
+      "bExcludeFromDemo": false,
+      "bExcludeFromDistribution": false
+    },
+    "classPolicies": {
+      "VoyageItem": {
+        "primaryAssetType": "Item",
+        "fallbacks": {
+          "bAllowFabricationOnTop": false,
+          "bCanGainLootExp": true,
+          "bIsRecyclable": true
+        }
+      },
+      "VoyageItemAmmo": {
+        "primaryAssetType": "Item",
+        "fallbacks": {
+          "bAllowFabricationOnTop": false,
+          "bCanGainLootExp": true,
+          "bIsDestructible": false,
+          "bIsDismantlable": false,
+          "bIsRecyclable": true,
+          "bIsRepairable": false,
+          "Tag": "None"
+        }
+      },
+      "VoyageSkill": {
+        "primaryAssetType": "Skill",
+        "fallbacks": {}
+      }
+    }
+  },
   "serialization": {
     "engineVersion": "5.8",
     "uassetGuiCommit": "df18b5fd0d263d78fdb0cd5f49de1ee5cf6a9520",

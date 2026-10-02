@@ -35,9 +35,10 @@ construction, input, operator, HUD, projectile and audio assets, cooks them in
 one pass, verifies them, and packages one IoStore container. The PAK contains
 only Railgun's three-record primary-asset registry at
 `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`; the ZIP and schema-3 release
-manifest also own the matching loose content-only descriptor. The stock
-registry is used only as a fingerprinted editor-time metadata donor and is
-never shipped or replaced.
+manifest also own the matching loose content-only descriptor. Registry records
+are derived from the three owned data-asset JSON readbacks and the compact
+registry policy in `Assets\data-assets-contract.json`; no stock registry is
+read, shipped or replaced.
 
 ## Inputs
 
@@ -55,10 +56,10 @@ All mod-owned inputs live below this directory:
   `Assets\Skill\railgun-skill.json` are the editable authoritative serialized
   sources for the ammo, gun item and research skill.
   `Assets\data-assets-contract.json` binds their package/native identities and
-  owns one shared game, mapping, writer and revalidation gate for the complete
-  set. It does not freeze editable gameplay or display values. The build writes
-  all three JSON files directly as staged packages; it does not read, copy or
-  patch stock asset packages.
+  owns one shared game, mapping, writer, registry-policy and revalidation gate
+  for the complete set. It does not freeze editable gameplay or display values.
+  The build writes all three JSON files directly as staged packages; it does
+  not read, copy or patch stock asset packages.
 - `Assets\Railgun_Shot_Blast.wav` is the shot sound.
 - `Assets\Railgun.ini` is the distributable template and source of defaults,
   comments, ordering and formatting. `Settings\Railgun.settings.json` adds the
@@ -66,12 +67,27 @@ All mod-owned inputs live below this directory:
   validates them against each other and generates the runtime header.
 - `Build\New-RailgunSettings.ps1` is an internal build step; invoke the public
   `Build-Railgun.ps1` producer rather than running it directly.
+- `Build\New-RailgunRegistryMetadata.ps1` derives compact registry metadata
+  from the three staged package readbacks and the shared contract. Explicitly
+  serialized values always win, class defaults apply only when a property is
+  absent, and the contract owns deployment policy such as registry format and
+  chunk IDs without duplicating item balance or recipe data.
+- `Build\Test-New-RailgunRegistryMetadata.ps1` runs fixture-only metadata tests
+  without launching or modifying the game:
+
+  ```powershell
+  powershell.exe -NoProfile -ExecutionPolicy Bypass `
+    -File mods\Railgun\Build\Test-New-RailgunRegistryMetadata.ps1
+  ```
+
 - `Source\` contains editor-only generators and game API mirrors.
 - `Config\` and `Voyage.uproject` define the authoring project.
 
 Nothing below `artifacts\` is a build input. Artifacts may be deleted between
-builds. Unreal's generated `Binaries`, `Build`, `Content`,
-`DerivedDataCache`, `Intermediate`, and `Saved` directories are also disposable.
+builds. Unreal's generated `Binaries`, `Content`, `DerivedDataCache`,
+`Intermediate`, and `Saved` directories are also disposable. The tracked
+scripts under `Build\` are source inputs and must not be deleted as generated
+output.
 
 ## Settings
 

@@ -130,12 +130,14 @@ VoyageSkill referencing a native VoyageItem with crafting properties and an
 owned actor. That external package remains structural evidence rather than a
 general gameplay or initialization-order guarantee.
 
-Railgun's normal source producer writes an exact three-record plugin registry,
-packages it at `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`, and releases a
-loose content-only descriptor through the schema-3 manifest contract. The
-installed `build-20261002-205216` artifact was confirmed by the user with the
-general result that everything works. This validates the current Railgun
-delivery contract without proving arbitrary multi-mod combinations or
+Railgun's normal source producer derives an exact three-record plugin registry
+from its owned package readbacks and explicit registry policy, packages it at
+`Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`, and releases a loose
+content-only descriptor through the schema-3 manifest contract. The installed
+`build-20261002-donor-free-03` artifact was confirmed by the user with the
+general result that everything works, including while `VoyageAssetPool_P`
+supplied a global registry override. This validates additive loading for that
+combination; it does not prove arbitrary registry overrides, duplicate IDs or
 additional individually unspecified gameplay scenarios. Build artifacts remain
 evidence, not source inputs. Plugin descriptors extend the installed footprint
 beyond `Content/Paks`, so schema-3 installation and restoration retain the
@@ -163,37 +165,13 @@ requires new validation, not reuse of its predecessor's offsets.
   callback, and `PakFile/Private/IPlatformFilePak.cpp` uses it for the default
   PAK key. No running-game injection is needed to read this callback.
 
-To recover and validate the key for this exact executable:
-
-1. Use `Invoke-VoyageExecutableInspector.ps1` for references and
-   `Inspect-VoyageNativeMemberAccess.py` for bounded instruction decoding.
-   The verified chain is the encryption-key delegate getter at preferred VA
-   `0x141422E30`, registration function `0x14142D160`, initializer
-   `0x14120CF70`, and callback `0x1456AD1F0`. These are offline PE addresses
-   with image base `0x140000000`, not ASLR-adjusted process addresses.
-2. Decode the callback at RVA `0x56AD1F0`. It writes eight immediate DWORDs
-   to stack offsets `-0x30`, `-0x2C`, `-0x28`, `-0x24`, `-0x20`, `-0x1C`,
-   `-0x18`, `-0x14`, then copies those 32 bytes to the output. Concatenate
-   the DWORD values in that order, each little-endian. Reject a different
-   instruction shape rather than reading unchecked offsets.
-3. Read the PAK index position, length and SHA-1 from its footer. Decrypt the
-   index using AES-256 ECB with no padding removal and compare its SHA-1
-   against the footer. This check passed: the decrypted index has mount
-   `../../../` and 4,748 entries. Readable text alone is not key validation.
-4. For UnrealPak access, supply a local crypto-key JSON through `-cryptokeys`.
-   UE 5.8 `Core/Public/Misc/KeyChainUtilities.h` reads the default key from
-   `EncryptionKey.Key` as Base64 of the 32 bytes. Do not pass hex to legacy
-   `-aes`, which interprets its value as ANSI characters. List the stock PAK,
-   confirm the registry's exact virtual path, then extract only that file.
-   Record the PAK and extracted-file hashes with the game fingerprint.
-
-The verified gate here is index decryption and hash equality. It does not by
-itself prove encryption of the registry payload, successful registry extraction,
-or runtime Primary Asset ID registration. Those require separate evidence.
-Keep recovered key material, local crypto JSON, extracted registries and raw
-reports under ignored `artifacts/`, never in Git. Keys and crypto JSON must not
-enter distributed mod packages. Packaging a rebuilt registry is a separate
-operation requiring its own compatibility and runtime validation.
+Encrypted stock PAK work must remain fingerprint-gated and fail closed when the
+callback or encrypted-index layout changes. Validate a recovered default key by
+decrypting the version-12 index and matching its footer SHA-1; readable text is
+not sufficient evidence. UnrealPak key-chain JSON uses Base64 key bytes, while
+legacy `-aes` interprets its value differently. Keep keys, local crypto JSON,
+extracted files and raw reports below ignored `artifacts/`; none may enter Git
+or a distributed mod package. Railgun no longer consumes this path.
 
 ## Validation ladder
 
