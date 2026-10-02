@@ -5,8 +5,6 @@ namespace StationControlNames
 {
 inline const FName Owned(TEXT("OwnsStationPossession"));
 inline const FName ReturnPending(TEXT("StationReturnNeedsRetry"));
-inline constexpr TCHAR Refused[] = TEXT("HC17: local authority and unoccupied station required");
-inline constexpr TCHAR EntryFailed[] = TEXT("HC17: possession rejected; entry rolled back");
 inline constexpr TCHAR ReturnFailed[] = TEXT("HC17 RETURN FAILED: F8 retries; do not save. Report this.");
 }
 namespace Control = StationControlNames;
@@ -22,18 +20,6 @@ void StationPossess(FGraph& G, UEdGraphPin* Pawn)
     auto* Call = G.Call(AController::StaticClass(), GET_FUNCTION_NAME_CHECKED(AController, Possess));
     G.Link(G.Read(S::Controller), G.Pin(Call, P::FunctionTarget));
     G.Link(Pawn, G.Pin(Call, SP::PossessionTarget)); G.Exec(Call);
-}
-
-void PrepareStationControl(FGraph& G)
-{
-    auto* Authority = ObserveCall(G, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, HasAuthority), G.Read(S::Controller));
-    G.Require(Authority, Control::Refused);
-    auto* Local = ObserveCall(G, APlayerController::StaticClass(), GET_FUNCTION_NAME_CHECKED(APlayerController, IsLocalController), G.Read(S::Controller));
-    G.Require(Local, Control::Refused);
-    auto* Occupant = ObserveCall(G, APawn::StaticClass(), BlueprintGraphNames::ActorFunctions::GetController, OpticalSelf(G));
-    G.Require(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool), G.Valid(Occupant), N::False), Control::Refused);
-    G.Require(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), StationControlledPawn(G), G.Read(N::OriginalPawn)), Control::Refused);
-    G.Write(Control::ReturnPending, nullptr, N::False);
 }
 
 void ReleaseStationControl(FGraph& G)
@@ -57,14 +43,4 @@ void ReleaseStationControl(FGraph& G)
     StationMerge(G, {G.Tail, G.Pin(CanReturn, P::Else), G.Pin(ControllerValid, P::Else)});
     G.Write(Control::Owned, nullptr, N::False); G.Write(Control::ReturnPending, nullptr, N::False);
     StationMerge(G, {G.Tail, G.Pin(Owned, P::Else)});
-}
-
-void BeginStationControl(FGraph& G)
-{
-    G.Write(N::NativeHudRequested, nullptr, N::False);
-    G.Write(Control::Owned, nullptr, N::True);
-    StationPossess(G, OpticalSelf(G));
-    auto* Entered = G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), StationControlledPawn(G), OpticalSelf(G)));
-    auto* Success = G.Tail; G.Tail = G.Pin(Entered, P::Else);
-    ReleaseStation(G); G.Text(N::FreezeStatus, Control::EntryFailed); G.Tail = Success;
 }

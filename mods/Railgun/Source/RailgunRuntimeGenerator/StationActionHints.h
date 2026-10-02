@@ -25,9 +25,6 @@ inline constexpr TCHAR ZoomLabel[] = TEXT("Toggle scope");
 inline constexpr TCHAR FireName[] = TEXT("RailgunFire");
 inline constexpr TCHAR FireLabel[] = TEXT("Fire");
 inline constexpr TCHAR Central[] = TEXT("EPlayerInputInterfaceActionType::Central");
-inline constexpr TCHAR NotReady[] = TEXT("HC28: native hint widget NOT READY; E exits, F8 fallback");
-inline constexpr TCHAR NoProvider[] = TEXT("HC28: hint widget READY; action provider NOT OBSERVED");
-inline constexpr TCHAR ProviderReady[] = TEXT("HC28: hint widget READY; action provider OBSERVED");
 }
 
 void AddStationActions(UBlueprint* BP)
@@ -83,21 +80,6 @@ void AddStationActions(UBlueprint* BP)
     for (auto* Pin : Array->Pins) if (Pin->Direction == EGPD_Input) LastElement = Pin;
     for (auto* Pin : FireAction->Pins) if (Pin->Direction == EGPD_Output) G.Link(Pin, LastElement);
     G.Link(Array->GetOutputPin(), G.Pin(Result, P::ReturnValue));
-}
-
-void UpdateStationHintMarker(FGraph& G, UEdGraphPin* Station, UClass* StationClass)
-{
-    auto SetStatus = [&](const TCHAR* Message)
-    {
-        auto* Set = G.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
-        G.Link(G.Read(Hint::Status), G.Pin(Set, P::FunctionTarget));
-        GetDefault<UEdGraphSchema_K2>()->TrySetDefaultText(*G.Pin(Set, E::WidgetText), FText::FromString(Message)); G.Exec(Set);
-    };
-    auto* Ready = G.Branch(G.Read(Hint::HintsReady)); auto* ReadyTail = G.Tail;
-    G.Tail = G.Pin(Ready, P::Else); SetStatus(Hint::NotReady); G.Tail = ReadyTail;
-    auto* Seen = G.Branch(ReadNativeInputField(G, Station, StationClass, Hint::ProviderSeen));
-    auto* SeenTail = G.Tail; G.Tail = G.Pin(Seen, P::Else); SetStatus(Hint::NoProvider);
-    G.Tail = SeenTail; SetStatus(Hint::ProviderReady);
 }
 
 // UMG Construct occurs when attached: configure context before AddChild.
