@@ -146,9 +146,8 @@ Evidence: `artifacts/mooring60/live-tension-25191271-{a,b,c}.json`,
 `extension-25191271.json`, `extension-inputs-25191271.json`,
 `classes-25191271-{cable,socket}.json`, `member-registry-25191271.json`.
 Class singleton identities and used member offsets were revalidated against
-the current executable before adding its hash to Read-VoyageCableState.py.
-The runtime reader's new fields are enabled only for 25191271; older diagnostic
-support is preserved. Three runtime calls each completed in about 1-1.5 seconds.
+the current executable fingerprint 25191271. Three runtime observations each
+completed in about 1-1.5 seconds.
 Get-VoyageAssetSummary confirmed no Blueprint functions in the stock base;
 attached payout belongs to native logic. No physics candidate is yet built.
 
