@@ -191,7 +191,6 @@ container and evidence, without installation.
 | Restore/remove a common release installation | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded predecessor restoration and recovery evidence |
 | Install/remove one unchanged package canary | `Install-VoyageUnchangedProbe.ps1`, `Remove-VoyageUnchangedProbe.ps1` | Current-fingerprint and exact-hash guarded runtime roundtrip test |
 | Locate native names, references, or correlated member offsets | `Invoke-VoyageExecutableInspector.ps1` | Compact fingerprinted result plus retained read-only executable report |
-| Discover which Blueprint editor APIs Unreal Python exposes | `Inspect-UnrealBlueprintApi.py` | `Saved/BlueprintApi.txt` in an Unreal project |
 | Reuse semantic C++ names while generating Blueprint graphs | `UnrealEditorGeneratorCommon` | Header-only build-time helpers; not a command-line tool |
 
 When an existing producer needs only the current game's `scriptobjects.bin`,
@@ -1269,20 +1268,6 @@ run the Windows PowerShell regression:
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File .\tools\Test-VoyageExecutableInspectorBinary.ps1
 ```
-
-### `Inspect-UnrealBlueprintApi.py`
-
-Run this script inside an Unreal Editor project with Python Editor Scripting
-enabled when generator work depends on an uncertain Python API surface:
-
-```powershell
-UnrealEditor-Cmd.exe '<project.uproject>' `
-  -ExecutePythonScript='<absolute-path>\tools\Inspect-UnrealBlueprintApi.py' `
-  -unattended -nop4 -nullrhi
-```
-
-It reports the public names exposed for selected Blueprint graph/editor types
-to `<project>/Saved/BlueprintApi.txt`. It does not inspect Voyage game assets.
 
 ### `UnrealEditorGeneratorCommon`
 
