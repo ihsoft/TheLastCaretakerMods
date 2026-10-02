@@ -17,10 +17,6 @@ inline constexpr TCHAR MinimumFov[] = TEXT("10.0");
 inline constexpr TCHAR MaximumFov[] = TEXT("150.0");
 inline constexpr TCHAR Visible[] = TEXT("HitTestInvisible");
 inline constexpr TCHAR Collapsed[] = TEXT("Collapsed");
-inline constexpr TCHAR ReticleText[] = TEXT("+");
-inline constexpr int32 ReticleFontSize = 34;
-inline const FVector2D ReticleSize(50.0f, 60.0f);
-inline const FVector2D ReticleCenter(0.5f, 0.5f);
 }
 namespace O = OpticalProbeNames;
 namespace OP = OpticalCameraGraphNames;
