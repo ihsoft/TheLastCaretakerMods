@@ -185,7 +185,7 @@ container and evidence, without installation.
 | Publish or resolve the native executable inspector | `Publish-VoyageExecutableInspectorBinary.ps1`, `Get-VoyageExecutableInspectorBinary.ps1` | Manifest-validated single-file `.tools/bin/VoyageExecutableInspector.exe` |
 | Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/bin/UAssetGUI.exe stress-open` | Incremental per-asset JSONL plus parse/binary-equality summary |
 | Build, cook and package an existing mod release | [Release producers](#release-producers) | Route to the owning mod's documented orchestrator; no generic rebuild recipe |
-| Create the common manifest for an already-built triplet and ZIP | `New-VoyageReleaseManifest.ps1` | Immutable schema-2 manifest published only after installer validation |
+| Create the common manifest for an already-built triplet and ZIP | `New-VoyageReleaseManifest.ps1` | Immutable schema-2 manifest, or schema 3 with one exact content-plugin descriptor, published only after installer validation |
 | Validate or install an already-built standalone IoStore release | `Install-VoyageRelease.ps1` | Manifest-gated install plan or recoverable installation evidence |
 | Verify one IoStore container and its expected package set | `Test-VoyageContainer.ps1` | Bounded integrity check, package inventory, exact-set differences and file hashes |
 | Restore/remove a common release installation | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded predecessor restoration and recovery evidence |
@@ -216,7 +216,7 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 | MooringCable60m | [Release workflow](../mods/MooringCable60m/README.md) | `Build-LimitGraph.ps1` builds/cooks the attached/free limit graph outside the sandbox; `Build-Candidate.ps1 -GraphManifest` preserves fresh stock inheritance, sets 60 m manual / 20 m attached payout, verifies exactly three assets and creates a schema-2 release manifest; neither installs |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
-| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes the fixed `Assets/Model/Railgun.glb` plus its compact role/box manifest, generates all mod assets, cooks and verifies one `Railgun_P` container, then writes the ZIP and schema-2 release manifest. Actual input hashes are recorded and must remain unchanged during the build. Optional `-Install` uses the common guarded installer. Gameplay validation remains a separate gate |
+| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes `Assets/Model/Railgun.glb` plus its compact role/box manifest, generates all mod assets, cooks and verifies one `Railgun_P` container, writes an isolated three-record content-plugin registry and descriptor, then publishes a schema-3 ZIP/manifest. The stock registry is metadata input only and is not shipped. Optional `-Install` uses the common guarded installer. Gameplay validation remains a separate gate |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a
@@ -231,7 +231,8 @@ producer's preconditions. Do not manually bypass its source or manifest gates.
 
 For an already-built release, skip build/cook and use the common verification
 and installation contracts below. The common installer accepts schema-2 release
-manifests, not every producer's build manifest. A producer without that schema
+manifests and schema 3 with one exact content-plugin descriptor, not every
+producer's build manifest. A producer without either schema
 keeps its documented installer until an explicit migration is implemented and
 validated. Keep exact commands and stage-specific details in the owning README,
 not duplicated here.
@@ -322,7 +323,8 @@ when those details are actually needed. This tool already returns JSON; unlike
 
 `-HashModFiles` adds SHA-256 for additional top-level files. An optional completed
 common installation manifest (schema 1, returned by `Install-VoyageRelease.ps1`)
-always hashes its exact installed targets, including the provenance ZIP. It
+always hashes its exact installed targets, including the provenance ZIP and a
+schema-3 content-plugin descriptor outside `Paks`. It
 reports `match`, `different`, `missing`, `unsupported-path`, or
 `changed-during-read` per file, and separates `filesMatch` from
 `gameFingerprintMatches`. No manifest means `installation: null`, not failure.
@@ -452,6 +454,12 @@ fingerprint, source commit, and dirty-source contract. Existing manifests are
 immutable. A dirty test candidate needs explicit `-AllowDirtySource`; a normal
 release should be committed first. `-InstalledArchiveName` can override the
 default installed provenance ZIP name, and `-AsJson` returns a compact result.
+When a release also owns one content-only plugin descriptor, pass its exact
+release-root-local `.uplugin` with `-ContentPluginDescriptor`. The producer then
+writes schema 3 with one typed `contentPlugin` record. Only the exact
+`Voyage/Mods/<Plugin>/<Plugin>.uplugin` destination is supported, and the
+descriptor must declare `CanContainContent=true`, `EnabledByDefault=true`,
+`ExplicitlyLoaded=false`, and `Modules=[]`. Schema 2 remains unchanged.
 
 Run its Windows PowerShell regression harness after changing this producer:
 
@@ -469,7 +477,9 @@ release. It never builds, cooks, repackages, or edits the source release:
   -ValidateOnly
 ```
 
-The accepted input is `release-manifest.json` schema 2. New release producers
+The accepted input is `release-manifest.json` schema 2 or 3. Schema 3 adds only
+the typed content-plugin descriptor described above; it is not a generic
+additional-file mechanism. New release producers
 should call `New-VoyageReleaseManifest.ps1` after their build and ZIP steps
 rather than duplicating this contract or passing an unrelated build manifest.
 
@@ -488,6 +498,10 @@ ignored `artifacts/installations/`. A handled failure restores all previous
 files and removes newly installed targets; the transaction records whether the
 rollback succeeded. A dirty-source manifest is rejected unless the caller
 explicitly supplies `-AllowDirtySource`.
+For schema 3 the descriptor participates in the same transaction outside the
+Paks directory. Every existing parent is checked against traversal and reparse
+points; restore removes only that owned file and installation-created
+directories that are still empty.
 
 Restore the exact predecessor through the paired tool rather than copying the
 backup manually:
@@ -525,7 +539,8 @@ Run the Windows PowerShell regression harness after changing this contract:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\tools\Test-Install-VoyageRelease.ps1
+  -File .\tools\Test-Install-VoyageRelease.ps1 `
+  -WithAutoLoadSidecar -WithContentPluginDescriptor
 ```
 
 It uses a unique synthetic Steam/Voyage tree under ignored `artifacts/tests/`

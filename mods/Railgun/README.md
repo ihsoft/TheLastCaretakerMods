@@ -27,11 +27,17 @@ output is written to a new `artifacts\railgun\build-*` directory and contains:
 - `payload\Railgun_P.pak`
 - `payload\Railgun_P.autoload`
 - `payload\Railgun.ini`
+- `payload\Mods\RailgunCatalogue\RailgunCatalogue.uplugin`
 - a ZIP, release manifest and verification reports
 
 `Build-Railgun.ps1` is the only supported build producer. It generates model,
 construction, input, operator, HUD, projectile and audio assets, cooks them in
-one pass, verifies them, and packages one IoStore container.
+one pass, verifies them, and packages one IoStore container. The PAK contains
+only Railgun's three-record primary-asset registry at
+`Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`; the ZIP and schema-3 release
+manifest also own the matching loose content-only descriptor. The stock
+registry is used only as a fingerprinted editor-time metadata donor and is
+never shipped or replaced.
 
 ## Inputs
 
@@ -63,8 +69,8 @@ All mod-owned inputs live below this directory:
 - `Source\` contains editor-only generators and game API mirrors.
 - `Config\` and `Voyage.uproject` define the authoring project.
 
-Nothing below `artifacts\` is a build input. That directory may be deleted
-between builds. Unreal's generated `Binaries`, `Build`, `Content`,
+Nothing below `artifacts\` is a build input. Artifacts may be deleted between
+builds. Unreal's generated `Binaries`, `Build`, `Content`,
 `DerivedDataCache`, `Intermediate`, and `Saved` directories are also disposable.
 
 ## Settings

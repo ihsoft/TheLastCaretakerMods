@@ -1,0 +1,12 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0",
+  "FriendlyName": "Railgun Catalogue",
+  "Description": "Registers Railgun primary assets without replacing the stock registry.",
+  "Category": "Content",
+  "CanContainContent": true,
+  "EnabledByDefault": true,
+  "ExplicitlyLoaded": false,
+  "Modules": []
+}

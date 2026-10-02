@@ -123,6 +123,10 @@ namespace N = RailgunRuntimeNames;
 
 namespace
 {
+constexpr TCHAR WritePluginRegistrySwitch[] = TEXT("WritePluginRegistry");
+constexpr TCHAR StockRegistryArgument[] = TEXT("StockRegistry=");
+constexpr TCHAR OutputRegistryArgument[] = TEXT("OutputRegistry=");
+
 class FGraph
 {
 public:
@@ -299,18 +303,19 @@ UGenerateRailgunRuntimeCommandlet::UGenerateRailgunRuntimeCommandlet()
 
 int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
 {
-    if (FParse::Param(*Params, TEXT("PatchStockRegistry")))
+    const bool bWritePluginRegistry = FParse::Param(*Params, WritePluginRegistrySwitch);
+    if (bWritePluginRegistry)
     {
         constexpr int32 ExpectedRegistryVersion = 24;
         constexpr int32 RegistryVersionOffset = 16;
         constexpr int32 RegistryFilterOffset = 20;
         FString StockFile;
         FString OutputFile;
-        if (!FParse::Value(*Params, TEXT("StockRegistry="), StockFile) ||
-            !FParse::Value(*Params, TEXT("OutputRegistry="), OutputFile) ||
+        if (!FParse::Value(*Params, StockRegistryArgument, StockFile) ||
+            !FParse::Value(*Params, OutputRegistryArgument, OutputFile) ||
             !FPaths::FileExists(StockFile) || StockFile == OutputFile)
         {
-            UE_LOG(LogTemp, Error, TEXT("PatchStockRegistry requires distinct StockRegistry and OutputRegistry paths"));
+            UE_LOG(LogTemp, Error, TEXT("Registry writing requires distinct StockRegistry and OutputRegistry paths"));
             return 1;
         }
         TArray<uint8> StockBytes;
@@ -339,58 +344,8 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
             }
         }
         FAssetRegistrySerializationOptions Options(UE::AssetRegistry::ESerializationTarget::ForDevelopment);
-        const FString NoopFile = OutputFile + TEXT(".noop");
-        {
-            TUniquePtr<FArchive> Noop(IFileManager::Get().CreateFileWriter(*NoopFile));
-            if (!Noop)
-            {
-                UE_LOG(LogTemp, Error, TEXT("Cannot create stock registry no-op output"));
-                return 1;
-            }
-            Noop->SetFilterEditorOnly(true);
-            if (!Registry.Save(*Noop, Options) || Noop->IsError())
-            {
-                UE_LOG(LogTemp, Error, TEXT("Stock registry no-op serialization failed"));
-                return 1;
-            }
-        }
-        TArray<uint8> NoopBytes;
-        if (!FFileHelper::LoadFileToArray(NoopBytes, *NoopFile) ||
-            NoopBytes.Num() < RegistryFilterOffset + static_cast<int32>(sizeof(int32)))
-        {
-            UE_LOG(LogTemp, Error, TEXT("Cannot read no-op registry header"));
-            return 1;
-        }
-        int32 NoopVersion = -1;
-        int32 NoopFilter = -1;
-        FMemory::Memcpy(&NoopVersion, NoopBytes.GetData() + RegistryVersionOffset, sizeof(int32));
-        FMemory::Memcpy(&NoopFilter, NoopBytes.GetData() + RegistryFilterOffset, sizeof(int32));
-        if (NoopVersion != StockVersion || NoopFilter != StockFilter)
-        {
-            UE_LOG(LogTemp, Error, TEXT("No-op registry header differs: version=%d filter=%d"), NoopVersion, NoopFilter);
-            return 1;
-        }
-        FAssetRegistryState NoopRegistry;
-        if (!FAssetRegistryState::LoadFromDisk(*NoopFile, FAssetRegistryLoadOptions(), NoopRegistry) ||
-            NoopRegistry.GetNumAssets() != Registry.GetNumAssets())
-        {
-            UE_LOG(LogTemp, Error, TEXT("No-op registry cannot be reopened or asset count differs"));
-            return 1;
-        }
-        TArray<FString> DumpFields { TEXT("All"), TEXT("Tag") };
-        TArray<FString> StockDump;
-        TArray<FString> NoopDump;
-        Registry.Dump(DumpFields, StockDump, 0);
-        NoopRegistry.Dump(DumpFields, NoopDump, 0);
-        if (StockDump != NoopDump)
-        {
-            UE_LOG(LogTemp, Error, TEXT("Stock registry no-op semantic dump differs: originalPages=%d outputPages=%d"),
-                StockDump.Num(), NoopDump.Num());
-            return 1;
-        }
-        UE_LOG(LogTemp, Display, TEXT("STOCK REGISTRY NO-OP SEMANTIC DUMP MATCH originalBytes=%d outputBytes=%d assets=%d"),
-            StockBytes.Num(), NoopBytes.Num(), Registry.GetNumAssets());
         const int32 OriginalCount = Registry.GetNumAssets();
+        FAssetRegistryState PluginRegistry;
         const FAssetData* Stock = Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockAmmoPath));
         const FAssetData* Existing = Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath));
         const FAssetData* StockGun = Registry.GetAssetByObjectPath(
@@ -425,10 +380,10 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
             delete Clone;
             return 1;
         }
-        Registry.AddAssetData(Clone);
+        PluginRegistry.AddAssetData(Clone);
         if (const FAssetPackageData* StockPackage = Registry.GetAssetPackageData(Stock->PackageName))
         {
-            *Registry.CreateOrGetAssetPackageData(ClonePackage) = *StockPackage;
+            *PluginRegistry.CreateOrGetAssetPackageData(ClonePackage) = *StockPackage;
         }
         const FName GunPackage(RailgunAmmo::GunItemPackage);
         const FName GunAsset(RailgunAmmo::GunItemAsset);
@@ -449,11 +404,11 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
             delete GunClone;
             return 1;
         }
-        Registry.AddAssetData(GunClone);
+        PluginRegistry.AddAssetData(GunClone);
         if (const FAssetPackageData* StockGunPackage =
             Registry.GetAssetPackageData(StockGun->PackageName))
         {
-            *Registry.CreateOrGetAssetPackageData(GunPackage) = *StockGunPackage;
+            *PluginRegistry.CreateOrGetAssetPackageData(GunPackage) = *StockGunPackage;
         }
         const FName SkillPackage(RailgunAmmo::SkillPackage);
         const FName SkillAsset(RailgunAmmo::SkillAsset);
@@ -473,66 +428,77 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
             delete SkillClone;
             return 1;
         }
-        Registry.AddAssetData(SkillClone);
+        PluginRegistry.AddAssetData(SkillClone);
         if (const FAssetPackageData* StockSkillPackage = Registry.GetAssetPackageData(StockSkill->PackageName))
         {
-            *Registry.CreateOrGetAssetPackageData(SkillPackage) = *StockSkillPackage;
+            *PluginRegistry.CreateOrGetAssetPackageData(SkillPackage) = *StockSkillPackage;
         }
-        if (Registry.GetNumAssets() != OriginalCount + 3 ||
-            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockAmmoPath)) ||
-            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath)) ||
-            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockGunItemPath)) ||
-            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::GunItemObjectPath)) ||
-            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockSkillPath)) ||
-            !Registry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath)))
+        if (Registry.GetNumAssets() != OriginalCount || PluginRegistry.GetNumAssets() != 3 ||
+            PluginRegistry.GetNumPackages() != 3 ||
+            !PluginRegistry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath)) ||
+            !PluginRegistry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::GunItemObjectPath)) ||
+            !PluginRegistry.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath)))
         {
             UE_LOG(LogTemp, Error,
-                TEXT("Stock registry gun/ammo/skill clone invariant failed before serialization"));
+                TEXT("Plugin registry gun/ammo/skill invariant failed before serialization"));
             return 1;
         }
+        TArray<FString> DumpFields { TEXT("All"), TEXT("Tag") };
+        TArray<FString> PluginDump;
+        PluginRegistry.Dump(DumpFields, PluginDump, 0);
         {
             TUniquePtr<FArchive> Output(IFileManager::Get().CreateFileWriter(*OutputFile));
             if (!Output)
             {
-                UE_LOG(LogTemp, Error, TEXT("Cannot create patched complete AssetRegistry.bin"));
+                UE_LOG(LogTemp, Error, TEXT("Cannot create output AssetRegistry.bin"));
                 return 1;
             }
             Output->SetFilterEditorOnly(true);
-            if (!Registry.Save(*Output, Options) || Output->IsError())
+            if (!PluginRegistry.Save(*Output, Options) || Output->IsError())
             {
-                UE_LOG(LogTemp, Error, TEXT("Cannot serialize patched complete AssetRegistry.bin"));
+                UE_LOG(LogTemp, Error, TEXT("Cannot serialize output AssetRegistry.bin"));
                 return 1;
             }
         }
-        TArray<uint8> PatchedBytes;
-        int32 PatchedVersion = -1;
-        int32 PatchedFilter = -1;
-        if (!FFileHelper::LoadFileToArray(PatchedBytes, *OutputFile) ||
-            PatchedBytes.Num() < RegistryFilterOffset + static_cast<int32>(sizeof(int32)))
+        TArray<uint8> OutputBytes;
+        int32 OutputVersion = -1;
+        int32 OutputFilter = -1;
+        if (!FFileHelper::LoadFileToArray(OutputBytes, *OutputFile) ||
+            OutputBytes.Num() < RegistryFilterOffset + static_cast<int32>(sizeof(int32)))
         {
-            UE_LOG(LogTemp, Error, TEXT("Cannot read patched registry header"));
+            UE_LOG(LogTemp, Error, TEXT("Cannot read plugin registry header"));
             return 1;
         }
-        FMemory::Memcpy(&PatchedVersion, PatchedBytes.GetData() + RegistryVersionOffset, sizeof(int32));
-        FMemory::Memcpy(&PatchedFilter, PatchedBytes.GetData() + RegistryFilterOffset, sizeof(int32));
-        if (PatchedVersion != StockVersion || PatchedFilter != StockFilter)
+        FMemory::Memcpy(&OutputVersion, OutputBytes.GetData() + RegistryVersionOffset, sizeof(int32));
+        FMemory::Memcpy(&OutputFilter, OutputBytes.GetData() + RegistryFilterOffset, sizeof(int32));
+        if (OutputVersion != StockVersion || OutputFilter != StockFilter)
         {
-            UE_LOG(LogTemp, Error, TEXT("Patched registry header differs: version=%d filter=%d"),
-                PatchedVersion, PatchedFilter);
+            UE_LOG(LogTemp, Error, TEXT("Plugin registry header differs: version=%d filter=%d"),
+                OutputVersion, OutputFilter);
             return 1;
         }
         FAssetRegistryState Reopened;
-        if (!FAssetRegistryState::LoadFromDisk(*OutputFile, FAssetRegistryLoadOptions(), Reopened) ||
-            Reopened.GetNumAssets() != OriginalCount + 3 ||
-            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockAmmoPath)) ||
+        if (!FAssetRegistryState::LoadFromDisk(
+                *OutputFile, FAssetRegistryLoadOptions(), Reopened))
+        {
+            UE_LOG(LogTemp, Error, TEXT("Output registry cannot be reopened"));
+            return 1;
+        }
+        TArray<FString> ReopenedDump;
+        Reopened.Dump(DumpFields, ReopenedDump, 0);
+        const bool bDumpMatches = ReopenedDump == PluginDump;
+        if (Reopened.GetNumAssets() != 3 || Reopened.GetNumPackages() != 3 ||
+            !bDumpMatches ||
+            Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockAmmoPath)) ||
+            Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockGunItemPath)) ||
+            Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockSkillPath)) ||
             !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::FullClonePath)) ||
-            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockGunItemPath)) ||
             !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::GunItemObjectPath)) ||
-            !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::StockSkillPath)) ||
             !Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath)))
         {
             UE_LOG(LogTemp, Error,
-                TEXT("Patched registry reopen/count/gun/ammo/skill verification failed"));
+                TEXT("Plugin registry reopen verification failed: assets=%d packages=%d dump=%d"),
+                Reopened.GetNumAssets(), Reopened.GetNumPackages(), bDumpMatches);
             return 1;
         }
         const FAssetData* ReopenedSkill = Reopened.GetAssetByObjectPath(FSoftObjectPath(RailgunAmmo::SkillObjectPath));
@@ -546,11 +512,11 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
             ReopenedGun->GetPrimaryAssetId() != ExpectedGunId ||
             ReopenedGun->AssetClassPath != StockGun->AssetClassPath)
         {
-            UE_LOG(LogTemp, Error, TEXT("Patched registry primary IDs or native classes changed on reopening"));
+            UE_LOG(LogTemp, Error, TEXT("Plugin registry primary IDs or native classes changed on reopening"));
             return 1;
         }
         UE_LOG(LogTemp, Display,
-            TEXT("STOCK REGISTRY PATCH VERIFIED original=%d patched=%d gun=%s ammo=%s skill=%s skillId=%s"),
+            TEXT("PLUGIN REGISTRY VERIFIED source=%d output=%d gun=%s ammo=%s skill=%s skillId=%s"),
             OriginalCount, Reopened.GetNumAssets(), RailgunAmmo::GunItemObjectPath,
             RailgunAmmo::FullClonePath, RailgunAmmo::SkillObjectPath,
             *ExpectedSkillId.ToString());

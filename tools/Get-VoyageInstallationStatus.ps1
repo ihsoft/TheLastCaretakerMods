@@ -30,6 +30,23 @@ function Get-Snapshot([string]$Path, [bool]$Hash) {
     }
     [pscustomobject]@{ state = $state; size = $after.Length; sha256 = $digest }
 }
+function Test-NoReparseParent([string]$RootPath, [string]$TargetPath) {
+    $rootFull = [IO.Path]::GetFullPath($RootPath).TrimEnd([IO.Path]::DirectorySeparatorChar)
+    $targetFull = [IO.Path]::GetFullPath($TargetPath)
+    $boundary = $rootFull + [IO.Path]::DirectorySeparatorChar
+    if (-not $targetFull.StartsWith($boundary, [StringComparison]::OrdinalIgnoreCase)) { return $false }
+    $relativeParent = [IO.Path]::GetDirectoryName($targetFull).Substring($boundary.Length)
+    $current = $rootFull
+    foreach ($part in @($relativeParent -split '[\\/]' | Where-Object { $_ })) {
+        $current = Join-Path $current $part
+        if (Test-Path -LiteralPath $current) {
+            $item = Get-Item -LiteralPath $current -Force
+            if (-not $item.PSIsContainer -or
+                ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { return $false }
+        }
+    }
+    return $true
+}
 
 $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $paks = Join-Path $root 'Voyage\Content\Paks'
@@ -76,6 +93,7 @@ if ($InstallManifest) {
     $records = @(Get-Value $manifest 'files')
     if ($records.Count -eq 0) { throw 'Installation manifest has no file records.' }
     $seen = @{}
+    $recordTargets = @{}
     # Validate the entire record set before hashing any record-supplied target.
     foreach ($record in $records) {
         $name = [string](Get-Value $record 'name')
@@ -84,14 +102,32 @@ if ($InstallManifest) {
             $name.IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -ge 0 -or
             $seen.ContainsKey($name)) { throw 'Unsafe or duplicate installation filename.' }
         $seen[$name] = $true
-        if ([string](Get-Value $record 'destinationPath') -ine (Join-Path $paks $name) -or
+        $kind = [string](Get-Value $record 'kind')
+        $expectedDestination = Join-Path $paks $name
+        if ($kind -ceq 'content-plugin-descriptor') {
+            $relativePath = [string](Get-Value $record 'installRelativePath')
+            $parts = @($relativePath -split '[\\/]')
+            if ([IO.Path]::IsPathRooted($relativePath) -or $parts.Count -ne 4 -or
+                $parts[0] -cne 'Voyage' -or $parts[1] -cne 'Mods' -or
+                [string]::IsNullOrWhiteSpace($parts[2]) -or
+                [IO.Path]::GetFileName($parts[2]) -cne $parts[2] -or
+                $parts[3] -cne ($parts[2] + '.uplugin') -or $name -cne $parts[3]) {
+                throw "Invalid content-plugin installation record: $name"
+            }
+            $expectedDestination = [IO.Path]::GetFullPath((Join-Path $root $relativePath))
+            if (-not (Test-NoReparseParent $root $expectedDestination)) {
+                throw "Unsafe content-plugin installation path: $name"
+            }
+        }
+        if ([string](Get-Value $record 'destinationPath') -ine $expectedDestination -or
             [string](Get-Value $record 'installedSha256') -notmatch '^[0-9a-fA-F]{64}$' -or
             $null -eq (Get-Value $record 'size') -or [long]$record.size -lt 0) {
             throw "Invalid installation file record: $name"
         }
+        $recordTargets[$name] = $expectedDestination
     }
     $results = @(foreach ($record in $records) {
-        $snapshot = Get-Snapshot (Join-Path $paks $record.name) $true
+        $snapshot = Get-Snapshot $recordTargets[[string]$record.name] $true
         $state = $snapshot.state
         if ($state -eq 'present') {
             $state = if ($snapshot.sha256 -ieq $record.installedSha256 -and

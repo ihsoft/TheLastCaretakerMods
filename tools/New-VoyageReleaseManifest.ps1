@@ -1,4 +1,4 @@
-# Creates and validates the common schema-2 manifest for an already-built Voyage release.
+# Creates and validates the common release manifest for an already-built Voyage release.
 # This script does not build, cook, package, install, or modify release payload files.
 
 [CmdletBinding()]
@@ -24,6 +24,8 @@ param(
     [string]$ModVersion,
 
     [string]$InstalledArchiveName,
+
+    [string]$ContentPluginDescriptor,
 
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
@@ -118,6 +120,42 @@ function Write-Utf8Json {
         $Path,
         (($Value | ConvertTo-Json -Depth 10) + [Environment]::NewLine),
         [Text.UTF8Encoding]::new($false))
+}
+
+function Get-ContentPluginRecord {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$DescriptorPath
+    )
+
+    $resolvedDescriptor = (Resolve-Path -LiteralPath $DescriptorPath).Path
+    Assert-PathBelowRoot -Path $resolvedDescriptor -Root $resolvedReleaseRoot `
+        -Label 'Content plugin descriptor'
+    if ([IO.Path]::GetExtension($resolvedDescriptor) -cne '.uplugin') {
+        throw "Content plugin descriptor must be a lowercase .uplugin file: $resolvedDescriptor"
+    }
+    $pluginName = [IO.Path]::GetFileNameWithoutExtension($resolvedDescriptor)
+    if ($pluginName -cnotmatch '^[0-9A-Za-z_]+$') {
+        throw "Content plugin name is unsafe: $pluginName"
+    }
+    $descriptor = Get-Content -LiteralPath $resolvedDescriptor -Raw | ConvertFrom-Json
+    if ($descriptor.CanContainContent -isnot [bool] -or
+        -not [bool]$descriptor.CanContainContent -or
+        $descriptor.EnabledByDefault -isnot [bool] -or
+        -not [bool]$descriptor.EnabledByDefault -or
+        $descriptor.ExplicitlyLoaded -isnot [bool] -or
+        [bool]$descriptor.ExplicitlyLoaded -or
+        $null -eq $descriptor.Modules -or @($descriptor.Modules).Count -ne 0) {
+        throw ('Content plugin descriptor must declare CanContainContent=true, ' +
+            'EnabledByDefault=true, ExplicitlyLoaded=false, and Modules=[].')
+    }
+    [ordered]@{
+        type = 'content-plugin-descriptor'
+        pluginName = $pluginName
+        artifact = New-ArtifactRecord -Path $resolvedDescriptor
+        archivePath = "Mods/$pluginName/$pluginName.uplugin"
+        installRelativePath = "Voyage/Mods/$pluginName/$pluginName.uplugin"
+    }
 }
 
 if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
@@ -225,8 +263,13 @@ if ([string]::IsNullOrWhiteSpace($buildId) -or
     throw 'The installed game did not return a complete release fingerprint.'
 }
 
+$contentPlugin = $null
+if (-not [string]::IsNullOrWhiteSpace($ContentPluginDescriptor)) {
+    $contentPlugin = Get-ContentPluginRecord -DescriptorPath $ContentPluginDescriptor
+}
+
 $manifest = [ordered]@{
-    schemaVersion = 2
+    schemaVersion = $(if ($null -eq $contentPlugin) { 2 } else { 3 })
     mod = $Mod
     version = $Version
     createdAtUtc = [DateTime]::UtcNow.ToString('o')
@@ -239,6 +282,9 @@ $manifest = [ordered]@{
     }
     payload = @($payloadPaths | ForEach-Object { New-ArtifactRecord -Path $_ })
     archive = New-ArtifactRecord -Path $resolvedArchive
+}
+if ($null -ne $contentPlugin) {
+    $manifest['contentPlugin'] = $contentPlugin
 }
 if (-not [string]::IsNullOrWhiteSpace($ModVersion)) {
     $manifest['modVersion'] = $ModVersion
@@ -289,6 +335,7 @@ $result = [pscustomobject][ordered]@{
     steamBuildId = $buildId
     executableSha256 = $executableSha256
     payloadCount = $payloadPaths.Count
+    contentPlugin = if ($null -eq $contentPlugin) { $null } else { $contentPlugin.pluginName }
     archiveName = [IO.Path]::GetFileName($resolvedArchive)
     validation = 'Install-VoyageRelease.ps1 -ValidateOnly'
 }

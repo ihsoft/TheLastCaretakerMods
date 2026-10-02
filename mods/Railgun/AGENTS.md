@@ -35,8 +35,12 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   `/Game/Data/Assets/Skill`. Keep their names mod-unique and never ship a stock
   Cyclone package override.
 - The released container is exactly `Railgun_P` plus its autoload sidecar and
-  optional user settings. Editor mirrors and generator binaries are never
-  shipped.
+  optional user settings. Its PAK contains only the three-record primary-asset
+  registry at `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`; the release ZIP
+  also owns the matching loose content-only descriptor. Never ship or replace
+  `Voyage/AssetRegistry.bin`. The fingerprinted stock registry remains an
+  editor-time metadata donor/control only. Editor mirrors and generator
+  binaries are never shipped.
 - Keep documentation factual and compact. Do not maintain an experiment
   chronology or candidate backlog. Put transient logs under ignored artifacts;
   promote only game-validated facts or clearly labelled design hypotheses.

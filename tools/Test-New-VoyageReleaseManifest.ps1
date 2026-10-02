@@ -126,6 +126,55 @@ try {
             [string]$manifest.sourcePaths[0].path -ceq 'AGENTS.md') `
         -Evidence ($manifest.sourcePaths | ConvertTo-Json -Compress)
 
+    $pluginReleaseRoot = Join-Path $testRoot 'plugin-release'
+    $pluginPackageRoot = Join-Path $pluginReleaseRoot 'package'
+    $pluginDescriptorDirectory = Join-Path $pluginPackageRoot 'Mods/SyntheticCatalogue'
+    [IO.Directory]::CreateDirectory($pluginDescriptorDirectory) | Out-Null
+    foreach ($payloadPath in $payloadPaths) {
+        Copy-Item -LiteralPath $payloadPath -Destination $pluginPackageRoot
+    }
+    $pluginDescriptor = Join-Path $pluginDescriptorDirectory 'SyntheticCatalogue.uplugin'
+    [IO.File]::WriteAllText($pluginDescriptor, (@{
+        FileVersion = 3
+        CanContainContent = $true
+        EnabledByDefault = $true
+        ExplicitlyLoaded = $false
+        Modules = @()
+    } | ConvertTo-Json -Depth 4), [Text.UTF8Encoding]::new($false))
+    $pluginArchive = Join-Path $pluginReleaseRoot 'SyntheticPluginMod-test-v1.zip'
+    Compress-Archive -Path (Join-Path $pluginPackageRoot '*') -DestinationPath $pluginArchive
+    $pluginResult = & $producer -ReleaseRoot $pluginReleaseRoot `
+        -Mod 'SyntheticPluginMod' -Version 'test-v1' `
+        -Container (Join-Path $pluginPackageRoot ($containerBase + '.utoc')) `
+        -Archive $pluginArchive -SourcePath (Join-Path $repositoryRoot 'AGENTS.md') `
+        -GameRoot $gameRoot -ContentPluginDescriptor $pluginDescriptor
+    $pluginManifest = Get-Content -LiteralPath $pluginResult.manifestPath -Raw |
+        ConvertFrom-Json
+    Add-Check -Name 'schema3-content-plugin-created' `
+        -Passed ($pluginManifest.schemaVersion -eq 3 -and
+            [string]$pluginManifest.contentPlugin.type -ceq 'content-plugin-descriptor' -and
+            [string]$pluginManifest.contentPlugin.installRelativePath -ceq
+                'Voyage/Mods/SyntheticCatalogue/SyntheticCatalogue.uplugin') `
+        -Evidence ($pluginManifest.contentPlugin | ConvertTo-Json -Compress)
+
+    $invalidDescriptor = Join-Path $pluginDescriptorDirectory 'InvalidCatalogue.uplugin'
+    [IO.File]::WriteAllText($invalidDescriptor, (@{
+        FileVersion = 3
+        CanContainContent = $true
+        EnabledByDefault = $false
+        ExplicitlyLoaded = $false
+        Modules = @()
+    } | ConvertTo-Json -Depth 4), [Text.UTF8Encoding]::new($false))
+    Assert-Rejected -Name 'unsafe-content-plugin-flags-rejected' `
+        -Pattern 'must declare' -Action {
+        & $producer -ReleaseRoot $pluginReleaseRoot `
+            -Mod 'SyntheticPluginMod' -Version 'invalid-plugin' `
+            -Container (Join-Path $pluginPackageRoot ($containerBase + '.utoc')) `
+            -Archive $pluginArchive -SourcePath (Join-Path $repositoryRoot 'AGENTS.md') `
+            -GameRoot $gameRoot -ContentPluginDescriptor $invalidDescriptor `
+            -OutputPath (Join-Path $pluginReleaseRoot 'invalid-plugin.json')
+    }
+
     [IO.File]::WriteAllText(
         $dirtySourcePath,
         'synthetic untracked source',

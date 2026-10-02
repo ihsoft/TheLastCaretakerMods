@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$KeepArtifacts,
-    [switch]$WithAutoLoadSidecar
+    [switch]$WithAutoLoadSidecar,
+    [switch]$WithContentPluginDescriptor
 )
 
 $ErrorActionPreference = 'Stop'
@@ -23,7 +24,10 @@ $modName = 'SyntheticVoyageMod'
 $containerName = 'SyntheticVoyageMod_P'
 $fixtureExtensions = @('.pak', '.ucas', '.utoc')
 if ($WithAutoLoadSidecar) { $fixtureExtensions += '.autoload' }
-$expectedInstalledCount = $fixtureExtensions.Count + 1
+$expectedInstalledCount = $fixtureExtensions.Count + 1 +
+    $(if ($WithContentPluginDescriptor) { 1 } else { 0 })
+$pluginName = 'SyntheticCatalogue'
+$pluginInstallPath = Join-Path $gameRoot "Voyage\Mods\$pluginName\$pluginName.uplugin"
 $sourceCommit = (& git -C $repositoryRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
     throw 'Could not resolve the repository HEAD for the synthetic manifest.'
@@ -75,13 +79,37 @@ function New-SyntheticRelease {
         }
     }
 
+    $contentPlugin = $null
+    if ($WithContentPluginDescriptor) {
+        $descriptorDirectory = Join-Path $packageRoot "Mods\$pluginName"
+        [IO.Directory]::CreateDirectory($descriptorDirectory) | Out-Null
+        $descriptorPath = Join-Path $descriptorDirectory ($pluginName + '.uplugin')
+        Write-Utf8Json -Path $descriptorPath -Value ([ordered]@{
+            FileVersion = 3
+            CanContainContent = $true
+            EnabledByDefault = $true
+            ExplicitlyLoaded = $false
+            Modules = @()
+        })
+        $descriptor = Get-Item -LiteralPath $descriptorPath
+        $contentPlugin = [ordered]@{
+            type = 'content-plugin-descriptor'
+            pluginName = $pluginName
+            artifact = [ordered]@{
+                name = $descriptor.Name
+                path = "container/package/Mods/$pluginName/$pluginName.uplugin"
+                size = $descriptor.Length
+                sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $descriptorPath).Hash
+            }
+            archivePath = "Mods/$pluginName/$pluginName.uplugin"
+            installRelativePath = "Voyage/Mods/$pluginName/$pluginName.uplugin"
+        }
+    }
     $archivePath = Join-Path $releaseRoot "$modName-$Version.zip"
-    Compress-Archive -LiteralPath @($records | ForEach-Object {
-        Join-Path $packageRoot $_.name
-    }) -DestinationPath $archivePath
+    Compress-Archive -Path (Join-Path $packageRoot '*') -DestinationPath $archivePath
     $archive = Get-Item -LiteralPath $archivePath
     $manifest = [ordered]@{
-        schemaVersion = 2
+        schemaVersion = $(if ($WithContentPluginDescriptor) { 3 } else { 2 })
         mod = $modName
         version = $Version
         modVersion = 'test'
@@ -98,6 +126,9 @@ function New-SyntheticRelease {
             sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath).Hash
         }
     }
+    if ($WithContentPluginDescriptor) {
+        $manifest['contentPlugin'] = $contentPlugin
+    }
     $manifestPath = Join-Path $releaseRoot 'release-manifest.json'
     Write-Utf8Json -Path $manifestPath -Value $manifest
     [pscustomobject]@{
@@ -105,6 +136,7 @@ function New-SyntheticRelease {
         manifestPath = $manifestPath
         records = $records
         archive = $manifest.archive
+        contentPlugin = $contentPlugin
     }
 }
 
@@ -211,6 +243,20 @@ try {
         & $installer -ReleaseManifest $wrongArchiveRelease.manifestPath `
             -GameRoot $gameRoot -ValidateOnly
     }
+    if ($WithContentPluginDescriptor) {
+        $unsafePluginRelease = New-SyntheticRelease -Version 'unsafe-plugin-path' `
+            -ContentMarker 'unsafe-plugin' -ExecutableSha256 $executableSha256
+        $unsafePluginManifest = Get-Content -LiteralPath `
+            $unsafePluginRelease.manifestPath -Raw | ConvertFrom-Json
+        $unsafePluginManifest.contentPlugin.installRelativePath =
+            'Voyage/Mods/../SyntheticCatalogue/SyntheticCatalogue.uplugin'
+        Write-Utf8Json -Path $unsafePluginRelease.manifestPath `
+            -Value $unsafePluginManifest
+        Assert-Rejected -Pattern 'paths do not match' -Action {
+            & $installer -ReleaseManifest $unsafePluginRelease.manifestPath `
+                -GameRoot $gameRoot -ValidateOnly
+        }
+    }
 
     $directoryTargetPath = Join-Path $paksDirectory ($containerName + '.pak')
     $directoryTargetOriginal = [IO.File]::ReadAllBytes($directoryTargetPath)
@@ -233,6 +279,11 @@ try {
         Assert-Hash -Path (Join-Path $paksDirectory $record.name) `
             -Expected $record.sha256 -Label "Installed $($record.name)"
     }
+    if ($WithContentPluginDescriptor) {
+        Assert-Hash -Path $pluginInstallPath `
+            -Expected $firstRelease.contentPlugin.artifact.sha256 `
+            -Label 'Installed content plugin descriptor'
+    }
     $firstArchiveName = $modName + '_test-v1.zip'
     Assert-Hash -Path (Join-Path $paksDirectory $firstArchiveName) `
         -Expected $firstRelease.archive.sha256 -Label 'Installed release archive'
@@ -254,6 +305,25 @@ try {
     Assert-Hash -Path ([string]$pakEvidence[0].backupPath) `
         -Expected $previousHashes[$containerName + '.pak'] `
         -Label 'Previous-file backup'
+    if ($WithContentPluginDescriptor) {
+        $unsafeRestoreManifestPath = Join-Path `
+            (Split-Path -Parent $installResult.installManifestPath) `
+            'unsafe-restore-manifest.json'
+        $unsafeRestoreManifest = Get-Content -LiteralPath `
+            $installResult.installManifestPath -Raw | ConvertFrom-Json
+        $descriptorEvidence = @($unsafeRestoreManifest.files | Where-Object {
+            [string]$_.kind -ceq 'content-plugin-descriptor'
+        })
+        if ($descriptorEvidence.Count -ne 1) {
+            throw 'Content plugin installation evidence is missing or duplicated.'
+        }
+        $descriptorEvidence[0].createdDirectories = @(
+            (Join-Path $gameRoot 'Voyage\Content'))
+        Write-Utf8Json -Path $unsafeRestoreManifestPath -Value $unsafeRestoreManifest
+        Assert-Rejected -Pattern 'unowned created directory' -Action {
+            & $restorer -InstallManifest $unsafeRestoreManifestPath -ValidateOnly
+        }
+    }
 
     $installedBeforeFailure = @{}
     foreach ($extension in @('.pak', '.ucas', '.utoc')) {
@@ -370,7 +440,8 @@ try {
         -InstallManifest $installResult.installManifestPath -ValidateOnly
     if (-not [bool]$restoreValidation.validated -or
         [int]$restoreValidation.restoreCount -ne $fixtureExtensions.Count -or
-        [int]$restoreValidation.removeCount -ne 1) {
+        [int]$restoreValidation.removeCount -ne
+            (1 + $(if ($WithContentPluginDescriptor) { 1 } else { 0 }))) {
         throw 'Restore ValidateOnly returned an unexpected plan.'
     }
     $restoreResult = & $restorer -InstallManifest $installResult.installManifestPath
@@ -380,6 +451,10 @@ try {
     }
     if (Test-Path -LiteralPath (Join-Path $paksDirectory $firstArchiveName)) {
         throw 'Successful restore left the installed release archive behind.'
+    }
+    if ($WithContentPluginDescriptor -and
+        (Test-Path -LiteralPath $pluginInstallPath)) {
+        throw 'Successful restore left the content plugin descriptor behind.'
     }
 
     $reinstallEvidence = Join-Path $testRoot 'reinstall-evidence'
@@ -512,7 +587,9 @@ try {
     [pscustomobject][ordered]@{
         passed = $true
         autoLoadSidecar = [bool]$WithAutoLoadSidecar
+        contentPluginDescriptor = [bool]$WithContentPluginDescriptor
         checks = @('validate-only', 'fingerprint-rejection', 'archive-payload-rejection',
+            'content-plugin-path-rejection',
             'directory-target-rejection', 'install-readback', 'predecessor-backup',
             'install-rollback', 'changed-file-rejection', 'damaged-backup-rejection',
             'restore-remove', 'restore-rollback', 'failed-recovery-copy-retention')

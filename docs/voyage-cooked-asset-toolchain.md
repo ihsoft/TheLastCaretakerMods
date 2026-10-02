@@ -90,7 +90,8 @@ Use the wrappers listed in `tools/README.md`:
   ownership, call relations, or lifecycle;
 - build or prepare fork source only while deliberately changing a dependency
   checkpoint or diagnosing an unexpected publisher/tool result;
-- create the common schema-2 manifest for an already-built triplet and ZIP with
+- create the common schema-2 manifest for an ordinary triplet and ZIP, or
+  schema 3 when the release owns one exact content-plugin descriptor, with
   `New-VoyageReleaseManifest.ps1`; give it the exact source scope and let its
   installer validation gate publish the immutable manifest;
 - validate or install an already-built standalone IoStore release through
@@ -102,6 +103,43 @@ Use the wrappers listed in `tools/README.md`:
 
 The script is the reusable method; game-derived JSON, packages, reports, raw
 mapping candidates, and test containers stay under ignored `artifacts/`.
+
+## Additive content-plugin registries
+
+Local UE 5.8 source establishes a separate registry-loading path for enabled
+content plugins. `Projects/Private/PluginManager.cpp` reads loose project
+`Mods` descriptors; `AssetRegistry/Private/AssetRegistry.cpp`, in
+`LoadPremadeAssetRegistry_Plugins`, reads each enabled content plugin's
+`<plugin base>/AssetRegistry.bin` and appends its state in a non-editor build.
+This does not require a native plugin module or replacing the main project
+registry. The descriptor enables discovery; the binary registry supplies asset
+metadata, and the cooked containers must still supply the actual packages.
+
+A plugin-local registry can describe `/Game/...` packages. Its physical registry
+location does not relocate those assets into the plugin's virtual mount point.
+Voyage primary assets must still satisfy the independently configured Item and
+Skill scan roots and native class/primary-ID contracts; enabling a content
+plugin alone does not prove Asset Manager registration or recipe availability.
+
+Inspection on Steam build `25191271`, executable SHA-256
+`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`,
+first confirmed this layout in an external mod: a loose content-only descriptor,
+one plugin-local registry in its PAK, and Item/Skill packages under the stock
+`/Game/Data/Assets` roots in IoStore. Structural inspection confirmed a native
+VoyageSkill referencing a native VoyageItem with crafting properties and an
+owned actor. That external package remains structural evidence rather than a
+general gameplay or initialization-order guarantee.
+
+Railgun's normal source producer writes an exact three-record plugin registry,
+packages it at `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`, and releases a
+loose content-only descriptor through the schema-3 manifest contract. The
+installed `build-20261002-205216` artifact was confirmed by the user with the
+general result that everything works. This validates the current Railgun
+delivery contract without proving arbitrary multi-mod combinations or
+additional individually unspecified gameplay scenarios. Build artifacts remain
+evidence, not source inputs. Plugin descriptors extend the installed footprint
+beyond `Content/Paks`, so schema-3 installation and restoration retain the
+common backup, hash, path, reparse-point and closed-game gates.
 
 ## Stock AssetRegistry access and PAK encryption
 

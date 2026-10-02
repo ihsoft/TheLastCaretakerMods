@@ -636,27 +636,36 @@ $containerPak = [IO.Path]::ChangeExtension($container, '.pak')
 $resolvedContainerPak = [IO.Path]::GetFullPath($containerPak)
 if (-not $resolvedContainerPak.StartsWith($output + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
     -not (Test-Path -LiteralPath $resolvedContainerPak -PathType Leaf)) { throw 'retoc did not create the expected owned PAK.' }
-# Merge the gun, ammo and shared research skill into the complete stock registry.
-$patchedRegistry = Join-Path $output 'AssetRegistry.bin'
-Invoke-NativeStage 'patch-registry' $editor @($project,'-run=GenerateRailgunRuntime','-PatchStockRegistry',
-    ('-StockRegistry=' + $stockRegistry.registryPath),('-OutputRegistry=' + $patchedRegistry),
-    '-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'patch-registry-unreal.log')))
-if (-not (Test-Path -LiteralPath $patchedRegistry -PathType Leaf) -or
-    (Get-Item -LiteralPath $patchedRegistry).Length -lt $stockRegistry.registryLength) {
-    throw 'Patched complete registry is missing or unexpectedly small.'
+# Write only the three Railgun primary records. The stock registry is a
+# fingerprinted metadata donor/control and is never shipped.
+$pluginRegistry = Join-Path $output 'RailgunCatalogue-AssetRegistry.bin'
+Invoke-NativeStage 'write-plugin-registry' $editor @(
+    $project,'-run=GenerateRailgunRuntime','-WritePluginRegistry',
+    ('-StockRegistry=' + $stockRegistry.registryPath),
+    ('-OutputRegistry=' + $pluginRegistry),'-unattended','-nop4','-nosplash',
+    '-nullrhi',('-abslog=' + (Join-Path $output 'write-plugin-registry-unreal.log')))
+if (-not (Test-Path -LiteralPath $pluginRegistry -PathType Leaf) -or
+    (Get-Item -LiteralPath $pluginRegistry).Length -lt 1024 -or
+    (Get-Item -LiteralPath $pluginRegistry).Length -ge $stockRegistry.registryLength) {
+    throw 'Owned-entry plugin registry is missing or has an invalid size.'
 }
 $registryResponse = Join-Path $output 'registry-response.txt'
 $registryPak = Join-Path $output 'Railgun_P.registry.pak'
 [IO.File]::WriteAllText($registryResponse,
-    ('"' + [IO.Path]::GetFullPath($patchedRegistry) + '" "../../../Voyage/AssetRegistry.bin"' + [Environment]::NewLine),
+    ('"' + [IO.Path]::GetFullPath($pluginRegistry) +
+        '" "../../../Voyage/Mods/RailgunCatalogue/AssetRegistry.bin"' +
+        [Environment]::NewLine),
     [Text.Encoding]::ASCII)
 Invoke-NativeStage 'pack-registry' $unrealPak @($registryPak,('-Create=' + $registryResponse),'-Dest=../../../')
 $registryListLog = Join-Path $output 'list-registry.log'
 & $unrealPak -List $registryPak *> $registryListLog
 if ($LASTEXITCODE -ne 0) { throw "Registry PAK listing failed; log: $registryListLog" }
-$registryList = Get-Content -LiteralPath $registryListLog -Raw
-if (-not $registryList.Contains('mount point "../../../Voyage/"') -or
-    @($registryList -split "`n" | Where-Object { $_ -match 'AssetRegistry\.bin' }).Count -ne 1) {
+$registryList = @(Get-Content -LiteralPath $registryListLog)
+$registryEntries = @($registryList | Where-Object { $_ -match 'AssetRegistry\.bin' })
+if ($registryEntries.Count -ne 1 -or
+    @($registryList | Where-Object {
+        $_.Contains('mount point "../../../Voyage/Mods/RailgunCatalogue/"')
+    }).Count -ne 1 -or -not $registryEntries[0].Contains('"AssetRegistry.bin"')) {
     throw "Registry PAK mount/file list invalid; log: $registryListLog"
 }
 $registryReadback = Join-Path $output 'registry-readback'
@@ -665,8 +674,8 @@ Invoke-NativeStage 'readback-registry' $unrealPak @($registryPak,'-Extract',$reg
 $readbackFiles = @(Get-ChildItem -LiteralPath $registryReadback -File -Recurse)
 if ($readbackFiles.Count -ne 1 -or $readbackFiles[0].Name -cne 'AssetRegistry.bin' -or
     (Get-FileHash -LiteralPath $readbackFiles[0].FullName -Algorithm SHA256).Hash -cne
-        (Get-FileHash -LiteralPath $patchedRegistry -Algorithm SHA256).Hash) {
-    throw 'Packaged complete registry readback hash mismatch.'
+        (Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash) {
+    throw 'Packaged plugin registry readback hash mismatch.'
 }
 Move-Item -LiteralPath $containerPak -Destination (Join-Path $output 'Railgun_P.empty.pak')
 Move-Item -LiteralPath $registryPak -Destination $containerPak
@@ -727,6 +736,11 @@ if ($null -eq $bulkChunks -or $bulkChunks -lt 1) { throw 'Cooked shot sound bulk
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Railgun_P.autoload') -Destination $payload
 Copy-Item -LiteralPath $generatedSettingsIni -Destination $payload
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.txt') -Destination $payload
+$descriptorSource = Join-Path $PSScriptRoot 'Registry/RailgunCatalogue.uplugin'
+$descriptorDirectory = Join-Path $payload 'Mods/RailgunCatalogue'
+$null = New-Item -ItemType Directory -Path $descriptorDirectory
+$descriptor = Join-Path $descriptorDirectory 'RailgunCatalogue.uplugin'
+Copy-Item -LiteralPath $descriptorSource -Destination $descriptor
 $version = Split-Path -Leaf $output
 $archivePath = Join-Path $output ('Railgun_' + $version + '.zip')
 Compress-Archive -Path (Join-Path $payload '*') -DestinationPath $archivePath
@@ -739,7 +753,7 @@ $provenance = [ordered]@{
     sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;
     gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';retocSha256=$retocManifest.executableSha256;
     gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId;executableSha256=$fingerprint.executable.sha256};
-    validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, GLB module actor, operator, inputs, HUD, shot audio and autoload coordinator';
+    validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, plugin-local three-record primary-asset registry, GLB module actor, operator, inputs, HUD, shot audio and autoload coordinator';
     mappingSha256=$mapping.sha256;verificationReport=$verify.reportPath;packagingReport=$pack.reportPath;semanticReport=$semantic.reportPath;
     ammoSourceJson=$ammoItemJsonPath;ammoSourceJsonSha256=(Get-FileHash -LiteralPath $ammoItemJsonPath -Algorithm SHA256).Hash;
     ammoWriterReport=$ammoWrite.reportPath;ammoReadbackReport=$ammoReadback.reportPath;
@@ -754,10 +768,19 @@ $provenance = [ordered]@{
     gunWriterSha256=$serializationContract.uassetGuiSha256;
     scriptObjectsInput=$scriptObjectsInput;scriptObjectsReport=$scriptObjectsRun.reportPath;
     scriptObjectsSha256=$scriptObjectsSha256;
+    primaryAssetRegistry=$pluginRegistry;
+    primaryAssetRegistrySha256=(Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash;
+    primaryAssetRegistryWriterLog=(Join-Path $output 'write-plugin-registry-unreal.log');
+    contentPluginDescriptor=$descriptorSource;
+    contentPluginDescriptorSha256=(Get-FileHash -LiteralPath $descriptorSource -Algorithm SHA256).Hash;
 }
 $provenance | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'build-provenance.json') -Encoding UTF8
 $releaseSourcePaths = @($sourcePaths | ForEach-Object { [IO.Path]::GetFullPath((Join-Path $repo $_)) })
-$release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod Railgun -Version $version -Container $container -Archive $archivePath -SourcePath $releaseSourcePaths -AllowDirtySource -AsJson) | ConvertFrom-Json
+$release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
+    -ReleaseRoot $output -Mod Railgun -Version $version -Container $container `
+    -Archive $archivePath -SourcePath $releaseSourcePaths `
+    -ContentPluginDescriptor $descriptor -AllowDirtySource -AsJson) |
+    ConvertFrom-Json
 $manifestPath = Join-Path $output 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Manifest producer did not publish the candidate.' }
 $installation = $null

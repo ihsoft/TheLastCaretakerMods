@@ -43,6 +43,54 @@ function Assert-SafeLeafName {
     }
 }
 
+function Resolve-ExpectedDestination {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Record,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+
+        [Parameter(Mandatory = $true)]
+        [string]$GameRoot,
+
+        [Parameter(Mandatory = $true)]
+        [string]$PaksDirectory
+    )
+
+    $kind = [string](Get-OptionalPropertyValue -Object $Record -Name 'kind')
+    if ($kind -cne 'content-plugin-descriptor') {
+        return (Join-Path $PaksDirectory $Name)
+    }
+    $pluginName = [IO.Path]::GetFileNameWithoutExtension($Name)
+    $relativePath = [string](
+        Get-OptionalPropertyValue -Object $Record -Name 'installRelativePath')
+    $expectedRelativePath = "Voyage/Mods/$pluginName/$pluginName.uplugin"
+    if ($pluginName -cnotmatch '^[0-9A-Za-z_]+$' -or
+        $relativePath -cne $expectedRelativePath) {
+        throw "Installation record has an unsafe content plugin destination: $relativePath"
+    }
+    $destination = [IO.Path]::GetFullPath((Join-Path $GameRoot $relativePath))
+    $rootPrefix = $GameRoot.TrimEnd('\') + '\'
+    if (-not $destination.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Content plugin destination escapes the game root: $relativePath"
+    }
+    $cursor = Split-Path -Parent $destination
+    while ($cursor.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase) -or
+        [StringComparer]::OrdinalIgnoreCase.Equals($cursor, $GameRoot)) {
+        if (Test-Path -LiteralPath $cursor) {
+            $item = Get-Item -LiteralPath $cursor -Force
+            if (-not $item.PSIsContainer -or
+                ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                throw "Content plugin parent is not a plain directory: $cursor"
+            }
+        }
+        if ([StringComparer]::OrdinalIgnoreCase.Equals($cursor, $GameRoot)) { break }
+        $cursor = Split-Path -Parent $cursor
+    }
+    $destination
+}
+
 function Assert-GameClosed {
     $running = @(
         Get-Process -Name 'VoyageSteam-Win64-Shipping', 'Voyage' `
@@ -115,10 +163,11 @@ $restoreItems = @(
 
         $destinationPath = [string](
             Get-OptionalPropertyValue -Object $record -Name 'destinationPath')
-        $expectedDestination = Join-Path $paksDirectory $name
+        $expectedDestination = Resolve-ExpectedDestination -Record $record -Name $name `
+            -GameRoot $gameRoot -PaksDirectory $paksDirectory
         if ([IO.Path]::GetFullPath($destinationPath) -cne
             [IO.Path]::GetFullPath($expectedDestination)) {
-            throw "Installation destination does not match its Paks filename: $name"
+            throw "Installation destination does not match its owned safe path: $name"
         }
 
         $installedSha256 = [string](
@@ -168,7 +217,33 @@ $restoreItems = @(
             }
         }
 
+        $kind = [string](Get-OptionalPropertyValue -Object $record -Name 'kind')
+        $createdDirectories = @(
+            Get-OptionalPropertyValue -Object $record -Name 'createdDirectories')
+        if ($kind -cne 'content-plugin-descriptor' -and
+            $createdDirectories.Count -ne 0) {
+            throw "Only a content plugin descriptor may own created directories: $name"
+        }
+        if ($kind -ceq 'content-plugin-descriptor') {
+            $pluginDirectory = Split-Path -Parent $expectedDestination
+            $modsDirectory = Split-Path -Parent $pluginDirectory
+            $allowedDirectories = @($pluginDirectory, $modsDirectory)
+            foreach ($directory in $createdDirectories) {
+                $directoryFullPath = [IO.Path]::GetFullPath([string]$directory)
+                if (@($allowedDirectories | Where-Object {
+                    [StringComparer]::OrdinalIgnoreCase.Equals($_, $directoryFullPath)
+                }).Count -ne 1) {
+                    throw "Content plugin recorded an unowned created directory: $directory"
+                }
+            }
+            if (@($createdDirectories | Sort-Object -Unique).Count -ne
+                $createdDirectories.Count) {
+                throw 'Content plugin created-directory records must be unique.'
+            }
+        }
+
         [pscustomobject][ordered]@{
+            kind = $kind
             name = $name
             destinationPath = $expectedDestination
             installedSha256 = $installedSha256
@@ -178,6 +253,7 @@ $restoreItems = @(
             currentStagingPath = $null
             restoreStagingPath = $null
             restoredSha256 = $null
+            createdDirectories = $createdDirectories
         }
     }
 )
@@ -191,13 +267,17 @@ $archiveItems = @($restoreItems | Where-Object {
 $sidecarItems = @($restoreItems | Where-Object {
     [IO.Path]::GetExtension($_.name).ToLowerInvariant() -ceq '.autoload'
 })
+$descriptorItems = @($restoreItems | Where-Object {
+    $_.kind -ceq 'content-plugin-descriptor'
+})
 $bases = @($containerItems | ForEach-Object {
     [IO.Path]::GetFileNameWithoutExtension($_.name)
 } | Sort-Object -Unique)
 $extensions = @($containerItems | ForEach-Object {
     [IO.Path]::GetExtension($_.name).ToLowerInvariant()
 } | Sort-Object -Unique)
-if ($restoreItems.Count -ne (4 + $sidecarItems.Count) -or $sidecarItems.Count -gt 1 -or $containerItems.Count -ne 3 -or
+if ($restoreItems.Count -ne (4 + $sidecarItems.Count + $descriptorItems.Count) -or
+    $sidecarItems.Count -gt 1 -or $descriptorItems.Count -gt 1 -or $containerItems.Count -ne 3 -or
     $archiveItems.Count -ne 1 -or $bases.Count -ne 1 -or $extensions.Count -ne 3 -or
     $bases[0] -match '^(?i:global$|pakchunk)') {
     throw 'Restoration requires one standalone mod triplet and its release ZIP; stock containers are forbidden.'
@@ -228,10 +308,11 @@ $transactionPath = Join-Path $installationEvidence (
 $restoreManifestPath = Join-Path $installationEvidence (
     "restore-manifest-$timestamp-$($token.Substring(0, 8)).json")
 foreach ($item in $restoreItems) {
-    $item.currentStagingPath = Join-Path $paksDirectory (
+    $stagingDirectory = Split-Path -Parent $item.destinationPath
+    $item.currentStagingPath = Join-Path $stagingDirectory (
         '.' + $item.name + ".removing-$token")
     if ($item.hadExisting) {
-        $item.restoreStagingPath = Join-Path $paksDirectory (
+        $item.restoreStagingPath = Join-Path $stagingDirectory (
             '.' + $item.name + ".restoring-$token")
     }
 }
@@ -299,6 +380,22 @@ try {
             Remove-Item -LiteralPath $item.destinationPath -Force
             if (Test-Path -LiteralPath $item.destinationPath) {
                 throw "Newly installed file still exists after removal: $($item.name)"
+            }
+        }
+    }
+    foreach ($directory in @($restoreItems | ForEach-Object {
+        @($_.createdDirectories)
+    } | Sort-Object Length -Descending -Unique)) {
+        if (Test-Path -LiteralPath $directory -PathType Container) {
+            $directoryFullPath = [IO.Path]::GetFullPath($directory)
+            $gamePrefix = $gameRoot.TrimEnd('\') + '\'
+            if (-not $directoryFullPath.StartsWith(
+                    $gamePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+                throw "Refusing to remove a recorded directory outside the game root: $directory"
+            }
+            $children = @(Get-ChildItem -LiteralPath $directory -Force)
+            if ($children.Count -eq 0) {
+                Remove-Item -LiteralPath $directory -Force
             }
         }
     }

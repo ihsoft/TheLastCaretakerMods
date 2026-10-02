@@ -14,6 +14,10 @@ $exe = Join-Path $game 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe'
 $target = Join-Path $paks 'Probe_P.utoc'
 [IO.File]::WriteAllText($target, 'synthetic mod')
 [IO.File]::WriteAllText((Join-Path $paks 'pakchunk0-Windows.utoc'), 'stock')
+$pluginDirectory = Join-Path $game 'Voyage\Mods\ProbeCatalogue'
+[IO.Directory]::CreateDirectory($pluginDirectory) | Out-Null
+$pluginTarget = Join-Path $pluginDirectory 'ProbeCatalogue.uplugin'
+[IO.File]::WriteAllText($pluginTarget, 'synthetic descriptor')
 $tool = Join-Path $PSScriptRoot 'Get-VoyageInstallationStatus.ps1'
 $manifestPath = Join-Path $root 'install.json'
 $checks = [Collections.Generic.List[string]]::new()
@@ -55,11 +59,20 @@ $manifest = [ordered]@{
     schemaVersion = 1; kind = 'Voyage release installation'; status = 'installed'
     gameRoot = $game; paksDirectory = $paks; mod = 'Probe'; artifactVersion = 'test'
     steamBuildId = $status.steamBuildId; executableSha256 = $status.executableSha256
-    files = @([ordered]@{
-        name = 'Probe_P.utoc'; destinationPath = $target
-        size = (Get-Item -LiteralPath $target).Length
-        installedSha256 = (Get-FileHash -LiteralPath $target).Hash
-    })
+    files = @(
+        [ordered]@{
+            kind = 'container'; name = 'Probe_P.utoc'; destinationPath = $target
+            size = (Get-Item -LiteralPath $target).Length
+            installedSha256 = (Get-FileHash -LiteralPath $target).Hash
+        },
+        [ordered]@{
+            kind = 'content-plugin-descriptor'; name = 'ProbeCatalogue.uplugin'
+            installRelativePath = 'Voyage/Mods/ProbeCatalogue/ProbeCatalogue.uplugin'
+            destinationPath = $pluginTarget
+            size = (Get-Item -LiteralPath $pluginTarget).Length
+            installedSha256 = (Get-FileHash -LiteralPath $pluginTarget).Hash
+        }
+    )
 }
 Save-Manifest
 $status = Read-Status -Manifest
@@ -67,7 +80,7 @@ Assert ($status.installation.filesMatch -and $status.installation.gameFingerprin
 $checks.Add('manifest-hash-match')
 $summaryStatus = Read-Status -Manifest -Summary
 Assert ($summaryStatus.installation.filesMatch -and $summaryStatus.installation.gameFingerprintMatches -and
-    $summaryStatus.installation.fileCount -eq 1 -and $summaryStatus.installation.mismatchCount -eq 0 -and
+    $summaryStatus.installation.fileCount -eq 2 -and $summaryStatus.installation.mismatchCount -eq 0 -and
     $summaryStatus.installation.PSObject.Properties['files'] -eq $null) 'Compact manifest summary contract.'
 $checks.Add('compact-manifest-summary')
 $after = @(Get-ChildItem -LiteralPath $game -Recurse -File | ForEach-Object {
@@ -97,6 +110,11 @@ Save-Manifest
 Expect-Rejection
 $checks.Add('unsafe-record-rejected')
 $manifest.files[0].name = 'Probe_P.utoc'
+$manifest.files[1].destinationPath = Join-Path $game 'Voyage\Mods\Other\ProbeCatalogue.uplugin'
+Save-Manifest
+Expect-Rejection
+$checks.Add('wrong-content-plugin-target-rejected')
+$manifest.files[1].destinationPath = $pluginTarget
 $manifest.gameRoot = $root
 Save-Manifest
 Expect-Rejection

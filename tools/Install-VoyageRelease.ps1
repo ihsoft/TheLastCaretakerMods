@@ -57,6 +57,92 @@ function Assert-SafeLeafName {
     }
 }
 
+function Get-ContentPluginPlan {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Record,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ReleaseRoot
+    )
+
+    if ([string](Get-OptionalPropertyValue -Object $Record -Name 'type') -cne
+        'content-plugin-descriptor') {
+        throw 'contentPlugin has an unsupported type.'
+    }
+    $pluginName = [string](Get-OptionalPropertyValue -Object $Record -Name 'pluginName')
+    if ($pluginName -cnotmatch '^[0-9A-Za-z_]+$') {
+        throw "contentPlugin has an unsafe pluginName: $pluginName"
+    }
+    $expectedArchivePath = "Mods/$pluginName/$pluginName.uplugin"
+    $expectedInstallPath = "Voyage/Mods/$pluginName/$pluginName.uplugin"
+    if ([string](Get-OptionalPropertyValue -Object $Record -Name 'archivePath') -cne
+            $expectedArchivePath -or
+        [string](Get-OptionalPropertyValue -Object $Record -Name 'installRelativePath') -cne
+            $expectedInstallPath) {
+        throw 'contentPlugin paths do not match its exact safe plugin identity.'
+    }
+    $artifactRecord = Get-OptionalPropertyValue -Object $Record -Name 'artifact'
+    if ($null -eq $artifactRecord -or
+        [string](Get-OptionalPropertyValue -Object $artifactRecord -Name 'name') -cne
+            ($pluginName + '.uplugin')) {
+        throw 'contentPlugin has no matching descriptor artifact.'
+    }
+    $artifact = Resolve-ManifestArtifact -ReleaseRoot $ReleaseRoot `
+        -Record $artifactRecord -Label 'Content plugin descriptor'
+    $descriptor = Get-Content -LiteralPath $artifact.path -Raw | ConvertFrom-Json
+    if ($descriptor.CanContainContent -isnot [bool] -or
+        -not [bool]$descriptor.CanContainContent -or
+        $descriptor.EnabledByDefault -isnot [bool] -or
+        -not [bool]$descriptor.EnabledByDefault -or
+        $descriptor.ExplicitlyLoaded -isnot [bool] -or
+        [bool]$descriptor.ExplicitlyLoaded -or
+        $null -eq $descriptor.Modules -or @($descriptor.Modules).Count -ne 0) {
+        throw 'Content plugin descriptor has unsafe loading/content flags.'
+    }
+    [pscustomobject][ordered]@{
+        pluginName = $pluginName
+        archivePath = $expectedArchivePath
+        installRelativePath = $expectedInstallPath
+        artifact = $artifact
+    }
+}
+
+function Assert-SafeDestinationPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$GameRoot,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RelativePath
+    )
+
+    if ([string]::IsNullOrWhiteSpace($RelativePath) -or
+        [IO.Path]::IsPathRooted($RelativePath) -or $RelativePath.Contains('..') -or
+        $RelativePath.Contains('/') -eq $false) {
+        throw "Unsafe game-relative installation path: $RelativePath"
+    }
+    $destination = [IO.Path]::GetFullPath((Join-Path $GameRoot $RelativePath))
+    $rootPrefix = $GameRoot.TrimEnd('\') + '\'
+    if (-not $destination.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Installation path escapes the game root: $RelativePath"
+    }
+    $cursor = Split-Path -Parent $destination
+    while ($cursor.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase) -or
+        [StringComparer]::OrdinalIgnoreCase.Equals($cursor, $GameRoot)) {
+        if (Test-Path -LiteralPath $cursor) {
+            $item = Get-Item -LiteralPath $cursor -Force
+            if (-not $item.PSIsContainer -or
+                ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                throw "Installation parent is not a plain directory: $cursor"
+            }
+        }
+        if ([StringComparer]::OrdinalIgnoreCase.Equals($cursor, $GameRoot)) { break }
+        $cursor = Split-Path -Parent $cursor
+    }
+    $destination
+}
+
 function Assert-GameClosed {
     $running = @(
         Get-Process -Name 'VoyageSteam-Win64-Shipping', 'Voyage' `
@@ -160,8 +246,9 @@ $manifestPath = (Resolve-Path -LiteralPath $ReleaseManifest).Path
 $releaseRoot = Split-Path -Parent $manifestPath
 $releaseManifestSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $manifestPath).Hash
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-if ([int](Get-OptionalPropertyValue -Object $manifest -Name 'schemaVersion') -ne 2) {
-    throw 'Install-VoyageRelease supports release-manifest schemaVersion 2 only.'
+$manifestSchema = [int](Get-OptionalPropertyValue -Object $manifest -Name 'schemaVersion')
+if ($manifestSchema -notin @(2, 3)) {
+    throw 'Install-VoyageRelease supports release-manifest schemaVersion 2 or 3 only.'
 }
 
 $mod = [string](Get-OptionalPropertyValue -Object $manifest -Name 'mod')
@@ -172,6 +259,13 @@ $dirtySourceValue = Get-OptionalPropertyValue -Object $manifest -Name 'dirtySour
 $gameFingerprint = Get-OptionalPropertyValue -Object $manifest -Name 'gameFingerprint'
 $payload = @(Get-OptionalPropertyValue -Object $manifest -Name 'payload')
 $archiveRecord = Get-OptionalPropertyValue -Object $manifest -Name 'archive'
+$contentPluginRecord = Get-OptionalPropertyValue -Object $manifest -Name 'contentPlugin'
+if ($manifestSchema -eq 2 -and $null -ne $contentPluginRecord) {
+    throw 'release-manifest schemaVersion 2 cannot contain contentPlugin.'
+}
+if ($manifestSchema -eq 3 -and $null -eq $contentPluginRecord) {
+    throw 'release-manifest schemaVersion 3 requires contentPlugin.'
+}
 
 if ([string]::IsNullOrWhiteSpace($mod) -or
     [string]::IsNullOrWhiteSpace($artifactVersion)) {
@@ -247,6 +341,12 @@ $resolvedArtifacts = @(
 )
 $resolvedArchive = Resolve-ManifestArtifact -ReleaseRoot $releaseRoot `
     -Record $archiveRecord -Label 'Release archive'
+$contentPluginPlan = if ($null -eq $contentPluginRecord) {
+    $null
+}
+else {
+    Get-ContentPluginPlan -Record $contentPluginRecord -ReleaseRoot $releaseRoot
+}
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archiveReader = [IO.Compression.ZipFile]::OpenRead($resolvedArchive.path)
 try {
@@ -275,6 +375,28 @@ try {
         }
         if ($entryHash -cne $artifact.sha256) {
             throw "Release ZIP content disagrees with payload hash: $($artifact.name)"
+        }
+    }
+    if ($null -ne $contentPluginPlan) {
+        $descriptorEntries = @($archiveReader.Entries | Where-Object {
+            $_.FullName.Replace('\', '/') -ceq $contentPluginPlan.archivePath
+        })
+        if ($descriptorEntries.Count -ne 1 -or
+            $descriptorEntries[0].Length -ne $contentPluginPlan.artifact.size) {
+            throw 'Release ZIP does not contain the exact content plugin descriptor.'
+        }
+        $stream = $descriptorEntries[0].Open()
+        $hasher = [Security.Cryptography.SHA256]::Create()
+        try {
+            $descriptorHash = [BitConverter]::ToString(
+                $hasher.ComputeHash($stream)).Replace('-', '')
+        }
+        finally {
+            $hasher.Dispose()
+            $stream.Dispose()
+        }
+        if ($descriptorHash -cne $contentPluginPlan.artifact.sha256) {
+            throw 'Release ZIP content plugin descriptor hash mismatch.'
         }
     }
 }
@@ -310,6 +432,13 @@ if ($actualBuildId -cne $expectedBuildId -or
 $resolvedGameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
 $paksDirectory = (Resolve-Path -LiteralPath (
     Join-Path $resolvedGameRoot 'Voyage\Content\Paks')).Path
+$contentPluginDestination = if ($null -eq $contentPluginPlan) {
+    $null
+}
+else {
+    Assert-SafeDestinationPath -GameRoot $resolvedGameRoot `
+        -RelativePath $contentPluginPlan.installRelativePath
+}
 $safeMod = $mod -replace '[^0-9A-Za-z._-]', '_'
 $safeVersion = $artifactVersion -replace '[^0-9A-Za-z._-]', '_'
 $timestamp = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
@@ -338,6 +467,7 @@ $installItems = @(
             previousSha256 = $null
             backupPath = $null
             installedSha256 = $null
+            createdDirectories = @()
         }
     }
     [pscustomobject][ordered]@{
@@ -352,6 +482,24 @@ $installItems = @(
         previousSha256 = $null
         backupPath = $null
         installedSha256 = $null
+        createdDirectories = @()
+    }
+    if ($null -ne $contentPluginPlan) {
+        [pscustomobject][ordered]@{
+            kind = 'content-plugin-descriptor'
+            name = $contentPluginPlan.artifact.name
+            sourcePath = $contentPluginPlan.artifact.path
+            size = $contentPluginPlan.artifact.size
+            sourceSha256 = $contentPluginPlan.artifact.sha256
+            installRelativePath = $contentPluginPlan.installRelativePath
+            destinationPath = $contentPluginDestination
+            stagingPath = $contentPluginDestination + ".installing-$token"
+            hadExisting = $false
+            previousSha256 = $null
+            backupPath = $null
+            installedSha256 = $null
+            createdDirectories = @()
+        }
     }
 )
 
@@ -409,6 +557,28 @@ $mutationStarted = $false
 try {
     Assert-GameClosed
 
+    foreach ($item in @($installItems | Where-Object {
+        $_.kind -ceq 'content-plugin-descriptor'
+    })) {
+        $missing = @()
+        $parent = Split-Path -Parent $item.destinationPath
+        while (-not (Test-Path -LiteralPath $parent)) {
+            $missing = @($parent) + $missing
+            $parent = Split-Path -Parent $parent
+        }
+        foreach ($directory in $missing) {
+            Assert-GameClosed
+            [IO.Directory]::CreateDirectory($directory) | Out-Null
+            $item.createdDirectories = @($item.createdDirectories) + $directory
+        }
+        $null = Assert-SafeDestinationPath -GameRoot $resolvedGameRoot `
+            -RelativePath $item.installRelativePath
+    }
+    if (@($installItems | Where-Object { @($_.createdDirectories).Count -gt 0 }).Count -gt 0) {
+        $mutationStarted = $true
+        Write-JsonFile -Path $transactionPath -Value $transaction
+    }
+
     foreach ($item in $installItems) {
         Copy-Item -LiteralPath $item.sourcePath -Destination $item.stagingPath
         $stagedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $item.stagingPath).Hash
@@ -423,7 +593,7 @@ try {
             $item.previousSha256 = (
                 Get-FileHash -Algorithm SHA256 -LiteralPath $item.destinationPath).Hash
             [IO.Directory]::CreateDirectory($backupDirectory) | Out-Null
-            $item.backupPath = Join-Path $backupDirectory $item.name
+            $item.backupPath = Join-Path $backupDirectory ($item.kind + '-' + $item.name)
             Copy-Item -LiteralPath $item.destinationPath -Destination $item.backupPath
             $backupHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $item.backupPath).Hash
             if ($backupHash -cne $item.previousSha256) {
@@ -518,6 +688,21 @@ catch {
                     }
                     else {
                         throw "Refusing to remove unexpected file: $($item.destinationPath)"
+                    }
+                }
+            }
+            catch {
+                $recoveryErrors += $_.Exception.Message
+            }
+        }
+        foreach ($directory in @($installItems | ForEach-Object {
+            @($_.createdDirectories)
+        } | Sort-Object Length -Descending -Unique)) {
+            try {
+                if (Test-Path -LiteralPath $directory -PathType Container) {
+                    $children = @(Get-ChildItem -LiteralPath $directory -Force)
+                    if ($children.Count -eq 0) {
+                        Remove-Item -LiteralPath $directory -Force
                     }
                 }
             }

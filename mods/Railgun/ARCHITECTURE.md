@@ -52,9 +52,11 @@
   `/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun`; its dedicated research icon
   is under `/Game/Mods/Railgun`. Its complete serialized source is
   `Assets/Skill/railgun-skill.json`, not a generated mutation of a stock skill.
-- A complete current-game AssetRegistry with Railgun's primary entries is
-  packaged. This is an accepted interim registry override, not a composable
-  solution for multiple mods replacing the same registry.
+- The PAK carries an owned-entry registry with exactly the gun, ammunition and
+  skill records at `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`. A loose
+  content-only descriptor enables that plugin registry. The stock registry is
+  used during generation only as a fingerprinted metadata donor/control;
+  `Voyage/AssetRegistry.bin` is never packaged or replaced.
 - On Steam build `25191271`, the stock `DefaultGame.ini` scans `Skill` below
   `/Game/Data/Assets/Skill` and `Item` below `/Game/Data/Assets`. Registry
   membership alone is insufficient for discovery outside those roots.
@@ -214,26 +216,28 @@ previously shot-ready gun into the red incomplete-charge state.
 
 ## Current game-validated checkpoint
 
-`build-20260930-221701` is the current firing, power-state, HUD-state,
-model-structure and single-round fabrication checkpoint. Its model
-passes the six distinct, disjoint and nonempty cassette-subtree contract with
-all 36 render descendants covered by default hiding and propagated runtime
-visibility, while the six holders remain outside those subtrees. User gameplay
-confirmation covers the new model rendering, ammo visibility behavior, isolated
-zero-ammo warning, one-round firing debit, rejection without ammunition or
-charge, charge warning across offline, insufficient and ready states, 10 kW
-offline discharge, persistence, one-round fabrication and the owned physical
-ammo cassette. The earlier validated inventory and firing contracts remain the
-foundation.
+`build-20261002-205216` is the current source-built checkpoint. It packages the
+three-record plugin-local registry and loose content-plugin descriptor through
+the normal producer. The user tested the installed artifact and reported that
+everything works; this general confirmation is not evidence of additional
+individually enumerated scenarios.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Release evidence: `artifacts/railgun/build-20260930-221701/release-manifest.json`.
+- Release evidence: `artifacts/railgun/build-20261002-205216/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20260930-222108-build-20260930-221701-237fa395/install-manifest.json`.
+  `artifacts/installations/Railgun/20261002-205733-build-20261002-205216-6af5a2f2/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
+
+The preceding `build-20260930-221701` remains scoped behavioral evidence for
+the six distinct cassette subtrees and their 36 covered render descendants,
+model rendering, ammo visibility, isolated zero-ammo warning, one-round firing
+debit, ordinary ammunition and charge rejection, charge warnings, 10 kW offline
+discharge, persistence, single-round fabrication and the owned physical ammo
+cassette. Those observations were not separately repeated or itemized for the
+current checkpoint.
 
 ## Compatibility limits and deferred work
 
