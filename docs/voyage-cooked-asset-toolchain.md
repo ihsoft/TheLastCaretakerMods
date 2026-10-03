@@ -131,17 +131,25 @@ owned actor. That external package remains structural evidence rather than a
 general gameplay or initialization-order guarantee.
 
 Railgun's normal source producer derives an exact three-record plugin registry
-from its owned package readbacks and explicit registry policy, packages it at
+from its owned package readbacks through the shared Voyage registry profile and
+class-agnostic native writer, packages it at
 `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`, and releases a loose
 content-only descriptor through the schema-3 manifest contract. The installed
-`build-20261002-donor-free-03` artifact was confirmed by the user with the
-general result that everything works, including while `VoyageAssetPool_P`
-supplied a global registry override. This validates additive loading for that
-combination; it does not prove arbitrary registry overrides, duplicate IDs or
-additional individually unspecified gameplay scenarios. Build artifacts remain
-evidence, not source inputs. Plugin descriptors extend the installed footprint
+`build-20261003-030058` artifact was confirmed by the user with the general
+result that everything works. Its three-record registry is byte-identical to
+the earlier confirmed combination where `VoyageAssetPool_P` supplied a global
+registry override. This validates those exact results; it does not prove
+arbitrary registry overrides, duplicate IDs or additional individually
+unspecified gameplay scenarios. Build artifacts remain evidence, not source
+inputs. Plugin descriptors extend the installed footprint
 beyond `Content/Paks`, so schema-3 installation and restoration retain the
 common backup, hash, path, reparse-point and closed-game gates.
+
+With UE 5.8's `PakPlatformFile` active, the plugin registry lookup resolves
+through mounted PAK files and does not fall back to a same-path loose
+`AssetRegistry.bin`. Keep the descriptor loose and the registry at the
+plugin-local path inside the mod PAK; a loose registry beside the descriptor is
+not a supported equivalent layout.
 
 ## Stock AssetRegistry access and PAK encryption
 

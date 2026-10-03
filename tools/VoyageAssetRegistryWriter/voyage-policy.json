@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "steamBuildId": "25191271",
+    "executableSha256": "747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B",
+    "engineVersion": "5.8",
+    "registryFormatVersion": 24
+  },
+  "revalidateWhen": "The game fingerprint, native Voyage class defaults, primary-asset discovery contract, engine registry format, or UAssetAPI/UAssetGUI JSON schema changes.",
+  "formatVersion": 24,
+  "filterEditorOnly": true,
+  "defaultChunkIds": [0],
+  "versionRange": "(InitialVersion=(MajorVersion=0,MinorVersion=0,PatchVersion=0),bHasSunsetVersion=False,SunsetVersion=(MajorVersion=99999,MinorVersion=0,PatchVersion=0))",
+  "commonFallbacks": {
+    "bExcludeFromDemo": false,
+    "bExcludeFromDistribution": false
+  },
+  "classPolicies": {
+    "/Script/Voyage.VoyageItem": {
+      "primaryAssetType": "Item",
+      "fallbacks": {
+        "bAllowFabricationOnTop": false,
+        "bCanGainLootExp": true,
+        "bIsRecyclable": true
+      }
+    },
+    "/Script/Voyage.VoyageItemAmmo": {
+      "primaryAssetType": "Item",
+      "fallbacks": {
+        "bAllowFabricationOnTop": false,
+        "bCanGainLootExp": true,
+        "bIsDestructible": false,
+        "bIsDismantlable": false,
+        "bIsRecyclable": true,
+        "bIsRepairable": false,
+        "Tag": "None"
+      }
+    },
+    "/Script/Voyage.VoyageSkill": {
+      "primaryAssetType": "Skill",
+      "fallbacks": {}
+    }
+  }
+}

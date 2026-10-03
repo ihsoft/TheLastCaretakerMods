@@ -1,0 +1,13 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Modding",
+  "Description": "Minimal editor host for writing premade AssetRegistry.bin files.",
+  "Modules": [
+    {
+      "Name": "VoyageAssetRegistryWriter",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ]
+}

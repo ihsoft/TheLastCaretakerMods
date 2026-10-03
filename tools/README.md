@@ -181,6 +181,8 @@ container and evidence, without installation.
 | Publish or reuse canonical CUE4Parse | `Publish-Cue4ParseBinary.ps1` | Stable managed `.tools/bin/CUE4Parse/` library bundle |
 | Prepare reviewed UAssetAPI source for development | `Prepare-UAssetApiVoyageUe58.ps1` | Exact source snapshot for deliberate fork/API investigation |
 | Publish the validated compact UAssetGUI executable | `Publish-UAssetGuiBinary.ps1` | Stable ignored `.tools/bin/UAssetGUI.exe` |
+| Build a premade registry from owned asset JSON | `New-VoyageAssetRegistry.ps1` | UE-native `AssetRegistry.bin`, manifest, exact reopened record counts/IDs and retained evidence |
+| Publish or resolve the native registry writer | `VoyageAssetRegistryWriter\Publish-VoyageAssetRegistryWriter.ps1`, `VoyageAssetRegistryWriter\Get-VoyageAssetRegistryWriter.ps1` | Manifest-validated minimal UE 5.8 editor host under `.tools/bin/` |
 | Publish or resolve the native executable inspector | `Publish-VoyageExecutableInspectorBinary.ps1`, `Get-VoyageExecutableInspectorBinary.ps1` | Manifest-validated single-file `.tools/bin/VoyageExecutableInspector.exe` |
 | Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/bin/UAssetGUI.exe stress-open` | Incremental per-asset JSONL plus parse/binary-equality summary |
 | Build, cook and package an existing mod release | [Release producers](#release-producers) | Route to the owning mod's documented orchestrator; no generic rebuild recipe |
@@ -204,6 +206,39 @@ cross-version constant.
 `Inspect-VoyageAsset.ps1`. Prefer the PowerShell wrapper because it adds the
 game fingerprint, a versioned output directory, and an inspection manifest.
 
+### Premade AssetRegistry generation
+
+Use `New-VoyageAssetRegistry.ps1 -AssetJsonPath <array> -OutputPath <bin>` to
+derive primary-asset records directly from UAssetAPI/UAssetGUI JSON and write
+them with Unreal's native `FAssetRegistryState.Save`. From another PowerShell
+script, pass a normal string array. At a Windows PowerShell 5.1 `-File`
+boundary, pass the paths as one semicolon-delimited argument. Example:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File tools\New-VoyageAssetRegistry.ps1 `
+  -AssetJsonPath "ammo.json;item.json;skill.json" `
+  -OutputPath "artifacts\candidate\AssetRegistry.bin"
+```
+
+The Voyage profile currently accepts exactly one top-level `VoyageItem`,
+`VoyageItemAmmo`, or `VoyageSkill` primary export per input package and ignores
+auxiliary exports. It is fingerprinted to Steam build `25191271`, UE 5.8 and
+registry format 24. Explicit serialized values win over class defaults. Unknown
+classes, ambiguous primary exports, duplicate object paths or primary IDs,
+unsupported package flags, and changed inputs fail before publication. Output
+and its sibling manifest are staged and rolled back together; the native writer
+reopens the temporary registry and compares every field before replacement.
+
+The native writer is a separate class-agnostic layer: it supports arbitrary
+record counts, distinct asset/package counts and arbitrary chunk arrays. Its
+normal path uses the manifest-validated published host and runs from an ignored
+execution copy so warm calls do not mutate the canonical publication. Run
+`VoyageAssetRegistryWriter\Test-New-VoyageAssetRegistry.ps1` outside the
+restricted sandbox for converter,
+failure-preservation and native reopen regressions. Publish the host explicitly
+only when its compiled inputs or selected UE 5.8 identity change.
+
 
 ## Release producers
 
@@ -215,7 +250,7 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 | MooringCable60m | [Release workflow](../mods/MooringCable60m/README.md) | `Build-LimitGraph.ps1` builds/cooks the attached/free limit graph outside the sandbox; `Build-Candidate.ps1 -GraphManifest` preserves fresh stock inheritance, sets 60 m manual / 20 m attached payout, verifies exactly three assets and creates a schema-2 release manifest; neither installs |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
-| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun_P` container, derives an isolated three-record content-plugin registry from owned JSON readbacks, and publishes a schema-3 ZIP/manifest. Optional `-Install` uses the common guarded installer. Gameplay validation remains a separate gate |
+| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun_P` container, calls the common native registry producer for its three owned JSON readbacks, and publishes a schema-3 ZIP/manifest. Optional `-Install` uses the common guarded installer. Gameplay validation remains a separate gate |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a

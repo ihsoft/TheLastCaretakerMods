@@ -39,9 +39,9 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   registry at `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`; the release ZIP
   also owns the matching loose content-only descriptor. Never ship or replace
   `Voyage/AssetRegistry.bin`. Build registry records from the owned data-asset
-  JSON and their compact registry policy; no stock registry or stock primary
-  record is a build input. Editor mirrors and generator binaries are never
-  shipped.
+  JSON through the shared Voyage registry profile/tool; no stock registry,
+  stock primary record, or Railgun-owned registry writer/policy is a build
+  input. Editor mirrors and generator binaries are never shipped.
 - Keep documentation factual and compact. Do not maintain an experiment
   chronology or candidate backlog. Put transient logs under ignored artifacts;
   promote only game-validated facts or clearly labelled design hypotheses.
