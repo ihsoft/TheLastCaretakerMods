@@ -286,22 +286,21 @@ alone does not establish which world points are represented.
 
 ## Current game-validated checkpoint
 
-`build-20261003-214942` is the current game-validated checkpoint. Its explicit
+`build-20261003-224533` is the current game-validated checkpoint. Its explicit
 320-package cook inventory is passed through the bounded manifest adapter, and
 its three-record plugin-local registry is derived solely from owned package
 readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field. The user tested the
-installed artifact and accepted its visible wake. Removing its temporary wake
-status report is statically validated separately and does not turn the cleanup
-build into a new gameplay-validated checkpoint.
+installed cleanup artifact and reported that the runtime behavior works. This
+general confirmation does not separately establish untested edge cases.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
 - Release evidence:
-  `artifacts/railgun/build-20261003-214942/release-manifest.json`.
+  `artifacts/railgun/build-20261003-224533/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20261003-215521-build-20261003-214942-e61285fa/install-manifest.json`.
+  `artifacts/installations/Railgun/20261003-225127-build-20261003-224533-f3d98a60/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 - The registry SHA-256 is
