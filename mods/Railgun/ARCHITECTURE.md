@@ -217,20 +217,21 @@ previously shot-ready gun into the red incomplete-charge state.
 
 ## Current game-validated checkpoint
 
-`build-20261003-030058` is the current source-built checkpoint. Its three-record
-plugin-local registry is derived solely from owned package readbacks through
-the shared Voyage registry profile and class-agnostic native writer, then
-reopened and compared field-for-field. The user tested the installed artifact
-and reported that everything works; this general confirmation is not evidence
-of additional individually enumerated scenarios.
+`build-20261003-044541` is the current source-built checkpoint. Its explicit
+291-package cook inventory is passed through the bounded manifest adapter, and
+its three-record plugin-local registry is derived solely from owned package
+readbacks through the shared Voyage registry profile and class-agnostic native
+writer, then reopened and compared field-for-field. The user tested the
+installed artifact and reported that everything works; this general
+confirmation is not evidence of additional individually enumerated scenarios.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
 - Release evidence:
-  `artifacts/railgun/build-20261003-030058/release-manifest.json`.
+  `artifacts/railgun/build-20261003-044541/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20261003-030552-build-20261003-030058-7b08f77f/install-manifest.json`.
+  `artifacts/installations/Railgun/20261003-045036-build-20261003-044541-ccbea11b/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 - The registry SHA-256 is

@@ -353,10 +353,29 @@ $packages += @(
     '/Game/Mods/Railgun/Runtime/BP_RailgunCoordinator'
 )
 $packages = @($packages | Sort-Object -Unique)
+$cookPackageManifest = Join-Path $output 'cook-packages.txt'
+$cookPackageManifestText = ($packages -join "`n") + "`n"
+[IO.File]::WriteAllText($cookPackageManifest, $cookPackageManifestText,
+    (New-Object System.Text.UTF8Encoding($false)))
+$cookPackageManifestSha256 = (Get-FileHash -LiteralPath $cookPackageManifest -Algorithm SHA256).Hash
+$cookPackageManifestSha1 = (Get-FileHash -LiteralPath $cookPackageManifest -Algorithm SHA1).Hash
+$cookPackageManifestEvidence = [ordered]@{
+    schemaVersion = 1
+    packageCount = $packages.Count
+    sha256 = $cookPackageManifestSha256
+    sha1 = $cookPackageManifestSha1
+    manifestPath = $cookPackageManifest
+}
+$cookPackageManifestEvidence | ConvertTo-Json -Depth 3 |
+    Set-Content -LiteralPath (Join-Path $output 'cook-packages.manifest.json') -Encoding UTF8
 # Keep new material shader code inline in owned packages. Do not change shared
 # project config or require a game-global ShaderArchive-Voyage library override.
 # Partial native mirrors serialize named property tags, never positional indices.
-Invoke-NativeStage 'cook' $editor @($project,'-run=cook','-targetplatform=Windows','-SkipZenStore','-CookSinglePackageNoRefs',('-Package=' + ($packages -join '+')),'-ini:Game:[/Script/UnrealEd.ProjectPackagingSettings]:bShareMaterialShaderCode=False','-ini:Engine:[/Script/WindowsTargetPlatform.WindowsTargetSettings]:D3D12TargetedShaderFormats=PCD3D_SM6,D3D11TargetedShaderFormats=PCD3D_SM5','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'cook-unreal.log')))
+$cookArguments = @($project,'-run=CookPackageManifest','-RunAsCookCommandlet',('-PackageManifest=' + $cookPackageManifest),('-PackageManifestCount=' + $packages.Count),('-PackageManifestSha1=' + $cookPackageManifestSha1),'-targetplatform=Windows','-SkipZenStore','-CookSinglePackageNoRefs','-ini:Game:[/Script/UnrealEd.ProjectPackagingSettings]:bShareMaterialShaderCode=False','-ini:Engine:[/Script/WindowsTargetPlatform.WindowsTargetSettings]:D3D12TargetedShaderFormats=PCD3D_SM6,D3D11TargetedShaderFormats=PCD3D_SM5','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'cook-unreal.log')))
+if (($cookArguments -join ' ').Length -gt 4096) {
+    throw 'Cook launcher arguments unexpectedly exceed the bounded manifest-adapter contract.'
+}
+Invoke-NativeStage 'cook' $editor $cookArguments
 Invoke-NativeStage 'verify-tagged' $editor @($project,'-run=GenerateRailgun','-VerifyTagged','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'verify-tagged-unreal.log')))
 Invoke-NativeStage 'verify-runtime-tagged' $editor @($project,'-run=GenerateRailgunRuntime','-VerifyTagged','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'verify-runtime-tagged-unreal.log')))
 $retoc = Join-Path $repo '.tools/bin/retoc.exe'

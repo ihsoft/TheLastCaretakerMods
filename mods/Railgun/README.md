@@ -40,6 +40,13 @@ are derived from the three owned data-asset JSON readbacks by the shared
 `tools\New-VoyageAssetRegistry.ps1` producer; no stock registry is read, shipped
 or replaced.
 
+The exact cook inventory is written to the build artifact as
+`cook-packages.txt`. A small editor-only adapter validates its package count and
+Core SHA-1 before passing the complete list directly to Unreal's stock cook
+commandlet. This keeps the launcher command line bounded as model dependencies
+grow while preserving the single-pass `CookSinglePackageNoRefs` contract. The
+sibling `cook-packages.manifest.json` also records SHA-256 as build evidence.
+
 ## Inputs
 
 All mod-owned inputs live below this directory:
