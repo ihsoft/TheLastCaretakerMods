@@ -13,6 +13,7 @@
 #include "Engine/StaticMesh.h"
 #include "VoyageProjectileMovementComponent.h"
 #include "VoyageMiscBlueprintFunctionLibrary.h"
+#include "VoyageWeatherSubsystem.h"
 #include "VoyageCombatSubsystem.h"
 #include "Subsystems/SubsystemBlueprintLibrary.h"
 #include "TimerGraphNames.h"
@@ -257,6 +258,18 @@ void AddVariable(UBlueprint* BP, FName Name, FName Category, UObject* Type = nul
     check(FBlueprintEditorUtils::AddMemberVariable(BP, Name, PinType));
 }
 
+void AddArrayVariable(UBlueprint* BP, FName Name, FName Category,
+    UObject* Type = nullptr)
+{
+    FEdGraphPinType PinType;
+    PinType.PinCategory = Category;
+    PinType.PinSubCategoryObject = Type;
+    PinType.ContainerType = EPinContainerType::Array;
+    if (Category == UEdGraphSchema_K2::PC_Real)
+        PinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
+    check(FBlueprintEditorUtils::AddMemberVariable(BP, Name, PinType));
+}
+
 }
 
 namespace
@@ -269,6 +282,7 @@ namespace
 #include "StationEntryGraph.h"
 #include "RailgunVfx.h"
 #include "RailgunWater.h"
+#include "RailgunWaterWake.h"
 #include "RailgunShot.h"
 #include "RailgunVfxCanary.h"
 #include "DedicatedStationGenerator.h"
@@ -289,6 +303,7 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
         TArray<const TCHAR*> VerifyPackages {N::Package, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
             RailgunInputNames::LookYaw, RailgunInputNames::LookPitch, RailgunInputNames::Exit, RailgunInputNames::Zoom, RailgunInputNames::Fire,
             RailgunInputNames::ExplosionCanary, RailgunInputNames::SplashCanary, Shot::Package,
+            RailgunWaterWake::ControllerPackage,
             RailgunImpactVfx::Package,
             ShotAudio::Package, ZoomTest::MaskPackage, EnergyHud::ChargingPackage, EnergyHud::OfflinePackage, EnergyHud::ReadyPackage,
             EnergyHud::AmmoIndicatorPackage,
@@ -349,6 +364,7 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
             RailgunAmmo::AmmoCategoryPackage, RailgunAmmo::AmmoCategoryAsset);
     ConfigureRailgunInventory(Ammo, AmmoCategory, AmmoWeightKg);
     RailgunImpactVfx::Class = CreateRailgunImpactVfx();
+    RailgunWaterWake::ControllerClass = CreateRailgunWaterWakeController();
     Shot::Class=CreateRailgunShot();
     UClass* StationClass = CreateDedicatedStation();
     UPackage* Package = CreatePackage(N::Package);

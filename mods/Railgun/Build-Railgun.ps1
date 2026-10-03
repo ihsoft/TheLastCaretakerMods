@@ -346,6 +346,7 @@ $packages += @(
     '/Game/Mods/Railgun/Station/T_RailgunStatusReady',
     '/Game/Mods/Railgun/Station/T_RailgunAmmoIndicator',
     '/Game/Mods/Railgun/Station/BP_RailgunTestShot',
+    '/Game/Mods/Railgun/Station/BP_RailgunWaterWakeController',
     '/Game/Mods/Railgun/Station/BP_RailgunTransientVfx',
     '/Game/Mods/Railgun/Station/S_RailgunShotBlast',
     '/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod',

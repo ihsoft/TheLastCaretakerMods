@@ -251,23 +251,57 @@ the game. That general confirmation does not separately establish every
 collision ordering, submerged-target, save/load, multiplayer or performance
 edge case.
 
+The above-water wake path uses the fingerprint-bound
+`VoyageWeatherSubsystem.AddFluidImpulse(FVoyageFluidImpulse)` contract directly;
+the subsystem derives from `TickableWorldSubsystem`, and the impulse contains
+location, two-dimensional direction, radius and strength. One transient
+controller per shot samples only already travelled segments over the first
+500 metres, with two-metre spacing and cross-frame remainder carry. Its bounded
+arrays hold at most 256 valid queried surface positions. Water lookup is made
+eight metres below each trajectory point to satisfy the confirmed native
+height-query bounds gate; only finite surfaces zero to eight metres below the
+original trajectory are accepted.
+
+Each accepted point submits a radius-two-metre impulse on every controller tick
+for at most 0.25 seconds. Strength is held constant over that interval and is
+bounded by `0.2`, with linear height falloff to zero at eight metres; it is not
+scaled by delta time, velocity or projectile mass. The controller stops
+accepting at the preview limit or when the shot finishes, destroys itself after
+the last short tail, and has a one-second hard lifetime. It is independent of
+the accepted first-crossing fountain and direct-hit attack paths. The user
+accepted the visible wake and its appearance behind an ordinary shot with this
+complete path active. That validates the combined wake behavior in the tested
+scene, but does not establish an exact reconstruction of the stock attack
+consumer, isolate the 0.25-second hold as the sole cause, or separately validate
+every accepted height or distance, obstacle clipping, frame-rate behavior,
+performance, or other edge cases.
+
+For the fingerprint above, the native `AddFluidImpulse` entry appends the
+48-byte impulse to the subsystem queue; it does not render or acknowledge a
+visible effect. The stock weather Blueprint selects `RT_Foam` (1024 by 1024) and
+`FluidWorldScale = 20000` cm. `BP_NinjaLive_Area_Water_Voyage` feeds that render
+target to its FluidNinja component. Queue consumption, simulation-area placement
+and the exact stock consumer lifecycle remain unresolved; the configured scale
+alone does not establish which world points are represented.
+
 ## Current game-validated checkpoint
 
-`build-20261003-083733` is the current source-built checkpoint. Its explicit
-319-package cook inventory is passed through the bounded manifest adapter, and
+`build-20261003-214942` is the current game-validated checkpoint. Its explicit
+320-package cook inventory is passed through the bounded manifest adapter, and
 its three-record plugin-local registry is derived solely from owned package
 readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field. The user tested the
-installed artifact and reported that everything works; this general
-confirmation is not evidence of additional individually enumerated scenarios.
+installed artifact and accepted its visible wake. Removing its temporary wake
+status report is statically validated separately and does not turn the cleanup
+build into a new gameplay-validated checkpoint.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
 - Release evidence:
-  `artifacts/railgun/build-20261003-083733/release-manifest.json`.
+  `artifacts/railgun/build-20261003-214942/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20261003-085257-build-20261003-083733-a98f7008/install-manifest.json`.
+  `artifacts/installations/Railgun/20261003-215521-build-20261003-214942-e61285fa/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 - The registry SHA-256 is

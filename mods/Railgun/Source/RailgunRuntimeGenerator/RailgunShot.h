@@ -172,8 +172,15 @@ UClass* CreateRailgunShot()
     for(FName Name:{Shot::Start,Shot::Direction,RailgunWater::SegmentStart}) AddVariable(BP,Name,UEdGraphSchema_K2::PC_Struct,TBaseStructure<FVector>::Get());
     AddVariable(BP,Shot::Done,UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP,RailgunWater::FirstCrossingDone,UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP,RailgunWaterWake::DistanceToNext,UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP,RailgunWaterWake::PreviewDistance,
+        UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP,RailgunWaterWake::Controller,
+        UEdGraphSchema_K2::PC_Object,
+        RailgunWaterWake::ControllerClass);
     FKismetEditorUtilities::CompileBlueprint(BP);
     AddRailgunWaterSegmentFunction(BP);
+    AddRailgunWaterWakeSegmentFunction(BP);
     FKismetEditorUtilities::CompileBlueprint(BP); FGraph G(BP->UbergraphPages[0],nullptr);
     ShotEvent(G,TimerGraphNames::ActorBeginPlay);
     auto* TypePath=G.Call(UKismetSystemLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,MakeSoftClassPath)); G.Default(TypePath,E::PathString,ShotAttack::PhysicalType);
@@ -185,6 +192,9 @@ UClass* CreateRailgunShot()
     G.Write(Shot::Start,ObserveCall(G,AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,K2_GetActorLocation),OpticalSelf(G)));
     G.Write(RailgunWater::SegmentStart, G.Read(Shot::Start));
     G.Write(RailgunWater::FirstCrossingDone,nullptr,N::False);
+    G.Write(RailgunWaterWake::DistanceToNext,nullptr,N::Zero);
+    G.Write(RailgunWaterWake::PreviewDistance,nullptr,N::Zero);
+    SpawnRailgunWaterWakeController(G);
     G.Write(Shot::Direction,ObserveCall(G,AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,GetActorForwardVector),OpticalSelf(G)));
     for(FName Name:{Shot::Railgun,Shot::Operator,Shot::Station}) {
         auto* Ignore=G.Call(UPrimitiveComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent,IgnoreActorWhenMoving));
@@ -203,21 +213,25 @@ UClass* CreateRailgunShot()
     auto* Done=G.Branch(G.Read(Shot::Done)); G.Tail=G.Pin(Done,P::Else);
     UEdGraphPin* CurrentLocation=ObserveCall(G,AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,K2_GetActorLocation),OpticalSelf(G));
     ProcessRailgunWaterSegment(G,BP->GeneratedClass,G.Read(RailgunWater::SegmentStart),CurrentLocation);
+    ProcessRailgunWaterWakeSegment(G,BP->GeneratedClass,
+        G.Read(RailgunWater::SegmentStart),CurrentLocation,false);
     G.Write(RailgunWater::SegmentStart,CurrentLocation);
     // Exit/destroy of the operator ends remaining flight.
     auto* Controlled=G.Call(APawn::StaticClass(),GET_FUNCTION_NAME_CHECKED(APawn,IsPlayerControlled));
     auto* StationCast=NewObject<UK2Node_DynamicCast>(G.Graph); StationCast->TargetType=APawn::StaticClass(); StationCast->SetPurity(true); G.Node(StationCast);
     G.Link(G.Read(Shot::Station),StationCast->GetCastSourcePin());
     auto* Valid=G.Branch(G.Valid(StationCast->GetCastResultPin())); auto* ValidTail=G.Tail;
-    G.Tail=G.Pin(Valid,P::Else); auto* Destroy=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,K2_DestroyActor)); G.Exec(Destroy);
+    G.Tail=G.Pin(Valid,P::Else); FinishRailgunWaterWake(G); auto* Destroy=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,K2_DestroyActor)); G.Exec(Destroy);
     G.Tail=ValidTail; G.Link(StationCast->GetCastResultPin(),G.Pin(Controlled,P::FunctionTarget));
     auto* Occupied=G.Branch(G.Pin(Controlled,P::ReturnValue)); auto* OccupiedTail=G.Tail;
-    G.Tail=G.Pin(Occupied,P::Else); auto* ExitDestroy=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,K2_DestroyActor)); G.Exec(ExitDestroy); G.Tail=OccupiedTail;
+    G.Tail=G.Pin(Occupied,P::Else); FinishRailgunWaterWake(G); auto* ExitDestroy=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,K2_DestroyActor)); G.Exec(ExitDestroy); G.Tail=OccupiedTail;
     auto* Delta=G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Subtract_VectorVector),CurrentLocation,G.Read(Shot::Start));
     auto* Remaining=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Subtract_DoubleDouble));
     G.Default(Remaining,P::Binary::LeftOperand,Shot::Range); G.Link(ShotLength(G,Delta),G.Pin(Remaining,P::Binary::RightOperand));
     auto* InRange=G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Greater_DoubleDouble),G.Pin(Remaining,P::ReturnValue),CE::One)); auto* FlyingTail=G.Tail;
-    G.Tail=G.Pin(InRange,P::Else); StopShot(G); G.Tail=FlyingTail;
+    G.Tail=G.Pin(InRange,P::Else);
+    FinishRailgunWaterWake(G);
+    StopShot(G); G.Tail=FlyingTail;
     G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Greater_DoubleDouble),G.Pin(Tick,P::DeltaSeconds),N::Zero));
     auto* Rate=G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Divide_DoubleDouble),G.Pin(Remaining,P::ReturnValue),G.Pin(Tick,P::DeltaSeconds));
     auto* Limited=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,FMin));
@@ -228,6 +242,10 @@ UClass* CreateRailgunShot()
     auto* BrokenHit=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,BreakHitResult));
     G.Link(G.Pin(Hit,E::Hit),G.Pin(BrokenHit,E::Hit));
     ProcessRailgunWaterSegment(G,BP->GeneratedClass,G.Read(RailgunWater::SegmentStart),G.Pin(BrokenHit,OP::ImpactPoint));
+    ProcessRailgunWaterWakeSegment(G,BP->GeneratedClass,
+        G.Read(RailgunWater::SegmentStart),
+        G.Pin(BrokenHit,OP::ImpactPoint),true);
+    FinishRailgunWaterWake(G);
     StopShot(G);
     // Done was set before this path: a second ReceiveHit cannot submit twice.
     SpawnRailgunImpactVfx(G, G.Pin(Hit, E::Hit));
