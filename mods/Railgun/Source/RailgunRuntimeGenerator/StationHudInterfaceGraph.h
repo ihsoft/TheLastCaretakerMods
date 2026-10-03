@@ -23,7 +23,7 @@ void AddNativeStationHudInterface(UBlueprint* BP, UClass* ReturnedHud = nullptr)
     check(Entry && Result);
     FGraph G(Graph, nullptr);
     G.Pin(Entry, P::Then)->BreakAllPinLinks(); G.Pin(Result, P::Execute)->BreakAllPinLinks();
-    G.Tail = G.Pin(Entry, P::Then); G.Write(N::NativeHudRequested, nullptr, N::True);
+    G.Tail = G.Pin(Entry, P::Then);
     G.Link(G.Tail, G.Pin(Result, P::Execute));
     G.Pin(Result, P::ReturnValue)->DefaultObject = ReturnedHud;
 }

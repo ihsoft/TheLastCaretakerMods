@@ -2,7 +2,6 @@
 // HC28: provider -> unchanged stock hint widget in OWN HUD. No input/physics edit.
 namespace Hint
 {
-inline const FName ProviderSeen(TEXT("RailgunActionProviderObserved"));
 inline const FName HintsReady(TEXT("RailgunHintWidgetReady"));
 inline const FName HintInstance(TEXT("RailgunActionHints"));
 inline const FName Root(TEXT("RailgunHintHost"));
@@ -41,7 +40,7 @@ void AddStationActions(UBlueprint* BP)
     }
     check(Entry && Result); FGraph G(Graph, nullptr);
     G.Pin(Entry, P::Then)->BreakAllPinLinks(); G.Pin(Result, P::Execute)->BreakAllPinLinks();
-    G.Tail = G.Pin(Entry, P::Then); G.Write(Hint::ProviderSeen, nullptr, N::True);
+    G.Tail = G.Pin(Entry, P::Then);
     G.Link(G.Tail, G.Pin(Result, P::Execute));
     auto* Action = NewObject<UK2Node_MakeStruct>(Graph); Action->StructType = FPlayerInputInterfaceAction::StaticStruct();
     Action->bMadeAfterOverridePinRemoval = true; G.Node(Action);

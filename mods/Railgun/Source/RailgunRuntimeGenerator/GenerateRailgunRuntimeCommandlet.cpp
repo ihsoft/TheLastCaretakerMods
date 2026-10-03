@@ -218,7 +218,6 @@ public:
     void Text(FName Component, const TCHAR* Value, UEdGraphPin* DynamicText = nullptr)
     {
         if (!HudClass) return; // Non-UI station guards have no observer widget.
-        if (Component == N::Marker) return; // No world-space debug geometry in HC06.
         auto* Widget = NewObject<UK2Node_VariableGet>(Graph);
         Widget->VariableReference.SetExternalMember(Component, HudClass); Node(Widget);
         Link(Read(N::HudInstance), Pin(Widget, P::FunctionTarget));
@@ -232,23 +231,6 @@ public:
             Link(Pin(Literal, P::ReturnValue), Pin(Set, E::WidgetText));
         }
         Exec(Set);
-    }
-    void Number(FName Component, const TCHAR* Prefix, UEdGraphPin* Value)
-    {
-        auto* String = Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, BuildString_Double));
-        Default(String, E::StringPrefix, Prefix); Link(Value, Pin(String, E::DoubleValue));
-        auto* TextValue = Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText));
-        Link(Pin(String, P::ReturnValue), Pin(TextValue, E::StringValue));
-        Text(Component, nullptr, Pin(TextValue, P::ReturnValue));
-    }
-    void BooleanText(FName Component, UEdGraphPin* Condition, const TCHAR* WhenTrue, const TCHAR* WhenFalse)
-    {
-        auto* Select = Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectString));
-        Link(Condition, Pin(Select, P::Select::Condition));
-        Default(Select, P::Select::WhenTrue, WhenTrue); Default(Select, P::Select::WhenFalse, WhenFalse);
-        auto* Value = Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText));
-        Link(Pin(Select, P::ReturnValue), Pin(Value, E::StringValue));
-        Text(Component, nullptr, Pin(Value, P::ReturnValue));
     }
     UEdGraphPin* Transform(UEdGraphPin* Location, UEdGraphPin* Rotation)
     {
@@ -371,16 +353,13 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     CameraTemplate->bUsePawnControlRotation = false; CameraTemplate->bConstrainAspectRatio = false;
     CameraTemplate->SetAutoActivate(true);
     AddVariable(BP, O::Active, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, N::NativeHudRequested, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, Control::Owned, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, Control::ReturnPending, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, O::PreviousView, UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
     AddVariable(BP, O::BaselineFov, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, O::RequestedFov, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, Aim::Yaw, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, Aim::Pitch, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, O::CharacterHidden, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, N::Age, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, N::OriginalPawn, UEdGraphSchema_K2::PC_Object, ACharacter::StaticClass());
     AddVariable(BP, S::Held, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, S::Controller, UEdGraphSchema_K2::PC_Object, APlayerController::StaticClass());

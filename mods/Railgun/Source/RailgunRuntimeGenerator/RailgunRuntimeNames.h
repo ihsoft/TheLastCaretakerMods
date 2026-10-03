@@ -10,18 +10,14 @@
 // Renew the class and loader contract on fingerprint change. No Voyage mirror.
 namespace RailgunRuntimeNames
 {
-inline const FName NativeHudRequested(TEXT("NativeHudCallbackObserved"));
 inline constexpr TCHAR Package[] = TEXT("/Game/Mods/Railgun/Runtime/BP_RailgunCoordinator");
 inline constexpr TCHAR Asset[] = TEXT("BP_RailgunCoordinator");
 inline const FName HudInstance(TEXT("DiagnosticHUD"));
 inline const FName HudTree(TEXT("WidgetTree"));
 inline const FName HudCanvas(TEXT("DiagnosticCanvas"));
 inline const FName Root(TEXT("ProbeRoot"));
-inline const FName Current(TEXT("CurrentText"));
-inline const FName Marker(TEXT("DroneMarkerText"));
 inline const FName OriginalPawn(TEXT("OriginalPlayerPawn"));
 inline const FName FreezeStatus(TEXT("FreezeStatusText"));
-inline const FName Age(TEXT("ObservationSeconds"));
 inline constexpr TCHAR UnitScale[] = TEXT("1,1,1");
 inline constexpr TCHAR True[] = TEXT("true");
 inline constexpr TCHAR False[] = TEXT("false");

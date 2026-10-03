@@ -4,8 +4,7 @@
 namespace StationControlNames
 {
 inline const FName Owned(TEXT("OwnsStationPossession"));
-inline const FName ReturnPending(TEXT("StationReturnNeedsRetry"));
-inline constexpr TCHAR ReturnFailed[] = TEXT("HC17 RETURN FAILED: F8 retries; do not save. Report this.");
+inline constexpr TCHAR ReturnFailed[] = TEXT("RETURN FAILED: press E to retry; do not save. Report this.");
 }
 namespace Control = StationControlNames;
 void OpticalReticle(FGraph& G, bool Visible);
@@ -30,8 +29,8 @@ void ReleaseStationControl(FGraph& G)
         G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), StationControlledPawn(G), OpticalSelf(G)),
         G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool), G.Valid(StationControlledPawn(G)), N::False)));
     // Stop this execution path on return failure: retain fixation and the proxy.
-    // A latched failure allows only a deliberate F8 retry, not repeated Possess.
-    G.Write(Control::ReturnPending, nullptr, N::True);
+    // A failed execution path allows only a deliberate normal exit retry, not
+    // repeated Possess.
     OpticalReticle(G, false); G.Text(N::FreezeStatus, Control::ReturnFailed);
     G.Require(G.Valid(G.Read(N::OriginalPawn)), Control::ReturnFailed);
     auto* OriginalController = ObserveCall(G, APawn::StaticClass(), BlueprintGraphNames::ActorFunctions::GetController, G.Read(N::OriginalPawn));
@@ -41,6 +40,6 @@ void ReleaseStationControl(FGraph& G)
     StationPossess(G, G.Read(N::OriginalPawn));
     G.Require(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), StationControlledPawn(G), G.Read(N::OriginalPawn)), Control::ReturnFailed);
     StationMerge(G, {G.Tail, G.Pin(CanReturn, P::Else), G.Pin(ControllerValid, P::Else)});
-    G.Write(Control::Owned, nullptr, N::False); G.Write(Control::ReturnPending, nullptr, N::False);
+    G.Write(Control::Owned, nullptr, N::False);
     StationMerge(G, {G.Tail, G.Pin(Owned, P::Else)});
 }

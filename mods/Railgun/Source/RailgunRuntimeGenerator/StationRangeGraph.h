@@ -9,9 +9,7 @@ inline const FName TargetRange(TEXT("OpticalTargetRange"));
 inline constexpr TCHAR MaximumCentimeters[] = TEXT("100000.0");
 inline constexpr TCHAR MaximumDisplayedMeters[] = TEXT("999.0");
 inline constexpr TCHAR CentimetersPerMeter[] = TEXT("100.0");
-inline constexpr TCHAR NoHit[] = TEXT("RANGE: no hit within 1000m");
 inline constexpr TCHAR NoHitLabel[] = TEXT("---");
-inline constexpr TCHAR Distance[] = TEXT("TARGET distance from sight (m): ");
 inline constexpr TCHAR IntegralDigits[] = TEXT("3");
 inline const FName UseGroupingPin(TEXT("bUseGrouping"));
 inline const FName MinimumIntegralDigitsPin(TEXT("MinimumIntegralDigits"));
@@ -19,11 +17,10 @@ inline const FName MaximumIntegralDigitsPin(TEXT("MaximumIntegralDigits"));
 }
 namespace Range = StationRangeNames;
 
-void UpdateStationRange(FGraph& G, bool StoreOnStation = false)
+void UpdateStationRange(FGraph& G)
 {
     auto TargetText = [&](FName Field, UEdGraphPin* Value = nullptr)
     {
-        if (!StoreOnStation) { G.Text(Field, N::EmptyText, Value); return; }
         if (!Value)
         {
             auto* Empty = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText));
@@ -32,7 +29,6 @@ void UpdateStationRange(FGraph& G, bool StoreOnStation = false)
         G.Write(Field, Value);
     };
     // First blocking optical hit only; any actor is a display target, not a fireable target.
-    if (!StoreOnStation) G.Text(N::Current, Range::NoHit);
     TargetText(Range::TargetName);
     auto* NoHitText = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText));
     G.Default(NoHitText, E::StringValue, Range::NoHitLabel); TargetText(Range::TargetRange, G.Pin(NoHitText, P::ReturnValue));
@@ -65,7 +61,6 @@ void UpdateStationRange(FGraph& G, bool StoreOnStation = false)
     G.Default(ClampedMeters, P::Binary::RightOperand, Range::MaximumDisplayedMeters);
     auto* Rounded = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Round));
     G.Link(G.Pin(ClampedMeters, P::ReturnValue), G.Pin(Rounded, OP::AngleValue));
-    if (!StoreOnStation) G.Number(N::Current, Range::Distance, G.Pin(Rounded, P::ReturnValue));
     auto* Digits = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_IntToText));
     G.Link(G.Pin(Rounded, P::ReturnValue), G.Pin(Digits, P::Value));
     G.Default(Digits, Range::UseGroupingPin, N::False);

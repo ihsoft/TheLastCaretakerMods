@@ -211,7 +211,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Branch(G.Valid(G.Read(N::OriginalPawn))); G.Branch(G.Valid(G.Read(S::Anchor)));
     auto* EyeMode = G.Branch(G.Read(ZoomTest::Wide));
     UpdateEyeCameraPosition(G); ConvergeEyeAim(G); StationMerge(G, {G.Tail, G.Pin(EyeMode, P::Else)});
-    UpdateStationRange(G, true);
+    UpdateStationRange(G);
 
     // Action event, not polling: one toggle on RMB Started while possessed.
     auto* ZoomInput = LoadObject<UInputAction>(nullptr, RailgunInputNames::Zoom); check(ZoomInput);
@@ -290,7 +290,7 @@ UClass* CreateDedicatedStation()
     for (const auto& Setting : Settings::FontSettings)
         AddVariable(BP, Setting.ObjectField, UEdGraphSchema_K2::PC_Object, UObject::StaticClass());
     AddVariable(BP, DS::Sight, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
-    for (FName Field : {CE::Ready, CE::InteractBlocks, CE::ProviderSeen, CE::CallbackSeen}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
+    for (FName Field : {CE::Ready, CE::InteractBlocks}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, O::BaselineFov, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, S::Movement, UEdGraphSchema_K2::PC_Object, UCharacterMovementComponent::StaticClass());
     AddVariable(BP, CE::EntryAction, UEdGraphSchema_K2::PC_Object, UInputAction::StaticClass());
@@ -310,8 +310,6 @@ UClass* CreateDedicatedStation()
     QueryTemplate->SetCollisionResponseToAllChannels(ECR_Ignore);
     QueryTemplate->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
     QueryTemplate->SetGenerateOverlapEvents(false); QueryTemplate->SetSimulatePhysics(false);
-    AddVariable(BP, N::NativeHudRequested, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, Hint::ProviderSeen, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, DS::ViewOwned, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, DS::Camera, UEdGraphSchema_K2::PC_Object, ACameraActor::StaticClass());
     AddVariable(BP, DS::Controller, UEdGraphSchema_K2::PC_Object, APlayerController::StaticClass());
@@ -479,22 +477,9 @@ UClass* CreateDedicatedStation()
         auto* Layout = Canvas->AddChildToCanvas(Widget); Layout->SetAnchors(FAnchors(0.5f, 0.5f));
         Layout->SetAlignment(FVector2D(0.5f, 0.5f)); Layout->SetPosition(FVector2D(0, Offset)); Layout->SetAutoSize(true);
     };
-    auto AddDiagnosticText = [&](FName Field, const TCHAR* Text, float Offset)
-    {
-        auto* Widget = Hud->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Field); Widget->bIsVariable = true;
-        Widget->SetText(FText::FromString(Text)); Widget->SetJustification(ETextJustify::Left);
-        auto Font = Widget->GetFont(); Font.Size = H::TargetFontSize; Widget->SetFont(Font);
-        Widget->SetVisibility(ESlateVisibility::HitTestInvisible);
-        auto* Layout = Canvas->AddChildToCanvas(Widget); Layout->SetAnchors(FAnchors(0.0f, 0.0f));
-        Layout->SetAlignment(FVector2D(0.0f, 0.0f)); Layout->SetPosition(FVector2D(EnergyHud::DiagnosticLeft, Offset)); Layout->SetAutoSize(true);
-    };
     AddScopeText(Range::TargetName, N::EmptyText, 0.0f, true);
     AddScopeText(Range::TargetRange, N::EmptyText, 0.0f, true);
     AddScopeText(ZoomTest::WideCenter, ZoomTest::WideCenterText, 0.0f, true);
-    AddDiagnosticText(EnergyHud::Connection, EnergyHud::UnknownConnection, EnergyHud::ConnectionOffset);
-    AddDiagnosticText(EnergyHud::Power, EnergyHud::UnknownPower, EnergyHud::PowerOffset);
-    AddDiagnosticText(EnergyHud::Progress, EnergyHud::EmptyCharge, EnergyHud::ProgressOffset);
-    AddDiagnosticText(EnergyHud::Rate, EnergyHud::EmptyRate, EnergyHud::RateOffset);
     auto* Host = Hud->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), Hint::Root); Host->bIsVariable = true;
     auto* HostSlot = Canvas->AddChildToCanvas(Host); HostSlot->SetAnchors(FAnchors(0.0f, 1.0f));
     HostSlot->SetAlignment(FVector2D(0.0f, 1.0f)); HostSlot->SetPosition(DS::HintHostOffset); HostSlot->SetAutoSize(true);

@@ -30,7 +30,6 @@ void AddContextEntry(UBlueprint* BP)
     { if (auto* It = Cast<UK2Node_FunctionEntry>(Node)) Entry = It; if (auto* It = Cast<UK2Node_FunctionResult>(Node)) Result = It; }
     check(Entry && Result); FGraph C(CallbackGraph, nullptr);
     C.Pin(Entry, P::Then)->BreakAllPinLinks(); C.Pin(Result, P::Execute)->BreakAllPinLinks(); C.Tail = C.Pin(Entry, P::Then);
-    C.Write(CE::CallbackSeen, nullptr, N::True);
     C.Branch(C.Read(CE::Ready)); C.Branch(C.Valid(C.Read(S::Anchor))); C.Branch(ContextParentValid(C));
     C.Branch(C.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
         ObserveCall(C, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), OpticalSelf(C)), N::False));
@@ -94,7 +93,6 @@ void AddContextEntry(UBlueprint* BP)
         auto* Guard = G.Branch(Condition);
         G.Link(G.Pin(Guard, P::Else), G.Pin(EmptyResult, P::Execute));
     };
-    G.Write(CE::ProviderSeen, nullptr, N::True);
     Available(G.Read(CE::Ready)); Available(G.Valid(G.Read(S::Anchor))); Available(ContextParentValid(G));
     Available(G.Valid(G.Read(CE::EntryAction))); Available(G.Valid(G.Pin(Entry, CE::MyCharacter)));
     Available(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), G.Pin(Entry, CE::Component), G.Read(CE::Interaction)));
@@ -132,8 +130,4 @@ void ContextStationSafety(FGraph& G)
     auto* Destroy = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_DestroyActor)); G.Link(Self, G.Pin(Destroy, P::FunctionTarget)); G.Exec(Destroy);
     (void)Requested; // Exit branch deliberately waits until an independent next tick.
     G.Tail = Normal;
-    G.Branch(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self));
-    auto* Key = G.Call(APlayerController::StaticClass(), GET_FUNCTION_NAME_CHECKED(APlayerController, WasInputKeyJustPressed));
-    G.Link(G.Read(DS::Controller), G.Pin(Key, P::FunctionTarget)); G.Default(Key, P::Key, S::Key);
-    G.Branch(G.Pin(Key, P::ReturnValue)); Exit();
 }

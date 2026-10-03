@@ -14,7 +14,6 @@ inline const FName EntryLocal(TEXT("StationEntryLocal"));
 inline const FName AnchorStart(TEXT("StationAnchorStart"));
 inline constexpr TCHAR ClassPath[] = TEXT("/Game/Mods/Railgun/Module/BP_Module_Railgun.BP_Module_Railgun_C");
 inline constexpr TCHAR RootName[] = TEXT("ModuleMountCollision");
-inline constexpr TCHAR Key[] = TEXT("F8");
 inline constexpr TCHAR Range[] = TEXT("300.0");
 inline constexpr TCHAR Walking[] = TEXT("MOVE_Walking");
 inline constexpr TCHAR WalkingByte[] = TEXT("1");
