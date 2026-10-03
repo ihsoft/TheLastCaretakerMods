@@ -46,12 +46,17 @@ int32 UGenerateRailgunInputsCommandlet::Main(const FString& Params)
     auto* Leave = Asset<UInputAction>(Exit);
     auto* Optics = Asset<UInputAction>(Zoom);
     auto* Shot = Asset<UInputAction>(Fire);
+    auto* ExplosionTest = Asset<UInputAction>(ExplosionCanary);
+    auto* SplashTest = Asset<UInputAction>(SplashCanary);
     Shot->ValueType = EInputActionValueType::Boolean;
+    ExplosionTest->ValueType = EInputActionValueType::Boolean;
+    SplashTest->ValueType = EInputActionValueType::Boolean;
     Optics->ValueType = EInputActionValueType::Boolean;
     Yaw->ValueType = EInputActionValueType::Axis1D;
     Pitch->ValueType = EInputActionValueType::Axis1D;
     Leave->ValueType = EInputActionValueType::Boolean;
-    for (auto* Action : {Yaw, Pitch, Leave, Optics, Shot}) Action->bConsumeInput = true;
+    for (auto* Action : {Yaw, Pitch, Leave, Optics, Shot, ExplosionTest, SplashTest})
+        Action->bConsumeInput = true;
 
     auto* Mapping = Asset<UInputMappingContext>(Keyboard);
     Mapping->MapKey(Yaw, EKeys::MouseX);
@@ -59,6 +64,8 @@ int32 UGenerateRailgunInputsCommandlet::Main(const FString& Params)
     Mapping->MapKey(Leave, EKeys::E);
     Mapping->MapKey(Optics, EKeys::RightMouseButton);
     Mapping->MapKey(Shot, EKeys::LeftMouseButton);
+    Mapping->MapKey(ExplosionTest, EKeys::F7);
+    Mapping->MapKey(SplashTest, EKeys::F8);
     check(Mapping->GetMappings().Num() == KeyboardMappingCount);
 
     auto* InputContext = Asset<UVoyageInputContextAsset>(Context);
@@ -68,7 +75,8 @@ int32 UGenerateRailgunInputsCommandlet::Main(const FString& Params)
     InputContext->InputPriorityOffset = ContextPriority;
     // No inherited Forklift bindings, modifier actions or driving inputs.
     // This gate authors assets only: it does not activate them or imply hints.
-    const TArray<UObject*> Objects{Yaw, Pitch, Leave, Optics, Shot, Mapping, InputContext};
+    const TArray<UObject*> Objects{
+        Yaw, Pitch, Leave, Optics, Shot, ExplosionTest, SplashTest, Mapping, InputContext};
     for (UObject* Object : Objects)
         if (!SaveAsset(Object)) return 1;
     return 0;

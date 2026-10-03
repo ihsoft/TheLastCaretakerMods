@@ -12,6 +12,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "VoyageProjectileMovementComponent.h"
+#include "VoyageMiscBlueprintFunctionLibrary.h"
 #include "VoyageCombatSubsystem.h"
 #include "Subsystems/SubsystemBlueprintLibrary.h"
 #include "TimerGraphNames.h"
@@ -74,6 +75,9 @@
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/TextBlock.h"
 #include "Components/PrimitiveComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "SlateFontInfoBlueprintLibrary.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
@@ -263,7 +267,10 @@ namespace
 #include "NativeVehicleGraphHelpers.h"
 #include "StationActionHints.h"
 #include "StationEntryGraph.h"
+#include "RailgunVfx.h"
+#include "RailgunWater.h"
 #include "RailgunShot.h"
+#include "RailgunVfxCanary.h"
 #include "DedicatedStationGenerator.h"
 #include "RailgunAmmo.h"
 #include "RailgunInventory.h"
@@ -280,7 +287,9 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, DedicatedStationNames::VerifySwitch))
     {
         TArray<const TCHAR*> VerifyPackages {N::Package, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
-            RailgunInputNames::LookYaw, RailgunInputNames::LookPitch, RailgunInputNames::Exit, RailgunInputNames::Zoom, RailgunInputNames::Fire, Shot::Package,
+            RailgunInputNames::LookYaw, RailgunInputNames::LookPitch, RailgunInputNames::Exit, RailgunInputNames::Zoom, RailgunInputNames::Fire,
+            RailgunInputNames::ExplosionCanary, RailgunInputNames::SplashCanary, Shot::Package,
+            RailgunImpactVfx::Package,
             ShotAudio::Package, ZoomTest::MaskPackage, EnergyHud::ChargingPackage, EnergyHud::OfflinePackage, EnergyHud::ReadyPackage,
             EnergyHud::AmmoIndicatorPackage,
             RailgunInputNames::Keyboard, RailgunInputNames::Context,
@@ -339,6 +348,7 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
         CreateRailgunReference<UVoyageItemCategoryAsset>(
             RailgunAmmo::AmmoCategoryPackage, RailgunAmmo::AmmoCategoryAsset);
     ConfigureRailgunInventory(Ammo, AmmoCategory, AmmoWeightKg);
+    RailgunImpactVfx::Class = CreateRailgunImpactVfx();
     Shot::Class=CreateRailgunShot();
     UClass* StationClass = CreateDedicatedStation();
     UPackage* Package = CreatePackage(N::Package);

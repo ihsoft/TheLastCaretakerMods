@@ -234,6 +234,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     SetZoom(false);
     G.Tail = G.Pin(Wide, P::Else); SetZoom(true);
 
+    AddRailgunVfxCanaries(G, Self());
     AddRailgunFire(G, G.Pin(Tick, P::DeltaSeconds),
         SafetyAndEnergy->GetThenPinGivenIndex(1),
         G.Read(Settings::OfflineDischarge));
@@ -285,6 +286,18 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, EyeAim::Pitch, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, EyeAim::Target, UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
     AddVariable(BP, ZoomTest::Mouse, UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP, RailgunVfxCanary::ExplosionSystem,
+        UEdGraphSchema_K2::PC_Object, UNiagaraSystem::StaticClass());
+    AddVariable(BP, RailgunVfxCanary::SplashSystem,
+        UEdGraphSchema_K2::PC_Object, UNiagaraSystem::StaticClass());
+    AddVariable(BP, RailgunVfxCanary::ExplosionComponent,
+        UEdGraphSchema_K2::PC_Object, UNiagaraComponent::StaticClass());
+    AddVariable(BP, RailgunVfxCanary::SplashComponent,
+        UEdGraphSchema_K2::PC_Object, UNiagaraComponent::StaticClass());
+    AddVariable(BP, RailgunVfxCanary::StatusText,
+        UEdGraphSchema_K2::PC_Text);
+    AddVariable(BP, RailgunVfxCanary::StatusExpires,
+        UEdGraphSchema_K2::PC_Real);
     for (const auto& Setting : Settings::NumericSettings) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
     for (const auto& Setting : Settings::TextSettings) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_String);
     for (const auto& Setting : Settings::FontSettings)
@@ -480,6 +493,20 @@ UClass* CreateDedicatedStation()
     AddScopeText(Range::TargetName, N::EmptyText, 0.0f, true);
     AddScopeText(Range::TargetRange, N::EmptyText, 0.0f, true);
     AddScopeText(ZoomTest::WideCenter, ZoomTest::WideCenterText, 0.0f, true);
+    auto* CanaryStatus = Hud->WidgetTree->ConstructWidget<UTextBlock>(
+        UTextBlock::StaticClass(), RailgunVfxCanary::StatusText);
+    CanaryStatus->bIsVariable = true;
+    CanaryStatus->SetText(FText::GetEmpty());
+    CanaryStatus->SetJustification(ETextJustify::Center);
+    auto CanaryFont = CanaryStatus->GetFont();
+    CanaryFont.Size = H::TargetFontSize;
+    CanaryStatus->SetFont(CanaryFont);
+    CanaryStatus->SetVisibility(ESlateVisibility::Collapsed);
+    auto* CanaryStatusSlot = Canvas->AddChildToCanvas(CanaryStatus);
+    CanaryStatusSlot->SetAnchors(FAnchors(0.5f, 0.0f));
+    CanaryStatusSlot->SetAlignment(FVector2D(0.5f, 0.0f));
+    CanaryStatusSlot->SetPosition(FVector2D(0.0f, 48.0f));
+    CanaryStatusSlot->SetAutoSize(true);
     auto* Host = Hud->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), Hint::Root); Host->bIsVariable = true;
     auto* HostSlot = Canvas->AddChildToCanvas(Host); HostSlot->SetAnchors(FAnchors(0.0f, 1.0f));
     HostSlot->SetAlignment(FVector2D(0.0f, 1.0f)); HostSlot->SetPosition(DS::HintHostOffset); HostSlot->SetAutoSize(true);
@@ -500,6 +527,35 @@ UClass* CreateDedicatedStation()
         auto* Set = HG.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
         HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Link(Value, HG.Pin(Set, E::WidgetText)); HG.Exec(Set);
     }
+    auto* SetCanaryText = HG.Call(UTextBlock::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
+    HG.Link(HG.Read(RailgunVfxCanary::StatusText),
+        HG.Pin(SetCanaryText, P::FunctionTarget));
+    HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(),
+        BP->GeneratedClass, RailgunVfxCanary::StatusText),
+        HG.Pin(SetCanaryText, E::WidgetText));
+    HG.Exec(SetCanaryText);
+    auto* CanaryTime = HG.Call(UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, GetGameTimeInSeconds));
+    auto* CanaryVisible = HG.Branch(HG.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, LessEqual_DoubleDouble),
+        HG.Pin(CanaryTime, P::ReturnValue),
+        ReadNativeInputField(HG, Station->GetCastResultPin(),
+            BP->GeneratedClass, RailgunVfxCanary::StatusExpires)));
+    auto SetCanaryVisibility = [&](const TCHAR* Visibility)
+    {
+        auto* Set = HG.Call(UWidget::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
+        HG.Link(HG.Read(RailgunVfxCanary::StatusText),
+            HG.Pin(Set, P::FunctionTarget));
+        HG.Default(Set, OP::Visibility, Visibility);
+        HG.Exec(Set);
+    };
+    SetCanaryVisibility(ZoomTest::Shown);
+    auto* CanaryShownTail = HG.Tail;
+    HG.Tail = HG.Pin(CanaryVisible, P::Else);
+    SetCanaryVisibility(ZoomTest::Hidden);
+    StationMerge(HG, {CanaryShownTail, HG.Tail});
     auto ApplyTextStyle = [&](FName WidgetField, FName Opacity, FName FontSize, FName FontObject, FName Typeface)
     {
         auto* NormalizedOpacity = HG.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble));

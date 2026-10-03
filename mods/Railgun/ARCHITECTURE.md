@@ -215,10 +215,46 @@ opaque white; the radial background color is never changed by this warning.
 When power is disconnected, configurable offline discharge eventually moves a
 previously shot-ready gun into the red incomplete-charge state.
 
+## Shot visual effects
+
+The stock
+`/Game/VFX/Environment/Interactive/NS_Explosion_SeaMine` system can be split
+per spawned Niagara component without copying or modifying the stock asset.
+Calling `UFXSystemComponent.SetEmitterEnable` before activation with
+`dirt_main` disabled and `shockwave`, `main`, `spark`, `spark_l`, `refr`,
+`project` and `puff` enabled produces the explosion without the water fountain.
+The inverse mask produces only the fountain. The user validated both modes in
+`build-20261003-073746` through the manual F7/F8 canaries.
+
+Production effects use a mod-owned transient Blueprint helper with an owned
+inactive Niagara component. Each instance applies one of the validated masks,
+activates independently and has a ten-second maximum actor lifetime. This
+keeps an effect alive after its projectile stops while preventing one hit from
+destroying or reconfiguring another hit's effect. The helper stores only a
+runtime reference to the stock system; no stock VFX package is copied, patched
+or registered by Railgun.
+
+For Steam build `25191271`, the editor-only native mirror for water lookup is
+`/Script/Voyage.VoyageMiscBlueprintFunctionLibrary`. Its confirmed signatures
+are `GetActorWorld(AActor*) -> UWorld*` and
+`GetWaterHeightAtLocation(UWorld*, FVector) -> float`. The latter may return
+the `-100000 cm` sentinel, and its native implementation filters candidates by
+water-body bounds and query results. A valid gameplay world, bounded segment
+sampling and a verified near-surface residual are therefore required; a
+single endpoint value, zero height, or the function alone is not a universal
+exact-surface contract. This API and its limits are fingerprint-bound.
+
+`build-20261003-083733` applies the explosion on a real blocking hit and checks
+only finite travelled projectile segments for the first accepted water-surface
+crossing. The user confirmed the resulting production hit and water effects in
+the game. That general confirmation does not separately establish every
+collision ordering, submerged-target, save/load, multiplayer or performance
+edge case.
+
 ## Current game-validated checkpoint
 
-`build-20261003-044541` is the current source-built checkpoint. Its explicit
-291-package cook inventory is passed through the bounded manifest adapter, and
+`build-20261003-083733` is the current source-built checkpoint. Its explicit
+319-package cook inventory is passed through the bounded manifest adapter, and
 its three-record plugin-local registry is derived solely from owned package
 readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field. The user tested the
@@ -229,9 +265,9 @@ confirmation is not evidence of additional individually enumerated scenarios.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
 - Release evidence:
-  `artifacts/railgun/build-20261003-044541/release-manifest.json`.
+  `artifacts/railgun/build-20261003-083733/release-manifest.json`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20261003-045036-build-20261003-044541-ccbea11b/install-manifest.json`.
+  `artifacts/installations/Railgun/20261003-085257-build-20261003-083733-a98f7008/install-manifest.json`.
 - These ignored manifests identify the tested dirty-source artifact; they are
   evidence and rollback pointers, never required source inputs for a rebuild.
 - The registry SHA-256 is
@@ -265,6 +301,8 @@ current checkpoint.
 - Railgun neither requires nor uses a shared placeholder registry pool. Shared
   allocation rules, duplicate-ID ownership and precedence between conflicting
   records are outside its supported contract.
-- Visual projectile effects, muzzle effects and richer audio can be added
-  without changing hit resolution, provided the validated direct-attack path
-  remains the authority.
+- Collision and water-entry visuals must remain observational: they do not
+  change projectile movement, water physics or the validated direct-attack
+  authority. Production hit and water effects are game-validated only by the
+  current checkpoint's general confirmation; unenumerated edge cases remain
+  outside that evidence.
