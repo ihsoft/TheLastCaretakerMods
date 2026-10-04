@@ -559,6 +559,23 @@ foreach ($forbiddenFireReference in @(
         ('Railgun fire must not use presentation state or direct mutation: ' +
             $forbiddenFireReference)
 }
+foreach ($requiredChargeIndicatorReference in @(
+    'RailgunChargeIndicatorOwner',
+    'RailgunChargeIndicatorComponent',
+    'RailgunChargeIndicatorMaterial',
+    'RailgunChargeIndicatorLastLevel',
+    'Railgun.Model.ChargeIndicator',
+    'ProgressLevel',
+    'CreateDynamicMaterialInstance',
+    "Class'MaterialInstanceDynamic:SetScalarParameterValue'",
+    '/Game/Materials/Modules/MI_PogressBar_Basic_LED.MI_PogressBar_Basic_LED'
+)) {
+    Require ($operatorStrings -ccontains $requiredChargeIndicatorReference) `
+        ('Railgun charge-indicator contract reference missing: ' +
+            $requiredChargeIndicatorReference)
+}
+Require (-not ($operatorStrings -ccontains "Class'GameplayStatics:GetAllActorsOfClass'")) `
+    'Railgun charge indicator must not add a world actor scan.'
 $removeEnergyCallIndexes = @(NativeContextCallIndexes $operatorStatements `
     "Class'VoyageModuleComponent:RemoveResource'")
 $removeAmmoCallIndexes = @(NativeContextCallIndexes $operatorStatements `
@@ -1296,6 +1313,31 @@ foreach ($role in @('yaw','pitch','sight','muzzle')) {
     $tag = @{yaw='Railgun.Model.Yaw';pitch='Railgun.Model.Pitch';sight='Railgun.Model.Sight';muzzle='Railgun.Model.Muzzle'}[$role]
     Require (@($component[0].Properties.ComponentTags) -ccontains $tag) ('Missing tag: ' + $role)
 }
+$chargeIndicatorName = [string]$inventory.roles.chargeIndicatorMesh
+Require (-not [string]::IsNullOrWhiteSpace($chargeIndicatorName)) `
+    'Charge-indicator model role is missing.'
+$chargeIndicatorInventory = @(Get-InventoryComponent $chargeIndicatorName)
+Require ($chargeIndicatorInventory.Count -eq 1 -and
+    -not [string]::IsNullOrWhiteSpace(
+        [string]$chargeIndicatorInventory[0].mesh)) `
+    'Charge-indicator role must identify one render mesh.'
+$chargeIndicatorComponent = @($shell | Where-Object {
+    $_.Name -ceq ($chargeIndicatorName + '_GEN_VARIABLE')
+})
+Require ($chargeIndicatorComponent.Count -eq 1 -and
+    $chargeIndicatorComponent[0].Type -ceq 'StaticMeshComponent') `
+    'Cooked charge indicator is not one static-mesh component.'
+Require (@($chargeIndicatorComponent[0].Properties.ComponentTags) -ccontains
+    'Railgun.Model.ChargeIndicator') `
+    'Cooked charge-indicator tag is missing.'
+Require ($chargeIndicatorComponent[0].Properties.BodyInstance.CollisionEnabled -ceq
+    'ECollisionEnabled::NoCollision') `
+    'Charge indicator must not collide.'
+$chargeIndicatorShadowProperties = @(PropertyNames $chargeIndicatorComponent[0] |
+    Where-Object { $_ -cin @('CastShadow','bCastShadow') })
+Require ($chargeIndicatorShadowProperties.Count -eq 1 -and
+    -not [bool]$chargeIndicatorComponent[0].Properties.($chargeIndicatorShadowProperties[0])) `
+    'Charge indicator must not cast shadows.'
 $mesh = @(Read-Candidate $inventory.collisionMesh)
 $body = @($mesh | Where-Object { $_.Type -ceq 'BodySetup' })
 Require ($body.Count -eq 1) 'Missing collision BodySetup.'

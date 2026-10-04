@@ -21,6 +21,7 @@
 #include "PhysicsEngine/BoxElem.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "StaticMeshAttributes.h"
 #include "UObject/SavePackage.h"
 #include "UObject/PackageFileSummary.h"
 #include "UObject/UnrealType.h"

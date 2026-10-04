@@ -4,6 +4,7 @@
 #include "VoyageBaseInventoryComponent.h"
 #include "VoyageModuleComponent.h"
 #include "StationEnergy.h"
+#include "RailgunChargeIndicator.h"
 // Native swept projectile with a single direct-hit combat submission.
 namespace Shot
 {
@@ -434,4 +435,8 @@ void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail,
     PostShot->AddInputPin();
     G.Tail = PostShot->GetThenPinGivenIndex(2);
     ApplyRailgunShipRecoil(G, TypedRailgun);
+    PostShot->AddInputPin();
+    G.Tail = PostShot->GetThenPinGivenIndex(3);
+    EnsureRailgunChargeIndicator(G);
+    UpdateRailgunChargeIndicator(G, EnergyAmount(G));
 }

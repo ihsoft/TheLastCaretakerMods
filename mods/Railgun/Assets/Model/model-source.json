@@ -5,8 +5,9 @@
     "base": "BASE",
     "yaw": "YAW",
     "pitch": "PITCH",
-    "sight": "Muzzle",
+    "sight": "Sight",
     "muzzle": "Muzzle",
+    "chargeIndicatorMesh": "ChargeIndicator",
     "powerSocketAnchor": "ElectricalSocket_Reference",
     "ammoInstances": [
       "Slot_01_AmmoCassette",
@@ -28,7 +29,7 @@
     "sizeCm": [80, 70, 54]
   },
   "fabricatorCollision": {
-    "node": "Foundation_BottomPlate__Gray",
+    "node": "Foundation_BottomPlate",
     "sizeCm": [
       164,
       164,

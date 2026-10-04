@@ -21,6 +21,8 @@
 #include "Components/RadialSlider.h"
 #include "Components/ScaleBox.h"
 #include "Engine/Texture2D.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "Sound/SoundWave.h"
 #include "AssetImportTask.h"
 #include "AssetToolsModule.h"

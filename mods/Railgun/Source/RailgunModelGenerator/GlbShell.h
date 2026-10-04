@@ -16,6 +16,7 @@ inline constexpr TCHAR YawKey[] = TEXT("yaw");
 inline constexpr TCHAR PitchKey[] = TEXT("pitch");
 inline constexpr TCHAR SightKey[] = TEXT("sight");
 inline constexpr TCHAR MuzzleKey[] = TEXT("muzzle");
+inline constexpr TCHAR ChargeIndicatorMeshKey[] = TEXT("chargeIndicatorMesh");
 inline constexpr TCHAR PowerSocketAnchorKey[] = TEXT("powerSocketAnchor");
 inline constexpr TCHAR FabricatorKey[] = TEXT("fabricatorCollision");
 inline constexpr TCHAR EntryKey[] = TEXT("entryInteraction");
@@ -156,6 +157,83 @@ inline int32 Generate()
     }
     AActor* ModelRoot = Actors.FindChecked(Roles->GetStringField(RootKey));
     AActor* Base = Actors.FindChecked(Roles->GetStringField(BaseKey));
+    FString ChargeIndicatorName;
+    if (!Roles->TryGetStringField(ChargeIndicatorMeshKey, ChargeIndicatorName))
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Set nodes.chargeIndicatorMesh to the Railgun charge-indicator render mesh"));
+        return 1;
+    }
+    AActor* ChargeIndicatorActor = Actors.FindRef(ChargeIndicatorName);
+    auto* ChargeIndicatorSource = ChargeIndicatorActor
+        ? Cast<UStaticMeshComponent>(ChargeIndicatorActor->GetRootComponent())
+        : nullptr;
+    UStaticMesh* ChargeIndicatorMesh = ChargeIndicatorSource
+        ? ChargeIndicatorSource->GetStaticMesh() : nullptr;
+    if (!ChargeIndicatorMesh)
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("nodes.chargeIndicatorMesh must identify a GLB render mesh, not an empty anchor: %s"),
+            *ChargeIndicatorName);
+        return 1;
+    }
+    if (ChargeIndicatorMesh->GetNumUVChannels(0) < 1)
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Charge-indicator mesh requires UV channel 0: %s"),
+            *ChargeIndicatorName);
+        return 1;
+    }
+    const FMeshDescription* ChargeIndicatorDescription =
+        ChargeIndicatorMesh->GetMeshDescription(0);
+    if (!ChargeIndicatorDescription)
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Charge-indicator mesh has no source mesh description: %s"),
+            *ChargeIndicatorName);
+        return 1;
+    }
+    FStaticMeshConstAttributes ChargeIndicatorAttributes(
+        *ChargeIndicatorDescription);
+    const auto ChargeIndicatorUVs =
+        ChargeIndicatorAttributes.GetVertexInstanceUVs();
+    const auto ChargeIndicatorNormals =
+        ChargeIndicatorAttributes.GetVertexInstanceNormals();
+    if (!ChargeIndicatorUVs.IsValid() ||
+        ChargeIndicatorUVs.GetNumChannels() < 1 ||
+        !ChargeIndicatorNormals.IsValid())
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Charge-indicator mesh requires UV0 and vertex normals: %s"),
+            *ChargeIndicatorName);
+        return 1;
+    }
+    FVector2f MinimumUV(TNumericLimits<float>::Max());
+    FVector2f MaximumUV(TNumericLimits<float>::Lowest());
+    for (const FVertexInstanceID VertexInstanceId :
+        ChargeIndicatorDescription->VertexInstances().GetElementIDs())
+    {
+        const FVector2f UV = ChargeIndicatorUVs.Get(VertexInstanceId, 0);
+        MinimumUV.X = FMath::Min(MinimumUV.X, UV.X);
+        MinimumUV.Y = FMath::Min(MinimumUV.Y, UV.Y);
+        MaximumUV.X = FMath::Max(MaximumUV.X, UV.X);
+        MaximumUV.Y = FMath::Max(MaximumUV.Y, UV.Y);
+        if (ChargeIndicatorNormals.Get(VertexInstanceId).IsNearlyZero())
+        {
+            UE_LOG(LogTemp, Error,
+                TEXT("Charge-indicator mesh has an invalid vertex normal: %s"),
+                *ChargeIndicatorName);
+            return 1;
+        }
+    }
+    if (!MinimumUV.Equals(FVector2f::ZeroVector, 0.001f) ||
+        !MaximumUV.Equals(FVector2f::UnitVector, 0.001f))
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Charge-indicator UV0 must span the complete 0..1 range: %s"),
+            *ChargeIndicatorName);
+        return 1;
+    }
     FString PowerAnchorName;
     if (!Roles->TryGetStringField(PowerSocketAnchorKey, PowerAnchorName) || !Actors.Contains(PowerAnchorName))
     {
@@ -329,6 +407,10 @@ inline int32 Generate()
                     Target->SetHiddenInGame(true);
                 MeshPath = SourceMesh->GetStaticMesh()->GetPathName();
                 for (int32 Slot = 0; Slot < SourceMesh->GetNumMaterials(); ++Slot) Target->SetMaterial(Slot, SourceMesh->GetMaterial(Slot));
+                if (Actor == ChargeIndicatorActor)
+                {
+                    Target->SetCastShadow(false);
+                }
                 Target->SetCollisionProfileName(Actor == CollisionActor ? RailgunAssetNames::BlockAllDynamicCollisionProfileName : RailgunAssetNames::NoCollisionProfileName);
                 Target->SetGenerateOverlapEvents(false); Target->SetSimulatePhysics(false);
             }
@@ -336,6 +418,8 @@ inline int32 Generate()
             if (Name == Roles->GetStringField(PitchKey)) Component->ComponentTags.Add(RailgunModelContract::PitchTag);
             if (Name == Roles->GetStringField(MuzzleKey)) Component->ComponentTags.Add(RailgunModelContract::MuzzleTag);
             if (Name == Roles->GetStringField(SightKey)) Component->ComponentTags.Add(RailgunModelContract::SightTag);
+            if (Actor == ChargeIndicatorActor)
+                Component->ComponentTags.Add(RailgunModelContract::ChargeIndicatorTag);
             Nodes.Add(Actor, Node);
             auto Entry = MakeShared<FJsonObject>(); Entry->SetStringField(NameKey, Name);
             Entry->SetStringField(ParentKey, Actor == ModelRoot ? RailgunAssetNames::ModuleMountRootName.ToString() : Parent->GetActorLabel());

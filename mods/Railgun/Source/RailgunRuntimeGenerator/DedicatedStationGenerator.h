@@ -354,6 +354,14 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, Charge::Sampled, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, Charge::Module, UEdGraphSchema_K2::PC_Object, UVoyageModuleComponent::StaticClass());
     for (FName Field : {Charge::Energy, Charge::Previous, Charge::Rate}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP, RailgunChargeIndicator::Owner,
+        UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
+    AddVariable(BP, RailgunChargeIndicator::Component,
+        UEdGraphSchema_K2::PC_Object, UStaticMeshComponent::StaticClass());
+    AddVariable(BP, RailgunChargeIndicator::Material,
+        UEdGraphSchema_K2::PC_Object, UMaterialInstanceDynamic::StaticClass());
+    AddVariable(BP, RailgunChargeIndicator::LastLevel,
+        UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, ZoomTest::Wide, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, EyeAim::Yaw, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, EyeAim::Pitch, UEdGraphSchema_K2::PC_Real);

@@ -17,9 +17,10 @@
   that station; the physical weapon remains stationary.
 - The GLB is imported by Unreal Interchange. Full hierarchy matrices determine
   ownership and transforms; node names identify roles but do not imply parentage.
-- Yaw, pitch, muzzle, sight, entry and power-socket roles are declared in the
-  model manifest. Model revisions may change topology, materials and local
-  offsets without changing generator code when those roles remain valid.
+- Yaw, pitch, muzzle, sight, entry, power-socket and charge-indicator roles are
+  declared in the model manifest. Model revisions may change topology,
+  materials and local offsets without changing generator code when those roles
+  remain valid.
 - Wide view is character-eye view. Scope view uses the barrel sight, optical
   mask, reticle and reduced sensitivity. The weapon aligns toward the character
   view target before scoped aiming.
@@ -34,6 +35,22 @@
 - Loss of the module power connection discharges stored energy to zero at the
   configured `OfflineDischargeKW` rate. The default is `10` kW; zero disables
   offline discharge. This setting is independent of normal standby demand.
+- The model-authored charge-indicator render mesh keeps its GLB transform,
+  ancestry, dimensions and UVs. The shell disables collision, overlap and shadow
+  and tags it for runtime binding. That tagged component loads the stock
+  `MI_PogressBar_Basic_LED` material at runtime. Each station instance caches it,
+  an independent MID and its last written level. The existing automatic-charge
+  branch completes demand/charge gameplay first, then runs the display as an
+  independent sequence branch so visual failures cannot gate charging. It
+  initializes `ProgressLevel` to zero, then updates it only when the
+  clamped ratio of stored native electricity to `RequiredEnergyAmount` changes;
+  a completed shot also refreshes it from the actual post-debit balance. This
+  path does not use `MaxResourceAmount`, because capacity includes the extra
+  service unit. Rebinding a restored/replaced module rebuilds the cache. The
+  structural, source and cooked contracts are statically checked. Its visual
+  appearance and charge-linked operation are user game-validated on
+  `build-20261004-050711`; save/load and multiplayer behavior were not
+  separately confirmed for this display.
 - Shot audio is cooked as a `SoundWave`; its volume multiplier is read from
   `Railgun.ini`. The accepted baseline is 600 percent.
 - A successful shot has two independent recoil paths. The historical

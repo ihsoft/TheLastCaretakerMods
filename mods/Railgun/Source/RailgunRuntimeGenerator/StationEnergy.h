@@ -18,6 +18,9 @@ inline constexpr TCHAR WattsPerResourceUnit[] = TEXT("1000.0");
 inline constexpr TCHAR WattsPerKilowatt[] = TEXT("1000.0");
 inline constexpr TCHAR SecondsPerHour[] = TEXT("3600.0");
 }
+
+void EnsureRailgunChargeIndicator(FGraph& G);
+void UpdateRailgunChargeIndicator(FGraph& G, UEdGraphPin* StoredEnergy);
 // Public tuning and HUD values use the game's displayed KWh scale. The module stores
 // 1000 native electricity amount units per displayed KWh, while custom demand
 // is expressed in W. Keep that game contract at this boundary.
@@ -153,5 +156,17 @@ void UpdateAutomaticCharge(FGraph& G, UEdGraphPin* DeltaSeconds,
     auto* Full = G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
         EnergyAmount(G), RequiredEnergyAmount(G)));
     SetEnergyDemand(G, false);
+    UEdGraphPin* FullTail = G.Tail;
     G.Tail = G.Pin(Full, P::Else); SetEnergyDemand(G, true);
+    StationMerge(G, {FullTail, G.Tail});
+
+    // Visual observation is a sibling branch after gameplay state is complete.
+    // Any missing component/material or unchanged value may end only this branch.
+    auto* IndicatorWork = G.Node(NewObject<UK2Node_ExecutionSequence>(G.Graph));
+    G.Link(G.Tail, G.Pin(IndicatorWork, P::Execute));
+    UEdGraphPin* ChargeComplete = IndicatorWork->GetThenPinGivenIndex(0);
+    G.Tail = IndicatorWork->GetThenPinGivenIndex(1);
+    EnsureRailgunChargeIndicator(G);
+    UpdateRailgunChargeIndicator(G, G.Read(Charge::Energy));
+    G.Tail = ChargeComplete;
 }

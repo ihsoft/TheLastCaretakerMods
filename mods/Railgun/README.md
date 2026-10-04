@@ -55,6 +55,9 @@ All mod-owned inputs live below this directory:
   file to revise geometry or materials without changing the build contract.
 - `Assets\Model\model-source.json` maps stable node roles and explicit
   interaction/collision boxes. It contains no revision metadata or stored hash.
+  Its `nodes.chargeIndicatorMesh` role identifies the model-authored render
+  mesh used for the gun's local charge display; placement, dimensions and UVs
+  remain properties of the GLB.
 - `Assets\Fabricator\RailgunAmmoCassette.glb` is the user-authored physical
   single-round pickup model. Its sibling `ammo-cassette-source.json` binds the
   current source revision to the import readback contract.
@@ -123,6 +126,19 @@ Electricity storage is configured in the same `KWh` unit shown by the game.
 Voyage maps one displayed `KWh` to 1000 native electricity amount units; the
 generator converts that amount to the module's W demand for the configured
 charge time, plus the 1 kW idle load.
+
+The model charge indicator uses the GLB mesh bound by
+`nodes.chargeIndicatorMesh`. At runtime, only that tagged component loads the
+stock `/Game/Materials/Modules/MI_PogressBar_Basic_LED` material and creates
+its own dynamic material instance. Each gun instance writes `ProgressLevel` from the
+same stored-electricity sample and required-shot denominator used by the HUD.
+The value is clamped to `0..1`, initialized to zero, and written again only
+when it changes. It runs as an observer after charge and demand gameplay, so a
+missing component/material or unchanged display value cannot block charging.
+This model display does not add another charging accumulator, timer,
+interaction or collision path. Its appearance and charge-linked operation are
+user game-validated on `build-20261004-050711`; save/load and multiplayer
+behavior were not separately confirmed for this display.
 
 The two recoil settings are independent multipliers. With no INI, a missing
 recoil key, or an invalid numeric value, the runtime fallback is `0`, which
