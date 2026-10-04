@@ -283,6 +283,7 @@ namespace
 #include "RailgunVfx.h"
 #include "RailgunWater.h"
 #include "RailgunWaterWake.h"
+#include "RailgunRecoil.h"
 #include "RailgunShot.h"
 #include "RailgunVfxCanary.h"
 #include "DedicatedStationGenerator.h"

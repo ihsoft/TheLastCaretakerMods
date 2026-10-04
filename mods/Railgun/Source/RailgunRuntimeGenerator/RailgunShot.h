@@ -15,6 +15,8 @@ inline const FName SpawnedThisPress(TEXT("ShotSpawnedThisPress"));
 inline const FName RefundFaulted(TEXT("ShotRefundFaulted"));
 inline const FName EnergyBeforeDebit(TEXT("ShotEnergyBeforeDebit"));
 inline const FName AmmoSlot(TEXT("ShotAmmoSlot"));
+inline const FName SpawnLocation(TEXT("ShotSpawnLocation"));
+inline const FName SpawnRotation(TEXT("ShotSpawnRotation"));
 inline const FName Railgun(TEXT("ShotRailgun")), Operator(TEXT("ShotOperator")), Station(TEXT("ShotStation"));
 inline const FName LifePin(TEXT("InLifespan")), HitEvent(TEXT("ReceiveHit"));
 inline const FName Other(TEXT("Other")), Velocity(TEXT("Velocity")), Sweep(TEXT("bSweepCollision"));
@@ -349,7 +351,13 @@ void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail,
         GreaterEqual_IntInt), G.Pin(Data, Shot::ItemCount), Shot::One));
     auto* Location=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentLocation),Cast->GetCastResultPin());
     auto* Rotation=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentRotation),Cast->GetCastResultPin());
-    auto* Transform=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,MakeTransform)); G.Link(Location,G.Pin(Transform,E::Location)); G.Link(Rotation,G.Pin(Transform,Shot::ActorRotation)); G.Default(Transform,E::Scale,N::UnitScale);
+    G.Write(Shot::SpawnLocation, Location);
+    G.Write(Shot::SpawnRotation, Rotation);
+    G.Write(RailgunRecoil::ModuleLocation,
+        ObserveCall(G, AActor::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(AActor, K2_GetActorLocation),
+            TypedRailgun));
+    auto* Transform=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,MakeTransform)); G.Link(G.Read(Shot::SpawnLocation),G.Pin(Transform,E::Location)); G.Link(G.Read(Shot::SpawnRotation),G.Pin(Transform,Shot::ActorRotation)); G.Default(Transform,E::Scale,N::UnitScale);
     auto* Spawn=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,BeginDeferredActorSpawnFromClass)); G.Pin(Spawn,E::ActorClass)->DefaultObject=Shot::Class; G.Link(G.Pin(Transform,P::ReturnValue),G.Pin(Spawn,P::SpawnTransform)); G.Default(Spawn,E::CollisionHandling,N::AlwaysSpawn); G.Exec(Spawn);
     auto* Typed=NewObject<UK2Node_DynamicCast>(G.Graph); Typed->TargetType=Shot::Class; Typed->SetPurity(false); G.Node(Typed); G.Link(G.Tail,G.Pin(Typed,P::Execute)); G.Link(G.Pin(Spawn,P::ReturnValue),Typed->GetCastSourcePin()); G.Tail=Typed->GetValidCastPin();
     UEdGraphPin* DeferredReady = G.Tail;
@@ -402,11 +410,28 @@ void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail,
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,ShotAttack::Controller,ObserveCall(G,APawn::StaticClass(),ShotAttack::GetController,OpticalSelf(G)));
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,ShotAttack::DamageAmount,G.Read(ShotAttack::ConfiguredDamage));
     auto* Finish=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,FinishSpawningActor)); G.Link(G.Pin(Spawn,P::ReturnValue),G.Pin(Finish,P::Actor)); G.Link(G.Pin(Transform,P::ReturnValue),G.Pin(Finish,P::SpawnTransform)); G.Exec(Finish);
+    G.Branch(G.Valid(G.Pin(Finish, P::ReturnValue)));
+    auto* Direction = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Normal));
+    G.Link(ObserveCall(G, AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, GetActorForwardVector),
+        G.Pin(Finish, P::ReturnValue)),
+        G.Pin(Direction, RailgunRecoil::VectorInputPin));
+    G.Write(RailgunRecoil::ShotDirection,
+        G.Pin(Direction, P::ReturnValue));
+    auto* PostShot = G.Node(NewObject<UK2Node_ExecutionSequence>(G.Graph));
+    G.Link(G.Tail, G.Pin(PostShot, P::Execute));
+    G.Tail = PostShot->GetThenPinGivenIndex(0);
     check(ShotAudio::Wave);
     auto* Play=G.Call(UGameplayStatics::StaticClass(),ShotAudio::PlayAtLocation);
     G.Pin(Play,ShotAudio::SoundPin)->DefaultObject=ShotAudio::Wave;
     auto* Volume=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Multiply_DoubleDouble));
     G.Link(G.Read(ShotAudio::VolumePercent),G.Pin(Volume,P::Binary::LeftOperand)); G.Default(Volume,P::Binary::RightOperand,ShotAudio::PercentMultiplier);
     G.Link(G.Pin(Volume,P::ReturnValue),G.Pin(Play,ShotAudio::VolumeMultiplierPin));
-    G.Link(Location,G.Pin(Play,E::Location)); G.Link(Rotation,G.Pin(Play,Shot::ActorRotation)); G.Exec(Play);
+    G.Link(G.Read(Shot::SpawnLocation),G.Pin(Play,E::Location)); G.Link(G.Read(Shot::SpawnRotation),G.Pin(Play,Shot::ActorRotation)); G.Exec(Play);
+    G.Tail = PostShot->GetThenPinGivenIndex(1);
+    ApplyRailgunAimRecoil(G);
+    PostShot->AddInputPin();
+    G.Tail = PostShot->GetThenPinGivenIndex(2);
+    ApplyRailgunShipRecoil(G, TypedRailgun);
 }

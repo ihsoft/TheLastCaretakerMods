@@ -51,7 +51,9 @@
         { "id": "HitDamage", "field": "ShotAttack::ConfiguredDamage", "key": "HitDamage", "type": "number", "minimum": 0, "maximum": 1000000000 },
         { "id": "FullChargeEnergy", "field": "Charge::ConfiguredEnergyKWh", "key": "FullChargeEnergyKWh", "type": "number", "minimum": 0.001, "maximum": 1000000000 },
         { "id": "FullChargeTime", "field": "Charge::ConfiguredTimeSeconds", "key": "FullChargeTimeSeconds", "type": "number", "minimum": 0.001, "maximum": 86400 },
-        { "id": "OfflineDischarge", "runtimeName": "RailgunOfflineDischargeKW", "key": "OfflineDischargeKW", "type": "number", "minimum": 0, "maximum": 1000000000 }
+        { "id": "OfflineDischarge", "runtimeName": "RailgunOfflineDischargeKW", "key": "OfflineDischargeKW", "type": "number", "minimum": 0, "maximum": 1000000000 },
+        { "id": "CameraRecoilStrength", "runtimeName": "RailgunCameraRecoilStrength", "key": "CameraRecoilStrength", "type": "number", "minimum": 0, "maximum": 10 },
+        { "id": "ShipRecoilStrength", "runtimeName": "RailgunShipRecoilStrength", "key": "ShipRecoilStrength", "type": "number", "minimum": 0, "maximum": 10 }
       ]
     },
     {

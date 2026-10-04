@@ -15,7 +15,10 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   defaults, comments, order and formatting. `Settings/Railgun.settings.json`
   owns only runtime bindings, types and numeric ranges. Add each option to both,
   then wire only its consuming behavior by hand; never edit generated output.
-  `Build-Railgun.ps1` owns the internal validation and generation step.
+  `Build-Railgun.ps1` owns the internal validation and generation step. The
+  only runtime safety fallback outside that file is disabled recoil: when the
+  INI or either recoil key is missing or invalid, camera and ship recoil use
+  zero. Explicit valid INI values still override that fallback.
 - The user owns model geometry. Ada may move or wire model files and update the
   role manifest, but does not alter GLB geometry unless explicitly requested.
 - The live model has the stable path `Assets/Model/Railgun.glb`. Model logic

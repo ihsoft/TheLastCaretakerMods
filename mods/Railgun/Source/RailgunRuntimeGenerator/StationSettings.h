@@ -7,6 +7,7 @@ inline constexpr TCHAR Separator[] = TEXT("=");
 inline constexpr TCHAR OriginalPerPercent[] = TEXT("0.0128");
 inline constexpr TCHAR PercentMultiplier[] = TEXT("0.01");
 inline constexpr TCHAR Negate[] = TEXT("-1.0");
+inline constexpr TCHAR DisabledRecoilFallback[] = TEXT("0");
 inline const FName FontObjectPin(TEXT("FontObject"));
 inline const FName TypefaceFontNamePin(TEXT("TypefaceFontName"));
 inline const FName FontSizePin(TEXT("Size"));
@@ -43,6 +44,13 @@ struct FFontSetting
 };
 
 #include "StationSettings.generated.h"
+
+inline const TCHAR* RuntimeFallback(const FNumericSetting& Setting)
+{
+    return Setting.Field == CameraRecoilStrength || Setting.Field == ShipRecoilStrength
+        ? DisabledRecoilFallback
+        : Setting.Default;
+}
 }
 
 UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values);
@@ -75,7 +83,8 @@ UEdGraphPin* ClampStationAim(FGraph& G, bool Horizontal, UEdGraphPin* Value)
 
 void ReadStationSettings(FGraph& G)
 {
-    for (const auto& Setting : Settings::NumericSettings) G.Write(Setting.Field, nullptr, Setting.Default);
+    for (const auto& Setting : Settings::NumericSettings)
+        G.Write(Setting.Field, nullptr, Settings::RuntimeFallback(Setting));
     for (const auto& Setting : Settings::TextSettings) G.Write(Setting.Field, nullptr, Setting.Default);
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(G.Graph));
     G.Link(G.Tail, G.Pin(Work, P::Execute)); G.Tail = Work->GetThenPinGivenIndex(0);

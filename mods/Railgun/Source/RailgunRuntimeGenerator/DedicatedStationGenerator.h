@@ -119,6 +119,65 @@ void DedicatedAim(FGraph& G)
 
 #include "EyeAimGraph.h"
 
+void ApplyRailgunAimRecoil(FGraph& G)
+{
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        Greater_DoubleDouble), G.Read(RailgunRecoil::CameraStrength),
+        RailgunRecoil::MinimumEnabledStrength));
+    auto* RandomAzimuth = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, RandomFloatInRange));
+    G.Default(RandomAzimuth, P::Min, N::Zero);
+    G.Default(RandomAzimuth, P::Max,
+        RailgunRecoil::MaximumAzimuthRadians);
+    G.Write(RailgunRecoil::AimAzimuth,
+        G.Pin(RandomAzimuth, P::ReturnValue));
+
+    auto* KickAngle = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            Multiply_DoubleDouble));
+    G.Link(G.Read(RailgunRecoil::CameraStrength),
+        G.Pin(KickAngle, P::Binary::LeftOperand));
+    G.Default(KickAngle, P::Binary::RightOperand,
+        RailgunRecoil::BaselineAimKickDegrees);
+    auto* AzimuthCos = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Cos));
+    G.Link(G.Read(RailgunRecoil::AimAzimuth),
+        G.Pin(AzimuthCos, RailgunRecoil::VectorInputPin));
+    auto* AzimuthSin = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Sin));
+    G.Link(G.Read(RailgunRecoil::AimAzimuth),
+        G.Pin(AzimuthSin, RailgunRecoil::VectorInputPin));
+    UEdGraphPin* DeltaYaw = G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            Multiply_DoubleDouble), G.Pin(AzimuthCos, P::ReturnValue),
+        G.Pin(KickAngle, P::ReturnValue));
+    UEdGraphPin* DeltaPitch = G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            Multiply_DoubleDouble), G.Pin(AzimuthSin, P::ReturnValue),
+        G.Pin(KickAngle, P::ReturnValue));
+
+    auto* Wide = G.Branch(G.Read(ZoomTest::Wide));
+    G.Write(EyeAim::Yaw, ClampStationAim(G, true,
+        G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            Add_DoubleDouble), G.Read(EyeAim::Yaw), DeltaYaw)));
+    G.Write(EyeAim::Pitch, ClampStationAim(G, false,
+        G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            Add_DoubleDouble), G.Read(EyeAim::Pitch), DeltaPitch)));
+    RotateEyeCamera(G);
+    ConvergeEyeAim(G);
+    UEdGraphPin* WideTail = G.Tail;
+
+    G.Tail = G.Pin(Wide, P::Else);
+    G.Write(Aim::Yaw, ClampStationAim(G, true,
+        G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            Add_DoubleDouble), G.Read(Aim::Yaw), DeltaYaw)));
+    G.Write(Aim::Pitch, ClampStationAim(G, false,
+        G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            Add_DoubleDouble), G.Read(Aim::Pitch), DeltaPitch)));
+    DedicatedAim(G);
+    StationMerge(G, {WideTail, G.Tail});
+}
+
 void BuildDedicatedStationGraph(UBlueprint* BP)
 {
     UEdGraph* Graph = BP->UbergraphPages[0];
@@ -278,6 +337,20 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, Shot::RefundFaulted, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, Shot::EnergyBeforeDebit, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, Shot::AmmoSlot, UEdGraphSchema_K2::PC_Int);
+    AddVariable(BP, Shot::SpawnLocation, UEdGraphSchema_K2::PC_Struct,
+        TBaseStructure<FVector>::Get());
+    AddVariable(BP, Shot::SpawnRotation, UEdGraphSchema_K2::PC_Struct,
+        TBaseStructure<FRotator>::Get());
+    AddVariable(BP, RailgunRecoil::AimAzimuth,
+        UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP, RailgunRecoil::SearchComponent,
+        UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
+    AddArrayVariable(BP, RailgunRecoil::VisitedComponents,
+        UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
+    AddVariable(BP, RailgunRecoil::ShotDirection,
+        UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
+    AddVariable(BP, RailgunRecoil::ModuleLocation,
+        UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
     AddVariable(BP, Charge::Sampled, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, Charge::Module, UEdGraphSchema_K2::PC_Object, UVoyageModuleComponent::StaticClass());
     for (FName Field : {Charge::Energy, Charge::Previous, Charge::Rate}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);

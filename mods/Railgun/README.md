@@ -108,6 +108,9 @@ ChargeTextTypeface=Regular
 HitDamage=350
 FullChargeEnergyKWh=0.85
 FullChargeTimeSeconds=5.5
+OfflineDischargeKW=10
+CameraRecoilStrength=1
+ShipRecoilStrength=1
 ```
 
 The wide-view charge gauge is evaluated every rendered widget frame. Its
@@ -120,6 +123,17 @@ Electricity storage is configured in the same `KWh` unit shown by the game.
 Voyage maps one displayed `KWh` to 1000 native electricity amount units; the
 generator converts that amount to the module's W demand for the configured
 charge time, plus the 1 kW idle load.
+
+The two recoil settings are independent multipliers. With no INI, a missing
+recoil key, or an invalid numeric value, the runtime fallback is `0`, which
+disables that effect. Explicit valid INI values override the fallback; `1`
+selects the authored baseline. The historical
+`CameraRecoilStrength` key now applies a persistent two-degree random aim
+deflection at baseline strength; it does not shake the camera or return by
+itself. Aim limits may reduce the actual displacement near their boundaries.
+Ship recoil applies a backward impulse only when the module's attachment chain
+reaches a simulated physical body. Recoil is emitted only after a successful
+shot has consumed both charge and ammunition.
 
 ## Compatibility and validation
 

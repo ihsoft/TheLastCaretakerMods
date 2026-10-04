@@ -36,6 +36,21 @@
   offline discharge. This setting is independent of normal standby demand.
 - Shot audio is cooked as a `SoundWave`; its volume multiplier is read from
   `Railgun.ini`. The accepted baseline is 600 percent.
+- A successful shot has two independent recoil paths. The historical
+  `CameraRecoilStrength` key now changes real station aim once per shot in a
+  uniformly random yaw/pitch-plane direction, with a two-degree baseline and
+  no return animation. Wide view updates eye aim before converging the weapon;
+  scope view updates weapon aim directly. Existing yaw/pitch limits clamp the
+  result, and neither path changes character or control rotation. Ship recoil
+  walks at most 32 scene-component attachment parents from the real module root
+  and applies one backward impulse to the first simulated primitive it finds.
+  Both settings are bounded multipliers from zero through ten. Before parsing,
+  the runtime initializes only these two settings to zero, so a missing INI,
+  missing recoil key or invalid numeric value disables the corresponding
+  recoil. Explicit valid INI values override that fallback; one remains the
+  authored baseline. The random-aim and ship-recoil implementation in
+  `build-20261004-024904` is accepted in game. The new fallback path remains
+  below the real-game validation boundary.
 - Dismantling after exit is supported and must not leave the coordinator with a
   stale actor reference.
 
