@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true)][string]$Container,
     [string]$ExpectedPackageList,
     [string]$Retoc,
+    [string]$OutputRoot,
     [ValidateRange(1, 3600)][int]$TimeoutSeconds = 60,
     [ValidateRange(64, 65536)][int]$MemoryLimitMB = 1024,
     [switch]$AllowFailure
@@ -58,7 +59,25 @@ function Get-ContainerFiles {
 }
 $before = Get-ContainerFiles
 if (-not (Test-Path -LiteralPath (Join-Path $parent ($stem + '.ucas')) -PathType Leaf)) { throw 'Matching .ucas is missing.' }
-$directory = Join-Path $repo ('artifacts\container-checks\' + [Guid]::NewGuid().ToString('N'))
+$allowedOutputRoots = @(
+    [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')),
+    [IO.Path]::GetFullPath((Join-Path $repo 'Tmp'))
+)
+$reportRoot = if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    Join-Path $repo 'Tmp\container-checks'
+}
+else {
+    [IO.Path]::GetFullPath($OutputRoot)
+}
+if (-not @($allowedOutputRoots | Where-Object {
+    $reportRoot.StartsWith(
+        ($_ + [IO.Path]::DirectorySeparatorChar),
+        [StringComparison]::OrdinalIgnoreCase)
+}).Count) {
+    throw 'Container-check output must be below repository artifacts or Tmp.'
+}
+[IO.Directory]::CreateDirectory($reportRoot) | Out-Null
+$directory = Join-Path $reportRoot ([Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($directory) | Out-Null
 $reportPath = Join-Path $directory 'verification.json'
 $packageListPath = Join-Path $directory 'packages.txt'
@@ -75,12 +94,14 @@ $report = [ordered]@{
 }
 try {
     $verify = & $runner -Executable $retocPath -Arguments @('verify', $utoc) `
+        -OutputRoot (Join-Path $directory 'bounded-tool-runs') `
         -MemoryLimitMB $MemoryLimitMB -TimeoutSeconds $TimeoutSeconds -AllowFailure
     $report.verificationRun = $verify.reportPath
     if ($verify.status -cne 'passed' -or (Get-Content -LiteralPath $verify.stdoutPath -Raw).Trim() -cne 'verified') {
         throw "Retoc verification failed or returned an unrecognized result: $($verify.reportPath)"
     }
     $list = & $runner -Executable $retocPath -Arguments @('list', '--path', $utoc) `
+        -OutputRoot (Join-Path $directory 'bounded-tool-runs') `
         -MemoryLimitMB $MemoryLimitMB -TimeoutSeconds $TimeoutSeconds -AllowFailure
     $report.inventoryRun = $list.reportPath
     if ($list.status -cne 'passed') { throw "Retoc inventory failed: $($list.reportPath)" }

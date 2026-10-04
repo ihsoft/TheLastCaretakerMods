@@ -6,6 +6,7 @@
 # All game-derived artifacts are local, version-specific, and reproducible.
 # Promote useful conclusions to docs/ and repeatable extraction logic to tools/.
 artifacts/
+/Tmp/
 
 # Runtime logs and temporary files
 *.log

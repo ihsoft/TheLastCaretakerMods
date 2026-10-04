@@ -9,8 +9,15 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
 - Never stop the game. Installation must retain the common closed-game,
   manifest, backup and installed-hash gates.
 - All mod-authored build inputs, including the GLB, sound and settings schema,
-  live below this directory. `artifacts` contains outputs and evidence only and
-  must never be required to build.
+  live below this directory. A Railgun build must not depend on preserved
+  scratch output from an earlier Railgun run. Published toolchain binaries and
+  reviewed reusable caches selected through their documented interfaces are
+  separate dependencies. Apply the repository lifecycle policy: keep retained
+  releases, minimal trust evidence and rollback material in `artifacts/`; treat
+  logs, loose cook output, temporary scripts and one-off readbacks as temporary.
+  The public producer writes those disposable files below repository `Tmp/`,
+  removes its owned successful-run scratch, and publishes only the validated
+  self-contained release below `artifacts/railgun/build-*`.
 - `Assets/Railgun.ini` is the canonical packaged INI and sole source of setting
   defaults, comments, order and formatting. `Settings/Railgun.settings.json`
   owns only runtime bindings, types and numeric ranges. Add each option to both,
@@ -52,7 +59,9 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   stock primary record, or Railgun-owned registry writer/policy is a build
   input. Editor mirrors and generator binaries are never shipped.
 - Keep documentation factual and compact. Do not maintain an experiment
-  chronology or candidate backlog. Put transient logs under ignored artifacts;
-  promote only game-validated facts or clearly labelled design hypotheses.
+  chronology or candidate backlog. Keep transient logs and discarded
+  experiment output in repository `Tmp/`; promote durable conclusions to
+  documentation and retain research artifacts only when they are needed for
+  continuing work.
 - Runtime/UI/gameplay changes are complete only after a real-game test. Build,
   cook and static verification remain lower gates.

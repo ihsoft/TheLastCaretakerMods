@@ -20,6 +20,8 @@ param(
 
     [string]$ModContainer,
 
+    [string]$ModInspectionRoot,
+
     [switch]$AsJson
 )
 
@@ -32,13 +34,36 @@ if ($Source -eq 'Game' -and -not [string]::IsNullOrWhiteSpace($ModContainer)) {
 if ($Source -eq 'Mod' -and [string]::IsNullOrWhiteSpace($ModContainer)) {
     throw '-Source Mod requires -ModContainer with one exact mod .utoc file.'
 }
+if ($Source -ne 'Mod' -and -not [string]::IsNullOrWhiteSpace($ModInspectionRoot)) {
+    throw '-ModInspectionRoot is valid only with -Source Mod.'
+}
 
 $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'
 $getMappingsScript = Join-Path $PSScriptRoot 'Get-VoyageMappings.ps1'
 $testMappingsScript = Join-Path $PSScriptRoot 'Test-VoyageMappings.ps1'
 $getInspectorScript = Join-Path $PSScriptRoot 'Get-VoyageAssetInspectorBinary.ps1'
 $cacheRoot = Join-Path $PSScriptRoot '..\artifacts\asset-cache'
-$inspectionRoot = Join-Path $PSScriptRoot '..\artifacts\asset-inspections'
+$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$inspectionRoot = $null
+if ($Source -eq 'Mod') {
+    $inspectionRoot = if ([string]::IsNullOrWhiteSpace($ModInspectionRoot)) {
+        [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'Tmp\asset-inspections'))
+    }
+    else {
+        [IO.Path]::GetFullPath($ModInspectionRoot)
+    }
+    $allowedInspectionRoots = @(
+        [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'artifacts')),
+        [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'Tmp'))
+    )
+    if (-not @($allowedInspectionRoots | Where-Object {
+        $inspectionRoot.StartsWith(
+            ($_ + [IO.Path]::DirectorySeparatorChar),
+            [StringComparison]::OrdinalIgnoreCase)
+    }).Count) {
+        throw 'Mod inspection output must be below repository artifacts or Tmp.'
+    }
+}
 $cacheSchemaVersion = 3
 $sha256Pattern = '^[0-9A-F]{64}$'
 

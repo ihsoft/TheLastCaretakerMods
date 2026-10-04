@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true)][string]$Executable,
     [string[]]$Arguments = @(),
     [string]$WorkingDirectory,
+    [string]$OutputRoot,
     [ValidateRange(64, 65536)][int]$MemoryLimitMB = 1024,
     [ValidateRange(1, 3600)][int]$TimeoutSeconds = 60,
     [switch]$AllowFailure
@@ -25,7 +26,25 @@ if (-not ('Voyage.Tools.WindowsJobRunner' -as [type])) {
 elseif ([AppDomain]::CurrentDomain.GetData('VoyageJobRunnerHash') -cne $helperHash) {
     throw 'Runner source changed in this host. Start a fresh PowerShell process.'
 }
-$run = Join-Path $repo ('artifacts\tool-runs\' + [Guid]::NewGuid().ToString('N'))
+$allowedOutputRoots = @(
+    [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')),
+    [IO.Path]::GetFullPath((Join-Path $repo 'Tmp'))
+)
+$runParent = if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    Join-Path $repo 'Tmp\tool-runs'
+}
+else {
+    [IO.Path]::GetFullPath($OutputRoot)
+}
+if (-not @($allowedOutputRoots | Where-Object {
+    $runParent.StartsWith(
+        ($_ + [IO.Path]::DirectorySeparatorChar),
+        [StringComparison]::OrdinalIgnoreCase)
+}).Count) {
+    throw 'Bounded-tool output must be below repository artifacts or Tmp.'
+}
+[IO.Directory]::CreateDirectory($runParent) | Out-Null
+$run = Join-Path $runParent ([Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($run) | Out-Null
 $stdout = Join-Path $run 'stdout.log'
 $stderr = Join-Path $run 'stderr.log'

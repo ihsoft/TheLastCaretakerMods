@@ -8,9 +8,21 @@ real-task measurements in
 [`voyage-toolchain-coverage.md`](voyage-toolchain-coverage.md). Mod-specific
 work belongs to the owning mod documentation.
 
-There is no active common-tool implementation. Select normal operations through
-`tools/README.md`, consume compact results and returned evidence paths, and do
-not inspect implementation on a successful supported path.
+## Current work / restart
+
+The Railgun public build separates disposable repo-local `Tmp/` work from
+minimal self-contained releases retained below `artifacts/`. The audited
+cleanup of accumulated Railgun output is complete: the installed release, its
+game-validated predecessor, exact installation/rename recovery chain, directly
+referenced validation closure and selected native research remain. Both release
+manifests and the active restore chain validate after cleanup. Private caches,
+`.tools/bin`, DDC, reusable Game summaries, real material exports/requests and
+unrelated installation evidence were outside the deletion scope.
+
+There is no active cleanup implementation. Tools not used by Railgun remain
+deferred. Review shared inspectors/tests, exporter guards, older mod producers
+and other historical artifact families separately under their owners before
+any further deletion; stop rather than inventing a generic retention framework.
 
 ## Prioritization gate
 

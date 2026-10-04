@@ -28,7 +28,8 @@ output is written to a new `artifacts\railgun\build-*` directory and contains:
 - `payload\Railgun.autoload`
 - `payload\Railgun.ini`
 - `payload\Mods\RailgunCatalogue\RailgunCatalogue.uplugin`
-- a ZIP, release manifest and verification reports
+- a ZIP, release manifest, `build-provenance.json` and compact
+  `validation-summary.json`
 
 `Build-Railgun.ps1` is the only supported build producer. It generates model,
 construction, input, operator, HUD, projectile and audio assets, cooks them in
@@ -40,12 +41,15 @@ are derived from the three owned data-asset JSON readbacks by the shared
 `tools\New-VoyageAssetRegistry.ps1` producer; no stock registry is read, shipped
 or replaced.
 
-The exact cook inventory is written to the build artifact as
-`cook-packages.txt`. A small editor-only adapter validates its package count and
-Core SHA-1 before passing the complete list directly to Unreal's stock cook
-commandlet. This keeps the launcher command line bounded as model dependencies
-grow while preserving the single-pass `CookSinglePackageNoRefs` contract. The
-sibling `cook-packages.manifest.json` also records SHA-256 as build evidence.
+The exact cook inventory is written to the per-run TMP workspace. A small
+editor-only adapter validates its package count and Core SHA-1 before passing
+the complete list directly to Unreal's stock cook commandlet. This keeps the
+launcher command line bounded as model dependencies grow while preserving the
+single-pass `CookSinglePackageNoRefs` contract. After publication, the TMP
+workspace is removed and the retained release is validated again. The build
+result's `verificationReport` compatibility field and its explicit
+`validationSummaryPath` both identify the retained schema-1
+`validation-summary.json`; neither points back into TMP.
 
 ## Inputs
 
@@ -84,9 +88,19 @@ All mod-owned inputs live below this directory:
 - `Source\` contains editor-only generators and game API mirrors.
 - `Config\` and `Voyage.uproject` define the authoring project.
 
-Nothing below `artifacts\` is a build input. Artifacts may be deleted between
-builds. Unreal's generated `Binaries`, `Content`, `DerivedDataCache`,
-`Intermediate`, and `Saved` directories are also disposable. The tracked
+A build does not depend on preserved scratch output from an earlier Railgun
+run. Published toolchain binaries and reviewed reusable caches selected through
+their documented interfaces are separate dependencies. The producer writes
+disposable logs, loose cook output and readbacks below repository `Tmp/`,
+removes its owned successful-run scratch, and publishes only a validated,
+self-contained release to `artifacts\railgun\build-*`. Keep selected releases
+and the minimum provenance needed to trust them, plus installation
+backup/restore evidence. Do not delete an existing artifact until its release,
+cache, research or rollback value and dependencies are understood. Unreal's
+generated `Binaries`, `Content`, `Intermediate`, and `Saved` directories are
+producer workspaces that may be recreated when no run is active.
+`DerivedDataCache` is a reusable performance cache: clear it only for an
+intentional cache reset, not as part of general temporary cleanup. The tracked
 scripts under `Build\` are source inputs and must not be deleted as generated
 output.
 

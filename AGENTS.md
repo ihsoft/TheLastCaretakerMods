@@ -65,16 +65,36 @@ those details here.
 
 - Do not commit anything reproducible from the installed game: extracted
   assets, `.jmap`, JSON, pseudocode, raw reports, disassembly dumps, cooked
-  packages, container inventories, or installed-file backups. Keep
-  version-specific output below ignored `artifacts/` paths. Exceptions are the
+  packages, container inventories, or installed-file backups. Keep generated
+  output in ignored local storage selected by the lifecycle policy below; the
+  fact that a file is reproducible does not determine whether it is temporary
+  or worth retaining. Exceptions to the commit rule are the
   explicitly reviewed `.usmap` registry under `mappings/Voyage/`. User-authored
   mod assets, including `mods/Railgun/Assets/Model/Railgun.glb`, are ordinary
   source inputs; this does not authorize extracted game meshes or materials.
+- Choose ignored storage by value and lifecycle, not file extension or how the
+  file was generated. Disposable logs, intermediate scripts/files, one-off
+  checks, full readbacks, disassembly output and test fixtures belong in the
+  repository-local ignored `/Tmp/` tree by default. Reserve `artifacts/` for
+  caches that materially avoid repeated work
+  (including `CachedBlueprints`), retained releases with the minimum provenance
+  and validation needed to trust them, installation backups and restore
+  evidence, and explicitly selected research needed by ongoing work. A durable
+  exception needs a clear use, owner and removal condition, but not necessarily
+  a separate manifest for every file. Preserve an exceptional diagnostic log
+  only when an unresolved failure gives it continuing value; a failed run alone
+  is not sufficient. Promote conclusions to docs and reusable methods to tools.
+  Retained releases and rollback evidence must remain usable without `/Tmp/`.
+  Clearing `/Tmp/` may interrupt an active run, but must not damage durable
+  state or make the next clean run require manual recovery. Do not delete
+  existing `artifacts/` content until its value and dependencies are understood.
 - Every tracked `.usmap` must live in its own Steam-build/engine-version
   directory and have a sibling manifest containing the executable fingerprint,
   exact engine/parser version, generator commit, file hash, validation evidence,
   and revalidation condition. Never overwrite an older mapping for a new game
-  build, and keep raw dumper output/logs under ignored `artifacts/`.
+  build. Keep a selected candidate and the evidence required to review it as a
+  durable artifact; raw dumper output and logs are temporary unless retained
+  explicitly for an unresolved investigation.
 - Never generate mappings merely because a task needs them. Call
   `tools/Get-VoyageMappings.ps1`; it fingerprints the installed game, selects
   the matching reviewed entry from `mappings/Voyage/`, validates it, and returns

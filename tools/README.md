@@ -6,8 +6,16 @@ public Test-UAssetGuiJsonRoundtrip / Invoke-VoyageBoundedTool interfaces.
 Normal Voyage extraction uses UE5_8; UE5_7 is an explicit legacy profile.
 
 This directory contains reproducible methods for inspecting **The Last
-Caretaker** (`Voyage`). Game-derived outputs belong under ignored `artifacts/`
-directories; the tools and the conclusions derived from them belong in Git.
+Caretaker** (`Voyage`). Generated output stays ignored, but its location and
+retention depend on value and lifecycle: disposable logs, intermediate files,
+one-off checks, full readbacks, disassembly output and test fixtures default to
+repository `Tmp/`; `artifacts/` is for useful caches, retained releases with
+minimal trust
+evidence, installation backup/restore evidence and explicitly selected ongoing
+research. The tools and durable conclusions derived from output belong in Git.
+Existing documented output paths remain the current public interfaces until
+their owning producers are migrated; they are not a claim that every file under
+those paths deserves long-term retention.
 
 Agents should start here instead of reading every implementation file.
 
@@ -25,8 +33,10 @@ intent-level call, a small structured result, and links/paths to complete local
 evidence. A tool that prints a large asset or log into the conversation, forces
 manual searching of its output, or requires callers to understand its internals
 has not met that goal merely because it is called a black box. Detailed logs,
-full JSON and inventories should be written under ignored artifacts and opened
-only as narrowly as the task or a failure requires. Never trade away validation,
+full JSON and inventories should default to ignored repository `Tmp/` and be
+opened only as narrowly as the task or a failure requires. Retain one
+explicitly only when it has continuing diagnostic or research value. Never
+trade away validation,
 provenance, fail-closed behavior, or recoverability merely to reduce tokens.
 
 Open the implementation or a third-party fork only after a non-zero exit, a
@@ -157,7 +167,7 @@ container and evidence, without installation.
 
 | Goal | Start with | Result |
 | --- | --- | --- |
-| Run a potentially failing native diagnostic with resource limits | `Invoke-VoyageBoundedTool.ps1` | Time/memory-bounded process tree, separate logs, exit and peak-memory report |
+| Run a potentially failing native diagnostic with resource limits | `Invoke-VoyageBoundedTool.ps1` | Time/memory-bounded process tree, separate TMP logs, exit and peak-memory report |
 | Identify the installed game build | `Get-VoyageBuildFingerprint.ps1` | Steam build ID, executable hash, and container metadata/hashes |
 | Inspect installed containers and running game processes without mutation | `Get-VoyageInstallationStatus.ps1` | JSON inventory, process snapshot, optional installed-manifest hash comparison |
 | Get one cooked asset as JSON or list every package | `Get-VoyageAssetJson.ps1` | Validated JSON or package-list path; game storage and reuse are automatic |
@@ -188,7 +198,7 @@ container and evidence, without installation.
 | Build, cook and package an existing mod release | [Release producers](#release-producers) | Route to the owning mod's documented orchestrator; no generic rebuild recipe |
 | Create the common manifest for an already-built triplet and ZIP | `New-VoyageReleaseManifest.ps1` | Immutable schema-2 manifest, or schema 3 with one exact content-plugin descriptor, published only after installer validation |
 | Validate or install an already-built standalone IoStore release | `Install-VoyageRelease.ps1` | Manifest-gated install plan or recoverable installation evidence |
-| Verify one IoStore container and its expected package set | `Test-VoyageContainer.ps1` | Bounded integrity check, package inventory, exact-set differences and file hashes |
+| Verify one IoStore container and its expected package set | `Test-VoyageContainer.ps1` | Bounded integrity check with a transient package inventory, exact-set differences and file hashes |
 | Restore/remove a common release installation | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded predecessor restoration and recovery evidence |
 | Regression-test Git mutation coordination | [`Test-RepositoryGitCoordination.ps1`](repository-git-coordination.md#regression-test) | PowerShell 5.1 semaphore and isolated fixture-repository checks |
 | Locate native names, references, or correlated member offsets | `Invoke-VoyageExecutableInspector.ps1` | Compact fingerprinted result plus retained read-only executable report |
@@ -300,8 +310,10 @@ The returned PowerShell object contains `status`, `packageCount`, nullable
 `packageSetMatches`, `reportPath`, `packageListPath` and `error`. Read the full
 JSON report only for details: native-run evidence paths, exact file and retoc
 hashes, chunk types/counts, missing/unexpected packages and failure reason.
-Ignored output lives under `artifacts/container-checks/<run>/`; the package
-list contains sorted relative asset paths, one per line. Default failures
+Ignored output defaults to `Tmp/container-checks/<run>/`; `-OutputRoot` may
+select another fresh root below repository `Tmp` or `artifacts` for an owning
+workflow. The package list contains sorted relative asset paths, one per line.
+Default failures
 throw after returning/storing evidence. `-AllowFailure` returns failed status
 without throwing; preflight input/manifest errors still throw. It does not
 turn a failed result into a passing check.
@@ -803,7 +815,8 @@ and identify that exact mod container:
 Mod mode first proves that the requested package belongs to that container,
 then mounts the stock dependencies plus only that mod for parsing. Its JSON,
 index, logs, and manifest go to a unique ignored diagnostic run under
-`artifacts/asset-inspections/`; they are never read from or promoted into the
+`Tmp/asset-inspections/` by default; `-ModInspectionRoot` may select another
+fresh root below repository `Tmp` or `artifacts`. They are never read from or promoted into the
 game cache. An intentional stock-package replacement can be reported once for
 the stock container and once for the selected mod; after the ownership proof,
 the wrapper accepts those duplicate identical virtual paths but still rejects
@@ -967,8 +980,9 @@ This follows the Windows [job-limit contract](https://learn.microsoft.com/en-us/
 and [restricted handle inheritance](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute).
 
 Consume `status`, `exitCode` when present, `peakJobMemoryBytes`, `stdoutPath`,
-`stderrPath`, and `reportPath`. Evidence is retained under ignored
-`artifacts/tool-runs/`. Status is `passed`, `exit-failed`, `timeout`, or
+`stderrPath`, and `reportPath`. Run output is written under ignored
+`Tmp/tool-runs/` by default; `-OutputRoot` may select another root below
+repository `Tmp` or `artifacts`. Status is `passed`, `exit-failed`, `timeout`, or
 `launch-failed`. A nonzero native exit is not automatically classified as a
 memory failure: inspect stderr and the supplied limits. Failure throws by
 default; use `-AllowFailure` only when inspecting an expected failure and then
@@ -1017,8 +1031,10 @@ tries to invoke them. It checks publisher reuse, a narrow legacy query, both
 reference-search absence contracts, public stock inventory and compact JSON
 output, formatter-independent asset JSON, compact Blueprint overview/exact-
 function focus, plus normal JSON retrieval and reuse.
-Diagnostic output is retained under ignored `artifacts/tests/`; game files and
-mapping registry are never changed.
+The current test writes diagnostic output under ignored `artifacts/tests/`;
+that output is disposable test state under the lifecycle policy and the path
+remains only until the producer is migrated. Game files and the mapping
+registry are never changed.
 This is tool validation, not new coding-agent adoption evidence.
 
 ### Canonical retoc, jmap, UAssetAPI, and CUE4Parse binaries
@@ -1092,23 +1108,28 @@ be at least 60 seconds old and for three identical structural `GUObjectArray`
 samples, then creates a complete `--all` UE 5.8 USMAP with concurrency `128`,
 writes logs and provenance, and runs `Test-VoyageMappings.ps1`. It returns only
 after the new mapping passes every gate. Each attempt uses a new fingerprinted
-directory below `artifacts/mappings/`, so a previous known-good mapping is
-never overwritten. A missing or invalid canonical dumper is a hard stop; run
+directory below `artifacts/mappings/`; this is the current producer interface,
+so a previous known-good mapping is never overwritten. Retain a selected
+candidate and only the provenance/validation needed to review it; partial-run
+logs are disposable unless an unresolved failure gives them continuing value.
+A missing or invalid canonical dumper is a hard stop; run
 `Publish-JmapBinary.ps1` separately rather than rebuilding source during a
 mapping job.
 
 Use `-InstallForUAssetGUI` to copy the validated result to
 `%LOCALAPPDATA%\UAssetGUI\Mappings\Voyage-<build>.usmap`; a different existing
 file is backed up first. Reflection readiness and the dumper both have bounded
-timeouts. A partial run and its logs remain under `artifacts/` for
-diagnosis instead of being promoted.
+timeouts. Until this producer is migrated, a partial run and its logs are left
+under `artifacts/`; apply the lifecycle policy rather than treating every failed
+attempt as durable evidence.
 
 The standalone dumper can be sensitive to live object state. On Steam build
 `25191271`, a loaded-save capture ended with an unexpected null pointer while
 the unchanged reviewed dumper succeeded from the main menu. This does not prove
-which object caused the failure. Retain the failed attempt, return to the main
-menu and retry once before changing dumper source; promote only output that
-passes the normal mapping and fingerprint gates.
+which object caused the failure. If that unresolved diagnosis is active,
+explicitly retain the failed attempt with its reason; otherwise discard it.
+Return to the main menu and retry once before changing dumper source; promote
+only output that passes the normal mapping and fingerprint gates.
 
 ### `VoyageMappingsDumper`
 

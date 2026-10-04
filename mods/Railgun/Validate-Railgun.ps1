@@ -4,8 +4,8 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $output = [IO.Path]::GetFullPath($OutputRoot)
-$boundary = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')) + [IO.Path]::DirectorySeparatorChar
-if (-not $output.StartsWith($boundary, [StringComparison]::OrdinalIgnoreCase)) { throw 'Evidence must be below artifacts.' }
+$boundary = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp')) + [IO.Path]::DirectorySeparatorChar
+if (-not $output.StartsWith($boundary, [StringComparison]::OrdinalIgnoreCase)) { throw 'Semantic scratch output must be below repository Tmp.' }
 if (Test-Path -LiteralPath $output) { throw 'Semantic output exists; use a fresh candidate.' }
 $null = New-Item -ItemType Directory -Path $output
 $evidence = @()
@@ -19,7 +19,10 @@ $operatorPackage = '/Game/Mods/Railgun/Station/BP_RailgunOperator'
 $hudPackage = '/Game/Mods/Railgun/Station/WBP_RailgunHUD'
 $ammoIndicatorPackage = '/Game/Mods/Railgun/Station/T_RailgunAmmoIndicator'
 function Read-Candidate([string]$Query) {
-    $result = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') -Query $Query -Source Mod -ModContainer $Container -AsJson) | ConvertFrom-Json
+    $result = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
+        -Query $Query -Source Mod -ModContainer $Container `
+        -ModInspectionRoot (Join-Path $output 'asset-inspections') `
+        -AsJson) | ConvertFrom-Json
     $script:evidence += $result
     # Windows PowerShell5.1 ConvertFrom-Json returns a top-level array as one
     # pipeline value. Emit each export explicitly before caller filtering.

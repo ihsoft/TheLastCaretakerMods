@@ -8,12 +8,26 @@ $engine = 'K:\Epic Games\UE_5.8\Engine'
 $editor = Join-Path $engine 'Binaries/Win64/UnrealEditor-Cmd.exe'
 $itemDiscoveryRoot = '/Game/Data/Assets'
 $skillDiscoveryRoot = '/Game/Data/Assets/Skill'
-if (-not $OutputRoot) { $OutputRoot = Join-Path $repo ('artifacts/railgun/build-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')) }
-$output = [IO.Path]::GetFullPath($OutputRoot)
+$defaultVersion = 'build-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
+if (-not $OutputRoot) {
+    $OutputRoot = Join-Path $repo ('artifacts/railgun/' + $defaultVersion)
+}
+$releaseRoot = [IO.Path]::GetFullPath($OutputRoot)
 $artifactBoundary = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')) + [IO.Path]::DirectorySeparatorChar
-if (-not $output.StartsWith($artifactBoundary, [StringComparison]::OrdinalIgnoreCase)) { throw 'Output must be under repository artifacts.' }
-if (Test-Path -LiteralPath $output) { throw 'Output already exists; use a new build identity.' }
+if (-not $releaseRoot.StartsWith($artifactBoundary, [StringComparison]::OrdinalIgnoreCase)) { throw 'Output must be under repository artifacts.' }
+if (Test-Path -LiteralPath $releaseRoot) { throw 'Output already exists; use a new build identity.' }
+$version = Split-Path -Leaf $releaseRoot
+$tmpOwnerRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/Railgun'))
+$tmpBoundary = $tmpOwnerRoot + [IO.Path]::DirectorySeparatorChar
+$output = Join-Path $tmpOwnerRoot ($version + '-' + [Guid]::NewGuid().ToString('N'))
+if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Railgun scratch path escaped its owned Tmp root.'
+}
 $null = New-Item -ItemType Directory -Path $output
+$releaseStaging = Join-Path $output 'retained-release'
+$boundedToolRoot = Join-Path $output 'bounded-tool-runs'
+$containerCheckRoot = Join-Path $output 'container-checks'
+$modInspectionRoot = Join-Path $output 'asset-inspections'
 $settingsSchema = Join-Path $PSScriptRoot 'Settings/Railgun.settings.json'
 $settingsDefaults = Join-Path $PSScriptRoot 'Assets/Railgun.ini'
 $settingsGenerator = Join-Path $PSScriptRoot 'Build/New-RailgunSettings.ps1'
@@ -29,7 +43,14 @@ Copy-Item -LiteralPath $generatedSettingsHeader,$generatedSettingsIni `
 $sourcePaths = @(
     'mods/Railgun',
     'tools/UnrealEditorGeneratorCommon/Public',
+    'tools/Get-VoyageAssetJson.ps1',
+    'tools/Get-VoyageBuildFingerprint.ps1',
+    'tools/Get-VoyageMappings.ps1',
+    'tools/Install-VoyageRelease.ps1',
+    'tools/Invoke-VoyageBoundedTool.ps1',
     'tools/New-VoyageAssetRegistry.ps1',
+    'tools/New-VoyageReleaseManifest.ps1',
+    'tools/Test-VoyageContainer.ps1',
     'tools/VoyageAssetRegistryWriter'
 )
 $sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
@@ -258,7 +279,7 @@ if (-not $SkipBuild) {
 }
 $content = Join-Path $PSScriptRoot 'Content'
 if (Test-Path -LiteralPath $content) {
-    # Exact owned generated tree, checked destination remains under artifacts.
+    # Exact owned generated tree, checked destination remains under this run's scratch.
     $resolvedContent = (Resolve-Path -LiteralPath $content).Path
     if ($resolvedContent -cne [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'Content'))) { throw 'Unexpected generated Content target.' }
     Move-Item -LiteralPath $resolvedContent -Destination (Join-Path $output 'previous-generated')
@@ -427,7 +448,7 @@ $ammoWrite = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
     -Executable $uassetGui -Arguments @(
         '--portable','fromjson',$ammoItemJsonPath,$authoredAmmo,
         $mapping.mappingsPath,[string]$serializationContract.engineVersion) `
-    -MemoryLimitMB 2048 -TimeoutSeconds 45
+    -OutputRoot $boundedToolRoot -MemoryLimitMB 2048 -TimeoutSeconds 45
 $authoredAmmoExport = [IO.Path]::ChangeExtension($authoredAmmo, '.uexp')
 if ($ammoWrite.status -cne 'passed' -or
     -not (Test-Path -LiteralPath $authoredAmmo -PathType Leaf) -or
@@ -441,7 +462,7 @@ $ammoReadback = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
     -Executable $uassetGui -Arguments @(
         '--portable','tojson',($cloneTarget + '.uasset'),$ammoReadbackPath,
         [string]$serializationContract.engineVersion,$mapping.mappingsPath) `
-    -MemoryLimitMB 2048 -TimeoutSeconds 45
+    -OutputRoot $boundedToolRoot -MemoryLimitMB 2048 -TimeoutSeconds 45
 if ($ammoReadback.status -cne 'passed' -or
     -not (Test-Path -LiteralPath $ammoReadbackPath -PathType Leaf)) {
     throw 'Railgun ammo import readback failed.'
@@ -517,7 +538,7 @@ $skillWrite = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
     -Executable $uassetGui -Arguments @(
         '--portable','fromjson',$skillJsonPath,$authoredSkill,
         $mapping.mappingsPath,[string]$serializationContract.engineVersion) `
-    -MemoryLimitMB 2048 -TimeoutSeconds 45
+    -OutputRoot $boundedToolRoot -MemoryLimitMB 2048 -TimeoutSeconds 45
 $authoredSkillExport = [IO.Path]::ChangeExtension($authoredSkill, '.uexp')
 if ($skillWrite.status -cne 'passed' -or
     -not (Test-Path -LiteralPath $authoredSkill -PathType Leaf) -or
@@ -531,7 +552,7 @@ $skillReadback = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
     -Executable $uassetGui -Arguments @(
         '--portable','tojson',($skillTarget + '.uasset'),$skillReadbackPath,
         [string]$serializationContract.engineVersion,$mapping.mappingsPath) `
-    -MemoryLimitMB 2048 -TimeoutSeconds 45
+    -OutputRoot $boundedToolRoot -MemoryLimitMB 2048 -TimeoutSeconds 45
 if ($skillReadback.status -cne 'passed' -or
     -not (Test-Path -LiteralPath $skillReadbackPath -PathType Leaf)) {
     throw 'Railgun skill import readback failed.'
@@ -570,7 +591,7 @@ $gunWrite = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
     -Executable $uassetGui -Arguments @(
         '--portable','fromjson',$gunJsonPath,$authoredGun,
         $mapping.mappingsPath,[string]$serializationContract.engineVersion) `
-    -MemoryLimitMB 2048 -TimeoutSeconds 45
+    -OutputRoot $boundedToolRoot -MemoryLimitMB 2048 -TimeoutSeconds 45
 $authoredGunExport = [IO.Path]::ChangeExtension($authoredGun, '.uexp')
 if ($gunWrite.status -cne 'passed' -or
     -not (Test-Path -LiteralPath $authoredGun -PathType Leaf) -or
@@ -584,7 +605,7 @@ $gunReadback = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
     -Executable $uassetGui -Arguments @(
         '--portable','tojson',($gunTarget + '.uasset'),$gunReadbackPath,
         [string]$serializationContract.engineVersion,$mapping.mappingsPath) `
-    -MemoryLimitMB 2048 -TimeoutSeconds 45
+    -OutputRoot $boundedToolRoot -MemoryLimitMB 2048 -TimeoutSeconds 45
 if ($gunReadback.status -cne 'passed' -or
     -not (Test-Path -LiteralPath $gunReadbackPath -PathType Leaf)) {
     throw 'Railgun item import readback failed.'
@@ -628,7 +649,8 @@ $null = New-Item -ItemType Directory -Path $scriptObjectsDirectory
 $scriptObjectsRun = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
     -Executable $retoc -Arguments @(
         'to-legacy','--version','UE5_8','--no-assets','--no-shaders',
-        $globalUtoc,$scriptObjectsDirectory) -TimeoutSeconds 60 -MemoryLimitMB 1024
+        $globalUtoc,$scriptObjectsDirectory) -OutputRoot $boundedToolRoot `
+    -TimeoutSeconds 60 -MemoryLimitMB 1024
 $scriptObjectsFiles = @(Get-ChildItem -LiteralPath $scriptObjectsDirectory -File -Recurse)
 if ($scriptObjectsRun.status -cne 'passed' -or $scriptObjectsFiles.Count -ne 1 -or
     $scriptObjectsFiles[0].Name -cne 'scriptobjects.bin') {
@@ -638,11 +660,15 @@ $scriptObjectsSha256 = (Get-FileHash -LiteralPath $scriptObjectsFiles[0].FullNam
     -Algorithm SHA256).Hash
 Copy-Item -LiteralPath $scriptObjectsFiles[0].FullName `
     -Destination (Join-Path $loose 'scriptobjects.bin')
-$payload = Join-Path $output 'payload'
+$null = New-Item -ItemType Directory -Path $releaseStaging
+$payload = Join-Path $releaseStaging 'payload'
 $null = New-Item -ItemType Directory -Path $payload
 $stem = 'Railgun'
 $container = Join-Path $payload ($stem + '.utoc')
-$pack = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') -Executable $retoc -Arguments @('to-zen',$loose,$container,'--version','UE5_8') -TimeoutSeconds 60 -MemoryLimitMB 1024
+$pack = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
+    -Executable $retoc `
+    -Arguments @('to-zen',$loose,$container,'--version','UE5_8') `
+    -OutputRoot $boundedToolRoot -TimeoutSeconds 60 -MemoryLimitMB 1024
 if ($pack.status -ne 'passed') { throw 'Packaging failed.' }
 $containerPak = [IO.Path]::ChangeExtension($container, '.pak')
 $resolvedContainerPak = [IO.Path]::GetFullPath($containerPak)
@@ -694,9 +720,13 @@ Move-Item -LiteralPath $containerPak -Destination (Join-Path $output ($stem + '.
 Move-Item -LiteralPath $registryPak -Destination $containerPak
 $expected = Join-Path $output 'expected-packages.txt'
 [IO.File]::WriteAllLines($expected, @($assetRelatives | ForEach-Object { $_ + '.uasset' }))
-$verify = & (Join-Path $repo 'tools/Test-VoyageContainer.ps1') -Container $container -ExpectedPackageList $expected
+$verify = & (Join-Path $repo 'tools/Test-VoyageContainer.ps1') `
+    -Container $container -ExpectedPackageList $expected `
+    -OutputRoot $containerCheckRoot
 if ($verify.status -ne 'passed' -or -not $verify.packageSetMatches) { throw 'Container verification failed.' }
-$cloneInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') $cloneRelative -Source Mod -ModContainer $container -AsJson) | ConvertFrom-Json
+$cloneInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
+    $cloneRelative -Source Mod -ModContainer $container `
+    -ModInspectionRoot $modInspectionRoot -AsJson) | ConvertFrom-Json
 $cloneExports = Get-Content -LiteralPath $cloneInspection.jsonPath -Raw | ConvertFrom-Json
 $cloneItems = @($cloneExports | Where-Object { $_.Type -ceq 'VoyageItemAmmo' -and $_.Name -ceq $newName })
 if ($cloneItems.Count -ne 1) {
@@ -713,7 +743,9 @@ if ($cloneItems[0].Package -cne $newPackage -or
     $null -eq $cloneItems[0].Properties.Components) {
     throw 'Railgun ammo lost a runtime identity, inventory, fabrication, or pickup contract.'
 }
-$gunInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') $gunRelative -Source Mod -ModContainer $container -AsJson) | ConvertFrom-Json
+$gunInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
+    $gunRelative -Source Mod -ModContainer $container `
+    -ModInspectionRoot $modInspectionRoot -AsJson) | ConvertFrom-Json
 $gunExports = Get-Content -LiteralPath $gunInspection.jsonPath -Raw | ConvertFrom-Json
 $gunItems = @($gunExports | Where-Object { $_.Type -ceq 'VoyageItem' -and $_.Name -ceq $newGunName })
 if ($gunItems.Count -ne 1 -or
@@ -729,7 +761,9 @@ if (-not $skillPackage.StartsWith($skillDiscoveryRoot + '/', [StringComparison]:
     -not $newPackage.StartsWith($itemDiscoveryRoot + '/', [StringComparison]::Ordinal)) {
     throw 'A Railgun primary asset escaped its confirmed AssetManager discovery root.'
 }
-$skillInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') $skillRelative -Source Mod -ModContainer $container -AsJson) | ConvertFrom-Json
+$skillInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
+    $skillRelative -Source Mod -ModContainer $container `
+    -ModInspectionRoot $modInspectionRoot -AsJson) | ConvertFrom-Json
 $skillExports = @(Get-Content -LiteralPath $skillInspection.jsonPath -Raw | ConvertFrom-Json)
 $skillAssets = @($skillExports | Where-Object { $_.Type -ceq 'VoyageSkill' -and $_.Name -ceq 'DA_Skill_Railgun' })
 if ($skillAssets.Count -ne 1) { throw 'Railgun research skill asset is missing or duplicated.' }
@@ -741,7 +775,9 @@ if ($skillAssets[0].Package -cne $skillPackage -or
     @($skillItems | Where-Object { $_.StartsWith($newPackage + '.', [StringComparison]::Ordinal) }).Count -ne 1) {
     throw 'Railgun research skill lost its primary type or gun/ammo unlock references.'
 }
-$semantic = & (Join-Path $PSScriptRoot 'Validate-Railgun.ps1') -Container $container -OutputRoot (Join-Path $output 'semantic') -ModelInventory $inventoryPath
+$semantic = & (Join-Path $PSScriptRoot 'Validate-Railgun.ps1') `
+    -Container $container -OutputRoot (Join-Path $output 'semantic') `
+    -ModelInventory $inventoryPath
 if ($semantic.status -ne 'passed') { throw 'Railgun semantic validation failed.' }
 $containerReport = Get-Content -LiteralPath $verify.reportPath -Raw | ConvertFrom-Json
 $bulkChunks = @($containerReport.chunkTypes | Where-Object { $_.type -ceq 'BulkData' } | ForEach-Object { $_.count } | Measure-Object -Sum).Sum
@@ -754,50 +790,120 @@ $descriptorDirectory = Join-Path $payload 'Mods/RailgunCatalogue'
 $null = New-Item -ItemType Directory -Path $descriptorDirectory
 $descriptor = Join-Path $descriptorDirectory 'RailgunCatalogue.uplugin'
 Copy-Item -LiteralPath $descriptorSource -Destination $descriptor
-$version = Split-Path -Leaf $output
-$archivePath = Join-Path $output ('Railgun_' + $version + '.zip')
+$archivePath = Join-Path $releaseStaging ('Railgun_' + $version + '.zip')
 Compress-Archive -Path (Join-Path $payload '*') -DestinationPath $archivePath
 $sourceAfter = @(& git -C $repo status --porcelain -- $sourcePaths)
 if (($sourceAfter -join "`n") -cne ($sourceStatus -join "`n")) { throw 'Source status changed during preparation.' }
 if ((@(Get-RailgunSourceHashes) | ConvertTo-Json -Compress) -cne ($sourceHashes | ConvertTo-Json -Compress)) { throw 'Source content changed during preparation.' }
 if ((& git -C $repo rev-parse HEAD).Trim() -cne $sourceCommit) { throw 'Repository HEAD changed during preparation.' }
+$semanticReport = Get-Content -LiteralPath $semantic.reportPath -Raw |
+    ConvertFrom-Json
+$validationSummary = [ordered]@{
+    schemaVersion = 1
+    status = 'passed'
+    runtime = 'pending'
+    container = [ordered]@{
+        packageCount = [int]$containerReport.packageCount
+        packageSetMatches = [bool]$containerReport.packageSetMatches
+        chunkCount = [int]$containerReport.chunkCount
+        chunkTypes = @($containerReport.chunkTypes)
+        files = @($containerReport.files | ForEach-Object {
+            [ordered]@{
+                name = [string]$_.name
+                size = [long]$_.size
+                sha256 = [string]$_.sha256
+            }
+        })
+    }
+    semantic = [ordered]@{
+        status = [string]$semanticReport.status
+        runtime = [string]$semanticReport.runtime
+        containerSha256 = [string]$semanticReport.containerSha256
+        assertions = [string]$semanticReport.assertions
+    }
+    primaryAssetRegistry = [ordered]@{
+        sha256 = (Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash
+        assetCount = [int]$registryResult.assetCount
+        packageCount = [int]$registryResult.packageCount
+        reopenVerified = [bool]$registryResult.reopenVerified
+        primaryAssetIds = @($registryResult.primaryAssetIds)
+    }
+    generatedAtUtc = [DateTime]::UtcNow.ToString('o')
+}
+$validationSummaryPath = Join-Path $releaseStaging 'validation-summary.json'
+[IO.File]::WriteAllText(
+    $validationSummaryPath,
+    (($validationSummary | ConvertTo-Json -Depth 8) + [Environment]::NewLine),
+    (New-Object Text.UTF8Encoding($false)))
 $provenance = [ordered]@{
     schemaVersion=1;mod='Railgun';version=$version;createdAtUtc=[DateTime]::UtcNow.ToString('o');
     sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;
     gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';retocSha256=$retocManifest.executableSha256;
     gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId;executableSha256=$fingerprint.executable.sha256};
     validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, plugin-local three-record primary-asset registry, GLB module actor, operator, inputs, HUD, shot audio and autoload coordinator';
-    mappingSha256=$mapping.sha256;verificationReport=$verify.reportPath;packagingReport=$pack.reportPath;semanticReport=$semantic.reportPath;
-    ammoSourceJson=$ammoItemJsonPath;ammoSourceJsonSha256=(Get-FileHash -LiteralPath $ammoItemJsonPath -Algorithm SHA256).Hash;
-    ammoWriterReport=$ammoWrite.reportPath;ammoReadbackReport=$ammoReadback.reportPath;
-    dataAssetContract=$dataAssetContractPath;dataAssetContractSha256=(Get-FileHash -LiteralPath $dataAssetContractPath -Algorithm SHA256).Hash;
+    mappingSha256=$mapping.sha256;validationSummary='validation-summary.json';
+    packagingStatus=$pack.status;containerVerificationStatus=$verify.status;semanticStatus=$semantic.status;
+    ammoSourceJson='mods/Railgun/Assets/Fabricator/railgun-ammo-item.json';ammoSourceJsonSha256=(Get-FileHash -LiteralPath $ammoItemJsonPath -Algorithm SHA256).Hash;
+    ammoWriterStatus=$ammoWrite.status;ammoReadbackStatus=$ammoReadback.status;
+    dataAssetContract='mods/Railgun/Assets/data-assets-contract.json';dataAssetContractSha256=(Get-FileHash -LiteralPath $dataAssetContractPath -Algorithm SHA256).Hash;
     dataAssetSerialization=$serializationContract;
     ammoWriterSha256=$serializationContract.uassetGuiSha256;
-    skillSourceJson=$skillJsonPath;skillSourceJsonSha256=(Get-FileHash -LiteralPath $skillJsonPath -Algorithm SHA256).Hash;
-    skillWriterReport=$skillWrite.reportPath;skillReadbackReport=$skillReadback.reportPath;
+    skillSourceJson='mods/Railgun/Assets/Skill/railgun-skill.json';skillSourceJsonSha256=(Get-FileHash -LiteralPath $skillJsonPath -Algorithm SHA256).Hash;
+    skillWriterStatus=$skillWrite.status;skillReadbackStatus=$skillReadback.status;
     skillWriterSha256=$serializationContract.uassetGuiSha256;
-    gunSourceJson=$gunJsonPath;gunSourceJsonSha256=(Get-FileHash -LiteralPath $gunJsonPath -Algorithm SHA256).Hash;
-    gunWriterReport=$gunWrite.reportPath;gunReadbackReport=$gunReadback.reportPath;
+    gunSourceJson='mods/Railgun/Assets/Fabricator/railgun-item.json';gunSourceJsonSha256=(Get-FileHash -LiteralPath $gunJsonPath -Algorithm SHA256).Hash;
+    gunWriterStatus=$gunWrite.status;gunReadbackStatus=$gunReadback.status;
     gunWriterSha256=$serializationContract.uassetGuiSha256;
-    scriptObjectsInput=$scriptObjectsInput;scriptObjectsReport=$scriptObjectsRun.reportPath;
+    scriptObjectsInput=@($scriptObjectsInput | ForEach-Object { [ordered]@{name=[IO.Path]::GetFileName($_.path);sha256=$_.sha256} });scriptObjectsStatus=$scriptObjectsRun.status;
     scriptObjectsSha256=$scriptObjectsSha256;
-    primaryAssetRegistry=$pluginRegistry;
     primaryAssetRegistrySha256=(Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash;
-    primaryAssetRegistryManifest=$registryResult.manifestPath;
-    primaryAssetRegistryWriterEvidence=$registryResult.evidenceRoot;
-    primaryAssetRegistryWriterLog=$registryResult.writerLog;
-    contentPluginDescriptor=$descriptorSource;
+    primaryAssetRegistryAssetCount=[int]$registryResult.assetCount;
+    primaryAssetRegistryPackageCount=[int]$registryResult.packageCount;
+    primaryAssetRegistryReopenVerified=[bool]$registryResult.reopenVerified;
+    contentPluginDescriptor='mods/Railgun/Registry/RailgunCatalogue.uplugin';
     contentPluginDescriptorSha256=(Get-FileHash -LiteralPath $descriptorSource -Algorithm SHA256).Hash;
 }
-$provenance | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'build-provenance.json') -Encoding UTF8
+[IO.File]::WriteAllText(
+    (Join-Path $releaseStaging 'build-provenance.json'),
+    (($provenance | ConvertTo-Json -Depth 8) + [Environment]::NewLine),
+    (New-Object Text.UTF8Encoding($false)))
 $releaseSourcePaths = @($sourcePaths | ForEach-Object { [IO.Path]::GetFullPath((Join-Path $repo $_)) })
 $release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
-    -ReleaseRoot $output -Mod Railgun -Version $version -Container $container `
+    -ReleaseRoot $releaseStaging -Mod Railgun -Version $version -Container $container `
     -Archive $archivePath -SourcePath $releaseSourcePaths `
     -ContentPluginDescriptor $descriptor -AllowDirtySource -AsJson) |
     ConvertFrom-Json
-$manifestPath = Join-Path $output 'release-manifest.json'
+$manifestPath = Join-Path $releaseStaging 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Manifest producer did not publish the candidate.' }
+$releaseParent = Split-Path -Parent $releaseRoot
+$null = New-Item -ItemType Directory -Path $releaseParent -Force
+Move-Item -LiteralPath $releaseStaging -Destination $releaseRoot
+$manifestPath = Join-Path $releaseRoot 'release-manifest.json'
+$archivePath = Join-Path $releaseRoot ('Railgun_' + $version + '.zip')
+$payload = Join-Path $releaseRoot 'payload'
+$validationSummaryPath = Join-Path $releaseRoot 'validation-summary.json'
+try {
+    $publicationValidation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
+        -ReleaseManifest $manifestPath -ValidateOnly -AllowDirtySource
+    if (-not [bool]$publicationValidation.validated) {
+        throw 'Published Railgun release did not pass post-promotion validation.'
+    }
+}
+catch {
+    if ((Test-Path -LiteralPath $releaseRoot -PathType Container) -and
+        -not (Test-Path -LiteralPath $releaseStaging)) {
+        Move-Item -LiteralPath $releaseRoot -Destination $releaseStaging
+    }
+    throw
+}
+if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase) -or
+    [IO.Path]::GetFullPath($output) -ceq $tmpOwnerRoot) {
+    throw 'Refusing to remove an unowned Railgun scratch path.'
+}
+[IO.Directory]::Delete($output, $true)
+if (Test-Path -LiteralPath $output) {
+    throw 'Railgun scratch cleanup did not complete.'
+}
 $installation = $null
 $settingsInstallation = $null
 if ($Install) {
@@ -813,4 +919,32 @@ if ($Install) {
     }
     Write-Host 'Railgun installed successfully; container hashes verified and settings are present.'
 }
-[pscustomobject]@{status=$(if ($Install) { 'installed' } else { 'prepared-not-installed' });releaseManifestPath=$manifestPath;archivePath=$archivePath;verificationReport=$verify.reportPath;installation=$installation;settingsInstallation=$settingsInstallation} | ConvertTo-Json -Depth 8 -Compress
+else {
+    try {
+        $cleanupValidation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
+            -ReleaseManifest $manifestPath -ValidateOnly -AllowDirtySource
+        if (-not [bool]$cleanupValidation.validated) {
+            throw 'Railgun release validation returned no success after scratch cleanup.'
+        }
+    }
+    catch {
+        $failedRelease = Join-Path $tmpOwnerRoot `
+            ($version + '-post-cleanup-validation-failed-' +
+                [Guid]::NewGuid().ToString('N'))
+        if (Test-Path -LiteralPath $releaseRoot -PathType Container) {
+            $null = New-Item -ItemType Directory -Path $tmpOwnerRoot -Force
+            Move-Item -LiteralPath $releaseRoot -Destination $failedRelease
+        }
+        throw
+    }
+}
+[pscustomobject]@{
+    status = $(if ($Install) { 'installed' } else { 'prepared-not-installed' })
+    releaseManifestPath = $manifestPath
+    archivePath = $archivePath
+    validationSummaryPath = $validationSummaryPath
+    verificationReport = $validationSummaryPath
+    scratchCleaned = $true
+    installation = $installation
+    settingsInstallation = $settingsInstallation
+} | ConvertTo-Json -Depth 8 -Compress
