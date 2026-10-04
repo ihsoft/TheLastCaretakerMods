@@ -260,7 +260,7 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 | MooringCable60m | [Release workflow](../mods/MooringCable60m/README.md) | `Build-LimitGraph.ps1` builds/cooks the attached/free limit graph outside the sandbox; `Build-Candidate.ps1 -GraphManifest` preserves fresh stock inheritance, sets 60 m manual / 20 m attached payout, verifies exactly three assets and creates a schema-2 release manifest; neither installs |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
-| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun` container, calls the common native registry producer for its three owned JSON readbacks, and publishes a schema-3 ZIP/manifest. Optional `-Install` uses the common guarded installer. Gameplay validation remains a separate gate |
+| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun` container, calls the common native registry producer for its three owned JSON readbacks, and prepares a schema-3 ZIP/manifest below `Tmp/Railgun`. Optional `-Install` uses the common guarded installer, retains the versioned ZIP in Paks and removes the temporary candidate after verification. Gameplay validation remains a separate gate |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a
@@ -536,6 +536,15 @@ build/executable fingerprint, then returns the planned destinations without
 creating evidence or touching the Paks directory. Remove `-ValidateOnly` only
 for an explicitly authorized installation while the game is closed.
 
+`-RetainArchiveOnRestore` is a narrow opt-in for producers that use the
+artifact-versioned installed ZIP as their canonical retained release. The
+installer records the choice only on the ZIP archive record in the completed
+install manifest. A later explicit restore still requires that ZIP to exist
+with its installed hash, but reports action `keep` and neither removes it nor
+replaces it with an older same-named file. Without the switch, legacy restore
+behavior is unchanged. A failed installation always rolls back an unpublished
+ZIP normally; retention does not weaken installation transactions.
+
 During installation the wrapper stages and hashes every source in the Paks
 directory, backs up all existing targets before replacing any of them, checks
 the process again immediately before replacement, reads every installed hash
@@ -567,6 +576,14 @@ compatibility allowlist, are the removal gate. The original release and
 installation manifests remain immutable; restoration gets its own transaction
 and result manifest beside the installation evidence.
 
+Install evidence may retain historical `releaseManifestPath` and `sourcePath`
+values after an owning producer removes temporary build input. Restore does not
+consume those paths: its operational contract is the completed install manifest,
+exact current installed hashes and `previous-files` backups. This is not an
+install-from-ZIP interface; a retained ZIP with `Mods/` and `Content/Paks/`
+layout is intended for explicit manual extraction when the owning mod documents
+that workflow.
+
 If either transaction reports `recovery-failed`, stop normal install/restore
 work: backups and remaining staging copies are intentionally retained for
 recovery. Do not delete them or blindly retry. Abruptly interrupted transactions
@@ -587,16 +604,23 @@ Run the Windows PowerShell regression harness after changing this contract:
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File .\tools\Test-Install-VoyageRelease.ps1 `
   -WithAutoLoadSidecar -WithContentPluginDescriptor
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\Test-Install-VoyageRelease.ps1 `
+  -WithAutoLoadSidecar -WithContentPluginDescriptor `
+  -RetainArchiveOnRestore
 ```
 
-It uses a unique synthetic Steam/Voyage tree under ignored `artifacts/tests/`
+It uses a unique synthetic Steam/Voyage tree under ignored
+`Tmp/tests/install-voyage-release/`
 and covers validate-only, successful installation, previous-file backup,
 installed hash readback, successful predecessor restoration, removal of new
-files, injected mid-install and mid-restore failures, and complete rollback in
-both directions. It also rejects a mismatched fingerprint, ZIP/payload mismatch,
+files or explicit archive retention, injected mid-install and mid-restore
+failures, and complete rollback in both directions. It also rejects a
+mismatched fingerprint, ZIP/payload mismatch,
 directory target, changed installed file, and damaged backup, and verifies that
 recovery copies survive a failed rollback. `-KeepArtifacts` retains the complete
-synthetic evidence tree; otherwise it is removed after the run.
+diagnostic TMP tree; otherwise it is removed after the run.
 
 ## Typical workflow
 

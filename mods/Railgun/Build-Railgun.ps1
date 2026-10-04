@@ -9,22 +9,20 @@ $editor = Join-Path $engine 'Binaries/Win64/UnrealEditor-Cmd.exe'
 $itemDiscoveryRoot = '/Game/Data/Assets'
 $skillDiscoveryRoot = '/Game/Data/Assets/Skill'
 $defaultVersion = 'build-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
-if (-not $OutputRoot) {
-    $OutputRoot = Join-Path $repo ('artifacts/railgun/' + $defaultVersion)
-}
-$releaseRoot = [IO.Path]::GetFullPath($OutputRoot)
-$artifactBoundary = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')) + [IO.Path]::DirectorySeparatorChar
-if (-not $releaseRoot.StartsWith($artifactBoundary, [StringComparison]::OrdinalIgnoreCase)) { throw 'Output must be under repository artifacts.' }
-if (Test-Path -LiteralPath $releaseRoot) { throw 'Output already exists; use a new build identity.' }
-$version = Split-Path -Leaf $releaseRoot
 $tmpOwnerRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/Railgun'))
 $tmpBoundary = $tmpOwnerRoot + [IO.Path]::DirectorySeparatorChar
-$output = Join-Path $tmpOwnerRoot ($version + '-' + [Guid]::NewGuid().ToString('N'))
-if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'Railgun scratch path escaped its owned Tmp root.'
+if (-not $OutputRoot) {
+    $OutputRoot = Join-Path $tmpOwnerRoot (
+        $defaultVersion + '-' + [Guid]::NewGuid().ToString('N'))
 }
+$output = [IO.Path]::GetFullPath($OutputRoot)
+if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'OutputRoot must be a fresh directory below repository Tmp/Railgun.'
+}
+if (Test-Path -LiteralPath $output) { throw 'OutputRoot already exists.' }
+$version = $defaultVersion
 $null = New-Item -ItemType Directory -Path $output
-$releaseStaging = Join-Path $output 'retained-release'
+$releaseStaging = Join-Path $output 'candidate'
 $boundedToolRoot = Join-Path $output 'bounded-tool-runs'
 $containerCheckRoot = Join-Path $output 'container-checks'
 $modInspectionRoot = Join-Path $output 'asset-inspections'
@@ -50,6 +48,7 @@ $sourcePaths = @(
     'tools/Invoke-VoyageBoundedTool.ps1',
     'tools/New-VoyageAssetRegistry.ps1',
     'tools/New-VoyageReleaseManifest.ps1',
+    'tools/Restore-VoyageReleaseInstallation.ps1',
     'tools/Test-VoyageContainer.ps1',
     'tools/VoyageAssetRegistryWriter'
 )
@@ -790,14 +789,86 @@ $containerReport = Get-Content -LiteralPath $verify.reportPath -Raw | ConvertFro
 $bulkChunks = @($containerReport.chunkTypes | Where-Object { $_.type -ceq 'BulkData' } | ForEach-Object { $_.count } | Measure-Object -Sum).Sum
 if ($null -eq $bulkChunks -or $bulkChunks -lt 1) { throw 'Cooked shot sound bulk data is absent from the container.' }
 Copy-Item -LiteralPath $generatedSettingsIni -Destination $payload
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.txt') -Destination $payload
 $descriptorSource = Join-Path $PSScriptRoot 'Registry/RailgunCatalogue.uplugin'
 $descriptorDirectory = Join-Path $payload 'Mods/RailgunCatalogue'
 $null = New-Item -ItemType Directory -Path $descriptorDirectory
 $descriptor = Join-Path $descriptorDirectory 'RailgunCatalogue.uplugin'
 Copy-Item -LiteralPath $descriptorSource -Destination $descriptor
 $archivePath = Join-Path $releaseStaging ('Railgun_' + $version + '.zip')
-Compress-Archive -Path (Join-Path $payload '*') -DestinationPath $archivePath
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archiveFiles = @(
+    [pscustomobject]@{ source = Join-Path $payload 'Railgun.pak'; entry = 'Content/Paks/Railgun.pak' },
+    [pscustomobject]@{ source = Join-Path $payload 'Railgun.ucas'; entry = 'Content/Paks/Railgun.ucas' },
+    [pscustomobject]@{ source = Join-Path $payload 'Railgun.utoc'; entry = 'Content/Paks/Railgun.utoc' },
+    [pscustomobject]@{ source = Join-Path $payload 'Railgun.ini'; entry = 'Content/Paks/Railgun.ini' },
+    [pscustomobject]@{
+        source = $descriptor
+        entry = 'Mods/RailgunCatalogue/RailgunCatalogue.uplugin'
+    }
+)
+$archiveStream = [IO.File]::Open(
+    $archivePath,
+    [IO.FileMode]::CreateNew,
+    [IO.FileAccess]::ReadWrite,
+    [IO.FileShare]::None)
+try {
+    $archive = [IO.Compression.ZipArchive]::new(
+        $archiveStream,
+        [IO.Compression.ZipArchiveMode]::Create,
+        $false)
+    try {
+        foreach ($archiveFile in $archiveFiles) {
+            [IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $archive,
+                $archiveFile.source,
+                $archiveFile.entry,
+                [IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+finally {
+    $archiveStream.Dispose()
+}
+$archiveReadback = [IO.Compression.ZipFile]::OpenRead($archivePath)
+try {
+    $expectedArchiveEntries = @($archiveFiles.entry | Sort-Object)
+    $actualArchiveEntries = @($archiveReadback.Entries | ForEach-Object {
+        $_.FullName.Replace('\', '/')
+    } | Sort-Object)
+    if (Compare-Object $expectedArchiveEntries $actualArchiveEntries) {
+        throw 'Railgun release ZIP does not contain exactly the supported five files.'
+    }
+    foreach ($archiveFile in $archiveFiles) {
+        $entry = @($archiveReadback.Entries | Where-Object {
+            $_.FullName.Replace('\', '/') -ceq $archiveFile.entry
+        })
+        if ($entry.Count -ne 1 -or $entry[0].Length -ne
+            (Get-Item -LiteralPath $archiveFile.source).Length) {
+            throw "Railgun release ZIP entry size mismatch: $($archiveFile.entry)"
+        }
+        $entryStream = $entry[0].Open()
+        $entryHasher = [Security.Cryptography.SHA256]::Create()
+        try {
+            $entrySha256 = [BitConverter]::ToString(
+                $entryHasher.ComputeHash($entryStream)).Replace('-', '')
+        }
+        finally {
+            $entryHasher.Dispose()
+            $entryStream.Dispose()
+        }
+        if ($entrySha256 -cne
+            (Get-FileHash -LiteralPath $archiveFile.source -Algorithm SHA256).Hash) {
+            throw "Railgun release ZIP entry hash mismatch: $($archiveFile.entry)"
+        }
+    }
+}
+finally {
+    $archiveReadback.Dispose()
+}
 $sourceAfter = @(& git -C $repo status --porcelain -- $sourcePaths)
 if (($sourceAfter -join "`n") -cne ($sourceStatus -join "`n")) { throw 'Source status changed during preparation.' }
 if ((@(Get-RailgunSourceHashes) | ConvertTo-Json -Compress) -cne ($sourceHashes | ConvertTo-Json -Compress)) { throw 'Source content changed during preparation.' }
@@ -881,39 +952,19 @@ $release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
     ConvertFrom-Json
 $manifestPath = Join-Path $releaseStaging 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Manifest producer did not publish the candidate.' }
-$releaseParent = Split-Path -Parent $releaseRoot
-$null = New-Item -ItemType Directory -Path $releaseParent -Force
-Move-Item -LiteralPath $releaseStaging -Destination $releaseRoot
-$manifestPath = Join-Path $releaseRoot 'release-manifest.json'
-$archivePath = Join-Path $releaseRoot ('Railgun_' + $version + '.zip')
-$payload = Join-Path $releaseRoot 'payload'
-$validationSummaryPath = Join-Path $releaseRoot 'validation-summary.json'
-try {
-    $publicationValidation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
-        -ReleaseManifest $manifestPath -ValidateOnly -AllowDirtySource
-    if (-not [bool]$publicationValidation.validated) {
-        throw 'Published Railgun release did not pass post-promotion validation.'
-    }
-}
-catch {
-    if ((Test-Path -LiteralPath $releaseRoot -PathType Container) -and
-        -not (Test-Path -LiteralPath $releaseStaging)) {
-        Move-Item -LiteralPath $releaseRoot -Destination $releaseStaging
-    }
-    throw
-}
-if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase) -or
-    [IO.Path]::GetFullPath($output) -ceq $tmpOwnerRoot) {
-    throw 'Refusing to remove an unowned Railgun scratch path.'
-}
-[IO.Directory]::Delete($output, $true)
-if (Test-Path -LiteralPath $output) {
-    throw 'Railgun scratch cleanup did not complete.'
+$publicationValidation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
+    -ReleaseManifest $manifestPath -ValidateOnly -AllowDirtySource `
+    -RetainArchiveOnRestore
+if (-not [bool]$publicationValidation.validated) {
+    throw 'Prepared Railgun release did not pass installation validation.'
 }
 $installation = $null
 $settingsInstallation = $null
+$restoreValidation = $null
+$scratchCleaned = $false
 if ($Install) {
-    $installation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') -ReleaseManifest $manifestPath -AllowDirtySource
+    $installation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
+        -ReleaseManifest $manifestPath -AllowDirtySource -RetainArchiveOnRestore
     $settingsPath = Join-Path $installation.paksDirectory 'Railgun.ini'
     if (-not (Test-Path -LiteralPath $settingsPath)) {
         if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' -ErrorAction SilentlyContinue).Count -gt 0) { throw 'Game started; settings installation refused.' }
@@ -923,26 +974,31 @@ if ($Install) {
         $addedKeys = @(Add-MissingRailgunSettings (Join-Path $payload 'Railgun.ini') $settingsPath)
         $settingsInstallation = [pscustomobject]@{path=$settingsPath;created=$false;addedKeys=$addedKeys;sha256=(Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash}
     }
+    $restoreValidation = & (Join-Path $repo `
+        'tools/Restore-VoyageReleaseInstallation.ps1') `
+        -InstallManifest $installation.installManifestPath -ValidateOnly
+    if (-not [bool]$restoreValidation.validated -or
+        [int]$restoreValidation.retainedCount -ne 1) {
+        throw 'Installed Railgun release did not retain its canonical archive in the restore plan.'
+    }
+    $installedArchivePath = [IO.Path]::GetFullPath($installation.installedArchivePath)
+    if ((Get-FileHash -LiteralPath $installedArchivePath -Algorithm SHA256).Hash -cne
+        (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash) {
+        throw 'Installed Railgun archive hash does not match the prepared release.'
+    }
+    if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase) -or
+        [IO.Path]::GetFullPath($output) -ceq $tmpOwnerRoot) {
+        throw 'Refusing to remove an unowned Railgun scratch path.'
+    }
+    [IO.Directory]::Delete($output, $true)
+    if (Test-Path -LiteralPath $output) {
+        throw 'Railgun scratch cleanup did not complete.'
+    }
+    $scratchCleaned = $true
+    $manifestPath = $null
+    $archivePath = $installedArchivePath
+    $validationSummaryPath = $null
     Write-Host 'Railgun installed successfully; container hashes verified and settings are present.'
-}
-else {
-    try {
-        $cleanupValidation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
-            -ReleaseManifest $manifestPath -ValidateOnly -AllowDirtySource
-        if (-not [bool]$cleanupValidation.validated) {
-            throw 'Railgun release validation returned no success after scratch cleanup.'
-        }
-    }
-    catch {
-        $failedRelease = Join-Path $tmpOwnerRoot `
-            ($version + '-post-cleanup-validation-failed-' +
-                [Guid]::NewGuid().ToString('N'))
-        if (Test-Path -LiteralPath $releaseRoot -PathType Container) {
-            $null = New-Item -ItemType Directory -Path $tmpOwnerRoot -Force
-            Move-Item -LiteralPath $releaseRoot -Destination $failedRelease
-        }
-        throw
-    }
 }
 [pscustomobject]@{
     status = $(if ($Install) { 'installed' } else { 'prepared-not-installed' })
@@ -950,7 +1006,9 @@ else {
     archivePath = $archivePath
     validationSummaryPath = $validationSummaryPath
     verificationReport = $validationSummaryPath
-    scratchCleaned = $true
+    candidateRoot = $(if ($Install) { $null } else { $output })
+    scratchCleaned = $scratchCleaned
     installation = $installation
     settingsInstallation = $settingsInstallation
+    restoreValidation = $restoreValidation
 } | ConvertTo-Json -Depth 8 -Compress

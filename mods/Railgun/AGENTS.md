@@ -12,12 +12,12 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   live below this directory. A Railgun build must not depend on preserved
   scratch output from an earlier Railgun run. Published toolchain binaries and
   reviewed reusable caches selected through their documented interfaces are
-  separate dependencies. Apply the repository lifecycle policy: keep retained
-  releases, minimal trust evidence and rollback material in `artifacts/`; treat
-  logs, loose cook output, temporary scripts and one-off readbacks as temporary.
-  The public producer writes those disposable files below repository `Tmp/`,
-  removes its owned successful-run scratch, and publishes only the validated
-  self-contained release below `artifacts/railgun/build-*`.
+  separate dependencies. Apply the repository lifecycle policy: the public
+  producer writes its candidate, loose payload, reports and logs below
+  repository `Tmp/Railgun/`. A preparation-only run leaves that temporary
+  candidate for inspection. A successful installation preserves exactly the
+  artifact-versioned release ZIP in Voyage's Paks directory plus common
+  installation/restore evidence, then removes its complete owned TMP run.
 - `Assets/Railgun.ini` is the canonical packaged INI and sole source of setting
   defaults, comments, order and formatting. `Settings/Railgun.settings.json`
   owns only runtime bindings, types and numeric ranges. Add each option to both,

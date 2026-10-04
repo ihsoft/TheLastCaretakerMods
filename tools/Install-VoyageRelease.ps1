@@ -12,6 +12,8 @@ param(
 
     [switch]$AllowDirtySource,
 
+    [switch]$RetainArchiveOnRestore,
+
     [switch]$ValidateOnly
 )
 
@@ -483,6 +485,7 @@ $installItems = @(
         backupPath = $null
         installedSha256 = $null
         createdDirectories = @()
+        retainOnRestore = [bool]$RetainArchiveOnRestore
     }
     if ($null -ne $contentPluginPlan) {
         [pscustomobject][ordered]@{
@@ -526,7 +529,8 @@ if ($ValidateOnly) {
         executableSha256 = $actualExecutableSha256
         paksDirectory = $paksDirectory
         installedArchiveName = $installedArchiveName
-        files = @($installItems | Select-Object kind, name, size, sourceSha256)
+        files = @($installItems | Select-Object kind, name, size, sourceSha256,
+            retainOnRestore)
     }
     return
 }

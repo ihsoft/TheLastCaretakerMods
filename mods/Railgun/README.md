@@ -20,15 +20,28 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods\Railgun\Build-Railg
 ```
 
 Add `-Install` to install the verified result when the game is closed. The
-output is written to a new `artifacts\railgun\build-*` directory and contains:
+default preparation-only output is a unique temporary directory below
+`Tmp\Railgun\`. `-OutputRoot` may select an exact fresh directory only below
+that same owner root. The candidate contains loose installation inputs and one
+ZIP whose user-facing layout is exactly:
 
-- `payload\Railgun.utoc`
-- `payload\Railgun.ucas`
-- `payload\Railgun.pak`
-- `payload\Railgun.ini`
-- `payload\Mods\RailgunCatalogue\RailgunCatalogue.uplugin`
-- a ZIP, release manifest, `build-provenance.json` and compact
-  `validation-summary.json`
+- `Mods\RailgunCatalogue\RailgunCatalogue.uplugin`
+- `Content\Paks\Railgun.pak`
+- `Content\Paks\Railgun.ucas`
+- `Content\Paks\Railgun.utoc`
+- `Content\Paks\Railgun.ini`
+
+There are no root files or README in the ZIP. It may be extracted manually
+from inside `Voyage\Voyage`. On a successful `-Install`, the exact
+artifact-versioned ZIP is copied to the game's Paks directory and becomes the
+single retained release copy. The loose payload, release manifest,
+`build-provenance.json`, `validation-summary.json`, cook output and logs remain
+temporary and the producer removes the complete run only after installation,
+settings merge, installed-hash readback and restore-plan validation succeed.
+The returned `archivePath` then identifies the retained Paks ZIP;
+build-specific temporary report paths are returned as null. Without `-Install`,
+the returned candidate paths remain valid below `Tmp\Railgun` until explicitly
+discarded.
 
 `Build-Railgun.ps1` is the only supported build producer. It generates model,
 construction, input, operator, HUD, projectile and audio assets, cooks them in
@@ -50,11 +63,12 @@ The exact cook inventory is written to the per-run TMP workspace. A small
 editor-only adapter validates its package count and Core SHA-1 before passing
 the complete list directly to Unreal's stock cook commandlet. This keeps the
 launcher command line bounded as model dependencies grow while preserving the
-single-pass `CookSinglePackageNoRefs` contract. After publication, the TMP
-workspace is removed and the retained release is validated again. The build
-result's `verificationReport` compatibility field and its explicit
-`validationSummaryPath` both identify the retained schema-1
-`validation-summary.json`; neither points back into TMP.
+single-pass `CookSinglePackageNoRefs` contract. A successful installation
+removes the TMP workspace only after the common installer and restore validator
+accept it. Installation evidence deliberately records historical source and
+release-manifest paths; after TMP cleanup those paths are provenance text, not
+a supported reinstall entry point. Operational restore uses the durable
+install manifest and `previous-files` evidence.
 
 ## Inputs
 
@@ -97,11 +111,11 @@ A build does not depend on preserved scratch output from an earlier Railgun
 run. Published toolchain binaries and reviewed reusable caches selected through
 their documented interfaces are separate dependencies. The producer writes
 disposable logs, loose cook output and readbacks below repository `Tmp/`,
-removes its owned successful-run scratch, and publishes only a validated,
-self-contained release to `artifacts\railgun\build-*`. Keep selected releases
-and the minimum provenance needed to trust them, plus installation
-backup/restore evidence. Do not delete an existing artifact until its release,
-cache, research or rollback value and dependencies are understood. Unreal's
+removes its owned successful-install scratch, and retains one validated,
+self-contained artifact-versioned ZIP in the game's Paks directory. Common
+installation backup/restore evidence remains below `artifacts/installations`.
+Do not delete an existing artifact until its release, cache, research or
+rollback value and dependencies are understood. Unreal's
 generated `Binaries`, `Content`, `Intermediate`, and `Saved` directories are
 producer workspaces that may be recreated when no run is active.
 `DerivedDataCache` is a reusable performance cache: clear it only for an

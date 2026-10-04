@@ -218,6 +218,17 @@ $restoreItems = @(
         }
 
         $kind = [string](Get-OptionalPropertyValue -Object $record -Name 'kind')
+        $retainOnRestoreValue = Get-OptionalPropertyValue -Object $record `
+            -Name 'retainOnRestore'
+        if ($null -ne $retainOnRestoreValue -and $retainOnRestoreValue -isnot [bool]) {
+            throw "Installation record retainOnRestore must be boolean: $name"
+        }
+        $retainOnRestore = [bool]($null -ne $retainOnRestoreValue -and
+            [bool]$retainOnRestoreValue)
+        if ($retainOnRestore -and ($kind -cne 'archive' -or
+            [IO.Path]::GetExtension($name).ToLowerInvariant() -cne '.zip')) {
+            throw "Only a release archive may be retained during restore: $name"
+        }
         $createdDirectories = @(
             Get-OptionalPropertyValue -Object $record -Name 'createdDirectories')
         if ($kind -cne 'content-plugin-descriptor' -and
@@ -254,6 +265,16 @@ $restoreItems = @(
             restoreStagingPath = $null
             restoredSha256 = $null
             createdDirectories = $createdDirectories
+            retainOnRestore = $retainOnRestore
+            restoreAction = if ($retainOnRestore) {
+                'keep'
+            }
+            elseif ($hadExisting) {
+                'restore'
+            }
+            else {
+                'remove'
+            }
         }
     }
 )
@@ -285,6 +306,8 @@ if ($restoreItems.Count -ne (4 + $sidecarItems.Count + $descriptorItems.Count) -
 if ($sidecarItems.Count -eq 1 -and $sidecarItems[0].name -cne ($bases[0] + '.autoload')) {
     throw 'Restoration autoload sidecar does not match the exact container basename.'
 }
+$mutationItems = @($restoreItems | Where-Object { -not $_.retainOnRestore })
+$retainedItems = @($restoreItems | Where-Object { $_.retainOnRestore })
 
 if ($ValidateOnly) {
     Write-Host "Voyage installation restore validated without mutation: $mod $artifactVersion"
@@ -295,8 +318,9 @@ if ($ValidateOnly) {
         installManifestPath = $manifestPath
         installManifestSha256 = $manifestSha256
         paksDirectory = $paksDirectory
-        restoreCount = @($restoreItems | Where-Object { $_.hadExisting }).Count
-        removeCount = @($restoreItems | Where-Object { -not $_.hadExisting }).Count
+        restoreCount = @($mutationItems | Where-Object { $_.hadExisting }).Count
+        removeCount = @($mutationItems | Where-Object { -not $_.hadExisting }).Count
+        retainedCount = $retainedItems.Count
     }
     return
 }
@@ -307,7 +331,7 @@ $transactionPath = Join-Path $installationEvidence (
     "restore-transaction-$timestamp-$($token.Substring(0, 8)).json")
 $restoreManifestPath = Join-Path $installationEvidence (
     "restore-manifest-$timestamp-$($token.Substring(0, 8)).json")
-foreach ($item in $restoreItems) {
+foreach ($item in $mutationItems) {
     $stagingDirectory = Split-Path -Parent $item.destinationPath
     $item.currentStagingPath = Join-Path $stagingDirectory (
         '.' + $item.name + ".removing-$token")
@@ -335,7 +359,7 @@ $mutationStarted = $false
 try {
     Assert-GameClosed
 
-    foreach ($item in $restoreItems) {
+    foreach ($item in $mutationItems) {
         Copy-Item -LiteralPath $item.destinationPath `
             -Destination $item.currentStagingPath
         $stagedCurrentHash = (
@@ -366,7 +390,7 @@ try {
         }
     }
     $mutationStarted = $true
-    foreach ($item in $restoreItems) {
+    foreach ($item in $mutationItems) {
         if ($item.hadExisting) {
             Move-Item -LiteralPath $item.restoreStagingPath `
                 -Destination $item.destinationPath -Force
@@ -383,7 +407,7 @@ try {
             }
         }
     }
-    foreach ($directory in @($restoreItems | ForEach-Object {
+    foreach ($directory in @($mutationItems | ForEach-Object {
         @($_.createdDirectories)
     } | Sort-Object Length -Descending -Unique)) {
         if (Test-Path -LiteralPath $directory -PathType Container) {
@@ -423,7 +447,7 @@ catch {
     $originalError = $_
     $recoveryErrors = @()
     if ($mutationStarted) {
-        foreach ($item in $restoreItems) {
+        foreach ($item in $mutationItems) {
             try {
                 if (-not (Test-Path -LiteralPath $item.currentStagingPath -PathType Leaf)) {
                     throw "Installed-state staging file is missing: $($item.currentStagingPath)"
@@ -463,7 +487,7 @@ catch {
 }
 finally {
     if ($transaction.status -cne 'recovery-failed') {
-        foreach ($item in $restoreItems) {
+        foreach ($item in $mutationItems) {
             foreach ($stagingPath in @($item.currentStagingPath, $item.restoreStagingPath)) {
                 if (-not [string]::IsNullOrWhiteSpace($stagingPath) -and
                     (Test-Path -LiteralPath $stagingPath -PathType Leaf)) {
@@ -481,6 +505,7 @@ Write-Host "Restoration evidence: $restoreManifestPath"
     artifactVersion = $artifactVersion
     restoreManifestPath = $restoreManifestPath
     paksDirectory = $paksDirectory
-    restoredCount = @($restoreItems | Where-Object { $_.hadExisting }).Count
-    removedCount = @($restoreItems | Where-Object { -not $_.hadExisting }).Count
+    restoredCount = @($mutationItems | Where-Object { $_.hadExisting }).Count
+    removedCount = @($mutationItems | Where-Object { -not $_.hadExisting }).Count
+    retainedCount = $retainedItems.Count
 }

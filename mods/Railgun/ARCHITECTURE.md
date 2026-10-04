@@ -324,28 +324,28 @@ alone does not establish which world points are represented.
 
 ## Current game-validated checkpoint
 
-`build-20261003-224533` is the current game-validated checkpoint. Its explicit
-320-package cook inventory is passed through the bounded manifest adapter, and
-its three-record plugin-local registry is derived solely from owned package
+`build-20261004-084803` is the current game-validated checkpoint. Its explicit
+cook inventory is passed through the bounded manifest adapter, and its
+three-record plugin-local registry is derived solely from owned package
 readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field. The user tested the
-installed cleanup artifact and reported that the runtime behavior works. This
-general confirmation does not separately establish untested edge cases.
+installed loader-free artifact and reported that the runtime behavior works,
+including clean startup without the former autoload sidecar. Commit `91c6c12`
+records that accepted source state. This general confirmation does not
+separately establish untested edge cases or validate later packaging changes.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Release evidence:
-  `artifacts/railgun/build-20261003-224533/release-manifest.json`.
+- Retained release ZIP:
+  `Voyage/Content/Paks/Railgun_build-20261004-084803.zip`, SHA-256
+  `0A59730210BB43FBC78F38F0B3DB98234EB7515B8BA372526DEA2C0FE98063E3`.
 - Installation evidence:
-  `artifacts/installations/Railgun/20261003-225127-build-20261003-224533-f3d98a60/install-manifest.json`.
-- These ignored manifests identify the tested dirty-source artifact; they are
-  evidence and rollback pointers, never required source inputs for a rebuild.
-- The registry SHA-256 is
-  `8583937196A4BA462011AF4B561F58FB03242E1E719ECFA8E8374F21F70B0A0B`,
-  identical to the previously game-validated additive combination where
-  `VoyageAssetPool_P` supplied a global registry override. This does not
-  establish safety for arbitrary registry overrides or duplicate primary IDs.
+  `artifacts/installations/Railgun/20261004-085227-build-20261004-084803-4f9d54da/install-manifest.json`.
+- The ignored installation manifest identifies the tested dirty-source artifact
+  and its exact rollback material; it is evidence, never a required source input
+  for a rebuild. The release ZIP is the durable tested payload. Historical
+  release-manifest paths may become unavailable after temporary build cleanup.
 
 The preceding `build-20260930-221701` remains scoped behavioral evidence for
 the six distinct cassette subtrees and their 36 covered render descendants,

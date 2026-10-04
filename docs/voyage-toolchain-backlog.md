@@ -10,19 +10,28 @@ work belongs to the owning mod documentation.
 
 ## Current work / restart
 
-The Railgun public build separates disposable repo-local `Tmp/` work from
-minimal self-contained releases retained below `artifacts/`. The audited
-cleanup of accumulated Railgun output is complete: the installed release, its
-game-validated predecessor, exact installation/rename recovery chain, directly
-referenced validation closure and selected native research remain. Both release
-manifests and the active restore chain validate after cleanup. Private caches,
-`.tools/bin`, DDC, reusable Game summaries, real material exports/requests and
-unrelated installation evidence were outside the deletion scope.
+The Railgun public build now keeps build staging and service reports below
+repo-local `Tmp/Railgun/`, retains one exact artifact-versioned release ZIP in
+the game's Paks directory after successful installation, and keeps only common
+installation/restore evidence below `artifacts/`. The generic installer has a
+narrow opt-in restore action that hash-validates but retains this canonical ZIP;
+legacy manifests without the field retain their previous behavior. Both
+Windows PowerShell 5.1 synthetic modes passed. `build-20261004-093343` completed
+the full build/install pipeline: its TMP was removed, its ZIP has exactly the
+documented five entries, installed hashes match, the user INI was unchanged,
+and Restore ValidateOnly still reports four restores, no removals and one
+retained archive after TMP deletion. This validates packaging and recovery
+mechanics, not runtime gameplay.
 
-There is no active cleanup implementation. Tools not used by Railgun remain
-deferred. Review shared inspectors/tests, exporter guards, older mod producers
-and other historical artifact families separately under their owners before
-any further deletion; stop rather than inventing a generic retention framework.
+The authorized Railgun release-duplicate cleanup is complete. Paks retains the
+verified versioned ZIPs `073326`, game-validated `084803`, and current packaging
+candidate `093343`. Installation evidence, backups and migrations remain
+durable; there are no retained Railgun release directories below
+`artifacts/railgun` and no failed Railgun build TMP. The owner intentionally did
+not retain `065619`; do not reconstruct that archive from an installed triplet
+or rewrite immutable manifests. Private caches, `.tools/bin`, DDC, reusable
+Game summaries, real material exports/requests and unrelated installation
+evidence remain outside cleanup.
 
 ## Prioritization gate
 
