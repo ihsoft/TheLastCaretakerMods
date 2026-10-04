@@ -84,6 +84,8 @@ those details here.
   a separate manifest for every file. Preserve an exceptional diagnostic log
   only when an unresolved failure gives it continuing value; a failed run alone
   is not sufficient. Promote conclusions to docs and reusable methods to tools.
+  Before creating or changing retained output, consult the family registry in
+  `artifacts/README.md` and the local rules in `artifacts/AGENTS.md`.
   Retained releases and rollback evidence must remain usable without `/Tmp/`.
   Clearing `/Tmp/` may interrupt an active run, but must not damage durable
   state or make the next clean run require manual recovery. Do not delete
