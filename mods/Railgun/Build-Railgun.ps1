@@ -42,27 +42,16 @@ if ($model.schemaVersion -ne 1 -or (Compare-Object $modelFields $expectedModelFi
 $glbPath = [IO.Path]::GetFullPath((Join-Path $modelDirectory 'Railgun.glb'))
 if (-not (Test-Path -LiteralPath $glbPath -PathType Leaf)) { throw "GLB not found: $glbPath" }
 $ammoCassettePath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'Assets/Fabricator/RailgunAmmoCassette.glb'))
-$ammoCassetteContractPath = Join-Path $PSScriptRoot 'Assets/Fabricator/ammo-cassette-source.json'
 $ammoItemJsonPath = Join-Path $PSScriptRoot 'Assets/Fabricator/railgun-ammo-item.json'
 $skillJsonPath = Join-Path $PSScriptRoot 'Assets/Skill/railgun-skill.json'
 $gunJsonPath = Join-Path $PSScriptRoot 'Assets/Fabricator/railgun-item.json'
 $dataAssetContractPath = Join-Path $PSScriptRoot 'Assets/data-assets-contract.json'
 if (-not (Test-Path -LiteralPath $ammoCassettePath -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $ammoCassetteContractPath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $ammoItemJsonPath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $skillJsonPath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $gunJsonPath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $dataAssetContractPath -PathType Leaf)) {
     throw 'Railgun item/skill source or the shared data-asset contract is missing.'
-}
-$ammoCassetteContract = Get-Content -LiteralPath $ammoCassetteContractPath -Raw | ConvertFrom-Json
-$ammoCassetteContractFields = @($ammoCassetteContract.PSObject.Properties.Name | Sort-Object)
-if ($ammoCassetteContract.schemaVersion -ne 1 -or
-    (Compare-Object $ammoCassetteContractFields @('audit','importReadback','schemaVersion','sha256','sourceFile')) -or
-    $ammoCassetteContract.sourceFile -cne 'RailgunAmmoCassette.glb' -or
-    (Get-FileHash -LiteralPath $ammoCassettePath -Algorithm SHA256).Hash -cne
-        $ammoCassetteContract.sha256) {
-    throw 'Railgun ammo cassette source differs from its reviewed contract.'
 }
 function Read-OwnedAssetJson([string]$JsonPath, $Contract,
     [string]$Label) {
@@ -289,21 +278,20 @@ if ($packages.Count -lt 2 -or @($packages | Where-Object {
 }).Count) { throw 'GLB cook inventory escaped owned packages.' }
 $ammoCassetteInventory = $inventory.ammoCassette
 $ammoCassetteBounds = @($ammoCassetteInventory.boundsCm)
-$expectedUnrealBoundsCm = @($ammoCassetteContract.importReadback.boundsCm)
 if ($null -eq $ammoCassetteInventory -or
+    [IO.Path]::GetFullPath([string]$ammoCassetteInventory.sourceFile) -cne $ammoCassettePath -or
     $ammoCassetteInventory.meshPackage -cne '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette' -or
     $ammoCassetteInventory.objectPath -cne '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette' -or
-    [int]$ammoCassetteInventory.triangles -ne [int]$ammoCassetteContract.importReadback.triangles -or
-    [int]$ammoCassetteInventory.materialSlots -ne [int]$ammoCassetteContract.audit.materials -or
+    [int]$ammoCassetteInventory.triangles -le 0 -or
     [int]$ammoCassetteInventory.collisionPrimitives -lt 1 -or
-    @($ammoCassetteInventory.materialPackages).Count -ne [int]$ammoCassetteContract.audit.materials -or
-    @($ammoCassetteInventory.texturePackages).Count -ne [int]$ammoCassetteContract.audit.embeddedImages -or
     $ammoCassetteBounds.Count -ne 3) {
-    throw 'Imported Railgun ammo cassette differs from its current source contract.'
+    throw 'Imported Railgun ammo cassette lost its functional mesh contract.'
 }
-for ($axis = 0; $axis -lt 3; $axis++) {
-    if ([Math]::Abs([double]$ammoCassetteBounds[$axis] - $expectedUnrealBoundsCm[$axis]) -gt 0.1) {
-        throw 'Imported Railgun ammo cassette bounds/axis conversion differs from source.'
+foreach ($extent in $ammoCassetteBounds) {
+    $value = [double]$extent
+    if ($value -le 0.0 -or [double]::IsNaN($value) -or
+        [double]::IsInfinity($value)) {
+        throw 'Imported Railgun ammo cassette bounds are not finite and nondegenerate.'
     }
 }
 foreach ($dependencyPackage in @($ammoCassetteInventory.meshPackage) +
@@ -652,7 +640,7 @@ Copy-Item -LiteralPath $scriptObjectsFiles[0].FullName `
     -Destination (Join-Path $loose 'scriptobjects.bin')
 $payload = Join-Path $output 'payload'
 $null = New-Item -ItemType Directory -Path $payload
-$stem = 'Railgun_P'
+$stem = 'Railgun'
 $container = Join-Path $payload ($stem + '.utoc')
 $pack = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') -Executable $retoc -Arguments @('to-zen',$loose,$container,'--version','UE5_8') -TimeoutSeconds 60 -MemoryLimitMB 1024
 if ($pack.status -ne 'passed') { throw 'Packaging failed.' }
@@ -675,7 +663,7 @@ if ($registryResult.status -cne 'passed' -or
     throw 'Owned-entry plugin registry is missing or empty.'
 }
 $registryResponse = Join-Path $output 'registry-response.txt'
-$registryPak = Join-Path $output 'Railgun_P.registry.pak'
+$registryPak = Join-Path $output ($stem + '.registry.pak')
 [IO.File]::WriteAllText($registryResponse,
     ('"' + [IO.Path]::GetFullPath($pluginRegistry) +
         '" "../../../Voyage/Mods/RailgunCatalogue/AssetRegistry.bin"' +
@@ -702,7 +690,7 @@ if ($readbackFiles.Count -ne 1 -or $readbackFiles[0].Name -cne 'AssetRegistry.bi
         (Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash) {
     throw 'Packaged plugin registry readback hash mismatch.'
 }
-Move-Item -LiteralPath $containerPak -Destination (Join-Path $output 'Railgun_P.empty.pak')
+Move-Item -LiteralPath $containerPak -Destination (Join-Path $output ($stem + '.empty.pak'))
 Move-Item -LiteralPath $registryPak -Destination $containerPak
 $expected = Join-Path $output 'expected-packages.txt'
 [IO.File]::WriteAllLines($expected, @($assetRelatives | ForEach-Object { $_ + '.uasset' }))
@@ -758,7 +746,7 @@ if ($semantic.status -ne 'passed') { throw 'Railgun semantic validation failed.'
 $containerReport = Get-Content -LiteralPath $verify.reportPath -Raw | ConvertFrom-Json
 $bulkChunks = @($containerReport.chunkTypes | Where-Object { $_.type -ceq 'BulkData' } | ForEach-Object { $_.count } | Measure-Object -Sum).Sum
 if ($null -eq $bulkChunks -or $bulkChunks -lt 1) { throw 'Cooked shot sound bulk data is absent from the container.' }
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Railgun_P.autoload') -Destination $payload
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot ($stem + '.autoload')) -Destination $payload
 Copy-Item -LiteralPath $generatedSettingsIni -Destination $payload
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.txt') -Destination $payload
 $descriptorSource = Join-Path $PSScriptRoot 'Registry/RailgunCatalogue.uplugin'

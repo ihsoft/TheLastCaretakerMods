@@ -141,18 +141,15 @@ omissions are validated for fabrication and pickup, not for firing this item
 through a stock sniper rifle.
 
 `Assets/Fabricator/RailgunAmmoCassette.glb` is a user-authored rigid source for
-one physical round. Its sibling `ammo-cassette-source.json` binds the current
-source hash to an inspection snapshot: eight nodes, six mesh instances, three
-mesh definitions, 1508 triangles, two materials and six embedded images, with
-no skin or animation. Those counts describe this source revision rather than a
-permanent topology contract. The dedicated Interchange adapter combines all
-current instances, preserves imported materials and textures, applies a simple
-box collision, and records the resulting packages and mesh readback in the
-build inventory. The current Unreal readback is 1504 triangles with bounds
-`6.56 x 6.56 x 54.65952 cm`; the source audit and imported readback are recorded
-separately because mesh building may remove degenerate source triangles. A
-future source revision must refresh the sibling contract and pass the same
-source-to-import checks; it need not retain decorative node names or counts.
+one physical round. The dedicated Interchange adapter combines the source's
+current mesh instances, preserves any imported materials and textures, applies
+simple box collision, and records the resulting packages and mesh readback in
+the build inventory. Validation requires the stable owned mesh identity,
+nonempty render geometry, simple pickup collision, finite nondegenerate bounds,
+and inclusion of every material and texture dependency actually imported from
+the current source. It does not freeze a model revision, topology, decorative
+nodes, former bounds, or material and texture counts. Build provenance hashes
+the actual source and rejects changes made while a build is in progress.
 
 After cook, the reviewed UAssetGUI/UAssetAPI writer converts the three owned
 JSON sources directly to staged `.uasset`/`.uexp` packages using UE 5.8.

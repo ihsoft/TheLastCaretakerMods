@@ -100,7 +100,7 @@ This is process-scoped selection, not a global cache migration or cleanup.
 
 Railgun cooking uses tagged properties for its partial native mirrors.
 `mods/Railgun/Build-Railgun.ps1` owns generation, cook, verification, packaging
-and optional guarded installation of the single `Railgun_P` container.
+and optional guarded installation of the single `Railgun` container.
 
 GLB-first model inspection, direct previews and standard Blender conversions are
 collected in [tools/glb](glb/README.md). GLB is the editable source/handoff, not a
@@ -250,7 +250,7 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 | MooringCable60m | [Release workflow](../mods/MooringCable60m/README.md) | `Build-LimitGraph.ps1` builds/cooks the attached/free limit graph outside the sandbox; `Build-Candidate.ps1 -GraphManifest` preserves fresh stock inheritance, sets 60 m manual / 20 m attached payout, verifies exactly three assets and creates a schema-2 release manifest; neither installs |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
-| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun_P` container, calls the common native registry producer for its three owned JSON readbacks, and publishes a schema-3 ZIP/manifest. Optional `-Install` uses the common guarded installer. Gameplay validation remains a separate gate |
+| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun` container, calls the common native registry producer for its three owned JSON readbacks, and publishes a schema-3 ZIP/manifest. Optional `-Install` uses the common guarded installer. Gameplay validation remains a separate gate |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a

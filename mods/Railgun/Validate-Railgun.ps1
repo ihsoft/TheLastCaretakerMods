@@ -1127,29 +1127,32 @@ foreach ($name in @('PersistentComponent','DestructibleObjectComponent')) {
 $dynamic = @($shell | Where-Object { $_.Type -ceq 'VoyageDynamicCollisionComponent' })
 Require ($dynamic.Count -eq 1 -and $dynamic[0].Properties.bAutoWeld -eq $true) 'Missing auto-weld.'
 $inventory = Get-Content -LiteralPath $ModelInventory -Raw | ConvertFrom-Json
-$ammoCassetteContract = Get-Content -LiteralPath (Join-Path $PSScriptRoot `
-    'Assets/Fabricator/ammo-cassette-source.json') -Raw | ConvertFrom-Json
 $ammoCassetteInventory = $inventory.ammoCassette
+Require ($null -ne $ammoCassetteInventory) `
+    'Ammo cassette import evidence is missing.'
+Require ([IO.Path]::GetFullPath([string]$ammoCassetteInventory.sourceFile) -ceq `
+    [IO.Path]::GetFullPath((Join-Path $PSScriptRoot `
+        'Assets/Fabricator/RailgunAmmoCassette.glb'))) `
+    'Ammo cassette import used an unexpected source file.'
 Require ($ammoCassetteInventory.meshPackage -ceq `
     '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette') `
     'Ammo cassette mesh package mismatch.'
 Require ($ammoCassetteInventory.objectPath -ceq `
     '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette') `
     'Ammo cassette object path mismatch.'
-Require ([int]$ammoCassetteInventory.triangles -eq `
-    [int]$ammoCassetteContract.importReadback.triangles) `
-    'Merged ammo cassette triangle readback changed for the bound source.'
-Require ([int]$ammoCassetteInventory.materialSlots -eq `
-    [int]$ammoCassetteContract.audit.materials) `
-    'Ammo cassette material-slot count mismatch.'
+Require ([int]$ammoCassetteInventory.triangles -gt 0) `
+    'Ammo cassette has no render geometry.'
 Require ([int]$ammoCassetteInventory.collisionPrimitives -gt 0) `
     'Ammo cassette has no simple collision.'
-Require (@($ammoCassetteInventory.materialPackages).Count -eq `
-    [int]$ammoCassetteContract.audit.materials) `
-    'Ammo cassette material package count mismatch.'
-Require (@($ammoCassetteInventory.texturePackages).Count -eq `
-    [int]$ammoCassetteContract.audit.embeddedImages) `
-    'Ammo cassette texture package count mismatch.'
+$ammoCassetteBounds = @($ammoCassetteInventory.boundsCm)
+Require ($ammoCassetteBounds.Count -eq 3) `
+    'Ammo cassette bounds are incomplete.'
+foreach ($extent in $ammoCassetteBounds) {
+    $value = [double]$extent
+    Require ($value -gt 0.0 -and -not [double]::IsNaN($value) -and
+        -not [double]::IsInfinity($value)) `
+        'Ammo cassette bounds are not finite and nondegenerate.'
+}
 foreach ($package in @($ammoCassetteInventory.meshPackage) +
     @($ammoCassetteInventory.materialPackages) +
     @($ammoCassetteInventory.texturePackages)) {

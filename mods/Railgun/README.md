@@ -22,10 +22,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods\Railgun\Build-Railg
 Add `-Install` to install the verified result when the game is closed. The
 output is written to a new `artifacts\railgun\build-*` directory and contains:
 
-- `payload\Railgun_P.utoc`
-- `payload\Railgun_P.ucas`
-- `payload\Railgun_P.pak`
-- `payload\Railgun_P.autoload`
+- `payload\Railgun.utoc`
+- `payload\Railgun.ucas`
+- `payload\Railgun.pak`
+- `payload\Railgun.autoload`
 - `payload\Railgun.ini`
 - `payload\Mods\RailgunCatalogue\RailgunCatalogue.uplugin`
 - a ZIP, release manifest and verification reports
@@ -59,8 +59,10 @@ All mod-owned inputs live below this directory:
   mesh used for the gun's local charge display; placement, dimensions and UVs
   remain properties of the GLB.
 - `Assets\Fabricator\RailgunAmmoCassette.glb` is the user-authored physical
-  single-round pickup model. Its sibling `ammo-cassette-source.json` binds the
-  current source revision to the import readback contract.
+  single-round pickup model. Geometry and materials may be replaced while the
+  import still produces the stable owned mesh identity, nonempty render
+  geometry, finite nondegenerate bounds, simple pickup collision, and all
+  material and texture dependencies used by the current source.
 - `Assets\Fabricator\railgun-ammo-item.json`,
   `Assets\Fabricator\railgun-item.json` and
   `Assets\Skill\railgun-skill.json` are the editable authoritative serialized

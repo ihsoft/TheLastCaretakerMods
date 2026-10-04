@@ -21,6 +21,12 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   zero. Explicit valid INI values still override that fallback.
 - The user owns model geometry. Ada may move or wire model files and update the
   role manifest, but does not alter GLB geometry unless explicitly requested.
+- Replacement gun and cassette GLBs are gated by their behavior-critical roles,
+  stable owned identities, usable render geometry and collision, and the
+  dependencies actually produced for the current source. Do not freeze authored
+  models by revision hash, topology, decorative-node names, previous bounds, or
+  material and texture counts. Build provenance still hashes the actual inputs
+  and rejects source edits made during one build.
 - The live model has the stable path `Assets/Model/Railgun.glb`. Model logic
   binds stable roles and explicit boxes from `Assets/Model/model-source.json`;
   do not hard-code vertex topology, offsets or incidental Blender object order.
@@ -37,7 +43,7 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   below `/Game/Data/Assets` and the research skill below
   `/Game/Data/Assets/Skill`. Keep their names mod-unique and never ship a stock
   Cyclone package override.
-- The released container is exactly `Railgun_P` plus its autoload sidecar and
+- The released container is exactly `Railgun` plus its autoload sidecar and
   optional user settings. Its PAK contains only the three-record primary-asset
   registry at `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`; the release ZIP
   also owns the matching loose content-only descriptor. Never ship or replace

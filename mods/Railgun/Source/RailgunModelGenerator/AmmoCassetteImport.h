@@ -28,6 +28,7 @@ inline constexpr TCHAR CollisionPrimitivesKey[] = TEXT("collisionPrimitives");
 inline constexpr TCHAR BoundsCmKey[] = TEXT("boundsCm");
 inline constexpr TCHAR MaterialPackagesKey[] = TEXT("materialPackages");
 inline constexpr TCHAR TexturePackagesKey[] = TEXT("texturePackages");
+inline constexpr double MinimumBoundsExtentCm = 0.0;
 
 inline int32 Generate(const FString& SourceFile)
 {
@@ -134,9 +135,10 @@ inline int32 Generate(const FString& SourceFile)
         ? BodySetup->AggGeom.GetElementCount() : 0;
     const int32 TriangleCount = Mesh->GetNumTriangles(0);
     const FVector BoundsSize = Mesh->GetBoundingBox().GetSize();
-    if (TriangleCount <= 0 || Mesh->GetStaticMaterials().IsEmpty() ||
-        CollisionPrimitives <= 0 || BoundsSize.GetMin() <= 0.0 ||
-        BoundsSize.ContainsNaN())
+    const bool HasFiniteBounds = FMath::IsFinite(BoundsSize.X) &&
+        FMath::IsFinite(BoundsSize.Y) && FMath::IsFinite(BoundsSize.Z);
+    if (TriangleCount <= 0 || CollisionPrimitives <= 0 ||
+        BoundsSize.GetMin() <= MinimumBoundsExtentCm || !HasFiniteBounds)
     {
         UE_LOG(LogTemp, Error,
             TEXT("Ammo cassette readback is incomplete: triangles=%d materials=%d collision=%d bounds=%s"),
