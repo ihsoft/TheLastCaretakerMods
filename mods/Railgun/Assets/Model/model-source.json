@@ -5,7 +5,7 @@
     "base": "BASE",
     "yaw": "YAW",
     "pitch": "PITCH",
-    "sight": "Sight",
+    "sight": "Muzzle",
     "muzzle": "Muzzle",
     "chargeIndicatorMesh": "ChargeIndicator",
     "powerSocketAnchor": "ElectricalSocket_Reference",
