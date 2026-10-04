@@ -68,13 +68,22 @@
   authored baseline. The random-aim and ship-recoil implementation in
   `build-20261004-024904` is accepted in game. The new fallback path remains
   below the real-game validation boundary.
-- Dismantling after exit is supported and must not leave the coordinator with a
-  stale actor reference.
+- Dismantling after exit is supported. The module owns a transient direct
+  station reference; station safety disables acquisition, exits a controlled
+  pawn, and destroys the detached station on a later pass.
 
 ## Primary assets and research
 
-- The actor is `/Game/Mods/Railgun/Module/BP_Module_Railgun`; the coordinator
-  discovers that exact owned class. Its `VoyageModuleComponent.ItemAsset` points
+- The actor is `/Game/Mods/Railgun/Module/BP_Module_Railgun`. The shell owns an
+  idempotent `InitializeRailgunStation` function and a transient direct station
+  reference; no global actor discovery or autoload coordinator is packaged.
+  `ReceiveBeginPlay` and the exact inherited persistent post-load event each
+  schedule one next-tick initialization attempt. Initialization requires the
+  exact native module root and an attached parent, so fabricator visuals and
+  unattached ghosts cannot spawn a station. The loader-free shell-owned
+  initialization path in `build-20261004-084803` is user game-validated; the
+  Railgun no longer requires VoyageAutoLoader. There is no polling or retry
+  fallback. Its `VoyageModuleComponent.ItemAsset` points
   to `/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01`. The complete
   gun item object graph is authored in
   `Assets/Fabricator/railgun-item.json` and written directly to the staged

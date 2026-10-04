@@ -186,6 +186,14 @@ function Get-RailgunSourceHashes {
 $sourceHashes = @(Get-RailgunSourceHashes)
 $fingerprint = (& (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -OutputPath (Join-Path $output 'fingerprint.json')) | ConvertFrom-Json
 if ([string]$fingerprint.steam.buildId -cne '25191271' -or $fingerprint.executable.sha256 -cne '747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B') { throw 'Railgun game provenance mismatch.' }
+if ($Install) {
+    $legacyAutoload = [IO.Path]::GetFullPath((Join-Path $fingerprint.gameRoot `
+        'Voyage/Content/Paks/Railgun.autoload'))
+    if (Test-Path -LiteralPath $legacyAutoload -PathType Leaf) {
+        throw ('Legacy Railgun.autoload is still installed. Refusing a loader-free ' +
+            'Railgun install until the reviewed one-time recoverable migration retires it.')
+    }
+}
 $mapping = & (Join-Path $repo 'tools/Get-VoyageMappings.ps1')
 if ([string]$serializationContract.steamBuildId -cne
         [string]$fingerprint.steam.buildId -or
@@ -362,8 +370,7 @@ $packages += @(
     '/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun',
     '/Game/Mods/Railgun/Research/T_RailgunSkill',
     '/Game/Mods/Railgun/Fabricator/T_RailgunAmmoIcon',
-    '/Game/Mods/Railgun/Fabricator/T_RailgunIcon',
-    '/Game/Mods/Railgun/Runtime/BP_RailgunCoordinator'
+    '/Game/Mods/Railgun/Fabricator/T_RailgunIcon'
 )
 $packages = @($packages | Sort-Object -Unique)
 $cookPackageManifest = Join-Path $output 'cook-packages.txt'
@@ -782,7 +789,6 @@ if ($semantic.status -ne 'passed') { throw 'Railgun semantic validation failed.'
 $containerReport = Get-Content -LiteralPath $verify.reportPath -Raw | ConvertFrom-Json
 $bulkChunks = @($containerReport.chunkTypes | Where-Object { $_.type -ceq 'BulkData' } | ForEach-Object { $_.count } | Measure-Object -Sum).Sum
 if ($null -eq $bulkChunks -or $bulkChunks -lt 1) { throw 'Cooked shot sound bulk data is absent from the container.' }
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot ($stem + '.autoload')) -Destination $payload
 Copy-Item -LiteralPath $generatedSettingsIni -Destination $payload
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.txt') -Destination $payload
 $descriptorSource = Join-Path $PSScriptRoot 'Registry/RailgunCatalogue.uplugin'
@@ -840,7 +846,7 @@ $provenance = [ordered]@{
     sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;
     gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';retocSha256=$retocManifest.executableSha256;
     gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId;executableSha256=$fingerprint.executable.sha256};
-    validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, plugin-local three-record primary-asset registry, GLB module actor, operator, inputs, HUD, shot audio and autoload coordinator';
+    validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, plugin-local three-record primary-asset registry, GLB module actor with lifecycle-owned station initialization, operator, inputs, HUD and shot audio';
     mappingSha256=$mapping.sha256;validationSummary='validation-summary.json';
     packagingStatus=$pack.status;containerVerificationStatus=$verify.status;semanticStatus=$semantic.status;
     ammoSourceJson='mods/Railgun/Assets/Fabricator/railgun-ammo-item.json';ammoSourceJsonSha256=(Get-FileHash -LiteralPath $ammoItemJsonPath -Algorithm SHA256).Hash;

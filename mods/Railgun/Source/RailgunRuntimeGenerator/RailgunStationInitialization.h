@@ -1,6 +1,6 @@
 #pragma once
 #include "AssetLoadingGraphNames.h"
-// Engine-only autoload manager. Exact shell class; no shell event or mutation.
+// Shared array loop used by the generated Railgun graphs.
 UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values)
 {
     auto* Macros = LoadObject<UBlueprint>(nullptr, CE::LoopPackage); check(Macros);
@@ -13,7 +13,7 @@ UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values)
     G.Link(G.Tail, Execute); G.Link(Values, G.Pin(Loop, CE::Array)); G.Tail = G.Pin(Loop, CE::LoopBody); return Loop;
 }
 
-void ContextPrepareStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
+void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
 {
     // Resolve before spawning: old/missing shell contract must not create an
     // active fallback query around the gun body or orphan replacement stations.
@@ -88,48 +88,72 @@ void ContextPrepareStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     ContextSet(G, Station, StationClass, CE::Ready, nullptr, N::True);
 }
 
-void BuildContextCoordinator(UBlueprint* BP, UClass* StationClass)
+void AddRailgunStationInitializationFunction(UBlueprint* BP,
+    UClass* StationClass)
 {
+    check(BP && StationClass);
     AddVariable(BP, CE::ModelEntry, UEdGraphSchema_K2::PC_Object, UBoxComponent::StaticClass());
-    AddVariable(BP, CE::ShellClass, UEdGraphSchema_K2::PC_Class, AActor::StaticClass());
     AddVariable(BP, CE::EntryAction, UEdGraphSchema_K2::PC_Object, UInputAction::StaticClass());
-    AddVariable(BP, CE::FoundPair, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, NativeInputNames::Context, UEdGraphSchema_K2::PC_Object,
+        UVoyageInputContextAsset::StaticClass());
+    AddVariable(BP, S::Anchor, UEdGraphSchema_K2::PC_Object,
+        USceneComponent::StaticClass());
+    AddVariable(BP, V::Vehicle, UEdGraphSchema_K2::PC_Object,
+        AVoyageVehiclePawn::StaticClass());
+    AddVariable(BP, V::Body, UEdGraphSchema_K2::PC_Object,
+        UPrimitiveComponent::StaticClass());
+    for (FName RuntimeReference : {CE::ModelEntry, CE::EntryAction,
+        NativeInputNames::Context, S::Anchor, V::Vehicle, V::Body})
+    {
+        MarkVariableTransient(BP, RuntimeReference);
+    }
     FKismetEditorUtilities::CompileBlueprint(BP);
-    UEdGraph* Graph = BP->UbergraphPages[0]; const auto Defaults = Graph->Nodes; for (UEdGraphNode* Node : Defaults) Node->DestroyNode();
+    check(BP->Status != BS_Error && BP->GeneratedClass);
+
+    UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(BP,
+        CE::InitializeStation, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(BP, Graph, false,
+        static_cast<UClass*>(nullptr));
+    UK2Node_FunctionEntry* Entry = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node)) Entry = Candidate;
+    check(Entry);
+    Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
+
     FGraph G(Graph, nullptr);
-    auto* Tick = NewObject<UK2Node_Event>(Graph); Tick->EventReference.SetExternalMember(BlueprintGraphNames::Events::ActorReceiveTick, AActor::StaticClass());
-    Tick->bOverrideFunction = true; G.Node(Tick); G.Tail = G.Pin(Tick, P::Then);
-    G.Branch(ObserveCall(G, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, HasAuthority), OpticalSelf(G)));
-    auto* Player = G.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, GetPlayerController));
-    G.Branch(G.Valid(G.Pin(Player, P::ReturnValue))); G.Write(S::Controller, G.Pin(Player, P::ReturnValue));
-    auto* ClassValid = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, IsValidClass));
-    G.Link(G.Read(CE::ShellClass), G.Pin(ClassValid, P::Class));
-    auto* Loaded = G.Branch(G.Pin(ClassValid, P::ReturnValue)); auto* LoadedTail = G.Tail; G.Tail = G.Pin(Loaded, P::Else);
+    G.Tail = G.Pin(Entry, P::Then);
+    // Idempotence is local to this shell. A destroyed station becomes invalid,
+    // allowing a later genuine lifecycle event to recreate it without scans.
+    auto* Existing = G.Branch(G.Valid(G.Read(V::Vehicle)));
+    G.Tail = G.Pin(Existing, P::Else);
+    G.Branch(ObserveCall(G, AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, HasAuthority), OpticalSelf(G)));
     G.Write(CE::EntryAction, LoadStockInputReference(G, CE::InteractActionPath, UInputAction::StaticClass()));
     G.Write(NativeInputNames::Context, LoadStockInputReference(G, DS::ContextPath, UVoyageInputContextAsset::StaticClass()));
-    auto* Path = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, MakeSoftClassPath)); G.Default(Path, CE::SoftClassPath, S::ClassPath);
-    auto* Ref = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, Conv_SoftClassPathToSoftClassRef));
-    G.Link(G.Pin(Path, P::ReturnValue), G.Pin(Ref, CE::SoftClassReferencePath));
-    auto* Load = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, LoadClassAsset_Blocking));
-    const FName AssetClass(TEXT("AssetClass")); G.Link(G.Pin(Ref, P::ReturnValue), G.Pin(Load, AssetClass)); G.Exec(Load);
-    auto* ClassCast = NewObject<UK2Node_ClassDynamicCast>(Graph); ClassCast->TargetType = AActor::StaticClass(); ClassCast->SetPurity(false); G.Node(ClassCast);
-    G.Link(G.Tail, G.Pin(ClassCast, P::Execute)); G.Link(G.Pin(Load, P::ReturnValue), ClassCast->GetCastSourcePin()); G.Tail = ClassCast->GetValidCastPin();
-    G.Write(CE::ShellClass, ClassCast->GetCastResultPin()); StationMerge(G, {G.Tail, LoadedTail});
-    auto* Shells = G.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, GetAllActorsOfClass));
-    G.Link(G.Read(CE::ShellClass), G.Pin(Shells, E::ActorClass)); G.Exec(Shells);
-    auto* Outer = ContextLoop(G, G.Pin(Shells, CE::OutActors)); auto* Shell = G.Pin(Outer, CE::ArrayElement);
-    G.Branch(G.Valid(Shell)); G.Write(CE::FoundPair, nullptr, N::False);
-    // Owner, not proximity or attached-list alone: a failed/deferred station is
-    // retained as a blocked pair rather than spawning an unbounded retry train.
-    auto* Stations = G.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, GetAllActorsOfClass));
-    G.Pin(Stations, E::ActorClass)->DefaultObject = StationClass; G.Exec(Stations);
-    auto* Inner = ContextLoop(G, G.Pin(Stations, CE::OutActors));
-    auto* Candidate = G.Pin(Inner, CE::ArrayElement); G.Branch(G.Valid(Candidate));
-    [[maybe_unused]] constexpr auto OwnerSignature = static_cast<AActor* (AActor::*)() const>(&AActor::GetOwner);
-    auto* Owner = ObserveCall(G, AActor::StaticClass(), ActorScanGraphNames::GetActorOwner, Candidate);
-    G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), Owner, Shell)); G.Write(CE::FoundPair, nullptr, N::True);
-    G.Tail = G.Pin(Inner, CE::Completed);
-    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool), G.Read(CE::FoundPair), N::False)); ContextPrepareStation(G, StationClass, Shell);
-    G.Tail = G.Pin(Outer, CE::Completed);
+    PrepareRailgunStation(G, StationClass, OpticalSelf(G));
+}
+
+bool ConfigureRailgunStationInitialization(UClass* StationClass)
+{
+    check(StationClass);
+    UBlueprint* BP = LoadObject<UBlueprint>(nullptr,
+        RailgunInventoryShared::ModuleObjectPath);
+    check(BP && BP->ParentClass == AVoyageModuleActor::StaticClass());
+    AddRailgunStationInitializationFunction(BP, StationClass);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass &&
+        BP->GeneratedClass->FindFunctionByName(CE::InitializeStation));
+
+    // Both paths schedule exactly one next-tick initialization attempt. This
+    // avoids player/controller readiness and global discovery. Whether native
+    // construction has attached a newly built shell by then is a runtime gate.
+    AddRailgunInventoryLimitInitialization(BP, CE::InitializeStation);
+    AddRailgunAmmoVisualPostLoad(BP, CE::InitializeStation);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass);
+    return SaveDedicatedAsset(BP);
 
 }

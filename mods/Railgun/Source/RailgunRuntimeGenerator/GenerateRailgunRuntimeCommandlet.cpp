@@ -260,6 +260,18 @@ void AddVariable(UBlueprint* BP, FName Name, FName Category, UObject* Type = nul
     check(FBlueprintEditorUtils::AddMemberVariable(BP, Name, PinType));
 }
 
+void MarkVariableTransient(UBlueprint* BP, FName Name)
+{
+    check(BP);
+    FBPVariableDescription* Variable = BP->NewVariables.FindByPredicate(
+        [Name](const FBPVariableDescription& Candidate)
+        {
+            return Candidate.VarName == Name;
+        });
+    check(Variable);
+    Variable->PropertyFlags |= CPF_Transient;
+}
+
 void AddArrayVariable(UBlueprint* BP, FName Name, FName Category,
     UObject* Type = nullptr)
 {
@@ -291,7 +303,7 @@ namespace
 #include "DedicatedStationGenerator.h"
 #include "RailgunAmmo.h"
 #include "RailgunInventory.h"
-#include "ContextStationCoordinator.h"
+#include "RailgunStationInitialization.h"
 }
 
 UGenerateRailgunRuntimeCommandlet::UGenerateRailgunRuntimeCommandlet()
@@ -303,7 +315,7 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
 {
     if (FParse::Param(*Params, DedicatedStationNames::VerifySwitch))
     {
-        TArray<const TCHAR*> VerifyPackages {N::Package, DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
+        TArray<const TCHAR*> VerifyPackages {DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
             RailgunInputNames::LookYaw, RailgunInputNames::LookPitch, RailgunInputNames::Exit, RailgunInputNames::Zoom, RailgunInputNames::Fire,
             RailgunInputNames::ExplosionCanary, RailgunInputNames::SplashCanary, Shot::Package,
             RailgunWaterWake::ControllerPackage,
@@ -370,56 +382,5 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     RailgunWaterWake::ControllerClass = CreateRailgunWaterWakeController();
     Shot::Class=CreateRailgunShot();
     UClass* StationClass = CreateDedicatedStation();
-    UPackage* Package = CreatePackage(N::Package);
-    UBlueprint* BP = FKismetEditorUtilities::CreateBlueprint(APawn::StaticClass(), Package, FName(N::Asset),
-        BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
-    check(BP);
-    auto* Root = BP->SimpleConstructionScript->CreateNode(USceneComponent::StaticClass(), N::Root);
-    BP->SimpleConstructionScript->AddNode(Root);
-    auto* CameraNode = BP->SimpleConstructionScript->CreateNode(UCameraComponent::StaticClass(), O::Camera);
-    Root->AddChildNode(CameraNode);
-    auto* CameraTemplate = CastChecked<UCameraComponent>(CameraNode->ComponentTemplate);
-    CameraTemplate->bUsePawnControlRotation = false; CameraTemplate->bConstrainAspectRatio = false;
-    CameraTemplate->SetAutoActivate(true);
-    AddVariable(BP, O::Active, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, Control::Owned, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, O::PreviousView, UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
-    AddVariable(BP, O::BaselineFov, UEdGraphSchema_K2::PC_Real);
-    AddVariable(BP, O::RequestedFov, UEdGraphSchema_K2::PC_Real);
-    AddVariable(BP, Aim::Yaw, UEdGraphSchema_K2::PC_Real);
-    AddVariable(BP, Aim::Pitch, UEdGraphSchema_K2::PC_Real);
-    AddVariable(BP, O::CharacterHidden, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, N::OriginalPawn, UEdGraphSchema_K2::PC_Object, ACharacter::StaticClass());
-    AddVariable(BP, S::Held, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, S::Controller, UEdGraphSchema_K2::PC_Object, APlayerController::StaticClass());
-    AddVariable(BP, S::Movement, UEdGraphSchema_K2::PC_Object, UCharacterMovementComponent::StaticClass());
-    AddVariable(BP, S::Root, UEdGraphSchema_K2::PC_Object, UPrimitiveComponent::StaticClass());
-    AddVariable(BP, S::Anchor, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
-    AddVariable(BP, S::CollisionBefore, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(BP, S::RotationBefore, UEdGraphSchema_K2::PC_Struct, TBaseStructure<FRotator>::Get());
-    AddVariable(BP, S::EntryLocal, UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
-    AddVariable(BP, S::AnchorStart, UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
-    AddVariable(BP, V::Vehicle, UEdGraphSchema_K2::PC_Object, AVoyageVehiclePawn::StaticClass());
-    AddVariable(BP, NativeInputNames::Context, UEdGraphSchema_K2::PC_Object, UVoyageInputContextAsset::StaticClass());
-    AddVariable(BP, V::Body, UEdGraphSchema_K2::PC_Object, UPrimitiveComponent::StaticClass());
-    FKismetEditorUtilities::CompileBlueprint(BP);
-    BuildContextCoordinator(BP, StationClass);
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
-    FKismetEditorUtilities::CompileBlueprint(BP);
-    if (BP->Status == BS_Error) return 1;
-    auto* CDO = CastChecked<AActor>(BP->GeneratedClass->GetDefaultObject());
-    CDO->PrimaryActorTick.bCanEverTick = true; CDO->PrimaryActorTick.bStartWithTickEnabled = true;
-    CDO->PrimaryActorTick.TickGroup = TG_PostPhysics;
-    CDO->PrimaryActorTick.TickInterval = CE::CoordinatorTickInterval; CDO->SetActorEnableCollision(false);
-    auto* PawnCDO = CastChecked<APawn>(CDO);
-    PawnCDO->AutoPossessPlayer = EAutoReceiveInput::Disabled;
-    PawnCDO->AutoPossessAI = EAutoPossessAI::Disabled;
-    PawnCDO->bUseControllerRotationPitch = false;
-    PawnCDO->bUseControllerRotationYaw = false;
-    PawnCDO->bUseControllerRotationRoll = false;
-    Package->MarkPackageDirty();
-    const FString Filename = FPackageName::LongPackageNameToFilename(N::Package, FPackageName::GetAssetPackageExtension());
-    IFileManager::Get().MakeDirectory(*FPaths::GetPath(Filename), true);
-    FSavePackageArgs Save; Save.TopLevelFlags = RF_Public | RF_Standalone; Save.SaveFlags = SAVE_NoError;
-    return UPackage::SavePackage(Package, BP, *Filename, Save) ? 0 : 1;
+    return ConfigureRailgunStationInitialization(StationClass) ? 0 : 1;
 }

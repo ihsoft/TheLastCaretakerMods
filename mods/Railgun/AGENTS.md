@@ -50,8 +50,10 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   below `/Game/Data/Assets` and the research skill below
   `/Game/Data/Assets/Skill`. Keep their names mod-unique and never ship a stock
   Cyclone package override.
-- The released container is exactly `Railgun` plus its autoload sidecar and
-  optional user settings. Its PAK contains only the three-record primary-asset
+- The released container is exactly the `Railgun` triplet plus optional user
+  settings. The gun shell owns event-driven, idempotent station initialization;
+  do not restore a global coordinator, autoload sidecar, or periodic actor
+  discovery. Its PAK contains only the three-record primary-asset
   registry at `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`; the release ZIP
   also owns the matching loose content-only descriptor. Never ship or replace
   `Voyage/AssetRegistry.bin`. Build registry records from the owned data-asset

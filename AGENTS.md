@@ -237,6 +237,12 @@ those details here.
 
 ## Shared Voyage vehicle and HUD principles
 
+- Prefer lifecycle events and direct owned references over periodic object
+  discovery. Repeated scans or rediscovery are a last-resort runtime design:
+  explain why no event or ownership path is sufficient and notify the user
+  before implementing one. This restriction does not apply to ordinary
+  simulation ticks, line traces, or other gameplay updates that are not
+  searching for ownership or lifecycle state.
 - Treat input mapping, vehicle state, physical movement, provided actions, and
   HUD rendering as separate layers until evidence proves a direct connection.
 - Enhanced Input mappings or action events alone do not imply that Voyage's

@@ -12,10 +12,8 @@ inline constexpr TCHAR BlockResponseValue[] = TEXT("2");
 inline const FName QueryBox(TEXT("RailgunEntryQuery"));
 inline const FName Interaction(TEXT("RailgunInteraction"));
 inline const FName EntryAction(TEXT("RailgunEntryAction"));
+inline const FName InitializeStation(TEXT("InitializeRailgunStation"));
 inline const FName EnterFunction(TEXT("RailgunEnterFromAction"));
-inline const FName FoundPair(TEXT("RailgunFoundPair"));
-inline const FName ShellClass(TEXT("RailgunShellClass"));
-inline const FName Shell(TEXT("RailgunShell"));
 inline const FName Component(TEXT("Component"));
 inline const FName MyCharacter(TEXT("MyCharacter"));
 inline const FName OutActions(TEXT("OutActions"));
@@ -27,9 +25,6 @@ inline const FName Array(TEXT("Array"));
 inline const FName ArrayElement(TEXT("Array Element"));
 inline const FName LoopBody(TEXT("LoopBody"));
 inline const FName Completed(TEXT("Completed"));
-inline const FName OutActors(TEXT("OutActors"));
-inline const FName SoftClassPath(TEXT("PathString"));
-inline const FName SoftClassReferencePath(TEXT("SoftClassPath"));
 inline constexpr TCHAR One[] = TEXT("1.0");
 // Secondary character interaction (default F), as used for drone entry.
 // Keep primary interaction (default E) available for the electrical socket.
@@ -38,7 +33,6 @@ inline constexpr TCHAR ActionName[] = TEXT("RailgunEnter");
 inline constexpr TCHAR Label[] = TEXT("Enter Railgun");
 inline constexpr TCHAR LoopPackage[] = TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros");
 inline const FName LoopGraph(TEXT("ForEachLoop"));
-inline constexpr float CoordinatorTickInterval = 0.0f;
 // Runtime geometry is copied from the shell's manifest-authored entry reference.
 inline const FVector BoxExtent(1.0f, 1.0f, 1.0f);
 inline const FVector BoxOffset = FVector::ZeroVector;

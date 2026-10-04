@@ -425,6 +425,7 @@ $shell = @(Read-Candidate '/Game/Mods/Railgun/Module/BP_Module_Railgun')
 $shellFunctions = @($shell | Where-Object { $_.Type -eq 'Function' })
 $expectedShellFunctions = @(
     'ExecuteUbergraph_BP_Module_Railgun','InteractGetInventory',
+    'InitializeRailgunStation',
     'OnPersistentActorPostLoad','OnRailgunAmmoInventoryChanged',
     'ReceiveBeginPlay','SyncRailgunAmmoVisuals','ValidateItem'
 )
@@ -485,6 +486,8 @@ Require ($ubergraphStrings -ccontains 'MaxWeightLimit') `
     'Native weight-limit setter must receive the authored component limit.'
 Require ($ubergraphStrings -ccontains 'SyncRailgunAmmoVisuals') `
     'Inventory lifecycle must invoke the owned ammo-visual sync function.'
+Require ($ubergraphStrings -ccontains 'InitializeRailgunStation') `
+    'Shell lifecycle must invoke its owned station initializer.'
 foreach ($requiredDelegateReference in @(
     'OnInventoryChanged','OnRailgunAmmoInventoryChanged',
     "Class'InventoryDelegate__DelegateSignature'",
@@ -510,7 +513,39 @@ Require ($postLoad.Count -eq 1 -and
     $postLoad[0].SuperStruct.ObjectName -ceq
         "Class'PersistentInterface:OnPersistentActorPostLoad'") `
     'Post-load refresh must override the exact inherited Voyage interface event.'
+$initializeStation = @($shellFunctions | Where-Object {
+    $_.Name -ceq 'InitializeRailgunStation'
+})
+Require ($initializeStation.Count -eq 1) `
+    'Expected one shell-owned station initialization function.'
+$initializeStationStrings = @(JsonStringLeaves $initializeStation[0])
+foreach ($requiredInitializationReference in @(
+    'NativeStation','RailgunModelEntryReference','RailgunEntryAction',
+    'ExpectedVehicleInputContext','ModuleMountCollision',
+    "Class'Actor:HasAuthority'",
+    "Class'Actor:GetComponentsByTag'",
+    "Class'GameplayStatics:BeginDeferredActorSpawnFromClass'",
+    "Class'GameplayStatics:FinishSpawningActor'",
+    "Class'Actor:K2_AttachToComponent'",
+    "Class'KismetSystemLibrary:LoadAsset_Blocking'"
+)) {
+    Require ($initializeStationStrings -ccontains
+        $requiredInitializationReference) `
+        ('Station initialization reference missing: ' +
+            $requiredInitializationReference)
+}
+foreach ($forbiddenDiscoveryReference in @(
+    "Class'GameplayStatics:GetAllActorsOfClass'",
+    "Class'GameplayStatics:GetPlayerController'"
+)) {
+    Require (-not ($initializeStationStrings -ccontains
+        $forbiddenDiscoveryReference)) `
+        ('Station initialization retained global discovery: ' +
+            $forbiddenDiscoveryReference)
+}
 $shellStrings = @(JsonStringLeaves $shell)
+Require (-not ($shellStrings -ccontains 'BP_RailgunCoordinator')) `
+    'Shell retained the removed global coordinator identity.'
 Require (-not ($shellStrings -ccontains 'RailgunAmmoVisualSyncElapsed')) `
     'Removed ammo-visual polling accumulator was serialized.'
 $syncVisuals = @($shellFunctions | Where-Object {
@@ -1428,5 +1463,5 @@ $skillIcon = @(Read-Candidate '/Game/Mods/Railgun/Research/T_RailgunSkill')
 $skillTexture = @($skillIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunSkill' })
 Require ($skillTexture.Count -eq 1 -and $skillTexture[0].SizeX -eq 256 -and $skillTexture[0].SizeY -eq 256) 'Railgun skill icon must be 256x256.'
 $reportPath = Join-Path $output 'validation.json'
-[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; no operator references; simple collision preserved; imported material packages remain readable and are recorded as evidence without constraining authored material type, parameters or parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; shell-owned BeginPlay and persistent post-load station initialization with a transient direct station reference, no global actor discovery and no player-controller startup gate; simple collision preserved; imported material packages remain readable and are recorded as evidence without constraining authored material type, parameters or parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 [pscustomobject]@{status='passed';reportPath=$reportPath}

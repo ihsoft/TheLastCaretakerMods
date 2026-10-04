@@ -91,7 +91,8 @@ void FindFunctionTerminals(UEdGraph* Graph, UK2Node_FunctionEntry*& Entry,
     Result->FindPinChecked(P::Execute)->BreakAllPinLinks();
 }
 
-void AddRailgunInventoryLimitInitialization(UBlueprint* BP)
+void AddRailgunInventoryLimitInitialization(UBlueprint* BP,
+    FName DeferredInitialization)
 {
     check(BP && BP->UbergraphPages.Num() == 1);
     UEdGraph* Graph = BP->UbergraphPages[0];
@@ -170,6 +171,16 @@ void AddRailgunInventoryLimitInitialization(UBlueprint* BP)
     G.Exec(Add);
     auto* Sync = G.Call(BP->GeneratedClass, RailgunInventory::SyncVisuals);
     G.Exec(Sync);
+    if (!DeferredInitialization.IsNone())
+    {
+        auto* Delay = G.Call(UKismetSystemLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,
+                DelayUntilNextTick));
+        G.Exec(Delay);
+        auto* Initialize = G.Call(BP->GeneratedClass,
+            DeferredInitialization);
+        G.Exec(Initialize);
+    }
 }
 
 void AddRailgunAmmoVisualSync(UBlueprint* BP)
@@ -279,7 +290,7 @@ void AddRailgunAmmoVisualCallback(UBlueprint* BP)
     G.Exec(Sync);
 }
 
-void AddRailgunAmmoVisualPostLoad(UBlueprint* BP)
+void AddRailgunAmmoVisualPostLoad(UBlueprint* BP, FName DeferredInitialization)
 {
     using namespace RailgunInventory;
     check(BP && BP->UbergraphPages.Num() == 1 && BP->GeneratedClass);
@@ -300,6 +311,12 @@ void AddRailgunAmmoVisualPostLoad(UBlueprint* BP)
     G.Write(LastVisualCount, nullptr, InvalidVisualCount);
     auto* Sync = G.Call(BP->GeneratedClass, SyncVisuals);
     G.Exec(Sync);
+    if (!DeferredInitialization.IsNone())
+    {
+        auto* Initialize = G.Call(BP->GeneratedClass,
+            DeferredInitialization);
+        G.Exec(Initialize);
+    }
 }
 
 void AddRailgunInventoryValidator(UBlueprint* BP)
@@ -424,11 +441,6 @@ void ConfigureRailgunInventory(UVoyageItemAmmo* Ammo,
     FKismetEditorUtilities::CompileBlueprint(BP);
     check(BP->Status != BS_Error && BP->GeneratedClass);
     AddRailgunAmmoVisualCallback(BP);
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
-    FKismetEditorUtilities::CompileBlueprint(BP);
-    check(BP->Status != BS_Error && BP->GeneratedClass);
-    AddRailgunInventoryLimitInitialization(BP);
-    AddRailgunAmmoVisualPostLoad(BP);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
     check(BP->Status != BS_Error && BP->GeneratedClass);

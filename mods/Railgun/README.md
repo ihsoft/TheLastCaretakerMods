@@ -25,7 +25,6 @@ output is written to a new `artifacts\railgun\build-*` directory and contains:
 - `payload\Railgun.utoc`
 - `payload\Railgun.ucas`
 - `payload\Railgun.pak`
-- `payload\Railgun.autoload`
 - `payload\Railgun.ini`
 - `payload\Mods\RailgunCatalogue\RailgunCatalogue.uplugin`
 - a ZIP, release manifest, `build-provenance.json` and compact
@@ -40,6 +39,12 @@ manifest also own the matching loose content-only descriptor. Registry records
 are derived from the three owned data-asset JSON readbacks by the shared
 `tools\New-VoyageAssetRegistry.ps1` producer; no stock registry is read, shipped
 or replaced.
+
+Current releases are loader-free: the built module shell initializes its owned
+operator station from `ReceiveBeginPlay` and persistent post-load lifecycle
+events. `-Install` fails closed if a legacy `Railgun.autoload` remains in the
+game. Updating such an installation requires the reviewed one-time recoverable
+migration; do not delete unrelated mods or their autoload sidecars.
 
 The exact cook inventory is written to the per-run TMP workspace. A small
 editor-only adapter validates its package count and Core SHA-1 before passing
