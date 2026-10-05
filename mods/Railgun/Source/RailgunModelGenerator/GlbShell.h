@@ -353,15 +353,6 @@ inline int32 Generate()
     UBlueprint* BP = FKismetEditorUtilities::CreateBlueprint(AVoyageModuleActor::StaticClass(), Package,
         FName(RailgunAssetNames::LeafProbeAssetName), BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass(), RailgunAssetNames::GeneratorLeafProbeName);
     USimpleConstructionScript* SCS = BP->SimpleConstructionScript;
-    auto* Mount = AddRootNode(SCS, UBoxComponent::StaticClass(), RailgunAssetNames::ModuleMountRootName);
-    auto* MountTemplate = CastChecked<UBoxComponent>(Mount->ComponentTemplate);
-    MountTemplate->SetBoxExtent(FVector(RailgunAssetNames::CollisionHalfWidthCentimeters, RailgunAssetNames::CollisionHalfWidthCentimeters, RailgunAssetNames::CollisionHalfHeightCentimeters));
-    MountTemplate->SetRelativeLocation(RailgunAssetNames::CollisionRelativeLocation);
-    MountTemplate->SetCollisionProfileName(RailgunAssetNames::BlockAllDynamicCollisionProfileName);
-    MountTemplate->SetGenerateOverlapEvents(RailgunAssetNames::ModuleMountGeneratesInteractionOverlaps);
-    MountTemplate->SetSimulatePhysics(false);
-    auto* Dynamic = AddRootNode(SCS, UVoyageDynamicCollisionComponent::StaticClass(), RailgunAssetNames::DynamicCollisionName);
-    CastChecked<UVoyageDynamicCollisionComponent>(Dynamic->ComponentTemplate)->bAutoWeld = true;
     // Attach after importing the hierarchy; no fixed offset or second axis conversion.
     auto* Electric = SCS->CreateNode(USceneComponent::StaticClass(), RailgunAssetNames::ElectricComponentName);
     CastChecked<USceneComponent>(Electric->ComponentTemplate)->SetRelativeTransform(FTransform::Identity);
@@ -393,8 +384,13 @@ inline int32 Generate()
             if (Actor != ModelRoot && !Nodes.Contains(Parent)) continue;
             auto* SourceComponent = Actor->GetRootComponent();
             auto* SourceMesh = Cast<UStaticMeshComponent>(SourceComponent);
-            auto* Node = AddChildNode(SCS, Actor == ModelRoot ? Mount : Nodes[Parent],
-                SourceMesh ? UStaticMeshComponent::StaticClass() : USceneComponent::StaticClass(), FName(*Name));
+            UClass* ComponentClass = SourceMesh
+                ? UStaticMeshComponent::StaticClass()
+                : USceneComponent::StaticClass();
+            auto* Node = Actor == ModelRoot
+                ? AddRootNode(SCS, ComponentClass, FName(*Name))
+                : AddChildNode(SCS, Nodes.FindChecked(Parent), ComponentClass,
+                    FName(*Name));
             auto* Component = CastChecked<USceneComponent>(Node->ComponentTemplate);
             Component->SetRelativeTransform(SourceComponent->GetRelativeTransform());
             Component->SetMobility(EComponentMobility::Movable);
@@ -418,11 +414,14 @@ inline int32 Generate()
             if (Name == Roles->GetStringField(PitchKey)) Component->ComponentTags.Add(RailgunModelContract::PitchTag);
             if (Name == Roles->GetStringField(MuzzleKey)) Component->ComponentTags.Add(RailgunModelContract::MuzzleTag);
             if (Name == Roles->GetStringField(SightKey)) Component->ComponentTags.Add(RailgunModelContract::SightTag);
+            if (Actor == ModelRoot)
+                Component->ComponentTags.Add(RailgunModelContract::RootTag);
             if (Actor == ChargeIndicatorActor)
                 Component->ComponentTags.Add(RailgunModelContract::ChargeIndicatorTag);
             Nodes.Add(Actor, Node);
             auto Entry = MakeShared<FJsonObject>(); Entry->SetStringField(NameKey, Name);
-            Entry->SetStringField(ParentKey, Actor == ModelRoot ? RailgunAssetNames::ModuleMountRootName.ToString() : Parent->GetActorLabel());
+            Entry->SetStringField(ParentKey,
+                Actor == ModelRoot ? FString() : Parent->GetActorLabel());
             Entry->SetStringField(MeshKey, MeshPath);
             Entry->SetBoolField(HiddenInGameKey, Component->bHiddenInGame);
             Entry->SetArrayField(LocationKey, VectorJson(Component->GetRelativeLocation()));
@@ -432,6 +431,11 @@ inline int32 Generate()
         }
         if (Nodes.Num() == Previous) return 1;
     }
+    auto* Dynamic = AddRootNode(SCS,
+        UVoyageDynamicCollisionComponent::StaticClass(),
+        RailgunAssetNames::DynamicCollisionName);
+    CastChecked<UVoyageDynamicCollisionComponent>(
+        Dynamic->ComponentTemplate)->bAutoWeld = true;
     Nodes.FindChecked(PowerAnchor)->AddChildNode(Electric);
     auto* Entry = AddChildNode(SCS, Nodes.FindChecked(EntryParent), UBoxComponent::StaticClass(), RailgunModelContract::EntryComponent);
     auto* EntryTemplate = CastChecked<UBoxComponent>(Entry->ComponentTemplate);

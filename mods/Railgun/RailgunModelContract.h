@@ -5,6 +5,7 @@
 // model-owned GLB registry, not in station input code.
 namespace RailgunModelContract
 {
+inline const FName RootTag(TEXT("Railgun.Model.Root"));
 inline const FName YawTag(TEXT("Railgun.Model.Yaw"));
 inline const FName PitchTag(TEXT("Railgun.Model.Pitch"));
 inline const FName MuzzleTag(TEXT("Railgun.Model.Muzzle"));

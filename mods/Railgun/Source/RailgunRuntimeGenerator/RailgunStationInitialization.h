@@ -29,11 +29,14 @@ void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     G.Branch(G.Valid(G.Read(CE::ModelEntry)));
     auto* Root = ObserveCall(G, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetRootComponent), Shell);
     G.Branch(G.Valid(Root)); G.Write(S::Anchor, Root);
-    // Fabricator visuals are not this class; exact native-built mount guards
-    // also exclude transient/unattached editor previews of the same class.
-    auto* Name = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, GetObjectName)); G.Link(Root, G.Pin(Name, P::Object));
-    auto* Match = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr));
-    G.Link(G.Pin(Name, P::ReturnValue), G.Pin(Match, P::Binary::LeftOperand)); G.Default(Match, P::Binary::RightOperand, S::RootName); G.Branch(G.Pin(Match, P::ReturnValue));
+    // Fabricator visuals are not this class; the owned model-root role plus an
+    // external attachment also excludes transient/unattached editor previews.
+    auto* HasRootTag = G.Call(UActorComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UActorComponent, ComponentHasTag));
+    G.Link(Root, G.Pin(HasRootTag, P::FunctionTarget));
+    G.Default(HasRootTag, ActorScanGraphNames::ComponentTag,
+        *RailgunModelContract::RootTag.ToString());
+    G.Branch(G.Pin(HasRootTag, P::ReturnValue));
     G.Branch(G.Valid(ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, GetAttachParent), Root)));
     auto* Rotation = ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_GetComponentRotation), Root);
     auto* AnchorTransform = G.Transform(ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_GetComponentLocation), Root), Rotation);

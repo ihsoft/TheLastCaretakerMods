@@ -79,8 +79,13 @@
   reference; no global actor discovery or autoload coordinator is packaged.
   `ReceiveBeginPlay` and the exact inherited persistent post-load event each
   schedule one next-tick initialization attempt. Initialization requires the
-  exact native module root and an attached parent, so fabricator visuals and
-  unattached ghosts cannot spawn a station. The loader-free shell-owned
+  model root tagged `Railgun.Model.Root` and an attached parent, so fabricator
+  visuals and unattached ghosts cannot spawn a station. The node selected by
+  `model-source.json`'s `nodes.root` is the shell's scene root and station
+  anchor; no additional mount collider is needed. Physical collision remains
+  on the configured `fabricatorCollision` mesh, and the dynamic-collision
+  component retains auto-weld. An enclosing mount collider interferes with
+  the attached power cable. The loader-free shell-owned
   initialization path in `build-20261004-084803` is user game-validated; the
   Railgun no longer requires VoyageAutoLoader. There is no polling or retry
   fallback. Its `VoyageModuleComponent.ItemAsset` points

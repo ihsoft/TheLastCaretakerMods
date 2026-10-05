@@ -24,20 +24,15 @@ constexpr TCHAR ElectricSocketDataObjectPath[] = TEXT("/Game/Data/Assets/ModuleS
 constexpr TCHAR CameraDronePackageName[] = TEXT("/Game/Blueprints/Vehicles/BP_CameraDrone");
 
 const FName GeneratorLeafProbeName(TEXT("GenerateRailgunLeafProbe"));
-const FName ModuleMountRootName(TEXT("ModuleMountCollision"));
 const FName DynamicCollisionName(TEXT("VoyageDynamicCollision"));
 const FName ElectricComponentName(TEXT("Electric"));
 const FName ElectricSocketName(TEXT("ElectricSocket"));
 const FName BlockAllDynamicCollisionProfileName(TEXT("BlockAllDynamic"));
 const FName NoCollisionProfileName(TEXT("NoCollision"));
-constexpr float CollisionHalfWidthCentimeters = 75.0f;
-constexpr float CollisionHalfHeightCentimeters = 50.0f;
-constexpr bool ModuleMountGeneratesInteractionOverlaps = true;
 constexpr double RailgunEnergyConsumptionOn = 1000.0;
 constexpr double RailgunEnergyConsumptionStandby = 1000.0;
 constexpr double RailgunIdleBufferKJ = 1.0;
 constexpr uint32 ElectricSocketId = 2236302826u;
 constexpr bool IncludeBaseGameLoadedConnectorReference = false;
 constexpr bool UsesStockCameraDroneClass = true;
-const FVector CollisionRelativeLocation(0.0, 0.0, 50.0);
 }

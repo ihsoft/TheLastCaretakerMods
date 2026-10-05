@@ -521,7 +521,7 @@ Require ($initializeStation.Count -eq 1) `
 $initializeStationStrings = @(JsonStringLeaves $initializeStation[0])
 foreach ($requiredInitializationReference in @(
     'NativeStation','RailgunModelEntryReference','RailgunEntryAction',
-    'ExpectedVehicleInputContext','ModuleMountCollision',
+    'ExpectedVehicleInputContext','Railgun.Model.Root',
     "Class'Actor:HasAuthority'",
     "Class'Actor:GetComponentsByTag'",
     "Class'GameplayStatics:BeginDeferredActorSpawnFromClass'",
@@ -546,6 +546,8 @@ foreach ($forbiddenDiscoveryReference in @(
 $shellStrings = @(JsonStringLeaves $shell)
 Require (-not ($shellStrings -ccontains 'BP_RailgunCoordinator')) `
     'Shell retained the removed global coordinator identity.'
+Require (-not ($shellStrings -ccontains 'ModuleMountCollision')) `
+    'Removed module-mount collision identity was serialized.'
 Require (-not ($shellStrings -ccontains 'RailgunAmmoVisualSyncElapsed')) `
     'Removed ammo-visual polling accumulator was serialized.'
 $syncVisuals = @($shellFunctions | Where-Object {
@@ -1165,6 +1167,47 @@ foreach ($name in @('PersistentComponent','DestructibleObjectComponent')) {
 $dynamic = @($shell | Where-Object { $_.Type -ceq 'VoyageDynamicCollisionComponent' })
 Require ($dynamic.Count -eq 1 -and $dynamic[0].Properties.bAutoWeld -eq $true) 'Missing auto-weld.'
 $inventory = Get-Content -LiteralPath $ModelInventory -Raw | ConvertFrom-Json
+$constructionScript = @($shell | Where-Object {
+    $_.Type -ceq 'SimpleConstructionScript'
+})
+Require ($constructionScript.Count -eq 1) `
+    'Expected one shell construction script.'
+$modelRootName = [string]$inventory.roles.root
+$modelRootNode = @($shell | Where-Object {
+    $_.Type -ceq 'SCS_Node' -and
+    $_.Properties.InternalVariableName -ceq $modelRootName
+})
+Require ($modelRootNode.Count -eq 1) 'Model root SCS node is missing.'
+$modelRootSuffix = '.' + $modelRootNode[0].Name + "'"
+$rootNodes = @($constructionScript[0].Properties.RootNodes)
+Require ($rootNodes.Count -ge 1 -and
+    $rootNodes[0].ObjectName.EndsWith($modelRootSuffix)) `
+    'Model registry root is not the shell scene root.'
+$modelRootComponent = @($shell | Where-Object {
+    $_.Name -ceq ($modelRootName + '_GEN_VARIABLE')
+})
+$modelRootInventory = @($inventory.components | Where-Object {
+    $_.name -ceq $modelRootName
+})
+Require ($modelRootInventory.Count -eq 1 -and
+    $modelRootComponent.Count -eq 1) `
+    'Model registry root is missing or duplicated.'
+$expectedModelRootType = if ([string]::IsNullOrWhiteSpace(
+    [string]$modelRootInventory[0].mesh)) {
+    'SceneComponent'
+} else {
+    'StaticMeshComponent'
+}
+Require ($modelRootComponent[0].Type -ceq $expectedModelRootType) `
+    'Model registry root type does not match the imported root.'
+Require (@($modelRootComponent[0].Properties.ComponentTags) -ccontains
+    'Railgun.Model.Root') 'Model root role tag is missing.'
+$rootInventoryEntries = @($inventory.components | Where-Object {
+    [string]::IsNullOrEmpty([string]$_.parent)
+})
+Require ($rootInventoryEntries.Count -eq 1 -and
+    $rootInventoryEntries[0].name -ceq $modelRootName) `
+    'Model inventory does not identify exactly one root.'
 $ammoCassetteInventory = $inventory.ammoCassette
 Require ($null -ne $ammoCassetteInventory) `
     'Ammo cassette import evidence is missing.'
@@ -1316,7 +1359,12 @@ for ($i=0; $i -lt 3; $i++) {
 foreach ($expected in $inventory.components) {
     $component = @($shell | Where-Object { $_.Name -ceq ($expected.name + '_GEN_VARIABLE') })
     Require ($component.Count -eq 1) ('Missing GLB component: ' + $expected.name)
-    Require-Child $expected.parent $expected.name
+    if ([string]::IsNullOrEmpty([string]$expected.parent)) {
+        Require ($expected.name -ceq $modelRootName) `
+            ('Unexpected root component: ' + $expected.name)
+    } else {
+        Require-Child $expected.parent $expected.name
+    }
     foreach ($field in @('location','rotation','scale')) {
         $property = @{location='RelativeLocation';rotation='RelativeRotation';scale='RelativeScale3D'}[$field]
         $axes = if ($field -ceq 'rotation') { @('Pitch','Yaw','Roll') } else { @('X','Y','Z') }
