@@ -362,6 +362,9 @@ UClass* CreateDedicatedStation()
         UEdGraphSchema_K2::PC_Object, UMaterialInstanceDynamic::StaticClass());
     AddVariable(BP, RailgunChargeIndicator::LastLevel,
         UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP, RailgunChargeIndicator::BoundModule,
+        UEdGraphSchema_K2::PC_Object,
+        UVoyageModuleComponent::StaticClass());
     AddVariable(BP, ZoomTest::Wide, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, EyeAim::Yaw, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, EyeAim::Pitch, UEdGraphSchema_K2::PC_Real);
@@ -724,7 +727,10 @@ UClass* CreateDedicatedStation()
     check(Hud->Status != BS_Error);
     AddStationActions(BP);
     AddContextEntry(BP);
-    AddNativeStationHudInterface(BP, Hud->GeneratedClass); BuildDedicatedStationGraph(BP);
+    AddNativeStationHudInterface(BP, Hud->GeneratedClass);
+    AddRailgunChargeIndicatorFunctions(BP);
+    BuildDedicatedStationGraph(BP);
+    AddRailgunChargeIndicatorTeardown(BP);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP); FKismetEditorUtilities::CompileBlueprint(BP); check(BP->Status != BS_Error);
     auto* CDO = CastChecked<APawn>(BP->GeneratedClass->GetDefaultObject());
     check(CDO->GetRootComponent() && CDO->GetRootComponent()->IsA<UVoyageFastSceneComponent>());

@@ -12,6 +12,9 @@
 #include "ModuleResourceType.h"
 #include "VoyageModuleComponent.generated.h"
 class UVoyageBaseInventoryComponent;
+class UVoyageModuleComponent;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVoyageModuleCompDelegate,
+    UVoyageModuleComponent*, Module);
 UCLASS(BlueprintType)
 class VOYAGE_API UVoyageModuleComponent : public UActorComponent
 {
@@ -28,6 +31,8 @@ public:
     UPROPERTY() FModuleConfigData ConfigData;
     UPROPERTY() bool bUseSocketCustomTarget = false;
     UPROPERTY() FComponentReference SocketCustomTarget;
+    UPROPERTY(BlueprintAssignable, Category="RailgunEvents")
+    FVoyageModuleCompDelegate OnModuleValueChanged;
 
     // Steam25191271 native registration/thunk and stock FoodProcessor call.
     // Read-only methods; module lifecycle/consumption is not ActorComponent activation.

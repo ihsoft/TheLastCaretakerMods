@@ -89,6 +89,10 @@ void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     ContextSet(G, Station, StationClass, CE::InteractBlocks,
         G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ByteByte), G.Pin(Response, P::ReturnValue), CE::BlockResponseValue));
     ContextSet(G, Station, StationClass, CE::Ready, nullptr, N::True);
+    auto* BindIndicator = G.Call(StationClass,
+        RailgunChargeIndicator::BindFunction);
+    G.Link(Station, G.Pin(BindIndicator, P::FunctionTarget));
+    G.Exec(BindIndicator);
 }
 
 void AddRailgunStationInitializationFunction(UBlueprint* BP,
@@ -129,6 +133,18 @@ void AddRailgunStationInitializationFunction(UBlueprint* BP,
     // Idempotence is local to this shell. A destroyed station becomes invalid,
     // allowing a later genuine lifecycle event to recreate it without scans.
     auto* Existing = G.Branch(G.Valid(G.Read(V::Vehicle)));
+    auto* ExistingStation = NewObject<UK2Node_DynamicCast>(Graph);
+    ExistingStation->TargetType = StationClass;
+    ExistingStation->SetPurity(false);
+    G.Node(ExistingStation);
+    G.Link(G.Tail, G.Pin(ExistingStation, P::Execute));
+    G.Link(G.Read(V::Vehicle), ExistingStation->GetCastSourcePin());
+    G.Tail = ExistingStation->GetValidCastPin();
+    auto* RebindIndicator = G.Call(StationClass,
+        RailgunChargeIndicator::BindFunction);
+    G.Link(ExistingStation->GetCastResultPin(),
+        G.Pin(RebindIndicator, P::FunctionTarget));
+    G.Exec(RebindIndicator);
     G.Tail = G.Pin(Existing, P::Else);
     G.Branch(ObserveCall(G, AActor::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(AActor, HasAuthority), OpticalSelf(G)));

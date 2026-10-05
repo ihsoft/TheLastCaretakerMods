@@ -527,7 +527,8 @@ foreach ($requiredInitializationReference in @(
     "Class'GameplayStatics:BeginDeferredActorSpawnFromClass'",
     "Class'GameplayStatics:FinishSpawningActor'",
     "Class'Actor:K2_AttachToComponent'",
-    "Class'KismetSystemLibrary:LoadAsset_Blocking'"
+    "Class'KismetSystemLibrary:LoadAsset_Blocking'",
+    'BindRailgunChargeIndicator'
 )) {
     Require ($initializeStationStrings -ccontains
         $requiredInitializationReference) `
@@ -599,21 +600,88 @@ foreach ($forbiddenFireReference in @(
         ('Railgun fire must not use presentation state or direct mutation: ' +
             $forbiddenFireReference)
 }
+$chargeIndicatorBind = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'BindRailgunChargeIndicator'
+})
+Require ($chargeIndicatorBind.Count -eq 1) `
+    'Expected one event-driven charge-indicator binding function.'
+$chargeIndicatorBindStrings = @(JsonStringLeaves $chargeIndicatorBind[0])
 foreach ($requiredChargeIndicatorReference in @(
     'RailgunChargeIndicatorOwner',
     'RailgunChargeIndicatorComponent',
     'RailgunChargeIndicatorMaterial',
     'RailgunChargeIndicatorLastLevel',
+    'RailgunChargeIndicatorModule',
+    'OnModuleValueChanged',
+    'OnRailgunChargeIndicatorModuleValueChanged',
+    "Class'VoyageModuleComponent:GetResourceAmount'",
+    'EX_AddMulticastDelegate',
+    'EX_RemoveMulticastDelegate',
     'Railgun.Model.ChargeIndicator',
     'ProgressLevel',
     'CreateDynamicMaterialInstance',
     "Class'MaterialInstanceDynamic:SetScalarParameterValue'",
     '/Game/Materials/Modules/MI_PogressBar_Basic_LED.MI_PogressBar_Basic_LED'
 )) {
-    Require ($operatorStrings -ccontains $requiredChargeIndicatorReference) `
+    Require ($chargeIndicatorBindStrings -ccontains
+        $requiredChargeIndicatorReference) `
         ('Railgun charge-indicator contract reference missing: ' +
             $requiredChargeIndicatorReference)
 }
+$chargeIndicatorCallback = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'OnRailgunChargeIndicatorModuleValueChanged'
+})
+Require ($chargeIndicatorCallback.Count -eq 1) `
+    'Expected one charge-indicator callback.'
+$chargeIndicatorParameters = @($chargeIndicatorCallback[0].ChildProperties |
+    Where-Object {
+        $_.PSObject.Properties.Name -ccontains 'PropertyFlags' -and
+        $_.PropertyFlags -match '(^| \| )Parm($| \| )'
+    })
+Require ($chargeIndicatorParameters.Count -eq 1 -and
+    $chargeIndicatorParameters[0].Name -ceq 'Module' -and
+    $chargeIndicatorParameters[0].Type -ceq 'ObjectProperty' -and
+    $chargeIndicatorParameters[0].PropertyClass.ObjectName -ceq
+        "Class'VoyageModuleComponent'" -and
+    $chargeIndicatorParameters[0].PropertyClass.ObjectPath -ceq '/Script/Voyage') `
+    'Charge-indicator callback must own the exact Voyage module delegate signature.'
+$chargeIndicatorCallbackStrings = @(
+    JsonStringLeaves $chargeIndicatorCallback[0])
+foreach ($requiredCallbackReference in @(
+    'Module','RailgunChargeIndicatorModule',
+    "Class'VoyageModuleComponent:GetResourceAmount'",
+    "Class'MaterialInstanceDynamic:SetScalarParameterValue'",
+    'ProgressLevel'
+)) {
+    Require ($chargeIndicatorCallbackStrings -ccontains
+        $requiredCallbackReference) `
+        ('Charge-indicator callback reference missing: ' +
+            $requiredCallbackReference)
+}
+foreach ($forbiddenCallbackReference in @(
+    "Class'VoyageModuleComponent:AddResource'",
+    "Class'VoyageModuleComponent:RemoveResource'",
+    "Class'VoyageModuleComponent:SetCustomConsumption'",
+    "Class'KismetSystemLibrary:Delay",
+    "Class'GameplayStatics:GetAllActorsOfClass'"
+)) {
+    Require (-not ($chargeIndicatorCallbackStrings -ccontains
+        $forbiddenCallbackReference)) `
+        ('Charge-indicator callback must remain visual-only: ' +
+            $forbiddenCallbackReference)
+}
+foreach ($requiredChargeTeardownReference in @(
+    'RailgunChargeIndicatorModule',
+    'OnRailgunChargeIndicatorModuleValueChanged',
+    'EX_RemoveMulticastDelegate'
+)) {
+    Require ($operatorStrings -ccontains $requiredChargeTeardownReference) `
+        ('Charge-indicator teardown reference missing: ' +
+            $requiredChargeTeardownReference)
+}
+Require (-not ($operatorStrings -ccontains
+    "Class'MaterialInstanceDynamic:SetScalarParameterValue'")) `
+    'Operator tick/fire/end-play graph must not poll or write the charge indicator.'
 Require (-not ($operatorStrings -ccontains "Class'GameplayStatics:GetAllActorsOfClass'")) `
     'Railgun charge indicator must not add a world actor scan.'
 $removeEnergyCallIndexes = @(NativeContextCallIndexes $operatorStatements `
@@ -1511,5 +1579,5 @@ $skillIcon = @(Read-Candidate '/Game/Mods/Railgun/Research/T_RailgunSkill')
 $skillTexture = @($skillIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunSkill' })
 Require ($skillTexture.Count -eq 1 -and $skillTexture[0].SizeX -eq 256 -and $skillTexture[0].SizeY -eq 256) 'Railgun skill icon must be 256x256.'
 $reportPath = Join-Path $output 'validation.json'
-[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; shell-owned BeginPlay and persistent post-load station initialization with a transient direct station reference, no global actor discovery and no player-controller startup gate; simple collision preserved; imported material packages remain readable and are recorded as evidence without constraining authored material type, parameters or parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; exact Voyage module-value delegate binding with idempotent remove/add, one initial charge-indicator snapshot, visual-only callback and end-play unbinding, with no charge-indicator write in the operator tick/fire graph; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; shell-owned BeginPlay and persistent post-load station initialization with a transient direct station reference, no global actor discovery and no player-controller startup gate; simple collision preserved; imported material packages remain readable and are recorded as evidence without constraining authored material type, parameters or parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 [pscustomobject]@{status='passed';reportPath=$reportPath}

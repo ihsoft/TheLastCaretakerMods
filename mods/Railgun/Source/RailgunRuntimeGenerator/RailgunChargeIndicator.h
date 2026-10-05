@@ -6,6 +6,12 @@ inline const FName Owner(TEXT("RailgunChargeIndicatorOwner"));
 inline const FName Component(TEXT("RailgunChargeIndicatorComponent"));
 inline const FName Material(TEXT("RailgunChargeIndicatorMaterial"));
 inline const FName LastLevel(TEXT("RailgunChargeIndicatorLastLevel"));
+inline const FName BoundModule(TEXT("RailgunChargeIndicatorModule"));
+inline const FName BindFunction(TEXT("BindRailgunChargeIndicator"));
+inline const FName CallbackFunction(
+    TEXT("OnRailgunChargeIndicatorModuleValueChanged"));
+inline const FName OnModuleValueChanged(TEXT("OnModuleValueChanged"));
+inline const FName ModuleParameter(TEXT("Module"));
 inline const FName ElementIndexPin(TEXT("ElementIndex"));
 inline const FName OptionalNamePin(TEXT("OptionalName"));
 inline const FName SourceMaterialPin(TEXT("SourceMaterial"));
@@ -14,6 +20,8 @@ inline const FName ValuePin(TEXT("Value"));
 inline const FName DoubleInputPin(TEXT("InDouble"));
 inline const FName DynamicMaterialName(TEXT("RailgunChargeIndicatorMID"));
 inline constexpr TCHAR FullLevel[] = TEXT("1.0");
+inline constexpr TCHAR DelegateSignaturePath[] =
+    TEXT("/Script/Voyage.VoyageModuleCompDelegate__DelegateSignature");
 }
 
 UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values);
@@ -140,4 +148,174 @@ void UpdateRailgunChargeIndicator(FGraph& G, UEdGraphPin* StoredEnergy)
         Level, G.Read(RailgunChargeIndicator::LastLevel)));
     SetRailgunChargeIndicatorLevel(G, Level);
     G.Write(RailgunChargeIndicator::LastLevel, Level);
+}
+
+FMulticastDelegateProperty* RailgunChargeIndicatorDelegateProperty()
+{
+    auto* Property = FindFProperty<FMulticastDelegateProperty>(
+        UVoyageModuleComponent::StaticClass(),
+        RailgunChargeIndicator::OnModuleValueChanged);
+    check(Property && Property->SignatureFunction &&
+        Property->SignatureFunction->GetPathName() ==
+            RailgunChargeIndicator::DelegateSignaturePath &&
+        Property->SignatureFunction->NumParms == 1);
+    auto* Module = FindFProperty<FObjectProperty>(
+        Property->SignatureFunction,
+        RailgunChargeIndicator::ModuleParameter);
+    check(Module && Module->HasAnyPropertyFlags(CPF_Parm) &&
+        Module->PropertyClass == UVoyageModuleComponent::StaticClass());
+    return Property;
+}
+
+UEdGraphPin* ReadRailgunChargeIndicatorEnergy(FGraph& G,
+    UEdGraphPin* Module)
+{
+    auto* Get = G.Call(UVoyageModuleComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent,
+            GetResourceAmount));
+    G.Link(Module, G.Pin(Get, P::FunctionTarget));
+    G.Default(Get, Charge::Type, Charge::Electricity);
+    return G.Pin(Get, P::ReturnValue);
+}
+
+void AddRailgunChargeIndicatorFunctions(UBlueprint* BP)
+{
+    using namespace RailgunChargeIndicator;
+    check(BP && BP->GeneratedClass);
+    FMulticastDelegateProperty* DelegateProperty =
+        RailgunChargeIndicatorDelegateProperty();
+
+    UEdGraph* CallbackGraph = FBlueprintEditorUtils::CreateNewGraph(BP,
+        CallbackFunction, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(BP, CallbackGraph, true,
+        DelegateProperty->SignatureFunction.Get());
+    UK2Node_FunctionEntry* CallbackEntry = nullptr;
+    for (UEdGraphNode* Node : CallbackGraph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+            CallbackEntry = Candidate;
+    check(CallbackEntry);
+    CallbackEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
+    FGraph Callback(CallbackGraph, nullptr);
+    Callback.Tail = Callback.Pin(CallbackEntry, P::Then);
+    UEdGraphPin* ChangedModule = Callback.Pin(CallbackEntry,
+        ModuleParameter);
+    Callback.Branch(Callback.Valid(ChangedModule));
+    Callback.Branch(Callback.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            EqualEqual_ObjectObject), ChangedModule,
+        Callback.Read(BoundModule)));
+    EnsureRailgunChargeIndicator(Callback);
+    UpdateRailgunChargeIndicator(Callback,
+        ReadRailgunChargeIndicatorEnergy(Callback, ChangedModule));
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass &&
+        BP->GeneratedClass->FindFunctionByName(CallbackFunction));
+
+    UEdGraph* BindGraph = FBlueprintEditorUtils::CreateNewGraph(BP,
+        BindFunction, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(BP, BindGraph, false,
+        static_cast<UClass*>(nullptr));
+    UK2Node_FunctionEntry* BindEntry = nullptr;
+    for (UEdGraphNode* Node : BindGraph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+            BindEntry = Candidate;
+    check(BindEntry);
+    BindEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
+
+    FGraph Bind(BindGraph, nullptr);
+    Bind.Tail = Bind.Pin(BindEntry, P::Then);
+    auto* CallbackDelegate = Bind.Node(
+        NewObject<UK2Node_CreateDelegate>(BindGraph));
+    CallbackDelegate->SetFunction(CallbackFunction);
+    auto* RemovePrevious = NewObject<UK2Node_RemoveDelegate>(BindGraph);
+    RemovePrevious->SetFromProperty(DelegateProperty, false,
+        UVoyageModuleComponent::StaticClass());
+    Bind.Node(RemovePrevious);
+    auto* RemoveCurrent = NewObject<UK2Node_RemoveDelegate>(BindGraph);
+    RemoveCurrent->SetFromProperty(DelegateProperty, false,
+        UVoyageModuleComponent::StaticClass());
+    Bind.Node(RemoveCurrent);
+    auto* Add = NewObject<UK2Node_AddDelegate>(BindGraph);
+    Add->SetFromProperty(DelegateProperty, false,
+        UVoyageModuleComponent::StaticClass());
+    Bind.Node(Add);
+    Bind.Link(CallbackDelegate->GetDelegateOutPin(),
+        RemovePrevious->GetDelegatePin());
+    Bind.Link(CallbackDelegate->GetDelegateOutPin(),
+        RemoveCurrent->GetDelegatePin());
+    Bind.Link(CallbackDelegate->GetDelegateOutPin(),
+        Add->GetDelegatePin());
+
+    auto* PreviousValid = Bind.Branch(Bind.Valid(Bind.Read(BoundModule)));
+    Bind.Link(Bind.Read(BoundModule),
+        Bind.Pin(RemovePrevious, P::FunctionTarget));
+    Bind.Exec(RemovePrevious);
+    UEdGraphPin* RemovedTail = Bind.Tail;
+    Bind.Tail = Bind.Pin(PreviousValid, P::Else);
+    StationMerge(Bind, {RemovedTail, Bind.Tail});
+    Bind.Write(BoundModule, nullptr);
+
+    UEdGraphPin* Module = FindEnergyModule(Bind);
+    Bind.Write(BoundModule, Module);
+    Bind.Link(Module, Bind.Pin(RemoveCurrent, P::FunctionTarget));
+    Bind.Exec(RemoveCurrent);
+    Bind.Link(Module, Bind.Pin(Add, P::FunctionTarget));
+    Bind.Exec(Add);
+    EnsureRailgunChargeIndicator(Bind);
+    UpdateRailgunChargeIndicator(Bind,
+        ReadRailgunChargeIndicatorEnergy(Bind, Module));
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass &&
+        BP->GeneratedClass->FindFunctionByName(BindFunction));
+}
+
+void AddRailgunChargeIndicatorTeardown(UBlueprint* BP)
+{
+    using namespace RailgunChargeIndicator;
+    check(BP && BP->UbergraphPages.Num() == 1);
+    UEdGraph* Graph = BP->UbergraphPages[0];
+    UK2Node_Event* EndPlay = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        auto* Event = Cast<UK2Node_Event>(Node);
+        if (!Event || Event->EventReference.GetMemberName() !=
+            ActorLifecycleGraphNames::EndPlayEvent) continue;
+        check(!EndPlay);
+        EndPlay = Event;
+    }
+    check(EndPlay);
+    UEdGraphPin* EndPlayTail = EndPlay->FindPinChecked(P::Then);
+    check(EndPlayTail->LinkedTo.Num() == 1);
+    UEdGraphPin* ExistingWork = EndPlayTail->LinkedTo[0];
+    EndPlayTail->BreakAllPinLinks();
+
+    FGraph G(Graph, nullptr);
+    auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
+    G.Link(EndPlayTail, G.Pin(Work, P::Execute));
+    G.Link(Work->GetThenPinGivenIndex(0), ExistingWork);
+    G.Tail = Work->GetThenPinGivenIndex(1);
+
+    auto* DelegateProperty = RailgunChargeIndicatorDelegateProperty();
+    auto* Callback = G.Node(NewObject<UK2Node_CreateDelegate>(Graph));
+    Callback->SetFunction(CallbackFunction);
+    auto* Remove = NewObject<UK2Node_RemoveDelegate>(Graph);
+    Remove->SetFromProperty(DelegateProperty, false,
+        UVoyageModuleComponent::StaticClass());
+    G.Node(Remove);
+    G.Link(Callback->GetDelegateOutPin(), Remove->GetDelegatePin());
+    auto* BoundValid = G.Branch(G.Valid(G.Read(BoundModule)));
+    G.Link(G.Read(BoundModule), G.Pin(Remove, P::FunctionTarget));
+    G.Exec(Remove);
+    UEdGraphPin* RemovedTail = G.Tail;
+    G.Tail = G.Pin(BoundValid, P::Else);
+    StationMerge(G, {RemovedTail, G.Tail});
+    for (FName Field : {BoundModule, Owner, Component, Material})
+        G.Write(Field, nullptr);
+    G.Write(LastLevel, nullptr, N::Zero);
 }

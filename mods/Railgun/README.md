@@ -165,15 +165,16 @@ charge time, plus the 1 kW idle load.
 The model charge indicator uses the GLB mesh bound by
 `nodes.chargeIndicatorMesh`. At runtime, only that tagged component loads the
 stock `/Game/Materials/Modules/MI_PogressBar_Basic_LED` material and creates
-its own dynamic material instance. Each gun instance writes `ProgressLevel` from the
-same stored-electricity sample and required-shot denominator used by the HUD.
-The value is clamped to `0..1`, initialized to zero, and written again only
-when it changes. It runs as an observer after charge and demand gameplay, so a
-missing component/material or unchanged display value cannot block charging.
+its own dynamic material instance. Initialization binds to the module's
+`OnModuleValueChanged` event and reads the initial Electricity balance. Each
+event reads that module directly and writes `ProgressLevel` only when the
+clamped `0..1` ratio changes, using the existing required-shot denominator.
+Binding is idempotent, post-load initialization rebinds, and EndPlay unbinds.
+The callback only updates the display; tick and post-shot observers are removed.
 This model display does not add another charging accumulator, timer,
 interaction or collision path. Its appearance and charge-linked operation are
-user game-validated on `build-20261004-050711`; save/load and multiplayer
-behavior were not separately confirmed for this display.
+user game-validated with event-driven updates on `build-20261005-053611`.
+Save/load and multiplayer behavior were not separately confirmed for this display.
 
 The two recoil settings are independent multipliers. With no INI, a missing
 recoil key, or an invalid numeric value, the runtime fallback is `0`, which

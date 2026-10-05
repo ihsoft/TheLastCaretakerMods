@@ -435,8 +435,4 @@ void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail,
     PostShot->AddInputPin();
     G.Tail = PostShot->GetThenPinGivenIndex(2);
     ApplyRailgunShipRecoil(G, TypedRailgun);
-    PostShot->AddInputPin();
-    G.Tail = PostShot->GetThenPinGivenIndex(3);
-    EnsureRailgunChargeIndicator(G);
-    UpdateRailgunChargeIndicator(G, EnergyAmount(G));
 }

@@ -39,17 +39,18 @@
   ancestry, dimensions and UVs. The shell disables collision, overlap and shadow
   and tags it for runtime binding. That tagged component loads the stock
   `MI_PogressBar_Basic_LED` material at runtime. Each station instance caches it,
-  an independent MID and its last written level. The existing automatic-charge
-  branch completes demand/charge gameplay first, then runs the display as an
-  independent sequence branch so visual failures cannot gate charging. It
-  initializes `ProgressLevel` to zero, then updates it only when the
-  clamped ratio of stored native electricity to `RequiredEnergyAmount` changes;
-  a completed shot also refreshes it from the actual post-debit balance. This
-  path does not use `MaxResourceAmount`, because capacity includes the extra
-  service unit. Rebinding a restored/replaced module rebuilds the cache. The
-  structural, source and cooked contracts are statically checked. Its visual
-  appearance and charge-linked operation are user game-validated on
-  `build-20261004-050711`; save/load and multiplayer behavior were not
+  an independent MID and its last written level. Station initialization binds
+  idempotently to the concrete module's exact `OnModuleValueChanged` delegate:
+  it removes a stale or duplicate binding, adds one callback and performs one
+  initial snapshot. The visual-only callback reads Electricity directly from
+  the reported module and updates `ProgressLevel` only when the clamped ratio
+  to `RequiredEnergyAmount` changes. EndPlay removes the binding and clears the
+  visual cache. The automatic-charge tick and successful-shot path do not write
+  the model indicator, and there is no polling or timer fallback. This path
+  does not use `MaxResourceAmount`, because capacity includes the extra service
+  unit. Structural, source and cooked contracts are statically checked. The
+  indicator's event-driven operation is user game-validated on
+  `build-20261005-053611`; save/load and multiplayer behavior were not
   separately confirmed for this display.
 - Shot audio is cooked as a `SoundWave`; its volume multiplier is read from
   `Railgun.ini`. The accepted baseline is 600 percent.
