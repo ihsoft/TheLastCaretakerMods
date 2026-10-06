@@ -2,9 +2,18 @@
 #include "VoyageModuleComponent.h"
 namespace Charge
 {
-inline const FName Sampled(TEXT("RailgunEnergySampled")), Module(TEXT("RailgunEnergyModule"));
-inline const FName Energy(TEXT("RailgunChargeAmount")), Previous(TEXT("RailgunPreviousChargeAmount"));
-inline const FName Rate(TEXT("RailgunChargeKW"));
+inline const FName Module(TEXT("RailgunEnergyModule"));
+inline const FName Energy(TEXT("RailgunChargeAmount"));
+inline const FName DemandInitialized(TEXT("RailgunEnergyDemandInitialized"));
+inline const FName DemandCharging(TEXT("RailgunEnergyDemandCharging"));
+inline const FName UpdateActive(TEXT("RailgunEnergyUpdateActive"));
+inline const FName UpdatePending(TEXT("RailgunEnergyUpdatePending"));
+inline const FName RefreshFunction(TEXT("RefreshRailgunEnergy"));
+inline const FName BindFunction(TEXT("BindRailgunEnergy"));
+inline const FName CallbackFunction(TEXT("OnRailgunEnergyModuleValueChanged"));
+inline const FName OnModuleValueChanged(TEXT("OnModuleValueChanged"));
+inline const FName ModuleParameter(TEXT("Module"));
+inline const FName ForceDemandParameter(TEXT("ForceDemand"));
 inline const FName ConfiguredEnergyKWh(TEXT("RailgunFullChargeEnergyKWh"));
 inline const FName ConfiguredTimeSeconds(TEXT("RailgunFullChargeTimeSeconds"));
 inline const FName Type(TEXT("Type")), RemoveAmount(TEXT("RemoveAmount")),
@@ -17,6 +26,8 @@ inline constexpr TCHAR GameResourceUnitsPerKWh[] = TEXT("1000.0");
 inline constexpr TCHAR WattsPerResourceUnit[] = TEXT("1000.0");
 inline constexpr TCHAR WattsPerKilowatt[] = TEXT("1000.0");
 inline constexpr TCHAR SecondsPerHour[] = TEXT("3600.0");
+inline constexpr TCHAR DelegateSignaturePath[] =
+    TEXT("/Script/Voyage.VoyageModuleCompDelegate__DelegateSignature");
 }
 
 // Public tuning and HUD values use the game's displayed KWh scale. The module stores
@@ -65,7 +76,22 @@ UEdGraphPin* OfflineDrainAmount(FGraph& G, UEdGraphPin* DeltaSeconds,
     return G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMin),
         StoredEnergy, OfflineEnergyAmount);
 }
-UEdGraphPin* FindEnergyModule(FGraph& G)
+FMulticastDelegateProperty* RailgunModuleValueDelegateProperty()
+{
+    auto* Property = FindFProperty<FMulticastDelegateProperty>(
+        UVoyageModuleComponent::StaticClass(), Charge::OnModuleValueChanged);
+    check(Property && Property->SignatureFunction &&
+        Property->SignatureFunction->GetPathName() ==
+            Charge::DelegateSignaturePath &&
+        Property->SignatureFunction->NumParms == 1);
+    auto* Module = FindFProperty<FObjectProperty>(
+        Property->SignatureFunction, Charge::ModuleParameter);
+    check(Module && Module->HasAnyPropertyFlags(CPF_Parm) &&
+        Module->PropertyClass == UVoyageModuleComponent::StaticClass());
+    return Property;
+}
+
+UEdGraphPin* ResolveEnergyModule(FGraph& G)
 {
     G.Branch(G.Valid(G.Read(S::Anchor)));
     auto* Railgun = ObserveCall(G, UActorComponent::StaticClass(), OP::ComponentOwner, G.Read(S::Anchor));
@@ -93,6 +119,236 @@ UEdGraphPin* EnergyAmount(FGraph& G)
     G.Link(G.Read(Charge::Module), G.Pin(Get, P::FunctionTarget)); G.Default(Get, Charge::Type, Charge::Electricity);
     return G.Pin(Get, P::ReturnValue);
 }
+
+void RefreshRailgunEnergyPass(FGraph& G, UEdGraphPin* ForceDemand)
+{
+    UEdGraphPin* StoredEnergy = EnergyAmount(G);
+    UEdGraphPin* Positive = EnergyMath(G,
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax),
+        StoredEnergy, N::Zero);
+    G.Write(Charge::Energy, G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMin), Positive,
+        RequiredEnergyAmount(G)));
+
+    UEdGraphPin* Charging = G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Less_DoubleDouble),
+        StoredEnergy, RequiredEnergyAmount(G));
+    UEdGraphPin* NotInitialized = G.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
+        G.Read(Charge::DemandInitialized), N::False);
+    UEdGraphPin* ModeChanged = G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, NotEqual_BoolBool),
+        Charging, G.Read(Charge::DemandCharging));
+    UEdGraphPin* StateNeedsDemand = G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR),
+        NotInitialized, ModeChanged);
+    auto* NeedsDemand = G.Branch(G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR),
+        ForceDemand, StateNeedsDemand));
+    G.Write(Charge::DemandCharging, Charging);
+    G.Write(Charge::DemandInitialized, nullptr, N::True);
+    auto* DesiredMode = G.Branch(Charging);
+    SetEnergyDemand(G, true);
+    UEdGraphPin* ChargingTail = G.Tail;
+    G.Tail = G.Pin(DesiredMode, P::Else);
+    SetEnergyDemand(G, false);
+    StationMerge(G, {ChargingTail, G.Tail});
+    StationMerge(G, {G.Tail, G.Pin(NeedsDemand, P::Else)});
+}
+
+FEdGraphPinType RailgunEnergyBooleanPinType()
+{
+    FEdGraphPinType Type;
+    Type.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+    return Type;
+}
+
+void AddRailgunEnergyFunctions(UBlueprint* BP)
+{
+    check(BP && BP->GeneratedClass);
+    FMulticastDelegateProperty* DelegateProperty =
+        RailgunModuleValueDelegateProperty();
+
+    UEdGraph* RefreshGraph = FBlueprintEditorUtils::CreateNewGraph(BP,
+        Charge::RefreshFunction, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(BP, RefreshGraph, false,
+        static_cast<UClass*>(nullptr));
+    UK2Node_FunctionEntry* RefreshEntry = nullptr;
+    for (UEdGraphNode* Node : RefreshGraph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+            RefreshEntry = Candidate;
+    check(RefreshEntry);
+    UEdGraphPin* ForceDemand = RefreshEntry->CreateUserDefinedPin(
+        Charge::ForceDemandParameter, RailgunEnergyBooleanPinType(),
+        EGPD_Output);
+    check(ForceDemand);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass &&
+        BP->GeneratedClass->FindFunctionByName(Charge::RefreshFunction));
+
+    RefreshEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
+    FGraph Refresh(RefreshGraph, nullptr);
+    Refresh.Tail = Refresh.Pin(RefreshEntry, P::Then);
+    Refresh.Branch(Refresh.Valid(Refresh.Read(Charge::Module)));
+    auto* Busy = Refresh.Branch(Refresh.Read(Charge::UpdateActive));
+    Refresh.Write(Charge::UpdatePending, nullptr, N::True);
+    Refresh.Tail = Refresh.Pin(Busy, P::Else);
+    Refresh.Write(Charge::UpdateActive, nullptr, N::True);
+    Refresh.Write(Charge::UpdatePending, nullptr, N::False);
+    RefreshRailgunEnergyPass(Refresh, ForceDemand);
+    Refresh.Write(Charge::UpdateActive, nullptr, N::False);
+    Refresh.Branch(Refresh.Read(Charge::UpdatePending));
+    // The demand mode is cached before SetCustomConsumption. A synchronous
+    // module notification therefore requests one final read without issuing
+    // the same native demand change again.
+    auto* FinalRefresh = Refresh.Call(BP->GeneratedClass,
+        Charge::RefreshFunction);
+    Refresh.Default(FinalRefresh, Charge::ForceDemandParameter, N::False);
+    Refresh.Exec(FinalRefresh);
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass);
+
+    UEdGraph* CallbackGraph = FBlueprintEditorUtils::CreateNewGraph(BP,
+        Charge::CallbackFunction, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(BP, CallbackGraph, true,
+        DelegateProperty->SignatureFunction.Get());
+    UK2Node_FunctionEntry* CallbackEntry = nullptr;
+    for (UEdGraphNode* Node : CallbackGraph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+            CallbackEntry = Candidate;
+    check(CallbackEntry);
+    CallbackEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
+    FGraph Callback(CallbackGraph, nullptr);
+    Callback.Tail = Callback.Pin(CallbackEntry, P::Then);
+    UEdGraphPin* ChangedModule = Callback.Pin(CallbackEntry,
+        Charge::ModuleParameter);
+    Callback.Branch(Callback.Valid(ChangedModule));
+    Callback.Branch(Callback.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            EqualEqual_ObjectObject), ChangedModule,
+        Callback.Read(Charge::Module)));
+    auto* RefreshCall = Callback.Call(BP->GeneratedClass,
+        Charge::RefreshFunction);
+    Callback.Default(RefreshCall, Charge::ForceDemandParameter, N::False);
+    Callback.Exec(RefreshCall);
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass &&
+        BP->GeneratedClass->FindFunctionByName(Charge::CallbackFunction));
+
+    UEdGraph* BindGraph = FBlueprintEditorUtils::CreateNewGraph(BP,
+        Charge::BindFunction, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(BP, BindGraph, false,
+        static_cast<UClass*>(nullptr));
+    UK2Node_FunctionEntry* BindEntry = nullptr;
+    for (UEdGraphNode* Node : BindGraph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+            BindEntry = Candidate;
+    check(BindEntry);
+    BindEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
+    FGraph Bind(BindGraph, nullptr);
+    Bind.Tail = Bind.Pin(BindEntry, P::Then);
+
+    auto* CallbackDelegate = Bind.Node(
+        NewObject<UK2Node_CreateDelegate>(BindGraph));
+    CallbackDelegate->SetFunction(Charge::CallbackFunction);
+    auto NewRemove = [&]()
+    {
+        auto* Remove = NewObject<UK2Node_RemoveDelegate>(BindGraph);
+        Remove->SetFromProperty(DelegateProperty, false,
+            UVoyageModuleComponent::StaticClass());
+        Bind.Node(Remove);
+        Bind.Link(CallbackDelegate->GetDelegateOutPin(),
+            Remove->GetDelegatePin());
+        return Remove;
+    };
+    auto* RemovePrevious = NewRemove();
+    auto* RemoveCurrent = NewRemove();
+    auto* Add = NewObject<UK2Node_AddDelegate>(BindGraph);
+    Add->SetFromProperty(DelegateProperty, false,
+        UVoyageModuleComponent::StaticClass());
+    Bind.Node(Add);
+    Bind.Link(CallbackDelegate->GetDelegateOutPin(), Add->GetDelegatePin());
+
+    auto* PreviousValid = Bind.Branch(Bind.Valid(Bind.Read(Charge::Module)));
+    Bind.Link(Bind.Read(Charge::Module),
+        Bind.Pin(RemovePrevious, P::FunctionTarget));
+    Bind.Exec(RemovePrevious);
+    UEdGraphPin* RemovedTail = Bind.Tail;
+    Bind.Tail = Bind.Pin(PreviousValid, P::Else);
+    StationMerge(Bind, {RemovedTail, Bind.Tail});
+    Bind.Write(Charge::Module, nullptr);
+
+    UEdGraphPin* Module = ResolveEnergyModule(Bind);
+    Bind.Link(Module, Bind.Pin(RemoveCurrent, P::FunctionTarget));
+    Bind.Exec(RemoveCurrent);
+    Bind.Link(Module, Bind.Pin(Add, P::FunctionTarget));
+    Bind.Exec(Add);
+    Bind.Write(Charge::DemandInitialized, nullptr, N::False);
+    Bind.Write(Charge::UpdateActive, nullptr, N::False);
+    Bind.Write(Charge::UpdatePending, nullptr, N::False);
+    auto* InitialRefresh = Bind.Call(BP->GeneratedClass,
+        Charge::RefreshFunction);
+    Bind.Default(InitialRefresh, Charge::ForceDemandParameter, N::True);
+    Bind.Exec(InitialRefresh);
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass &&
+        BP->GeneratedClass->FindFunctionByName(Charge::BindFunction));
+}
+
+void AddRailgunEnergyTeardown(UBlueprint* BP)
+{
+    check(BP && BP->UbergraphPages.Num() == 1);
+    UEdGraph* Graph = BP->UbergraphPages[0];
+    UK2Node_Event* EndPlay = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        auto* Event = Cast<UK2Node_Event>(Node);
+        if (!Event || Event->EventReference.GetMemberName() !=
+            ActorLifecycleGraphNames::EndPlayEvent) continue;
+        check(!EndPlay);
+        EndPlay = Event;
+    }
+    check(EndPlay);
+    UEdGraphPin* EndPlayTail = EndPlay->FindPinChecked(P::Then);
+    check(EndPlayTail->LinkedTo.Num() == 1);
+    UEdGraphPin* ExistingWork = EndPlayTail->LinkedTo[0];
+    EndPlayTail->BreakAllPinLinks();
+    FGraph G(Graph, nullptr);
+    auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
+    G.Link(EndPlayTail, G.Pin(Work, P::Execute));
+    G.Link(Work->GetThenPinGivenIndex(0), ExistingWork);
+    G.Tail = Work->GetThenPinGivenIndex(1);
+
+    auto* DelegateProperty = RailgunModuleValueDelegateProperty();
+    auto* Callback = G.Node(NewObject<UK2Node_CreateDelegate>(Graph));
+    Callback->SetFunction(Charge::CallbackFunction);
+    auto* Remove = NewObject<UK2Node_RemoveDelegate>(Graph);
+    Remove->SetFromProperty(DelegateProperty, false,
+        UVoyageModuleComponent::StaticClass());
+    G.Node(Remove);
+    G.Link(Callback->GetDelegateOutPin(), Remove->GetDelegatePin());
+    auto* ModuleValid = G.Branch(G.Valid(G.Read(Charge::Module)));
+    G.Link(G.Read(Charge::Module), G.Pin(Remove, P::FunctionTarget));
+    G.Exec(Remove);
+    UEdGraphPin* RemovedTail = G.Tail;
+    G.Tail = G.Pin(ModuleValid, P::Else);
+    StationMerge(G, {RemovedTail, G.Tail});
+    G.Write(Charge::Module, nullptr);
+    G.Write(Charge::Energy, nullptr, N::Zero);
+    G.Write(Charge::DemandInitialized, nullptr, N::False);
+    G.Write(Charge::UpdateActive, nullptr, N::False);
+    G.Write(Charge::UpdatePending, nullptr, N::False);
+}
 UEdGraphPin* DebitEnergy(FGraph& G, UEdGraphPin* Amount = nullptr)
 {
     auto* Debit = G.Call(UVoyageModuleComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, RemoveResource));
@@ -114,8 +370,7 @@ UEdGraphPin* CreditEnergy(FGraph& G, UEdGraphPin* Amount)
 void UpdateAutomaticCharge(FGraph& G, UEdGraphPin* DeltaSeconds,
     UEdGraphPin* OfflineDischargeKW)
 {
-    G.Write(Charge::Rate, nullptr, N::Zero);
-    FindEnergyModule(G);
+    G.Branch(G.Valid(G.Read(Charge::Module)));
     G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble), DeltaSeconds, N::Zero));
     UEdGraphPin* Connected = ObserveCall(G,
         UVoyageModuleComponent::StaticClass(),
@@ -142,20 +397,4 @@ void UpdateAutomaticCharge(FGraph& G, UEdGraphPin* DeltaSeconds,
         OfflineDischargeKW));
     StationMerge(G, {G.Tail, G.Pin(HasStoredEnergy, P::Else)});
     StationMerge(G, {SuppliedTail, G.Tail});
-    auto* Positive = EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax), EnergyAmount(G), N::Zero);
-    G.Write(Charge::Energy, G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMin),
-        Positive, RequiredEnergyAmount(G)));
-    auto* Sample = G.Branch(G.Read(Charge::Sampled));
-    auto* Delta = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_DoubleDouble), G.Read(Charge::Energy), G.Read(Charge::Previous));
-    auto* Net = EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax), Delta, N::Zero);
-    G.Write(Charge::Rate, G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble), Net, DeltaSeconds));
-    StationMerge(G, {G.Tail, G.Pin(Sample, P::Else)});
-    G.Write(Charge::Previous, G.Read(Charge::Energy)); G.Write(Charge::Sampled, nullptr, N::True);
-    auto* Full = G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
-        EnergyAmount(G), RequiredEnergyAmount(G)));
-    SetEnergyDemand(G, false);
-    UEdGraphPin* FullTail = G.Tail;
-    G.Tail = G.Pin(Full, P::Else); SetEnergyDemand(G, true);
-    StationMerge(G, {FullTail, G.Tail});
-
 }

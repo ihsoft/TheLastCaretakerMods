@@ -162,19 +162,30 @@ Voyage maps one displayed `KWh` to 1000 native electricity amount units; the
 generator converts that amount to the module's W demand for the configured
 charge time, plus the 1 kW idle load.
 
+Station initialization caches the concrete module and binds one exact
+`OnModuleValueChanged` callback for gameplay energy maintenance. The callback
+refreshes the stored charge snapshot and changes custom consumption only when
+the required charging/idle mode changes. A re-entry settings read forces one
+demand refresh so changed charge-time or capacity values take effect without
+waiting for another resource event. Synchronous notifications raised by the
+native demand setter are coalesced into one final read; the desired mode is
+cached before the setter is called. EndPlay removes the binding. The main actor
+tick no longer discovers the module, samples charge rate, or rewrites demand;
+it retains the configured time-based offline discharge and its existing power
+connection checks.
+
 The model charge indicator uses the GLB mesh bound by
 `nodes.chargeIndicatorMesh`. At runtime, only that tagged component loads the
 stock `/Game/Materials/Modules/MI_PogressBar_Basic_LED` material and creates
-its own dynamic material instance. Initialization binds to the module's
+its own dynamic material instance. Initialization binds a separate visual observer to the module's
 `OnModuleValueChanged` event and reads the initial Electricity balance. Each
-event reads that module directly and writes `ProgressLevel` only when the
+event invokes the visual refresh, which reads that module directly and writes `ProgressLevel` only when the
 clamped `0..1` ratio changes, using the existing required-shot denominator.
 Binding is idempotent, post-load initialization rebinds, and EndPlay unbinds.
 The callback only updates the display; tick and post-shot observers are removed.
 This model display does not add another charging accumulator, timer,
-interaction or collision path. Its appearance and charge-linked operation are
-user game-validated with event-driven updates on `build-20261005-053611`.
-Save/load and multiplayer behavior were not separately confirmed for this display.
+interaction or collision path. Display-specific save/load and multiplayer
+behavior remain outside the established compatibility coverage.
 
 The two recoil settings are independent multipliers. With no INI, a missing
 recoil key, or an invalid numeric value, the runtime fallback is `0`, which

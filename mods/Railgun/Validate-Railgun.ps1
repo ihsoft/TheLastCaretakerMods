@@ -528,6 +528,7 @@ foreach ($requiredInitializationReference in @(
     "Class'GameplayStatics:FinishSpawningActor'",
     "Class'Actor:K2_AttachToComponent'",
     "Class'KismetSystemLibrary:LoadAsset_Blocking'",
+    'BindRailgunEnergy',
     'BindRailgunChargeIndicator'
 )) {
     Require ($initializeStationStrings -ccontains
@@ -600,6 +601,86 @@ foreach ($forbiddenFireReference in @(
         ('Railgun fire must not use presentation state or direct mutation: ' +
             $forbiddenFireReference)
 }
+$energyBind = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'BindRailgunEnergy'
+})
+Require ($energyBind.Count -eq 1) `
+    'Expected one event-driven energy binding function.'
+$energyBindStrings = @(JsonStringLeaves $energyBind[0])
+foreach ($requiredEnergyBindReference in @(
+    'RailgunEnergyModule',
+    'RailgunEnergyDemandInitialized',
+    'RailgunEnergyUpdateActive',
+    'RailgunEnergyUpdatePending',
+    'OnModuleValueChanged',
+    'OnRailgunEnergyModuleValueChanged',
+    'RefreshRailgunEnergy',
+    'EX_AddMulticastDelegate',
+    'EX_RemoveMulticastDelegate'
+)) {
+    Require ($energyBindStrings -ccontains $requiredEnergyBindReference) `
+        ('Railgun energy-bind reference missing: ' +
+            $requiredEnergyBindReference)
+}
+$energyRefresh = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'RefreshRailgunEnergy'
+})
+Require ($energyRefresh.Count -eq 1) `
+    'Expected one guarded energy refresh function.'
+$energyRefreshStrings = @(JsonStringLeaves $energyRefresh[0])
+foreach ($requiredEnergyRefreshReference in @(
+    'ForceDemand',
+    'RailgunEnergyModule',
+    'RailgunChargeAmount',
+    'RailgunEnergyDemandInitialized',
+    'RailgunEnergyDemandCharging',
+    'RailgunEnergyUpdateActive',
+    'RailgunEnergyUpdatePending',
+    "Class'VoyageModuleComponent:GetResourceAmount'",
+    "Class'VoyageModuleComponent:SetCustomConsumption'"
+)) {
+    Require ($energyRefreshStrings -ccontains $requiredEnergyRefreshReference) `
+        ('Railgun energy-refresh reference missing: ' +
+            $requiredEnergyRefreshReference)
+}
+$energyCallback = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'OnRailgunEnergyModuleValueChanged'
+})
+Require ($energyCallback.Count -eq 1) `
+    'Expected one energy module-value callback.'
+$energyCallbackParameters = @($energyCallback[0].ChildProperties |
+    Where-Object {
+        $_.PSObject.Properties.Name -ccontains 'PropertyFlags' -and
+        $_.PropertyFlags -match '(^| \| )Parm($| \| )'
+    })
+Require ($energyCallbackParameters.Count -eq 1 -and
+    $energyCallbackParameters[0].Name -ceq 'Module' -and
+    $energyCallbackParameters[0].Type -ceq 'ObjectProperty' -and
+    $energyCallbackParameters[0].PropertyClass.ObjectName -ceq
+        "Class'VoyageModuleComponent'" -and
+    $energyCallbackParameters[0].PropertyClass.ObjectPath -ceq '/Script/Voyage') `
+    'Energy callback must own the exact Voyage module delegate signature.'
+$energyCallbackStrings = @(JsonStringLeaves $energyCallback[0])
+foreach ($requiredEnergyCallbackReference in @(
+    'Module','RailgunEnergyModule','RefreshRailgunEnergy'
+)) {
+    Require ($energyCallbackStrings -ccontains
+        $requiredEnergyCallbackReference) `
+        ('Railgun energy callback reference missing: ' +
+            $requiredEnergyCallbackReference)
+}
+foreach ($forbiddenEnergyCallbackReference in @(
+    "Class'VoyageModuleComponent:AddResource'",
+    "Class'VoyageModuleComponent:RemoveResource'",
+    "Class'VoyageModuleComponent:SetCustomConsumption'",
+    "Class'KismetSystemLibrary:Delay",
+    "Class'GameplayStatics:GetAllActorsOfClass'"
+)) {
+    Require (-not ($energyCallbackStrings -ccontains
+        $forbiddenEnergyCallbackReference)) `
+        ('Energy callback must delegate to the guarded refresh only: ' +
+            $forbiddenEnergyCallbackReference)
+}
 $chargeIndicatorBind = @($operatorFunctions | Where-Object {
     $_.Name -ceq 'BindRailgunChargeIndicator'
 })
@@ -607,25 +688,40 @@ Require ($chargeIndicatorBind.Count -eq 1) `
     'Expected one event-driven charge-indicator binding function.'
 $chargeIndicatorBindStrings = @(JsonStringLeaves $chargeIndicatorBind[0])
 foreach ($requiredChargeIndicatorReference in @(
+    'RailgunChargeIndicatorModule',
+    'OnModuleValueChanged',
+    'OnRailgunChargeIndicatorModuleValueChanged',
+    'RefreshRailgunChargeIndicator',
+    'EX_AddMulticastDelegate',
+    'EX_RemoveMulticastDelegate'
+)) {
+    Require ($chargeIndicatorBindStrings -ccontains
+        $requiredChargeIndicatorReference) `
+        ('Railgun charge-indicator bind reference missing: ' +
+            $requiredChargeIndicatorReference)
+}
+$chargeIndicatorRefresh = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'RefreshRailgunChargeIndicator'
+})
+Require ($chargeIndicatorRefresh.Count -eq 1) `
+    'Expected one charge-indicator refresh function.'
+$chargeIndicatorRefreshStrings = @(JsonStringLeaves $chargeIndicatorRefresh[0])
+foreach ($requiredChargeIndicatorReference in @(
     'RailgunChargeIndicatorOwner',
     'RailgunChargeIndicatorComponent',
     'RailgunChargeIndicatorMaterial',
     'RailgunChargeIndicatorLastLevel',
     'RailgunChargeIndicatorModule',
-    'OnModuleValueChanged',
-    'OnRailgunChargeIndicatorModuleValueChanged',
     "Class'VoyageModuleComponent:GetResourceAmount'",
-    'EX_AddMulticastDelegate',
-    'EX_RemoveMulticastDelegate',
     'Railgun.Model.ChargeIndicator',
     'ProgressLevel',
     'CreateDynamicMaterialInstance',
     "Class'MaterialInstanceDynamic:SetScalarParameterValue'",
     '/Game/Materials/Modules/MI_PogressBar_Basic_LED.MI_PogressBar_Basic_LED'
 )) {
-    Require ($chargeIndicatorBindStrings -ccontains
+    Require ($chargeIndicatorRefreshStrings -ccontains
         $requiredChargeIndicatorReference) `
-        ('Railgun charge-indicator contract reference missing: ' +
+        ('Railgun charge-indicator refresh reference missing: ' +
             $requiredChargeIndicatorReference)
 }
 $chargeIndicatorCallback = @($operatorFunctions | Where-Object {
@@ -649,9 +745,7 @@ $chargeIndicatorCallbackStrings = @(
     JsonStringLeaves $chargeIndicatorCallback[0])
 foreach ($requiredCallbackReference in @(
     'Module','RailgunChargeIndicatorModule',
-    "Class'VoyageModuleComponent:GetResourceAmount'",
-    "Class'MaterialInstanceDynamic:SetScalarParameterValue'",
-    'ProgressLevel'
+    'RefreshRailgunChargeIndicator'
 )) {
     Require ($chargeIndicatorCallbackStrings -ccontains
         $requiredCallbackReference) `
@@ -671,6 +765,8 @@ foreach ($forbiddenCallbackReference in @(
             $forbiddenCallbackReference)
 }
 foreach ($requiredChargeTeardownReference in @(
+    'RailgunEnergyModule',
+    'OnRailgunEnergyModuleValueChanged',
     'RailgunChargeIndicatorModule',
     'OnRailgunChargeIndicatorModuleValueChanged',
     'EX_RemoveMulticastDelegate'
@@ -682,6 +778,15 @@ foreach ($requiredChargeTeardownReference in @(
 Require (-not ($operatorStrings -ccontains
     "Class'MaterialInstanceDynamic:SetScalarParameterValue'")) `
     'Operator tick/fire/end-play graph must not poll or write the charge indicator.'
+Require (-not ($operatorStrings -ccontains
+    "Class'VoyageModuleComponent:SetCustomConsumption'")) `
+    'Operator tick/fire/end-play graph must not maintain energy demand.'
+foreach ($removedEnergyField in @(
+    'RailgunEnergySampled','RailgunPreviousChargeAmount','RailgunChargeKW'
+)) {
+    Require (-not ($operatorStrings -ccontains $removedEnergyField)) `
+        ('Removed tick-sampling state was serialized: ' + $removedEnergyField)
+}
 Require (-not ($operatorStrings -ccontains "Class'GameplayStatics:GetAllActorsOfClass'")) `
     'Railgun charge indicator must not add a world actor scan.'
 $removeEnergyCallIndexes = @(NativeContextCallIndexes $operatorStatements `
@@ -1579,5 +1684,5 @@ $skillIcon = @(Read-Candidate '/Game/Mods/Railgun/Research/T_RailgunSkill')
 $skillTexture = @($skillIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunSkill' })
 Require ($skillTexture.Count -eq 1 -and $skillTexture[0].SizeX -eq 256 -and $skillTexture[0].SizeY -eq 256) 'Railgun skill icon must be 256x256.'
 $reportPath = Join-Path $output 'validation.json'
-[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; exact Voyage module-value delegate binding with idempotent remove/add, one initial charge-indicator snapshot, visual-only callback and end-play unbinding, with no charge-indicator write in the operator tick/fire graph; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; shell-owned BeginPlay and persistent post-load station initialization with a transient direct station reference, no global actor discovery and no player-controller startup gate; simple collision preserved; imported material packages remain readable and are recorded as evidence without constraining authored material type, parameters or parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; exact Voyage module-value delegate bindings for guarded gameplay-energy maintenance and a separate visual observer, with idempotent remove/add, initial and settings snapshots, mode-cached demand changes, end-play unbinding, offline drain remaining on tick, and no tick-owned demand or charge-indicator write; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; shell-owned BeginPlay and persistent post-load station initialization with a transient direct station reference, no global actor discovery and no player-controller startup gate; simple collision preserved; imported material packages remain readable and are recorded as evidence without constraining authored material type, parameters or parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 [pscustomobject]@{status='passed';reportPath=$reportPath}

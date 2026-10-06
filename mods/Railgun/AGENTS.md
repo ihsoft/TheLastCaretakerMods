@@ -61,7 +61,10 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   stock primary record, or Railgun-owned registry writer/policy is a build
   input. Editor mirrors and generator binaries are never shipped.
 - Keep documentation factual and compact. Do not maintain an experiment
-  chronology or candidate backlog. Keep transient logs and discarded
+  chronology, candidate backlog, or records that the user tested a build.
+  Describe current behavior, durable findings and compatibility limits;
+  build identities and installation evidence belong to release artifacts.
+  Keep transient logs and discarded
   experiment output in repository `Tmp/`; promote durable conclusions to
   documentation and retain research artifacts only when they are needed for
   continuing work.

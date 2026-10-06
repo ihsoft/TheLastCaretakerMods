@@ -281,7 +281,7 @@ void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail,
     UpdateAutomaticCharge(G, DeltaSeconds, OfflineDischargeKW);
     auto* Event=NewObject<UK2Node_EnhancedInputAction>(G.Graph); Event->InputAction=LoadObject<UInputAction>(nullptr,RailgunInputNames::Fire); check(Event->InputAction); G.Node(Event); G.Tail=G.Pin(Event,DS::Started);
     G.Branch(ObserveCall(G,APawn::StaticClass(),GET_FUNCTION_NAME_CHECKED(APawn,IsPlayerControlled),OpticalSelf(G)));
-    FindEnergyModule(G);
+    G.Branch(G.Valid(G.Read(Charge::Module)));
     G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
         EqualEqual_BoolBool), G.Read(Shot::RefundFaulted), N::False));
     // A premature press is ignored, never queued for a later automatic shot.
@@ -402,9 +402,6 @@ void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail,
     StationMerge(G, {RefundValidTail, G.Tail});
     DestroyDeferredShot(G, G.Pin(Spawn, P::ReturnValue));
     G.Tail = AmmoRemovedTail;
-    G.Write(Charge::Sampled, nullptr, N::False);
-    G.Write(Charge::Energy, nullptr, N::Zero); G.Write(Charge::Previous, nullptr, N::Zero); G.Write(Charge::Rate, nullptr, N::Zero);
-    SetEnergyDemand(G, true);
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Railgun,TypedRailgun);
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Operator,G.Read(N::OriginalPawn));
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Station,OpticalSelf(G));

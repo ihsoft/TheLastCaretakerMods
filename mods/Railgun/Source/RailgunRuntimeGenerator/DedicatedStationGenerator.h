@@ -219,6 +219,13 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Link(G.Tail, G.Pin(Cast, P::Execute)); G.Link(Controller, Cast->GetCastSourcePin()); G.Tail = Cast->GetValidCastPin();
     G.Write(DS::Controller, Cast->GetCastResultPin());
     ReadStationSettings(G);
+    auto* RefreshEnergySettings = G.Call(BP->GeneratedClass,
+        Charge::RefreshFunction);
+    G.Default(RefreshEnergySettings, Charge::ForceDemandParameter, N::True);
+    G.Exec(RefreshEnergySettings);
+    auto* RefreshChargeIndicator = G.Call(BP->GeneratedClass,
+        RailgunChargeIndicator::RefreshFunction);
+    G.Exec(RefreshChargeIndicator);
     G.Write(ZoomTest::Wide, nullptr, N::True);
     G.Write(ZoomTest::Mouse, nullptr, ZoomTest::NormalMouse);
     auto* FindSight = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, GetComponentsByTag));
@@ -351,9 +358,11 @@ UClass* CreateDedicatedStation()
         UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
     AddVariable(BP, RailgunRecoil::ModuleLocation,
         UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
-    AddVariable(BP, Charge::Sampled, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, Charge::Module, UEdGraphSchema_K2::PC_Object, UVoyageModuleComponent::StaticClass());
-    for (FName Field : {Charge::Energy, Charge::Previous, Charge::Rate}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP, Charge::Energy, UEdGraphSchema_K2::PC_Real);
+    for (FName Field : {Charge::DemandInitialized, Charge::DemandCharging,
+        Charge::UpdateActive, Charge::UpdatePending})
+        AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, RailgunChargeIndicator::Owner,
         UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
     AddVariable(BP, RailgunChargeIndicator::Component,
@@ -728,8 +737,10 @@ UClass* CreateDedicatedStation()
     AddStationActions(BP);
     AddContextEntry(BP);
     AddNativeStationHudInterface(BP, Hud->GeneratedClass);
+    AddRailgunEnergyFunctions(BP);
     AddRailgunChargeIndicatorFunctions(BP);
     BuildDedicatedStationGraph(BP);
+    AddRailgunEnergyTeardown(BP);
     AddRailgunChargeIndicatorTeardown(BP);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP); FKismetEditorUtilities::CompileBlueprint(BP); check(BP->Status != BS_Error);
     auto* CDO = CastChecked<APawn>(BP->GeneratedClass->GetDefaultObject());

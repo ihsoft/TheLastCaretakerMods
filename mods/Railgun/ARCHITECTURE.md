@@ -1,6 +1,6 @@
 # Railgun architecture
 
-## Proven runtime contracts
+## Runtime contracts
 
 - The weapon uses the game's module/fabricator path. Its actor, UI and runtime
   packages remain under `/Game/Mods/Railgun/...`; primary Item and Skill data
@@ -32,6 +32,18 @@
   one displayed `KWh` to 1000 native electricity amount units; module demand
   remains expressed in W and is derived from the configured charge time in
   addition to standby demand.
+- Station initialization resolves and caches the concrete module, binds the
+  exact `OnModuleValueChanged` delegate, performs an initial charge snapshot,
+  and removes the binding at EndPlay. The gameplay callback refreshes the
+  cached charge and switches `SetCustomConsumption` only when the charging
+  versus idle mode changes. Re-entry settings reload forces one demand refresh.
+  The desired mode is cached before the native setter; synchronous nested
+  notifications are coalesced into one final non-forced read, which does not
+  repeat the setter when the mode is unchanged. The energy branch of the actor
+  tick retains only time-based offline discharge and its supply checks; it no longer discovers
+  the module, maintains demand, or samples unused charge-rate state. Capacity,
+  units, the fresh pre-shot balance check, shot debit and bounded refund are
+  unchanged.
 - Loss of the module power connection discharges stored energy to zero at the
   configured `OfflineDischargeKW` rate. The default is `10` kW; zero disables
   offline discharge. This setting is independent of normal standby demand.
@@ -48,10 +60,9 @@
   visual cache. The automatic-charge tick and successful-shot path do not write
   the model indicator, and there is no polling or timer fallback. This path
   does not use `MaxResourceAmount`, because capacity includes the extra service
-  unit. Structural, source and cooked contracts are statically checked. The
-  indicator's event-driven operation is user game-validated on
-  `build-20261005-053611`; save/load and multiplayer behavior were not
-  separately confirmed for this display.
+  unit. Structural, source and cooked contracts are statically checked.
+  Display-specific save/load and multiplayer behavior remain outside the
+  established compatibility coverage.
 - Shot audio is cooked as a `SoundWave`; its volume multiplier is read from
   `Railgun.ini`. The accepted baseline is 600 percent.
 - A successful shot has two independent recoil paths. The historical
@@ -66,9 +77,8 @@
   the runtime initializes only these two settings to zero, so a missing INI,
   missing recoil key or invalid numeric value disables the corresponding
   recoil. Explicit valid INI values override that fallback; one remains the
-  authored baseline. The random-aim and ship-recoil implementation in
-  `build-20261004-024904` is accepted in game. The new fallback path remains
-  below the real-game validation boundary.
+  authored baseline. Missing/invalid-INI recoil fallback has static coverage
+  only, not runtime coverage.
 - Dismantling after exit is supported. The module owns a transient direct
   station reference; station safety disables acquisition, exits a controlled
   pawn, and destroys the detached station on a later pass.
@@ -86,9 +96,8 @@
   anchor; no additional mount collider is needed. Physical collision remains
   on the configured `fabricatorCollision` mesh, and the dynamic-collision
   component retains auto-weld. An enclosing mount collider interferes with
-  the attached power cable. The loader-free shell-owned
-  initialization path in `build-20261004-084803` is user game-validated; the
-  Railgun no longer requires VoyageAutoLoader. There is no polling or retry
+  the attached power cable. Shell-owned initialization requires no
+  VoyageAutoLoader. There is no polling or retry
   fallback. Its `VoyageModuleComponent.ItemAsset` points
   to `/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01`. The complete
   gun item object graph is authored in
@@ -108,13 +117,11 @@
 - On Steam build `25191271`, the stock `DefaultGame.ini` scans `Skill` below
   `/Game/Data/Assets/Skill` and `Item` below `/Game/Data/Assets`. Registry
   membership alone is insufficient for discovery outside those roots.
-- User validation of `build-20260926-083231` confirmed discovery, research
-  unlocking both recipes, and independent gun construction, firing and
-  dismantling. Pre-research recipe absence was also tested.
-- `EVoyageSkillUnlockMethod::Never` hid the skill and left its recipes unavailable
-  in the tested pre-research save while the assets remained registered and
-  packaged. Revoking existing unlocks and persistence under `Never` were not
-  tested. The hiding experiment is no longer enabled.
+- Research unlocks both recipes; neither recipe is available before research.
+- `EVoyageSkillUnlockMethod::Never` hides a skill and leaves its recipes
+  unavailable in a pre-research save while its assets remain registered and
+  packaged. It is not an established mechanism for revoking existing unlocks
+  or controlling their persistence. Railgun does not use this unlock method.
 
 ## Authored ammunition contract
 
@@ -126,7 +133,7 @@ or a stock Rod package override. The generator emits only an editor/cook
 placeholder at the same identity so the research skill can reference it. The
 packaged ammo object graph and values come only from the owned JSON.
 
-The current game-validated ammo baseline contains 16 top-level serialized properties:
+The ammo item contains 16 top-level serialized properties:
 `Caliber`, `Icon`, `Category`, `CategoryAsset`, `Quality`, `Weight`, `CraftTime`,
 `CraftElectricityCost`, `CraftAmount`, `CraftFilter`, `Components`,
 `DropVariations`, `DroppedActor`, `MaxDropCount`, `Name`, `Description`.
@@ -267,11 +274,10 @@ per spawned Niagara component without copying or modifying the stock asset.
 Calling `UFXSystemComponent.SetEmitterEnable` before activation with
 `dirt_main` disabled and `shockwave`, `main`, `spark`, `spark_l`, `refr`,
 `project` and `puff` enabled produces the explosion without the water fountain.
-The inverse mask produces only the fountain. The user validated both modes in
-`build-20261003-073746` through the manual F7/F8 canaries.
+The inverse mask produces only the fountain.
 
 Production effects use a mod-owned transient Blueprint helper with an owned
-inactive Niagara component. Each instance applies one of the validated masks,
+inactive Niagara component. Each instance applies one of these masks,
 activates independently and has a ten-second maximum actor lifetime. This
 keeps an effect alive after its projectile stops while preventing one hit from
 destroying or reconfiguring another hit's effect. The helper stores only a
@@ -288,12 +294,10 @@ sampling and a verified near-surface residual are therefore required; a
 single endpoint value, zero height, or the function alone is not a universal
 exact-surface contract. This API and its limits are fingerprint-bound.
 
-`build-20261003-083733` applies the explosion on a real blocking hit and checks
+The projectile applies the explosion on a real blocking hit and checks
 only finite travelled projectile segments for the first accepted water-surface
-crossing. The user confirmed the resulting production hit and water effects in
-the game. That general confirmation does not separately establish every
-collision ordering, submerged-target, save/load, multiplayer or performance
-edge case.
+crossing. Exhaustive collision ordering, submerged-target, save/load,
+multiplayer and performance guarantees are outside the established coverage.
 
 The above-water wake path uses the fingerprint-bound
 `VoyageWeatherSubsystem.AddFluidImpulse(FVoyageFluidImpulse)` contract directly;
@@ -312,13 +316,11 @@ bounded by `0.2`, with linear height falloff to zero at eight metres; it is not
 scaled by delta time, velocity or projectile mass. The controller stops
 accepting at the preview limit or when the shot finishes, destroys itself after
 the last short tail, and has a one-second hard lifetime. It is independent of
-the accepted first-crossing fountain and direct-hit attack paths. The user
-accepted the visible wake and its appearance behind an ordinary shot with this
-complete path active. That validates the combined wake behavior in the tested
-scene, but does not establish an exact reconstruction of the stock attack
-consumer, isolate the 0.25-second hold as the sole cause, or separately validate
-every accepted height or distance, obstacle clipping, frame-rate behavior,
-performance, or other edge cases.
+the first-crossing fountain and direct-hit attack paths. This is not an exact
+reconstruction of the stock attack consumer. The 0.25-second hold is one part
+of the complete wake path, not an isolated explanation of its visibility.
+Exhaustive height/distance, obstacle-clipping, frame-rate and performance
+guarantees are outside the established coverage.
 
 For the fingerprint above, the native `AddFluidImpulse` entry appends the
 48-byte impulse to the subsystem queue; it does not render or acknowledge a
@@ -328,38 +330,20 @@ target to its FluidNinja component. Queue consumption, simulation-area placement
 and the exact stock consumer lifecycle remain unresolved; the configured scale
 alone does not establish which world points are represented.
 
-## Current game-validated checkpoint
+## Build and compatibility identity
 
-`build-20261004-084803` is the current game-validated checkpoint. Its explicit
-cook inventory is passed through the bounded manifest adapter, and its
-three-record plugin-local registry is derived solely from owned package
+The explicit cook inventory passes through the bounded manifest adapter.
+The three-record plugin-local registry is derived solely from owned package
 readbacks through the shared Voyage registry profile and class-agnostic native
-writer, then reopened and compared field-for-field. The user tested the
-installed loader-free artifact and reported that the runtime behavior works,
-including clean startup without the former autoload sidecar. Commit `91c6c12`
-records that accepted source state. This general confirmation does not
-separately establish untested edge cases or validate later packaging changes.
+writer, then reopened and compared field-for-field.
 
 - Steam build: `25191271`; parser profile: `UE5_8`.
 - Executable SHA-256:
   `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-- Retained release ZIP:
-  `Voyage/Content/Paks/Railgun_build-20261004-084803.zip`, SHA-256
-  `0A59730210BB43FBC78F38F0B3DB98234EB7515B8BA372526DEA2C0FE98063E3`.
-- Installation evidence:
-  `artifacts/installations/Railgun/20261004-085227-build-20261004-084803-4f9d54da/install-manifest.json`.
-- The ignored installation manifest identifies the tested dirty-source artifact
-  and its exact rollback material; it is evidence, never a required source input
-  for a rebuild. The release ZIP is the durable tested payload. Historical
-  release-manifest paths may become unavailable after temporary build cleanup.
-
-The preceding `build-20260930-221701` remains scoped behavioral evidence for
-the six distinct cassette subtrees and their 36 covered render descendants,
-model rendering, ammo visibility, isolated zero-ammo warning, one-round firing
-debit, ordinary ammunition and charge rejection, charge warnings, 10 kW offline
-discharge, persistence, single-round fabrication and the owned physical ammo
-cassette. Those observations were not separately repeated or itemized for the
-current checkpoint.
+- Versioned release ZIPs live in `Voyage/Content/Paks/`. Ignored installation
+  manifests under `artifacts/installations/Railgun/` identify exact installed
+  hashes and rollback material; neither is a source dependency for rebuilding.
+  Temporary release-manifest paths can disappear after build cleanup.
 
 ## Compatibility limits and deferred work
 
@@ -369,17 +353,15 @@ current checkpoint.
 - Generated packages use tagged properties for partial mirrors. The ammo item
   is the sole bounded post-cook conversion exception; it is reopened before
   packaging. Do not convert unrelated native-child assets by analogy.
-- The mod is single-player validated, including magazine save/reload.
-  Multiplayer and distinct cable or operator-entry scenarios remain unvalidated.
-- Native one-round consumption and ordinary ammunition/energy rejection gates
-  are game-validated. The bounded energy-compensation failure branch is
-  structurally validated; its exceptional native rejection path has not been
-  induced in game.
+- The established runtime scope is single-player, including magazine
+  save/reload. Multiplayer and exhaustive cable/operator-entry scenarios are
+  outside that scope.
+- Firing consumes one round and rejects insufficient ammunition or energy.
+  The bounded energy-compensation failure branch has structural coverage only;
+  exceptional native rejection is outside the established runtime coverage.
 - Railgun neither requires nor uses a shared placeholder registry pool. Shared
   allocation rules, duplicate-ID ownership and precedence between conflicting
   records are outside its supported contract.
 - Collision and water-entry visuals must remain observational: they do not
-  change projectile movement, water physics or the validated direct-attack
-  authority. Production hit and water effects are game-validated only by the
-  current checkpoint's general confirmation; unenumerated edge cases remain
-  outside that evidence.
+  change projectile movement, water physics or direct-attack authority. The
+  separate above-water wake path owns fluid impulses.
