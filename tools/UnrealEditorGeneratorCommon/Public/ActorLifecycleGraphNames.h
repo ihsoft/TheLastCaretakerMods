@@ -46,5 +46,12 @@ inline const FName OwningPlayer(TEXT("OwningPlayer"));
 inline const FName ZOrder(TEXT("ZOrder"));
 inline const FName WidgetText(TEXT("InText"));
 inline const FName EndPlayEvent(TEXT("ReceiveEndPlay"));
+inline const FName ReceivePossessedEvent(TEXT("ReceivePossessed"));
+inline const FName ReceiveUnpossessedEvent(TEXT("ReceiveUnpossessed"));
+inline const FName NewController(TEXT("NewController"));
+inline const FName OldController(TEXT("OldController"));
+inline const FName OnEndPlay(TEXT("OnEndPlay"));
+inline const FName EndPlayActor(TEXT("Actor"));
+inline const FName EndPlayReason(TEXT("EndPlayReason"));
 inline const FName IgnoreMoveInputSetting(TEXT("bNewMoveInput"));
 }

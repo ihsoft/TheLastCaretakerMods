@@ -193,31 +193,43 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     Tick->EventReference.SetExternalMember(BlueprintGraphNames::Events::ActorReceiveTick, AActor::StaticClass());
     Tick->bOverrideFunction = true; G.Node(Tick); G.Tail = G.Pin(Tick, P::Then);
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
-    G.Link(G.Tail, G.Pin(Work, P::Execute)); G.Tail = Work->GetThenPinGivenIndex(0);
-    auto* SafetyAndEnergy = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
-    G.Link(G.Tail, G.Pin(SafetyAndEnergy, P::Execute)); G.Tail = SafetyAndEnergy->GetThenPinGivenIndex(0);
-    ContextStationSafety(G);
-    G.Tail = Work->GetThenPinGivenIndex(1);
-    G.Branch(G.Valid(G.Read(S::Anchor)));
-    auto* Controlled = G.Branch(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self()));
-    auto* OccupiedTail = G.Tail;
-    G.Tail = G.Pin(Controlled, P::Else);
-    G.Branch(G.Read(DS::ViewOwned)); G.Write(DS::ViewOwned, nullptr, N::False);
-    G.Branch(G.Valid(G.Read(DS::Controller)));
-    auto* CurrentView = ObserveCall(G, AController::StaticClass(), GET_FUNCTION_NAME_CHECKED(AController, GetViewTarget), G.Read(DS::Controller));
-    G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), CurrentView, G.Read(DS::Camera)));
-    auto* CurrentPawn = ObserveCall(G, AController::StaticClass(), GET_FUNCTION_NAME_CHECKED(AController, K2_GetPawn), G.Read(DS::Controller));
-    G.Branch(G.Valid(CurrentPawn)); DedicatedViewTarget(G, CurrentPawn);
+    G.Link(G.Tail, G.Pin(Work, P::Execute));
 
-    G.Tail = OccupiedTail;
-    auto* OccupiedWork = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
-    G.Link(G.Tail, G.Pin(OccupiedWork, P::Execute)); G.Tail = OccupiedWork->GetThenPinGivenIndex(0);
-    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool), G.Read(DS::ViewOwned), N::False));
-    [[maybe_unused]] constexpr auto ControllerSignature = static_cast<AController* (APawn::*)() const>(&APawn::GetController);
-    auto* Controller = ObserveCall(G, APawn::StaticClass(), BlueprintGraphNames::ActorFunctions::GetController, Self());
+    auto* Possessed = NewObject<UK2Node_Event>(Graph);
+    Possessed->EventReference.SetExternalMember(
+        ActorLifecycleGraphNames::ReceivePossessedEvent,
+        APawn::StaticClass());
+    Possessed->bOverrideFunction = true;
+    G.Node(Possessed);
+    G.Tail = G.Pin(Possessed, P::Then);
+    G.Write(StationLifecycle::ExitPending, nullptr, N::False);
+    G.Write(StationLifecycle::EntryPending, nullptr, N::True);
+    auto* EntryDelay = G.Call(UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, DelayUntilNextTick));
+    G.Exec(EntryDelay);
+    G.Branch(G.Read(StationLifecycle::EntryPending));
+    G.Write(StationLifecycle::EntryPending, nullptr, N::False);
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        EqualEqual_BoolBool), G.Read(StationLifecycle::TeardownPending),
+        N::False));
+    G.Branch(G.Read(CE::Ready));
+    G.Branch(G.Valid(G.Read(S::Anchor)));
+    G.Branch(ContextParentValid(G));
+    G.Branch(ObserveCall(G, APawn::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self()));
+    [[maybe_unused]] constexpr auto ControllerSignature =
+        static_cast<AController* (APawn::*)() const>(&APawn::GetController);
+    auto* Controller = ObserveCall(G, APawn::StaticClass(),
+        BlueprintGraphNames::ActorFunctions::GetController, Self());
+    G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        EqualEqual_ObjectObject), Controller,
+        G.Pin(Possessed, ActorLifecycleGraphNames::NewController)));
     auto* Cast = NewObject<UK2Node_DynamicCast>(Graph); Cast->TargetType = APlayerController::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
     G.Link(G.Tail, G.Pin(Cast, P::Execute)); G.Link(Controller, Cast->GetCastSourcePin()); G.Tail = Cast->GetValidCastPin();
     G.Write(DS::Controller, Cast->GetCastResultPin());
+    G.Branch(ObserveCall(G, APlayerController::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(APlayerController, IsLocalController),
+        G.Read(DS::Controller)));
     ReadStationSettings(G);
     auto* RefreshEnergySettings = G.Call(BP->GeneratedClass,
         Charge::RefreshFunction);
@@ -269,8 +281,45 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Link(G.Read(O::Camera), G.Pin(RefreshFov, P::FunctionTarget)); G.Link(G.Read(O::BaselineFov), G.Pin(RefreshFov, OP::FieldOfView)); G.Exec(RefreshFov);
     DedicatedAim(G); PlaceModeCamera(G, true); DedicatedViewTarget(G, G.Read(DS::Camera)); G.Write(DS::ViewOwned, nullptr, N::True);
 
+    auto* Unpossessed = NewObject<UK2Node_Event>(Graph);
+    Unpossessed->EventReference.SetExternalMember(
+        ActorLifecycleGraphNames::ReceiveUnpossessedEvent,
+        APawn::StaticClass());
+    Unpossessed->bOverrideFunction = true;
+    G.Node(Unpossessed);
+    G.Tail = G.Pin(Unpossessed, P::Then);
+    G.Write(StationLifecycle::EntryPending, nullptr, N::False);
+    G.Write(StationLifecycle::ExitPending, nullptr, N::True);
+    auto* ExitDelay = G.Call(UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, DelayUntilNextTick));
+    G.Exec(ExitDelay);
+    G.Branch(G.Read(StationLifecycle::ExitPending));
+    G.Write(StationLifecycle::ExitPending, nullptr, N::False);
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        EqualEqual_BoolBool), ObserveCall(G, APawn::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self()),
+        N::False));
+    UEdGraphPin* RemainingController = ObserveCall(G, APawn::StaticClass(),
+        BlueprintGraphNames::ActorFunctions::GetController, Self());
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        EqualEqual_BoolBool), G.Valid(RemainingController), N::False));
+    G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        EqualEqual_ObjectObject),
+        G.Pin(Unpossessed, ActorLifecycleGraphNames::OldController),
+        G.Read(DS::Controller)));
+    RestoreDedicatedViewIfOwned(G);
+    auto* Teardown = G.Branch(
+        G.Read(StationLifecycle::TeardownPending));
+    auto* FinalizeTeardown = G.Call(BP->GeneratedClass,
+        StationLifecycle::FinalizeTeardown);
+    G.Exec(FinalizeTeardown);
+    G.Tail = G.Pin(Teardown, P::Else);
+
     // Independent sequence: misses/classification failures cannot block view setup or exit.
-    G.Tail = OccupiedWork->GetThenPinGivenIndex(1);
+    G.Tail = Work->GetThenPinGivenIndex(0);
+    G.Branch(G.Valid(G.Read(S::Anchor)));
+    G.Branch(ObserveCall(G, APawn::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self()));
     auto* OpticalWork = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
     G.Link(G.Tail, G.Pin(OpticalWork, P::Execute)); G.Tail = OpticalWork->GetThenPinGivenIndex(0);
     G.Branch(G.Read(DS::ViewOwned)); G.Branch(G.Valid(G.Read(O::Camera)));
@@ -302,7 +351,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
 
     AddRailgunVfxCanaries(G, Self());
     AddRailgunFire(G, G.Pin(Tick, P::DeltaSeconds),
-        SafetyAndEnergy->GetThenPinGivenIndex(1),
+        Work->GetThenPinGivenIndex(1),
         G.Read(Settings::OfflineDischarge));
     // Real Enhanced Input events on the possessed station, not observer key polling.
     auto ActionNode = [&](const TCHAR* Package, FName Trigger)
@@ -419,6 +468,12 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, DS::ViewOwned, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, DS::Camera, UEdGraphSchema_K2::PC_Object, ACameraActor::StaticClass());
     AddVariable(BP, DS::Controller, UEdGraphSchema_K2::PC_Object, APlayerController::StaticClass());
+    AddVariable(BP, StationLifecycle::ShellOwner,
+        UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
+    for (FName Field : {StationLifecycle::EntryPending,
+        StationLifecycle::ExitPending,
+        StationLifecycle::TeardownPending})
+        AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, O::Camera, UEdGraphSchema_K2::PC_Object, UCameraComponent::StaticClass());
     AddVariable(BP, O::RequestedFov, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, N::OriginalPawn, UEdGraphSchema_K2::PC_Object, APawn::StaticClass());
@@ -739,9 +794,11 @@ UClass* CreateDedicatedStation()
     AddNativeStationHudInterface(BP, Hud->GeneratedClass);
     AddRailgunEnergyFunctions(BP);
     AddRailgunChargeIndicatorFunctions(BP);
+    AddStationLifecycleFunctions(BP);
     BuildDedicatedStationGraph(BP);
     AddRailgunEnergyTeardown(BP);
     AddRailgunChargeIndicatorTeardown(BP);
+    AddStationLifecycleTeardown(BP);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP); FKismetEditorUtilities::CompileBlueprint(BP); check(BP->Status != BS_Error);
     auto* CDO = CastChecked<APawn>(BP->GeneratedClass->GetDefaultObject());
     check(CDO->GetRootComponent() && CDO->GetRootComponent()->IsA<UVoyageFastSceneComponent>());

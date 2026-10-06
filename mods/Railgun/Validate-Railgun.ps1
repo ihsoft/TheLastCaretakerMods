@@ -528,6 +528,7 @@ foreach ($requiredInitializationReference in @(
     "Class'GameplayStatics:FinishSpawningActor'",
     "Class'Actor:K2_AttachToComponent'",
     "Class'KismetSystemLibrary:LoadAsset_Blocking'",
+    'BindRailgunShellLifecycle',
     'BindRailgunEnergy',
     'BindRailgunChargeIndicator'
 )) {
@@ -600,6 +601,140 @@ foreach ($forbiddenFireReference in @(
     Require (-not ($operatorStrings -ccontains $forbiddenFireReference)) `
         ('Railgun fire must not use presentation state or direct mutation: ' +
             $forbiddenFireReference)
+}
+$lifecycleBind = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'BindRailgunShellLifecycle'
+})
+Require ($lifecycleBind.Count -eq 1) `
+    'Expected one shell lifecycle binding function.'
+$lifecycleBindStrings = @(JsonStringLeaves $lifecycleBind[0])
+foreach ($requiredLifecycleBindReference in @(
+    'RailgunShellOwner','OnEndPlay','OnRailgunShellEndPlay',
+    'EX_AddMulticastDelegate','EX_RemoveMulticastDelegate'
+)) {
+    Require ($lifecycleBindStrings -ccontains
+        $requiredLifecycleBindReference) `
+        ('Shell lifecycle bind reference missing: ' +
+            $requiredLifecycleBindReference)
+}
+$shellEndPlayCallback = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'OnRailgunShellEndPlay'
+})
+Require ($shellEndPlayCallback.Count -eq 1) `
+    'Expected one exact shell EndPlay callback.'
+$shellEndPlayParameters = @($shellEndPlayCallback[0].ChildProperties |
+    Where-Object {
+        $_.PSObject.Properties.Name -ccontains 'PropertyFlags' -and
+        $_.PropertyFlags -match '(^| \| )Parm($| \| )'
+    })
+Require ($shellEndPlayParameters.Count -eq 2 -and
+    @($shellEndPlayParameters | Where-Object {
+        $_.Name -ceq 'Actor' -and $_.Type -ceq 'ObjectProperty' -and
+        $_.PropertyClass.ObjectName -ceq "Class'Actor'" -and
+        $_.PropertyClass.ObjectPath -ceq '/Script/Engine'
+    }).Count -eq 1 -and
+    @($shellEndPlayParameters | Where-Object {
+        $_.Name -ceq 'EndPlayReason' -and $_.Type -ceq 'ByteProperty'
+    }).Count -eq 1) `
+    'Shell EndPlay callback must preserve the exact actor/reason delegate parameters.'
+$shellEndPlayStrings = @(JsonStringLeaves $shellEndPlayCallback[0])
+foreach ($requiredShellEndPlayReference in @(
+    'RailgunShellOwner','RailgunEntryReady','RailgunEntryPending',
+    'RailgunTeardownPending',
+    "Class'Actor:SetActorEnableCollision'",
+    'OnExitVehicle',
+    'FinalizeRailgunStationTeardown'
+)) {
+    Require ($shellEndPlayStrings -ccontains
+        $requiredShellEndPlayReference) `
+        ('Shell EndPlay callback reference missing: ' +
+            $requiredShellEndPlayReference)
+}
+$shellEndPlayReasonValues = @(
+    $shellEndPlayCallback[0].ScriptBytecode |
+        Where-Object {
+            $_.PSObject.Properties.Name -ccontains 'Expression' -and
+            $_.Expression.PSObject.Properties.Name -ccontains 'Function' -and
+            $_.Expression.Token -ceq 'EX_CallMath' -and
+            $_.Expression.Function.ObjectName -ceq
+                "Class'KismetMathLibrary:EqualEqual_ByteByte'" -and
+            @($_.Expression.Parameters | Where-Object {
+                $_.Token -ceq 'EX_LocalVariable' -and
+                $_.Variable.Property.Name -ceq 'EndPlayReason'
+            }).Count -eq 1
+        } |
+        ForEach-Object {
+            @($_.Expression.Parameters | Where-Object {
+                $_.Token -ceq 'EX_ByteConst'
+            }).Value
+        }
+)
+Require ($shellEndPlayReasonValues.Count -eq 2 -and
+    $shellEndPlayReasonValues -ccontains 0 -and
+    $shellEndPlayReasonValues -ccontains 3) `
+    'Shell EndPlay callback must handle Destroyed (0) and RemovedFromWorld (3).'
+$finalizeStationTeardown = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'FinalizeRailgunStationTeardown'
+})
+Require ($finalizeStationTeardown.Count -eq 1) `
+    'Expected one guarded station teardown finalizer.'
+$finalizeStationTeardownStrings = @(
+    JsonStringLeaves $finalizeStationTeardown[0])
+foreach ($requiredTeardownReference in @(
+    'RailgunTeardownPending','RailgunExitPending','RailgunOwnsView',
+    'RailgunViewActor','RailgunViewController',
+    'IsPlayerControlled',
+    "Class'Pawn:GetController'",
+    'GetViewTarget',
+    "Class'Controller:K2_GetPawn'",
+    'SetViewTargetWithBlend',
+    'K2_DestroyActor'
+)) {
+    Require ($finalizeStationTeardownStrings -ccontains
+        $requiredTeardownReference) `
+        ('Station teardown finalizer reference missing: ' +
+            $requiredTeardownReference)
+}
+$possessedEvent = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'ReceivePossessed' -and
+    $_.SuperStruct.ObjectName -ceq "Class'Pawn:ReceivePossessed'"
+})
+$unpossessedEvent = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'ReceiveUnpossessed' -and
+    $_.SuperStruct.ObjectName -ceq "Class'Pawn:ReceiveUnpossessed'"
+})
+Require ($possessedEvent.Count -eq 1 -and
+    @($possessedEvent[0].ChildProperties | Where-Object {
+        $_.Name -ceq 'NewController' -and $_.Type -ceq 'ObjectProperty' -and
+        $_.PropertyClass.ObjectName -ceq "Class'Controller'"
+    }).Count -eq 1) `
+    'Station must implement the exact Pawn ReceivePossessed event.'
+Require ($unpossessedEvent.Count -eq 1 -and
+    @($unpossessedEvent[0].ChildProperties | Where-Object {
+        $_.Name -ceq 'OldController' -and $_.Type -ceq 'ObjectProperty' -and
+        $_.PropertyClass.ObjectName -ceq "Class'Controller'"
+    }).Count -eq 1) `
+    'Station must implement the exact Pawn ReceiveUnpossessed event.'
+foreach ($requiredLifecycleEventReference in @(
+    'RailgunEntryPending','RailgunExitPending',
+    "Class'KismetSystemLibrary:DelayUntilNextTick'"
+)) {
+    Require ($operatorStrings -ccontains $requiredLifecycleEventReference) `
+        ('Station lifecycle event reference missing: ' +
+            $requiredLifecycleEventReference)
+}
+Require (@($operatorStrings | Where-Object {
+    $_ -ceq 'OnExitVehicle'
+}).Count -eq 1) `
+    'Operator ubergraph must request native exit only from the explicit input action.'
+foreach ($requiredLifecycleTeardownReference in @(
+    'RailgunShellOwner','OnRailgunShellEndPlay',
+    'EX_RemoveMulticastDelegate'
+)) {
+    Require ($operatorStrings -ccontains
+        $requiredLifecycleTeardownReference) `
+        ('Station lifecycle unbind reference missing: ' +
+            $requiredLifecycleTeardownReference)
 }
 $energyBind = @($operatorFunctions | Where-Object {
     $_.Name -ceq 'BindRailgunEnergy'

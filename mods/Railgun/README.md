@@ -55,7 +55,12 @@ or replaced.
 
 Current releases are loader-free: the built module shell initializes its owned
 operator station from `ReceiveBeginPlay` and persistent post-load lifecycle
-events. `-Install` fails closed if a legacy `Railgun.autoload` remains in the
+events. The station reacts to inherited Pawn possession/unpossession events,
+then performs one guarded next-tick continuation for camera and settings work;
+the main actor tick does not poll for entry or exit transitions. The station
+also observes its concrete shell owner's EndPlay event so dismantling blocks
+new acquisition and tears down only after native exit has released possession.
+`-Install` fails closed if a legacy `Railgun.autoload` remains in the
 game. Updating such an installation requires the reviewed one-time recoverable
 migration; do not delete unrelated mods or their autoload sidecars.
 
@@ -173,6 +178,12 @@ cached before the setter is called. EndPlay removes the binding. The main actor
 tick no longer discovers the module, samples charge rate, or rewrites demand;
 it retains the configured time-based offline discharge and its existing power
 connection checks.
+
+Actual station entry is driven by `ReceivePossessed`; it reloads the installed
+INI and refreshes camera and energy state after one next-tick continuation.
+`ReceiveUnpossessed` performs the symmetric guarded camera restoration. These
+events use pending-state coalescing and have no periodic lifecycle discovery,
+retry timer or polling fallback.
 
 The model charge indicator uses the GLB mesh bound by
 `nodes.chargeIndicatorMesh`. At runtime, only that tagged component loads the

@@ -15,6 +15,13 @@
 - Operator control uses a dedicated child of the common Voyage vehicle pawn.
   Entry, exit, camera, input context, HUD selection and action hints are owned by
   that station; the physical weapon remains stationary.
+- Station entry and exit follow the exact inherited Pawn possession events.
+  Each transition schedules one next-tick continuation so Voyage's native
+  possession and camera work completes first. Repeated events at the same
+  callsite coalesce behind pending-state guards; there is no lifecycle timer or
+  polling fallback. Actual entry reloads `Railgun.ini`, refreshes the cached
+  energy state and acquires the dedicated camera. Actual exit restores the
+  previous view only when the station still owns the current view target.
 - The GLB is imported by Unreal Interchange. Full hierarchy matrices determine
   ownership and transforms; node names identify roles but do not imply parentage.
 - Yaw, pitch, muzzle, sight, entry, power-socket and charge-indicator roles are
@@ -39,9 +46,10 @@
   versus idle mode changes. Re-entry settings reload forces one demand refresh.
   The desired mode is cached before the native setter; synchronous nested
   notifications are coalesced into one final non-forced read, which does not
-  repeat the setter when the mode is unchanged. The energy branch of the actor
-  tick retains only time-based offline discharge and its supply checks; it no longer discovers
-  the module, maintains demand, or samples unused charge-rate state. Capacity,
+  repeat the setter when the mode is unchanged. The main actor
+  tick retains only active optics/range work and time-based offline discharge
+  with its supply checks; it no longer discovers lifecycle state or the module,
+  maintains demand, or samples unused charge-rate state. Capacity,
   units, the fresh pre-shot balance check, shot debit and bounded refund are
   unchanged.
 - Loss of the module power connection discharges stored energy to zero at the
@@ -79,9 +87,14 @@
   recoil. Explicit valid INI values override that fallback; one remains the
   authored baseline. Missing/invalid-INI recoil fallback has static coverage
   only, not runtime coverage.
-- Dismantling after exit is supported. The module owns a transient direct
-  station reference; station safety disables acquisition, exits a controlled
-  pawn, and destroys the detached station on a later pass.
+- The station binds the concrete shell owner's `OnEndPlay` delegate. Shell
+  destruction or removal from the world immediately blocks acquisition and
+  collision. An unoccupied station finalizes teardown directly; an occupied
+  station requests Voyage's native exit and lets the resulting
+  `ReceiveUnpossessed` continuation finalize it. Finalization is idempotent and
+  refuses to destroy a player-controlled pawn or any pawn that still has a
+  controller. World transition, editor shutdown and process quit rely on normal
+  world teardown. Station EndPlay removes the shell delegate binding.
 
 ## Primary assets and research
 

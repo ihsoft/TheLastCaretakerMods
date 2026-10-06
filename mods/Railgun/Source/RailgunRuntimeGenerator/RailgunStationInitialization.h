@@ -89,6 +89,10 @@ void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     ContextSet(G, Station, StationClass, CE::InteractBlocks,
         G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ByteByte), G.Pin(Response, P::ReturnValue), CE::BlockResponseValue));
     ContextSet(G, Station, StationClass, CE::Ready, nullptr, N::True);
+    auto* BindLifecycle = G.Call(StationClass,
+        StationLifecycle::BindShell);
+    G.Link(Station, G.Pin(BindLifecycle, P::FunctionTarget));
+    G.Exec(BindLifecycle);
     auto* BindEnergy = G.Call(StationClass, Charge::BindFunction);
     G.Link(Station, G.Pin(BindEnergy, P::FunctionTarget));
     G.Exec(BindEnergy);
@@ -143,6 +147,11 @@ void AddRailgunStationInitializationFunction(UBlueprint* BP,
     G.Link(G.Tail, G.Pin(ExistingStation, P::Execute));
     G.Link(G.Read(V::Vehicle), ExistingStation->GetCastSourcePin());
     G.Tail = ExistingStation->GetValidCastPin();
+    auto* RebindLifecycle = G.Call(StationClass,
+        StationLifecycle::BindShell);
+    G.Link(ExistingStation->GetCastResultPin(),
+        G.Pin(RebindLifecycle, P::FunctionTarget));
+    G.Exec(RebindLifecycle);
     auto* RebindEnergy = G.Call(StationClass, Charge::BindFunction);
     G.Link(ExistingStation->GetCastResultPin(),
         G.Pin(RebindEnergy, P::FunctionTarget));

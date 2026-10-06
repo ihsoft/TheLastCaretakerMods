@@ -2,6 +2,18 @@
 // Builds station entry callbacks and the interaction interface graph.
 namespace CE = ContextEntryNames;
 namespace DS = DedicatedStationNames;
+namespace StationLifecycle
+{
+inline const FName ShellOwner(TEXT("RailgunShellOwner"));
+inline const FName EntryPending(TEXT("RailgunEntryPending"));
+inline const FName ExitPending(TEXT("RailgunExitPending"));
+inline const FName TeardownPending(TEXT("RailgunTeardownPending"));
+inline const FName BindShell(TEXT("BindRailgunShellLifecycle"));
+inline const FName ShellEndPlayCallback(TEXT("OnRailgunShellEndPlay"));
+inline const FName FinalizeTeardown(TEXT("FinalizeRailgunStationTeardown"));
+inline constexpr TCHAR DestroyedReason[] = TEXT("0");
+inline constexpr TCHAR RemovedFromWorldReason[] = TEXT("3");
+}
 
 void ContextSet(FGraph& G, UEdGraphPin* Target, UClass* Class, FName Field, UEdGraphPin* Value, const TCHAR* Literal = nullptr)
 {
@@ -111,23 +123,258 @@ void AddContextEntry(UBlueprint* BP)
     G.Link(Array->GetOutputPin(), G.Pin(Result, CE::OutActions)); G.Default(Result, P::ReturnValue, N::True); G.Link(G.Tail, G.Pin(Result, P::Execute));
 }
 
-// Independent station safety tick. Never destroy a possessed pawn.
-void ContextStationSafety(FGraph& G)
+FMulticastDelegateProperty* StationShellEndPlayDelegateProperty()
 {
-    auto* Self = OpticalSelf(G);
-    auto Exit = [&]() { auto* Call = G.Call(AVoyageVehiclePawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(AVoyageVehiclePawn, OnExitVehicle)); G.Link(Self, G.Pin(Call, P::FunctionTarget)); G.Exec(Call); };
-    auto* AnchorValid = G.Branch(G.Valid(G.Read(S::Anchor))); auto* Normal = G.Tail;
-    G.Tail = G.Pin(AnchorValid, P::Else); G.Write(CE::Ready, nullptr, N::False);
-    // Stop new acquisition before camera/station destruction. A detector can
-    // still hold an earlier result: handled/empty provider above covers it.
-    auto* DisableQuery = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, SetActorEnableCollision));
-    G.Link(Self, G.Pin(DisableQuery, P::FunctionTarget)); G.Default(DisableQuery, SP::CollisionEnabled, N::False); G.Exec(DisableQuery);
-    auto* Occupied = G.Branch(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self));
-    Exit(); auto* Requested = G.Tail; G.Tail = G.Pin(Occupied, P::Else);
-    auto* Camera = G.Branch(G.Valid(G.Read(DS::Camera))); auto* NoCamera = G.Pin(Camera, P::Else);
-    auto* DestroyCamera = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_DestroyActor));
-    G.Link(G.Read(DS::Camera), G.Pin(DestroyCamera, P::FunctionTarget)); G.Exec(DestroyCamera); StationMerge(G, {G.Tail, NoCamera});
-    auto* Destroy = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_DestroyActor)); G.Link(Self, G.Pin(Destroy, P::FunctionTarget)); G.Exec(Destroy);
-    (void)Requested; // Exit branch deliberately waits until an independent next tick.
-    G.Tail = Normal;
+    auto* Property = FindFProperty<FMulticastDelegateProperty>(
+        AActor::StaticClass(), ActorLifecycleGraphNames::OnEndPlay);
+    check(Property && Property->SignatureFunction &&
+        Property->SignatureFunction->NumParms == 2);
+    auto* Actor = FindFProperty<FObjectProperty>(Property->SignatureFunction,
+        ActorLifecycleGraphNames::EndPlayActor);
+    auto* Reason = FindFProperty<FByteProperty>(Property->SignatureFunction,
+        ActorLifecycleGraphNames::EndPlayReason);
+    check(Actor && Actor->HasAnyPropertyFlags(CPF_Parm) &&
+        Actor->PropertyClass == AActor::StaticClass());
+    check(Reason && Reason->HasAnyPropertyFlags(CPF_Parm) && Reason->Enum &&
+        Reason->Enum->GetPathName() == TEXT("/Script/Engine.EEndPlayReason"));
+    return Property;
+}
+
+void RestoreDedicatedViewIfOwned(FGraph& G)
+{
+    auto* Owned = G.Branch(G.Read(DS::ViewOwned));
+    G.Write(DS::ViewOwned, nullptr, N::False);
+    auto* ControllerValid = G.Branch(G.Valid(G.Read(DS::Controller)));
+    auto* CurrentView = ObserveCall(G, AController::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AController, GetViewTarget),
+        G.Read(DS::Controller));
+    auto* Ours = G.Branch(G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            EqualEqual_ObjectObject), CurrentView, G.Read(DS::Camera)));
+    auto* CurrentPawn = ObserveCall(G, AController::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AController, K2_GetPawn),
+        G.Read(DS::Controller));
+    auto* PawnValid = G.Branch(G.Valid(CurrentPawn));
+    auto* Restore = G.Call(APlayerController::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(APlayerController, SetViewTargetWithBlend));
+    G.Link(G.Read(DS::Controller), G.Pin(Restore, P::FunctionTarget));
+    G.Link(CurrentPawn, G.Pin(Restore, OP::NewViewTarget));
+    G.Default(Restore, OP::BlendTime, N::Zero);
+    G.Exec(Restore);
+    StationMerge(G, {G.Tail, G.Pin(PawnValid, P::Else),
+        G.Pin(Ours, P::Else), G.Pin(ControllerValid, P::Else),
+        G.Pin(Owned, P::Else)});
+}
+
+void AddStationLifecycleFunctions(UBlueprint* BP)
+{
+    using namespace StationLifecycle;
+    check(BP && BP->GeneratedClass);
+    FMulticastDelegateProperty* DelegateProperty =
+        StationShellEndPlayDelegateProperty();
+
+    UEdGraph* FinalizeGraph = FBlueprintEditorUtils::CreateNewGraph(BP,
+        FinalizeTeardown, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(BP, FinalizeGraph, false,
+        static_cast<UClass*>(nullptr));
+    UK2Node_FunctionEntry* FinalizeEntry = nullptr;
+    for (UEdGraphNode* Node : FinalizeGraph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+            FinalizeEntry = Candidate;
+    check(FinalizeEntry);
+    FinalizeEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
+    FGraph Finalize(FinalizeGraph, nullptr);
+    Finalize.Tail = Finalize.Pin(FinalizeEntry, P::Then);
+    Finalize.Branch(Finalize.Read(TeardownPending));
+    Finalize.Branch(Finalize.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
+        ObserveCall(Finalize, APawn::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled),
+            OpticalSelf(Finalize)), N::False));
+    UEdGraphPin* CurrentController = ObserveCall(Finalize,
+        APawn::StaticClass(), BlueprintGraphNames::ActorFunctions::GetController,
+        OpticalSelf(Finalize));
+    Finalize.Branch(Finalize.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
+        Finalize.Valid(CurrentController), N::False));
+    Finalize.Write(TeardownPending, nullptr, N::False);
+    Finalize.Write(ExitPending, nullptr, N::False);
+    RestoreDedicatedViewIfOwned(Finalize);
+    auto* CameraValid = Finalize.Branch(
+        Finalize.Valid(Finalize.Read(DS::Camera)));
+    auto* DestroyCamera = Finalize.Call(AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, K2_DestroyActor));
+    Finalize.Link(Finalize.Read(DS::Camera),
+        Finalize.Pin(DestroyCamera, P::FunctionTarget));
+    Finalize.Exec(DestroyCamera);
+    UEdGraphPin* CameraDestroyed = Finalize.Tail;
+    Finalize.Tail = Finalize.Pin(CameraValid, P::Else);
+    StationMerge(Finalize, {CameraDestroyed, Finalize.Tail});
+    Finalize.Write(DS::Camera, nullptr);
+    auto* DestroyStation = Finalize.Call(AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, K2_DestroyActor));
+    Finalize.Link(OpticalSelf(Finalize),
+        Finalize.Pin(DestroyStation, P::FunctionTarget));
+    Finalize.Exec(DestroyStation);
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass &&
+        BP->GeneratedClass->FindFunctionByName(FinalizeTeardown));
+
+    UEdGraph* CallbackGraph = FBlueprintEditorUtils::CreateNewGraph(BP,
+        ShellEndPlayCallback, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(BP, CallbackGraph, true,
+        DelegateProperty->SignatureFunction.Get());
+    UK2Node_FunctionEntry* CallbackEntry = nullptr;
+    for (UEdGraphNode* Node : CallbackGraph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+            CallbackEntry = Candidate;
+    check(CallbackEntry);
+    CallbackEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
+    FGraph Callback(CallbackGraph, nullptr);
+    Callback.Tail = Callback.Pin(CallbackEntry, P::Then);
+    UEdGraphPin* EndingActor = Callback.Pin(CallbackEntry,
+        ActorLifecycleGraphNames::EndPlayActor);
+    Callback.Branch(Callback.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            EqualEqual_ObjectObject), EndingActor, Callback.Read(ShellOwner)));
+    Callback.Write(CE::Ready, nullptr, N::False);
+    Callback.Write(EntryPending, nullptr, N::False);
+    auto* DisableQuery = Callback.Call(AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, SetActorEnableCollision));
+    Callback.Link(OpticalSelf(Callback),
+        Callback.Pin(DisableQuery, P::FunctionTarget));
+    Callback.Default(DisableQuery, SP::CollisionEnabled, N::False);
+    Callback.Exec(DisableQuery);
+    UEdGraphPin* Reason = Callback.Pin(CallbackEntry,
+        ActorLifecycleGraphNames::EndPlayReason);
+    UEdGraphPin* Destroyed = Callback.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ByteByte),
+        Reason, DestroyedReason);
+    UEdGraphPin* Removed = Callback.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ByteByte),
+        Reason, RemovedFromWorldReason);
+    Callback.Branch(Callback.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR),
+        Destroyed, Removed));
+    Callback.Write(TeardownPending, nullptr, N::True);
+    auto* Occupied = Callback.Branch(ObserveCall(Callback,
+        APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn,
+            IsPlayerControlled), OpticalSelf(Callback)));
+    auto* Exit = Callback.Call(AVoyageVehiclePawn::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AVoyageVehiclePawn, OnExitVehicle));
+    Callback.Link(OpticalSelf(Callback),
+        Callback.Pin(Exit, P::FunctionTarget));
+    Callback.Exec(Exit);
+    UEdGraphPin* ExitRequested = Callback.Tail;
+    Callback.Tail = Callback.Pin(Occupied, P::Else);
+    auto* FinalizeNow = Callback.Call(BP->GeneratedClass,
+        FinalizeTeardown);
+    Callback.Exec(FinalizeNow);
+    StationMerge(Callback, {ExitRequested, Callback.Tail});
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass &&
+        BP->GeneratedClass->FindFunctionByName(ShellEndPlayCallback));
+
+    UEdGraph* BindGraph = FBlueprintEditorUtils::CreateNewGraph(BP,
+        BindShell, UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(BP, BindGraph, false,
+        static_cast<UClass*>(nullptr));
+    UK2Node_FunctionEntry* BindEntry = nullptr;
+    for (UEdGraphNode* Node : BindGraph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+            BindEntry = Candidate;
+    check(BindEntry);
+    BindEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
+    FGraph Bind(BindGraph, nullptr);
+    Bind.Tail = Bind.Pin(BindEntry, P::Then);
+    auto* CallbackDelegate = Bind.Node(
+        NewObject<UK2Node_CreateDelegate>(BindGraph));
+    CallbackDelegate->SetFunction(ShellEndPlayCallback);
+    auto NewRemove = [&]()
+    {
+        auto* Remove = NewObject<UK2Node_RemoveDelegate>(BindGraph);
+        Remove->SetFromProperty(DelegateProperty, false,
+            AActor::StaticClass());
+        Bind.Node(Remove);
+        Bind.Link(CallbackDelegate->GetDelegateOutPin(),
+            Remove->GetDelegatePin());
+        return Remove;
+    };
+    auto* RemovePrevious = NewRemove();
+    auto* RemoveCurrent = NewRemove();
+    auto* Add = NewObject<UK2Node_AddDelegate>(BindGraph);
+    Add->SetFromProperty(DelegateProperty, false, AActor::StaticClass());
+    Bind.Node(Add);
+    Bind.Link(CallbackDelegate->GetDelegateOutPin(), Add->GetDelegatePin());
+    auto* PreviousValid = Bind.Branch(Bind.Valid(Bind.Read(ShellOwner)));
+    Bind.Link(Bind.Read(ShellOwner),
+        Bind.Pin(RemovePrevious, P::FunctionTarget));
+    Bind.Exec(RemovePrevious);
+    UEdGraphPin* PreviousRemoved = Bind.Tail;
+    Bind.Tail = Bind.Pin(PreviousValid, P::Else);
+    StationMerge(Bind, {PreviousRemoved, Bind.Tail});
+    Bind.Write(ShellOwner, nullptr);
+    Bind.Branch(Bind.Valid(Bind.Read(S::Anchor)));
+    UEdGraphPin* Owner = ObserveCall(Bind, UActorComponent::StaticClass(),
+        OP::ComponentOwner, Bind.Read(S::Anchor));
+    Bind.Branch(Bind.Valid(Owner));
+    Bind.Write(ShellOwner, Owner);
+    Bind.Link(Owner, Bind.Pin(RemoveCurrent, P::FunctionTarget));
+    Bind.Exec(RemoveCurrent);
+    Bind.Link(Owner, Bind.Pin(Add, P::FunctionTarget));
+    Bind.Exec(Add);
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass &&
+        BP->GeneratedClass->FindFunctionByName(BindShell));
+}
+
+void AddStationLifecycleTeardown(UBlueprint* BP)
+{
+    using namespace StationLifecycle;
+    check(BP && BP->UbergraphPages.Num() == 1);
+    UEdGraph* Graph = BP->UbergraphPages[0];
+    UK2Node_Event* EndPlay = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        auto* Event = Cast<UK2Node_Event>(Node);
+        if (!Event || Event->EventReference.GetMemberName() !=
+            ActorLifecycleGraphNames::EndPlayEvent) continue;
+        check(!EndPlay);
+        EndPlay = Event;
+    }
+    check(EndPlay);
+    UEdGraphPin* EndPlayTail = EndPlay->FindPinChecked(P::Then);
+    check(EndPlayTail->LinkedTo.Num() == 1);
+    UEdGraphPin* ExistingWork = EndPlayTail->LinkedTo[0];
+    EndPlayTail->BreakAllPinLinks();
+    FGraph G(Graph, nullptr);
+    auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
+    G.Link(EndPlayTail, G.Pin(Work, P::Execute));
+    G.Link(Work->GetThenPinGivenIndex(0), ExistingWork);
+    G.Tail = Work->GetThenPinGivenIndex(1);
+    auto* DelegateProperty = StationShellEndPlayDelegateProperty();
+    auto* Callback = G.Node(NewObject<UK2Node_CreateDelegate>(Graph));
+    Callback->SetFunction(ShellEndPlayCallback);
+    auto* Remove = NewObject<UK2Node_RemoveDelegate>(Graph);
+    Remove->SetFromProperty(DelegateProperty, false, AActor::StaticClass());
+    G.Node(Remove);
+    G.Link(Callback->GetDelegateOutPin(), Remove->GetDelegatePin());
+    auto* OwnerValid = G.Branch(G.Valid(G.Read(ShellOwner)));
+    G.Link(G.Read(ShellOwner), G.Pin(Remove, P::FunctionTarget));
+    G.Exec(Remove);
+    UEdGraphPin* Removed = G.Tail;
+    G.Tail = G.Pin(OwnerValid, P::Else);
+    StationMerge(G, {Removed, G.Tail});
+    G.Write(ShellOwner, nullptr);
+    G.Write(EntryPending, nullptr, N::False);
+    G.Write(ExitPending, nullptr, N::False);
+    G.Write(TeardownPending, nullptr, N::False);
 }
