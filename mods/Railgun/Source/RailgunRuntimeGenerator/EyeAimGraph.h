@@ -1,37 +1,68 @@
 #pragma once
 
 // Builds eye-origin and parallax aiming graphs for the dedicated station.
-namespace EyeAim
+void BindFirstPersonCamera(FGraph& G)
 {
-inline const FName Yaw(TEXT("RailgunEyeYaw"));
-inline const FName Pitch(TEXT("RailgunEyePitch"));
-inline const FName Target(TEXT("RailgunEyeTarget"));
-inline const FName EyeLocation(TEXT("OutLocation"));
-inline const FName NewLocation(TEXT("NewLocation"));
-inline const FName Direction(TEXT("Direction"));
-inline const FName RotationVector(TEXT("InVec"));
-inline constexpr TCHAR FirstPersonCameraName[] = TEXT("FirstPersonCamera");
+    G.Write(EyeAim::FirstPersonCamera, nullptr);
+    G.Write(EyeAim::FirstPersonCameraOwner, nullptr);
+    auto* PawnValid = G.Branch(G.Valid(G.Read(N::OriginalPawn)));
+    auto* Find = G.Call(AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, K2_GetComponentsByClass));
+    G.Link(G.Read(N::OriginalPawn), G.Pin(Find, P::FunctionTarget));
+    G.Pin(Find, OP::ComponentClass)->DefaultObject =
+        UCameraComponent::StaticClass();
+    auto* Loop = ContextLoop(G, G.Pin(Find, P::ReturnValue));
+    auto* Cast = NewObject<UK2Node_DynamicCast>(G.Graph);
+    Cast->TargetType = UCameraComponent::StaticClass();
+    Cast->SetPurity(false);
+    G.Node(Cast);
+    G.Link(G.Tail, G.Pin(Cast, P::Execute));
+    G.Link(G.Pin(Loop, CE::ArrayElement), Cast->GetCastSourcePin());
+    G.Tail = Cast->GetValidCastPin();
+    auto* Name = G.Call(UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, GetObjectName));
+    G.Link(Cast->GetCastResultPin(), G.Pin(Name, P::Object));
+    auto* Equal = G.Call(UKismetStringLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr));
+    G.Link(G.Pin(Name, P::ReturnValue),
+        G.Pin(Equal, P::Binary::LeftOperand));
+    G.Default(Equal, P::Binary::RightOperand,
+        EyeAim::FirstPersonCameraName);
+    G.Branch(G.Pin(Equal, P::ReturnValue));
+    G.Write(EyeAim::FirstPersonCamera, Cast->GetCastResultPin());
+    G.Write(EyeAim::FirstPersonCameraOwner, G.Read(N::OriginalPawn));
+    StationMerge(G, {G.Pin(Loop, CE::Completed),
+        G.Pin(PawnValid, P::Else)});
 }
 
 // Follow only the observed first-person component's position. Rotation remains
 // station-owned; do not activate the character camera or re-possess its pawn.
 void UpdateEyeCameraPosition(FGraph& G)
 {
-    auto* Find = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetComponentsByClass));
-    G.Link(G.Read(N::OriginalPawn), G.Pin(Find, P::FunctionTarget)); G.Pin(Find, OP::ComponentClass)->DefaultObject = UCameraComponent::StaticClass();
-    auto* Loop = ContextLoop(G, G.Pin(Find, P::ReturnValue));
-    auto* Cast = NewObject<UK2Node_DynamicCast>(G.Graph); Cast->TargetType = UCameraComponent::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
-    G.Link(G.Tail, G.Pin(Cast, P::Execute)); G.Link(G.Pin(Loop, CE::ArrayElement), Cast->GetCastSourcePin()); G.Tail = Cast->GetValidCastPin();
-    auto* Name = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, GetObjectName));
-    G.Link(Cast->GetCastResultPin(), G.Pin(Name, P::Object));
-    auto* Equal = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr));
-    G.Link(G.Pin(Name, P::ReturnValue), G.Pin(Equal, P::Binary::LeftOperand)); G.Default(Equal, P::Binary::RightOperand, EyeAim::FirstPersonCameraName);
-    G.Branch(G.Pin(Equal, P::ReturnValue));
+    auto* CameraValid = G.Branch(
+        G.Valid(G.Read(EyeAim::FirstPersonCamera)));
+    auto* OwnerValid = G.Branch(
+        G.Valid(G.Read(EyeAim::FirstPersonCameraOwner)));
+    auto* PawnValid = G.Branch(G.Valid(G.Read(N::OriginalPawn)));
+    auto* SamePawn = G.Branch(G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            EqualEqual_ObjectObject),
+        G.Read(EyeAim::FirstPersonCameraOwner), G.Read(N::OriginalPawn)));
+    auto* ComponentOwner = ObserveCall(G, UActorComponent::StaticClass(),
+        OP::ComponentOwner, G.Read(EyeAim::FirstPersonCamera));
+    auto* SameOwner = G.Branch(G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            EqualEqual_ObjectObject), ComponentOwner,
+        G.Read(EyeAim::FirstPersonCameraOwner)));
     auto* Set = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_SetActorLocation));
     G.Link(G.Read(DS::Camera), G.Pin(Set, P::FunctionTarget));
-    G.Link(ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_GetComponentLocation), Cast->GetCastResultPin()), G.Pin(Set, EyeAim::NewLocation));
+    G.Link(ObserveCall(G, USceneComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_GetComponentLocation),
+        G.Read(EyeAim::FirstPersonCamera)), G.Pin(Set, EyeAim::NewLocation));
     G.Default(Set, OP::Sweep, N::False); G.Default(Set, E::Teleport, N::False); G.Exec(Set);
-    G.Tail = G.Pin(Loop, CE::Completed);
+    StationMerge(G, {G.Tail, G.Pin(SameOwner, P::Else),
+        G.Pin(SamePawn, P::Else), G.Pin(PawnValid, P::Else),
+        G.Pin(OwnerValid, P::Else), G.Pin(CameraValid, P::Else)});
 }
 
 void RotateEyeCamera(FGraph& G)

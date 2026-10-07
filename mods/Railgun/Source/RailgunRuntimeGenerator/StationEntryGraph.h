@@ -203,6 +203,9 @@ void AddStationLifecycleFunctions(UBlueprint* BP)
     Finalize.Write(ExitPending, nullptr, N::False);
     Finalize.Write(ActiveHud, nullptr);
     RestoreDedicatedViewIfOwned(Finalize);
+    auto* ClearAimReferences = Finalize.Call(BP->GeneratedClass,
+        Aim::ClearReferences);
+    Finalize.Exec(ClearAimReferences);
     auto* CameraValid = Finalize.Branch(
         Finalize.Valid(Finalize.Read(DS::Camera)));
     auto* DestroyCamera = Finalize.Call(AActor::StaticClass(),
@@ -383,4 +386,7 @@ void AddStationLifecycleTeardown(UBlueprint* BP)
     G.Write(ExitPending, nullptr, N::False);
     G.Write(TeardownPending, nullptr, N::False);
     G.Write(ActiveHud, nullptr);
+    auto* ClearAimReferences = G.Call(BP->GeneratedClass,
+        Aim::ClearReferences);
+    G.Exec(ClearAimReferences);
 }

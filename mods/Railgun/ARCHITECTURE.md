@@ -33,6 +33,13 @@
 - Wide view is character-eye view. Scope view uses the barrel sight, optical
   mask, reticle and reduced sensitivity. The weapon aligns toward the character
   view target before scoped aiming.
+- The station resolves the character's `FirstPersonCamera` once on each
+  confirmed entry and resolves the model yaw/pitch roles once when the shell is
+  bound. Tick, input, recoil and parallax convergence use transient owned
+  references with validity and owner-identity guards; they never rediscover
+  those components. Arbitrary replacement of camera or model components between
+  the corresponding entry/shell lifecycle events is unsupported and does not
+  trigger a polling fallback.
 - The weapon charges from the module electricity system, may fire only when its
   configured charge is full, resets charge after a shot, and applies a validated
   direct attack to the hit target. Projectile travel is represented visually;

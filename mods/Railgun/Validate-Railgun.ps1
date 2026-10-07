@@ -529,6 +529,7 @@ foreach ($requiredInitializationReference in @(
     "Class'Actor:K2_AttachToComponent'",
     "Class'KismetSystemLibrary:LoadAsset_Blocking'",
     'BindRailgunShellLifecycle',
+    'BindRailgunAimComponents',
     'BindRailgunEnergy',
     'BindRailgunChargeIndicator'
 )) {
@@ -571,12 +572,79 @@ foreach ($requiredVisualReference in @(
 }
 $operator = @(Read-Candidate $operatorPackage)
 $operatorFunctions = @($operator | Where-Object { $_.Type -ceq 'Function' })
+$operatorClass = @($operator | Where-Object {
+    $_.Type -ceq 'BlueprintGeneratedClass'
+})
+Require ($operatorClass.Count -eq 1) `
+    'Expected one Railgun operator generated class.'
+$ownedAimReferences = @(
+    @{Name='RailgunFirstPersonCamera'; Class="Class'CameraComponent'"},
+    @{Name='RailgunFirstPersonCameraOwner'; Class="Class'Pawn'"},
+    @{Name='RailgunYawComponent'; Class="Class'SceneComponent'"},
+    @{Name='RailgunPitchComponent'; Class="Class'SceneComponent'"},
+    @{Name='RailgunAimModelOwner'; Class="Class'Actor'"}
+)
+foreach ($expectedReference in $ownedAimReferences) {
+    $property = @($operatorClass[0].ChildProperties | Where-Object {
+        $_.Name -ceq $expectedReference.Name
+    })
+    Require ($property.Count -eq 1 -and
+        $property[0].Type -ceq 'ObjectProperty' -and
+        $property[0].PropertyClass.ObjectName -ceq
+            $expectedReference.Class -and
+        $property[0].PropertyFlags -match '(^| \| )Transient($| \| )') `
+        ('Owned aim reference must be exact and transient: ' +
+            $expectedReference.Name)
+}
+$aimBinding = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'BindRailgunAimComponents'
+})
+Require ($aimBinding.Count -eq 1) `
+    'Expected one owned aim-component binding function.'
+$aimBindingStrings = @(JsonStringLeaves $aimBinding[0])
+foreach ($requiredAimBindingReference in @(
+    'RailgunYawComponent','RailgunPitchComponent','RailgunAimModelOwner',
+    'Railgun.Model.Yaw','Railgun.Model.Pitch',
+    "Class'Actor:GetComponentsByTag'"
+)) {
+    Require ($aimBindingStrings -ccontains $requiredAimBindingReference) `
+        ('Aim-component binding reference missing: ' +
+            $requiredAimBindingReference)
+}
+Require (@($aimBindingStrings | Where-Object {
+    $_ -ceq "Class'Actor:GetComponentsByTag'"
+}).Count -eq 4) `
+    'Aim-component binding must contain exactly two one-time tag queries.'
+$clearAimReferences = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'ClearRailgunAimReferences'
+})
+Require ($clearAimReferences.Count -eq 1) `
+    'Expected one owned aim-reference clear function.'
+$clearAimReferenceStrings = @(JsonStringLeaves $clearAimReferences[0])
+foreach ($expectedReference in $ownedAimReferences) {
+    Require ($clearAimReferenceStrings -ccontains $expectedReference.Name) `
+        ('Aim-reference clear omitted: ' + $expectedReference.Name)
+}
 $operatorUbergraph = @($operatorFunctions | Where-Object {
     $_.Name -ceq 'ExecuteUbergraph_BP_RailgunOperator'
 })
 Require ($operatorUbergraph.Count -eq 1) 'Expected one Railgun operator ubergraph.'
 $operatorStatements = @($operatorUbergraph[0].ScriptBytecode)
 $operatorStrings = @(JsonStringLeaves $operatorUbergraph[0])
+Require (@($operatorStrings | Where-Object {
+    $_ -ceq "Class'Actor:K2_GetComponentsByClass'"
+}).Count -eq 2 -and
+    ($operatorStrings -ccontains 'FirstPersonCamera') -and
+    ($operatorStrings -ccontains 'RailgunFirstPersonCamera') -and
+    ($operatorStrings -ccontains 'RailgunFirstPersonCameraOwner')) `
+    'Possession must resolve the first-person camera exactly once into owned references.'
+foreach ($forbiddenRecurringAimTag in @(
+    'Railgun.Model.Yaw','Railgun.Model.Pitch'
+)) {
+    Require (-not ($operatorStrings -ccontains $forbiddenRecurringAimTag)) `
+        ('Recurring operator graph retained aim-role discovery: ' +
+            $forbiddenRecurringAimTag)
+}
 foreach ($requiredFireReference in @(
     'ShotSpawnedThisPress','ShotRefundFaulted','ShotEnergyBeforeDebit',
     'ShotAmmoSlot','AcceptedRailgunAmmo','ItemCount',
@@ -688,6 +756,7 @@ foreach ($requiredTeardownReference in @(
     'GetViewTarget',
     "Class'Controller:K2_GetPawn'",
     'SetViewTargetWithBlend',
+    'ClearRailgunAimReferences',
     'K2_DestroyActor'
 )) {
     Require ($finalizeStationTeardownStrings -ccontains

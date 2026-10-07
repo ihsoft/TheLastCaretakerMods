@@ -83,25 +83,93 @@ void DedicatedViewTarget(FGraph& G, UEdGraphPin* Target)
 
 UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values);
 
-void AimModelPivot(FGraph& G, FName Tag, FName Angle, FName Axis)
+void AddRailgunAimBindingFunctions(UBlueprint* BP)
 {
-    G.Branch(G.Valid(G.Read(S::Anchor)));
-    [[maybe_unused]] constexpr auto OwnerSignature = static_cast<AActor* (UActorComponent::*)() const>(&UActorComponent::GetOwner);
-    auto* Owner = ObserveCall(G, UActorComponent::StaticClass(), ActorScanGraphNames::GetActorOwner, G.Read(S::Anchor));
-    auto* Find = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, GetComponentsByTag));
-    G.Link(Owner, G.Pin(Find, P::FunctionTarget));
-    G.Pin(Find, OP::ComponentClass)->DefaultObject = USceneComponent::StaticClass();
-    G.Default(Find, ActorScanGraphNames::ComponentTag, *Tag.ToString());
-    auto* Loop = ContextLoop(G, G.Pin(Find, P::ReturnValue));
-    auto* Cast = NewObject<UK2Node_DynamicCast>(G.Graph); Cast->TargetType = USceneComponent::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
-    G.Link(G.Tail, G.Pin(Cast, P::Execute)); G.Link(G.Pin(Loop, CE::ArrayElement), Cast->GetCastSourcePin()); G.Tail = Cast->GetValidCastPin();
+    auto AddFunction = [&](FName Name)
+    {
+        UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(BP, Name,
+            UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+        FBlueprintEditorUtils::AddFunctionGraph(BP, Graph, false,
+            static_cast<UClass*>(nullptr));
+        UK2Node_FunctionEntry* Entry = nullptr;
+        for (UEdGraphNode* Node : Graph->Nodes)
+            if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+                Entry = Candidate;
+        check(Entry);
+        Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
+        return TPair<UEdGraph*, UK2Node_FunctionEntry*>(Graph, Entry);
+    };
+
+    auto ClearFunction = AddFunction(Aim::ClearReferences);
+    FGraph Clear(ClearFunction.Key, nullptr);
+    Clear.Tail = Clear.Pin(ClearFunction.Value, P::Then);
+    Clear.Write(Aim::YawComponent, nullptr);
+    Clear.Write(Aim::PitchComponent, nullptr);
+    Clear.Write(Aim::ModelOwner, nullptr);
+    Clear.Write(EyeAim::FirstPersonCamera, nullptr);
+    Clear.Write(EyeAim::FirstPersonCameraOwner, nullptr);
+
+    auto BindFunction = AddFunction(Aim::BindComponents);
+    FGraph Bind(BindFunction.Key, nullptr);
+    Bind.Tail = Bind.Pin(BindFunction.Value, P::Then);
+    Bind.Write(Aim::YawComponent, nullptr);
+    Bind.Write(Aim::PitchComponent, nullptr);
+    Bind.Write(Aim::ModelOwner, nullptr);
+    auto* AnchorValid = Bind.Branch(Bind.Valid(Bind.Read(S::Anchor)));
+    auto* Owner = ObserveCall(Bind, UActorComponent::StaticClass(),
+        ActorScanGraphNames::GetActorOwner, Bind.Read(S::Anchor));
+    auto* OwnerValid = Bind.Branch(Bind.Valid(Owner));
+    Bind.Write(Aim::ModelOwner, Owner);
+    auto BindRole = [&](FName Tag, FName Field)
+    {
+        auto* Find = Bind.Call(AActor::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(AActor, GetComponentsByTag));
+        Bind.Link(Owner, Bind.Pin(Find, P::FunctionTarget));
+        Bind.Pin(Find, OP::ComponentClass)->DefaultObject =
+            USceneComponent::StaticClass();
+        Bind.Default(Find, ActorScanGraphNames::ComponentTag,
+            *Tag.ToString());
+        auto* Loop = ContextLoop(Bind, Bind.Pin(Find, P::ReturnValue));
+        auto* Cast = NewObject<UK2Node_DynamicCast>(Bind.Graph);
+        Cast->TargetType = USceneComponent::StaticClass();
+        Cast->SetPurity(false);
+        Bind.Node(Cast);
+        Bind.Link(Bind.Tail, Bind.Pin(Cast, P::Execute));
+        Bind.Link(Bind.Pin(Loop, CE::ArrayElement),
+            Cast->GetCastSourcePin());
+        Bind.Tail = Cast->GetValidCastPin();
+        Bind.Write(Field, Cast->GetCastResultPin());
+        Bind.Tail = Bind.Pin(Loop, CE::Completed);
+    };
+    BindRole(RailgunModelContract::YawTag, Aim::YawComponent);
+    BindRole(RailgunModelContract::PitchTag, Aim::PitchComponent);
+    StationMerge(Bind, {Bind.Tail, Bind.Pin(OwnerValid, P::Else),
+        Bind.Pin(AnchorValid, P::Else)});
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass &&
+        BP->GeneratedClass->FindFunctionByName(Aim::BindComponents) &&
+        BP->GeneratedClass->FindFunctionByName(Aim::ClearReferences));
+}
+
+void AimModelPivot(FGraph& G, FName Component, FName Angle, FName Axis)
+{
+    auto* ComponentValid = G.Branch(G.Valid(G.Read(Component)));
+    auto* OwnerValid = G.Branch(G.Valid(G.Read(Aim::ModelOwner)));
+    auto* Owner = ObserveCall(G, UActorComponent::StaticClass(),
+        ActorScanGraphNames::GetActorOwner, G.Read(Component));
+    auto* SameOwner = G.Branch(G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            EqualEqual_ObjectObject), Owner, G.Read(Aim::ModelOwner)));
     auto* Rotation = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeRotator));
     G.Link(G.Read(Angle), G.Pin(Rotation, Axis));
     auto* Set = G.Call(USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_SetRelativeRotation));
-    G.Link(Cast->GetCastResultPin(), G.Pin(Set, P::FunctionTarget));
+    G.Link(G.Read(Component), G.Pin(Set, P::FunctionTarget));
     G.Link(G.Pin(Rotation, P::ReturnValue), G.Pin(Set, SP::NewRotation));
     G.Default(Set, OP::Sweep, N::False); G.Default(Set, E::Teleport, N::False); G.Exec(Set);
-    G.Tail = G.Pin(Loop, CE::Completed);
+    StationMerge(G, {G.Tail, G.Pin(SameOwner, P::Else),
+        G.Pin(OwnerValid, P::Else), G.Pin(ComponentValid, P::Else)});
 }
 
 void DedicatedAim(FGraph& G)
@@ -112,8 +180,8 @@ void DedicatedAim(FGraph& G)
     // character. Missing visual roles must not break entry/camera/exit.
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(G.Graph));
     G.Link(G.Tail, G.Pin(Work, P::Execute)); G.Tail = Work->GetThenPinGivenIndex(0);
-    AimModelPivot(G, RailgunModelContract::YawTag, Aim::Yaw, SP::Yaw);
-    AimModelPivot(G, RailgunModelContract::PitchTag, Aim::Pitch, SP::Pitch);
+    AimModelPivot(G, Aim::YawComponent, Aim::Yaw, SP::Yaw);
+    AimModelPivot(G, Aim::PitchComponent, Aim::Pitch, SP::Pitch);
     G.Tail = Work->GetThenPinGivenIndex(1);
 }
 
@@ -263,6 +331,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Exec(RefreshChargeIndicator);
     G.Write(ZoomTest::Wide, nullptr, N::True);
     G.Write(ZoomTest::Mouse, nullptr, ZoomTest::NormalMouse);
+    BindFirstPersonCamera(G);
     auto* FindSight = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, GetComponentsByTag));
     G.Link(ObserveCall(G, UActorComponent::StaticClass(), OP::ComponentOwner, G.Read(S::Anchor)), G.Pin(FindSight, P::FunctionTarget));
     G.Pin(FindSight, OP::ComponentClass)->DefaultObject = USceneComponent::StaticClass();
@@ -340,6 +409,8 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
         G.Pin(Unpossessed, ActorLifecycleGraphNames::OldController),
         G.Read(DS::Controller)));
     RestoreDedicatedViewIfOwned(G);
+    G.Write(EyeAim::FirstPersonCamera, nullptr);
+    G.Write(EyeAim::FirstPersonCameraOwner, nullptr);
     auto* RefreshRuntimeActivity = G.Call(BP->GeneratedClass,
         DS::RefreshActivity);
     G.Exec(RefreshRuntimeActivity);
@@ -484,6 +555,10 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, EyeAim::Yaw, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, EyeAim::Pitch, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, EyeAim::Target, UEdGraphSchema_K2::PC_Struct, TBaseStructure<FVector>::Get());
+    AddVariable(BP, EyeAim::FirstPersonCamera,
+        UEdGraphSchema_K2::PC_Object, UCameraComponent::StaticClass());
+    AddVariable(BP, EyeAim::FirstPersonCameraOwner,
+        UEdGraphSchema_K2::PC_Object, APawn::StaticClass());
     AddVariable(BP, ZoomTest::Mouse, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, RailgunVfxCanary::ExplosionSystem,
         UEdGraphSchema_K2::PC_Object, UNiagaraSystem::StaticClass());
@@ -541,7 +616,18 @@ UClass* CreateDedicatedStation()
         UUserWidget::StaticClass());
     MarkVariableTransient(BP, EnergyHud::ActiveHud);
     AddVariable(BP, Aim::Yaw, UEdGraphSchema_K2::PC_Real); AddVariable(BP, Aim::Pitch, UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP, Aim::YawComponent, UEdGraphSchema_K2::PC_Object,
+        USceneComponent::StaticClass());
+    AddVariable(BP, Aim::PitchComponent, UEdGraphSchema_K2::PC_Object,
+        USceneComponent::StaticClass());
+    AddVariable(BP, Aim::ModelOwner, UEdGraphSchema_K2::PC_Object,
+        AActor::StaticClass());
+    for (FName RuntimeReference : {EyeAim::FirstPersonCamera,
+        EyeAim::FirstPersonCameraOwner, Aim::YawComponent,
+        Aim::PitchComponent, Aim::ModelOwner})
+        MarkVariableTransient(BP, RuntimeReference);
     FKismetEditorUtilities::CompileBlueprint(BP);
+    AddRailgunAimBindingFunctions(BP);
     auto* Hud = CastChecked<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(UVoyageBaseUserWidget::StaticClass(),
         CreatePackage(DS::HudPackage), *FPackageName::GetLongPackageAssetName(DS::HudPackage), BPTYPE_Normal,
         UWidgetBlueprint::StaticClass(), UWidgetBlueprintGeneratedClass::StaticClass()));
