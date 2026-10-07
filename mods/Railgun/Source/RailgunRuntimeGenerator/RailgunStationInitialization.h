@@ -123,6 +123,10 @@ void AddRailgunStationInitializationFunction(UBlueprint* BP,
     }
     FKismetEditorUtilities::CompileBlueprint(BP);
     check(BP->Status != BS_Error && BP->GeneratedClass);
+    AddRailgunAmmoHudNotification(BP, StationClass);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error && BP->GeneratedClass);
 
     UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(BP,
         CE::InitializeStation, UEdGraph::StaticClass(),

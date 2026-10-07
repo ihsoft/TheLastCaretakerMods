@@ -207,6 +207,9 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     BeginPlay->EventReference.SetExternalMember(TimerGraphNames::ActorBeginPlay, AActor::StaticClass());
     BeginPlay->bOverrideFunction = true; G.Node(BeginPlay); G.Tail = G.Pin(BeginPlay, P::Then);
     ReadStationSettings(G);
+    auto* RefreshBeginPlayHudStyle = G.Call(BP->GeneratedClass,
+        EnergyHud::RefreshStyleFunction);
+    G.Exec(RefreshBeginPlayHudStyle);
     auto* Tick = NewObject<UK2Node_Event>(Graph);
     Tick->EventReference.SetExternalMember(BlueprintGraphNames::Events::ActorReceiveTick, AActor::StaticClass());
     Tick->bOverrideFunction = true; G.Node(Tick); G.Tail = G.Pin(Tick, P::Then);
@@ -248,6 +251,9 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
         GET_FUNCTION_NAME_CHECKED(APlayerController, IsLocalController),
         G.Read(DS::Controller)));
     ReadStationSettings(G);
+    auto* RefreshPossessedHudStyle = G.Call(BP->GeneratedClass,
+        EnergyHud::RefreshStyleFunction);
+    G.Exec(RefreshPossessedHudStyle);
     auto* RefreshEnergySettings = G.Call(BP->GeneratedClass,
         Charge::RefreshFunction);
     G.Default(RefreshEnergySettings, Charge::ForceDemandParameter, N::True);
@@ -296,7 +302,13 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     // Re-entry uses current on-foot FOV, including when the camera already exists.
     auto* RefreshFov = G.Call(UCameraComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UCameraComponent, SetFieldOfView));
     G.Link(G.Read(O::Camera), G.Pin(RefreshFov, P::FunctionTarget)); G.Link(G.Read(O::BaselineFov), G.Pin(RefreshFov, OP::FieldOfView)); G.Exec(RefreshFov);
-    DedicatedAim(G); PlaceModeCamera(G, true); DedicatedViewTarget(G, G.Read(DS::Camera)); G.Write(DS::ViewOwned, nullptr, N::True);
+    DedicatedAim(G);
+    PlaceModeCamera(G, true);
+    DedicatedViewTarget(G, G.Read(DS::Camera));
+    G.Write(DS::ViewOwned, nullptr, N::True);
+    auto* RefreshEntryHudMode = G.Call(BP->GeneratedClass,
+        EnergyHud::RefreshModeFunction);
+    G.Exec(RefreshEntryHudMode);
     auto* EnableRuntimeActivity = G.Call(BP->GeneratedClass,
         DS::RefreshActivity);
     G.Exec(EnableRuntimeActivity);
@@ -368,6 +380,9 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
         auto* Set = G.Call(UCameraComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UCameraComponent, SetFieldOfView));
         G.Link(G.Read(O::Camera), G.Pin(Set, P::FunctionTarget));
         G.Link(G.Read(ToWide ? O::BaselineFov : O::RequestedFov), G.Pin(Set, OP::FieldOfView)); G.Exec(Set);
+        auto* RefreshHudMode = G.Call(BP->GeneratedClass,
+            EnergyHud::RefreshModeFunction);
+        G.Exec(RefreshHudMode);
     };
     SetZoom(false);
     G.Tail = G.Pin(Wide, P::Else); SetZoom(true);
@@ -522,6 +537,9 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, S::Anchor, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
     AddVariable(BP, Range::TargetName, UEdGraphSchema_K2::PC_Text);
     AddVariable(BP, Range::TargetRange, UEdGraphSchema_K2::PC_Text);
+    AddVariable(BP, EnergyHud::ActiveHud, UEdGraphSchema_K2::PC_Object,
+        UUserWidget::StaticClass());
+    MarkVariableTransient(BP, EnergyHud::ActiveHud);
     AddVariable(BP, Aim::Yaw, UEdGraphSchema_K2::PC_Real); AddVariable(BP, Aim::Pitch, UEdGraphSchema_K2::PC_Real);
     FKismetEditorUtilities::CompileBlueprint(BP);
     auto* Hud = CastChecked<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(UVoyageBaseUserWidget::StaticClass(),
@@ -531,6 +549,9 @@ UClass* CreateDedicatedStation()
     AddVariable(Hud, Hint::HintsReady, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(Hud, Hint::HintInstance, UEdGraphSchema_K2::PC_Object, UVoyageDynamicPlayerInputWidget::StaticClass());
     AddVariable(Hud, EnergyHud::AmmoInitialized, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(Hud, EnergyHud::Station, UEdGraphSchema_K2::PC_Object,
+        BP->GeneratedClass);
+    MarkVariableTransient(Hud, EnergyHud::Station);
     auto* Canvas = Hud->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), N::HudCanvas); Canvas->bIsVariable = false;
     Hud->WidgetTree->RootWidget = Canvas;
     check(ZoomTest::OverlayTexture);
@@ -701,18 +722,315 @@ UClass* CreateDedicatedStation()
     HostSlot->SetAlignment(FVector2D(0.0f, 1.0f)); HostSlot->SetPosition(DS::HintHostOffset); HostSlot->SetAutoSize(true);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud); FKismetEditorUtilities::CompileBlueprint(Hud);
     check(Hud->Status != BS_Error);
-    UEdGraph* HudGraph = Hud->UbergraphPages[0]; const auto Defaults = HudGraph->Nodes;
+    UBlueprint* RailgunModule = LoadObject<UBlueprint>(
+        nullptr, RailgunInventoryShared::ModuleObjectPath);
+    check(RailgunModule && RailgunModule->GeneratedClass);
+    auto AddHudFunction = [&](FName FunctionName, auto BuildBody)
+    {
+        UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(Hud,
+            FunctionName, UEdGraph::StaticClass(),
+            UEdGraphSchema_K2::StaticClass());
+        FBlueprintEditorUtils::AddFunctionGraph(Hud, Graph, false,
+            static_cast<UClass*>(nullptr));
+        UK2Node_FunctionEntry* Entry = nullptr;
+        for (UEdGraphNode* Node : Graph->Nodes)
+            if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+                Entry = Candidate;
+        check(Entry);
+        Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
+        FGraph Function(Graph, nullptr);
+        Function.Tail = Function.Pin(Entry, P::Then);
+        Function.Branch(Function.Valid(Function.Read(EnergyHud::Station)));
+        BuildBody(Function, Function.Read(EnergyHud::Station));
+    };
+    AddHudFunction(EnergyHud::RefreshEnergyFunction,
+        [&](FGraph& Function, UEdGraphPin* Station)
+        {
+            UpdateStationEnergyHud(Function, Station, BP->GeneratedClass);
+        });
+    AddHudFunction(EnergyHud::RefreshAmmoFunction,
+        [&](FGraph& Function, UEdGraphPin* Station)
+        {
+            UpdateStationAmmoHud(Function, Station, BP->GeneratedClass,
+                RailgunModule->GeneratedClass);
+        });
+    AddHudFunction(EnergyHud::RefreshStyleFunction,
+        [&](FGraph& Function, UEdGraphPin* Station)
+        {
+            auto ApplyTextStyle = [&](FName WidgetField, FName Opacity,
+                FName FontSize, FName FontObject, FName Typeface)
+            {
+                auto* NormalizedOpacity = Function.Call(
+                    UKismetMathLibrary::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+                        Multiply_DoubleDouble));
+                Function.Link(ReadNativeInputField(Function, Station,
+                    BP->GeneratedClass, Opacity), Function.Pin(
+                        NormalizedOpacity, P::Binary::LeftOperand));
+                Function.Default(NormalizedOpacity,
+                    P::Binary::RightOperand, Settings::PercentMultiplier);
+                auto* SetOpacity = Function.Call(UWidget::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderOpacity));
+                Function.Link(Function.Read(WidgetField),
+                    Function.Pin(SetOpacity, P::FunctionTarget));
+                Function.Link(Function.Pin(NormalizedOpacity,
+                    P::ReturnValue), Function.Pin(SetOpacity,
+                        Settings::OpacityPin));
+                Function.Exec(SetOpacity);
+
+                auto* SizeValue = ReadNativeInputField(Function, Station,
+                    BP->GeneratedClass, FontSize);
+                auto* SetSize = Function.Call(UTextBlock::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UTextBlock, SetFontSize));
+                Function.Link(Function.Read(WidgetField),
+                    Function.Pin(SetSize, P::FunctionTarget));
+                Function.Link(SizeValue, Function.Pin(SetSize,
+                    Settings::DisplayFontSizePin));
+                Function.Exec(SetSize);
+
+                auto* FontValue = ReadNativeInputField(Function, Station,
+                    BP->GeneratedClass, FontObject);
+                auto* HasFont = Function.Branch(Function.Valid(FontValue));
+                auto* NoFont = Function.Pin(HasFont, P::Else);
+                auto* TypefaceName = Function.Call(
+                    UKismetStringLibrary::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary,
+                        Conv_StringToName));
+                Function.Link(ReadNativeInputField(Function, Station,
+                    BP->GeneratedClass, Typeface), Function.Pin(TypefaceName,
+                        TextSettingsGraphNames::NumericString));
+                auto* FontInfo = Function.Call(
+                    USlateFontInfoBlueprintLibrary::StaticClass(),
+                    Settings::MakeSlateFontInfoFunction);
+                Function.Link(FontValue, Function.Pin(FontInfo,
+                    Settings::FontObjectPin));
+                Function.Link(Function.Pin(TypefaceName, P::ReturnValue),
+                    Function.Pin(FontInfo, Settings::TypefaceFontNamePin));
+                Function.Link(SizeValue, Function.Pin(FontInfo,
+                    Settings::FontSizePin));
+                auto* SetFont = Function.Call(UTextBlock::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UTextBlock, SetFont));
+                Function.Link(Function.Read(WidgetField),
+                    Function.Pin(SetFont, P::FunctionTarget));
+                Function.Link(Function.Pin(FontInfo, P::ReturnValue),
+                    Function.Pin(SetFont, Settings::FontInfoPin));
+                Function.Exec(SetFont);
+                StationMerge(Function, {Function.Tail, NoFont});
+            };
+            auto ApplyTargetStyle = [&](FName WidgetField, FName OffsetX,
+                FName OffsetY, FName Opacity, FName FontSize,
+                FName FontObject, FName Typeface)
+            {
+                auto* Position = Function.Call(
+                    UKismetMathLibrary::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+                        MakeVector2D));
+                Function.Link(ReadNativeInputField(Function, Station,
+                    BP->GeneratedClass, OffsetX), Function.Pin(Position,
+                        Settings::XPin));
+                Function.Link(ReadNativeInputField(Function, Station,
+                    BP->GeneratedClass, OffsetY), Function.Pin(Position,
+                        Settings::YPin));
+                auto* Translation = Function.Call(UWidget::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UWidget,
+                        SetRenderTranslation));
+                Function.Link(Function.Read(WidgetField),
+                    Function.Pin(Translation, P::FunctionTarget));
+                Function.Link(Function.Pin(Position, P::ReturnValue),
+                    Function.Pin(Translation, Settings::TranslationPin));
+                Function.Exec(Translation);
+                ApplyTextStyle(WidgetField, Opacity, FontSize, FontObject,
+                    Typeface);
+            };
+            ApplyTextStyle(EnergyHud::ChargeText,
+                Settings::ChargeTextOpacity, Settings::ChargeTextFontSize,
+                Settings::ChargeTextFontObject,
+                Settings::ChargeTextTypeface);
+            ApplyTargetStyle(Range::TargetName,
+                Settings::TargetNameOffsetX, Settings::TargetNameOffsetY,
+                Settings::TargetNameOpacity, Settings::TargetNameFontSize,
+                Settings::TargetNameFontObject,
+                Settings::TargetNameTypeface);
+            ApplyTargetStyle(Range::TargetRange,
+                Settings::TargetDistanceOffsetX,
+                Settings::TargetDistanceOffsetY,
+                Settings::TargetDistanceOpacity,
+                Settings::TargetDistanceFontSize,
+                Settings::TargetDistanceFontObject,
+                Settings::TargetDistanceTypeface);
+            auto* NormalizedStatusOpacity = Function.Call(
+                UKismetMathLibrary::StaticClass(),
+                GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+                    Multiply_DoubleDouble));
+            Function.Link(ReadNativeInputField(Function, Station,
+                BP->GeneratedClass, Settings::StatusIconOpacity),
+                Function.Pin(NormalizedStatusOpacity,
+                    P::Binary::LeftOperand));
+            Function.Default(NormalizedStatusOpacity,
+                P::Binary::RightOperand, Settings::PercentMultiplier);
+            for (FName Field : {EnergyHud::StatusCharging,
+                EnergyHud::StatusOffline, EnergyHud::StatusReady})
+            {
+                auto* Set = Function.Call(UWidget::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderOpacity));
+                Function.Link(Function.Read(Field),
+                    Function.Pin(Set, P::FunctionTarget));
+                Function.Link(Function.Pin(NormalizedStatusOpacity,
+                    P::ReturnValue), Function.Pin(Set,
+                        Settings::OpacityPin));
+                Function.Exec(Set);
+            }
+        });
+    AddHudFunction(EnergyHud::RefreshModeFunction,
+        [&](FGraph& Function, UEdGraphPin* Station)
+        {
+            auto* WideHud = Function.Branch(ReadNativeInputField(Function,
+                Station, BP->GeneratedClass, ZoomTest::Wide));
+            auto SetOpticalVisibility = [&](const TCHAR* Visibility)
+            {
+                for (FName Field : {ZoomTest::Mask, Range::TargetName,
+                    Range::TargetRange, EnergyHud::ScopeAmmoIndicatorRow})
+                {
+                    auto* Set = Function.Call(UWidget::StaticClass(),
+                        GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
+                    Function.Link(Function.Read(Field),
+                        Function.Pin(Set, P::FunctionTarget));
+                    Function.Default(Set, OP::Visibility, Visibility);
+                    Function.Exec(Set);
+                }
+            };
+            auto SetWideCenter = [&](const TCHAR* Visibility)
+            {
+                auto* Set = Function.Call(UWidget::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
+                Function.Link(Function.Read(ZoomTest::WideCenter),
+                    Function.Pin(Set, P::FunctionTarget));
+                Function.Default(Set, OP::Visibility, Visibility);
+                Function.Exec(Set);
+            };
+            auto SetWideChargeVisibility = [&](const TCHAR* Visibility)
+            {
+                for (FName Field : {EnergyHud::ChargeRadial,
+                    EnergyHud::ChargeBlock})
+                {
+                    auto* Set = Function.Call(UWidget::StaticClass(),
+                        GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
+                    Function.Link(Function.Read(Field),
+                        Function.Pin(Set, P::FunctionTarget));
+                    Function.Default(Set, OP::Visibility, Visibility);
+                    Function.Exec(Set);
+                }
+            };
+            SetOpticalVisibility(ZoomTest::Hidden);
+            SetWideCenter(ZoomTest::Shown);
+            SetWideChargeVisibility(ZoomTest::Shown);
+            auto* WideTail = Function.Tail;
+            Function.Tail = Function.Pin(WideHud, P::Else);
+            SetOpticalVisibility(ZoomTest::Shown);
+            SetWideCenter(ZoomTest::Hidden);
+            SetWideChargeVisibility(ZoomTest::Hidden);
+            StationMerge(Function, {WideTail, Function.Tail});
+        });
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud);
+    FKismetEditorUtilities::CompileBlueprint(Hud);
+    check(Hud->Status != BS_Error);
+
+    auto AddStationHudFunction = [&](FName FunctionName,
+        FName HudFunctionName)
+    {
+        UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(BP,
+            FunctionName, UEdGraph::StaticClass(),
+            UEdGraphSchema_K2::StaticClass());
+        FBlueprintEditorUtils::AddFunctionGraph(BP, Graph, false,
+            static_cast<UClass*>(nullptr));
+        UK2Node_FunctionEntry* Entry = nullptr;
+        for (UEdGraphNode* Node : Graph->Nodes)
+            if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+                Entry = Candidate;
+        check(Entry);
+        Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
+        FGraph Function(Graph, nullptr);
+        Function.Tail = Function.Pin(Entry, P::Then);
+        Function.Branch(Function.Valid(Function.Read(EnergyHud::ActiveHud)));
+        auto* CastHud = NewObject<UK2Node_DynamicCast>(Graph);
+        CastHud->TargetType = Hud->GeneratedClass;
+        CastHud->SetPurity(false);
+        Function.Node(CastHud);
+        Function.Link(Function.Tail, Function.Pin(CastHud, P::Execute));
+        Function.Link(Function.Read(EnergyHud::ActiveHud),
+            CastHud->GetCastSourcePin());
+        Function.Tail = CastHud->GetValidCastPin();
+        auto* Refresh = Function.Call(Hud->GeneratedClass,
+            HudFunctionName);
+        Function.Link(CastHud->GetCastResultPin(),
+            Function.Pin(Refresh, P::FunctionTarget));
+        Function.Exec(Refresh);
+    };
+    auto AddHudBindingFunction = [&](FName FunctionName, bool Register)
+    {
+        UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(BP,
+            FunctionName, UEdGraph::StaticClass(),
+            UEdGraphSchema_K2::StaticClass());
+        FBlueprintEditorUtils::AddFunctionGraph(BP, Graph, false,
+            static_cast<UClass*>(nullptr));
+        UK2Node_FunctionEntry* Entry = nullptr;
+        for (UEdGraphNode* Node : Graph->Nodes)
+            if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+                Entry = Candidate;
+        check(Entry);
+        FEdGraphPinType HudType;
+        HudType.PinCategory = UEdGraphSchema_K2::PC_Object;
+        HudType.PinSubCategoryObject = Hud->GeneratedClass;
+        UEdGraphPin* HudParameter = Entry->CreateUserDefinedPin(
+            EnergyHud::HudParameter, HudType, EGPD_Output);
+        check(HudParameter);
+        Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
+        FGraph Function(Graph, nullptr);
+        Function.Tail = Function.Pin(Entry, P::Then);
+        if (Register)
+        {
+            Function.Write(EnergyHud::ActiveHud, HudParameter);
+        }
+        else
+        {
+            Function.Branch(Function.Binary(
+                GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+                    EqualEqual_ObjectObject),
+                Function.Read(EnergyHud::ActiveHud), HudParameter));
+            Function.Write(EnergyHud::ActiveHud, nullptr);
+        }
+    };
+    AddHudBindingFunction(EnergyHud::RegisterFunction, true);
+    AddHudBindingFunction(EnergyHud::UnregisterFunction, false);
+    AddStationHudFunction(EnergyHud::RefreshEnergyFunction,
+        EnergyHud::RefreshEnergyFunction);
+    AddStationHudFunction(EnergyHud::RefreshAmmoFunction,
+        EnergyHud::RefreshAmmoFunction);
+    AddStationHudFunction(EnergyHud::RefreshStyleFunction,
+        EnergyHud::RefreshStyleFunction);
+    AddStationHudFunction(EnergyHud::RefreshModeFunction,
+        EnergyHud::RefreshModeFunction);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(BP->Status != BS_Error);
+
+    UEdGraph* HudGraph = Hud->UbergraphPages[0];
+    const auto Defaults = HudGraph->Nodes;
     for (UEdGraphNode* Node : Defaults) Node->DestroyNode();
     FGraph HG(HudGraph, nullptr);
     auto* HudTick = NewObject<UK2Node_Event>(HudGraph);
-    HudTick->EventReference.SetExternalMember(BlueprintGraphNames::Events::WidgetTick, UUserWidget::StaticClass());
-    HudTick->bOverrideFunction = true; HG.Node(HudTick); HG.Tail = HG.Pin(HudTick, P::Then);
-    auto* Player = HG.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, GetPlayerPawn));
-    auto* Station = NewObject<UK2Node_DynamicCast>(HudGraph); Station->TargetType = BP->GeneratedClass; Station->SetPurity(false); HG.Node(Station);
-    HG.Link(HG.Tail, HG.Pin(Station, P::Execute)); HG.Link(HG.Pin(Player, P::ReturnValue), Station->GetCastSourcePin()); HG.Tail = Station->GetValidCastPin();
+    HudTick->EventReference.SetExternalMember(
+        BlueprintGraphNames::Events::WidgetTick,
+        UUserWidget::StaticClass());
+    HudTick->bOverrideFunction = true;
+    HG.Node(HudTick);
+    HG.Tail = HG.Pin(HudTick, P::Then);
+    UEdGraphPin* Station = HG.Read(EnergyHud::Station);
+    HG.Branch(HG.Valid(Station));
     for (FName Field : {Range::TargetName, Range::TargetRange})
     {
-        auto* Value = ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Field);
+        auto* Value = ReadNativeInputField(HG, Station,
+            BP->GeneratedClass, Field);
         auto* Set = HG.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
         HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Link(Value, HG.Pin(Set, E::WidgetText)); HG.Exec(Set);
     }
@@ -720,7 +1038,7 @@ UClass* CreateDedicatedStation()
         GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
     HG.Link(HG.Read(RailgunVfxCanary::StatusText),
         HG.Pin(SetCanaryText, P::FunctionTarget));
-    HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(),
+    HG.Link(ReadNativeInputField(HG, Station,
         BP->GeneratedClass, RailgunVfxCanary::StatusText),
         HG.Pin(SetCanaryText, E::WidgetText));
     HG.Exec(SetCanaryText);
@@ -729,7 +1047,7 @@ UClass* CreateDedicatedStation()
     auto* CanaryVisible = HG.Branch(HG.Binary(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, LessEqual_DoubleDouble),
         HG.Pin(CanaryTime, P::ReturnValue),
-        ReadNativeInputField(HG, Station->GetCastResultPin(),
+        ReadNativeInputField(HG, Station,
             BP->GeneratedClass, RailgunVfxCanary::StatusExpires)));
     auto SetCanaryVisibility = [&](const TCHAR* Visibility)
     {
@@ -745,88 +1063,78 @@ UClass* CreateDedicatedStation()
     HG.Tail = HG.Pin(CanaryVisible, P::Else);
     SetCanaryVisibility(ZoomTest::Hidden);
     StationMerge(HG, {CanaryShownTail, HG.Tail});
-    auto ApplyTextStyle = [&](FName WidgetField, FName Opacity, FName FontSize, FName FontObject, FName Typeface)
-    {
-        auto* NormalizedOpacity = HG.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble));
-        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Opacity), HG.Pin(NormalizedOpacity, P::Binary::LeftOperand));
-        HG.Default(NormalizedOpacity, P::Binary::RightOperand, Settings::PercentMultiplier);
-        auto* SetOpacity = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderOpacity));
-        HG.Link(HG.Read(WidgetField), HG.Pin(SetOpacity, P::FunctionTarget));
-        HG.Link(HG.Pin(NormalizedOpacity, P::ReturnValue), HG.Pin(SetOpacity, Settings::OpacityPin)); HG.Exec(SetOpacity);
+    UpdateStationStatusHud(HG, Station, BP->GeneratedClass,
+        ReadNativeInputField(HG, Station, BP->GeneratedClass,
+            ZoomTest::Wide));
 
-        auto* SizeValue = ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, FontSize);
-        auto* SetSize = HG.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetFontSize));
-        HG.Link(HG.Read(WidgetField), HG.Pin(SetSize, P::FunctionTarget));
-        HG.Link(SizeValue, HG.Pin(SetSize, Settings::DisplayFontSizePin)); HG.Exec(SetSize);
+    auto* Construct = NewObject<UK2Node_Event>(HudGraph);
+    Construct->EventReference.SetExternalMember(
+        GET_FUNCTION_NAME_CHECKED(UUserWidget, Construct),
+        UUserWidget::StaticClass());
+    Construct->bOverrideFunction = true;
+    HG.Node(Construct);
+    auto* ConstructWork = HG.Node(
+        NewObject<UK2Node_ExecutionSequence>(HudGraph));
+    HG.Link(HG.Pin(Construct, P::Then),
+        HG.Pin(ConstructWork, P::Execute));
+    HG.Tail = ConstructWork->GetThenPinGivenIndex(0);
+    auto* OldStationValid = HG.Branch(
+        HG.Valid(HG.Read(EnergyHud::Station)));
+    auto* UnregisterOld = HG.Call(BP->GeneratedClass,
+        EnergyHud::UnregisterFunction);
+    HG.Link(HG.Read(EnergyHud::Station),
+        HG.Pin(UnregisterOld, P::FunctionTarget));
+    HG.Link(OpticalSelf(HG), HG.Pin(UnregisterOld,
+        EnergyHud::HudParameter));
+    HG.Exec(UnregisterOld);
+    StationMerge(HG, {HG.Tail, HG.Pin(OldStationValid, P::Else)});
+    HG.Write(EnergyHud::Station, nullptr);
+    auto* OwningPawn = HG.Call(UUserWidget::StaticClass(),
+        EnergyHud::OwningPlayerPawnGetter);
+    auto* OwningStation = NewObject<UK2Node_DynamicCast>(HudGraph);
+    OwningStation->TargetType = BP->GeneratedClass;
+    OwningStation->SetPurity(false);
+    HG.Node(OwningStation);
+    HG.Link(HG.Tail, HG.Pin(OwningStation, P::Execute));
+    HG.Link(HG.Pin(OwningPawn, P::ReturnValue),
+        OwningStation->GetCastSourcePin());
+    HG.Tail = OwningStation->GetValidCastPin();
+    HG.Write(EnergyHud::Station, OwningStation->GetCastResultPin());
+    auto* RegisterHud = HG.Call(BP->GeneratedClass,
+        EnergyHud::RegisterFunction);
+    HG.Link(OwningStation->GetCastResultPin(),
+        HG.Pin(RegisterHud, P::FunctionTarget));
+    HG.Link(OpticalSelf(HG), HG.Pin(RegisterHud,
+        EnergyHud::HudParameter));
+    HG.Exec(RegisterHud);
+    for (FName RefreshFunction : {EnergyHud::RefreshStyleFunction,
+        EnergyHud::RefreshModeFunction, EnergyHud::RefreshAmmoFunction,
+        EnergyHud::RefreshEnergyFunction})
+    {
+        auto* Refresh = HG.Call(Hud->GeneratedClass, RefreshFunction);
+        HG.Exec(Refresh);
+    }
+    AddStationHintConstruction(Hud,
+        ConstructWork->GetThenPinGivenIndex(1));
 
-        auto* FontValue = ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, FontObject);
-        auto* HasFont = HG.Branch(HG.Valid(FontValue));
-        auto* NoFont = HG.Pin(HasFont, P::Else);
-        auto* TypefaceName = HG.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Conv_StringToName));
-        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Typeface),
-            HG.Pin(TypefaceName, TextSettingsGraphNames::NumericString));
-        auto* FontInfo = HG.Call(USlateFontInfoBlueprintLibrary::StaticClass(), Settings::MakeSlateFontInfoFunction);
-        HG.Link(FontValue, HG.Pin(FontInfo, Settings::FontObjectPin));
-        HG.Link(HG.Pin(TypefaceName, P::ReturnValue), HG.Pin(FontInfo, Settings::TypefaceFontNamePin));
-        HG.Link(SizeValue, HG.Pin(FontInfo, Settings::FontSizePin));
-        auto* SetFont = HG.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetFont));
-        HG.Link(HG.Read(WidgetField), HG.Pin(SetFont, P::FunctionTarget));
-        HG.Link(HG.Pin(FontInfo, P::ReturnValue), HG.Pin(SetFont, Settings::FontInfoPin)); HG.Exec(SetFont);
-        StationMerge(HG, {HG.Tail, NoFont});
-    };
-    auto ApplyTargetStyle = [&](FName WidgetField, FName OffsetX, FName OffsetY, FName Opacity,
-        FName FontSize, FName FontObject, FName Typeface)
-    {
-        auto* Position = HG.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector2D));
-        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, OffsetX), HG.Pin(Position, Settings::XPin));
-        HG.Link(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, OffsetY), HG.Pin(Position, Settings::YPin));
-        auto* Translation = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderTranslation));
-        HG.Link(HG.Read(WidgetField), HG.Pin(Translation, P::FunctionTarget));
-        HG.Link(HG.Pin(Position, P::ReturnValue), HG.Pin(Translation, Settings::TranslationPin)); HG.Exec(Translation);
-        ApplyTextStyle(WidgetField, Opacity, FontSize, FontObject, Typeface);
-    };
-    ApplyTextStyle(EnergyHud::ChargeText, Settings::ChargeTextOpacity, Settings::ChargeTextFontSize,
-        Settings::ChargeTextFontObject, Settings::ChargeTextTypeface);
-    ApplyTargetStyle(Range::TargetName, Settings::TargetNameOffsetX, Settings::TargetNameOffsetY,
-        Settings::TargetNameOpacity, Settings::TargetNameFontSize, Settings::TargetNameFontObject, Settings::TargetNameTypeface);
-    ApplyTargetStyle(Range::TargetRange, Settings::TargetDistanceOffsetX, Settings::TargetDistanceOffsetY,
-        Settings::TargetDistanceOpacity, Settings::TargetDistanceFontSize, Settings::TargetDistanceFontObject, Settings::TargetDistanceTypeface);
-    auto* WideHud = HG.Branch(ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, ZoomTest::Wide));
-    auto SetOpticalVisibility = [&](const TCHAR* Visibility)
-    {
-        for (FName Field : {ZoomTest::Mask, Range::TargetName,
-            Range::TargetRange, EnergyHud::ScopeAmmoIndicatorRow})
-        {
-            auto* Set = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
-            HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Default(Set, OP::Visibility, Visibility); HG.Exec(Set);
-        }
-    };
-    auto SetWideCenter = [&](const TCHAR* Visibility)
-    {
-        auto* Set = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
-        HG.Link(HG.Read(ZoomTest::WideCenter), HG.Pin(Set, P::FunctionTarget)); HG.Default(Set, OP::Visibility, Visibility); HG.Exec(Set);
-    };
-    auto SetWideChargeVisibility = [&](const TCHAR* Visibility)
-    {
-        for (FName Field : {EnergyHud::ChargeRadial, EnergyHud::ChargeBlock})
-        {
-            auto* Set = HG.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
-            HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Default(Set, OP::Visibility, Visibility); HG.Exec(Set);
-        }
-    };
-    SetOpticalVisibility(ZoomTest::Hidden); SetWideCenter(ZoomTest::Shown); SetWideChargeVisibility(ZoomTest::Shown); auto* WideTail = HG.Tail;
-    HG.Tail = HG.Pin(WideHud, P::Else); SetOpticalVisibility(ZoomTest::Shown); SetWideCenter(ZoomTest::Hidden); SetWideChargeVisibility(ZoomTest::Hidden);
-    StationMerge(HG, {WideTail, HG.Tail});
-    UpdateStationStatusHud(HG, Station->GetCastResultPin(), BP->GeneratedClass,
-        ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, ZoomTest::Wide),
-        ReadNativeInputField(HG, Station->GetCastResultPin(), BP->GeneratedClass, Settings::StatusIconOpacity));
-    UBlueprint* RailgunModule = LoadObject<UBlueprint>(
-        nullptr, RailgunInventoryShared::ModuleObjectPath);
-    check(RailgunModule && RailgunModule->GeneratedClass);
-    UpdateStationAmmoHud(HG, Station->GetCastResultPin(), BP->GeneratedClass,
-        RailgunModule->GeneratedClass);
-    UpdateStationEnergyHud(HG, Station->GetCastResultPin(), BP->GeneratedClass);
-    AddStationHintConstruction(Hud);
+    auto* Destruct = NewObject<UK2Node_Event>(HudGraph);
+    Destruct->EventReference.SetExternalMember(
+        GET_FUNCTION_NAME_CHECKED(UUserWidget, Destruct),
+        UUserWidget::StaticClass());
+    Destruct->bOverrideFunction = true;
+    HG.Node(Destruct);
+    HG.Tail = HG.Pin(Destruct, P::Then);
+    auto* DestructStationValid = HG.Branch(
+        HG.Valid(HG.Read(EnergyHud::Station)));
+    auto* Unregister = HG.Call(BP->GeneratedClass,
+        EnergyHud::UnregisterFunction);
+    HG.Link(HG.Read(EnergyHud::Station),
+        HG.Pin(Unregister, P::FunctionTarget));
+    HG.Link(OpticalSelf(HG), HG.Pin(Unregister,
+        EnergyHud::HudParameter));
+    HG.Exec(Unregister);
+    StationMerge(HG, {HG.Tail, HG.Pin(DestructStationValid, P::Else)});
+    HG.Write(EnergyHud::Station, nullptr);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud); FKismetEditorUtilities::CompileBlueprint(Hud);
     check(Hud->Status != BS_Error);
     AddStationActions(BP);

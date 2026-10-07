@@ -8,6 +8,7 @@ inline const FName ShellOwner(TEXT("RailgunShellOwner"));
 inline const FName EntryPending(TEXT("RailgunEntryPending"));
 inline const FName ExitPending(TEXT("RailgunExitPending"));
 inline const FName TeardownPending(TEXT("RailgunTeardownPending"));
+inline const FName ActiveHud(TEXT("RailgunActiveHud"));
 inline const FName BindShell(TEXT("BindRailgunShellLifecycle"));
 inline const FName ShellEndPlayCallback(TEXT("OnRailgunShellEndPlay"));
 inline const FName FinalizeTeardown(TEXT("FinalizeRailgunStationTeardown"));
@@ -200,6 +201,7 @@ void AddStationLifecycleFunctions(UBlueprint* BP)
         Finalize.Valid(CurrentController), N::False));
     Finalize.Write(TeardownPending, nullptr, N::False);
     Finalize.Write(ExitPending, nullptr, N::False);
+    Finalize.Write(ActiveHud, nullptr);
     RestoreDedicatedViewIfOwned(Finalize);
     auto* CameraValid = Finalize.Branch(
         Finalize.Valid(Finalize.Read(DS::Camera)));
@@ -380,4 +382,5 @@ void AddStationLifecycleTeardown(UBlueprint* BP)
     G.Write(EntryPending, nullptr, N::False);
     G.Write(ExitPending, nullptr, N::False);
     G.Write(TeardownPending, nullptr, N::False);
+    G.Write(ActiveHud, nullptr);
 }

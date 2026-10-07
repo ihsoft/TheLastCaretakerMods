@@ -260,6 +260,47 @@ void AddRailgunAmmoVisualSync(UBlueprint* BP)
     }
 }
 
+void AddRailgunAmmoHudNotification(UBlueprint* BP, UClass* StationClass)
+{
+    using namespace RailgunInventory;
+    check(BP && BP->GeneratedClass && StationClass);
+    UEdGraph* Graph = nullptr;
+    for (UEdGraph* Candidate : BP->FunctionGraphs)
+        if (Candidate->GetFName() == SyncVisuals) Graph = Candidate;
+    check(Graph);
+    UK2Node_VariableSet* CountWrite = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        auto* Set = Cast<UK2Node_VariableSet>(Node);
+        if (!Set || Set->VariableReference.GetMemberName() != LastVisualCount)
+            continue;
+        check(!CountWrite);
+        CountWrite = Set;
+    }
+    check(CountWrite);
+    UEdGraphPin* CountWriteTail = CountWrite->FindPinChecked(P::Then);
+    check(CountWriteTail->LinkedTo.Num() == 1);
+    UEdGraphPin* ExistingWork = CountWriteTail->LinkedTo[0];
+    CountWriteTail->BreakAllPinLinks();
+
+    FGraph G(Graph, nullptr);
+    G.Tail = CountWriteTail;
+    auto* Station = NewObject<UK2Node_DynamicCast>(Graph);
+    Station->TargetType = StationClass;
+    Station->SetPurity(false);
+    G.Node(Station);
+    G.Link(G.Tail, G.Pin(Station, P::Execute));
+    G.Link(G.Read(V::Vehicle), Station->GetCastSourcePin());
+    G.Tail = Station->GetValidCastPin();
+    auto* Refresh = G.Call(StationClass,
+        EnergyHud::RefreshAmmoFunction);
+    G.Link(Station->GetCastResultPin(),
+        G.Pin(Refresh, P::FunctionTarget));
+    G.Exec(Refresh);
+    StationMerge(G, {G.Tail, Station->GetInvalidCastPin()});
+    G.Link(G.Tail, ExistingWork);
+}
+
 void AddRailgunAmmoVisualCallback(UBlueprint* BP)
 {
     using namespace RailgunInventory;

@@ -9,6 +9,16 @@ inline const FName ChargeBlock(TEXT("RailgunChargeBlock"));
 inline const FName AmmoIndicatorRow(TEXT("RailgunAmmoIndicatorRow"));
 inline const FName ScopeAmmoIndicatorRow(TEXT("RailgunScopeAmmoIndicatorRow"));
 inline const FName AmmoInitialized(TEXT("RailgunAmmoHudInitialized"));
+inline const FName Station(TEXT("RailgunHudStation"));
+inline const FName ActiveHud(StationLifecycle::ActiveHud);
+inline const FName HudParameter(TEXT("Hud"));
+inline const FName OwningPlayerPawnGetter(TEXT("GetOwningPlayerPawn"));
+inline const FName RegisterFunction(TEXT("RegisterRailgunHud"));
+inline const FName UnregisterFunction(TEXT("UnregisterRailgunHud"));
+inline const FName RefreshEnergyFunction(Charge::RefreshHudFunction);
+inline const FName RefreshAmmoFunction(TEXT("RefreshRailgunHudAmmo"));
+inline const FName RefreshStyleFunction(TEXT("RefreshRailgunHudStyle"));
+inline const FName RefreshModeFunction(TEXT("RefreshRailgunHudMode"));
 inline const TArray<FName> AmmoIndicators {
     TEXT("RailgunAmmoIndicator01"), TEXT("RailgunAmmoIndicator02"),
     TEXT("RailgunAmmoIndicator03"), TEXT("RailgunAmmoIndicator04"),
@@ -271,7 +281,7 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station,
 }
 
 void UpdateStationStatusHud(FGraph& G, UEdGraphPin* Station, UClass* StationClass,
-    UEdGraphPin* IsWide, UEdGraphPin* OpacityPercent)
+    UEdGraphPin* IsWide)
 {
     auto SetVisibility = [&](FName Field, const TCHAR* Visibility)
     {
@@ -283,16 +293,6 @@ void UpdateStationStatusHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
     const FName StatusFields[] = {EnergyHud::StatusCharging, EnergyHud::StatusOffline, EnergyHud::StatusReady};
     for (FName Field : StatusFields) SetVisibility(Field, EnergyHud::Hidden);
 
-    auto* NormalizedOpacity = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble));
-    G.Link(OpacityPercent, G.Pin(NormalizedOpacity, P::Binary::LeftOperand));
-    G.Default(NormalizedOpacity, P::Binary::RightOperand, EnergyHud::PercentMultiplier);
-    for (FName Field : StatusFields)
-    {
-        auto* Set = G.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderOpacity));
-        G.Link(G.Read(Field), G.Pin(Set, P::FunctionTarget));
-        G.Link(G.Pin(NormalizedOpacity, P::ReturnValue), G.Pin(Set, Settings::OpacityPin)); G.Exec(Set);
-    }
-
     auto* Wide = G.Branch(IsWide);
     auto* WideTail = G.Tail;
     G.Tail = G.Pin(Wide, P::Else);
@@ -302,21 +302,17 @@ void UpdateStationStatusHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
     G.Tail = G.Pin(ModuleValid, P::Else); SetVisible(EnergyHud::StatusOffline); auto* MissingModuleTail = G.Tail;
     G.Tail = ValidModuleTail;
 
-    auto* Amount = G.Call(UVoyageModuleComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, GetResourceAmount));
-    G.Link(Module, G.Pin(Amount, P::FunctionTarget)); G.Default(Amount, Charge::Type, Charge::Electricity);
     auto* Full = G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
-        G.Pin(Amount, P::ReturnValue),
+        ReadNativeInputField(G, Station, StationClass, Charge::Energy),
         RequiredEnergyAmount(G, ReadNativeInputField(G, Station, StationClass, Charge::ConfiguredEnergyKWh))));
     SetVisible(EnergyHud::StatusReady); auto* ReadyTail = G.Tail;
 
     G.Tail = G.Pin(Full, P::Else);
-    auto* Connected = ObserveCall(G, UVoyageModuleComponent::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, HasSocketConnection), Module);
-    auto* Powered = ObserveCall(G, UVoyageModuleComponent::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, HasPower), Module);
     auto* CanCharge = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND));
-    G.Link(Connected, G.Pin(CanCharge, P::Binary::LeftOperand));
-    G.Link(Powered, G.Pin(CanCharge, P::Binary::RightOperand));
+    G.Link(ReadNativeInputField(G, Station, StationClass,
+        Charge::SocketConnected), G.Pin(CanCharge, P::Binary::LeftOperand));
+    G.Link(ReadNativeInputField(G, Station, StationClass,
+        Charge::PowerAvailable), G.Pin(CanCharge, P::Binary::RightOperand));
     auto* Charging = G.Branch(G.Pin(CanCharge, P::ReturnValue));
 
     auto* Time = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, GetGameTimeInSeconds));

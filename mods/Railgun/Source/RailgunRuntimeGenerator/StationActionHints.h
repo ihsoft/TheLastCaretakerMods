@@ -82,12 +82,24 @@ void AddStationActions(UBlueprint* BP)
 }
 
 // UMG Construct occurs when attached: configure context before AddChild.
-void AddStationHintConstruction(UWidgetBlueprint* Hud)
+void AddStationHintConstruction(UWidgetBlueprint* Hud,
+    UEdGraphPin* ConstructTail = nullptr)
 {
     UEdGraph* Graph = Hud->UbergraphPages[0]; FGraph G(Graph, nullptr);
-    auto* Construct = NewObject<UK2Node_Event>(Graph);
-    Construct->EventReference.SetExternalMember(GET_FUNCTION_NAME_CHECKED(UUserWidget, Construct), UUserWidget::StaticClass());
-    Construct->bOverrideFunction = true; G.Node(Construct); G.Tail = G.Pin(Construct, P::Then);
+    if (ConstructTail)
+    {
+        G.Tail = ConstructTail;
+    }
+    else
+    {
+        auto* Construct = NewObject<UK2Node_Event>(Graph);
+        Construct->EventReference.SetExternalMember(
+            GET_FUNCTION_NAME_CHECKED(UUserWidget, Construct),
+            UUserWidget::StaticClass());
+        Construct->bOverrideFunction = true;
+        G.Node(Construct);
+        G.Tail = G.Pin(Construct, P::Then);
+    }
     // Reconstruct after Slate removal must not duplicate the same nested widget.
     G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool), G.Read(Hint::HintsReady), N::False));
     auto* Path = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, MakeSoftClassPath));

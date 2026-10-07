@@ -155,11 +155,22 @@ CameraRecoilStrength=1
 ShipRecoilStrength=1
 ```
 
-The wide-view charge gauge reads the station's event-updated cached energy on
-each rendered widget frame. Both the radial fraction and numeric value show
-that actual cached charge without display interpolation. Charge text font,
-typeface, size and opacity are configured independently by the corresponding
-`ChargeText*` keys.
+The HUD binds once to its owning Railgun station during widget construction and
+takes an initial charge, ammunition, style and view-mode snapshot. Later charge
+and ammunition changes refresh their displays through the existing station and
+module event paths; settings reload and zoom changes refresh style and
+visibility directly. The radial fraction and numeric value show the station's
+cached charge without display interpolation. Charge text font, typeface, size
+and opacity are configured independently by the corresponding `ChargeText*`
+keys.
+
+The widget and station retain transient direct references to each other. A
+reconstructed widget unregisters its previous station first, and destruction
+clears the station's reference only when it still names that exact widget.
+Missing or unexpected ownership fails closed without retry, timer or world
+discovery. Per-frame HUD work is limited to live range/canary presentation and
+status-icon blinking; status classification consumes the station's cached
+charge, socket and power state rather than polling the module.
 
 Electricity storage is configured in the same `KWh` unit shown by the game.
 Voyage maps one displayed `KWh` to 1000 native electricity amount units; the
@@ -194,6 +205,8 @@ idle, supplied, empty and zero-rate stations own no drain timer.
 
 Actual station entry is driven by `ReceivePossessed`; it reloads the installed
 INI and refreshes camera and energy state after one next-tick continuation.
+Every completed entry restores the ordinary wide camera, baseline FOV and
+normal wide-view input multiplier before refreshing the HUD mode.
 `ReceiveUnpossessed` performs the symmetric guarded camera restoration. These
 events use pending-state coalescing and have no periodic lifecycle discovery,
 retry timer or polling fallback.

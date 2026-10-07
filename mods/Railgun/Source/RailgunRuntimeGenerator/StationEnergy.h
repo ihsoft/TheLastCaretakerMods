@@ -26,6 +26,7 @@ inline const FName OfflineDrainElapsed(TEXT("RailgunOfflineDrainElapsed"));
 inline const FName OfflineDrainTimerHandle(
     TEXT("RailgunOfflineDrainTimerHandle"));
 inline const FName RefreshFunction(TEXT("RefreshRailgunEnergy"));
+inline const FName RefreshHudFunction(TEXT("RefreshRailgunHudEnergy"));
 inline const FName RefreshSupplyFunction(TEXT("RefreshRailgunSupplyState"));
 inline const FName SettleDrainFunction(TEXT("SettleRailgunOfflineDrain"));
 inline const FName StopDrainFunction(TEXT("StopRailgunOfflineDrain"));
@@ -703,6 +704,9 @@ void AddRailgunEnergyFunctions(UBlueprint* BP,
     Refresh.Write(Charge::UpdateActive, nullptr, N::True);
     Refresh.Write(Charge::UpdatePending, nullptr, N::False);
     RefreshRailgunEnergyPass(Refresh, BP, ForceDemand);
+    auto* RefreshHud = Refresh.Call(BP->GeneratedClass,
+        Charge::RefreshHudFunction);
+    Refresh.Exec(RefreshHud);
     Refresh.Write(Charge::UpdateActive, nullptr, N::False);
     Refresh.Branch(Refresh.Read(Charge::UpdatePending));
     // The demand mode is cached before SetCustomConsumption. A synchronous

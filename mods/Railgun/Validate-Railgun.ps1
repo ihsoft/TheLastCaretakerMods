@@ -723,6 +723,71 @@ foreach ($requiredLifecycleEventReference in @(
         ('Station lifecycle event reference missing: ' +
             $requiredLifecycleEventReference)
 }
+$modeWrites = @($operatorStatements | Where-Object {
+    $_.Token -ceq 'EX_LetBool' -and
+    $null -ne $_.Variable -and
+    $_.Variable.Token -ceq 'EX_InstanceVariable' -and
+    $_.Variable.Variable.Property.Name -ceq 'RailgunWideView'
+} | Sort-Object StatementIndex)
+$mouseWrites = @($operatorStatements | Where-Object {
+    $_.Token -ceq 'EX_Let' -and
+    $null -ne $_.Variable -and
+    $_.Variable.Token -ceq 'EX_InstanceVariable' -and
+    $_.Variable.Variable.Property.Name -ceq
+        'RailgunActiveMousePercent'
+} | Sort-Object StatementIndex)
+$modeNotifications = @($operatorStatements | Where-Object {
+    $_.Token -ceq 'EX_LocalVirtualFunction' -and
+    $_.Function -ceq 'RefreshRailgunHudMode'
+} | Sort-Object StatementIndex)
+Require ($modeWrites.Count -eq 3 -and $mouseWrites.Count -eq 3 -and
+    $modeNotifications.Count -eq 3 -and
+    @($modeWrites | Where-Object {
+        $_.Expression.Token -ceq 'EX_True'
+    }).Count -eq 2 -and
+    @($modeWrites | Where-Object {
+        $_.Expression.Token -ceq 'EX_False'
+    }).Count -eq 1) `
+    'Entry and zoom paths must each assign mode/mouse and notify the HUD once.'
+for ($modeIndex = 0; $modeIndex -lt $modeWrites.Count; $modeIndex++) {
+    $modeWriteIndex = [int]$modeWrites[$modeIndex].StatementIndex
+    $nextModeWriteIndex = if ($modeIndex + 1 -lt $modeWrites.Count) {
+        [int]$modeWrites[$modeIndex + 1].StatementIndex
+    } else { [int]::MaxValue }
+    $pathMouseWrites = @($mouseWrites | Where-Object {
+        $_.StatementIndex -gt $modeWriteIndex -and
+        $_.StatementIndex -lt $nextModeWriteIndex
+    })
+    $pathFovWrites = @($operatorStatements | Where-Object {
+        $_.StatementIndex -gt $modeWriteIndex -and
+        $_.StatementIndex -lt $nextModeWriteIndex -and
+        @(JsonStringLeaves $_) -ccontains 'SetFieldOfView'
+    } | Sort-Object StatementIndex)
+    $pathNotifications = @($modeNotifications | Where-Object {
+        $_.StatementIndex -gt $modeWriteIndex -and
+        $_.StatementIndex -lt $nextModeWriteIndex
+    })
+    Require ($pathMouseWrites.Count -eq 1 -and
+        $pathFovWrites.Count -ge 1 -and
+        $pathNotifications.Count -eq 1 -and
+        $pathMouseWrites[0].StatementIndex -lt
+            $pathFovWrites[-1].StatementIndex -and
+        $pathFovWrites[-1].StatementIndex -lt
+            $pathNotifications[0].StatementIndex) `
+        'Each mode assignment must set its mouse/FOV state before HUD notify.'
+}
+$entryModeWindow = @($operatorStatements | Where-Object {
+    $_.StatementIndex -gt $modeWrites[0].StatementIndex -and
+    $_.StatementIndex -le $modeNotifications[0].StatementIndex
+})
+Require ($modeWrites[0].Expression.Token -ceq 'EX_True' -and
+    $mouseWrites[0].Expression.Token -ceq 'EX_DoubleConst' -and
+    [Math]::Abs([double]$mouseWrites[0].Expression.Value - 100.0) -lt
+        0.000001 -and
+    @(JsonStringLeaves $entryModeWindow) -ccontains
+        "Class'Actor:K2_AttachToComponent'" -and
+    @(JsonStringLeaves $entryModeWindow) -ccontains 'RailgunOwnsView') `
+    'Possession must restore wide camera/mouse state before notifying the HUD.'
 Require (@($operatorStrings | Where-Object {
     $_ -ceq 'OnExitVehicle'
 }).Count -eq 1) `
@@ -1276,7 +1341,28 @@ $hudUbergraph = @($hudFunctions | Where-Object {
 })
 Require ($hudUbergraph.Count -eq 1) 'Expected one Railgun HUD ubergraph.'
 $hudUbergraphStrings = @(JsonStringLeaves $hudUbergraph[0])
-$chargeTextConversions = @($hudUbergraph[0].ScriptBytecode | Where-Object {
+$hudEnergyRefresh = @($hudFunctions | Where-Object {
+    $_.Name -ceq 'RefreshRailgunHudEnergy'
+})
+$hudAmmoRefresh = @($hudFunctions | Where-Object {
+    $_.Name -ceq 'RefreshRailgunHudAmmo'
+})
+$hudStyleRefresh = @($hudFunctions | Where-Object {
+    $_.Name -ceq 'RefreshRailgunHudStyle'
+})
+$hudModeRefresh = @($hudFunctions | Where-Object {
+    $_.Name -ceq 'RefreshRailgunHudMode'
+})
+Require ($hudEnergyRefresh.Count -eq 1 -and $hudAmmoRefresh.Count -eq 1 -and
+    $hudStyleRefresh.Count -eq 1 -and $hudModeRefresh.Count -eq 1) `
+    'HUD event-refresh function set is incomplete or duplicated.'
+$hudEnergyBytecode = @($hudEnergyRefresh[0].ScriptBytecode)
+$hudAmmoBytecode = @($hudAmmoRefresh[0].ScriptBytecode)
+$hudModeBytecode = @($hudModeRefresh[0].ScriptBytecode)
+$hudEnergyStrings = @(JsonStringLeaves $hudEnergyRefresh[0])
+$hudAmmoStrings = @(JsonStringLeaves $hudAmmoRefresh[0])
+$hudAllStrings = @(JsonStringLeaves $hudFunctions)
+$chargeTextConversions = @($hudEnergyBytecode | Where-Object {
     $_.Token -ceq 'EX_Let' -and
     $null -ne $_.Expression -and
     $_.Expression.Token -ceq 'EX_CallMath' -and
@@ -1290,7 +1376,7 @@ Require ($formattedChargeInput.Token -ceq 'EX_LocalVariable') `
     'HUD charge text must consume an explicit native-amount conversion.'
 $formattedChargeVariable =
     $formattedChargeInput.Variable.Property.Name
-$chargeUnitConversions = @($hudUbergraph[0].ScriptBytecode | Where-Object {
+$chargeUnitConversions = @($hudEnergyBytecode | Where-Object {
     $_.Token -ceq 'EX_Let' -and
     $_.Variable.Token -ceq 'EX_LocalVariable' -and
     $_.Variable.Variable.Property.Name -ceq $formattedChargeVariable -and
@@ -1312,37 +1398,37 @@ Require ([Math]::Abs($chargeUnitsPerKWh - 1000.0) -lt 0.000001 -and
     [Math]::Abs((850.0 / $chargeUnitsPerKWh) - 0.85) -lt 0.000001 -and
     [Math]::Abs((425.0 / $chargeUnitsPerKWh) - 0.425) -lt 0.000001) `
     'HUD charge text must convert 850/425 native amount to 0.85/0.425 KWh.'
-Require (@($hudUbergraphStrings | Where-Object {
+Require (@($hudAmmoStrings | Where-Object {
     $_ -ceq 'SyncRailgunAmmoVisuals'
 }).Count -eq 1) 'HUD must perform exactly one guarded initial ammo sync.'
-Require ($hudUbergraphStrings -ccontains 'RailgunAmmoHudInitialized') `
+Require ($hudAmmoStrings -ccontains 'RailgunAmmoHudInitialized') `
     'HUD initial ammo-sync guard is missing.'
-Require ($hudUbergraphStrings -ccontains 'RailgunAmmoLastVisualCount') `
+Require ($hudAmmoStrings -ccontains 'RailgunAmmoLastVisualCount') `
     'HUD does not read the event-maintained ammo count cache.'
-Require (@($hudUbergraphStrings | Where-Object {
+Require (@($hudAmmoStrings | Where-Object {
     $_ -ceq "Class'Image:SetColorAndOpacity'"
 }).Count -eq 12) 'HUD must tint exactly six wide and six scope ammo indicators.'
 $emptyAmmoTintAssignments = @(
-    EmptyAmmoTintAssignments $hudUbergraph[0].ScriptBytecode
+    EmptyAmmoTintAssignments $hudAmmoBytecode
 )
 Require ($emptyAmmoTintAssignments.Count -eq 6) `
     'HUD must apply the subtle red empty-magazine tint to all six indicators.'
 $emptyAmmoZeroComparisons = @(
-    EmptyAmmoZeroComparisons $hudUbergraph[0].ScriptBytecode
+    EmptyAmmoZeroComparisons $hudAmmoBytecode
 )
 Require ($emptyAmmoZeroComparisons.Count -eq 12) `
     'Every HUD empty-magazine tint must use an exact zero-count comparison.'
 $scopeAmmoTintAssignments = @(
-    ScopeAmmoTintAssignments $hudUbergraph[0].ScriptBytecode
+    ScopeAmmoTintAssignments $hudAmmoBytecode
 )
 Require ($scopeAmmoTintAssignments.Count -eq 6) `
     'Scope ammo indicators must use the independent blue active/inactive tints.'
 $scopeEmptyAmmoTintAssignments = @(
-    ScopeEmptyAmmoTintAssignments $hudUbergraph[0].ScriptBytecode
+    ScopeEmptyAmmoTintAssignments $hudAmmoBytecode
 )
 Require ($scopeEmptyAmmoTintAssignments.Count -eq 6) `
     'Scope ammo indicators must use the wide HUD red tint only at zero rounds.'
-$chargeTextColors = @(ChargeTextColorAssignments $hudUbergraph[0].ScriptBytecode)
+$chargeTextColors = @(ChargeTextColorAssignments $hudEnergyBytecode)
 Require ($chargeTextColors.Count -eq 3) `
     'HUD must set charge text colors for invalid, charging and ready paths.'
 $insufficientChargeTextColors = @($chargeTextColors | Where-Object {
@@ -1360,7 +1446,7 @@ $readyChargeTextColors = @($chargeTextColors | Where-Object {
 Require ($readyChargeTextColors.Count -eq 2) `
     'HUD must keep invalid and sufficient charge text opaque white.'
 $chargeRadialProgressColors = @(
-    ChargeRadialProgressColorAssignments $hudUbergraph[0].ScriptBytecode
+    ChargeRadialProgressColorAssignments $hudEnergyBytecode
 )
 Require ($chargeRadialProgressColors.Count -eq 3) `
     'HUD must set charge ring colors for invalid, charging and ready paths.'
@@ -1379,28 +1465,48 @@ $readyChargeRingColors = @($chargeRadialProgressColors | Where-Object {
 Require ($readyChargeRingColors.Count -eq 2) `
     'HUD must keep invalid and sufficient charge rings opaque white.'
 $insufficientChargeComparisons = @(
-    InsufficientChargeComparisons $hudUbergraph[0].ScriptBytecode
+    InsufficientChargeComparisons $hudEnergyBytecode
 )
 Require ($insufficientChargeComparisons.Count -eq 1) `
     'Charge text tint must use one exact current-charge threshold comparison.'
-Require (-not ($hudUbergraphStrings -ccontains
+Require (-not ($hudEnergyStrings -ccontains
     "Class'RadialSlider:SetSliderBarColor'")) `
     'Insufficient-charge tint must not alter the radial gauge background.'
-Require (-not ($hudUbergraphStrings -ccontains 'SliderProgressColor')) `
+Require (-not ($hudAmmoStrings -ccontains 'SliderProgressColor')) `
     'Ammo indicators must not inherit the dynamic charge ring color.'
-$ammoActivationThresholds = @(AmmoActivationThresholds $hudUbergraph[0])
+$ammoActivationThresholds = @(AmmoActivationThresholds $hudAmmoRefresh[0])
 Require (@(Compare-Object -ReferenceObject @(5,4,3,2,1,0,5,4,3,2,1,0) `
     -DifferenceObject $ammoActivationThresholds -SyncWindow 0).Count -eq 0) `
     'Wide and scope ammo indicators must activate from right to left.'
+foreach ($forbiddenHudNativeRead in @(
+    "Class'VoyageModuleComponent:GetResourceAmount'",
+    "Class'VoyageModuleComponent:HasSocketConnection'",
+    "Class'VoyageModuleComponent:HasPower'",
+    "Class'GameplayStatics:GetPlayerPawn'"
+)) {
+    Require (-not ($hudAllStrings -ccontains $forbiddenHudNativeRead)) `
+        ('HUD must consume station caches and its bound owner only: ' +
+            $forbiddenHudNativeRead)
+}
+foreach ($requiredHudLifecycleReference in @(
+    'RailgunHudStation','RegisterRailgunHud','UnregisterRailgunHud',
+    'RefreshRailgunHudEnergy','RefreshRailgunHudAmmo',
+    'RefreshRailgunHudStyle','RefreshRailgunHudMode',
+    "Class'UserWidget:GetOwningPlayerPawn'"
+)) {
+    Require ($hudUbergraphStrings -ccontains $requiredHudLifecycleReference) `
+        ('HUD lifecycle reference missing: ' +
+            $requiredHudLifecycleReference)
+}
 foreach ($forbiddenHudInventoryReference in @(
     'Items', "Class'BlueprintMapLibrary:Map_Values'", 'OnInventoryChanged'
 )) {
-    Require (-not ($hudUbergraphStrings -ccontains
+    Require (-not ($hudAmmoStrings -ccontains
         $forbiddenHudInventoryReference)) `
         ('HUD must not poll or bind inventory data directly: ' +
             $forbiddenHudInventoryReference)
 }
-$visibilityTargets = @(VisibilityTargets $hudUbergraph[0])
+$visibilityTargets = @(VisibilityTargets $hudModeRefresh[0])
 Require (@($visibilityTargets | Where-Object {
     $_ -ceq 'RailgunChargeRadial'
 }).Count -eq 2) 'Wide/optics visibility gate does not own the charge radial.'

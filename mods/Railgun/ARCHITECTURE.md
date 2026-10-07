@@ -20,8 +20,10 @@
   possession and camera work completes first. Repeated events at the same
   callsite coalesce behind pending-state guards; there is no lifecycle timer or
   polling fallback. Actual entry reloads `Railgun.ini`, refreshes the cached
-  energy state and acquires the dedicated camera. Actual exit restores the
-  previous view only when the station still owns the current view target.
+  energy state, restores canonical wide-mode camera/FOV/input state, notifies
+  the bound HUD after that reset, and acquires the dedicated camera. Actual
+  exit restores the previous view only when the station still owns the current
+  view target.
 - The GLB is imported by Unreal Interchange. Full hierarchy matrices determine
   ownership and transforms; node names identify roles but do not imply parentage.
 - Yaw, pitch, muzzle, sight, entry, power-socket and charge-indicator roles are
@@ -73,6 +75,21 @@
   charge-rate state. Capacity,
   units, the fresh pre-shot balance check, shot debit and bounded refund remain
   unchanged.
+- The HUD resolves its exact owning station once from the owning player pawn in
+  widget construction. It first identity-safely unregisters any prior station,
+  stores reciprocal transient widget/station references, then takes initial
+  charge, ammunition, style and view-mode snapshots. Missing or wrong ownership
+  stops that binding path without retry, timer or actor discovery. Widget
+  destruction clears the station reference only when it still points to that
+  exact widget; station teardown also clears its HUD reference.
+- Charge refresh follows the station's existing energy event path. The module's
+  event-maintained ammunition synchronization notifies the station only after
+  its cached count changes. Completed settings reads and zoom changes refresh
+  style and mode directly. Notifications that precede widget construction are
+  covered by the construction snapshot. Widget Tick keeps only range/canary
+  presentation and status blinking through the cached station reference;
+  status classification reads cached charge, socket and power fields and never
+  calls the module resource or supply getters.
 - Loss of the module power connection discharges stored energy to zero at the
   configured `OfflineDischargeKW` rate. The default is `10` kW; zero disables
   offline discharge. This setting is independent of normal standby demand.
@@ -281,13 +298,14 @@ fail-closed compensation, not a claim of transactional atomicity across the two
 native APIs.
 
 The wide-view HUD displays six persistent cartridge icons
-above the existing charge text. It reads the module's event-maintained cached
-count after one guarded initial synchronization; the HUD does not enumerate or
-bind the inventory. The rightmost N icons use opaque white and the remaining
-positions use the radial's faint bar color, matching the physical magazine
-while empty slots remain visible. At zero rounds, all six positions use a
-subtle red tint instead of the ordinary faint color. Ammo colors do not inherit
-the dynamic charge-ring color.
+above the existing charge text. Construction performs one guarded initial
+synchronization; later module inventory events update the event-maintained
+cached count and notify the bound station/HUD directly. The HUD does not
+enumerate or bind the inventory. The rightmost N icons use opaque white and the
+remaining positions use the radial's faint bar color, matching the physical
+magazine while empty slots remain visible. At zero rounds, all six positions
+use a subtle red tint instead of the ordinary faint color. Ammo colors do not
+inherit the dynamic charge-ring color.
 The icon row and charge text form one centered block, and the existing optics
 gate hides that whole block together with the charge radial. The source image,
 crop, six-slot order, colors, cached-count path and absence of HUD inventory
