@@ -206,6 +206,7 @@ void AddStationLifecycleFunctions(UBlueprint* BP)
     auto* ClearAimReferences = Finalize.Call(BP->GeneratedClass,
         Aim::ClearReferences);
     Finalize.Exec(ClearAimReferences);
+    ClearStationRangeDisplay(Finalize);
     auto* CameraValid = Finalize.Branch(
         Finalize.Valid(Finalize.Read(DS::Camera)));
     auto* DestroyCamera = Finalize.Call(AActor::StaticClass(),
@@ -389,4 +390,5 @@ void AddStationLifecycleTeardown(UBlueprint* BP)
     auto* ClearAimReferences = G.Call(BP->GeneratedClass,
         Aim::ClearReferences);
     G.Exec(ClearAimReferences);
+    ClearStationRangeDisplay(G);
 }

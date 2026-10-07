@@ -332,6 +332,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Write(ZoomTest::Wide, nullptr, N::True);
     G.Write(ZoomTest::Mouse, nullptr, ZoomTest::NormalMouse);
     BindFirstPersonCamera(G);
+    ClearStationRangeDisplay(G);
     auto* FindSight = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, GetComponentsByTag));
     G.Link(ObserveCall(G, UActorComponent::StaticClass(), OP::ComponentOwner, G.Read(S::Anchor)), G.Pin(FindSight, P::FunctionTarget));
     G.Pin(FindSight, OP::ComponentClass)->DefaultObject = USceneComponent::StaticClass();
@@ -411,6 +412,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     RestoreDedicatedViewIfOwned(G);
     G.Write(EyeAim::FirstPersonCamera, nullptr);
     G.Write(EyeAim::FirstPersonCameraOwner, nullptr);
+    ClearStationRangeDisplay(G);
     auto* RefreshRuntimeActivity = G.Call(BP->GeneratedClass,
         DS::RefreshActivity);
     G.Exec(RefreshRuntimeActivity);
@@ -612,6 +614,9 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, S::Anchor, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
     AddVariable(BP, Range::TargetName, UEdGraphSchema_K2::PC_Text);
     AddVariable(BP, Range::TargetRange, UEdGraphSchema_K2::PC_Text);
+    AddVariable(BP, Range::PendingTargetName,
+        UEdGraphSchema_K2::PC_Text);
+    MarkVariableTransient(BP, Range::PendingTargetName);
     AddVariable(BP, EnergyHud::ActiveHud, UEdGraphSchema_K2::PC_Object,
         UUserWidget::StaticClass());
     MarkVariableTransient(BP, EnergyHud::ActiveHud);
@@ -638,6 +643,15 @@ UClass* CreateDedicatedStation()
     AddVariable(Hud, EnergyHud::Station, UEdGraphSchema_K2::PC_Object,
         BP->GeneratedClass);
     MarkVariableTransient(Hud, EnergyHud::Station);
+    AddVariable(Hud, Range::DisplayedTargetName,
+        UEdGraphSchema_K2::PC_Text);
+    AddVariable(Hud, Range::DisplayedTargetRange,
+        UEdGraphSchema_K2::PC_Text);
+    AddVariable(Hud, Range::DisplayInitialized,
+        UEdGraphSchema_K2::PC_Boolean);
+    for (FName RuntimeDisplayState : {Range::DisplayedTargetName,
+        Range::DisplayedTargetRange, Range::DisplayInitialized})
+        MarkVariableTransient(Hud, RuntimeDisplayState);
     auto* Canvas = Hud->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), N::HudCanvas); Canvas->bIsVariable = false;
     Hud->WidgetTree->RootWidget = Canvas;
     check(ZoomTest::OverlayTexture);
@@ -1104,6 +1118,54 @@ UClass* CreateDedicatedStation()
     const auto Defaults = HudGraph->Nodes;
     for (UEdGraphNode* Node : Defaults) Node->DestroyNode();
     FGraph HG(HudGraph, nullptr);
+    auto RefreshRangeDisplay = [&](UEdGraphPin* BoundStation, bool Force)
+    {
+        const TPair<FName, FName> DisplayFields[] = {
+            {Range::TargetName, Range::DisplayedTargetName},
+            {Range::TargetRange, Range::DisplayedTargetRange}
+        };
+        for (const auto& DisplayField : DisplayFields)
+        {
+            const FName StationField = DisplayField.Key;
+            const FName CachedField = DisplayField.Value;
+            auto* Value = ReadNativeInputField(HG, BoundStation,
+                BP->GeneratedClass, StationField);
+            UK2Node_IfThenElse* Skip = nullptr;
+            if (!Force)
+            {
+                UEdGraphPin* Same = EqualRangeText(HG,
+                    HG.Read(CachedField), Value);
+                UEdGraphPin* InitializedAndSame = HG.Binary(
+                    GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+                        BooleanAND),
+                    HG.Read(Range::DisplayInitialized), Same);
+                Skip = HG.Branch(InitializedAndSame);
+                HG.Tail = HG.Pin(Skip, P::Else);
+            }
+            auto* Set = HG.Call(UTextBlock::StaticClass(),
+                GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
+            HG.Link(HG.Read(StationField),
+                HG.Pin(Set, P::FunctionTarget));
+            HG.Link(Value, HG.Pin(Set, E::WidgetText));
+            HG.Exec(Set);
+            HG.Write(CachedField, Value);
+            if (Skip)
+                StationMerge(HG, {HG.Tail, HG.Pin(Skip, P::Then)});
+        }
+        if (Force)
+        {
+            HG.Write(Range::DisplayInitialized, nullptr, N::True);
+        }
+        else
+        {
+            auto* AlreadyInitialized = HG.Branch(
+                HG.Read(Range::DisplayInitialized));
+            HG.Tail = HG.Pin(AlreadyInitialized, P::Else);
+            HG.Write(Range::DisplayInitialized, nullptr, N::True);
+            StationMerge(HG, {HG.Tail,
+                HG.Pin(AlreadyInitialized, P::Then)});
+        }
+    };
     auto* HudTick = NewObject<UK2Node_Event>(HudGraph);
     HudTick->EventReference.SetExternalMember(
         BlueprintGraphNames::Events::WidgetTick,
@@ -1113,13 +1175,7 @@ UClass* CreateDedicatedStation()
     HG.Tail = HG.Pin(HudTick, P::Then);
     UEdGraphPin* Station = HG.Read(EnergyHud::Station);
     HG.Branch(HG.Valid(Station));
-    for (FName Field : {Range::TargetName, Range::TargetRange})
-    {
-        auto* Value = ReadNativeInputField(HG, Station,
-            BP->GeneratedClass, Field);
-        auto* Set = HG.Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
-        HG.Link(HG.Read(Field), HG.Pin(Set, P::FunctionTarget)); HG.Link(Value, HG.Pin(Set, E::WidgetText)); HG.Exec(Set);
-    }
+    RefreshRangeDisplay(Station, false);
     auto* SetCanaryText = HG.Call(UTextBlock::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
     HG.Link(HG.Read(RailgunVfxCanary::StatusText),
@@ -1200,6 +1256,7 @@ UClass* CreateDedicatedStation()
         auto* Refresh = HG.Call(Hud->GeneratedClass, RefreshFunction);
         HG.Exec(Refresh);
     }
+    RefreshRangeDisplay(OwningStation->GetCastResultPin(), true);
     AddStationHintConstruction(Hud,
         ConstructWork->GetThenPinGivenIndex(1));
 
@@ -1221,6 +1278,7 @@ UClass* CreateDedicatedStation()
     HG.Exec(Unregister);
     StationMerge(HG, {HG.Tail, HG.Pin(DestructStationValid, P::Else)});
     HG.Write(EnergyHud::Station, nullptr);
+    HG.Write(Range::DisplayInitialized, nullptr, N::False);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud); FKismetEditorUtilities::CompileBlueprint(Hud);
     check(Hud->Status != BS_Error);
     AddStationActions(BP);

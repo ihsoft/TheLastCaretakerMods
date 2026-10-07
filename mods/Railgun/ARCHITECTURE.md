@@ -93,8 +93,14 @@
   event-maintained ammunition synchronization notifies the station only after
   its cached count changes. Completed settings reads and zoom changes refresh
   style and mode directly. Notifications that precede widget construction are
-  covered by the construction snapshot. Widget Tick keeps only range/canary
-  presentation and status blinking through the cached station reference;
+  covered by the construction snapshot. Target name/range retain their
+  per-frame optical trace and live module `ItemAsset`/localized `Name` lookup,
+  including the UObject-name fallback, but publish only the final `FText` when
+  it changes; misses and lifecycle reset publish the empty-name/`---` state.
+  The HUD takes an unconditional initial range snapshot on construction and
+  later calls `SetText` for those two widgets only when their `FText` changes.
+  Widget Tick keeps only range/canary presentation and status blinking through
+  the cached station reference;
   status classification reads cached charge, socket and power fields and never
   calls the module resource or supply getters.
 - Loss of the module power connection discharges stored energy to zero at the

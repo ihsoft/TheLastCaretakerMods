@@ -77,6 +77,32 @@ function VisibilityTargets($Value) {
         VisibilityTargets $property.Value
     }
 }
+function TextSetTargets($Value) {
+    if ($null -eq $Value) { return }
+    if ($Value -is [array]) {
+        foreach ($entry in $Value) { TextSetTargets $entry }
+        return
+    }
+    if ($Value -isnot [pscustomobject]) { return }
+    $names = @($Value.PSObject.Properties.Name)
+    if (($names -ccontains 'Token') -and $Value.Token -ceq 'EX_Context' -and
+        ($names -ccontains 'ContextExpression') -and
+        $null -ne $Value.ContextExpression -and
+        (@($Value.ContextExpression.PSObject.Properties.Name) -ccontains
+            'Function') -and
+        $Value.ContextExpression.Function -ceq 'SetText' -and
+        ($names -ccontains 'ObjectExpression') -and
+        $null -ne $Value.ObjectExpression -and
+        (@($Value.ObjectExpression.PSObject.Properties.Name) -ccontains
+            'Variable') -and
+        $null -ne $Value.ObjectExpression.Variable -and
+        $null -ne $Value.ObjectExpression.Variable.Property) {
+        [string]$Value.ObjectExpression.Variable.Property.Name
+    }
+    foreach ($property in $Value.PSObject.Properties) {
+        TextSetTargets $property.Value
+    }
+}
 function AmmoActivationThresholds($Value) {
     if ($null -eq $Value) { return }
     if ($Value -is [array]) {
@@ -631,6 +657,36 @@ $operatorUbergraph = @($operatorFunctions | Where-Object {
 Require ($operatorUbergraph.Count -eq 1) 'Expected one Railgun operator ubergraph.'
 $operatorStatements = @($operatorUbergraph[0].ScriptBytecode)
 $operatorStrings = @(JsonStringLeaves $operatorUbergraph[0])
+$pendingTargetName = @($operatorClass[0].ChildProperties | Where-Object {
+    $_.Name -ceq 'RailgunPendingTargetName'
+})
+Require ($pendingTargetName.Count -eq 1 -and
+    $pendingTargetName[0].Type -ceq 'TextProperty' -and
+    $pendingTargetName[0].PropertyFlags -match
+        '(^| \| )Transient($| \| )') `
+    'Final target-name resolution must use one transient FText value.'
+foreach ($requiredRangeReference in @(
+    'DetectedSharkName','OpticalTargetRange','RailgunPendingTargetName',
+    "Class'KismetSystemLibrary:LineTraceSingle'",
+    "Class'Actor:GetComponentByClass'",
+    "Class'KismetSystemLibrary:GetObjectName'",
+    "Class'KismetTextLibrary:TextIsEmpty'",
+    "Class'KismetTextLibrary:Conv_IntToText'",
+    "Class'KismetTextLibrary:EqualEqual_TextText'",
+    'ItemAsset','Name','---'
+)) {
+    Require ($operatorStrings -ccontains $requiredRangeReference) `
+        ('Changed-only range reference missing: ' +
+            $requiredRangeReference)
+}
+foreach ($forbiddenRangeCache in @(
+    'RailgunRangeTargetActor','RailgunRangeTargetModule',
+    'RailgunRangeTargetModuleResolved'
+)) {
+    Require (-not ($operatorStrings -ccontains $forbiddenRangeCache)) `
+        ('Unapproved target-component cache was serialized: ' +
+            $forbiddenRangeCache)
+}
 Require (@($operatorStrings | Where-Object {
     $_ -ceq "Class'Actor:K2_GetComponentsByClass'"
 }).Count -eq 2 -and
@@ -836,13 +892,16 @@ for ($modeIndex = 0; $modeIndex -lt $modeWrites.Count; $modeIndex++) {
         $_.StatementIndex -gt $modeWriteIndex -and
         $_.StatementIndex -lt $nextModeWriteIndex
     })
+    $orderedFovWrites = @($pathFovWrites | Where-Object {
+        $_.StatementIndex -gt $pathMouseWrites[0].StatementIndex -and
+        $_.StatementIndex -lt $pathNotifications[0].StatementIndex
+    })
     Require ($pathMouseWrites.Count -eq 1 -and
         $pathFovWrites.Count -ge 1 -and
         $pathNotifications.Count -eq 1 -and
         $pathMouseWrites[0].StatementIndex -lt
-            $pathFovWrites[-1].StatementIndex -and
-        $pathFovWrites[-1].StatementIndex -lt
-            $pathNotifications[0].StatementIndex) `
+            $pathNotifications[0].StatementIndex -and
+        $orderedFovWrites.Count -ge 1) `
         'Each mode assignment must set its mouse/FOV state before HUD notify.'
 }
 $entryModeWindow = @($operatorStatements | Where-Object {
@@ -1410,6 +1469,53 @@ $hudUbergraph = @($hudFunctions | Where-Object {
 })
 Require ($hudUbergraph.Count -eq 1) 'Expected one Railgun HUD ubergraph.'
 $hudUbergraphStrings = @(JsonStringLeaves $hudUbergraph[0])
+$hudClass = @($hud | Where-Object {
+    $_.Type -ceq 'WidgetBlueprintGeneratedClass'
+})
+Require ($hudClass.Count -eq 1) `
+    'Expected one Railgun HUD generated class.'
+foreach ($displayState in @(
+    @{Name='RailgunDisplayedTargetName'; Type='TextProperty'},
+    @{Name='RailgunDisplayedTargetRange'; Type='TextProperty'},
+    @{Name='RailgunRangeDisplayInitialized'; Type='BoolProperty'}
+)) {
+    $property = @($hudClass[0].ChildProperties | Where-Object {
+        $_.Name -ceq $displayState.Name
+    })
+    Require ($property.Count -eq 1 -and
+        $property[0].Type -ceq $displayState.Type -and
+        $property[0].PropertyFlags -match
+            '(^| \| )Transient($| \| )') `
+        ('HUD range display state must be exact and transient: ' +
+            $displayState.Name)
+}
+$rangeSetTargets = @(TextSetTargets $hudUbergraph[0])
+Require (@($rangeSetTargets | Where-Object {
+        $_ -ceq 'DetectedSharkName'
+    }).Count -eq 2 -and
+    @($rangeSetTargets | Where-Object {
+        $_ -ceq 'OpticalTargetRange'
+    }).Count -eq 2 -and
+    @($hudUbergraphStrings | Where-Object {
+        $_ -ceq "Class'KismetTextLibrary:EqualEqual_TextText'"
+    }).Count -eq 2) `
+    'HUD must own one initial and one changed-only SetText path per range field.'
+$rangeDisplayInitializationWrites = @($hudUbergraph[0].ScriptBytecode |
+    Where-Object {
+        $_.Token -ceq 'EX_LetBool' -and
+        $null -ne $_.Variable -and
+        $_.Variable.Token -ceq 'EX_InstanceVariable' -and
+        $_.Variable.Variable.Property.Name -ceq
+            'RailgunRangeDisplayInitialized'
+    })
+Require ($rangeDisplayInitializationWrites.Count -eq 3 -and
+    @($rangeDisplayInitializationWrites | Where-Object {
+        $_.Expression.Token -ceq 'EX_True'
+    }).Count -eq 2 -and
+    @($rangeDisplayInitializationWrites | Where-Object {
+        $_.Expression.Token -ceq 'EX_False'
+    }).Count -eq 1) `
+    'HUD range display must initialize on construction/tick and reset on destruction.'
 $hudEnergyRefresh = @($hudFunctions | Where-Object {
     $_.Name -ceq 'RefreshRailgunHudEnergy'
 })
