@@ -17,6 +17,12 @@ Root `../AGENTS.md` applies.
 - Logs, scratch data and build output belong in repository `Tmp/`. Do not infer
   retention value from generated status, age or size, and do not treat registry
   documentation as approval for perpetual retention.
+- A requested export or other generated deliverable is temporary unless facts
+  identify its continuing consumer and retention value. Put the run, including
+  provenance sidecars and failure evidence, in `Tmp/` by default. Ask the user
+  before creating a new retained family when that value is plausible but not
+  established; do not register a family retroactively to legitimize an output
+  location.
 - If an existing directory has no known owner or consumer, flag it for review.
   Do not invent a contract, delete it blindly, add automatic cleanup or build a
   new retention framework.

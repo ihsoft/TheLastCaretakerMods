@@ -12,7 +12,9 @@ would incorrectly suppress otherwise valid textures.
 
 This is a read-only extractor. It does not change the game, install a container,
 run Unreal, execute Blueprint construction scripts or write tracked game data.
-All output stays below ignored `artifacts/`.
+Ordinary output stays below ignored `Tmp/`. Writing below ignored `artifacts/`
+is supported only after a concrete continuing consumer and retention value have
+been established under the repository artifact lifecycle rules.
 
 ## Normal use (Windows PowerShell 5.1)
 
@@ -20,12 +22,12 @@ All output stays below ignored `artifacts/`.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageModelGlb.ps1 `
   -Asset '/Game/Blueprints/Modules/Utility/BP_Module_Fabricator' `
   -MaterialMode BakeReconstructed `
-  -OutputPath 'artifacts/model-export/fabricator.glb'
+  -OutputPath 'Tmp/model-export/fabricator.glb'
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageModelGlb.ps1 `
   -Asset '/Game/ModulesAnimations/Fabricator/Meshes/SM_Fabricator_Exterior_A_01' `
   -MaterialMode PbrApproximation `
-  -OutputPath 'artifacts/model-export/fabricator-exterior.glb'
+  -OutputPath 'Tmp/model-export/fabricator-exterior.glb'
 ```
 
 `-MaterialMode` is deliberately required. If the user's request does not choose
@@ -43,7 +45,9 @@ wildcard or fragment. Convert `Voyage/Content/.../SM_Name.uasset` to
 `/Game/.../SM_Name`. `-GameRoot` is optional and defaults to the configured Steam
 installation.
 
-Output must be a fresh `.glb` below repository `artifacts/`. The sibling
+Output must be a fresh `.glb` below repository `Tmp/` by default. An
+`artifacts/` path is allowed only for an explicitly justified retained result.
+The sibling
 `<output>.evidence/` contains the fingerprint, request, published-tool manifest,
 captured log, `export-report.json` and `material-omissions.md`. The Markdown file
 names deferred effects, their cooked texture paths, parameter names and relevant
@@ -63,9 +67,14 @@ logical indices. `material-omissions.md` is only a human-readable projection.
 
 - Direct `StaticMesh`: highest ordinary render LOD, or an explicit reported
   Nanite fallback only when no ordinary render LOD exists.
-- Blueprint: serialized `USimpleConstructionScript` hierarchy and default
-  `StaticMeshComponent` templates. Repeated meshes remain separate component
-  instances. Per-component material overrides are honored by slot index.
+- Blueprint: serialized `USimpleConstructionScript` hierarchy, inherited
+  component override templates and default `StaticMeshComponent` templates.
+  Local nodes attached to an overridden inherited component retain that
+  hierarchy. Repeated meshes remain separate component instances.
+  Per-component material overrides, including values inherited through the
+  component-template chain, are honored by slot index. Effective inherited
+  `bVisible = false` or `bHiddenInGame = true` excludes a mesh from the static
+  default GLB and records it as an omission because runtime logic may show it.
 - Geometry uses the reviewed CUE4Parse conversion DTO/writer conventions:
   centimeters to meters and Unreal axes/handedness to glTF Y-up.
 - Material output is approximate glTF metallic/roughness PBR. Only textures with
@@ -110,7 +119,7 @@ Normal export consumes the manifest-validated published binary and never runs
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/VoyageModelExporter/Publish.ps1
-python tools/glb/inspect_glb.py artifacts/model-export/fabricator.glb
+python tools/glb/inspect_glb.py Tmp/model-export/fabricator.glb
 ```
 
 Publishing requires the pinned clean CUE4Parse conversion checkout, canonical

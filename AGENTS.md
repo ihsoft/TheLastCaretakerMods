@@ -81,7 +81,14 @@ those details here.
   and validation needed to trust them, installation backups and restore
   evidence, and explicitly selected research needed by ongoing work. A durable
   exception needs a clear use, owner and removal condition, but not necessarily
-  a separate manifest for every file. Preserve an exceptional diagnostic log
+  a separate manifest for every file. A user request to generate, export, show
+  or hand off a file does not by itself prove durable retention value. When no
+  concrete continuing consumer, avoided repeat cost, rollback need or selected
+  research use is established, write the complete run below `/Tmp/`; if durable
+  retention may matter but is unclear, ask the user before writing to
+  `artifacts/`. Never create or broaden an artifact-family registration merely
+  to justify output that was already placed there. Preserve an exceptional
+  diagnostic log
   only when an unresolved failure gives it continuing value; a failed run alone
   is not sufficient. Promote conclusions to docs and reusable methods to tools.
   Before creating or changing retained output, consult the family registry in

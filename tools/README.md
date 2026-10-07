@@ -129,6 +129,8 @@ or Blueprint default SCS assembly -> self-contained GLB with hierarchy, transfor
 ordinary render geometry and the same bounded PBR material policy. Runtime
 Blueprint behavior, animation, Niagara, widgets and full shader graphs remain
 explicit report omissions rather than implied GLB fidelity.
+Normal model exports and their evidence go below `Tmp/`; an `artifacts/` output
+requires an already established continuing consumer and retention value.
 Both model and material exporters require the caller to explicitly select
 `-MaterialMode PbrApproximation` or `-MaterialMode BakeReconstructed`; if the
 user did not choose, ask. Reconstructed bakes expose their complete machine contract at GLB root

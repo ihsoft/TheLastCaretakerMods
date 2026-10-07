@@ -66,6 +66,7 @@ internal static class Program
             var omitted = new Dictionary<string, int>(StringComparer.Ordinal);
             var omittedInstances = new List<OmittedComponentRecord>();
             var nodeCount = 0;
+            var inheritedOverrideCount = 0;
 
             void Omit(string key, string node, string reason)
             {
@@ -83,15 +84,41 @@ internal static class Program
                     .WithLocalScale(new Vector3(transform.Scale3D.X, transform.Scale3D.Z, transform.Scale3D.Y));
                 return node;
             }
+            bool InheritedBool(USceneComponent component, string propertyName, bool defaultValue)
+            {
+                var current = component;
+                while (current != null)
+                {
+                    if (current.TryGetValue(out bool value, propertyName)) return value;
+                    current = current.Template?.Load<USceneComponent>();
+                }
+                return defaultValue;
+            }
+            bool IsVisibleByDefault(USceneComponent component) =>
+                InheritedBool(component, "bVisible", true) &&
+                !InheritedBool(component, "bHiddenInGame", false);
             MaterialBinding[] ResolveMaterials(UStaticMesh mesh, UStaticMeshComponent? component)
             {
+                FPackageIndex? ResolveOverride(int index)
+                {
+                    var current = component;
+                    while (current != null)
+                    {
+                        if (current.TryGetValue(out FPackageIndex?[] overrides, "OverrideMaterials"))
+                        {
+                            if (index < overrides.Length && overrides[index] is { IsNull: false } replacement)
+                                return replacement;
+                            return null;
+                        }
+                        current = current.Template?.Load<UStaticMeshComponent>();
+                    }
+                    return null;
+                }
                 var result = new MaterialBinding[mesh.StaticMaterials.Length];
                 for (var i = 0; i < result.Length; i++)
                 {
-                    FPackageIndex? selected = null;
-                    if (component != null && i < component.OverrideMaterials.Length && component.OverrideMaterials[i] is { IsNull: false } replacement)
-                        selected = replacement;
-                    else if (mesh.StaticMaterials[i].MaterialInterface is { IsNull: false } original)
+                    var selected = ResolveOverride(i);
+                    if (selected == null && mesh.StaticMaterials[i].MaterialInterface is { IsNull: false } original)
                         selected = original;
                     UMaterialInterface? material = selected?.Load<UMaterialInterface>();
                     result[i] = new MaterialBinding(materialFactory.Get(material, mesh.StaticMaterials[i].MaterialSlotName.Text),
@@ -117,6 +144,31 @@ internal static class Program
                     Materials = bindings.Select(x => x.Source).ToArray()
                 });
             }
+            NodeBuilder AddComponent(USceneComponent component, NodeBuilder? parent, string? componentName = null)
+            {
+                nodeCount++;
+                var name = CleanName(componentName ?? component.Name);
+                var node = ConfigureNode(parent == null ? new NodeBuilder(name) : parent.CreateNode(name), component);
+                if (component is UStaticMeshComponent staticComponent)
+                {
+                    if (!IsVisibleByDefault(staticComponent))
+                    {
+                        Omit("StaticMeshComponent hidden by default", name,
+                            "Effective component-template visibility excludes this mesh from the static default GLB; Blueprint runtime logic may show it.");
+                    }
+                    else
+                    {
+                        var mesh = staticComponent.GetLoadedStaticMesh();
+                        if (mesh == null) Omit("StaticMeshComponent without a mesh", name, "No static mesh is assigned in the default component template.");
+                        else AddMesh(node, mesh, staticComponent, name);
+                    }
+                }
+                else if (component is not USceneComponent || component.GetType() != typeof(USceneComponent))
+                {
+                    Omit(component.GetType().Name, name, "Component has no supported static-mesh geometry representation in glTF.");
+                }
+                return node;
+            }
             void Visit(USCS_Node scsNode, NodeBuilder? parent)
             {
                 var component = scsNode.GetComponentTemplate();
@@ -126,19 +178,7 @@ internal static class Program
                         "The serialized component template could not be loaded as a scene component.");
                     return;
                 }
-                nodeCount++;
-                var name = CleanName(component.Name);
-                var node = ConfigureNode(parent == null ? new NodeBuilder(name) : parent.CreateNode(name), component);
-                if (component is UStaticMeshComponent staticComponent)
-                {
-                    var mesh = staticComponent.GetLoadedStaticMesh();
-                    if (mesh == null) Omit("StaticMeshComponent without a mesh", name, "No static mesh is assigned in the default component template.");
-                    else AddMesh(node, mesh, staticComponent, name);
-                }
-                else if (component is not USceneComponent || component.GetType() != typeof(USceneComponent))
-                {
-                    Omit(component.GetType().Name, name, "Component has no supported static-mesh geometry representation in glTF.");
-                }
+                var node = AddComponent(component, parent);
                 foreach (var child in scsNode.GetChildNodes()) Visit(child, node);
             }
 
@@ -154,7 +194,30 @@ internal static class Program
             else if (constructionScripts.Length == 1)
             {
                 sourceKind = "BlueprintSCS";
-                foreach (var rootNode in constructionScripts[0].GetRootNodes()) Visit(rootNode, null);
+                var inheritedNodes = new Dictionary<string, NodeBuilder>(StringComparer.Ordinal);
+                foreach (var handler in exports.OfType<UInheritableComponentHandler>())
+                {
+                    foreach (var record in handler.GetRecords())
+                    {
+                        var variableName = record.ComponentKey.SCSVariableName.Text;
+                        var component = record.ComponentTemplate?.Load<USceneComponent>();
+                        if (component == null)
+                        {
+                            Omit("Unresolved inherited component override", variableName,
+                                "The inherited component override template could not be loaded as a scene component.");
+                            continue;
+                        }
+                        inheritedNodes[variableName] = AddComponent(component, null, variableName);
+                        inheritedOverrideCount++;
+                    }
+                }
+                foreach (var rootNode in constructionScripts[0].GetRootNodes())
+                {
+                    NodeBuilder? parent = null;
+                    if (rootNode.TryGetValue(out FName parentVariableName, "ParentComponentOrVariableName"))
+                        inheritedNodes.TryGetValue(parentVariableName.Text, out parent);
+                    Visit(rootNode, parent);
+                }
             }
             else
             {
@@ -203,6 +266,7 @@ internal static class Program
                 exporterSha256 = Hash(typeof(Program).Assembly.Location),
                 parserSha256 = Hash(typeof(DefaultFileProvider).Assembly.Location),
                 nodeCount,
+                inheritedOverrideCount,
                 meshComponents = meshRecords,
                 omittedComponents = omitted.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value),
                 omittedComponentInstances = omittedInstances,
