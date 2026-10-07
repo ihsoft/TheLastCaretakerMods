@@ -273,12 +273,8 @@ UClass* CreateRailgunShot()
     check(SaveDedicatedAsset(BP)); return BP->GeneratedClass;
 }
 
-void AddRailgunFire(FGraph& G, UEdGraphPin* DeltaSeconds, UEdGraphPin* TickTail,
-    UEdGraphPin* OfflineDischargeKW)
+void AddRailgunFire(FGraph& G)
 {
-    // Independent tick branch: charging continues with nobody operating the gun.
-    G.Tail = TickTail;
-    UpdateAutomaticCharge(G, DeltaSeconds, OfflineDischargeKW);
     auto* Event=NewObject<UK2Node_EnhancedInputAction>(G.Graph); Event->InputAction=LoadObject<UInputAction>(nullptr,RailgunInputNames::Fire); check(Event->InputAction); G.Node(Event); G.Tail=G.Pin(Event,DS::Started);
     G.Branch(ObserveCall(G,APawn::StaticClass(),GET_FUNCTION_NAME_CHECKED(APawn,IsPlayerControlled),OpticalSelf(G)));
     G.Branch(G.Valid(G.Read(Charge::Module)));

@@ -143,7 +143,6 @@ MinimumPitchDegrees=-30
 MaximumPitchDegrees=10
 ShotVolumePercent=600
 StatusIconOpacityPercent=50
-ChargeIndicatorSmoothingSpeed=4
 ChargeTextOpacityPercent=100
 ChargeTextFontSize=14
 ChargeTextFontPath=/Engine/EngineFonts/Roboto.Roboto
@@ -156,28 +155,42 @@ CameraRecoilStrength=1
 ShipRecoilStrength=1
 ```
 
-The wide-view charge gauge is evaluated every rendered widget frame. Its
-`ChargeIndicatorSmoothingSpeed` only interpolates the displayed value between
-the game's discrete energy samples; it does not change charging or firing.
-`0` disables interpolation. Charge text font, typeface, size and opacity are
-configured independently by the corresponding `ChargeText*` keys.
+The wide-view charge gauge reads the station's event-updated cached energy on
+each rendered widget frame. Both the radial fraction and numeric value show
+that actual cached charge without display interpolation. Charge text font,
+typeface, size and opacity are configured independently by the corresponding
+`ChargeText*` keys.
 
 Electricity storage is configured in the same `KWh` unit shown by the game.
 Voyage maps one displayed `KWh` to 1000 native electricity amount units; the
 generator converts that amount to the module's W demand for the configured
 charge time, plus the 1 kW idle load.
 
-Station initialization caches the concrete module and binds one exact
-`OnModuleValueChanged` callback for gameplay energy maintenance. The callback
-refreshes the stored charge snapshot and changes custom consumption only when
-the required charging/idle mode changes. A re-entry settings read forces one
-demand refresh so changed charge-time or capacity values take effect without
-waiting for another resource event. Synchronous notifications raised by the
-native demand setter are coalesced into one final read; the desired mode is
-cached before the setter is called. EndPlay removes the binding. The main actor
-tick no longer discovers the module, samples charge rate, or rewrites demand;
-it retains the configured time-based offline discharge and its existing power
-connection checks.
+Station initialization caches the concrete module, binds its exact value,
+socket-connection and power-state delegates, and takes initial charge and
+supply snapshots. Value changes refresh stored charge and change custom
+consumption only when the required charging/idle mode changes. For the
+supported game fingerprint, the socket notification may precede freshness of
+`HasSocketConnection`; an accepted event therefore schedules one coalesced
+next-tick snapshot for the same still-bound module. Power events consume their
+exact `bHasPower` payload immediately.
+A re-entry settings read forces one demand refresh so changed charge-time,
+capacity or offline-discharge values take effect without waiting for another
+resource event. Synchronous notifications raised by the native demand setter
+are coalesced into one final read; the desired mode is cached before the setter
+is called. Rebinding settles and stops the old module's drain timer, invalidates
+pending supply reconciliation, removes old delegates and clears stale state
+before resolving a replacement module. EndPlay performs the same timer and
+binding teardown.
+
+The station actor starts with Tick disabled and enables it only while the local
+station view is owned; Actor Tick owns optics and range work only. Offline
+discharge uses a separate looping timer that exists only while cached supply is
+missing, stored energy is positive and `OfflineDischargeKW` is positive. It
+runs at approximately 3 Hz, never polls socket or power, and integrates elapsed
+game time rather than assuming a fixed callback interval. Stop, rate change,
+rebind and teardown settle the last partial interval before clearing the timer;
+idle, supplied, empty and zero-rate stations own no drain timer.
 
 Actual station entry is driven by `ReceivePossessed`; it reloads the installed
 INI and refreshes camera and energy state after one next-tick continuation.

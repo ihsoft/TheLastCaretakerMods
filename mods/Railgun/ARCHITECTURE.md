@@ -40,17 +40,38 @@
   remains expressed in W and is derived from the configured charge time in
   addition to standby demand.
 - Station initialization resolves and caches the concrete module, binds the
-  exact `OnModuleValueChanged` delegate, performs an initial charge snapshot,
-  and removes the binding at EndPlay. The gameplay callback refreshes the
-  cached charge and switches `SetCustomConsumption` only when the charging
-  versus idle mode changes. Re-entry settings reload forces one demand refresh.
-  The desired mode is cached before the native setter; synchronous nested
-  notifications are coalesced into one final non-forced read, which does not
-  repeat the setter when the mode is unchanged. The main actor
-  tick retains only active optics/range work and time-based offline discharge
-  with its supply checks; it no longer discovers lifecycle state or the module,
-  maintains demand, or samples unused charge-rate state. Capacity,
-  units, the fresh pre-shot balance check, shot debit and bounded refund are
+  exact value, socket-connection and power-state delegates, and performs
+  initial charge and supply snapshots. The value callback refreshes cached
+  charge and switches `SetCustomConsumption` only when the charging versus idle
+  mode changes. On the currently supported Voyage fingerprint, an accepted
+  socket-change notification can run before `HasSocketConnection` exposes the
+  post-transition value. The guarded callback therefore records no
+  authoritative supply state and coalesces one next-tick reconciliation for
+  the same bound module; that reconciliation reads both supply getters after
+  checking lifecycle, generation and object identity. The power callback
+  consumes its exact `bHasPower` payload immediately.
+  Re-entry settings reload forces one demand refresh and runtime-activity
+  reconciliation. The desired demand mode is cached before the native setter;
+  synchronous nested notifications are coalesced into one final non-forced
+  read, which does not repeat the setter when the mode is unchanged. Rebinding
+  first settles and stops the old module's drain timer, invalidates pending
+  supply reconciliation, removes old delegates and clears cached module,
+  charge and supply state. A failed replacement cannot retain stale work.
+  EndPlay performs the same timer and binding teardown.
+- The station actor starts with Tick disabled and enables it only while the
+  local station view is owned. Active optics/range work may remain per-frame
+  while aiming. Offline discharge is separate: cached supply and charge state
+  start one looping active-only timer at one-third-second intervals. The timer
+  never polls `HasSocketConnection` or `HasPower`; it integrates elapsed game
+  time at the rate captured when the timer starts, advances its timestamp
+  before native removal, and caps each debit by the live stored amount.
+  Re-entrant value notifications therefore cannot debit the same interval.
+  Stop, rate change, rebind and teardown settle the final partial interval
+  against the old module and old rate, then clear the handle. Idle, supplied,
+  empty and zero-rate stations own no drain timer. Tick no longer discovers
+  lifecycle or supply state, maintains demand, drains energy, or samples unused
+  charge-rate state. Capacity,
+  units, the fresh pre-shot balance check, shot debit and bounded refund remain
   unchanged.
 - Loss of the module power connection discharges stored energy to zero at the
   configured `OfflineDischargeKW` rate. The default is `10` kW; zero disables

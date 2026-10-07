@@ -58,9 +58,8 @@
     },
     {
       "id": "wide-charge-hud",
-      "comments": ["Wide-view charge indicator. Smoothing speed 0 disables interpolation."],
+      "comments": ["Wide-view charge indicator."],
       "settings": [
-        { "id": "ChargeIndicatorSmoothingSpeed", "runtimeName": "RailgunChargeIndicatorSmoothingSpeed", "key": "ChargeIndicatorSmoothingSpeed", "type": "number", "minimum": 0, "maximum": 100 },
         { "id": "ChargeTextOpacity", "runtimeName": "RailgunChargeTextOpacityPercent", "key": "ChargeTextOpacityPercent", "type": "number", "minimum": 0, "maximum": 100 },
         { "id": "ChargeTextFontSize", "runtimeName": "RailgunChargeTextFontSize", "key": "ChargeTextFontSize", "type": "number", "minimum": 1, "maximum": 200 },
         { "id": "ChargeTextFontPath", "runtimeName": "RailgunChargeTextFontPath", "key": "ChargeTextFontPath", "type": "text", "fontObjectId": "ChargeTextFontObject", "fontObjectRuntimeName": "RailgunChargeTextFontObject" },

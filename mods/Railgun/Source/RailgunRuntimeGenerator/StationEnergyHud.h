@@ -8,7 +8,6 @@ inline const FName ChargeText(TEXT("RailgunChargeText"));
 inline const FName ChargeBlock(TEXT("RailgunChargeBlock"));
 inline const FName AmmoIndicatorRow(TEXT("RailgunAmmoIndicatorRow"));
 inline const FName ScopeAmmoIndicatorRow(TEXT("RailgunScopeAmmoIndicatorRow"));
-inline const FName ChargeInitialized(TEXT("RailgunChargeInitialized"));
 inline const FName AmmoInitialized(TEXT("RailgunAmmoHudInitialized"));
 inline const TArray<FName> AmmoIndicators {
     TEXT("RailgunAmmoIndicator01"), TEXT("RailgunAmmoIndicator02"),
@@ -88,12 +87,6 @@ inline const FName UseGroupingPin(TEXT("bUseGrouping"));
 inline const FName MinimumFractionalDigitsPin(TEXT("MinimumFractionalDigits"));
 inline const FName MaximumFractionalDigitsPin(TEXT("MaximumFractionalDigits"));
 inline const FName FormattedTextPin(TEXT("InText"));
-inline const FName CurrentPin(TEXT("Current"));
-inline const FName TargetPin(TEXT("Target"));
-inline const FName DeltaTimePin(TEXT("DeltaTime"));
-inline const FName WidgetDeltaTimePin(TEXT("InDeltaTime"));
-inline const FName InterpSpeedPin(TEXT("InterpSpeed"));
-inline const FName FloatInputPin(TEXT("InFloat"));
 inline const FName ColorAndOpacityPin(TEXT("InColorAndOpacity"));
 }
 
@@ -192,7 +185,8 @@ void UpdateStationAmmoHud(FGraph& G, UEdGraphPin* Station,
 }
 
 // The charge display reads production state from the possessed station.
-void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClass, UEdGraphPin* DeltaTime)
+void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station,
+    UClass* StationClass)
 {
     // This graph belongs to the widget itself, not an external observer actor.
     // FGraph::Text requires HudClass/HudInstance and is a no-op in this graph.
@@ -213,32 +207,12 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
     G.Link(Fraction, G.Pin(ClampedFraction, OP::ClampValue));
     G.Default(ClampedFraction, OP::ClampMinimum, N::Zero);
     G.Default(ClampedFraction, OP::ClampMaximum, EnergyHud::NormalizedMaximum);
-    auto* CurrentFraction = G.Call(URadialSlider::StaticClass(), GET_FUNCTION_NAME_CHECKED(URadialSlider, GetValue));
-    G.Link(G.Read(EnergyHud::ChargeRadial), G.Pin(CurrentFraction, P::FunctionTarget));
-    auto* CurrentAsDouble = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Conv_FloatToDouble));
-    G.Link(G.Pin(CurrentFraction, P::ReturnValue), G.Pin(CurrentAsDouble, EnergyHud::FloatInputPin));
-    auto* InterpolatedFraction = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FInterpTo));
-    G.Link(G.Pin(CurrentAsDouble, P::ReturnValue), G.Pin(InterpolatedFraction, EnergyHud::CurrentPin));
-    G.Link(G.Pin(ClampedFraction, P::ReturnValue), G.Pin(InterpolatedFraction, EnergyHud::TargetPin));
-    G.Link(DeltaTime, G.Pin(InterpolatedFraction, EnergyHud::DeltaTimePin));
-    G.Link(ReadNativeInputField(G, Station, StationClass, Settings::ChargeIndicatorSmoothingSpeed),
-        G.Pin(InterpolatedFraction, EnergyHud::InterpSpeedPin));
-    auto* DisplayedFraction = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectFloat));
-    G.Link(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Less_DoubleDouble),
-        G.Pin(ClampedFraction, P::ReturnValue), G.Pin(CurrentAsDouble, P::ReturnValue)),
-        G.Pin(DisplayedFraction, P::Select::Condition));
-    G.Link(G.Pin(ClampedFraction, P::ReturnValue), G.Pin(DisplayedFraction, P::Select::WhenTrue));
-    G.Link(G.Pin(InterpolatedFraction, P::ReturnValue), G.Pin(DisplayedFraction, P::Select::WhenFalse));
-    auto* InitialFraction = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, SelectFloat));
-    G.Link(G.Read(EnergyHud::ChargeInitialized), G.Pin(InitialFraction, P::Select::Condition));
-    G.Link(G.Pin(DisplayedFraction, P::ReturnValue), G.Pin(InitialFraction, P::Select::WhenTrue));
-    G.Link(G.Pin(ClampedFraction, P::ReturnValue), G.Pin(InitialFraction, P::Select::WhenFalse));
     auto* FractionAsFloat = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Conv_DoubleToFloat));
-    G.Link(G.Pin(InitialFraction, P::ReturnValue), G.Pin(FractionAsFloat, EnergyHud::DoubleInputPin));
+    G.Link(G.Pin(ClampedFraction, P::ReturnValue),
+        G.Pin(FractionAsFloat, EnergyHud::DoubleInputPin));
     auto* SetRadialValue = G.Call(URadialSlider::StaticClass(), GET_FUNCTION_NAME_CHECKED(URadialSlider, SetValue));
     G.Link(G.Read(EnergyHud::ChargeRadial), G.Pin(SetRadialValue, P::FunctionTarget));
     G.Link(G.Pin(FractionAsFloat, P::ReturnValue), G.Pin(SetRadialValue, EnergyHud::RadialValuePin)); G.Exec(SetRadialValue);
-    G.Write(EnergyHud::ChargeInitialized, nullptr, N::True);
 
     auto SetChargeColors = [&](const TCHAR* TextColor,
         const FLinearColor& ProgressColor)
@@ -279,10 +253,11 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
         EnergyHud::ChargeGaugeProgressColor);
     StationMerge(G, {InvalidChargeModuleTail, InsufficientChargeTail, G.Tail});
 
-    auto* DisplayCharge = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
-        G.Pin(InitialFraction, P::ReturnValue), FullCharge);
+    UEdGraphPin* ChargeKWh = EnergyMath(G,
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble),
+        CurrentCharge, Charge::GameResourceUnitsPerKWh);
     auto* ChargeAsText = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_DoubleToText));
-    G.Link(DisplayCharge, G.Pin(ChargeAsText, EnergyHud::NumericValuePin));
+    G.Link(ChargeKWh, G.Pin(ChargeAsText, EnergyHud::NumericValuePin));
     G.Default(ChargeAsText, EnergyHud::UseGroupingPin, N::False);
     G.Default(ChargeAsText, EnergyHud::MinimumFractionalDigitsPin, EnergyHud::MinimumChargeFractionDigits);
     G.Default(ChargeAsText, EnergyHud::MaximumFractionalDigitsPin, EnergyHud::MaximumChargeFractionDigits);

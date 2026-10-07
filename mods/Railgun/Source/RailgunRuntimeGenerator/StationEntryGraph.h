@@ -261,6 +261,9 @@ void AddStationLifecycleFunctions(UBlueprint* BP)
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR),
         Destroyed, Removed));
     Callback.Write(TeardownPending, nullptr, N::True);
+    auto* StopRuntimeActivity = Callback.Call(BP->GeneratedClass,
+        DS::RefreshActivity);
+    Callback.Exec(StopRuntimeActivity);
     auto* Occupied = Callback.Branch(ObserveCall(Callback,
         APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn,
             IsPlayerControlled), OpticalSelf(Callback)));

@@ -182,7 +182,25 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
 {
     UEdGraph* Graph = BP->UbergraphPages[0];
     const auto DefaultNodes = Graph->Nodes;
-    for (UEdGraphNode* Node : DefaultNodes) Node->DestroyNode();
+    // Energy owns two isolated custom-event components that must survive
+    // reconstruction of the station lifecycle graph. Preserve each complete
+    // connected component, including its latent and pure dependency nodes.
+    TSet<UEdGraphNode*> EnergyEventNodes;
+    TArray<UEdGraphNode*> PendingEnergyNodes;
+    for (UEdGraphNode* Node : DefaultNodes)
+        if (Cast<UK2Node_CustomEvent>(Node)) PendingEnergyNodes.Add(Node);
+    while (!PendingEnergyNodes.IsEmpty())
+    {
+        UEdGraphNode* Node = PendingEnergyNodes.Pop();
+        if (!Node || EnergyEventNodes.Contains(Node)) continue;
+        EnergyEventNodes.Add(Node);
+        for (UEdGraphPin* Pin : Node->Pins)
+            for (UEdGraphPin* Linked : Pin->LinkedTo)
+                if (Linked && Linked->GetOwningNode())
+                    PendingEnergyNodes.Add(Linked->GetOwningNode());
+    }
+    for (UEdGraphNode* Node : DefaultNodes)
+        if (!EnergyEventNodes.Contains(Node)) Node->DestroyNode();
     FGraph G(Graph, nullptr);
     auto Self = [&]() { return OpticalSelf(G); };
     auto* BeginPlay = NewObject<UK2Node_Event>(Graph);
@@ -192,8 +210,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     auto* Tick = NewObject<UK2Node_Event>(Graph);
     Tick->EventReference.SetExternalMember(BlueprintGraphNames::Events::ActorReceiveTick, AActor::StaticClass());
     Tick->bOverrideFunction = true; G.Node(Tick); G.Tail = G.Pin(Tick, P::Then);
-    auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
-    G.Link(G.Tail, G.Pin(Work, P::Execute));
+    UEdGraphPin* TickTail = G.Tail;
 
     auto* Possessed = NewObject<UK2Node_Event>(Graph);
     Possessed->EventReference.SetExternalMember(
@@ -280,6 +297,9 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     auto* RefreshFov = G.Call(UCameraComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UCameraComponent, SetFieldOfView));
     G.Link(G.Read(O::Camera), G.Pin(RefreshFov, P::FunctionTarget)); G.Link(G.Read(O::BaselineFov), G.Pin(RefreshFov, OP::FieldOfView)); G.Exec(RefreshFov);
     DedicatedAim(G); PlaceModeCamera(G, true); DedicatedViewTarget(G, G.Read(DS::Camera)); G.Write(DS::ViewOwned, nullptr, N::True);
+    auto* EnableRuntimeActivity = G.Call(BP->GeneratedClass,
+        DS::RefreshActivity);
+    G.Exec(EnableRuntimeActivity);
 
     auto* Unpossessed = NewObject<UK2Node_Event>(Graph);
     Unpossessed->EventReference.SetExternalMember(
@@ -308,6 +328,9 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
         G.Pin(Unpossessed, ActorLifecycleGraphNames::OldController),
         G.Read(DS::Controller)));
     RestoreDedicatedViewIfOwned(G);
+    auto* RefreshRuntimeActivity = G.Call(BP->GeneratedClass,
+        DS::RefreshActivity);
+    G.Exec(RefreshRuntimeActivity);
     auto* Teardown = G.Branch(
         G.Read(StationLifecycle::TeardownPending));
     auto* FinalizeTeardown = G.Call(BP->GeneratedClass,
@@ -316,7 +339,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Tail = G.Pin(Teardown, P::Else);
 
     // Independent sequence: misses/classification failures cannot block view setup or exit.
-    G.Tail = Work->GetThenPinGivenIndex(0);
+    G.Tail = TickTail;
     G.Branch(G.Valid(G.Read(S::Anchor)));
     G.Branch(ObserveCall(G, APawn::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self()));
@@ -350,9 +373,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Tail = G.Pin(Wide, P::Else); SetZoom(true);
 
     AddRailgunVfxCanaries(G, Self());
-    AddRailgunFire(G, G.Pin(Tick, P::DeltaSeconds),
-        Work->GetThenPinGivenIndex(1),
-        G.Read(Settings::OfflineDischarge));
+    AddRailgunFire(G);
     // Real Enhanced Input events on the possessed station, not observer key polling.
     auto ActionNode = [&](const TCHAR* Package, FName Trigger)
     {
@@ -410,8 +431,29 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, Charge::Module, UEdGraphSchema_K2::PC_Object, UVoyageModuleComponent::StaticClass());
     AddVariable(BP, Charge::Energy, UEdGraphSchema_K2::PC_Real);
     for (FName Field : {Charge::DemandInitialized, Charge::DemandCharging,
-        Charge::UpdateActive, Charge::UpdatePending})
+        Charge::UpdateActive, Charge::UpdatePending,
+        Charge::SocketConnected, Charge::PowerAvailable,
+        Charge::OfflineDrainActive, Charge::OfflineDrainDebitActive,
+        Charge::SupplyReconcilePending})
         AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, Charge::SupplyReconcileGeneration,
+        UEdGraphSchema_K2::PC_Int);
+    for (FName Field : {Charge::SupplyReconcileTime,
+        Charge::OfflineDrainTimestamp, Charge::OfflineDrainRate,
+        Charge::OfflineDrainElapsed})
+        AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP, Charge::OfflineDrainTimerHandle,
+        UEdGraphSchema_K2::PC_Struct, FTimerHandle::StaticStruct());
+    for (FName Field : {Charge::OfflineDrainActive,
+        Charge::OfflineDrainDebitActive,
+        Charge::SupplyReconcilePending,
+        Charge::SupplyReconcileGeneration,
+        Charge::SupplyReconcileTime,
+        Charge::OfflineDrainTimestamp,
+        Charge::OfflineDrainRate,
+        Charge::OfflineDrainElapsed,
+        Charge::OfflineDrainTimerHandle})
+        MarkVariableTransient(BP, Field);
     AddVariable(BP, RailgunChargeIndicator::Owner,
         UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
     AddVariable(BP, RailgunChargeIndicator::Component,
@@ -488,7 +530,6 @@ UClass* CreateDedicatedStation()
     if (!Hud->WidgetTree) Hud->WidgetTree = NewObject<UWidgetTree>(Hud, N::HudTree);
     AddVariable(Hud, Hint::HintsReady, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(Hud, Hint::HintInstance, UEdGraphSchema_K2::PC_Object, UVoyageDynamicPlayerInputWidget::StaticClass());
-    AddVariable(Hud, EnergyHud::ChargeInitialized, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(Hud, EnergyHud::AmmoInitialized, UEdGraphSchema_K2::PC_Boolean);
     auto* Canvas = Hud->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), N::HudCanvas); Canvas->bIsVariable = false;
     Hud->WidgetTree->RootWidget = Canvas;
@@ -784,15 +825,14 @@ UClass* CreateDedicatedStation()
     check(RailgunModule && RailgunModule->GeneratedClass);
     UpdateStationAmmoHud(HG, Station->GetCastResultPin(), BP->GeneratedClass,
         RailgunModule->GeneratedClass);
-    UpdateStationEnergyHud(HG, Station->GetCastResultPin(), BP->GeneratedClass,
-        HG.Pin(HudTick, EnergyHud::WidgetDeltaTimePin));
+    UpdateStationEnergyHud(HG, Station->GetCastResultPin(), BP->GeneratedClass);
     AddStationHintConstruction(Hud);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud); FKismetEditorUtilities::CompileBlueprint(Hud);
     check(Hud->Status != BS_Error);
     AddStationActions(BP);
     AddContextEntry(BP);
     AddNativeStationHudInterface(BP, Hud->GeneratedClass);
-    AddRailgunEnergyFunctions(BP);
+    AddRailgunEnergyFunctions(BP, Settings::OfflineDischarge);
     AddRailgunChargeIndicatorFunctions(BP);
     AddStationLifecycleFunctions(BP);
     BuildDedicatedStationGraph(BP);
@@ -805,7 +845,9 @@ UClass* CreateDedicatedStation()
     check(BP->SimpleConstructionScript->GetAllNodes().Num() == 2);
     check(Interaction->GetChildNodes().Num() == 1 && Interaction->GetChildNodes()[0] == Query);
     check(Interaction->bIsParentComponentNative && Interaction->ParentComponentOrVariableName == CDO->GetRootComponent()->GetFName());
-    CDO->PrimaryActorTick.bCanEverTick = true; CDO->PrimaryActorTick.bStartWithTickEnabled = true;
+    CDO->PrimaryActorTick.bCanEverTick = true;
+    CDO->PrimaryActorTick.bStartWithTickEnabled = false;
+    CDO->PrimaryActorTick.TickInterval = DS::ContinuousTickInterval;
     CDO->PrimaryActorTick.TickGroup = TG_PostPhysics;
     CDO->AutoPossessPlayer = EAutoReceiveInput::Disabled; CDO->AutoPossessAI = EAutoPossessAI::Disabled;
     CDO->bUseControllerRotationYaw = false; CDO->bUseControllerRotationPitch = false; CDO->bUseControllerRotationRoll = false;

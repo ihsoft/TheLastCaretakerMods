@@ -163,7 +163,7 @@ void AddRailgunChargeIndicatorFunctions(UBlueprint* BP)
     using namespace RailgunChargeIndicator;
     check(BP && BP->GeneratedClass);
     FMulticastDelegateProperty* DelegateProperty =
-        RailgunModuleValueDelegateProperty();
+        RailgunModuleDelegateProperty(Charge::OnModuleValueChanged);
 
     UEdGraph* RefreshGraph = FBlueprintEditorUtils::CreateNewGraph(BP,
         RefreshFunction, UEdGraph::StaticClass(),
@@ -306,7 +306,8 @@ void AddRailgunChargeIndicatorTeardown(UBlueprint* BP)
     G.Link(Work->GetThenPinGivenIndex(0), ExistingWork);
     G.Tail = Work->GetThenPinGivenIndex(1);
 
-    auto* DelegateProperty = RailgunModuleValueDelegateProperty();
+    auto* DelegateProperty = RailgunModuleDelegateProperty(
+        Charge::OnModuleValueChanged);
     auto* Callback = G.Node(NewObject<UK2Node_CreateDelegate>(Graph));
     Callback->SetFunction(CallbackFunction);
     auto* Remove = NewObject<UK2Node_RemoveDelegate>(Graph);

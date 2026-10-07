@@ -14,6 +14,8 @@ inline constexpr TCHAR GamePrefix[] = TEXT("/Game/");
 inline const FName Camera(TEXT("RailgunViewActor"));
 inline const FName Controller(TEXT("RailgunViewController"));
 inline const FName ViewOwned(TEXT("RailgunOwnsView"));
+inline const FName RefreshActivity(TEXT("RefreshRailgunRuntimeActivity"));
+inline constexpr float ContinuousTickInterval = 0.0f;
 inline const FName ActionValue(TEXT("ActionValue"));
 inline const FName Triggered(TEXT("Triggered"));
 inline const FName Started(TEXT("Started"));

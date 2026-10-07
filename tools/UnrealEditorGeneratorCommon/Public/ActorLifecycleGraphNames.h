@@ -53,5 +53,6 @@ inline const FName OldController(TEXT("OldController"));
 inline const FName OnEndPlay(TEXT("OnEndPlay"));
 inline const FName EndPlayActor(TEXT("Actor"));
 inline const FName EndPlayReason(TEXT("EndPlayReason"));
+inline const FName TickEnabled(TEXT("bEnabled"));
 inline const FName IgnoreMoveInputSetting(TEXT("bNewMoveInput"));
 }

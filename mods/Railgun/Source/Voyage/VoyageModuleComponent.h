@@ -1,7 +1,8 @@
 #pragma once
 // READ-ONLY editor mirror: Steam25191271 / UE5.8 parser target, executable
 // 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
-// Public mappings + three shark stock CDOs, GAME_DERIVED_SOURCES.md.
+// Public mappings, three shark stock CDOs, and stock Uplink/Sitting Light
+// delegate consumers.
 // Exact prefix through ItemAsset7; no instance, native code or data asset shipped.
 // Revalidate after fingerprint change. Never use this stub to serialize a module.
 // Module descriptor is Runtime so UHT omits PKG_EditorOnly; editor usage only,
@@ -15,6 +16,9 @@ class UVoyageBaseInventoryComponent;
 class UVoyageModuleComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVoyageModuleCompDelegate,
     UVoyageModuleComponent*, Module);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FVoyageModuleCompPowerStateChanged, UVoyageModuleComponent*, SourceModule,
+    bool, bHasPower);
 UCLASS(BlueprintType)
 class VOYAGE_API UVoyageModuleComponent : public UActorComponent
 {
@@ -33,6 +37,10 @@ public:
     UPROPERTY() FComponentReference SocketCustomTarget;
     UPROPERTY(BlueprintAssignable, Category="RailgunEvents")
     FVoyageModuleCompDelegate OnModuleValueChanged;
+    UPROPERTY(BlueprintAssignable, Category="RailgunEvents")
+    FVoyageModuleCompDelegate OnModuleSocketConnectionChanged;
+    UPROPERTY(BlueprintAssignable, Category="RailgunEvents")
+    FVoyageModuleCompPowerStateChanged OnModulePowerStateChanged;
 
     // Steam25191271 native registration/thunk and stock FoodProcessor call.
     // Read-only methods; module lifecycle/consumption is not ActorComponent activation.
