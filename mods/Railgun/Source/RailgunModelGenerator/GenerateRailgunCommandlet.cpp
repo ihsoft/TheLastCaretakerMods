@@ -1,112 +1,13 @@
 // Editor-only GLB shell generator. Never shipped; native identities are gated
-// by GAME_DERIVED_SOURCES.md. Operator generation lives in AutoloadProbe.
+// by GAME_DERIVED_SOURCES.md. Runtime generation lives in RailgunRuntimeGenerator.
 
 #include "GenerateRailgunCommandlet.h"
+#include "AmmoCassetteImport.h"
+#include "GlbShell.h"
 #include "RailgunAssetNames.h"
-#include "../../RailgunModelContract.h"
-#include "Components/BoxComponent.h"
-#include "Components/SceneComponent.h"
-#include "Components/StaticMeshComponent.h"
-#include "Dom/JsonObject.h"
-#include "Engine/Blueprint.h"
-#include "Engine/SCS_Node.h"
-#include "Engine/SimpleConstructionScript.h"
-#include "Engine/StaticMesh.h"
-#include "Kismet2/KismetEditorUtilities.h"
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "Misc/FileHelper.h"
-#include "Misc/PackageName.h"
-#include "Misc/Parse.h"
-#include "PhysicsEngine/BodySetup.h"
-#include "PhysicsEngine/BoxElem.h"
-#include "Serialization/JsonReader.h"
-#include "Serialization/JsonSerializer.h"
-#include "StaticMeshAttributes.h"
-#include "UObject/SavePackage.h"
-#include "UObject/PackageFileSummary.h"
-#include "UObject/UnrealType.h"
-#include "VoyageCustomModuleComponent.h"
-#include "VoyageDynamicCollisionComponent.h"
-#include "VoyageItem.h"
-#include "VoyageModuleActor.h"
-#include "VoyageModuleComponent.h"
-#include "VoyageModuleSocketViewComponent.h"
-#include "Editor.h"
-#include "EngineUtils.h"
-#include "InterchangeManager.h"
-#include "Materials/MaterialInstanceConstant.h"
+#include "RailgunModelGeneratorPrivate.h"
 
 #if WITH_EDITOR
-namespace
-{
-bool SaveGeneratedAsset(UPackage* Package, UObject* Asset)
-{
-    Package->MarkPackageDirty();
-    const FString Filename = FPackageName::LongPackageNameToFilename(
-        Package->GetName(),
-        FPackageName::GetAssetPackageExtension());
-    IFileManager::Get().MakeDirectory(*FPaths::GetPath(Filename), true);
-
-    FSavePackageArgs SaveArgs;
-    SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
-    SaveArgs.SaveFlags = SAVE_NoError;
-    return UPackage::SavePackage(Package, Asset, *Filename, SaveArgs);
-}
-
-bool CompileGeneratedBlueprint(UBlueprint* Blueprint)
-{
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
-    if (Blueprint->Status == BS_Error)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Compilation failed for %s"), *Blueprint->GetPathName());
-        return false;
-    }
-
-    return true;
-}
-
-UVoyageItem* CreateLeafItemReferenceStub()
-{
-    UPackage* Package = CreatePackage(RailgunAssetNames::LeafItemPackageName);
-    UVoyageItem* Item = NewObject<UVoyageItem>(
-        Package,
-        FName(RailgunAssetNames::LeafItemAssetName),
-        RF_Public | RF_Standalone);
-    if (!Item || !SaveGeneratedAsset(Package, Item))
-    {
-        UE_LOG(LogTemp, Error, TEXT("Failed to create the editor-only leaf-item reference stub"));
-        return nullptr;
-    }
-    return Item;
-}
-
-USCS_Node* AddRootNode(
-    USimpleConstructionScript* ConstructionScript,
-    UClass* ComponentClass,
-    const FName ComponentName)
-{
-    USCS_Node* Node = ConstructionScript->CreateNode(ComponentClass, ComponentName);
-    ConstructionScript->AddNode(Node);
-    return Node;
-}
-
-USCS_Node* AddChildNode(
-    USimpleConstructionScript* ConstructionScript,
-    USCS_Node* Parent,
-    UClass* ComponentClass,
-    const FName ComponentName)
-{
-    USCS_Node* Node = ConstructionScript->CreateNode(ComponentClass, ComponentName);
-    Parent->AddChildNode(Node);
-    return Node;
-}
-
-}
-
-#include "GlbShell.h"
-#include "AmmoCassetteImport.h"
-
 UGenerateRailgunCommandlet::UGenerateRailgunCommandlet()
 {
     // Interchange material parameter discovery needs client-side material data,

@@ -1,5 +1,8 @@
 #pragma once
+#include "CoreMinimal.h"
 
+namespace Railgun::Runtime
+{
 namespace RailgunInventoryShared
 {
 inline constexpr TCHAR ModuleObjectPath[] =
@@ -8,4 +11,5 @@ inline const FName InventoryComponent(TEXT("RailgunAmmoInventory"));
 inline const FName AcceptedAmmo(TEXT("AcceptedRailgunAmmo"));
 inline const FName SyncVisuals(TEXT("SyncRailgunAmmoVisuals"));
 inline const FName LastVisualCount(TEXT("RailgunAmmoLastVisualCount"));
+}
 }

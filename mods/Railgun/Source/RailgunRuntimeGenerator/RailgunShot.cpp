@@ -1,0 +1,333 @@
+#include "RailgunShot.h"
+
+#include "DedicatedStationGenerator.h"
+#include "GraphCallHelpers.h"
+#include "RailgunStationInitialization.h"
+#include "RailgunRecoil.h"
+#include "RailgunVfx.h"
+#include "RailgunWater.h"
+#include "RailgunWaterWake.h"
+#include "NativeVehicleGraphHelpers.h"
+#include "StationAttachmentGraph.h"
+#include "StationEnergy.h"
+#include "StationEntryGraph.h"
+#include "StationOpticsGraph.h"
+#include "RailgunRuntimeGeneratorPrivate.h"
+
+namespace Railgun::Runtime
+{
+void DestroyDeferredShot(FGraph& G, UEdGraphPin* Actor)
+{
+    G.Branch(G.Valid(Actor));
+    auto* Destroy = G.Call(AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, K2_DestroyActor));
+    G.Link(Actor, G.Pin(Destroy, P::FunctionTarget));
+    G.Exec(Destroy);
+}
+
+USoundWave* ImportShotSound(const FString& Filename)
+{
+    auto* Task = NewObject<UAssetImportTask>();
+    Task->Filename = Filename;
+    Task->DestinationPath = FPackageName::GetLongPackagePath(ShotAudio::Package);
+    Task->DestinationName = ShotAudio::Asset;
+    Task->bReplaceExisting = true;
+    Task->bReplaceExistingSettings = true;
+    Task->bAutomated = true;
+    Task->bSave = false;
+    Task->bAsync = false;
+    auto* Factory = NewObject<USoundFactory>();
+    Factory->bAutoCreateCue = false;
+    Factory->SuppressImportDialogs();
+    Task->Factory = Factory;
+    TArray<UAssetImportTask*> Tasks {Task};
+    FAssetToolsModule::GetModule().Get().ImportAssetTasks(Tasks);
+    const TArray<UObject*>& Imported = Task->GetObjects();
+    checkf(Imported.Num() == 1, TEXT("Expected one imported shot sound, got %d"), Imported.Num());
+    auto* Sound = CastChecked<USoundWave>(Imported[0]);
+    checkf(Sound->GetOutermost()->GetName() == ShotAudio::Package, TEXT("Shot sound package mismatch: %s"), *Sound->GetPathName());
+    check(SaveDedicatedAsset(Sound));
+    return Sound;
+}
+
+UEdGraphPin* ShotLength(FGraph& G, UEdGraphPin* Vector)
+{
+    auto* Length=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,VSize));
+    G.Link(Vector,G.Pin(Length,E::VectorLengthInput)); return G.Pin(Length,P::ReturnValue);
+}
+
+UEdGraphPin* ShotScale(FGraph& G, UEdGraphPin* Vector, const TCHAR* Scalar, UEdGraphPin* Value)
+{
+    auto* Scale=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Multiply_VectorFloat));
+    G.Link(Vector,G.Pin(Scale,P::Binary::LeftOperand));
+    if(Value) G.Link(Value,G.Pin(Scale,P::Binary::RightOperand)); else G.Default(Scale,P::Binary::RightOperand,Scalar);
+    return G.Pin(Scale,P::ReturnValue);
+}
+
+UK2Node_Event* ShotEvent(FGraph& G,FName Name)
+{
+    auto* Event=NewObject<UK2Node_Event>(G.Graph); Event->EventReference.SetExternalMember(Name,AActor::StaticClass());
+    Event->bOverrideFunction=true; G.Node(Event); G.Tail=G.Pin(Event,P::Then); return Event;
+}
+
+void StopShot(FGraph& G)
+{
+    G.Write(Shot::Done,nullptr,N::True);
+    auto* Stop=G.Call(UMovementComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(UMovementComponent,StopMovementImmediately));
+    G.Link(G.Read(Shot::Move),G.Pin(Stop,P::FunctionTarget)); G.Exec(Stop);
+    auto* Deactivate=G.Call(UActorComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(UActorComponent,Deactivate));
+    G.Link(G.Read(Shot::Move),G.Pin(Deactivate,P::FunctionTarget)); G.Exec(Deactivate);
+    auto* Collision=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,SetActorEnableCollision));
+    G.Default(Collision,SP::CollisionEnabled,N::False); G.Exec(Collision);
+}
+
+UClass* CreateRailgunShot()
+{
+    auto* BP=FKismetEditorUtilities::CreateBlueprint(AActor::StaticClass(),CreatePackage(Shot::Package),FName(FPackageName::GetLongPackageAssetName(Shot::Package)),BPTYPE_Normal,UBlueprint::StaticClass(),UBlueprintGeneratedClass::StaticClass());
+    const auto Nodes=BP->UbergraphPages[0]->Nodes; for(UEdGraphNode* Node:Nodes) Node->DestroyNode();
+    auto* Root=BP->SimpleConstructionScript->CreateNode(USphereComponent::StaticClass(),Shot::Body); BP->SimpleConstructionScript->AddNode(Root);
+    auto* Sphere=CastChecked<USphereComponent>(Root->ComponentTemplate); Sphere->SetSphereRadius(1);
+    Sphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); Sphere->SetCollisionObjectType(ECC_WorldDynamic);
+    Sphere->SetCollisionResponseToAllChannels(ECR_Block); Sphere->SetGenerateOverlapEvents(false);
+    auto* Move=BP->SimpleConstructionScript->CreateNode(UVoyageProjectileMovementComponent::StaticClass(),Shot::Move); BP->SimpleConstructionScript->AddNode(Move);
+    auto* Template=CastChecked<UProjectileMovementComponent>(Move->ComponentTemplate); Template->SetAutoActivate(false);
+    Template->ProjectileGravityScale=0; Template->MaxSpeed=300000; Template->bShouldBounce=false; Template->bSweepCollision=true;
+    for(FName Name:{Shot::Railgun,Shot::Operator,Shot::Station}) AddVariable(BP,Name,UEdGraphSchema_K2::PC_Object,AActor::StaticClass());
+    AddVariable(BP,ShotAttack::Controller,UEdGraphSchema_K2::PC_Object,AController::StaticClass());
+    AddVariable(BP,ShotAttack::DamageClass,UEdGraphSchema_K2::PC_Class,UVoyageDamageType::StaticClass());
+    AddVariable(BP,ShotAttack::DamageAmount,UEdGraphSchema_K2::PC_Real);
+    for(FName Name:{Shot::Start,Shot::Direction,RailgunWater::SegmentStart}) AddVariable(BP,Name,UEdGraphSchema_K2::PC_Struct,TBaseStructure<FVector>::Get());
+    AddVariable(BP,Shot::Done,UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP,RailgunWater::FirstCrossingDone,UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP,RailgunWaterWake::DistanceToNext,UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP,RailgunWaterWake::PreviewDistance,
+        UEdGraphSchema_K2::PC_Real);
+    AddVariable(BP,RailgunWaterWake::Controller,
+        UEdGraphSchema_K2::PC_Object,
+        RailgunWaterWake::ControllerClass);
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    AddRailgunWaterSegmentFunction(BP);
+    AddRailgunWaterWakeSegmentFunction(BP);
+    FKismetEditorUtilities::CompileBlueprint(BP); FGraph G(BP->UbergraphPages[0]);
+    ShotEvent(G,TimerGraphNames::ActorBeginPlay);
+    auto* TypePath=G.Call(UKismetSystemLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,MakeSoftClassPath)); G.Default(TypePath,E::PathString,ShotAttack::PhysicalType);
+    auto* TypeRef=G.Call(UKismetSystemLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,Conv_SoftClassPathToSoftClassRef)); G.Link(G.Pin(TypePath,P::ReturnValue),G.Pin(TypeRef,E::SoftClassPath));
+    auto* TypeLoad=G.Call(UKismetSystemLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,LoadClassAsset_Blocking)); G.Link(G.Pin(TypeRef,P::ReturnValue),G.Pin(TypeLoad,E::AssetClass)); G.Exec(TypeLoad);
+    auto* TypeCast=NewObject<UK2Node_ClassDynamicCast>(G.Graph); TypeCast->TargetType=UVoyageDamageType::StaticClass(); TypeCast->SetPurity(true); G.Node(TypeCast); G.Link(G.Pin(TypeLoad,P::ReturnValue),TypeCast->GetCastSourcePin());
+    G.Write(ShotAttack::DamageClass,TypeCast->GetCastResultPin());
+    auto* Life=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,SetLifeSpan)); G.Default(Life,Shot::LifePin,Shot::Life); G.Exec(Life);
+    G.Write(Shot::Start,ObserveCall(G,AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,K2_GetActorLocation),OpticalSelf(G)));
+    G.Write(RailgunWater::SegmentStart, G.Read(Shot::Start));
+    G.Write(RailgunWater::FirstCrossingDone,nullptr,N::False);
+    G.Write(RailgunWaterWake::DistanceToNext,nullptr,N::Zero);
+    G.Write(RailgunWaterWake::PreviewDistance,nullptr,N::Zero);
+    SpawnRailgunWaterWakeController(G);
+    G.Write(Shot::Direction,ObserveCall(G,AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,GetActorForwardVector),OpticalSelf(G)));
+    for(FName Name:{Shot::Railgun,Shot::Operator,Shot::Station}) {
+        auto* Ignore=G.Call(UPrimitiveComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent,IgnoreActorWhenMoving));
+        G.Link(G.Read(Shot::Body),G.Pin(Ignore,P::FunctionTarget)); G.Link(G.Read(Name),G.Pin(Ignore,Shot::IgnoreActor)); G.Default(Ignore,Shot::ShouldIgnore,N::True); G.Exec(Ignore);
+    }
+    // The ship is deliberately NOT ignored: a deck/superstructure obstruction is real.
+    ContextSet(G,G.Read(Shot::Move),UVoyageProjectileMovementComponent::StaticClass(),Shot::Penetration,nullptr,N::False);
+    ContextSet(G,G.Read(Shot::Move),UVoyageProjectileMovementComponent::StaticClass(),Shot::Ricochet,nullptr,N::False);
+    ContextSet(G,G.Read(Shot::Move),UProjectileMovementComponent::StaticClass(),Shot::Sweep,nullptr,N::True);
+    auto* Updated=G.Call(UMovementComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(UMovementComponent,SetUpdatedComponent));
+    G.Link(G.Read(Shot::Move),G.Pin(Updated,P::FunctionTarget)); G.Link(G.Read(Shot::Body),G.Pin(Updated,Shot::Updated)); G.Exec(Updated);
+    // Actor bounds this frame's displacement BEFORE movement ticks, including its first tick.
+    auto* Prereq=G.Call(UActorComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(UActorComponent,AddTickPrerequisiteActor));
+    G.Link(G.Read(Shot::Move),G.Pin(Prereq,P::FunctionTarget)); G.Link(OpticalSelf(G),G.Pin(Prereq,Shot::Prerequisite)); G.Exec(Prereq);
+    auto* Tick=ShotEvent(G,BlueprintGraphNames::Events::ActorReceiveTick);
+    auto* Done=G.Branch(G.Read(Shot::Done)); G.Tail=G.Pin(Done,P::Else);
+    UEdGraphPin* CurrentLocation=ObserveCall(G,AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,K2_GetActorLocation),OpticalSelf(G));
+    ProcessRailgunWaterSegment(G,BP->GeneratedClass,G.Read(RailgunWater::SegmentStart),CurrentLocation);
+    ProcessRailgunWaterWakeSegment(G,BP->GeneratedClass,
+        G.Read(RailgunWater::SegmentStart),CurrentLocation,false);
+    G.Write(RailgunWater::SegmentStart,CurrentLocation);
+    // Exit/destroy of the operator ends remaining flight.
+    auto* Controlled=G.Call(APawn::StaticClass(),GET_FUNCTION_NAME_CHECKED(APawn,IsPlayerControlled));
+    auto* StationCast=NewObject<UK2Node_DynamicCast>(G.Graph); StationCast->TargetType=APawn::StaticClass(); StationCast->SetPurity(true); G.Node(StationCast);
+    G.Link(G.Read(Shot::Station),StationCast->GetCastSourcePin());
+    auto* Valid=G.Branch(G.Valid(StationCast->GetCastResultPin())); auto* ValidTail=G.Tail;
+    G.Tail=G.Pin(Valid,P::Else); FinishRailgunWaterWake(G); auto* Destroy=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,K2_DestroyActor)); G.Exec(Destroy);
+    G.Tail=ValidTail; G.Link(StationCast->GetCastResultPin(),G.Pin(Controlled,P::FunctionTarget));
+    auto* Occupied=G.Branch(G.Pin(Controlled,P::ReturnValue)); auto* OccupiedTail=G.Tail;
+    G.Tail=G.Pin(Occupied,P::Else); FinishRailgunWaterWake(G); auto* ExitDestroy=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,K2_DestroyActor)); G.Exec(ExitDestroy); G.Tail=OccupiedTail;
+    auto* Delta=G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Subtract_VectorVector),CurrentLocation,G.Read(Shot::Start));
+    auto* Remaining=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Subtract_DoubleDouble));
+    G.Default(Remaining,P::Binary::LeftOperand,Shot::Range); G.Link(ShotLength(G,Delta),G.Pin(Remaining,P::Binary::RightOperand));
+    auto* InRange=G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Greater_DoubleDouble),G.Pin(Remaining,P::ReturnValue),CE::One)); auto* FlyingTail=G.Tail;
+    G.Tail=G.Pin(InRange,P::Else);
+    FinishRailgunWaterWake(G);
+    StopShot(G); G.Tail=FlyingTail;
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Greater_DoubleDouble),G.Pin(Tick,P::DeltaSeconds),N::Zero));
+    auto* Rate=G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Divide_DoubleDouble),G.Pin(Remaining,P::ReturnValue),G.Pin(Tick,P::DeltaSeconds));
+    auto* Limited=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,FMin));
+    G.Link(Rate,G.Pin(Limited,P::Binary::LeftOperand)); G.Default(Limited,P::Binary::RightOperand,Shot::Speed);
+    ContextSet(G,G.Read(Shot::Move),UMovementComponent::StaticClass(),Shot::Velocity,ShotScale(G,G.Read(Shot::Direction),nullptr,G.Pin(Limited,P::ReturnValue)));
+    auto* Activate=G.Call(UActorComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(UActorComponent,Activate)); G.Link(G.Read(Shot::Move),G.Pin(Activate,P::FunctionTarget)); G.Exec(Activate);
+    auto* Hit=ShotEvent(G,Shot::HitEvent); auto* WasDone=G.Branch(G.Read(Shot::Done)); G.Tail=G.Pin(WasDone,P::Else);
+    auto* BrokenHit=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,BreakHitResult));
+    G.Link(G.Pin(Hit,E::Hit),G.Pin(BrokenHit,E::Hit));
+    ProcessRailgunWaterSegment(G,BP->GeneratedClass,G.Read(RailgunWater::SegmentStart),G.Pin(BrokenHit,OP::ImpactPoint));
+    ProcessRailgunWaterWakeSegment(G,BP->GeneratedClass,
+        G.Read(RailgunWater::SegmentStart),
+        G.Pin(BrokenHit,OP::ImpactPoint),true);
+    FinishRailgunWaterWake(G);
+    StopShot(G);
+    // Done was set before this path: a second ReceiveHit cannot submit twice.
+    SpawnRailgunImpactVfx(G, G.Pin(Hit, E::Hit));
+    G.Branch(G.Valid(G.Pin(Hit,Shot::Other)));
+    G.Branch(G.Valid(G.Read(ShotAttack::Controller)));
+    auto* ValidType=G.Call(UKismetSystemLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,IsValidClass));
+    G.Link(G.Read(ShotAttack::DamageClass),G.Pin(ValidType,ShotAttack::ClassPin)); G.Branch(G.Pin(ValidType,P::ReturnValue));
+    auto* Subsystem=G.Call(USubsystemBlueprintLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(USubsystemBlueprintLibrary,GetWorldSubsystem));
+    G.Link(OpticalSelf(G),G.Pin(Subsystem,ShotAttack::Context)); G.Pin(Subsystem,ShotAttack::ClassPin)->DefaultObject=UVoyageCombatSubsystem::StaticClass();
+    auto* Combat=NewObject<UK2Node_DynamicCast>(G.Graph); Combat->TargetType=UVoyageCombatSubsystem::StaticClass(); Combat->SetPurity(false); G.Node(Combat);
+    G.Link(G.Tail,G.Pin(Combat,P::Execute)); G.Link(G.Pin(Subsystem,P::ReturnValue),Combat->GetCastSourcePin()); G.Tail=Combat->GetValidCastPin();
+    auto* Attack=NewObject<UK2Node_MakeStruct>(G.Graph); Attack->StructType=FVoyageAttack::StaticStruct(); Attack->bMadeAfterOverridePinRemoval=true; G.Node(Attack);
+    G.Link(G.Read(ShotAttack::DamageClass),G.Pin(Attack,ShotAttack::TypeClass)); G.Link(G.Read(ShotAttack::DamageAmount),G.Pin(Attack,ShotAttack::Damage));
+    G.Default(Attack,ShotAttack::Variance,N::Zero); G.Default(Attack,ShotAttack::Impulse,N::Zero); G.Default(Attack,ShotAttack::Id,N::Zero); G.Default(Attack,ShotAttack::Type,ShotAttack::Directional);
+    G.Link(G.Pin(Hit,E::Hit),G.Pin(Attack,ShotAttack::Hit)); G.Link(G.Pin(Hit,Shot::Other),G.Pin(Attack,ShotAttack::Target));
+    G.Link(G.Read(ShotAttack::Controller),G.Pin(Attack,ShotAttack::Instigator)); G.Link(OpticalSelf(G),G.Pin(Attack,ShotAttack::Causer));
+    auto* Register=G.Call(UVoyageCombatSubsystem::StaticClass(),GET_FUNCTION_NAME_CHECKED(UVoyageCombatSubsystem,RegisterAttack));
+    G.Link(Combat->GetCastResultPin(),G.Pin(Register,P::FunctionTarget)); G.Default(Register,ShotAttack::Duration,N::False);
+    for(auto* Pin:Attack->Pins) if(Pin->Direction==EGPD_Output) G.Link(Pin,G.Pin(Register,ShotAttack::Attack)); G.Exec(Register);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP); FKismetEditorUtilities::CompileBlueprint(BP); check(BP->Status!=BS_Error);
+    auto* CDO=BP->GeneratedClass->GetDefaultObject<AActor>(); CDO->PrimaryActorTick.bCanEverTick=true; CDO->PrimaryActorTick.bStartWithTickEnabled=true; CDO->PrimaryActorTick.TickGroup=TG_PrePhysics;
+    check(SaveDedicatedAsset(BP)); return BP->GeneratedClass;
+}
+
+void AddRailgunFire(FGraph& G)
+{
+    auto* Event=NewObject<UK2Node_EnhancedInputAction>(G.Graph); Event->InputAction=LoadObject<UInputAction>(nullptr,RailgunInputNames::Fire); check(Event->InputAction); G.Node(Event); G.Tail=G.Pin(Event,DS::Started);
+    G.Branch(ObserveCall(G,APawn::StaticClass(),GET_FUNCTION_NAME_CHECKED(APawn,IsPlayerControlled),OpticalSelf(G)));
+    G.Branch(G.Valid(G.Read(Charge::Module)));
+    // A premature press is ignored, never queued for a later automatic shot.
+    G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
+        EnergyAmount(G), RequiredEnergyAmount(G)));
+    G.Write(Shot::SpawnedThisPress,nullptr,N::False); // no cooldown; each Started is independent
+    G.Branch(G.Valid(G.Read(S::Anchor)));
+    auto* Railgun=ObserveCall(G,UActorComponent::StaticClass(),OP::ComponentOwner,G.Read(S::Anchor));
+    auto* ModuleBlueprint = LoadObject<UBlueprint>(nullptr,
+        RailgunInventoryShared::ModuleObjectPath);
+    check(ModuleBlueprint && ModuleBlueprint->GeneratedClass);
+    UClass* ModuleClass = ModuleBlueprint->GeneratedClass;
+    auto* ModuleActor = NewObject<UK2Node_DynamicCast>(G.Graph);
+    ModuleActor->TargetType = ModuleClass;
+    ModuleActor->SetPurity(false);
+    G.Node(ModuleActor);
+    G.Link(G.Tail, G.Pin(ModuleActor, P::Execute));
+    G.Link(Railgun, ModuleActor->GetCastSourcePin());
+    G.Tail = ModuleActor->GetValidCastPin();
+    UEdGraphPin* TypedRailgun = ModuleActor->GetCastResultPin();
+    auto* Find=G.Call(AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,GetComponentsByTag));
+    G.Link(TypedRailgun,G.Pin(Find,P::FunctionTarget)); G.Pin(Find,OP::ComponentClass)->DefaultObject=USceneComponent::StaticClass(); G.Default(Find,ActorScanGraphNames::ComponentTag,*RailgunModelContract::MuzzleTag.ToString());
+    auto* Loop=ContextLoop(G,G.Pin(Find,P::ReturnValue));
+    auto* Cast=NewObject<UK2Node_DynamicCast>(G.Graph); Cast->TargetType=USceneComponent::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
+    G.Link(G.Tail,G.Pin(Cast,P::Execute)); G.Link(G.Pin(Loop,CE::ArrayElement),Cast->GetCastSourcePin()); G.Tail=Cast->GetValidCastPin();
+    auto* Already=G.Branch(G.Read(Shot::SpawnedThisPress)); G.Tail=G.Pin(Already,P::Else); // one shot even if duplicate muzzle tags exist
+    auto* GetInventory = G.Call(UVoyageModuleComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, GetInternalInventory));
+    G.Link(G.Read(Charge::Module), G.Pin(GetInventory, P::FunctionTarget));
+    UEdGraphPin* Inventory = G.Pin(GetInventory, P::ReturnValue);
+    G.Branch(G.Valid(Inventory));
+    auto* GetLastSlot = G.Call(UVoyageBaseInventoryComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageBaseInventoryComponent,
+            GetLastOccupiedSlot));
+    G.Link(Inventory, G.Pin(GetLastSlot, P::FunctionTarget));
+    UEdGraphPin* LastSlot = G.Pin(GetLastSlot, P::ReturnValue);
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        Greater_IntInt), LastSlot, Shot::NoSlot));
+    G.Write(Shot::AmmoSlot, LastSlot);
+    auto* GetSlot = G.Call(UVoyageBaseInventoryComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageBaseInventoryComponent, GetSlot));
+    G.Link(Inventory, G.Pin(GetSlot, P::FunctionTarget));
+    G.Link(G.Read(Shot::AmmoSlot), G.Pin(GetSlot, Shot::Slot));
+    G.Branch(G.Pin(GetSlot, P::ReturnValue));
+    auto* Record = NewObject<UK2Node_BreakStruct>(G.Graph);
+    Record->StructType = FVoyageItemSerialize::StaticStruct();
+    G.Node(Record);
+    UEdGraphPin* RecordInput = nullptr;
+    for (UEdGraphPin* Pin : Record->Pins)
+        if (Pin->Direction == EGPD_Input) { check(!RecordInput); RecordInput = Pin; }
+    check(RecordInput);
+    G.Link(G.Pin(GetSlot, Shot::OutItemData), RecordInput);
+    UEdGraphPin* AcceptedAmmo = ReadNativeInputField(G, TypedRailgun, ModuleClass,
+        RailgunInventoryShared::AcceptedAmmo);
+    G.Branch(G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            EqualEqual_ObjectObject),
+        G.Pin(Record, Shot::Item), AcceptedAmmo));
+    auto* Data = NewObject<UK2Node_BreakStruct>(G.Graph);
+    Data->StructType = FVoyageItemData::StaticStruct();
+    G.Node(Data);
+    UEdGraphPin* DataInput = nullptr;
+    for (UEdGraphPin* Pin : Data->Pins)
+        if (Pin->Direction == EGPD_Input) { check(!DataInput); DataInput = Pin; }
+    check(DataInput);
+    G.Link(G.Pin(Record, Shot::Data), DataInput);
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        GreaterEqual_IntInt), G.Pin(Data, Shot::ItemCount), Shot::One));
+    auto* Location=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentLocation),Cast->GetCastResultPin());
+    auto* Rotation=ObserveCall(G,USceneComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(USceneComponent,K2_GetComponentRotation),Cast->GetCastResultPin());
+    G.Write(Shot::SpawnLocation, Location);
+    G.Write(Shot::SpawnRotation, Rotation);
+    G.Write(RailgunRecoil::ModuleLocation,
+        ObserveCall(G, AActor::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(AActor, K2_GetActorLocation),
+            TypedRailgun));
+    auto* Transform=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,MakeTransform)); G.Link(G.Read(Shot::SpawnLocation),G.Pin(Transform,E::Location)); G.Link(G.Read(Shot::SpawnRotation),G.Pin(Transform,Shot::ActorRotation)); G.Default(Transform,E::Scale,N::UnitScale);
+    auto* Spawn=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,BeginDeferredActorSpawnFromClass)); G.Pin(Spawn,E::ActorClass)->DefaultObject=Shot::Class; G.Link(G.Pin(Transform,P::ReturnValue),G.Pin(Spawn,P::SpawnTransform)); G.Default(Spawn,E::CollisionHandling,N::AlwaysSpawn); G.Exec(Spawn);
+    auto* Typed=NewObject<UK2Node_DynamicCast>(G.Graph); Typed->TargetType=Shot::Class; Typed->SetPurity(false); G.Node(Typed); G.Link(G.Tail,G.Pin(Typed,P::Execute)); G.Link(G.Pin(Spawn,P::ReturnValue),Typed->GetCastSourcePin()); G.Tail=Typed->GetValidCastPin();
+    UEdGraphPin* DeferredReady = G.Tail;
+    G.Tail = Typed->GetInvalidCastPin();
+    DestroyDeferredShot(G, G.Pin(Spawn, P::ReturnValue));
+    G.Tail = DeferredReady;
+    // Claim before either native debit can dispatch a reentrant delegate.
+    G.Write(Shot::SpawnedThisPress, nullptr, N::True);
+    auto* EnergyDebited = G.Branch(DebitEnergy(G,
+        RequiredEnergyAmount(G)));
+    UEdGraphPin* EnergyDebitedTail = G.Tail;
+    G.Tail = G.Pin(EnergyDebited, P::Else);
+    DestroyDeferredShot(G, G.Pin(Spawn, P::ReturnValue));
+    G.Tail = EnergyDebitedTail;
+    auto* RemoveAmmo = G.Call(UVoyageBaseInventoryComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageBaseInventoryComponent, RemoveItem));
+    G.Link(Inventory, G.Pin(RemoveAmmo, P::FunctionTarget));
+    G.Link(AcceptedAmmo, G.Pin(RemoveAmmo, Shot::Item));
+    G.Default(RemoveAmmo, Shot::Count, Shot::One);
+    G.Link(G.Read(Shot::AmmoSlot), G.Pin(RemoveAmmo, Shot::PreferredSlot));
+    G.Default(RemoveAmmo, Shot::Notify, N::True);
+    G.Exec(RemoveAmmo);
+    ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Railgun,TypedRailgun);
+    ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Operator,G.Read(N::OriginalPawn));
+    ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Station,OpticalSelf(G));
+    ContextSet(G,Typed->GetCastResultPin(),Shot::Class,ShotAttack::Controller,ObserveCall(G,APawn::StaticClass(),ShotAttack::GetController,OpticalSelf(G)));
+    ContextSet(G,Typed->GetCastResultPin(),Shot::Class,ShotAttack::DamageAmount,G.Read(ShotAttack::ConfiguredDamage));
+    auto* Finish=G.Call(UGameplayStatics::StaticClass(),GET_FUNCTION_NAME_CHECKED(UGameplayStatics,FinishSpawningActor)); G.Link(G.Pin(Spawn,P::ReturnValue),G.Pin(Finish,P::Actor)); G.Link(G.Pin(Transform,P::ReturnValue),G.Pin(Finish,P::SpawnTransform)); G.Exec(Finish);
+    G.Branch(G.Valid(G.Pin(Finish, P::ReturnValue)));
+    auto* Direction = G.Call(UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Normal));
+    G.Link(ObserveCall(G, AActor::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(AActor, GetActorForwardVector),
+        G.Pin(Finish, P::ReturnValue)),
+        G.Pin(Direction, RailgunRecoil::VectorInputPin));
+    G.Write(RailgunRecoil::ShotDirection,
+        G.Pin(Direction, P::ReturnValue));
+    auto* PostShot = G.Node(NewObject<UK2Node_ExecutionSequence>(G.Graph));
+    G.Link(G.Tail, G.Pin(PostShot, P::Execute));
+    G.Tail = PostShot->GetThenPinGivenIndex(0);
+    check(ShotAudio::Wave);
+    auto* Play=G.Call(UGameplayStatics::StaticClass(),ShotAudio::PlayAtLocation);
+    G.Pin(Play,ShotAudio::SoundPin)->DefaultObject=ShotAudio::Wave;
+    auto* Volume=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Multiply_DoubleDouble));
+    G.Link(G.Read(ShotAudio::VolumePercent),G.Pin(Volume,P::Binary::LeftOperand)); G.Default(Volume,P::Binary::RightOperand,ShotAudio::PercentMultiplier);
+    G.Link(G.Pin(Volume,P::ReturnValue),G.Pin(Play,ShotAudio::VolumeMultiplierPin));
+    G.Link(G.Read(Shot::SpawnLocation),G.Pin(Play,E::Location)); G.Link(G.Read(Shot::SpawnRotation),G.Pin(Play,Shot::ActorRotation)); G.Exec(Play);
+    G.Tail = PostShot->GetThenPinGivenIndex(1);
+    ApplyRailgunAimRecoil(G);
+    PostShot->AddInputPin();
+    G.Tail = PostShot->GetThenPinGivenIndex(2);
+    ApplyRailgunShipRecoil(G, TypedRailgun);
+}
+}

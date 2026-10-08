@@ -1,5 +1,18 @@
 # Railgun architecture
 
+## Source organization
+
+- `RailgunRuntimeGenerator` keeps graph-building declarations and stable names
+  in self-contained headers, with ordinary implementations in matching `.cpp`
+  files. `FGraph` is the shared graph-construction interface; its template node
+  factory remains in the header while non-template operations are out of line.
+- `RailgunModelGenerator` separates the GLB shell and ammunition-cassette
+  import interfaces from their implementations and keeps common editor-only
+  helpers in its private support translation unit.
+- Generator translation units include their own header first and build with
+  unity disabled. Voyage mirror headers retain only trivial reflected native
+  stubs inline; the nontrivial vehicle mirror constructor is out of line.
+
 ## Runtime contracts
 
 - The weapon uses the game's module/fabricator path. Its actor, UI and runtime

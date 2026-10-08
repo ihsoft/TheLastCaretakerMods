@@ -1,5 +1,8 @@
 #pragma once
+#include "CoreMinimal.h"
 
+namespace Railgun::Runtime
+{
 // Names for station-local yaw and pitch state.
 namespace StationAimNames
 {
@@ -25,4 +28,5 @@ inline const FName NewLocation(TEXT("NewLocation"));
 inline const FName Direction(TEXT("Direction"));
 inline const FName RotationVector(TEXT("InVec"));
 inline constexpr TCHAR FirstPersonCameraName[] = TEXT("FirstPersonCamera");
+}
 }

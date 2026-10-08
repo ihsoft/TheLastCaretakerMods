@@ -5,6 +5,7 @@ public class RailgunRuntimeGenerator : ModuleRules
     public RailgunRuntimeGenerator(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        bUseUnity = false;
         string GeneratedSettingsDirectory = Path.GetFullPath(Path.Combine(
             ModuleDirectory, "../../Intermediate/GeneratedSettings"));
         if (!Directory.Exists(GeneratedSettingsDirectory))

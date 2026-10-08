@@ -33,11 +33,7 @@ public:
     // Exact native root only, to prevent the editor inventing DefaultSceneRoot.
     // Other native subobjects are supplied by the SHIPPING constructor; HC26
     // must not serialize null overrides of their properties.
-    AVoyageVehiclePawn()
-    {
-        static const FName NativeRootName(TEXT("VehicleMesh"));
-        SetRootComponent(CreateDefaultSubobject<UVoyageFastSceneComponent>(NativeRootName));
-    }
+    AVoyageVehiclePawn();
     // Field-reference only: current mapping[0], stock CDO component type.
     UPROPERTY(BlueprintReadWrite, Category="Vehicle")
     TObjectPtr<UVoyageInputControlsComponent> InputControls;

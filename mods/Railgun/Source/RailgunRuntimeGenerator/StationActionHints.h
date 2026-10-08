@@ -1,4 +1,8 @@
 #pragma once
+#include "RailgunRuntimeGeneratorFwd.h"
+
+namespace Railgun::Runtime
+{
 // HC28: provider -> unchanged stock hint widget in OWN HUD. No input/physics edit.
 namespace Hint
 {
@@ -26,107 +30,9 @@ inline constexpr TCHAR FireLabel[] = TEXT("Fire");
 inline constexpr TCHAR Central[] = TEXT("EPlayerInputInterfaceActionType::Central");
 }
 
-void AddStationActions(UBlueprint* BP)
-{
-    const FName Name = GET_FUNCTION_NAME_CHECKED(AVoyageVehiclePawn, GetProvidedActionsBP);
-    check(AVoyageVehiclePawn::StaticClass()->FindFunctionByName(Name)->GetOuterUClass() == AVoyageVehiclePawn::StaticClass());
-    auto* Graph = FBlueprintEditorUtils::CreateNewGraph(BP, Name, UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
-    FBlueprintEditorUtils::AddFunctionGraph(BP, Graph, false, AVoyageVehiclePawn::StaticClass());
-    UK2Node_FunctionEntry* Entry = nullptr; UK2Node_FunctionResult* Result = nullptr;
-    for (UEdGraphNode* Node : Graph->Nodes)
-    {
-        if (auto* Found = Cast<UK2Node_FunctionEntry>(Node)) Entry = Found;
-        if (auto* Found = Cast<UK2Node_FunctionResult>(Node)) Result = Found;
-    }
-    check(Entry && Result); FGraph G(Graph);
-    G.Pin(Entry, P::Then)->BreakAllPinLinks(); G.Pin(Result, P::Execute)->BreakAllPinLinks();
-    G.Tail = G.Pin(Entry, P::Then);
-    G.Link(G.Tail, G.Pin(Result, P::Execute));
-    auto* Action = NewObject<UK2Node_MakeStruct>(Graph); Action->StructType = FPlayerInputInterfaceAction::StaticStruct();
-    Action->bMadeAfterOverridePinRemoval = true; G.Node(Action);
-    auto* ExitAction = LoadObject<UInputAction>(nullptr, RailgunInputNames::Exit); check(ExitAction);
-    G.Pin(Action, Hint::InputAction)->DefaultObject = ExitAction;
-    G.Default(Action, Hint::Name, Hint::ActionName); G.Default(Action, Hint::Category, Hint::ActionCategory);
-    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultText(*G.Pin(Action, Hint::Text), FText::FromString(Hint::ExitLabel));
-    G.Link(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), OpticalSelf(G)), G.Pin(Action, Hint::Enabled));
-    G.Default(Action, Hint::Type, Hint::Central);
-    auto* Array = G.Node(NewObject<UK2Node_MakeArray>(Graph));
-    UEdGraphPin* ActionOutput = nullptr; UEdGraphPin* FirstElement = nullptr;
-    for (auto* Pin : Action->Pins) if (Pin->Direction == EGPD_Output) ActionOutput = Pin;
-    for (auto* Pin : Array->Pins) if (Pin->Direction == EGPD_Input) { FirstElement = Pin; break; }
-    check(ActionOutput && FirstElement); G.Link(ActionOutput, FirstElement);
-    auto* ZoomAction = NewObject<UK2Node_MakeStruct>(Graph); ZoomAction->StructType = FPlayerInputInterfaceAction::StaticStruct();
-    ZoomAction->bMadeAfterOverridePinRemoval = true; G.Node(ZoomAction);
-    auto* ZoomInput = LoadObject<UInputAction>(nullptr, RailgunInputNames::Zoom); check(ZoomInput);
-    G.Pin(ZoomAction, Hint::InputAction)->DefaultObject = ZoomInput;
-    G.Default(ZoomAction, Hint::Name, Hint::ZoomName); G.Default(ZoomAction, Hint::Category, Hint::ActionCategory);
-    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultText(*G.Pin(ZoomAction, Hint::Text), FText::FromString(Hint::ZoomLabel));
-    G.Link(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), OpticalSelf(G)), G.Pin(ZoomAction, Hint::Enabled));
-    G.Default(ZoomAction, Hint::Type, Hint::Central);
-    Array->AddInputPin();
-    UEdGraphPin* LastElement = nullptr;
-    for (auto* Pin : Array->Pins) if (Pin->Direction == EGPD_Input) LastElement = Pin;
-    for (auto* Pin : ZoomAction->Pins) if (Pin->Direction == EGPD_Output) G.Link(Pin, LastElement);
-    auto* FireAction = NewObject<UK2Node_MakeStruct>(Graph); FireAction->StructType = FPlayerInputInterfaceAction::StaticStruct();
-    FireAction->bMadeAfterOverridePinRemoval = true; G.Node(FireAction);
-    auto* FireInput = LoadObject<UInputAction>(nullptr, RailgunInputNames::Fire); check(FireInput);
-    G.Pin(FireAction, Hint::InputAction)->DefaultObject = FireInput;
-    G.Default(FireAction, Hint::Name, Hint::FireName); G.Default(FireAction, Hint::Category, Hint::ActionCategory);
-    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultText(*G.Pin(FireAction, Hint::Text), FText::FromString(Hint::FireLabel));
-    G.Link(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), OpticalSelf(G)), G.Pin(FireAction, Hint::Enabled));
-    G.Default(FireAction, Hint::Type, Hint::Central);
-    Array->AddInputPin();
-    for (auto* Pin : Array->Pins) if (Pin->Direction == EGPD_Input) LastElement = Pin;
-    for (auto* Pin : FireAction->Pins) if (Pin->Direction == EGPD_Output) G.Link(Pin, LastElement);
-    G.Link(Array->GetOutputPin(), G.Pin(Result, P::ReturnValue));
-}
+void AddStationActions(UBlueprint* BP);
 
 // UMG Construct occurs when attached: configure context before AddChild.
 void AddStationHintConstruction(UWidgetBlueprint* Hud,
-    UEdGraphPin* ConstructTail = nullptr)
-{
-    UEdGraph* Graph = Hud->UbergraphPages[0]; FGraph G(Graph);
-    if (ConstructTail)
-    {
-        G.Tail = ConstructTail;
-    }
-    else
-    {
-        auto* Construct = NewObject<UK2Node_Event>(Graph);
-        Construct->EventReference.SetExternalMember(
-            GET_FUNCTION_NAME_CHECKED(UUserWidget, Construct),
-            UUserWidget::StaticClass());
-        Construct->bOverrideFunction = true;
-        G.Node(Construct);
-        G.Tail = G.Pin(Construct, P::Then);
-    }
-    // Reconstruct after Slate removal must not duplicate the same nested widget.
-    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool), G.Read(Hint::HintsReady), N::False));
-    auto* Path = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, MakeSoftClassPath));
-    G.Default(Path, E::PathString, Hint::StockWidget);
-    auto* Ref = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, Conv_SoftClassPathToSoftClassRef));
-    G.Link(G.Pin(Path, P::ReturnValue), G.Pin(Ref, E::SoftClassPath));
-    auto* Load = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, LoadClassAsset_Blocking));
-    G.Link(G.Pin(Ref, P::ReturnValue), G.Pin(Load, E::AssetClass)); G.Exec(Load);
-    auto* ClassCast = NewObject<UK2Node_ClassDynamicCast>(Graph); ClassCast->TargetType = UVoyageDynamicPlayerInputWidget::StaticClass(); ClassCast->SetPurity(false); G.Node(ClassCast);
-    G.Link(G.Tail, G.Pin(ClassCast, P::Execute)); G.Link(G.Pin(Load, P::ReturnValue), ClassCast->GetCastSourcePin()); G.Tail = ClassCast->GetValidCastPin();
-    [[maybe_unused]] constexpr auto OwningPlayerSignature = static_cast<APlayerController* (UUserWidget::*)() const>(&UUserWidget::GetOwningPlayer);
-    auto* Player = G.Call(UUserWidget::StaticClass(), OP::OwningPlayerGetter);
-    auto* Create = G.Call(UWidgetBlueprintLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidgetBlueprintLibrary, Create));
-    G.Link(ClassCast->GetCastResultPin(), G.Pin(Create, Hint::WidgetType)); G.Link(G.Pin(Player, P::ReturnValue), G.Pin(Create, Hint::OwningPlayer)); G.Exec(Create);
-    auto* Cast = NewObject<UK2Node_DynamicCast>(Graph); Cast->TargetType = UVoyageDynamicPlayerInputWidget::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
-    G.Link(G.Tail, G.Pin(Cast, P::Execute)); G.Link(G.Pin(Create, P::ReturnValue), Cast->GetCastSourcePin()); G.Tail = Cast->GetValidCastPin();
-    G.Write(Hint::HintInstance, Cast->GetCastResultPin());
-    auto* Context = LoadObject<UVoyageInputContextAsset>(nullptr, RailgunInputNames::Context); check(Context);
-    auto* SetContext = NewObject<UK2Node_VariableSet>(Graph);
-    const FName ContextField = GET_MEMBER_NAME_CHECKED(UVoyageDynamicPlayerInputWidget, ContextAsset);
-    SetContext->VariableReference.SetExternalMember(ContextField, UVoyageDynamicPlayerInputWidget::StaticClass()); G.Node(SetContext);
-    G.Link(Cast->GetCastResultPin(), G.Pin(SetContext, P::FunctionTarget)); G.Pin(SetContext, ContextField)->DefaultObject = Context; G.Exec(SetContext);
-    auto* Filter = NewObject<UK2Node_VariableSet>(Graph);
-    const FName FilterField = GET_MEMBER_NAME_CHECKED(UVoyageDynamicPlayerInputWidget, bFilterByActionType);
-    Filter->VariableReference.SetExternalMember(FilterField, UVoyageDynamicPlayerInputWidget::StaticClass()); G.Node(Filter);
-    G.Link(Cast->GetCastResultPin(), G.Pin(Filter, P::FunctionTarget)); G.Default(Filter, FilterField, N::True); G.Exec(Filter);
-    auto* Add = G.Call(UVerticalBox::StaticClass(), GET_FUNCTION_NAME_CHECKED(UVerticalBox, AddChildToVerticalBox));
-    G.Link(G.Read(Hint::Root), G.Pin(Add, P::FunctionTarget)); G.Link(Cast->GetCastResultPin(), G.Pin(Add, Hint::Content)); G.Exec(Add);
-    G.Branch(G.Valid(G.Pin(Add, P::ReturnValue))); G.Write(Hint::HintsReady, nullptr, N::True);
+    UEdGraphPin* ConstructTail = nullptr);
 }

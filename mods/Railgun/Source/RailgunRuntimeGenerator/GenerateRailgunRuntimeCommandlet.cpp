@@ -1,364 +1,127 @@
 #include "GenerateRailgunRuntimeCommandlet.h"
-#include "RailgunRuntimeNames.h"
-#include "RailgunInputNames.h"
-#include "DedicatedStationNames.h"
-#include "Kismet/BlueprintPathsLibrary.h"
-#include "VoyageEditorBlueprintFunctionLibrary.h"
-#include "TextSettingsGraphNames.h"
-#include "ContextEntryNames.h"
-#include "ActorScanGraphNames.h"
-#include "Components/BoxComponent.h"
-#include "Components/SphereComponent.h"
-#include "Components/StaticMeshComponent.h"
-#include "Engine/StaticMesh.h"
-#include "VoyageProjectileMovementComponent.h"
-#include "VoyageMiscBlueprintFunctionLibrary.h"
-#include "VoyageItemInterface.h"
-#include "VoyageWeatherSubsystem.h"
-#include "VoyageCombatSubsystem.h"
-#include "Subsystems/SubsystemBlueprintLibrary.h"
-#include "TimerGraphNames.h"
-#include "Components/Image.h"
-#include "Components/RadialSlider.h"
-#include "Components/ScaleBox.h"
-#include "Engine/Texture2D.h"
-#include "Engine/TimerHandle.h"
-#include "Materials/MaterialInstanceDynamic.h"
-#include "Materials/MaterialInterface.h"
-#include "Sound/SoundWave.h"
-#include "AssetImportTask.h"
-#include "AssetToolsModule.h"
-#include "PluginBlueprintLibrary.h"
-#include "Factories/SoundFactory.h"
-#include "Factories/TextureFactory.h"
-#include "K2Node_CreateDelegate.h"
-#include "K2Node_AddDelegate.h"
-#include "K2Node_RemoveDelegate.h"
-#include "K2Node_BreakStruct.h"
-#include "K2Node_MacroInstance.h"
-#include "VoyageDynamicPlayerInputWidget.h"
-#include "VoyageModuleComponent.h"
-#include "VoyageModuleActor.h"
-#include "VoyageBaseDataAsset.h"
-#include "VoyageItem.h"
-#include "VoyageSkill.h"
-#include "VoyageFabricatorComponent.h"
-#include "VoyageBaseInventoryComponent.h"
-#include "PersistentInterface.h"
-#include "VoyageInventoryWeightLimitedComponent.h"
-#include "VoyageInventoryItemValidatorInterface.h"
-#include "VoyageDynamicMeshActor.h"
-#include "InteractiveDetectorPointerComponent.h"
-#include "VoyageActorWidgetInterface.h"
-#include "VoyageVehiclePawn.h"
-#include "InteractiveObjectComponent.h"
-#include "VoyageVehicleForkliftPawn.h"
-#include "BlueprintGraphNames.h"
-#include "ActorLifecycleGraphNames.h"
-#include "CharacterObservationGraphNames.h"
-#include "CharacterStationGraphNames.h"
-#include "OpticalCameraGraphNames.h"
-#include "Modules/ModuleManager.h"
-#include "Camera/PlayerCameraManager.h"
-#include "Camera/CameraComponent.h"
-#include "Camera/CameraActor.h"
-#include "K2Node_ExecutionSequence.h"
-#include "K2Node_EnhancedInputAction.h"
-#include "Misc/Parse.h"
-#include "UObject/PackageFileSummary.h"
-#include "Blueprint/UserWidget.h"
-#include "Blueprint/WidgetBlueprintLibrary.h"
-#include "Blueprint/WidgetTree.h"
-#include "Blueprint/WidgetBlueprintGeneratedClass.h"
-#include "WidgetBlueprint.h"
-#include "Animation/WidgetAnimation.h"
-#include "Animation/WidgetAnimationBinding.h"
-#include "MovieScene.h"
-#include "Tracks/MovieSceneFloatTrack.h"
-#include "Sections/MovieSceneFloatSection.h"
-#include "Components/CanvasPanel.h"
-#include "Components/CanvasPanelSlot.h"
-#include "Components/Border.h"
-#include "Components/VerticalBox.h"
-#include "Components/VerticalBoxSlot.h"
-#include "Components/HorizontalBox.h"
-#include "Components/HorizontalBoxSlot.h"
-#include "Components/TextBlock.h"
-#include "Components/PrimitiveComponent.h"
-#include "NiagaraComponent.h"
-#include "NiagaraFunctionLibrary.h"
-#include "NiagaraSystem.h"
-#include "SlateFontInfoBlueprintLibrary.h"
-#include "Engine/Blueprint.h"
-#include "Engine/BlueprintGeneratedClass.h"
-#include "Engine/SCS_Node.h"
-#include "Engine/SimpleConstructionScript.h"
-#include "EdGraphSchema_K2.h"
-#include "GameFramework/Actor.h"
-#include "GameFramework/Character.h"
-#include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/PlayerController.h"
-#include "K2Node_CallFunction.h"
-#include "K2Node_CallArrayFunction.h"
-#include "K2Node_ClassDynamicCast.h"
-#include "K2Node_CustomEvent.h"
-#include "K2Node_DynamicCast.h"
-#include "K2Node_Event.h"
-#include "K2Node_FunctionEntry.h"
-#include "K2Node_FunctionResult.h"
-#include "K2Node_Self.h"
-#include "K2Node_IfThenElse.h"
-#include "K2Node_MakeArray.h"
-#include "K2Node_MakeStruct.h"
-#include "K2Node_VariableGet.h"
-#include "K2Node_VariableSet.h"
-#include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetArrayLibrary.h"
-#include "Kismet/BlueprintMapLibrary.h"
-#include "Kismet/BlueprintSetLibrary.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "Kismet/KismetStringLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
-#include "Kismet/KismetTextLibrary.h"
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/KismetEditorUtilities.h"
-#include "Misc/PackageName.h"
-#include "HAL/FileManager.h"
-#include "UObject/SavePackage.h"
-#include "UObject/UnrealType.h"
-
-IMPLEMENT_MODULE(FDefaultModuleImpl, RailgunRuntimeGenerator)
-namespace P = BlueprintGraphNames::Pins;
-namespace E = ActorLifecycleGraphNames;
-namespace N = RailgunRuntimeNames;
-
-namespace
-{
-class FGraph
-{
-public:
-    UEdGraph* Graph;
-    UEdGraphPin* Tail = nullptr;
-    int32 X = 0;
-    explicit FGraph(UEdGraph* InGraph) : Graph(InGraph) {}
-    template<class T> T* Node(T* In)
-    {
-        In->CreateNewGuid(); In->PostPlacedNewNode(); In->AllocateDefaultPins();
-        In->NodePosX = X; X += 180; Graph->AddNode(In, true, false); return In;
-    }
-    UEdGraphPin* Pin(UEdGraphNode* In, FName Name)
-    {
-        auto* Out = In->FindPin(Name);
-        checkf(Out, TEXT("Missing pin %s on %s"), *Name.ToString(), *In->GetName());
-        return Out;
-    }
-    void Link(UEdGraphPin* From, UEdGraphPin* To)
-    {
-        checkf(GetDefault<UEdGraphSchema_K2>()->TryCreateConnection(From, To),
-            TEXT("Cannot link %s -> %s"), *From->PinName.ToString(), *To->PinName.ToString());
-    }
-    void Default(UEdGraphNode* In, FName Name, const TCHAR* Value)
-    {
-        GetDefault<UEdGraphSchema_K2>()->TrySetDefaultValue(*Pin(In, Name), Value);
-    }
-    UK2Node_CallFunction* Call(UClass* Owner, FName Function)
-    {
-        auto* Fn = Owner->FindFunctionByName(Function);
-        checkf(Fn, TEXT("Missing reflected function %s.%s"), *Owner->GetPathName(), *Function.ToString());
-        checkf(Fn->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintPure),
-            TEXT("Function is not Blueprint-callable: %s"), *Function.ToString());
-        auto* Out = NewObject<UK2Node_CallFunction>(Graph); Out->SetFromFunction(Fn);
-        return Node(Out);
-    }
-    UK2Node_CallArrayFunction* ArrayCall(FName Function)
-    {
-        auto* Fn = UKismetArrayLibrary::StaticClass()->FindFunctionByName(Function);
-        checkf(Fn, TEXT("Missing reflected array function %s"), *Function.ToString());
-        auto* Out = NewObject<UK2Node_CallArrayFunction>(Graph); Out->SetFromFunction(Fn);
-        return Node(Out);
-    }
-    void Exec(UEdGraphNode* In)
-    {
-        Link(Tail, Pin(In, P::Execute)); Tail = Pin(In, P::Then);
-    }
-    UEdGraphPin* Read(FName Name)
-    {
-        auto* Get = NewObject<UK2Node_VariableGet>(Graph);
-        Get->VariableReference.SetSelfMember(Name); Node(Get); return Pin(Get, Name);
-    }
-    void Write(FName Name, UEdGraphPin* Value, const TCHAR* Literal = nullptr)
-    {
-        auto* Set = NewObject<UK2Node_VariableSet>(Graph);
-        Set->VariableReference.SetSelfMember(Name); Node(Set);
-        if (Value) Link(Value, Pin(Set, Name)); else Default(Set, Name, Literal);
-        Exec(Set);
-    }
-    UK2Node_IfThenElse* Branch(UEdGraphPin* Condition)
-    {
-        auto* Out = Node(NewObject<UK2Node_IfThenElse>(Graph));
-        Link(Tail, Pin(Out, P::Execute)); Link(Condition, Pin(Out, P::Condition));
-        Tail = Pin(Out, P::Then); return Out;
-    }
-    void Require(UEdGraphPin* Condition)
-    {
-        Branch(Condition);
-    }
-    UEdGraphPin* ActorArray(UEdGraphPin* FirstActor, UEdGraphPin* SecondActor)
-    {
-        auto* Array = Node(NewObject<UK2Node_MakeArray>(Graph)); Array->AddInputPin();
-        Link(FirstActor, Pin(Array, Array->GetPinName(0)));
-        Link(SecondActor, Pin(Array, Array->GetPinName(1)));
-        return Array->GetOutputPin();
-    }
-    UEdGraphPin* Valid(UEdGraphPin* Object)
-    {
-        auto* Fn = Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, IsValid));
-        Link(Object, Pin(Fn, P::Object)); return Pin(Fn, P::ReturnValue);
-    }
-    UEdGraphPin* Compare(FName Function, UEdGraphPin* Value, const TCHAR* Other)
-    {
-        auto* Fn = Call(UKismetMathLibrary::StaticClass(), Function);
-        Link(Value, Pin(Fn, P::Binary::LeftOperand)); Default(Fn, P::Binary::RightOperand, Other);
-        return Pin(Fn, P::ReturnValue);
-    }
-    UEdGraphPin* Binary(FName Function, UEdGraphPin* Left, UEdGraphPin* Right)
-    {
-        auto* Fn = Call(UKismetMathLibrary::StaticClass(), Function);
-        Link(Left, Pin(Fn, P::Binary::LeftOperand)); Link(Right, Pin(Fn, P::Binary::RightOperand));
-        return Pin(Fn, P::ReturnValue);
-    }
-    UEdGraphPin* Transform(UEdGraphPin* Location, UEdGraphPin* Rotation)
-    {
-        auto* Make = Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeTransform));
-        Link(Location, Pin(Make, E::Location)); Link(Rotation, Pin(Make, E::Rotation));
-        Default(Make, E::Scale, N::UnitScale); return Pin(Make, P::ReturnValue);
-    }
-    UEdGraphPin* Offset(UEdGraphPin* TransformValue, const TCHAR* Value)
-    {
-        auto* Fn = Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, TransformLocation));
-        Link(TransformValue, Pin(Fn, E::Transform)); Default(Fn, E::LocalPosition, Value);
-        return Pin(Fn, P::ReturnValue);
-    }
-};
-
-void AddVariable(UBlueprint* BP, FName Name, FName Category, UObject* Type = nullptr)
-{
-    FEdGraphPinType PinType; PinType.PinCategory = Category; PinType.PinSubCategoryObject = Type;
-    if (Category == UEdGraphSchema_K2::PC_Real) PinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
-    check(FBlueprintEditorUtils::AddMemberVariable(BP, Name, PinType));
-}
-
-void MarkVariableTransient(UBlueprint* BP, FName Name)
-{
-    check(BP);
-    FBPVariableDescription* Variable = BP->NewVariables.FindByPredicate(
-        [Name](const FBPVariableDescription& Candidate)
-        {
-            return Candidate.VarName == Name;
-        });
-    check(Variable);
-    Variable->PropertyFlags |= CPF_Transient;
-}
-
-void AddArrayVariable(UBlueprint* BP, FName Name, FName Category,
-    UObject* Type = nullptr)
-{
-    FEdGraphPinType PinType;
-    PinType.PinCategory = Category;
-    PinType.PinSubCategoryObject = Type;
-    PinType.ContainerType = EPinContainerType::Array;
-    if (Category == UEdGraphSchema_K2::PC_Real)
-        PinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
-    check(FBlueprintEditorUtils::AddMemberVariable(BP, Name, PinType));
-}
-
-}
-
-namespace
-{
-#include "GraphCallHelpers.h"
-#include "StationAttachmentGraph.h"
-#include "StationHudInterfaceGraph.h"
-#include "NativeVehicleGraphHelpers.h"
-#include "StationActionHints.h"
-#include "StationEntryGraph.h"
-#include "RailgunVfx.h"
-#include "RailgunWater.h"
-#include "RailgunWaterWake.h"
-#include "RailgunRecoil.h"
-#include "RailgunShot.h"
 #include "DedicatedStationGenerator.h"
 #include "RailgunAmmo.h"
 #include "RailgunInventory.h"
+#include "RailgunShot.h"
 #include "RailgunStationInitialization.h"
-}
+#include "RailgunVfx.h"
+#include "RailgunWaterWake.h"
+#include "StationEnergyHud.h"
+#include "RailgunRuntimeGeneratorPrivate.h"
+
+#include "Modules/ModuleManager.h"
+
+IMPLEMENT_MODULE(FDefaultModuleImpl, RailgunRuntimeGenerator)
+
+using namespace Railgun::Runtime;
 
 UGenerateRailgunRuntimeCommandlet::UGenerateRailgunRuntimeCommandlet()
 {
-    IsClient = false; IsServer = false; IsEditor = true; LogToConsole = true;
+    IsClient = false;
+    IsServer = false;
+    IsEditor = true;
+    LogToConsole = true;
 }
 
 int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
 {
     if (FParse::Param(*Params, DedicatedStationNames::VerifySwitch))
     {
-        TArray<const TCHAR*> VerifyPackages {DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
-            RailgunInputNames::LookYaw, RailgunInputNames::LookPitch, RailgunInputNames::Exit, RailgunInputNames::Zoom, RailgunInputNames::Fire,
+        TArray<const TCHAR*> VerifyPackages {
+            DedicatedStationNames::OperatorPackage,
+            DedicatedStationNames::HudPackage,
+            RailgunInputNames::LookYaw,
+            RailgunInputNames::LookPitch,
+            RailgunInputNames::Exit,
+            RailgunInputNames::Zoom,
+            RailgunInputNames::Fire,
             Shot::Package,
             RailgunWaterWake::ControllerPackage,
             RailgunImpactVfx::Package,
-            ShotAudio::Package, ZoomTest::MaskPackage, EnergyHud::ChargingPackage, EnergyHud::OfflinePackage, EnergyHud::ReadyPackage,
+            ShotAudio::Package,
+            ZoomTest::MaskPackage,
+            EnergyHud::ChargingPackage,
+            EnergyHud::OfflinePackage,
+            EnergyHud::ReadyPackage,
             EnergyHud::AmmoIndicatorPackage,
-            RailgunInputNames::Keyboard, RailgunInputNames::Context,
-            RailgunAmmo::AmmoIconPackage, RailgunAmmo::GunIconPackage,
-            RailgunAmmo::SkillIconPackage, RailgunAmmo::FullClonePackage,
+            RailgunInputNames::Keyboard,
+            RailgunInputNames::Context,
+            RailgunAmmo::AmmoIconPackage,
+            RailgunAmmo::GunIconPackage,
+            RailgunAmmo::SkillIconPackage,
+            RailgunAmmo::FullClonePackage,
             RailgunAmmo::SkillPackage};
         for (const TCHAR* Package : VerifyPackages)
         {
-            FString Relative(Package); check(Relative.RemoveFromStart(DedicatedStationNames::GamePrefix));
-            FString File = FPaths::Combine(FPaths::ProjectDir(), DedicatedStationNames::CookPrefix, Relative) + FPackageName::GetAssetPackageExtension();
-            TUniquePtr<FArchive> Reader(IFileManager::Get().CreateFileReader(*File)); check(Reader);
-            FPackageFileSummary Summary; *Reader << Summary;
-            checkf(!Reader->IsError() && !(Summary.GetPackageFlags() & PKG_UnversionedProperties), TEXT("Tagged property gate failed: %s"), *File);
-            UE_LOG(LogTemp, Display, TEXT("TAGGED VERIFIED %s flags=%u"), Package, Summary.GetPackageFlags());
+            FString Relative(Package);
+            check(Relative.RemoveFromStart(DedicatedStationNames::GamePrefix));
+            FString File = FPaths::Combine(FPaths::ProjectDir(),
+                DedicatedStationNames::CookPrefix, Relative)
+                + FPackageName::GetAssetPackageExtension();
+            TUniquePtr<FArchive> Reader(
+                IFileManager::Get().CreateFileReader(*File));
+            check(Reader);
+            FPackageFileSummary Summary;
+            *Reader << Summary;
+            checkf(!Reader->IsError()
+                && !(Summary.GetPackageFlags() & PKG_UnversionedProperties),
+                TEXT("Tagged property gate failed: %s"), *File);
+            UE_LOG(LogTemp, Display, TEXT("TAGGED VERIFIED %s flags=%u"),
+                Package, Summary.GetPackageFlags());
         }
         return 0;
     }
-    const bool Dedicated = FParse::Param(*Params, DedicatedStationNames::DedicatedSwitch);
-    checkf(Dedicated, TEXT("HC24 runtime emission is rejected; use DedicatedStation only"));
+
+    const bool Dedicated = FParse::Param(
+        *Params, DedicatedStationNames::DedicatedSwitch);
+    checkf(Dedicated,
+        TEXT("HC24 runtime emission is rejected; use DedicatedStation only"));
+
     float AmmoWeightKg = 0.0f;
     checkf(FParse::Value(*Params, RailgunAmmo::AmmoWeightSourceArgument,
         AmmoWeightKg) && AmmoWeightKg > 0.0f,
         TEXT("DedicatedStation requires a positive ammo weight from the owned JSON"));
+
     FString ShotSoundFile;
-    checkf(FParse::Value(*Params, ShotAudio::SourceArgument, ShotSoundFile) && FPaths::FileExists(ShotSoundFile),
+    checkf(FParse::Value(*Params, ShotAudio::SourceArgument, ShotSoundFile)
+        && FPaths::FileExists(ShotSoundFile),
         TEXT("Missing shot sound source: %s"), *ShotSoundFile);
     ShotAudio::Wave = ImportShotSound(ShotSoundFile);
-    auto ImportRequiredTexture = [&](const TCHAR* Argument, const TCHAR* PackageName,
-        const TCHAR* AssetName, bool RequireSquare)
+
+    auto ImportRequiredTexture = [&](const TCHAR* Argument,
+        const TCHAR* PackageName, const TCHAR* AssetName, bool RequireSquare)
     {
         FString SourceFile;
-        checkf(FParse::Value(*Params, Argument, SourceFile) && FPaths::FileExists(SourceFile),
-            TEXT("Missing UI texture source for %s: %s"), AssetName, *SourceFile);
-        return ImportUiTexture(SourceFile, PackageName, AssetName, RequireSquare);
+        checkf(FParse::Value(*Params, Argument, SourceFile)
+            && FPaths::FileExists(SourceFile),
+            TEXT("Missing UI texture source for %s: %s"), AssetName,
+            *SourceFile);
+        return ImportUiTexture(SourceFile, PackageName, AssetName,
+            RequireSquare);
     };
-    ZoomTest::OverlayTexture = ImportRequiredTexture(ZoomTest::OverlaySourceArgument,
-        ZoomTest::MaskPackage, ZoomTest::MaskAsset, true);
-    EnergyHud::ChargingTexture = ImportRequiredTexture(EnergyHud::ChargingSourceArgument,
-        EnergyHud::ChargingPackage, EnergyHud::ChargingAsset, false);
-    EnergyHud::OfflineTexture = ImportRequiredTexture(EnergyHud::OfflineSourceArgument,
-        EnergyHud::OfflinePackage, EnergyHud::OfflineAsset, false);
-    EnergyHud::ReadyTexture = ImportRequiredTexture(EnergyHud::ReadySourceArgument,
-        EnergyHud::ReadyPackage, EnergyHud::ReadyAsset, false);
+
+    ZoomTest::OverlayTexture = ImportRequiredTexture(
+        ZoomTest::OverlaySourceArgument, ZoomTest::MaskPackage,
+        ZoomTest::MaskAsset, true);
+    EnergyHud::ChargingTexture = ImportRequiredTexture(
+        EnergyHud::ChargingSourceArgument, EnergyHud::ChargingPackage,
+        EnergyHud::ChargingAsset, false);
+    EnergyHud::OfflineTexture = ImportRequiredTexture(
+        EnergyHud::OfflineSourceArgument, EnergyHud::OfflinePackage,
+        EnergyHud::OfflineAsset, false);
+    EnergyHud::ReadyTexture = ImportRequiredTexture(
+        EnergyHud::ReadySourceArgument, EnergyHud::ReadyPackage,
+        EnergyHud::ReadyAsset, false);
     EnergyHud::AmmoIndicatorTexture = ImportRequiredTexture(
-        EnergyHud::AmmoIndicatorSourceArgument, EnergyHud::AmmoIndicatorPackage,
-        EnergyHud::AmmoIndicatorAsset, true);
+        EnergyHud::AmmoIndicatorSourceArgument,
+        EnergyHud::AmmoIndicatorPackage, EnergyHud::AmmoIndicatorAsset, true);
     ImportRequiredTexture(RailgunAmmo::AmmoIconSourceArgument,
         RailgunAmmo::AmmoIconPackage, RailgunAmmo::AmmoIconAsset, true);
     ImportRequiredTexture(RailgunAmmo::GunIconSourceArgument,
         RailgunAmmo::GunIconPackage, RailgunAmmo::GunIconAsset, true);
     ImportRequiredTexture(RailgunAmmo::SkillIconSourceArgument,
         RailgunAmmo::SkillIconPackage, RailgunAmmo::SkillIconAsset, true);
+
     UVoyageItemAmmo* Ammo = CreateRailgunAmmoReference();
     CreateRailgunSkillReference();
     UVoyageItemCategoryAsset* AmmoCategory =
@@ -367,7 +130,7 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     ConfigureRailgunInventory(Ammo, AmmoCategory, AmmoWeightKg);
     RailgunImpactVfx::Class = CreateRailgunImpactVfx();
     RailgunWaterWake::ControllerClass = CreateRailgunWaterWakeController();
-    Shot::Class=CreateRailgunShot();
+    Shot::Class = CreateRailgunShot();
     UClass* StationClass = CreateDedicatedStation();
     return ConfigureRailgunStationInitialization(StationClass) ? 0 : 1;
 }

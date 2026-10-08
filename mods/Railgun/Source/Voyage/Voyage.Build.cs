@@ -4,6 +4,7 @@ public class Voyage : ModuleRules
     public Voyage(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        bUseUnity = false;
         PublicIncludePaths.Add(ModuleDirectory);
         PublicDependencyModuleNames.AddRange(new[] { "Core", "CoreUObject", "Engine", "UMG", "EnhancedInput", "ModularGameplay" });
     }

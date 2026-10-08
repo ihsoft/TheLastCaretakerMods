@@ -1,6 +1,12 @@
 #pragma once
 #include "VoyageItem.h"
 
+#include "RailgunRuntimeGeneratorFwd.h"
+
+namespace Railgun::Runtime
+{
+bool SaveDedicatedAsset(UObject* Asset);
+
 namespace RailgunAmmo
 {
 inline constexpr TCHAR AmmoIconPackage[] = TEXT("/Game/Mods/Railgun/Fabricator/T_RailgunAmmoIcon");
@@ -39,23 +45,7 @@ TObjectType* CreateRailgunReference(const TCHAR* PackageName, const TCHAR* Asset
     return Reference;
 }
 
-UVoyageItemAmmo* CreateRailgunAmmoReference()
-{
-    using namespace RailgunAmmo;
-    UPackage* AmmoPackage = CreatePackage(FullClonePackage);
-    UVoyageItemAmmo* Ammo = NewObject<UVoyageItemAmmo>(AmmoPackage,
-        FName(FullCloneAsset), RF_Public | RF_Standalone);
-    check(Ammo);
-    check(SaveDedicatedAsset(Ammo));
-    return Ammo;
-}
+UVoyageItemAmmo* CreateRailgunAmmoReference();
 
-UVoyageSkill* CreateRailgunSkillReference()
-{
-    using namespace RailgunAmmo;
-    UPackage* Package = CreatePackage(SkillPackage);
-    UVoyageSkill* Skill = NewObject<UVoyageSkill>(Package, FName(SkillAsset), RF_Public | RF_Standalone);
-    check(Skill);
-    check(SaveDedicatedAsset(Skill));
-    return Skill;
+UVoyageSkill* CreateRailgunSkillReference();
 }

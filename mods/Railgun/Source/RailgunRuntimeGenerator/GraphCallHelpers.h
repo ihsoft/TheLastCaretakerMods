@@ -1,10 +1,9 @@
 #pragma once
 
-// Invokes reflected Engine getters without writing player or boat state.
-UEdGraphPin* ObserveCall(FGraph& G, UClass* Owner, FName Function, UEdGraphPin* Target)
+#include "RailgunRuntimeGeneratorFwd.h"
+
+namespace Railgun::Runtime
 {
-    auto* Call = G.Call(Owner, Function);
-    G.Link(Target, G.Pin(Call, P::FunctionTarget));
-    if (Call->FindPin(P::Execute)) G.Exec(Call);
-    return G.Pin(Call, P::ReturnValue);
+// Invokes reflected Engine getters without writing player or boat state.
+UEdGraphPin* ObserveCall(FGraph& G, UClass* Owner, FName Function, UEdGraphPin* Target);
 }

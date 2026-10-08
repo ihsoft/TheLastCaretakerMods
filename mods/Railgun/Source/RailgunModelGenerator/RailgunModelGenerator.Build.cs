@@ -8,6 +8,7 @@ public class RailgunModelGenerator : ModuleRules
     public RailgunModelGenerator(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        bUseUnity = false;
 
         PrivateIncludePaths.Add(System.IO.Path.Combine(
             ModuleDirectory, "..", "..", "..", "..", "tools",

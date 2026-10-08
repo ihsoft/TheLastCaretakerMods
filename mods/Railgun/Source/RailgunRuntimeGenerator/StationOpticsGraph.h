@@ -1,5 +1,12 @@
 #pragma once
 
+#include "OpticalCameraGraphNames.h"
+#include "RailgunRuntimeGeneratorFwd.h"
+#include "StationAimNames.h"
+#include "StationHudNames.h"
+
+namespace Railgun::Runtime
+{
 // Builds optical view switching, reticle, and release graphs.
 namespace OpticalProbeNames
 {
@@ -17,10 +24,5 @@ inline constexpr TCHAR Collapsed[] = TEXT("Collapsed");
 namespace O = OpticalProbeNames;
 namespace OP = OpticalCameraGraphNames;
 
-UEdGraphPin* OpticalSelf(FGraph& G)
-{
-    auto* Node = G.Node(NewObject<UK2Node_Self>(G.Graph)); return G.Pin(Node, P::FunctionTarget);
+UEdGraphPin* OpticalSelf(FGraph& G);
 }
-#include "StationAimNames.h"
-#include "StationRangeGraph.h"
-#include "StationHudNames.h"
