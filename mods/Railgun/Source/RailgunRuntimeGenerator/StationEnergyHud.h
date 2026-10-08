@@ -19,6 +19,12 @@ inline const FName RefreshEnergyFunction(Charge::RefreshHudFunction);
 inline const FName RefreshAmmoFunction(TEXT("RefreshRailgunHudAmmo"));
 inline const FName RefreshStyleFunction(TEXT("RefreshRailgunHudStyle"));
 inline const FName RefreshModeFunction(TEXT("RefreshRailgunHudMode"));
+inline const FName ApplyStatusFunction(TEXT("ApplyRailgunHudStatus"));
+inline const FName ResetStatusFunction(TEXT("ResetRailgunHudStatus"));
+inline const FName StatusState(TEXT("RailgunHudStatusState"));
+inline const FName StatusInitialized(TEXT("RailgunHudStatusInitialized"));
+inline const FName NewStatusParameter(TEXT("NewStatus"));
+inline const FName StatusBlinkAnimation(TEXT("RailgunStatusChargingBlink"));
 inline const TArray<FName> AmmoIndicators {
     TEXT("RailgunAmmoIndicator01"), TEXT("RailgunAmmoIndicator02"),
     TEXT("RailgunAmmoIndicator03"), TEXT("RailgunAmmoIndicator04"),
@@ -84,11 +90,26 @@ inline constexpr TCHAR PercentMultiplier[] = TEXT("0.01");
 inline constexpr TCHAR NormalizedMaximum[] = TEXT("1.0");
 inline constexpr TCHAR MinimumChargeFractionDigits[] = TEXT("1");
 inline constexpr TCHAR MaximumChargeFractionDigits[] = TEXT("1");
-inline constexpr TCHAR BlinkPeriodSeconds[] = TEXT("0.5");
-inline constexpr TCHAR BlinkVisibleSeconds[] = TEXT("0.25");
-inline const FName DividendPin(TEXT("Dividend"));
-inline const FName DivisorPin(TEXT("Divisor"));
-inline const FName RemainderPin(TEXT("Remainder"));
+inline constexpr TCHAR StatusHiddenState[] = TEXT("0");
+inline constexpr TCHAR StatusOfflineState[] = TEXT("1");
+inline constexpr TCHAR StatusReadyState[] = TEXT("2");
+inline constexpr TCHAR StatusChargingState[] = TEXT("3");
+inline constexpr int32 BlinkDisplayFramesPerSecond = 4;
+inline constexpr double BlinkDurationSeconds = 0.5;
+inline constexpr double BlinkHiddenTimeSeconds = 0.25;
+inline constexpr float StatusVisibleOpacity = 1.0f;
+inline constexpr float StatusHiddenOpacity = 0.0f;
+inline constexpr TCHAR AnimationStartTime[] = TEXT("0.0");
+inline constexpr TCHAR AnimationLoopForever[] = TEXT("0");
+inline constexpr TCHAR AnimationPlaybackSpeed[] = TEXT("1.0");
+inline constexpr TCHAR AnimationForward[] = TEXT("Forward");
+inline const FName AnimationPin(TEXT("InAnimation"));
+inline const FName AnimationStartTimePin(TEXT("StartAtTime"));
+inline const FName AnimationLoopCountPin(TEXT("NumLoopsToPlay"));
+inline const FName AnimationPlayModePin(TEXT("PlayMode"));
+inline const FName AnimationPlaybackSpeedPin(TEXT("PlaybackSpeed"));
+inline const FName AnimationRestoreStatePin(TEXT("bRestoreState"));
+inline const FName RenderOpacityProperty(TEXT("RenderOpacity"));
 inline const FName DoubleInputPin(TEXT("InDouble"));
 inline const FName RadialValuePin(TEXT("InValue"));
 inline const FName SliderProgressColorPin(TEXT("InValue"));
@@ -280,32 +301,33 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station,
 
 }
 
-void UpdateStationStatusHud(FGraph& G, UEdGraphPin* Station, UClass* StationClass,
-    UEdGraphPin* IsWide)
+void ApplyStationStatusHud(FGraph& G, UClass* HudClass, const TCHAR* State)
 {
-    auto SetVisibility = [&](FName Field, const TCHAR* Visibility)
-    {
-        auto* Set = G.Call(UWidget::StaticClass(), GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
-        G.Link(G.Read(Field), G.Pin(Set, P::FunctionTarget));
-        G.Default(Set, OP::Visibility, Visibility); G.Exec(Set);
-    };
-    auto SetVisible = [&](FName Field) { SetVisibility(Field, EnergyHud::Shown); };
-    const FName StatusFields[] = {EnergyHud::StatusCharging, EnergyHud::StatusOffline, EnergyHud::StatusReady};
-    for (FName Field : StatusFields) SetVisibility(Field, EnergyHud::Hidden);
+    auto* Apply = G.Call(HudClass, EnergyHud::ApplyStatusFunction);
+    G.Default(Apply, EnergyHud::NewStatusParameter, State);
+    G.Exec(Apply);
+}
 
+void UpdateStationStatusHud(FGraph& G, UEdGraphPin* Station,
+    UClass* StationClass, UClass* HudClass, UEdGraphPin* IsWide)
+{
     auto* Wide = G.Branch(IsWide);
+    ApplyStationStatusHud(G, HudClass, EnergyHud::StatusHiddenState);
     auto* WideTail = G.Tail;
     G.Tail = G.Pin(Wide, P::Else);
     auto* Module = ReadNativeInputField(G, Station, StationClass, Charge::Module);
     auto* ModuleValid = G.Branch(G.Valid(Module));
     auto* ValidModuleTail = G.Tail;
-    G.Tail = G.Pin(ModuleValid, P::Else); SetVisible(EnergyHud::StatusOffline); auto* MissingModuleTail = G.Tail;
+    G.Tail = G.Pin(ModuleValid, P::Else);
+    ApplyStationStatusHud(G, HudClass, EnergyHud::StatusOfflineState);
+    auto* MissingModuleTail = G.Tail;
     G.Tail = ValidModuleTail;
 
     auto* Full = G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
         ReadNativeInputField(G, Station, StationClass, Charge::Energy),
         RequiredEnergyAmount(G, ReadNativeInputField(G, Station, StationClass, Charge::ConfiguredEnergyKWh))));
-    SetVisible(EnergyHud::StatusReady); auto* ReadyTail = G.Tail;
+    ApplyStationStatusHud(G, HudClass, EnergyHud::StatusReadyState);
+    auto* ReadyTail = G.Tail;
 
     G.Tail = G.Pin(Full, P::Else);
     auto* CanCharge = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND));
@@ -314,16 +336,12 @@ void UpdateStationStatusHud(FGraph& G, UEdGraphPin* Station, UClass* StationClas
     G.Link(ReadNativeInputField(G, Station, StationClass,
         Charge::PowerAvailable), G.Pin(CanCharge, P::Binary::RightOperand));
     auto* Charging = G.Branch(G.Pin(CanCharge, P::ReturnValue));
+    ApplyStationStatusHud(G, HudClass, EnergyHud::StatusChargingState);
+    auto* ChargingTail = G.Tail;
 
-    auto* Time = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, GetGameTimeInSeconds));
-    auto* Phase = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMod));
-    G.Link(G.Pin(Time, P::ReturnValue), G.Pin(Phase, EnergyHud::DividendPin));
-    G.Default(Phase, EnergyHud::DivisorPin, EnergyHud::BlinkPeriodSeconds);
-    auto* BlinkOn = G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Less_DoubleDouble),
-        G.Pin(Phase, EnergyHud::RemainderPin), EnergyHud::BlinkVisibleSeconds));
-    SetVisible(EnergyHud::StatusCharging); auto* ChargingVisibleTail = G.Tail;
-    auto* ChargingHiddenTail = G.Pin(BlinkOn, P::Else);
-
-    G.Tail = G.Pin(Charging, P::Else); SetVisible(EnergyHud::StatusOffline); auto* OfflineTail = G.Tail;
-    StationMerge(G, {WideTail, MissingModuleTail, ReadyTail, ChargingVisibleTail, ChargingHiddenTail, OfflineTail});
+    G.Tail = G.Pin(Charging, P::Else);
+    ApplyStationStatusHud(G, HudClass, EnergyHud::StatusOfflineState);
+    auto* OfflineTail = G.Tail;
+    StationMerge(G, {WideTail, MissingModuleTail, ReadyTail, ChargingTail,
+        OfflineTail});
 }

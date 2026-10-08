@@ -1041,6 +1041,7 @@ $supplyRefreshStrings = @(JsonStringLeaves $supplyRefresh[0])
 foreach ($requiredSupplyReference in @(
     'RailgunEnergyModule','RailgunSocketConnected',
     'RailgunPowerAvailable','RefreshRailgunRuntimeActivity',
+    'RefreshRailgunHudEnergy',
     "Class'VoyageModuleComponent:HasSocketConnection'",
     "Class'VoyageModuleComponent:HasPower'"
 )) {
@@ -1160,6 +1161,7 @@ Require (($powerCallbackStrings -ccontains 'RailgunEnergyModule') -and
     ($powerCallbackStrings -ccontains 'RailgunPowerAvailable') -and
     ($powerCallbackStrings -ccontains 'bHasPower') -and
     ($powerCallbackStrings -ccontains 'RefreshRailgunRuntimeActivity') -and
+    ($powerCallbackStrings -ccontains 'RefreshRailgunHudEnergy') -and
     -not ($powerCallbackStrings -ccontains
         "Class'VoyageModuleComponent:HasPower'") -and
     -not ($powerCallbackStrings -ccontains
@@ -1186,6 +1188,10 @@ Require ($deferredSupplyParameters.Count -eq 2 -and
         $_.Type -ceq 'IntProperty'
     }).Count -eq 1) `
     'Deferred supply event must carry exact module identity and generation.'
+Require (@($operatorStrings | Where-Object {
+        $_ -ceq 'RefreshRailgunHudEnergy'
+    }).Count -eq 1) `
+    'Deferred supply reconciliation must own one HUD status refresh.'
 $drainTimerEvent = @($operatorFunctions | Where-Object {
     $_.Name -ceq 'OnRailgunOfflineDrainTimer'
 })
@@ -1484,7 +1490,9 @@ Require ($hudClass.Count -eq 1) `
 foreach ($displayState in @(
     @{Name='RailgunDisplayedTargetName'; Type='TextProperty'},
     @{Name='RailgunDisplayedTargetRange'; Type='TextProperty'},
-    @{Name='RailgunRangeDisplayInitialized'; Type='BoolProperty'}
+    @{Name='RailgunRangeDisplayInitialized'; Type='BoolProperty'},
+    @{Name='RailgunHudStatusState'; Type='IntProperty'},
+    @{Name='RailgunHudStatusInitialized'; Type='BoolProperty'}
 )) {
     $property = @($hudClass[0].ChildProperties | Where-Object {
         $_.Name -ceq $displayState.Name
@@ -1535,14 +1543,219 @@ $hudStyleRefresh = @($hudFunctions | Where-Object {
 $hudModeRefresh = @($hudFunctions | Where-Object {
     $_.Name -ceq 'RefreshRailgunHudMode'
 })
+$hudApplyStatus = @($hudFunctions | Where-Object {
+    $_.Name -ceq 'ApplyRailgunHudStatus'
+})
+$hudResetStatus = @($hudFunctions | Where-Object {
+    $_.Name -ceq 'ResetRailgunHudStatus'
+})
 Require ($hudEnergyRefresh.Count -eq 1 -and $hudAmmoRefresh.Count -eq 1 -and
-    $hudStyleRefresh.Count -eq 1 -and $hudModeRefresh.Count -eq 1) `
+    $hudStyleRefresh.Count -eq 1 -and $hudModeRefresh.Count -eq 1 -and
+    $hudApplyStatus.Count -eq 1 -and $hudResetStatus.Count -eq 1) `
     'HUD event-refresh function set is incomplete or duplicated.'
+$applyStatusStrings = @(JsonStringLeaves $hudApplyStatus[0])
+$resetStatusStrings = @(JsonStringLeaves $hudResetStatus[0])
+Require (@($applyStatusStrings | Where-Object {
+        $_ -ceq "Class'UserWidget:PlayAnimation'"
+    }).Count -eq 1 -and
+    @($applyStatusStrings | Where-Object {
+        $_ -ceq "Class'UserWidget:StopAnimation'"
+    }).Count -eq 1 -and
+    ($applyStatusStrings -ccontains 'RailgunHudStatusState') -and
+    ($applyStatusStrings -ccontains 'RailgunHudStatusInitialized') -and
+    ($applyStatusStrings -ccontains
+        "Class'KismetMathLibrary:BooleanAND'") -and
+    @($resetStatusStrings | Where-Object {
+        $_ -ceq "Class'UserWidget:StopAnimation'"
+    }).Count -eq 1 -and
+    -not ($resetStatusStrings -ccontains
+        "Class'UserWidget:PlayAnimation'")) `
+    'HUD status transitions must be changed-only and own animation cleanup.'
+$forbiddenStatusTimerReferences = @(
+    "Class'KismetSystemLibrary:K2_SetTimerDelegate'",
+    "Class'KismetSystemLibrary:K2_SetTimer'",
+    "Class'GameplayStatics:GetTimeSeconds'",
+    "Class'KismetMathLibrary:FMod'"
+)
+foreach ($forbiddenStatusTimerReference in $forbiddenStatusTimerReferences) {
+    Require (-not ($applyStatusStrings -ccontains
+            $forbiddenStatusTimerReference) -and
+        -not ($resetStatusStrings -ccontains
+            $forbiddenStatusTimerReference)) `
+        ('HUD status animation retained a timer/poll reference: ' +
+            $forbiddenStatusTimerReference)
+}
+$statusAnimations = @($hud | Where-Object {
+    $_.Type -ceq 'WidgetAnimation' -and
+    $_.Name -ceq 'RailgunStatusChargingBlink_INST'
+})
+$statusScenes = @($hud | Where-Object {
+    $_.Type -ceq 'MovieScene' -and
+    $_.Name -ceq 'RailgunStatusChargingBlink'
+})
+$statusTracks = @($hud | Where-Object {
+    $_.Type -ceq 'MovieSceneFloatTrack'
+})
+$statusSections = @($hud | Where-Object {
+    $_.Type -ceq 'MovieSceneFloatSection'
+})
+Require ($statusAnimations.Count -eq 1 -and $statusScenes.Count -eq 1 -and
+    $statusTracks.Count -eq 1 -and $statusSections.Count -eq 1) `
+    'Charging status UMG animation structure is incomplete or duplicated.'
+$statusBinding = @($statusAnimations[0].Properties.AnimationBindings)
+$statusPossessable = @($statusScenes[0].Properties.Possessables)
+$statusTrack = $statusTracks[0]
+$statusCurve = $statusSections[0].Properties.FloatCurve
+$statusAnimationProperties = @($hudClass[0].ChildProperties | Where-Object {
+    $_.Type -ceq 'ObjectProperty' -and
+    $_.PropertyClass.ObjectName -ceq "Class'WidgetAnimation'"
+})
+Require ($statusBinding.Count -eq 1 -and
+    $statusAnimationProperties.Count -eq 1 -and
+    $statusScenes[0].Name -ceq $statusAnimationProperties[0].Name -and
+    $statusBinding[0].WidgetName -ceq 'RailgunStatusCharging' -and
+    -not [bool]$statusBinding[0].bIsRootWidget -and
+    $statusPossessable.Count -eq 1 -and
+    $statusPossessable[0].Name -ceq 'RailgunStatusCharging' -and
+    $statusPossessable[0].Guid -ceq $statusBinding[0].AnimationGuid -and
+    $statusTrack.Properties.PropertyBinding.PropertyName -ceq
+        'RenderOpacity' -and
+    $statusTrack.Properties.PropertyBinding.PropertyPath -ceq
+        'RenderOpacity') `
+    'Charging status animation is not runtime-bindable to the owned icon opacity.'
+$statusSceneHasTickResolution = @($statusScenes[0].Properties.
+    PSObject.Properties.Name) -ccontains 'TickResolution'
+$statusTickNumerator = if ($statusSceneHasTickResolution) {
+    [int]$statusScenes[0].Properties.TickResolution.Numerator
+} else { 60000 }
+$statusTickDenominator = if ($statusSceneHasTickResolution -and
+    @($statusScenes[0].Properties.TickResolution.PSObject.Properties.Name) `
+        -ccontains 'Denominator') {
+    [int]$statusScenes[0].Properties.TickResolution.Denominator
+} else { 1 }
+$statusTickRate = $statusTickNumerator / [double]$statusTickDenominator
+$statusChannelTickNumerator =
+    [int]$statusCurve.TickResolution.Numerator
+$statusChannelTickDenominator = if (@($statusCurve.TickResolution.
+        PSObject.Properties.Name) -ccontains 'Denominator') {
+    [int]$statusCurve.TickResolution.Denominator
+} else { 1 }
+$statusChannelTickRate = $statusChannelTickNumerator /
+    [double]$statusChannelTickDenominator
+$statusDurationTicks = [int]$statusScenes[0].Properties.PlaybackRange.Value.
+    UpperBound.Value.Value
+$statusHiddenTick = [int]$statusCurve.Times[1].Value
+Require ($statusTickRate -ge 24000 -and
+    [Math]::Abs($statusChannelTickRate - $statusTickRate) -lt 0.000001 -and
+    [int]$statusScenes[0].Properties.DisplayRate.Numerator -eq 4 -and
+    [int]$statusScenes[0].Properties.PlaybackRange.Value.LowerBound.Value.Value -eq
+        0 -and
+    [Math]::Abs(($statusDurationTicks / [double]$statusTickRate) - 0.5) -lt
+        0.000001 -and
+    @($statusCurve.Times).Count -eq 2 -and
+    [int]$statusCurve.Times[0].Value -eq 0 -and
+    [Math]::Abs(($statusHiddenTick / [double]$statusTickRate) - 0.25) -lt
+        0.000001 -and
+    @($statusCurve.Values).Count -eq 2 -and
+    [Math]::Abs([double]$statusCurve.Values[0].Value - 1.0) -lt 0.0001 -and
+    [Math]::Abs([double]$statusCurve.Values[1].Value) -lt 0.0001 -and
+    [int]$statusCurve.Values[0].InterpMode -eq 1 -and
+    [int]$statusCurve.Values[1].InterpMode -eq 1) `
+    'Charging status animation must step 0.25 seconds on and 0.25 seconds off.'
+foreach ($animationFrameRate in @(30, 60, 120, 240)) {
+    $animationTick = 0
+    $animationWasHidden = $false
+    $animationTransitions = 0
+    for ($frame = 0; $frame -lt (2 * $animationFrameRate); $frame++) {
+        $nextAnimationTick = [int][Math]::Round(
+            $animationTick + ($statusTickRate / [double]$animationFrameRate))
+        $nextAnimationTick %= $statusDurationTicks
+        $animationIsHidden = $nextAnimationTick -ge $statusHiddenTick
+        if ($animationIsHidden -ne $animationWasHidden) {
+            $animationTransitions++
+        }
+        $animationWasHidden = $animationIsHidden
+        $animationTick = $nextAnimationTick
+    }
+    Require ($animationTransitions -eq 8) `
+        ('Charging animation does not progress for ordinary frame rate ' +
+            $animationFrameRate + ' fps.')
+}
+$playStatusStatements = @($hudApplyStatus[0].ScriptBytecode |
+    Where-Object {
+        @(JsonStringLeaves $_) -ccontains "Class'UserWidget:PlayAnimation'"
+    })
+Require ($playStatusStatements.Count -eq 1) `
+    'Charging status must own exactly one animation play call.'
+$playStatusParameters = @(
+    $playStatusStatements[0].Expression.ContextExpression.Parameters)
+Require ($playStatusParameters.Count -eq 6 -and
+    $playStatusParameters[1].Token -ceq 'EX_FloatConst' -and
+    [Math]::Abs([double]$playStatusParameters[1].Value) -lt 0.0001 -and
+    $playStatusParameters[2].Token -ceq 'EX_IntConst' -and
+    [int]$playStatusParameters[2].Value -eq 0 -and
+    $playStatusParameters[3].Token -ceq 'EX_ByteConst' -and
+    [int]$playStatusParameters[3].Value -eq 0 -and
+    $playStatusParameters[4].Token -ceq 'EX_FloatConst' -and
+    [Math]::Abs([double]$playStatusParameters[4].Value - 1.0) -lt 0.0001 -and
+    $playStatusParameters[5].Token -ceq 'EX_False') `
+    'Charging status animation must loop forward indefinitely at unit speed.'
+$hudTick = @($hudFunctions | Where-Object { $_.Name -ceq 'Tick' })
+$hudConstruct = @($hudFunctions | Where-Object { $_.Name -ceq 'Construct' })
+Require ($hudTick.Count -eq 1 -and $hudConstruct.Count -eq 1) `
+    'HUD tick/construct event wrappers are incomplete.'
+$tickStart = [int]$hudTick[0].ScriptBytecode[2].Parameters[0].Value
+$constructStart = [int]$hudConstruct[0].ScriptBytecode[0].Parameters[0].Value
+Require ($constructStart -gt $tickStart) `
+    'HUD event layout no longer exposes a bounded tick section.'
+$tickStatements = @($hudUbergraph[0].ScriptBytecode | Where-Object {
+    [int]$_.StatementIndex -ge $tickStart -and
+    [int]$_.StatementIndex -lt $constructStart
+})
+$tickStrings = @(JsonStringLeaves $tickStatements)
+foreach ($forbiddenTickStatusReference in @(
+    'ApplyRailgunHudStatus','ResetRailgunHudStatus',
+    'RailgunStatusCharging','RailgunStatusOffline','RailgunStatusReady',
+    "Class'UserWidget:PlayAnimation'","Class'UserWidget:StopAnimation'"
+)) {
+    Require (-not ($tickStrings -ccontains $forbiddenTickStatusReference)) `
+        ('Widget Tick must remain range-only: ' +
+            $forbiddenTickStatusReference)
+}
 $hudEnergyBytecode = @($hudEnergyRefresh[0].ScriptBytecode)
 $hudAmmoBytecode = @($hudAmmoRefresh[0].ScriptBytecode)
 $hudModeBytecode = @($hudModeRefresh[0].ScriptBytecode)
 $hudEnergyStrings = @(JsonStringLeaves $hudEnergyRefresh[0])
 $hudAmmoStrings = @(JsonStringLeaves $hudAmmoRefresh[0])
+$statusStyleWidgets = @(
+    'RailgunStatusCharging','RailgunStatusOffline','RailgunStatusReady')
+$statusStyleCalls = @($hudStyleRefresh[0].ScriptBytecode | Where-Object {
+    $_.Token -ceq 'EX_Context' -and
+    $null -ne $_.ObjectExpression -and
+    $_.ObjectExpression.Token -ceq 'EX_InstanceVariable' -and
+    $statusStyleWidgets -ccontains
+        $_.ObjectExpression.Variable.Property.Name
+})
+Require ($statusStyleCalls.Count -eq 3 -and
+    @($statusStyleCalls | ForEach-Object {
+        $_.ObjectExpression.Variable.Property.Name
+    } | Sort-Object -Unique).Count -eq 3 -and
+    @($statusStyleCalls | Where-Object {
+        $_.ContextExpression.Function.ObjectName -ceq
+            "Class'Image:SetOpacity'" -and
+        @($_.ContextExpression.Parameters).Count -eq 1
+    }).Count -eq 3) `
+    'HUD status style must write image alpha without owning render opacity.'
+Require (-not (@(JsonStringLeaves $statusStyleCalls) -ccontains
+        "Class'Widget:SetRenderOpacity'")) `
+    'HUD status style must not overwrite the animation render-opacity factor.'
+foreach ($statusOpacityPercent in @(0.0, 50.0, 100.0)) {
+    $statusUserAlpha = $statusOpacityPercent * 0.01
+    Require ([Math]::Abs(($statusUserAlpha * 1.0) -
+            ($statusOpacityPercent / 100.0)) -lt 0.000001 -and
+        [Math]::Abs($statusUserAlpha * 0.0) -lt 0.000001) `
+        'HUD status user alpha and blink factor no longer compose correctly.'
+}
 $hudAllStrings = @(JsonStringLeaves $hudFunctions)
 $chargeTextConversions = @($hudEnergyBytecode | Where-Object {
     $_.Token -ceq 'EX_Let' -and

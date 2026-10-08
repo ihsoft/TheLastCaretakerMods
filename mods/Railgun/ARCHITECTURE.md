@@ -98,10 +98,17 @@
   it changes; misses and lifecycle reset publish the empty-name/`---` state.
   The HUD takes an unconditional initial range snapshot on construction and
   later calls `SetText` for those two widgets only when their `FText` changes.
-  Widget Tick keeps only range presentation and status blinking through the
-  cached station reference; the gameplay HUD has no diagnostic status text;
-  status classification reads cached charge, socket and power fields and never
-  calls the module resource or supply getters.
+  Widget Tick keeps only range presentation through the cached station
+  reference. Status classification is event-driven from cached charge, socket
+  and power fields and never calls the module resource or supply getters; the
+  charging icon blinks through an authored looping UMG animation. The gameplay
+  HUD has no diagnostic status text. The generated animation property and its
+  inner `MovieScene` share one logical name because cooked UMG initialization
+  resolves that property by the scene name. The animation keeps display rate
+  separate from evaluation precision: authored phase times are converted to a
+  high-resolution tick scale so ordinary widget frames accumulate playback.
+  User status opacity lives in each image's color alpha; animation render
+  opacity remains an independent zero-or-one blink factor.
 - Loss of the module power connection discharges stored energy to zero at the
   configured `OfflineDischargeKW` rate. The default is `10` kW; zero disables
   offline discharge. This setting is independent of normal standby demand.

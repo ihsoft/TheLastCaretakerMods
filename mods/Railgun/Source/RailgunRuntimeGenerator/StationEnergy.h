@@ -589,6 +589,9 @@ void AddRailgunActivityFunctions(UBlueprint* BP,
     auto* RefreshActivity = Supply.Call(BP->GeneratedClass,
         DS::RefreshActivity);
     Supply.Exec(RefreshActivity);
+    auto* RefreshHud = Supply.Call(BP->GeneratedClass,
+        Charge::RefreshHudFunction);
+    Supply.Exec(RefreshHud);
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
@@ -658,6 +661,9 @@ void AddRailgunDeferredSupplyEvent(UBlueprint* BP)
     auto* RefreshActivity = G.Call(BP->GeneratedClass,
         DS::RefreshActivity);
     G.Exec(RefreshActivity);
+    auto* RefreshHud = G.Call(BP->GeneratedClass,
+        Charge::RefreshHudFunction);
+    G.Exec(RefreshHud);
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
@@ -811,6 +817,9 @@ void AddRailgunEnergyFunctions(UBlueprint* BP,
             auto* RefreshActivity = Callback.Call(BP->GeneratedClass,
                 DS::RefreshActivity);
             Callback.Exec(RefreshActivity);
+            auto* RefreshHud = Callback.Call(BP->GeneratedClass,
+                Charge::RefreshHudFunction);
+            Callback.Exec(RefreshHud);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);

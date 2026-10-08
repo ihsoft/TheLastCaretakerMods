@@ -643,8 +643,12 @@ UClass* CreateDedicatedStation()
         UEdGraphSchema_K2::PC_Text);
     AddVariable(Hud, Range::DisplayInitialized,
         UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(Hud, EnergyHud::StatusState, UEdGraphSchema_K2::PC_Int);
+    AddVariable(Hud, EnergyHud::StatusInitialized,
+        UEdGraphSchema_K2::PC_Boolean);
     for (FName RuntimeDisplayState : {Range::DisplayedTargetName,
-        Range::DisplayedTargetRange, Range::DisplayInitialized})
+        Range::DisplayedTargetRange, Range::DisplayInitialized,
+        EnergyHud::StatusState, EnergyHud::StatusInitialized})
         MarkVariableTransient(Hud, RuntimeDisplayState);
     auto* Canvas = Hud->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), N::HudCanvas); Canvas->bIsVariable = false;
     Hud->WidgetTree->RootWidget = Canvas;
@@ -678,6 +682,49 @@ UClass* CreateDedicatedStation()
     AddStatusIcon(EnergyHud::StatusCharging, EnergyHud::ChargingTexture);
     AddStatusIcon(EnergyHud::StatusOffline, EnergyHud::OfflineTexture);
     AddStatusIcon(EnergyHud::StatusReady, EnergyHud::ReadyTexture);
+    auto* StatusBlinkAnimation = NewObject<UWidgetAnimation>(Hud,
+        EnergyHud::StatusBlinkAnimation, RF_Transactional);
+    StatusBlinkAnimation->MovieScene = NewObject<UMovieScene>(
+        StatusBlinkAnimation, EnergyHud::StatusBlinkAnimation,
+        RF_Transactional);
+    UMovieScene* StatusBlinkScene = StatusBlinkAnimation->MovieScene;
+    StatusBlinkScene->SetDisplayRate(FFrameRate(
+        EnergyHud::BlinkDisplayFramesPerSecond, 1));
+    const FFrameRate StatusBlinkTickResolution =
+        StatusBlinkScene->GetTickResolution();
+    const FFrameNumber StatusBlinkDurationTick =
+        (EnergyHud::BlinkDurationSeconds *
+            StatusBlinkTickResolution).RoundToFrame();
+    const FFrameNumber StatusBlinkHiddenTick =
+        (EnergyHud::BlinkHiddenTimeSeconds *
+            StatusBlinkTickResolution).RoundToFrame();
+    check(StatusBlinkHiddenTick > FFrameNumber(0) &&
+        StatusBlinkDurationTick > StatusBlinkHiddenTick);
+    StatusBlinkScene->SetPlaybackRange(FFrameNumber(0),
+        StatusBlinkDurationTick.Value);
+    const FGuid ChargingBinding = StatusBlinkScene->AddPossessable(
+        EnergyHud::StatusCharging.ToString(), UImage::StaticClass());
+    FWidgetAnimationBinding WidgetBinding;
+    WidgetBinding.WidgetName = EnergyHud::StatusCharging;
+    WidgetBinding.AnimationGuid = ChargingBinding;
+    WidgetBinding.bIsRootWidget = false;
+    StatusBlinkAnimation->AnimationBindings.Add(WidgetBinding);
+    auto* OpacityTrack = StatusBlinkScene->AddTrack<UMovieSceneFloatTrack>(
+        ChargingBinding);
+    check(OpacityTrack);
+    OpacityTrack->SetPropertyNameAndPath(EnergyHud::RenderOpacityProperty,
+        EnergyHud::RenderOpacityProperty.ToString());
+    auto* OpacitySection = CastChecked<UMovieSceneFloatSection>(
+        OpacityTrack->CreateNewSection());
+    OpacitySection->SetRange(TRange<FFrameNumber>(FFrameNumber(0),
+        StatusBlinkDurationTick));
+    OpacitySection->GetChannel().AddConstantKey(FFrameNumber(0),
+        EnergyHud::StatusVisibleOpacity);
+    OpacitySection->GetChannel().AddConstantKey(
+        StatusBlinkHiddenTick,
+        EnergyHud::StatusHiddenOpacity);
+    OpacityTrack->AddSection(*OpacitySection);
+    Hud->Animations.Add(StatusBlinkAnimation);
     auto* ChargeRadial = Hud->WidgetTree->ConstructWidget<URadialSlider>(URadialSlider::StaticClass(), EnergyHud::ChargeRadial);
     ChargeRadial->bIsVariable = true;
     ChargeRadial->Value = 0.0f;
@@ -823,10 +870,152 @@ UClass* CreateDedicatedStation()
         Function.Branch(Function.Valid(Function.Read(EnergyHud::Station)));
         BuildBody(Function, Function.Read(EnergyHud::Station));
     };
+    auto AddStatusFunction = [&](FName FunctionName, bool HasStatusParameter,
+        auto BuildBody)
+    {
+        UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(Hud,
+            FunctionName, UEdGraph::StaticClass(),
+            UEdGraphSchema_K2::StaticClass());
+        FBlueprintEditorUtils::AddFunctionGraph(Hud, Graph, false,
+            static_cast<UClass*>(nullptr));
+        UK2Node_FunctionEntry* Entry = nullptr;
+        for (UEdGraphNode* Node : Graph->Nodes)
+            if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+                Entry = Candidate;
+        check(Entry);
+        UEdGraphPin* StatusParameter = nullptr;
+        if (HasStatusParameter)
+        {
+            FEdGraphPinType StatusType;
+            StatusType.PinCategory = UEdGraphSchema_K2::PC_Int;
+            StatusParameter = Entry->CreateUserDefinedPin(
+                EnergyHud::NewStatusParameter, StatusType, EGPD_Output);
+            check(StatusParameter);
+        }
+        Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
+        FGraph Function(Graph, nullptr);
+        Function.Tail = Function.Pin(Entry, P::Then);
+        BuildBody(Function, StatusParameter);
+    };
+    auto StopStatusAnimation = [&](FGraph& Function)
+    {
+        auto* Stop = Function.Call(UUserWidget::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UUserWidget, StopAnimation));
+        Function.Link(OpticalSelf(Function),
+            Function.Pin(Stop, P::FunctionTarget));
+        Function.Link(Function.Read(EnergyHud::StatusBlinkAnimation),
+            Function.Pin(Stop, EnergyHud::AnimationPin));
+        Function.Exec(Stop);
+        auto* RestoreOpacity = Function.Call(UWidget::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderOpacity));
+        Function.Link(Function.Read(EnergyHud::StatusCharging),
+            Function.Pin(RestoreOpacity, P::FunctionTarget));
+        Function.Default(RestoreOpacity, Settings::OpacityPin,
+            *FString::SanitizeFloat(EnergyHud::StatusVisibleOpacity));
+        Function.Exec(RestoreOpacity);
+    };
+    auto SetStatusVisibility = [&](FGraph& Function, FName VisibleStatus)
+    {
+        for (FName Field : {EnergyHud::StatusCharging,
+            EnergyHud::StatusOffline, EnergyHud::StatusReady})
+        {
+            auto* Set = Function.Call(UWidget::StaticClass(),
+                GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
+            Function.Link(Function.Read(Field),
+                Function.Pin(Set, P::FunctionTarget));
+            Function.Default(Set, OP::Visibility,
+                Field == VisibleStatus ? EnergyHud::Shown : EnergyHud::Hidden);
+            Function.Exec(Set);
+        }
+    };
+    AddStatusFunction(EnergyHud::ResetStatusFunction, false,
+        [&](FGraph& Function, UEdGraphPin*)
+        {
+            StopStatusAnimation(Function);
+            SetStatusVisibility(Function, NAME_None);
+            Function.Write(EnergyHud::StatusState, nullptr,
+                EnergyHud::StatusHiddenState);
+            Function.Write(EnergyHud::StatusInitialized, nullptr, N::False);
+        });
+    AddStatusFunction(EnergyHud::ApplyStatusFunction, true,
+        [&](FGraph& Function, UEdGraphPin* NewStatus)
+        {
+            UEdGraphPin* SameStatus = Function.Binary(
+                GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+                    EqualEqual_IntInt), Function.Read(EnergyHud::StatusState),
+                NewStatus);
+            UEdGraphPin* InitializedAndSame = Function.Binary(
+                GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
+                Function.Read(EnergyHud::StatusInitialized), SameStatus);
+            auto* Skip = Function.Branch(InitializedAndSame);
+            UEdGraphPin* UnchangedTail = Function.Tail;
+            Function.Tail = Function.Pin(Skip, P::Else);
+            StopStatusAnimation(Function);
+            SetStatusVisibility(Function, NAME_None);
+            Function.Write(EnergyHud::StatusState, NewStatus);
+            Function.Write(EnergyHud::StatusInitialized, nullptr, N::True);
+
+            auto ApplyVisibleState = [&](const TCHAR* State, FName Widget)
+            {
+                auto* Matches = Function.Branch(Function.Compare(
+                    GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+                        EqualEqual_IntInt), NewStatus, State));
+                auto* Set = Function.Call(UWidget::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
+                Function.Link(Function.Read(Widget),
+                    Function.Pin(Set, P::FunctionTarget));
+                Function.Default(Set, OP::Visibility, EnergyHud::Shown);
+                Function.Exec(Set);
+                UEdGraphPin* MatchTail = Function.Tail;
+                Function.Tail = Function.Pin(Matches, P::Else);
+                return MatchTail;
+            };
+            UEdGraphPin* OfflineTail = ApplyVisibleState(
+                EnergyHud::StatusOfflineState, EnergyHud::StatusOffline);
+            UEdGraphPin* ReadyTail = ApplyVisibleState(
+                EnergyHud::StatusReadyState, EnergyHud::StatusReady);
+            auto* Charging = Function.Branch(Function.Compare(
+                GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+                    EqualEqual_IntInt), NewStatus,
+                EnergyHud::StatusChargingState));
+            auto* ShowCharging = Function.Call(UWidget::StaticClass(),
+                GET_FUNCTION_NAME_CHECKED(UWidget, SetVisibility));
+            Function.Link(Function.Read(EnergyHud::StatusCharging),
+                Function.Pin(ShowCharging, P::FunctionTarget));
+            Function.Default(ShowCharging, OP::Visibility, EnergyHud::Shown);
+            Function.Exec(ShowCharging);
+            auto* Play = Function.Call(UUserWidget::StaticClass(),
+                GET_FUNCTION_NAME_CHECKED(UUserWidget, PlayAnimation));
+            Function.Link(OpticalSelf(Function),
+                Function.Pin(Play, P::FunctionTarget));
+            Function.Link(Function.Read(EnergyHud::StatusBlinkAnimation),
+                Function.Pin(Play, EnergyHud::AnimationPin));
+            Function.Default(Play, EnergyHud::AnimationStartTimePin,
+                EnergyHud::AnimationStartTime);
+            Function.Default(Play, EnergyHud::AnimationLoopCountPin,
+                EnergyHud::AnimationLoopForever);
+            Function.Default(Play, EnergyHud::AnimationPlayModePin,
+                EnergyHud::AnimationForward);
+            Function.Default(Play, EnergyHud::AnimationPlaybackSpeedPin,
+                EnergyHud::AnimationPlaybackSpeed);
+            Function.Default(Play, EnergyHud::AnimationRestoreStatePin,
+                N::False);
+            Function.Exec(Play);
+            UEdGraphPin* ChargingTail = Function.Tail;
+            Function.Tail = Function.Pin(Charging, P::Else);
+            StationMerge(Function, {UnchangedTail, OfflineTail, ReadyTail,
+                ChargingTail, Function.Tail});
+        });
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud);
+    FKismetEditorUtilities::CompileBlueprint(Hud);
+    check(Hud->Status != BS_Error);
     AddHudFunction(EnergyHud::RefreshEnergyFunction,
         [&](FGraph& Function, UEdGraphPin* Station)
         {
             UpdateStationEnergyHud(Function, Station, BP->GeneratedClass);
+            UpdateStationStatusHud(Function, Station, BP->GeneratedClass,
+                Hud->GeneratedClass, ReadNativeInputField(Function, Station,
+                    BP->GeneratedClass, ZoomTest::Wide));
         });
     AddHudFunction(EnergyHud::RefreshAmmoFunction,
         [&](FGraph& Function, UEdGraphPin* Station)
@@ -951,8 +1140,8 @@ UClass* CreateDedicatedStation()
             for (FName Field : {EnergyHud::StatusCharging,
                 EnergyHud::StatusOffline, EnergyHud::StatusReady})
             {
-                auto* Set = Function.Call(UWidget::StaticClass(),
-                    GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderOpacity));
+                auto* Set = Function.Call(UImage::StaticClass(),
+                    GET_FUNCTION_NAME_CHECKED(UImage, SetOpacity));
                 Function.Link(Function.Read(Field),
                     Function.Pin(Set, P::FunctionTarget));
                 Function.Link(Function.Pin(NormalizedStatusOpacity,
@@ -1010,6 +1199,9 @@ UClass* CreateDedicatedStation()
             SetWideCenter(ZoomTest::Hidden);
             SetWideChargeVisibility(ZoomTest::Hidden);
             StationMerge(Function, {WideTail, Function.Tail});
+            UpdateStationStatusHud(Function, Station, BP->GeneratedClass,
+                Hud->GeneratedClass, ReadNativeInputField(Function, Station,
+                    BP->GeneratedClass, ZoomTest::Wide));
         });
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud);
     FKismetEditorUtilities::CompileBlueprint(Hud);
@@ -1077,6 +1269,11 @@ UClass* CreateDedicatedStation()
                 GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
                     EqualEqual_ObjectObject),
                 Function.Read(EnergyHud::ActiveHud), HudParameter));
+            auto* Reset = Function.Call(Hud->GeneratedClass,
+                EnergyHud::ResetStatusFunction);
+            Function.Link(HudParameter,
+                Function.Pin(Reset, P::FunctionTarget));
+            Function.Exec(Reset);
             Function.Write(EnergyHud::ActiveHud, nullptr);
         }
     };
@@ -1156,9 +1353,6 @@ UClass* CreateDedicatedStation()
     UEdGraphPin* Station = HG.Read(EnergyHud::Station);
     HG.Branch(HG.Valid(Station));
     RefreshRangeDisplay(Station, false);
-    UpdateStationStatusHud(HG, Station, BP->GeneratedClass,
-        ReadNativeInputField(HG, Station, BP->GeneratedClass,
-            ZoomTest::Wide));
 
     auto* Construct = NewObject<UK2Node_Event>(HudGraph);
     Construct->EventReference.SetExternalMember(
@@ -1171,6 +1365,9 @@ UClass* CreateDedicatedStation()
     HG.Link(HG.Pin(Construct, P::Then),
         HG.Pin(ConstructWork, P::Execute));
     HG.Tail = ConstructWork->GetThenPinGivenIndex(0);
+    auto* ResetOnConstruct = HG.Call(Hud->GeneratedClass,
+        EnergyHud::ResetStatusFunction);
+    HG.Exec(ResetOnConstruct);
     auto* OldStationValid = HG.Branch(
         HG.Valid(HG.Read(EnergyHud::Station)));
     auto* UnregisterOld = HG.Call(BP->GeneratedClass,
@@ -1218,6 +1415,9 @@ UClass* CreateDedicatedStation()
     Destruct->bOverrideFunction = true;
     HG.Node(Destruct);
     HG.Tail = HG.Pin(Destruct, P::Then);
+    auto* ResetOnDestruct = HG.Call(Hud->GeneratedClass,
+        EnergyHud::ResetStatusFunction);
+    HG.Exec(ResetOnDestruct);
     auto* DestructStationValid = HG.Branch(
         HG.Valid(HG.Read(EnergyHud::Station)));
     auto* Unregister = HG.Call(BP->GeneratedClass,
