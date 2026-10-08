@@ -53,7 +53,7 @@ void OpticalReticle(FGraph& G, bool Visible)
     G.Link(G.Pin(Widget, Name), G.Pin(Call, P::FunctionTarget));
     G.Default(Call, OP::Visibility, Show ? O::Visible : O::Collapsed); G.Exec(Call);
     };
-    SetWidget(O::Reticle, Visible); SetWidget(H::ScopePanel, Visible); SetWidget(N::FreezeStatus, !Visible);
+    SetWidget(O::Reticle, Visible); SetWidget(H::ScopePanel, Visible);
 }
 
 void ReleaseOptics(FGraph& G)

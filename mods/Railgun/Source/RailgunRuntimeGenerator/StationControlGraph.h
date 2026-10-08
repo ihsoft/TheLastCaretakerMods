@@ -4,7 +4,6 @@
 namespace StationControlNames
 {
 inline const FName Owned(TEXT("OwnsStationPossession"));
-inline constexpr TCHAR ReturnFailed[] = TEXT("RETURN FAILED: press E to retry; do not save. Report this.");
 }
 namespace Control = StationControlNames;
 void OpticalReticle(FGraph& G, bool Visible);
@@ -31,14 +30,14 @@ void ReleaseStationControl(FGraph& G)
     // Stop this execution path on return failure: retain fixation and the proxy.
     // A failed execution path allows only a deliberate normal exit retry, not
     // repeated Possess.
-    OpticalReticle(G, false); G.Text(N::FreezeStatus, Control::ReturnFailed);
-    G.Require(G.Valid(G.Read(N::OriginalPawn)), Control::ReturnFailed);
+    OpticalReticle(G, false);
+    G.Require(G.Valid(G.Read(N::OriginalPawn)));
     auto* OriginalController = ObserveCall(G, APawn::StaticClass(), BlueprintGraphNames::ActorFunctions::GetController, G.Read(N::OriginalPawn));
     G.Require(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanOR),
         G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool), G.Valid(OriginalController), N::False),
-        G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), OriginalController, G.Read(S::Controller))), Control::ReturnFailed);
+        G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), OriginalController, G.Read(S::Controller))));
     StationPossess(G, G.Read(N::OriginalPawn));
-    G.Require(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), StationControlledPawn(G), G.Read(N::OriginalPawn)), Control::ReturnFailed);
+    G.Require(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), StationControlledPawn(G), G.Read(N::OriginalPawn)));
     StationMerge(G, {G.Tail, G.Pin(CanReturn, P::Else), G.Pin(ControllerValid, P::Else)});
     G.Write(Control::Owned, nullptr, N::False);
     StationMerge(G, {G.Tail, G.Pin(Owned, P::Else)});

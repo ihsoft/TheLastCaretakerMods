@@ -14,7 +14,6 @@ inline const FName HudInstance(TEXT("DiagnosticHUD"));
 inline const FName HudTree(TEXT("WidgetTree"));
 inline const FName HudCanvas(TEXT("DiagnosticCanvas"));
 inline const FName OriginalPawn(TEXT("OriginalPlayerPawn"));
-inline const FName FreezeStatus(TEXT("FreezeStatusText"));
 inline constexpr TCHAR UnitScale[] = TEXT("1,1,1");
 inline constexpr TCHAR True[] = TEXT("true");
 inline constexpr TCHAR False[] = TEXT("false");

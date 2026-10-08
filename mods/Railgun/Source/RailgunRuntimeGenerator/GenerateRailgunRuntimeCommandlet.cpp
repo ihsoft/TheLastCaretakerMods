@@ -194,11 +194,9 @@ public:
         Link(Tail, Pin(Out, P::Execute)); Link(Condition, Pin(Out, P::Condition));
         Tail = Pin(Out, P::Then); return Out;
     }
-    void Require(UEdGraphPin* Condition, const TCHAR* FailureText)
+    void Require(UEdGraphPin* Condition)
     {
-        auto* Test = Branch(Condition);
-        auto* Success = Tail; Tail = Pin(Test, P::Else);
-        Text(N::FreezeStatus, FailureText); Tail = Success;
+        Branch(Condition);
     }
     UEdGraphPin* ActorArray(UEdGraphPin* FirstActor, UEdGraphPin* SecondActor)
     {

@@ -13,8 +13,6 @@ inline constexpr TCHAR Speed[] = TEXT("200000.0"), Range[] = TEXT("99999.0"), Li
 inline const FName Body(TEXT("ShotCollision")), Move(TEXT("ShotMovement"));
 inline const FName Start(TEXT("ShotOrigin")), Direction(TEXT("ShotDirection")), Done(TEXT("ShotDone"));
 inline const FName SpawnedThisPress(TEXT("ShotSpawnedThisPress"));
-inline const FName RefundFaulted(TEXT("ShotRefundFaulted"));
-inline const FName EnergyBeforeDebit(TEXT("ShotEnergyBeforeDebit"));
 inline const FName AmmoSlot(TEXT("ShotAmmoSlot"));
 inline const FName SpawnLocation(TEXT("ShotSpawnLocation"));
 inline const FName SpawnRotation(TEXT("ShotSpawnRotation"));
@@ -30,14 +28,8 @@ inline const FName Slot(TEXT("Slot")), OutItemData(TEXT("OutItemData"));
 inline const FName Item(TEXT("Item")), Data(TEXT("Data")), ItemCount(TEXT("ItemCount"));
 inline const FName Count(TEXT("Count")), PreferredSlot(TEXT("PreferredSlot"));
 inline const FName Notify(TEXT("bNotify"));
-inline const FName PrintText(TEXT("InString")), PrintToScreen(TEXT("bPrintToScreen"));
-inline const FName PrintToLog(TEXT("bPrintToLog")), PrintDuration(TEXT("Duration"));
 inline constexpr TCHAR One[] = TEXT("1");
 inline constexpr TCHAR NoSlot[] = TEXT("-1");
-inline constexpr TCHAR RefundTolerance[] = TEXT("0.001");
-inline constexpr TCHAR RefundDiagnosticSeconds[] = TEXT("10.0");
-inline constexpr TCHAR RefundFailureText[] =
-    TEXT("Railgun shot aborted: energy refund mismatch; firing disabled for this gun session");
 inline UClass* Class=nullptr;
 }
 namespace ShotAttack
@@ -68,25 +60,6 @@ inline USoundWave* Wave = nullptr;
 bool SaveDedicatedAsset(UObject* Asset);
 UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values);
 
-UEdGraphPin* WithinShotTolerance(FGraph& G, UEdGraphPin* Actual,
-    UEdGraphPin* Expected)
-{
-    UEdGraphPin* Lower = EnergyMath(G,
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_DoubleDouble),
-        Expected, Shot::RefundTolerance);
-    UEdGraphPin* Upper = EnergyMath(G,
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble),
-        Expected, Shot::RefundTolerance);
-    UEdGraphPin* AboveLower = G.Binary(
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
-            GreaterEqual_DoubleDouble), Actual, Lower);
-    UEdGraphPin* BelowUpper = G.Binary(
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
-            LessEqual_DoubleDouble), Actual, Upper);
-    return G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
-        AboveLower, BelowUpper);
-}
-
 void DestroyDeferredShot(FGraph& G, UEdGraphPin* Actor)
 {
     G.Branch(G.Valid(Actor));
@@ -96,16 +69,6 @@ void DestroyDeferredShot(FGraph& G, UEdGraphPin* Actor)
     G.Exec(Destroy);
 }
 
-void ReportRefundFailure(FGraph& G)
-{
-    auto* Print = G.Call(UKismetSystemLibrary::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, PrintString));
-    G.Default(Print, Shot::PrintText, Shot::RefundFailureText);
-    G.Default(Print, Shot::PrintToScreen, N::False);
-    G.Default(Print, Shot::PrintToLog, N::True);
-    G.Default(Print, Shot::PrintDuration, Shot::RefundDiagnosticSeconds);
-    G.Exec(Print);
-}
 USoundWave* ImportShotSound(const FString& Filename)
 {
     auto* Task = NewObject<UAssetImportTask>();
@@ -278,8 +241,6 @@ void AddRailgunFire(FGraph& G)
     auto* Event=NewObject<UK2Node_EnhancedInputAction>(G.Graph); Event->InputAction=LoadObject<UInputAction>(nullptr,RailgunInputNames::Fire); check(Event->InputAction); G.Node(Event); G.Tail=G.Pin(Event,DS::Started);
     G.Branch(ObserveCall(G,APawn::StaticClass(),GET_FUNCTION_NAME_CHECKED(APawn,IsPlayerControlled),OpticalSelf(G)));
     G.Branch(G.Valid(G.Read(Charge::Module)));
-    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
-        EqualEqual_BoolBool), G.Read(Shot::RefundFaulted), N::False));
     // A premature press is ignored, never queued for a later automatic shot.
     G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble),
         EnergyAmount(G), RequiredEnergyAmount(G)));
@@ -363,7 +324,6 @@ void AddRailgunFire(FGraph& G)
     G.Tail = DeferredReady;
     // Claim before either native debit can dispatch a reentrant delegate.
     G.Write(Shot::SpawnedThisPress, nullptr, N::True);
-    G.Write(Shot::EnergyBeforeDebit, EnergyAmount(G));
     auto* EnergyDebited = G.Branch(DebitEnergy(G,
         RequiredEnergyAmount(G)));
     UEdGraphPin* EnergyDebitedTail = G.Tail;
@@ -378,26 +338,6 @@ void AddRailgunFire(FGraph& G)
     G.Link(G.Read(Shot::AmmoSlot), G.Pin(RemoveAmmo, Shot::PreferredSlot));
     G.Default(RemoveAmmo, Shot::Notify, N::True);
     G.Exec(RemoveAmmo);
-    auto* AmmoRemoved = G.Branch(G.Compare(
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_IntInt),
-        G.Pin(RemoveAmmo, P::ReturnValue), Shot::One));
-    UEdGraphPin* AmmoRemovedTail = G.Tail;
-    G.Tail = G.Pin(AmmoRemoved, P::Else);
-    UEdGraphPin* RefundedAmount = CreditEnergy(G, RequiredEnergyAmount(G));
-    UEdGraphPin* AcceptedRefund = WithinShotTolerance(G, RefundedAmount,
-        RequiredEnergyAmount(G));
-    UEdGraphPin* RestoredBalance = WithinShotTolerance(G, EnergyAmount(G),
-        G.Read(Shot::EnergyBeforeDebit));
-    auto* RefundValid = G.Branch(G.Binary(
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
-        AcceptedRefund, RestoredBalance));
-    UEdGraphPin* RefundValidTail = G.Tail;
-    G.Tail = G.Pin(RefundValid, P::Else);
-    G.Write(Shot::RefundFaulted, nullptr, N::True);
-    ReportRefundFailure(G);
-    StationMerge(G, {RefundValidTail, G.Tail});
-    DestroyDeferredShot(G, G.Pin(Spawn, P::ReturnValue));
-    G.Tail = AmmoRemovedTail;
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Railgun,TypedRailgun);
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Operator,G.Read(N::OriginalPawn));
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Station,OpticalSelf(G));

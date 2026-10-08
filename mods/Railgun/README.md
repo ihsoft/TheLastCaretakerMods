@@ -168,8 +168,9 @@ The widget and station retain transient direct references to each other. A
 reconstructed widget unregisters its previous station first, and destruction
 clears the station's reference only when it still names that exact widget.
 Missing or unexpected ownership fails closed without retry, timer or world
-discovery. Per-frame HUD work is limited to live range/canary presentation and
-status-icon blinking; status classification consumes the station's cached
+discovery. Per-frame HUD work is limited to live range presentation and
+status-icon blinking; the gameplay HUD has no diagnostic status text, and
+status classification consumes the station's cached
 charge, socket and power state rather than polling the module.
 
 Electricity storage is configured in the same `KWh` unit shown by the game.

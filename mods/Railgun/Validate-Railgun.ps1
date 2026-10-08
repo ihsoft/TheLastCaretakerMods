@@ -597,6 +597,7 @@ foreach ($requiredVisualReference in @(
         ('Ammo-visual sync reference missing: ' + $requiredVisualReference)
 }
 $operator = @(Read-Candidate $operatorPackage)
+$operatorPackageStrings = @(JsonStringLeaves $operator)
 $operatorFunctions = @($operator | Where-Object { $_.Type -ceq 'Function' })
 $operatorClass = @($operator | Where-Object {
     $_.Type -ceq 'BlueprintGeneratedClass'
@@ -702,25 +703,36 @@ foreach ($forbiddenRecurringAimTag in @(
             $forbiddenRecurringAimTag)
 }
 foreach ($requiredFireReference in @(
-    'ShotSpawnedThisPress','ShotRefundFaulted','ShotEnergyBeforeDebit',
-    'ShotAmmoSlot','AcceptedRailgunAmmo','ItemCount',
+    'ShotSpawnedThisPress','ShotAmmoSlot','AcceptedRailgunAmmo','ItemCount',
     "Class'VoyageModuleComponent:GetInternalInventory'",
     "Class'VoyageBaseInventoryComponent:GetLastOccupiedSlot'",
     "Class'VoyageBaseInventoryComponent:GetSlot'",
     "Class'VoyageModuleComponent:RemoveResource'",
     "Class'VoyageBaseInventoryComponent:RemoveItem'",
-    "Class'VoyageModuleComponent:AddResource'",
     "Class'GameplayStatics:BeginDeferredActorSpawnFromClass'",
     "Class'GameplayStatics:FinishSpawningActor'",
     "Class'GameplayStatics:PlaySoundAtLocation'",
-    'K2_DestroyActor',
-    "Class'KismetSystemLibrary:PrintString'"
+    'K2_DestroyActor'
 )) {
     Require ($operatorStrings -ccontains $requiredFireReference) `
         ('Railgun fire contract reference missing: ' + $requiredFireReference)
 }
+foreach ($forbiddenDiagnosticReference in @(
+    'FreezeStatusText','RailgunCanaryStatusText','RailgunCanaryStatusExpires',
+    'HC19 STOP: prerequisite/entry failed. Screenshot, quit without saving.',
+    'HC23 STOP: stock input reference load/type/readback failed. Entry blocked; screenshot and quit.',
+    'HC24 CAMERA STOP: missing camera/flag/FOV prerequisite. Entry blocked.',
+    'RETURN FAILED: press E to retry; do not save. Report this.'
+)) {
+    Require (-not ($operatorPackageStrings -ccontains
+            $forbiddenDiagnosticReference)) `
+        ('Gameplay operator retained diagnostic text/reference: ' +
+            $forbiddenDiagnosticReference)
+}
 foreach ($forbiddenFireReference in @(
-    'Items','RailgunAmmoLastVisualCount','AddItem'
+    'Items','RailgunAmmoLastVisualCount','AddItem','ShotRefundFaulted',
+    'ShotEnergyBeforeDebit',"Class'VoyageModuleComponent:AddResource'",
+    "Class'KismetSystemLibrary:PrintString'"
 )) {
     Require (-not ($operatorStrings -ccontains $forbiddenFireReference)) `
         ('Railgun fire must not use presentation state or direct mutation: ' +
@@ -1380,8 +1392,8 @@ Require (-not ($runtimeActivityStrings -ccontains
     'Timer lifecycle must not poll socket or power supply state.'
 Require ($removeAmmoCallIndexes.Count -eq 1) `
     'Railgun fire must contain exactly one native ammo debit.'
-Require ($refundCallIndexes.Count -eq 1) `
-    'Railgun fire must contain exactly one bounded energy refund path.'
+Require ($refundCallIndexes.Count -eq 0) `
+    'Railgun fire must not contain an energy refund path.'
 $removeAmmoStatement = @($operatorStatements | Where-Object {
     [int]$_.StatementIndex -eq [int]$removeAmmoCallIndexes[0]
 })
@@ -1400,8 +1412,8 @@ Require ($removeAmmoParameters.Count -eq 4 -and
     $removeAmmoParameters[3].Token -ceq 'EX_True') `
     'Native ammo debit must use exact owned ammo, quantity one, captured slot and notifications.'
 $removeAmmoResultGates = @(RemoveAmmoResultGates $operatorStatements)
-Require ($removeAmmoResultGates.Count -eq 1) `
-    'Railgun fire must gate success on RemoveItem returning exactly one.'
+Require ($removeAmmoResultGates.Count -eq 0) `
+    'Railgun fire must not branch on the RemoveItem return value.'
 $shotDeferredCalls = @(DirectFunctionCalls $operatorStatements `
     "Class'GameplayStatics:BeginDeferredActorSpawnFromClass'" | Where-Object {
         @(JsonStringLeaves $_) -ccontains
@@ -1414,11 +1426,11 @@ Require ($claimAssignments.Count -eq 1) `
     'Railgun fire must claim each input request exactly once.'
 $finishIndexes = @(StatementIndexesContaining $operatorStatements `
     "Class'GameplayStatics:FinishSpawningActor'" | Where-Object {
-        $_ -gt [int]$removeAmmoResultGates[0].StatementIndex
+        $_ -gt [int]$removeAmmoCallIndexes[0]
     } | Sort-Object)
 $audioIndexes = @(StatementIndexesContaining $operatorStatements `
     "Class'GameplayStatics:PlaySoundAtLocation'" | Where-Object {
-        $_ -gt [int]$removeAmmoResultGates[0].StatementIndex
+        $_ -gt [int]$removeAmmoCallIndexes[0]
     } | Sort-Object)
 $getSlotIndexes = @(StatementIndexesContaining $operatorStatements `
     "Class'VoyageBaseInventoryComponent:GetSlot'")
@@ -1434,35 +1446,30 @@ $shotEnergyCallIndexes = @($removeEnergyCallIndexes | Where-Object {
 Require ($shotEnergyCallIndexes.Count -eq 1) `
     'Railgun fire must contain exactly one native energy debit after its claim.'
 $removeEnergyIndex = [int]$shotEnergyCallIndexes[0]
-$removeAmmoGateIndex = [int]$removeAmmoResultGates[0].StatementIndex
 $shotFinishIndex = [int]$finishIndexes[0]
 $shotAudioIndex = [int]$audioIndexes[0]
-$refundIndex = [int]$refundCallIndexes[0]
 Require ((($getSlotIndexes | Measure-Object -Maximum).Maximum) -lt
         $shotBeginIndex -and
     $shotBeginIndex -lt $claimIndex -and
     $claimIndex -lt $removeEnergyIndex -and
     $removeEnergyIndex -lt $removeAmmoIndex -and
-    $removeAmmoIndex -lt $removeAmmoGateIndex -and
-    $removeAmmoGateIndex -lt $shotFinishIndex -and
-    $shotFinishIndex -lt $shotAudioIndex -and
-    $shotAudioIndex -lt $refundIndex) `
+    $removeAmmoIndex -lt $shotFinishIndex -and
+    $shotFinishIndex -lt $shotAudioIndex) `
     'Railgun fire must preflight, claim, debit both resources and only then activate the shot.'
 $shotDestroyIndexes = @(StatementIndexesContaining $operatorStatements `
-    'K2_DestroyActor' | Where-Object {
-        $_ -gt $shotBeginIndex -and $_ -lt ($refundIndex + 1000)
-    })
-Require ($shotDestroyIndexes.Count -eq 3) `
-    'Railgun fire must destroy the deferred shot on cast, energy and ammo failure paths.'
-$refundBalanceReads = @(StatementIndexesContaining $operatorStatements `
-    "Class'VoyageModuleComponent:GetResourceAmount'" | Where-Object {
-        $_ -gt $refundIndex -and $_ -lt ($refundIndex + 1000)
-    })
-Require ($refundBalanceReads.Count -ge 1 -and
-    @($operatorStrings | Where-Object { $_ -ceq 'ShotEnergyBeforeDebit' }).Count -ge 2 -and
-    @($operatorStrings | Where-Object { $_ -ceq 'ShotRefundFaulted' }).Count -ge 2) `
-    'Energy compensation must verify the restored live balance and fail closed.'
+    'K2_DestroyActor')
+Require ($shotDestroyIndexes.Count -eq 2) `
+    'Railgun fire must destroy the deferred shot on cast and energy failure paths.'
 $hud = @(Read-Candidate $hudPackage)
+$hudPackageStrings = @(JsonStringLeaves $hud)
+foreach ($forbiddenHudDiagnosticReference in @(
+    'FreezeStatusText','RailgunCanaryStatusText','RailgunCanaryStatusExpires'
+)) {
+    Require (-not ($hudPackageStrings -ccontains
+            $forbiddenHudDiagnosticReference)) `
+        ('Gameplay HUD retained diagnostic text/reference: ' +
+            $forbiddenHudDiagnosticReference)
+}
 $hudFunctions = @($hud | Where-Object { $_.Type -ceq 'Function' })
 $hudUbergraph = @($hudFunctions | Where-Object {
     $_.Name -ceq 'ExecuteUbergraph_WBP_RailgunHUD'

@@ -1011,13 +1011,3 @@ UEdGraphPin* DebitEnergy(FGraph& G, UEdGraphPin* Amount)
     G.Link(RequestedAmount, G.Pin(Debit, Charge::RemoveAmount));
     G.Exec(Debit); return G.Pin(Debit, P::ReturnValue);
 }
-UEdGraphPin* CreditEnergy(FGraph& G, UEdGraphPin* Amount)
-{
-    auto* Credit = G.Call(UVoyageModuleComponent::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, AddResource));
-    G.Link(G.Read(Charge::Module), G.Pin(Credit, P::FunctionTarget));
-    G.Default(Credit, Charge::Type, Charge::Electricity);
-    G.Link(Amount, G.Pin(Credit, Charge::AddAmount));
-    G.Exec(Credit);
-    return G.Pin(Credit, P::ReturnValue);
-}

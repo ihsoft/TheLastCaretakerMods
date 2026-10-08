@@ -79,9 +79,8 @@
   against the old module and old rate, then clear the handle. Idle, supplied,
   empty and zero-rate stations own no drain timer. Tick no longer discovers
   lifecycle or supply state, maintains demand, drains energy, or samples unused
-  charge-rate state. Capacity,
-  units, the fresh pre-shot balance check, shot debit and bounded refund remain
-  unchanged.
+  charge-rate state. Capacity, units, the fresh pre-shot balance check and exact
+  shot debit remain independent of the offline-drain path.
 - The HUD resolves its exact owning station once from the owning player pawn in
   widget construction. It first identity-safely unregisters any prior station,
   stores reciprocal transient widget/station references, then takes initial
@@ -99,8 +98,8 @@
   it changes; misses and lifecycle reset publish the empty-name/`---` state.
   The HUD takes an unconditional initial range snapshot on construction and
   later calls `SetText` for those two widgets only when their `FText` changes.
-  Widget Tick keeps only range/canary presentation and status blinking through
-  the cached station reference;
+  Widget Tick keeps only range presentation and status blinking through the
+  cached station reference; the gameplay HUD has no diagnostic status text;
   status classification reads cached charge, socket and power fields and never
   calls the module resource or supply getters.
 - Loss of the module power connection discharges stored energy to zero at the
@@ -297,18 +296,12 @@ that slot's exact item and positive count, and creates a deferred inactive shot
 before spending resources. The input request is claimed before native calls
 that may dispatch delegates. Native exact energy removal runs first, followed
 without a latent gap by native `RemoveItem` for one round with notifications
-enabled. Only a return value of one finishes the projectile, updates successful
-shot charge state and plays audio. Empty inventory or insufficient charge
-therefore produces no projectile, sound, damage, ammo debit or energy debit;
-automatic charging remains independent of magazine state.
-
-If the ammo debit rejects after energy was removed, the graph uses native
-`AddResource` as bounded compensation, verifies both the accepted delta and the
-live restored balance within a small double tolerance, then destroys the
-deferred actor. A compensation mismatch permanently disables firing for that
-operator instance and emits one diagnostic log message. This is explicit
-fail-closed compensation, not a claim of transactional atomicity across the two
-native APIs.
+enabled. Its return value is not a control-flow gate: after the validated live
+precheck and exact energy debit, the graph finishes the projectile and effects
+without refund, retry, queue or persistent fault state. Empty inventory or
+insufficient charge fails the precheck and produces no projectile, sound,
+damage, ammo debit or energy debit; automatic charging remains independent of
+magazine state.
 
 The wide-view HUD displays six persistent cartridge icons
 above the existing charge text. Construction performs one guarded initial
@@ -422,8 +415,8 @@ writer, then reopened and compared field-for-field.
   save/reload. Multiplayer and exhaustive cable/operator-entry scenarios are
   outside that scope.
 - Firing consumes one round and rejects insufficient ammunition or energy.
-  The bounded energy-compensation failure branch has structural coverage only;
-  exceptional native rejection is outside the established runtime coverage.
+  Exceptional native inventory mutation rejection after the live precheck is
+  outside the established runtime coverage and does not lock later shots.
 - Railgun neither requires nor uses a shared placeholder registry pool. Shared
   allocation rules, duplicate-ID ownership and precedence between conflicting
   records are outside its supported contract.

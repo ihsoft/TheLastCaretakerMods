@@ -58,19 +58,19 @@ void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     const FName CollisionType(TEXT("NewType")); const TCHAR* NoCollision = TEXT("ECollisionEnabled::NoCollision");
     G.Link(G.Read(V::Body), G.Pin(Collision, P::FunctionTarget)); G.Default(Collision, CollisionType, NoCollision); G.Exec(Collision);
     auto* Controls = ReadNativeInputField(G, Station, AVoyageVehiclePawn::StaticClass(), NativeInputNames::ControlsField);
-    G.Require(G.Valid(Controls), ExitActionNames::Failed);
+    G.Require(G.Valid(Controls));
     NativeInputFieldGuard(G, Controls, UVoyageInputControlsComponent::StaticClass(), NativeInputNames::ContextField, NativeInputNames::Context, true);
     auto* Finish = G.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, FinishSpawningActor));
-    G.Link(Station, G.Pin(Finish, P::Actor)); G.Link(Transform, G.Pin(Finish, P::SpawnTransform)); G.Exec(Finish); G.Require(G.Valid(G.Pin(Finish, P::ReturnValue)), V::Failed);
+    G.Link(Station, G.Pin(Finish, P::Actor)); G.Link(Transform, G.Pin(Finish, P::SpawnTransform)); G.Exec(Finish); G.Require(G.Valid(G.Pin(Finish, P::ReturnValue)));
     auto* Attach = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_AttachToComponent));
     G.Link(Station, G.Pin(Attach, P::FunctionTarget)); G.Link(G.Read(S::Anchor), G.Pin(Attach, E::AttachmentParent));
     G.Default(Attach, E::LocationRule, N::KeepWorld); G.Default(Attach, E::RotationRule, N::KeepWorld); G.Default(Attach, E::ScaleRule, N::KeepWorld);
-    G.Default(Attach, E::WeldBodies, N::False); G.Exec(Attach); G.Require(G.Pin(Attach, P::ReturnValue), V::Failed);
+    G.Default(Attach, E::WeldBodies, N::False); G.Exec(Attach); G.Require(G.Pin(Attach, P::ReturnValue));
     ConfigureCombinedOperatorPoint(G);
     NativeInputFieldGuard(G, Controls, UVoyageInputControlsComponent::StaticClass(), NativeInputNames::ContextField, NativeInputNames::Context, false);
     auto* Interaction = ReadNativeInputField(G, Station, StationClass, CE::Interaction);
     auto* Query = ReadNativeInputField(G, Station, StationClass, CE::QueryBox);
-    G.Require(G.Valid(Interaction), V::Failed); G.Require(G.Valid(Query), V::Failed);
+    G.Require(G.Valid(Interaction)); G.Require(G.Valid(Query));
     auto* PlaceEntry = G.Call(USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_SetWorldTransform));
     G.Link(Interaction, G.Pin(PlaceEntry, P::FunctionTarget));
     G.Link(ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_GetComponentToWorld), G.Read(CE::ModelEntry)), G.Pin(PlaceEntry, ActorLifecycleGraphNames::NewTransform));
@@ -79,7 +79,7 @@ void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     G.Link(Query, G.Pin(ResizeEntry, P::FunctionTarget));
     G.Link(ObserveCall(G, UBoxComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UBoxComponent, GetUnscaledBoxExtent), G.Read(CE::ModelEntry)), G.Pin(ResizeEntry, CE::BoxExtentPin)); G.Exec(ResizeEntry);
     G.Require(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject),
-        ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, GetAttachParent), Query), Interaction), V::Failed);
+        ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, GetAttachParent), Query), Interaction));
     // Only own query box is enabled: native root remains NoCollision/nonphysical.
     auto* Enable = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, SetActorEnableCollision));
     G.Link(Station, G.Pin(Enable, P::FunctionTarget)); G.Default(Enable, SP::CollisionEnabled, N::True); G.Exec(Enable);

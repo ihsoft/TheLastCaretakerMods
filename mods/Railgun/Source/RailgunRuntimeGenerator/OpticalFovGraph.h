@@ -1,18 +1,14 @@
 #pragma once
 
 // Calculates the station optical FOV without possessing or mutating the character camera.
-namespace NativeCameraNames
-{
-inline constexpr TCHAR Refused[] = TEXT("HC24 CAMERA STOP: missing camera/flag/FOV prerequisite. Entry blocked.");
-}
 void CalculateNativeOpticalFov(FGraph& G)
 {
     auto* Manager = G.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, GetPlayerCameraManager));
-    G.Require(G.Valid(G.Pin(Manager, P::ReturnValue)), NativeCameraNames::Refused);
+    G.Require(G.Valid(G.Pin(Manager, P::ReturnValue)));
     G.Write(O::BaselineFov, ObserveCall(G, APlayerCameraManager::StaticClass(), GET_FUNCTION_NAME_CHECKED(APlayerCameraManager, GetFOVAngle), G.Pin(Manager, P::ReturnValue)));
     G.Require(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
         G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble), G.Read(O::BaselineFov), O::MinimumFov),
-        G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Less_DoubleDouble), G.Read(O::BaselineFov), O::MaximumFov)), NativeCameraNames::Refused);
+        G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Less_DoubleDouble), G.Read(O::BaselineFov), O::MaximumFov)));
     // Angular magnification: 2*atan(tan(on-foot FOV/2)/5), not FOV/5.
     auto* Half = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble));
     G.Link(G.Read(O::BaselineFov), G.Pin(Half, P::Binary::LeftOperand)); G.Default(Half, P::Binary::RightOperand, O::Half);
