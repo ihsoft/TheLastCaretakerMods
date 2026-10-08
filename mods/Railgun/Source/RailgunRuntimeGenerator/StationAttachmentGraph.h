@@ -13,19 +13,20 @@ inline const FName RotationBefore(TEXT("StationRotationBefore"));
 inline const FName EntryLocal(TEXT("StationEntryLocal"));
 inline const FName AnchorStart(TEXT("StationAnchorStart"));
 inline constexpr TCHAR ClassPath[] = TEXT("/Game/Mods/Railgun/Module/BP_Module_Railgun.BP_Module_Railgun_C");
-inline constexpr TCHAR Range[] = TEXT("300.0");
 inline constexpr TCHAR Walking[] = TEXT("MOVE_Walking");
 inline constexpr TCHAR WalkingByte[] = TEXT("1");
 }
 namespace S = StationProbeNames;
 namespace SP = CharacterStationGraphNames;
 
-UEdGraphPin* StationMode(FGraph& G)
+UEdGraphPin* StationMode(FGraph& G, UEdGraphPin* Movement = nullptr)
 {
     auto* Node = NewObject<UK2Node_VariableGet>(G.Graph);
     const FName Name = GET_MEMBER_NAME_CHECKED(UCharacterMovementComponent, MovementMode);
     Node->VariableReference.SetExternalMember(Name, UCharacterMovementComponent::StaticClass()); G.Node(Node);
-    G.Link(G.Read(S::Movement), G.Pin(Node, P::FunctionTarget)); return G.Pin(Node, Name);
+    G.Link(Movement ? Movement : G.Read(S::Movement),
+        G.Pin(Node, P::FunctionTarget));
+    return G.Pin(Node, Name);
 }
 
 UEdGraphPin* StationParent(FGraph& G)

@@ -11,7 +11,11 @@
   module component.
 - Interaction acquisition requires a query component that explicitly blocks the
   `Interact` channel and an exact `InteractiveInterface` implementation. The
-  action provider and input action are separate contracts.
+  action provider and input action are separate contracts. Native pointer/query
+  acquisition owns the spatial reach. The provider and entry callback share the
+  live station, character and walking-state eligibility; the callback repeats
+  those mutable checks before entry and does not add a separate actor-root
+  distance threshold in a different coordinate space.
 - Operator control uses a dedicated child of the common Voyage vehicle pawn.
   Entry, exit, camera, input context, HUD selection and action hints are owned by
   that station; the physical weapon remains stationary.

@@ -32,6 +32,57 @@ UEdGraphPin* ContextParentValid(FGraph& G)
     return G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), Owner, Parent);
 }
 
+struct FContextEntryEligibility
+{
+    UEdGraphPin* Character;
+    UEdGraphPin* Movement;
+};
+
+FContextEntryEligibility RequireContextEntryEligibility(FGraph& G,
+    UEdGraphPin* Pawn, UEdGraphPin* RejectedResult = nullptr,
+    UEdGraphPin* InteractionComponent = nullptr)
+{
+    auto Require = [&](UEdGraphPin* Condition)
+    {
+        auto* Guard = G.Branch(Condition);
+        if (RejectedResult)
+            G.Link(G.Pin(Guard, P::Else), RejectedResult);
+    };
+    Require(G.Read(CE::Ready));
+    Require(G.Valid(G.Read(S::Anchor)));
+    Require(ContextParentValid(G));
+    Require(G.Valid(G.Read(CE::EntryAction)));
+    Require(G.Valid(Pawn));
+    if (InteractionComponent)
+        Require(G.Binary(
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+                EqualEqual_ObjectObject), InteractionComponent,
+            G.Read(CE::Interaction)));
+    Require(G.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
+        ObserveCall(G, APawn::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled),
+            OpticalSelf(G)), N::False));
+    auto* Character = NewObject<UK2Node_DynamicCast>(G.Graph);
+    Character->TargetType = ACharacter::StaticClass();
+    Character->SetPurity(true);
+    G.Node(Character);
+    G.Link(Pawn, Character->GetCastSourcePin());
+    Require(G.Valid(Character->GetCastResultPin()));
+    auto* Movement = NewObject<UK2Node_DynamicCast>(G.Graph);
+    Movement->TargetType = UCharacterMovementComponent::StaticClass();
+    Movement->SetPurity(true);
+    G.Node(Movement);
+    G.Link(ObserveCall(G, APawn::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(APawn, GetMovementComponent),
+        Character->GetCastResultPin()), Movement->GetCastSourcePin());
+    Require(G.Valid(Movement->GetCastResultPin()));
+    Require(G.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ByteByte),
+        StationMode(G, Movement->GetCastResultPin()), S::WalkingByte));
+    return {Character->GetCastResultPin(), Movement->GetCastResultPin()};
+}
+
 void AddContextEntry(UBlueprint* BP)
 {
     // Own callback copies the exact current native delegate signature.
@@ -43,9 +94,6 @@ void AddContextEntry(UBlueprint* BP)
     { if (auto* It = Cast<UK2Node_FunctionEntry>(Node)) Entry = It; if (auto* It = Cast<UK2Node_FunctionResult>(Node)) Result = It; }
     check(Entry && Result); FGraph C(CallbackGraph, nullptr);
     C.Pin(Entry, P::Then)->BreakAllPinLinks(); C.Pin(Result, P::Execute)->BreakAllPinLinks(); C.Tail = C.Pin(Entry, P::Then);
-    C.Branch(C.Read(CE::Ready)); C.Branch(C.Valid(C.Read(S::Anchor))); C.Branch(ContextParentValid(C));
-    C.Branch(C.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
-        ObserveCall(C, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), OpticalSelf(C)), N::False));
     auto* Instance = NewObject<UK2Node_BreakStruct>(CallbackGraph); Instance->StructType = FVoyageInputActionInstance::StaticStruct(); C.Node(Instance);
     UEdGraphPin* InstanceInput = nullptr;
     for (auto* Pin : Instance->Pins) if (Pin->Direction == EGPD_Input) { InstanceInput = Pin; break; }
@@ -55,21 +103,12 @@ void AddContextEntry(UBlueprint* BP)
     C.Write(DS::Controller, PC->GetCastResultPin());
     C.Branch(ObserveCall(C, APlayerController::StaticClass(), GET_FUNCTION_NAME_CHECKED(APlayerController, IsLocalController), C.Read(DS::Controller)));
     C.Branch(ObserveCall(C, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, HasAuthority), OpticalSelf(C)));
-    auto* Character = NewObject<UK2Node_DynamicCast>(CallbackGraph); Character->TargetType = ACharacter::StaticClass(); Character->SetPurity(false); C.Node(Character);
-    C.Link(C.Tail, C.Pin(Character, P::Execute));
-    C.Link(ObserveCall(C, AController::StaticClass(), GET_FUNCTION_NAME_CHECKED(AController, K2_GetPawn), C.Read(DS::Controller)), Character->GetCastSourcePin()); C.Tail = Character->GetValidCastPin();
-    C.Write(N::OriginalPawn, Character->GetCastResultPin());
-    auto* Movement = NewObject<UK2Node_DynamicCast>(CallbackGraph); Movement->TargetType = UCharacterMovementComponent::StaticClass(); Movement->SetPurity(false); C.Node(Movement);
-    C.Link(C.Tail, C.Pin(Movement, P::Execute));
-    C.Link(ObserveCall(C, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, GetMovementComponent), C.Read(N::OriginalPawn)), Movement->GetCastSourcePin()); C.Tail = Movement->GetValidCastPin();
-    C.Write(S::Movement, Movement->GetCastResultPin());
-    C.Branch(C.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ByteByte), StationMode(C), S::WalkingByte));
-    auto* Difference = C.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_VectorVector),
-        ObserveCall(C, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetActorLocation), C.Read(N::OriginalPawn)),
-        ObserveCall(C, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_GetComponentLocation), C.Read(S::Anchor)));
-    auto* Distance = C.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, VSize));
-    C.Link(Difference, C.Pin(Distance, E::VectorLengthInput));
-    C.Branch(C.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, LessEqual_DoubleDouble), C.Pin(Distance, P::ReturnValue), S::Range));
+    auto Eligibility = RequireContextEntryEligibility(C,
+        ObserveCall(C, AController::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(AController, K2_GetPawn),
+            C.Read(DS::Controller)));
+    C.Write(N::OriginalPawn, Eligibility.Character);
+    C.Write(S::Movement, Eligibility.Movement);
     CalculateNativeOpticalFov(C);
     auto* Enter = C.Call(AVoyageVehiclePawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(AVoyageVehiclePawn, OnEnterVehicle));
     C.Link(OpticalSelf(C), C.Pin(Enter, P::FunctionTarget)); C.Link(C.Read(DS::Controller), C.Pin(Enter, V::NewPossessor)); C.Exec(Enter);
@@ -101,16 +140,8 @@ void AddContextEntry(UBlueprint* BP)
     EmptyResult->FunctionReference = Result->FunctionReference;
     G.Node(EmptyResult); G.Default(EmptyResult, P::ReturnValue, N::True);
     check(G.Pin(EmptyResult, CE::OutActions)->LinkedTo.IsEmpty());
-    auto Available = [&](UEdGraphPin* Condition)
-    {
-        auto* Guard = G.Branch(Condition);
-        G.Link(G.Pin(Guard, P::Else), G.Pin(EmptyResult, P::Execute));
-    };
-    Available(G.Read(CE::Ready)); Available(G.Valid(G.Read(S::Anchor))); Available(ContextParentValid(G));
-    Available(G.Valid(G.Read(CE::EntryAction))); Available(G.Valid(G.Pin(Entry, CE::MyCharacter)));
-    Available(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), G.Pin(Entry, CE::Component), G.Read(CE::Interaction)));
-    Available(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
-        ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), OpticalSelf(G)), N::False));
+    RequireContextEntryEligibility(G, G.Pin(Entry, CE::MyCharacter),
+        G.Pin(EmptyResult, P::Execute), G.Pin(Entry, CE::Component));
     auto* Action = NewObject<UK2Node_MakeStruct>(Graph); Action->StructType = FPlayerInputInterfaceAction::StaticStruct(); Action->bMadeAfterOverridePinRemoval = true; G.Node(Action);
     G.Link(G.Read(CE::EntryAction), G.Pin(Action, Hint::InputAction));
     G.Default(Action, Hint::Name, CE::ActionName); G.Default(Action, Hint::Category, Hint::ActionCategory);

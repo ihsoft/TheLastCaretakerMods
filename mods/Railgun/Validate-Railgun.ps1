@@ -604,6 +604,77 @@ $operatorClass = @($operator | Where-Object {
 })
 Require ($operatorClass.Count -eq 1) `
     'Expected one Railgun operator generated class.'
+$entryProvider = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'GetInteractiveProvidedActions'
+})
+$entryCallback = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'RailgunEnterFromAction'
+})
+Require ($entryProvider.Count -eq 1 -and $entryCallback.Count -eq 1) `
+    'Expected one modern entry provider and one entry callback.'
+$entryProviderStrings = @(JsonStringLeaves $entryProvider[0])
+$entryCallbackStrings = @(JsonStringLeaves $entryCallback[0])
+foreach ($requiredSharedEntryReference in @(
+    'RailgunEntryReady','StationAnchor','RailgunEntryAction',
+    'IsPlayerControlled','GetMovementComponent','MovementMode',
+    "Class'CharacterMovementComponent'",
+    "Class'KismetMathLibrary:EqualEqual_ByteByte'"
+)) {
+    Require ($entryProviderStrings -ccontains
+            $requiredSharedEntryReference -and
+        $entryCallbackStrings -ccontains $requiredSharedEntryReference) `
+        ('Entry provider/callback eligibility mismatch: ' +
+            $requiredSharedEntryReference)
+}
+foreach ($requiredProviderReference in @(
+    'RailgunInteraction','Component','MyCharacter'
+)) {
+    Require ($entryProviderStrings -ccontains $requiredProviderReference) `
+        ('Entry provider reference missing: ' +
+            $requiredProviderReference)
+}
+foreach ($requiredCallbackReference in @(
+    "Class'Actor:HasAuthority'",'IsLocalController','OnEnterVehicle'
+)) {
+    Require ($entryCallbackStrings -ccontains $requiredCallbackReference) `
+        ('Entry callback reference missing: ' +
+            $requiredCallbackReference)
+}
+foreach ($obsoleteEntryDistanceReference in @(
+    "Class'KismetMathLibrary:VSize'",
+    "Class'KismetMathLibrary:LessEqual_DoubleDouble'",
+    "Class'Actor:K2_GetActorLocation'",
+    "Class'SceneComponent:K2_GetComponentLocation'"
+)) {
+    Require (-not ($entryProviderStrings -ccontains
+            $obsoleteEntryDistanceReference) -and
+        -not ($entryCallbackStrings -ccontains
+            $obsoleteEntryDistanceReference)) `
+        ('Obsolete entry distance guard retained: ' +
+            $obsoleteEntryDistanceReference)
+}
+$handledEntryResults = @($entryProvider[0].ScriptBytecode | Where-Object {
+    $_.Token -ceq 'EX_LetBool' -and
+    @($_.PSObject.Properties.Name) -ccontains 'Variable' -and
+    @($_.Variable.PSObject.Properties.Name) -ccontains 'Variable' -and
+    @($_.Variable.Variable.PSObject.Properties.Name) -ccontains 'Property' -and
+    @($_.PSObject.Properties.Name) -ccontains 'Expression' -and
+    $_.Variable.Variable.Property.Name -ceq 'ReturnValue' -and
+    $_.Expression.Token -ceq 'EX_True'
+})
+$emptyEntryActions = @($entryProvider[0].ScriptBytecode | Where-Object {
+    $_.Token -ceq 'EX_Let' -and
+    @($_.PSObject.Properties.Name) -ccontains 'Variable' -and
+    @($_.Variable.PSObject.Properties.Name) -ccontains 'Variable' -and
+    @($_.Variable.Variable.PSObject.Properties.Name) -ccontains 'Property' -and
+    @($_.PSObject.Properties.Name) -ccontains 'Expression' -and
+    $_.Variable.Variable.Property.Name -ceq 'OutActions' -and
+    $_.Expression.Token -ceq 'EX_ArrayConst' -and
+    @($_.Expression.Values).Count -eq 0
+})
+Require ($handledEntryResults.Count -eq 2 -and
+    $emptyEntryActions.Count -eq 1) `
+    'Modern entry provider must return handled=true with empty actions when rejected.'
 $ownedAimReferences = @(
     @{Name='RailgunFirstPersonCamera'; Class="Class'CameraComponent'"},
     @{Name='RailgunFirstPersonCameraOwner'; Class="Class'Pawn'"},
