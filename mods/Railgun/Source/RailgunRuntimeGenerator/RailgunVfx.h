@@ -93,7 +93,7 @@ UClass* CreateRailgunImpactVfx()
         UEdGraphSchema_K2::PC_Boolean);
 
     FKismetEditorUtilities::CompileBlueprint(BP);
-    FGraph G(BP->UbergraphPages[0], nullptr);
+    FGraph G(BP->UbergraphPages[0]);
     auto* BeginPlay = NewObject<UK2Node_Event>(G.Graph);
     BeginPlay->EventReference.SetExternalMember(
         TimerGraphNames::ActorBeginPlay, AActor::StaticClass());

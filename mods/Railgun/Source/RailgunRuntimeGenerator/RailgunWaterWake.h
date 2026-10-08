@@ -175,7 +175,7 @@ void AddRailgunWaterWakeSegmentFunction(UBlueprint* BP)
 
     Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
     Result->FindPinChecked(P::Execute)->BreakAllPinLinks();
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     G.Tail = G.Pin(Entry, P::Then);
     TArray<UEdGraphPin*> ExitPaths;
     auto* ControllerValid = G.Branch(
@@ -438,7 +438,7 @@ void AddRailgunWaterWakeControllerFunctions(UBlueprint* BP)
         RailgunWaterWake::SampleStrength,
         RailgunWaterPinType(UEdGraphSchema_K2::PC_Real), EGPD_Output);
     check(AddLocation && AddStrength);
-    FGraph Add(AddGraph, nullptr);
+    FGraph Add(AddGraph);
     Add.Tail = Add.Pin(AddEntry, P::Then);
     auto* Accepting = Add.Branch(
         Add.Read(RailgunWaterWake::Accepting));
@@ -474,7 +474,7 @@ void AddRailgunWaterWakeControllerFunctions(UBlueprint* BP)
     UK2Node_FunctionResult* FinishResult = nullptr;
     CreateRailgunWaterWakeFunction(BP, RailgunWaterWake::Finish,
         FinishGraph, FinishEntry, FinishResult);
-    FGraph Finish(FinishGraph, nullptr);
+    FGraph Finish(FinishGraph);
     Finish.Tail = Finish.Pin(FinishEntry, P::Then);
     Finish.Write(RailgunWaterWake::Accepting, nullptr, N::False);
     Finish.Link(Finish.Tail, Finish.Pin(FinishResult, P::Execute));
@@ -545,7 +545,7 @@ UClass* CreateRailgunWaterWakeController()
     AddRailgunWaterWakeControllerFunctions(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
 
-    FGraph G(BP->UbergraphPages[0], nullptr);
+    FGraph G(BP->UbergraphPages[0]);
     RailgunWaterWakeEvent(G, TimerGraphNames::ActorBeginPlay);
     G.Write(RailgunWaterWake::Accepting, nullptr, N::True);
     auto* Life = G.Call(AActor::StaticClass(),

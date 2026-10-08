@@ -10,7 +10,6 @@
 // Renew the generated runtime contract on fingerprint change. No Voyage mirror.
 namespace RailgunRuntimeNames
 {
-inline const FName HudInstance(TEXT("DiagnosticHUD"));
 inline const FName HudTree(TEXT("WidgetTree"));
 inline const FName HudCanvas(TEXT("DiagnosticCanvas"));
 inline const FName OriginalPawn(TEXT("OriginalPlayerPawn"));

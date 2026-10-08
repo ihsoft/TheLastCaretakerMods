@@ -83,11 +83,6 @@ void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     // Only own query box is enabled: native root remains NoCollision/nonphysical.
     auto* Enable = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, SetActorEnableCollision));
     G.Link(Station, G.Pin(Enable, P::FunctionTarget)); G.Default(Enable, SP::CollisionEnabled, N::True); G.Exec(Enable);
-    // Observe the effective response after FinishSpawning; do not repair it here.
-    auto* Response = G.Call(UPrimitiveComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, GetCollisionResponseToChannel));
-    G.Link(Query, G.Pin(Response, P::FunctionTarget)); G.Default(Response, CE::CollisionChannelPin, CE::InteractChannelValue);
-    ContextSet(G, Station, StationClass, CE::InteractBlocks,
-        G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ByteByte), G.Pin(Response, P::ReturnValue), CE::BlockResponseValue));
     ContextSet(G, Station, StationClass, CE::Ready, nullptr, N::True);
     auto* BindAim = G.Call(StationClass, Aim::BindComponents);
     G.Link(Station, G.Pin(BindAim, P::FunctionTarget));
@@ -142,7 +137,7 @@ void AddRailgunStationInitializationFunction(UBlueprint* BP,
     check(Entry);
     Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
 
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     G.Tail = G.Pin(Entry, P::Then);
     // Idempotence is local to this shell. A destroyed station becomes invalid,
     // allowing a later genuine lifecycle event to recreate it without scans.

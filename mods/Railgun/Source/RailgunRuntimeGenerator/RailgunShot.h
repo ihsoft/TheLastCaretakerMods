@@ -147,7 +147,7 @@ UClass* CreateRailgunShot()
     FKismetEditorUtilities::CompileBlueprint(BP);
     AddRailgunWaterSegmentFunction(BP);
     AddRailgunWaterWakeSegmentFunction(BP);
-    FKismetEditorUtilities::CompileBlueprint(BP); FGraph G(BP->UbergraphPages[0],nullptr);
+    FKismetEditorUtilities::CompileBlueprint(BP); FGraph G(BP->UbergraphPages[0]);
     ShotEvent(G,TimerGraphNames::ActorBeginPlay);
     auto* TypePath=G.Call(UKismetSystemLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,MakeSoftClassPath)); G.Default(TypePath,E::PathString,ShotAttack::PhysicalType);
     auto* TypeRef=G.Call(UKismetSystemLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,Conv_SoftClassPathToSoftClassRef)); G.Link(G.Pin(TypePath,P::ReturnValue),G.Pin(TypeRef,E::SoftClassPath));

@@ -38,7 +38,7 @@ void AddStationActions(UBlueprint* BP)
         if (auto* Found = Cast<UK2Node_FunctionEntry>(Node)) Entry = Found;
         if (auto* Found = Cast<UK2Node_FunctionResult>(Node)) Result = Found;
     }
-    check(Entry && Result); FGraph G(Graph, nullptr);
+    check(Entry && Result); FGraph G(Graph);
     G.Pin(Entry, P::Then)->BreakAllPinLinks(); G.Pin(Result, P::Execute)->BreakAllPinLinks();
     G.Tail = G.Pin(Entry, P::Then);
     G.Link(G.Tail, G.Pin(Result, P::Execute));
@@ -85,7 +85,7 @@ void AddStationActions(UBlueprint* BP)
 void AddStationHintConstruction(UWidgetBlueprint* Hud,
     UEdGraphPin* ConstructTail = nullptr)
 {
-    UEdGraph* Graph = Hud->UbergraphPages[0]; FGraph G(Graph, nullptr);
+    UEdGraph* Graph = Hud->UbergraphPages[0]; FGraph G(Graph);
     if (ConstructTail)
     {
         G.Tail = ConstructTail;

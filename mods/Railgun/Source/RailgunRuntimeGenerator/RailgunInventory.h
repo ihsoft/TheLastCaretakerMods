@@ -106,7 +106,7 @@ void AddRailgunInventoryLimitInitialization(UBlueprint* BP,
         BeginPlay = Event;
     }
 
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     if (!BeginPlay)
     {
         BeginPlay = NewObject<UK2Node_Event>(Graph);
@@ -196,7 +196,7 @@ void AddRailgunAmmoVisualSync(UBlueprint* BP)
     check(Entry);
     Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
 
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     G.Tail = G.Pin(Entry, P::Then);
     UEdGraphPin* Inventory = G.Read(InventoryComponent);
     G.Branch(G.Valid(Inventory));
@@ -283,7 +283,7 @@ void AddRailgunAmmoHudNotification(UBlueprint* BP, UClass* StationClass)
     UEdGraphPin* ExistingWork = CountWriteTail->LinkedTo[0];
     CountWriteTail->BreakAllPinLinks();
 
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     G.Tail = CountWriteTail;
     auto* Station = NewObject<UK2Node_DynamicCast>(Graph);
     Station->TargetType = StationClass;
@@ -325,7 +325,7 @@ void AddRailgunAmmoVisualCallback(UBlueprint* BP)
     }
     check(Entry);
     Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     G.Tail = G.Pin(Entry, P::Then);
     auto* Sync = G.Call(BP->GeneratedClass, SyncVisuals);
     G.Exec(Sync);
@@ -340,7 +340,7 @@ void AddRailgunAmmoVisualPostLoad(UBlueprint* BP, FName DeferredInitialization)
     check(Function && Function->GetOuterUClass() == Interface &&
         BP->ParentClass->ImplementsInterface(Interface));
     UEdGraph* Graph = BP->UbergraphPages[0];
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     auto* PostLoad = NewObject<UK2Node_Event>(Graph);
     PostLoad->EventReference.SetExternalMember(OnPersistentActorPostLoad, Interface);
     PostLoad->bOverrideFunction = true;
@@ -369,7 +369,7 @@ void AddRailgunInventoryValidator(UBlueprint* BP)
     UK2Node_FunctionResult* Result;
     FindFunctionTerminals(Graph, Entry, Result);
 
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     G.Tail = G.Pin(Entry, P::Then);
     UEdGraphPin* CorrectItem = G.Binary(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject),
@@ -391,7 +391,7 @@ void AddRailgunInventoryInteraction(UBlueprint* BP)
     UK2Node_FunctionResult* Result;
     FindFunctionTerminals(Graph, Entry, Result);
 
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     G.Tail = G.Pin(Entry, P::Then);
     UK2Node_IfThenElse* Part = G.Branch(G.Compare(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_IntInt),

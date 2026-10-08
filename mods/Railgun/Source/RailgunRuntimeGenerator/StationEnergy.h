@@ -311,7 +311,7 @@ void AddRailgunDrainRuntime(UBlueprint* BP)
         BP->GeneratedClass->FindFunctionByName(Charge::SettleDrainFunction));
 
     SettleEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Settle(SettleGraph, nullptr);
+    FGraph Settle(SettleGraph);
     Settle.Tail = Settle.Pin(SettleEntry, P::Then);
     Settle.Branch(Settle.Read(Charge::OfflineDrainActive));
     Settle.Branch(Settle.Compare(
@@ -365,7 +365,7 @@ void AddRailgunDrainRuntime(UBlueprint* BP)
         BP->GeneratedClass->FindFunctionByName(Charge::StopDrainFunction));
 
     StopEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Stop(StopGraph, nullptr);
+    FGraph Stop(StopGraph);
     Stop.Tail = Stop.Pin(StopEntry, P::Then);
     auto* SettleRequested = Stop.Branch(ShouldSettle);
     auto* SettleCall = Stop.Call(BP->GeneratedClass,
@@ -397,7 +397,7 @@ void AddRailgunDrainRuntime(UBlueprint* BP)
     check(BP->Status != BS_Error && BP->GeneratedClass);
 
     UEdGraph* Ubergraph = BP->UbergraphPages[0];
-    FGraph Timer(Ubergraph, nullptr);
+    FGraph Timer(Ubergraph);
     auto* TimerEvent = NewObject<UK2Node_CustomEvent>(Ubergraph);
     TimerEvent->CustomFunctionName = Charge::DrainTimerEvent;
     Timer.Node(TimerEvent);
@@ -460,7 +460,7 @@ void AddRailgunActivityFunctions(UBlueprint* BP,
             ActivityEntry = Candidate;
     check(ActivityEntry);
     ActivityEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Activity(ActivityGraph, nullptr);
+    FGraph Activity(ActivityGraph);
     Activity.Tail = Activity.Pin(ActivityEntry, P::Then);
 
     UEdGraphPin* HasSupply = Activity.Binary(
@@ -575,7 +575,7 @@ void AddRailgunActivityFunctions(UBlueprint* BP,
             SupplyEntry = Candidate;
     check(SupplyEntry);
     SupplyEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Supply(SupplyGraph, nullptr);
+    FGraph Supply(SupplyGraph);
     Supply.Tail = Supply.Pin(SupplyEntry, P::Then);
     Supply.Branch(Supply.Valid(Supply.Read(Charge::Module)));
     Supply.Write(Charge::SocketConnected, ObserveCall(Supply,
@@ -604,7 +604,7 @@ void AddRailgunDeferredSupplyEvent(UBlueprint* BP)
 {
     check(BP && BP->GeneratedClass && BP->UbergraphPages.Num() == 1);
     UEdGraph* Graph = BP->UbergraphPages[0];
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     auto* Event = NewObject<UK2Node_CustomEvent>(Graph);
     Event->CustomFunctionName = Charge::DeferredSupplyEvent;
     G.Node(Event);
@@ -701,7 +701,7 @@ void AddRailgunEnergyFunctions(UBlueprint* BP,
         BP->GeneratedClass->FindFunctionByName(Charge::RefreshFunction));
 
     RefreshEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Refresh(RefreshGraph, nullptr);
+    FGraph Refresh(RefreshGraph);
     Refresh.Tail = Refresh.Pin(RefreshEntry, P::Then);
     Refresh.Branch(Refresh.Valid(Refresh.Read(Charge::Module)));
     auto* Busy = Refresh.Branch(Refresh.Read(Charge::UpdateActive));
@@ -738,7 +738,7 @@ void AddRailgunEnergyFunctions(UBlueprint* BP,
             CallbackEntry = Candidate;
     check(CallbackEntry);
     CallbackEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Callback(CallbackGraph, nullptr);
+    FGraph Callback(CallbackGraph);
     Callback.Tail = Callback.Pin(CallbackEntry, P::Then);
     UEdGraphPin* ChangedModule = Callback.Pin(CallbackEntry,
         Charge::ModuleParameter);
@@ -773,7 +773,7 @@ void AddRailgunEnergyFunctions(UBlueprint* BP,
                 Entry = Candidate;
         check(Entry);
         Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
-        FGraph Callback(Graph, nullptr);
+        FGraph Callback(Graph);
         Callback.Tail = Callback.Pin(Entry, P::Then);
         UEdGraphPin* ChangedModule = Callback.Pin(Entry, ModuleParameter);
         GuardRailgunModuleCallback(Callback, ChangedModule);
@@ -843,7 +843,7 @@ void AddRailgunEnergyFunctions(UBlueprint* BP,
             BindEntry = Candidate;
     check(BindEntry);
     BindEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Bind(BindGraph, nullptr);
+    FGraph Bind(BindGraph);
     Bind.Tail = Bind.Pin(BindEntry, P::Then);
 
     auto* BindNowCall = Bind.Call(UKismetSystemLibrary::StaticClass(),
@@ -951,16 +951,31 @@ void AddRailgunEnergyTeardown(UBlueprint* BP)
         check(!EndPlay);
         EndPlay = Event;
     }
-    check(EndPlay);
+    FGraph G(Graph);
+    if (!EndPlay)
+    {
+        EndPlay = NewObject<UK2Node_Event>(Graph);
+        EndPlay->EventReference.SetExternalMember(
+            ActorLifecycleGraphNames::EndPlayEvent, AActor::StaticClass());
+        EndPlay->bOverrideFunction = true;
+        G.Node(EndPlay);
+    }
     UEdGraphPin* EndPlayTail = EndPlay->FindPinChecked(P::Then);
-    check(EndPlayTail->LinkedTo.Num() == 1);
-    UEdGraphPin* ExistingWork = EndPlayTail->LinkedTo[0];
+    check(EndPlayTail->LinkedTo.Num() <= 1);
+    UEdGraphPin* ExistingWork = EndPlayTail->LinkedTo.Num() == 1
+        ? EndPlayTail->LinkedTo[0] : nullptr;
     EndPlayTail->BreakAllPinLinks();
-    FGraph G(Graph, nullptr);
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
     G.Link(EndPlayTail, G.Pin(Work, P::Execute));
-    G.Link(Work->GetThenPinGivenIndex(0), ExistingWork);
-    G.Tail = Work->GetThenPinGivenIndex(1);
+    if (ExistingWork)
+    {
+        G.Link(Work->GetThenPinGivenIndex(0), ExistingWork);
+        G.Tail = Work->GetThenPinGivenIndex(1);
+    }
+    else
+    {
+        G.Tail = Work->GetThenPinGivenIndex(0);
+    }
 
     auto* EndPlayNowCall = G.Call(UKismetSystemLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,

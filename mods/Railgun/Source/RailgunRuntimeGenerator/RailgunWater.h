@@ -268,7 +268,7 @@ void AddRailgunWaterSegmentFunction(UBlueprint* BP)
     EntryThen->BreakAllPinLinks();
     ResultExecute->BreakAllPinLinks();
 
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     G.Tail = G.Pin(Entry, P::Then);
     TArray<UEdGraphPin*> ExitPaths;
     auto* NotLatched = G.Branch(G.Compare(

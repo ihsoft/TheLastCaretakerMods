@@ -350,8 +350,6 @@ $packages += @(
     '/Game/Mods/Railgun/Inputs/IA_RailgunExit',
     '/Game/Mods/Railgun/Inputs/IA_RailgunZoom',
     '/Game/Mods/Railgun/Inputs/IA_RailgunFire',
-    '/Game/Mods/Railgun/Inputs/IA_RailgunExplosionCanary',
-    '/Game/Mods/Railgun/Inputs/IA_RailgunSplashCanary',
     '/Game/Mods/Railgun/Inputs/IMC_RailgunKeyboard',
     '/Game/Mods/Railgun/Inputs/DA_RailgunInputContext',
     '/Game/Mods/Railgun/Station/BP_RailgunOperator',

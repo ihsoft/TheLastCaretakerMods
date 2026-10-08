@@ -5,10 +5,6 @@ namespace ContextEntryNames
 inline const FName Ready(TEXT("RailgunEntryReady"));
 inline const FName ModelEntry(TEXT("RailgunModelEntryReference"));
 inline const FName BoxExtentPin(TEXT("InBoxExtent"));
-inline const FName InteractBlocks(TEXT("RailgunEntryInteractBlocks"));
-inline const FName CollisionChannelPin(TEXT("Channel"));
-inline constexpr TCHAR InteractChannelValue[] = TEXT("ECC_GameTraceChannel1");
-inline constexpr TCHAR BlockResponseValue[] = TEXT("2");
 inline const FName QueryBox(TEXT("RailgunEntryQuery"));
 inline const FName Interaction(TEXT("RailgunInteraction"));
 inline const FName EntryAction(TEXT("RailgunEntryAction"));

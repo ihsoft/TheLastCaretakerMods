@@ -21,7 +21,7 @@ void AddNativeStationHudInterface(UBlueprint* BP, UClass* ReturnedHud = nullptr)
         if (auto* Candidate = Cast<UK2Node_FunctionResult>(Node)) Result = Candidate;
     }
     check(Entry && Result);
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     G.Pin(Entry, P::Then)->BreakAllPinLinks(); G.Pin(Result, P::Execute)->BreakAllPinLinks();
     G.Tail = G.Pin(Entry, P::Then);
     G.Link(G.Tail, G.Pin(Result, P::Execute));

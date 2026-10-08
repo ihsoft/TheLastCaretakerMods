@@ -101,7 +101,7 @@ void AddRailgunAimBindingFunctions(UBlueprint* BP)
     };
 
     auto ClearFunction = AddFunction(Aim::ClearReferences);
-    FGraph Clear(ClearFunction.Key, nullptr);
+    FGraph Clear(ClearFunction.Key);
     Clear.Tail = Clear.Pin(ClearFunction.Value, P::Then);
     Clear.Write(Aim::YawComponent, nullptr);
     Clear.Write(Aim::PitchComponent, nullptr);
@@ -110,7 +110,7 @@ void AddRailgunAimBindingFunctions(UBlueprint* BP)
     Clear.Write(EyeAim::FirstPersonCameraOwner, nullptr);
 
     auto BindFunction = AddFunction(Aim::BindComponents);
-    FGraph Bind(BindFunction.Key, nullptr);
+    FGraph Bind(BindFunction.Key);
     Bind.Tail = Bind.Pin(BindFunction.Value, P::Then);
     Bind.Write(Aim::YawComponent, nullptr);
     Bind.Write(Aim::PitchComponent, nullptr);
@@ -269,7 +269,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     }
     for (UEdGraphNode* Node : DefaultNodes)
         if (!EnergyEventNodes.Contains(Node)) Node->DestroyNode();
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     auto Self = [&]() { return OpticalSelf(G); };
     auto* BeginPlay = NewObject<UK2Node_Event>(Graph);
     BeginPlay->EventReference.SetExternalMember(TimerGraphNames::ActorBeginPlay, AActor::StaticClass());
@@ -460,7 +460,6 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     SetZoom(false);
     G.Tail = G.Pin(Wide, P::Else); SetZoom(true);
 
-    AddRailgunVfxCanaries(G, Self());
     AddRailgunFire(G);
     // Real Enhanced Input events on the possessed station, not observer key polling.
     auto ActionNode = [&](const TCHAR* Package, FName Trigger)
@@ -560,22 +559,13 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, EyeAim::FirstPersonCameraOwner,
         UEdGraphSchema_K2::PC_Object, APawn::StaticClass());
     AddVariable(BP, ZoomTest::Mouse, UEdGraphSchema_K2::PC_Real);
-    AddVariable(BP, RailgunVfxCanary::ExplosionSystem,
-        UEdGraphSchema_K2::PC_Object, UNiagaraSystem::StaticClass());
-    AddVariable(BP, RailgunVfxCanary::SplashSystem,
-        UEdGraphSchema_K2::PC_Object, UNiagaraSystem::StaticClass());
-    AddVariable(BP, RailgunVfxCanary::ExplosionComponent,
-        UEdGraphSchema_K2::PC_Object, UNiagaraComponent::StaticClass());
-    AddVariable(BP, RailgunVfxCanary::SplashComponent,
-        UEdGraphSchema_K2::PC_Object, UNiagaraComponent::StaticClass());
     for (const auto& Setting : Settings::NumericSettings) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
     for (const auto& Setting : Settings::TextSettings) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_String);
     for (const auto& Setting : Settings::FontSettings)
         AddVariable(BP, Setting.ObjectField, UEdGraphSchema_K2::PC_Object, UObject::StaticClass());
     AddVariable(BP, DS::Sight, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
-    for (FName Field : {CE::Ready, CE::InteractBlocks}) AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
+    AddVariable(BP, CE::Ready, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, O::BaselineFov, UEdGraphSchema_K2::PC_Real);
-    AddVariable(BP, S::Movement, UEdGraphSchema_K2::PC_Object, UCharacterMovementComponent::StaticClass());
     AddVariable(BP, CE::EntryAction, UEdGraphSchema_K2::PC_Object, UInputAction::StaticClass());
     // Stock acquisition separates the interaction object from its hit shape.
     // Only Engine transform properties are authored on this native component.
@@ -865,7 +855,7 @@ UClass* CreateDedicatedStation()
                 Entry = Candidate;
         check(Entry);
         Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
-        FGraph Function(Graph, nullptr);
+        FGraph Function(Graph);
         Function.Tail = Function.Pin(Entry, P::Then);
         Function.Branch(Function.Valid(Function.Read(EnergyHud::Station)));
         BuildBody(Function, Function.Read(EnergyHud::Station));
@@ -893,7 +883,7 @@ UClass* CreateDedicatedStation()
             check(StatusParameter);
         }
         Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
-        FGraph Function(Graph, nullptr);
+        FGraph Function(Graph);
         Function.Tail = Function.Pin(Entry, P::Then);
         BuildBody(Function, StatusParameter);
     };
@@ -1221,7 +1211,7 @@ UClass* CreateDedicatedStation()
                 Entry = Candidate;
         check(Entry);
         Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
-        FGraph Function(Graph, nullptr);
+        FGraph Function(Graph);
         Function.Tail = Function.Pin(Entry, P::Then);
         Function.Branch(Function.Valid(Function.Read(EnergyHud::ActiveHud)));
         auto* CastHud = NewObject<UK2Node_DynamicCast>(Graph);
@@ -1257,7 +1247,7 @@ UClass* CreateDedicatedStation()
             EnergyHud::HudParameter, HudType, EGPD_Output);
         check(HudParameter);
         Entry->FindPinChecked(P::Then)->BreakAllPinLinks();
-        FGraph Function(Graph, nullptr);
+        FGraph Function(Graph);
         Function.Tail = Function.Pin(Entry, P::Then);
         if (Register)
         {
@@ -1294,7 +1284,7 @@ UClass* CreateDedicatedStation()
     UEdGraph* HudGraph = Hud->UbergraphPages[0];
     const auto Defaults = HudGraph->Nodes;
     for (UEdGraphNode* Node : Defaults) Node->DestroyNode();
-    FGraph HG(HudGraph, nullptr);
+    FGraph HG(HudGraph);
     auto RefreshRangeDisplay = [&](UEdGraphPin* BoundStation, bool Force)
     {
         const TPair<FName, FName> DisplayFields[] = {

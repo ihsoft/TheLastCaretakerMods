@@ -176,7 +176,7 @@ void AddRailgunChargeIndicatorFunctions(UBlueprint* BP)
             RefreshEntry = Candidate;
     check(RefreshEntry);
     RefreshEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Refresh(RefreshGraph, nullptr);
+    FGraph Refresh(RefreshGraph);
     Refresh.Tail = Refresh.Pin(RefreshEntry, P::Then);
     Refresh.Branch(Refresh.Valid(Refresh.Read(BoundModule)));
     EnsureRailgunChargeIndicator(Refresh);
@@ -200,7 +200,7 @@ void AddRailgunChargeIndicatorFunctions(UBlueprint* BP)
             CallbackEntry = Candidate;
     check(CallbackEntry);
     CallbackEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Callback(CallbackGraph, nullptr);
+    FGraph Callback(CallbackGraph);
     Callback.Tail = Callback.Pin(CallbackEntry, P::Then);
     UEdGraphPin* ChangedModule = Callback.Pin(CallbackEntry,
         Charge::ModuleParameter);
@@ -230,7 +230,7 @@ void AddRailgunChargeIndicatorFunctions(UBlueprint* BP)
     check(BindEntry);
     BindEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
 
-    FGraph Bind(BindGraph, nullptr);
+    FGraph Bind(BindGraph);
     Bind.Tail = Bind.Pin(BindEntry, P::Then);
     auto* CallbackDelegate = Bind.Node(
         NewObject<UK2Node_CreateDelegate>(BindGraph));
@@ -300,7 +300,7 @@ void AddRailgunChargeIndicatorTeardown(UBlueprint* BP)
     UEdGraphPin* ExistingWork = EndPlayTail->LinkedTo[0];
     EndPlayTail->BreakAllPinLinks();
 
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
     G.Link(EndPlayTail, G.Pin(Work, P::Execute));
     G.Link(Work->GetThenPinGivenIndex(0), ExistingWork);

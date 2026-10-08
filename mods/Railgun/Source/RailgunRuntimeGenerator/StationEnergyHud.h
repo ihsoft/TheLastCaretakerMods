@@ -220,7 +220,6 @@ void UpdateStationEnergyHud(FGraph& G, UEdGraphPin* Station,
     UClass* StationClass)
 {
     // This graph belongs to the widget itself, not an external observer actor.
-    // FGraph::Text requires HudClass/HudInstance and is a no-op in this graph.
     auto SetText = [&](FName Field, const TCHAR* Literal, UEdGraphPin* String = nullptr)
     {
         auto* Text = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText));

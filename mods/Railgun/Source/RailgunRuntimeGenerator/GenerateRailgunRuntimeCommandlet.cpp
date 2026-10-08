@@ -138,10 +138,9 @@ class FGraph
 {
 public:
     UEdGraph* Graph;
-    UClass* HudClass;
     UEdGraphPin* Tail = nullptr;
     int32 X = 0;
-    FGraph(UEdGraph* InGraph, UClass* InHudClass) : Graph(InGraph), HudClass(InHudClass) {}
+    explicit FGraph(UEdGraph* InGraph) : Graph(InGraph) {}
     template<class T> T* Node(T* In)
     {
         In->CreateNewGuid(); In->PostPlacedNewNode(); In->AllocateDefaultPins();
@@ -228,23 +227,6 @@ public:
         Link(Left, Pin(Fn, P::Binary::LeftOperand)); Link(Right, Pin(Fn, P::Binary::RightOperand));
         return Pin(Fn, P::ReturnValue);
     }
-    void Text(FName Component, const TCHAR* Value, UEdGraphPin* DynamicText = nullptr)
-    {
-        if (!HudClass) return; // Non-UI station guards have no observer widget.
-        auto* Widget = NewObject<UK2Node_VariableGet>(Graph);
-        Widget->VariableReference.SetExternalMember(Component, HudClass); Node(Widget);
-        Link(Read(N::HudInstance), Pin(Widget, P::FunctionTarget));
-        auto* Set = Call(UTextBlock::StaticClass(), GET_FUNCTION_NAME_CHECKED(UTextBlock, SetText));
-        Link(Pin(Widget, Component), Pin(Set, P::FunctionTarget));
-        if (DynamicText) Link(DynamicText, Pin(Set, E::WidgetText));
-        else
-        {
-            auto* Literal = Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText));
-            Default(Literal, E::StringValue, Value);
-            Link(Pin(Literal, P::ReturnValue), Pin(Set, E::WidgetText));
-        }
-        Exec(Set);
-    }
     UEdGraphPin* Transform(UEdGraphPin* Location, UEdGraphPin* Rotation)
     {
         auto* Make = Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeTransform));
@@ -305,7 +287,6 @@ namespace
 #include "RailgunWaterWake.h"
 #include "RailgunRecoil.h"
 #include "RailgunShot.h"
-#include "RailgunVfxCanary.h"
 #include "DedicatedStationGenerator.h"
 #include "RailgunAmmo.h"
 #include "RailgunInventory.h"
@@ -323,7 +304,7 @@ int32 UGenerateRailgunRuntimeCommandlet::Main(const FString& Params)
     {
         TArray<const TCHAR*> VerifyPackages {DedicatedStationNames::OperatorPackage, DedicatedStationNames::HudPackage,
             RailgunInputNames::LookYaw, RailgunInputNames::LookPitch, RailgunInputNames::Exit, RailgunInputNames::Zoom, RailgunInputNames::Fire,
-            RailgunInputNames::ExplosionCanary, RailgunInputNames::SplashCanary, Shot::Package,
+            Shot::Package,
             RailgunWaterWake::ControllerPackage,
             RailgunImpactVfx::Package,
             ShotAudio::Package, ZoomTest::MaskPackage, EnergyHud::ChargingPackage, EnergyHud::OfflinePackage, EnergyHud::ReadyPackage,

@@ -92,7 +92,7 @@ void AddContextEntry(UBlueprint* BP)
     UK2Node_FunctionEntry* Entry = nullptr; UK2Node_FunctionResult* Result = nullptr;
     for (UEdGraphNode* Node : CallbackGraph->Nodes)
     { if (auto* It = Cast<UK2Node_FunctionEntry>(Node)) Entry = It; if (auto* It = Cast<UK2Node_FunctionResult>(Node)) Result = It; }
-    check(Entry && Result); FGraph C(CallbackGraph, nullptr);
+    check(Entry && Result); FGraph C(CallbackGraph);
     C.Pin(Entry, P::Then)->BreakAllPinLinks(); C.Pin(Result, P::Execute)->BreakAllPinLinks(); C.Tail = C.Pin(Entry, P::Then);
     auto* Instance = NewObject<UK2Node_BreakStruct>(CallbackGraph); Instance->StructType = FVoyageInputActionInstance::StaticStruct(); C.Node(Instance);
     UEdGraphPin* InstanceInput = nullptr;
@@ -108,7 +108,6 @@ void AddContextEntry(UBlueprint* BP)
             GET_FUNCTION_NAME_CHECKED(AController, K2_GetPawn),
             C.Read(DS::Controller)));
     C.Write(N::OriginalPawn, Eligibility.Character);
-    C.Write(S::Movement, Eligibility.Movement);
     CalculateNativeOpticalFov(C);
     auto* Enter = C.Call(AVoyageVehiclePawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(AVoyageVehiclePawn, OnEnterVehicle));
     C.Link(OpticalSelf(C), C.Pin(Enter, P::FunctionTarget)); C.Link(C.Read(DS::Controller), C.Pin(Enter, V::NewPossessor)); C.Exec(Enter);
@@ -130,7 +129,7 @@ void AddContextEntry(UBlueprint* BP)
     Entry = nullptr; Result = nullptr;
     for (UEdGraphNode* Node : Graph->Nodes)
     { if (auto* It = Cast<UK2Node_FunctionEntry>(Node)) Entry = It; if (auto* It = Cast<UK2Node_FunctionResult>(Node)) Result = It; }
-    check(Entry && Result); FGraph G(Graph, nullptr);
+    check(Entry && Result); FGraph G(Graph);
     G.Pin(Entry, P::Then)->BreakAllPinLinks(); G.Pin(Result, P::Execute)->BreakAllPinLinks(); G.Tail = G.Pin(Entry, P::Then);
     // Modern-provider ownership is independent of action availability. Returning
     // false asks Voyage to invoke the legacy interface, which this K2-only
@@ -216,7 +215,7 @@ void AddStationLifecycleFunctions(UBlueprint* BP)
             FinalizeEntry = Candidate;
     check(FinalizeEntry);
     FinalizeEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Finalize(FinalizeGraph, nullptr);
+    FGraph Finalize(FinalizeGraph);
     Finalize.Tail = Finalize.Pin(FinalizeEntry, P::Then);
     Finalize.Branch(Finalize.Read(TeardownPending));
     Finalize.Branch(Finalize.Compare(
@@ -271,7 +270,7 @@ void AddStationLifecycleFunctions(UBlueprint* BP)
             CallbackEntry = Candidate;
     check(CallbackEntry);
     CallbackEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Callback(CallbackGraph, nullptr);
+    FGraph Callback(CallbackGraph);
     Callback.Tail = Callback.Pin(CallbackEntry, P::Then);
     UEdGraphPin* EndingActor = Callback.Pin(CallbackEntry,
         ActorLifecycleGraphNames::EndPlayActor);
@@ -331,7 +330,7 @@ void AddStationLifecycleFunctions(UBlueprint* BP)
             BindEntry = Candidate;
     check(BindEntry);
     BindEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
-    FGraph Bind(BindGraph, nullptr);
+    FGraph Bind(BindGraph);
     Bind.Tail = Bind.Pin(BindEntry, P::Then);
     auto* CallbackDelegate = Bind.Node(
         NewObject<UK2Node_CreateDelegate>(BindGraph));
@@ -395,7 +394,7 @@ void AddStationLifecycleTeardown(UBlueprint* BP)
     check(EndPlayTail->LinkedTo.Num() == 1);
     UEdGraphPin* ExistingWork = EndPlayTail->LinkedTo[0];
     EndPlayTail->BreakAllPinLinks();
-    FGraph G(Graph, nullptr);
+    FGraph G(Graph);
     auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(Graph));
     G.Link(EndPlayTail, G.Pin(Work, P::Execute));
     G.Link(Work->GetThenPinGivenIndex(0), ExistingWork);
