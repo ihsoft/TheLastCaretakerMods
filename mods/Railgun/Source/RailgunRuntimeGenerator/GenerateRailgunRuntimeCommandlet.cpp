@@ -13,6 +13,7 @@
 #include "Engine/StaticMesh.h"
 #include "VoyageProjectileMovementComponent.h"
 #include "VoyageMiscBlueprintFunctionLibrary.h"
+#include "VoyageItemInterface.h"
 #include "VoyageWeatherSubsystem.h"
 #include "VoyageCombatSubsystem.h"
 #include "Subsystems/SubsystemBlueprintLibrary.h"

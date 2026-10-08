@@ -73,13 +73,10 @@ void UpdateStationRange(FGraph& G)
     auto* Hit = G.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, BreakHitResult));
     G.Link(G.Pin(Trace, E::OutHit), G.Pin(Hit, E::Hit));
     auto* ActorValid = G.Branch(G.Valid(G.Pin(Hit, SP::HitActor)));
-    // Compute a guaranteed runtime UObject-name fallback first, but do not
-    // publish it until optional live Voyage item/name resolution has finished.
-    auto* ObjectName = G.Call(UKismetSystemLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, GetObjectName));
-    G.Link(G.Pin(Hit, SP::HitActor), G.Pin(ObjectName, P::Object));
-    auto* Fallback = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, Conv_StringToText));
-    G.Link(G.Pin(ObjectName, P::ReturnValue), G.Pin(Fallback, E::StringValue));
-    G.Write(Range::PendingTargetName, G.Pin(Fallback, P::ReturnValue));
+    // Resolve the same human-facing item provider used by the dismantle tool.
+    // Reset first so an unsupported hit cannot retain the previous target name.
+    G.Write(Range::PendingTargetName,
+        RangeLiteralText(G, N::EmptyText));
     auto* Length = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, VSize));
     G.Link(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Subtract_VectorVector), G.Pin(Hit, OP::ImpactPoint), Start), G.Pin(Length, E::VectorLengthInput));
     auto* Meters = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble));
@@ -96,31 +93,34 @@ void UpdateStationRange(FGraph& G)
     G.Default(Digits, Range::MaximumIntegralDigitsPin, Range::IntegralDigits);
     WriteRangeTextIfChanged(G, Range::TargetRange,
         G.Pin(Digits, P::ReturnValue));
-    [[maybe_unused]] constexpr auto ComponentSignature = static_cast<UActorComponent* (AActor::*)(TSubclassOf<UActorComponent>) const>(&AActor::GetComponentByClass);
-    auto* Component = G.Call(AActor::StaticClass(), OP::FindComponent);
-    G.Link(G.Pin(Hit, SP::HitActor), G.Pin(Component, P::FunctionTarget)); G.Pin(Component, OP::ComponentClass)->DefaultObject = UVoyageModuleComponent::StaticClass();
-    auto* Cast = NewObject<UK2Node_DynamicCast>(G.Graph); Cast->TargetType = UVoyageModuleComponent::StaticClass(); Cast->SetPurity(true); G.Node(Cast);
-    G.Link(G.Pin(Component, P::ReturnValue), Cast->GetCastSourcePin());
-    auto* ComponentValid = G.Branch(G.Valid(Cast->GetCastResultPin()));
-    auto* Item = NewObject<UK2Node_VariableGet>(G.Graph);
-    const FName ItemName = GET_MEMBER_NAME_CHECKED(UVoyageModuleComponent, ItemAsset);
-    Item->VariableReference.SetExternalMember(ItemName, UVoyageModuleComponent::StaticClass()); G.Node(Item);
-    G.Link(Cast->GetCastResultPin(), G.Pin(Item, P::FunctionTarget));
-    auto* ItemValid = G.Branch(G.Valid(G.Pin(Item, ItemName)));
-    auto* DataCast = NewObject<UK2Node_DynamicCast>(G.Graph); DataCast->TargetType = UVoyageBaseDataAsset::StaticClass(); DataCast->SetPurity(true); G.Node(DataCast);
-    G.Link(G.Pin(Item, ItemName), DataCast->GetCastSourcePin());
-    auto* DataValid = G.Branch(G.Valid(DataCast->GetCastResultPin()));
-    auto* Name = NewObject<UK2Node_VariableGet>(G.Graph);
-    const FName NameField = GET_MEMBER_NAME_CHECKED(UVoyageBaseDataAsset, Name);
-    Name->VariableReference.SetExternalMember(NameField, UVoyageBaseDataAsset::StaticClass()); G.Node(Name);
-    G.Link(DataCast->GetCastResultPin(), G.Pin(Name, P::FunctionTarget));
+    auto* ResolveItemProvider = G.Call(
+        UVoyageMiscBlueprintFunctionLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageMiscBlueprintFunctionLibrary,
+            GetDestructibleInterface));
+    G.Link(G.Pin(Hit, E::HitComponent),
+        G.Pin(ResolveItemProvider, P::Object));
+    auto* ProviderValid = G.Branch(
+        G.Valid(G.Pin(ResolveItemProvider, P::ReturnValue)));
+    auto* ItemInterface = NewObject<UK2Node_DynamicCast>(G.Graph);
+    ItemInterface->TargetType = UVoyageItemInterface::StaticClass();
+    ItemInterface->SetPurity(true);
+    G.Node(ItemInterface);
+    G.Link(G.Pin(ResolveItemProvider, P::ReturnValue),
+        ItemInterface->GetCastSourcePin());
+    auto* ItemInterfaceValid = G.Branch(
+        ItemInterface->GetBoolSuccessPin());
+    auto* GetItemName = G.Call(UVoyageItemInterface::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(IVoyageItemInterface, GetItemName));
+    G.Link(ItemInterface->GetCastResultPin(),
+        G.Pin(GetItemName, P::FunctionTarget));
     auto* Empty = G.Call(UKismetTextLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetTextLibrary, TextIsEmpty));
-    G.Link(G.Pin(Name, NameField), G.Pin(Empty, E::WidgetText));
+    G.Link(G.Pin(GetItemName, P::ReturnValue),
+        G.Pin(Empty, E::WidgetText));
     auto* EmptyBranch = G.Branch(G.Pin(Empty, P::ReturnValue)); G.Tail = EmptyBranch->GetElsePin();
-    G.Write(Range::PendingTargetName, G.Pin(Name, NameField));
+    G.Write(Range::PendingTargetName,
+        G.Pin(GetItemName, P::ReturnValue));
     StationMerge(G, {G.Tail, G.Pin(EmptyBranch, P::Then),
-        G.Pin(DataValid, P::Else), G.Pin(ItemValid, P::Else),
-        G.Pin(ComponentValid, P::Else)});
+        G.Pin(ItemInterfaceValid, P::Else), G.Pin(ProviderValid, P::Else)});
     WriteRangeTextIfChanged(G, Range::TargetName,
         G.Read(Range::PendingTargetName));
     UEdGraphPin* HitTail = G.Tail;

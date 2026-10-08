@@ -669,17 +669,78 @@ Require ($pendingTargetName.Count -eq 1 -and
 foreach ($requiredRangeReference in @(
     'DetectedSharkName','OpticalTargetRange','RailgunPendingTargetName',
     "Class'KismetSystemLibrary:LineTraceSingle'",
-    "Class'Actor:GetComponentByClass'",
-    "Class'KismetSystemLibrary:GetObjectName'",
+    'GetItemName',
+    "Class'VoyageMiscBlueprintFunctionLibrary:GetDestructibleInterface'",
     "Class'KismetTextLibrary:TextIsEmpty'",
     "Class'KismetTextLibrary:Conv_IntToText'",
     "Class'KismetTextLibrary:EqualEqual_TextText'",
-    'ItemAsset','Name','---'
+    '---'
 )) {
     Require ($operatorStrings -ccontains $requiredRangeReference) `
         ('Changed-only range reference missing: ' +
             $requiredRangeReference)
 }
+$targetProviderCalls = @($operatorStatements | Where-Object {
+    @(JsonStringLeaves $_) -ccontains
+        "Class'VoyageMiscBlueprintFunctionLibrary:GetDestructibleInterface'"
+})
+Require ($targetProviderCalls.Count -gt 0) `
+    'Range target provider resolution is missing.'
+foreach ($targetProviderCall in $targetProviderCalls) {
+    $targetProviderParameters = @($targetProviderCall.Expression.Parameters)
+    Require ($targetProviderParameters.Count -eq 1 -and
+        $targetProviderParameters[0].Token -ceq 'EX_LocalVariable' -and
+        $targetProviderParameters[0].Variable.Property.Name -match
+            '^CallFunc_BreakHitResult_HitComponent(_\d+)?$' -and
+        $targetProviderParameters[0].Variable.Property.Type -ceq
+            'ObjectProperty' -and
+        $targetProviderParameters[0].Variable.Property.PropertyClass.ObjectName `
+            -ceq "Class'PrimitiveComponent'") `
+        'Every range target provider call must consume the trace hit component.'
+}
+$targetItemNameCalls = @($operatorStatements | Where-Object {
+    $_.Token -ceq 'EX_Let' -and
+    $null -ne $_.Expression -and
+    $_.Expression.Token -ceq 'EX_Context' -and
+    $null -ne $_.Expression.ObjectExpression -and
+    $_.Expression.ObjectExpression.Token -ceq 'EX_InterfaceContext' -and
+    $_.Expression.ContextExpression.Token -ceq 'EX_VirtualFunction' -and
+    $_.Expression.ContextExpression.Function -ceq 'GetItemName'
+})
+Require ($targetItemNameCalls.Count -gt 0) `
+    'Range target item-name interface call is missing.'
+foreach ($targetItemNameCall in $targetItemNameCalls) {
+    Require (
+        @($targetItemNameCall.Expression.ContextExpression.Parameters).Count `
+            -eq 0 -and
+        $targetItemNameCall.Variable.Variable.Property.Type -ceq
+            'TextProperty' -and
+        $targetItemNameCall.Expression.ObjectExpression.InterfaceValue.Variable.`
+            Property.Type -ceq 'InterfaceProperty' -and
+        $targetItemNameCall.Expression.ObjectExpression.InterfaceValue.Variable.`
+            Property.InterfaceClass.ObjectName -ceq
+                "Class'VoyageItemInterface'") `
+        'Every range item-name call must be the exact no-argument Voyage item interface FText.'
+}
+$pendingTargetNameAssignments = @($operatorStatements | Where-Object {
+    $_.Token -ceq 'EX_Let' -and
+    @($_.PSObject.Properties.Name) -ccontains 'Variable' -and
+    @($_.Variable.PSObject.Properties.Name) -ccontains 'Variable' -and
+    @($_.Variable.Variable.PSObject.Properties.Name) -ccontains 'Property' -and
+    $_.Variable.Variable.Property.Name -ceq 'RailgunPendingTargetName'
+})
+Require ($pendingTargetNameAssignments.Count -eq 2) `
+    'Range target name must have only the empty reset and interface-name assignment.'
+$pendingTargetNameInputs = @($pendingTargetNameAssignments | ForEach-Object {
+    $_.Expression.Variable.Property.Name
+})
+Require (@($pendingTargetNameInputs | Where-Object {
+        $_ -match '^CallFunc_Conv_StringToText_ReturnValue(_\d+)?$'
+    }).Count -eq 1 -and
+    @($pendingTargetNameInputs | Where-Object {
+        $_ -ceq 'CallFunc_GetItemName_ReturnValue'
+    }).Count -eq 1) `
+    'Range target name must be sourced only from the empty reset or GetItemName FText.'
 foreach ($forbiddenRangeCache in @(
     'RailgunRangeTargetActor','RailgunRangeTargetModule',
     'RailgunRangeTargetModuleResolved'

@@ -93,9 +93,11 @@
   its cached count changes. Completed settings reads and zoom changes refresh
   style and mode directly. Notifications that precede widget construction are
   covered by the construction snapshot. Target name/range retain their
-  per-frame optical trace and live module `ItemAsset`/localized `Name` lookup,
-  including the UObject-name fallback, but publish only the final `FText` when
-  it changes; misses and lifecycle reset publish the empty-name/`---` state.
+  per-frame optical trace. The hit component resolves through Voyage's shared
+  destructible provider and `VoyageItemInterface.GetItemName`; the localized
+  `FText` is published only when it changes. Unsupported hits use an empty name
+  without exposing internal UObject identities, while misses and lifecycle
+  reset publish the empty-name/`---` state.
   The HUD takes an unconditional initial range snapshot on construction and
   later calls `SetText` for those two widgets only when their `FText` changes.
   Widget Tick keeps only range presentation through the cached station
