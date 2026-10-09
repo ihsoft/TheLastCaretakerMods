@@ -2384,37 +2384,83 @@ $rootInventoryEntries = @($inventory.components | Where-Object {
 Require ($rootInventoryEntries.Count -eq 1 -and
     $rootInventoryEntries[0].name -ceq $modelRootName) `
     'Model inventory does not identify exactly one root.'
-$ammoCassetteInventory = $inventory.ammoCassette
-Require ($null -ne $ammoCassetteInventory) `
-    'Ammo cassette import evidence is missing.'
-Require ([IO.Path]::GetFullPath([string]$ammoCassetteInventory.sourceFile) -ceq `
-    [IO.Path]::GetFullPath((Join-Path $PSScriptRoot `
-        'Assets/Fabricator/RailgunAmmoCassette.glb'))) `
-    'Ammo cassette import used an unexpected source file.'
-Require ($ammoCassetteInventory.meshPackage -ceq `
-    '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette') `
-    'Ammo cassette mesh package mismatch.'
-Require ($ammoCassetteInventory.objectPath -ceq `
-    '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette') `
-    'Ammo cassette object path mismatch.'
-Require ([int]$ammoCassetteInventory.triangles -gt 0) `
-    'Ammo cassette has no render geometry.'
-Require ([int]$ammoCassetteInventory.collisionPrimitives -gt 0) `
-    'Ammo cassette has no simple collision.'
-$ammoCassetteBounds = @($ammoCassetteInventory.boundsCm)
-Require ($ammoCassetteBounds.Count -eq 3) `
-    'Ammo cassette bounds are incomplete.'
-foreach ($extent in $ammoCassetteBounds) {
+$ammoPickupInventory = $inventory.ammoPickup
+$ammoPickupPackage = '/Game/Mods/Railgun/Fabricator/AmmoCassette/BP_RailgunAmmoCassette'
+$ammoPickupClass = $ammoPickupPackage + '.BP_RailgunAmmoCassette_C'
+$ammoSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot `
+    'Assets/Fabricator/railgun-ammo-item.json') -Raw | ConvertFrom-Json
+$ammoSourcePrimary = @($ammoSource.Exports | Where-Object {
+    $_.ObjectName -ceq 'DA_Ammo_Railgun_FullRod'
+})
+Require ($ammoSourcePrimary.Count -eq 1) `
+    'Authored ammo JSON primary export is missing or duplicated.'
+$ammoSourceDropProperties = @($ammoSourcePrimary[0].Data | Where-Object {
+    $_.Name -ceq 'DropVariations'
+})
+Require ($ammoSourceDropProperties.Count -eq 1) `
+    'Authored ammo JSON has no single DropVariations property.'
+$ammoSourceRenderAssets = @($ammoSourceDropProperties[0].Value.Value |
+    Where-Object { $_.Name -ceq 'RenderAsset' })
+Require ($ammoSourceRenderAssets.Count -eq 1) `
+    'Authored ammo JSON has no single supported RenderAsset.'
+$ammoSourceRenderIdentity = $ammoSourceRenderAssets[0].Value.AssetPath
+$ammoPickupCarrierMesh = [string]$ammoSourceRenderIdentity.PackageName + '.' +
+    [string]$ammoSourceRenderIdentity.AssetName
+Require ($null -ne $ammoPickupInventory) `
+    'Shared composite ammo pickup evidence is missing.'
+Require ($ammoPickupInventory.root -ceq $inventory.roles.ammoPickupRoot -and
+    $ammoPickupInventory.carrier -ceq $inventory.roles.ammoPickupCarrier) `
+    'Ammo pickup role evidence differs from the model role registry.'
+Require ($ammoPickupInventory.package -ceq $ammoPickupPackage -and
+    $ammoPickupInventory.classObjectPath -ceq $ammoPickupClass -and
+    $ammoPickupInventory.carrierMesh -ceq $ammoPickupCarrierMesh) `
+    'Ammo pickup owned actor or shared carrier identity mismatch.'
+Require (@($ammoPickupInventory.parts).Count -gt 0) `
+    'Ammo pickup has no non-carrier render descendants.'
+Require (-not (@($ammoPickupInventory.parts.sourceName) -ccontains
+    [string]$ammoPickupInventory.carrier)) `
+    'Ammo pickup duplicated its native carrier as an SCS child.'
+$ammoPickupCollisionSize = @($ammoPickupInventory.collisionSizeCm)
+$ammoPickupCollisionCenter = @($ammoPickupInventory.collisionCenterCm)
+Require ($ammoPickupCollisionSize.Count -eq 3 -and
+    $ammoPickupCollisionCenter.Count -eq 3) `
+    'Ammo pickup collision bounds are incomplete.'
+foreach ($extent in $ammoPickupCollisionSize) {
     $value = [double]$extent
     Require ($value -gt 0.0 -and -not [double]::IsNaN($value) -and
         -not [double]::IsInfinity($value)) `
-        'Ammo cassette bounds are not finite and nondegenerate.'
+        'Ammo pickup collision size is not finite and nondegenerate.'
 }
-foreach ($package in @($ammoCassetteInventory.meshPackage) +
-    @($ammoCassetteInventory.materialPackages) +
-    @($ammoCassetteInventory.texturePackages)) {
-    Require (@($inventory.packages) -ccontains $package) `
-        ('Ammo cassette cook dependency is absent: ' + $package)
+foreach ($center in $ammoPickupCollisionCenter) {
+    $value = [double]$center
+    Require (-not [double]::IsNaN($value) -and
+        -not [double]::IsInfinity($value)) `
+        'Ammo pickup collision center is not finite.'
+}
+foreach ($part in @($ammoPickupInventory.parts)) {
+    foreach ($field in @('location','rotation','scale')) {
+        $values = @($part.$field)
+        Require ($values.Count -eq 3) `
+            ('Ammo pickup transform is incomplete: ' + $part.sourceName + '/' + $field)
+        foreach ($coordinate in $values) {
+            $value = [double]$coordinate
+            Require (-not [double]::IsNaN($value) -and
+                -not [double]::IsInfinity($value)) `
+                ('Ammo pickup transform is not finite: ' + $part.sourceName + '/' + $field)
+        }
+    }
+}
+$pickupAssetPaths = @($ammoPickupInventory.carrierMesh) +
+    @($ammoPickupInventory.carrierMaterials) +
+    @($ammoPickupInventory.parts | ForEach-Object {
+        @($_.mesh) + @($_.materials)
+    })
+foreach ($pickupAssetPath in $pickupAssetPaths) {
+    if ([string]::IsNullOrWhiteSpace([string]$pickupAssetPath)) { continue }
+    $separator = ([string]$pickupAssetPath).LastIndexOf('.')
+    Require ($separator -gt 0 -and @($inventory.packages) -ccontains
+        ([string]$pickupAssetPath).Substring(0, $separator)) `
+        ('Ammo pickup shared dependency is absent: ' + $pickupAssetPath)
 }
 function Require-Child([string]$ParentName, [string]$ChildName) {
     $parent = @($shell | Where-Object { $_.Type -ceq 'SCS_Node' -and $_.Properties.InternalVariableName -ceq $ParentName })
@@ -2615,27 +2661,107 @@ for ($i=0; $i -lt 3; $i++) {
     Require ([Math]::Abs($boxes[0].Center.$axis - $config.centerCm[$i]) -lt 0.001) 'Fabricator collision center mismatch.'
 }
 Require ($body[0].Properties.CollisionTraceFlag -cin @('ECollisionTraceFlag::CTF_UseSimpleAsComplex','CTF_UseSimpleAsComplex')) 'Fabricator collision mode changed.'
-$ammoCassetteMesh = @(Read-Candidate $ammoCassetteInventory.meshPackage)
-$ammoCassetteStaticMesh = @($ammoCassetteMesh | Where-Object { $_.Type -ceq 'StaticMesh' })
-$ammoCassetteBody = @($ammoCassetteMesh | Where-Object { $_.Type -ceq 'BodySetup' })
-Require ($ammoCassetteStaticMesh.Count -eq 1 -and $ammoCassetteBody.Count -eq 1) `
-    'Cooked ammo cassette mesh or BodySetup is missing.'
-$ammoCassetteAggGeom = $ammoCassetteBody[0].Properties.AggGeom
-$ammoCassetteSimpleCollisionCount =
-    (ArrayPropertyCount $ammoCassetteAggGeom 'BoxElems') +
-    (ArrayPropertyCount $ammoCassetteAggGeom 'SphereElems') +
-    (ArrayPropertyCount $ammoCassetteAggGeom 'SphylElems') +
-    (ArrayPropertyCount $ammoCassetteAggGeom 'ConvexElems')
-Require ($ammoCassetteSimpleCollisionCount -gt 0) `
-    'Cooked ammo cassette has no simple collision primitives.'
-if (@($ammoCassetteBody[0].Properties.PSObject.Properties.Name) -ccontains
-    'CollisionTraceFlag') {
-    Require ($ammoCassetteBody[0].Properties.CollisionTraceFlag -cnotmatch `
-        'UseComplexAsSimple') 'Ammo cassette collision became complex-only.'
+$ammoPickupCarrierPackage = $ammoPickupCarrierMesh.Substring(0,
+    $ammoPickupCarrierMesh.LastIndexOf('.'))
+$ammoPickupCarrier = @(Read-Candidate $ammoPickupCarrierPackage)
+$ammoPickupCarrierStaticMesh = @($ammoPickupCarrier | Where-Object {
+    $_.Type -ceq 'StaticMesh'
+})
+$ammoPickupCarrierBody = @($ammoPickupCarrier | Where-Object {
+    $_.Type -ceq 'BodySetup'
+})
+Require ($ammoPickupCarrierStaticMesh.Count -eq 1 -and
+    $ammoPickupCarrierBody.Count -eq 1) `
+    'Cooked shared ammo carrier mesh or BodySetup is missing.'
+$ammoPickupBoxes = @($ammoPickupCarrierBody[0].Properties.AggGeom.BoxElems)
+Require ($ammoPickupBoxes.Count -eq 1) `
+    'Shared ammo carrier must own exactly one composite simple box.'
+for ($i=0; $i -lt 3; $i++) {
+    $axis = @('X','Y','Z')[$i]
+    Require ([Math]::Abs([double]$ammoPickupBoxes[0].$axis -
+        [double]$ammoPickupCollisionSize[$i]) -lt 0.001) `
+        ('Ammo pickup collision size mismatch: ' + $axis)
+    Require ([Math]::Abs([double]$ammoPickupBoxes[0].Center.$axis -
+        [double]$ammoPickupCollisionCenter[$i]) -lt 0.001) `
+        ('Ammo pickup collision center mismatch: ' + $axis)
 }
-foreach ($package in @(@($inventory.packages | Where-Object {
+Require ($ammoPickupCarrierBody[0].Properties.CollisionTraceFlag -cin @(
+    'ECollisionTraceFlag::CTF_UseSimpleAsComplex','CTF_UseSimpleAsComplex')) `
+    'Shared ammo carrier collision mode changed.'
+$ammoPickup = @(Read-Candidate $ammoPickupPackage)
+$ammoPickupClasses = @($ammoPickup | Where-Object {
+    $_.Type -ceq 'BlueprintGeneratedClass' -and
+    $_.Name -ceq 'BP_RailgunAmmoCassette_C'
+})
+Require ($ammoPickupClasses.Count -eq 1 -and
+    $ammoPickupClasses[0].Super.ObjectPath -ceq
+        '/Game/Blueprints/BP_DynamicMeshActor.0') `
+    'Ammo pickup lost its exact stock Blueprint parent.'
+$ammoPickupNodes = @($ammoPickup | Where-Object {
+    if ($_.Type -cne 'SCS_Node') { return $false }
+    $propertyNames = @($_.Properties.PSObject.Properties.Name)
+    ($propertyNames -ccontains 'ParentComponentOrVariableName') -and
+        $_.Properties.ParentComponentOrVariableName -ceq 'MeshComponent' -and
+        ($propertyNames -ccontains 'bIsParentComponentNative') -and
+        $_.Properties.bIsParentComponentNative -eq $true
+})
+$ammoPickupMeshes = @($ammoPickup | Where-Object {
+    $_.Type -ceq 'StaticMeshComponent'
+})
+$expectedPickupParts = @()
+foreach ($pickupPart in $ammoPickupInventory.parts) {
+    $expectedPickupParts += $pickupPart
+}
+Require ($ammoPickupNodes.Count -eq $expectedPickupParts.Count -and
+    $ammoPickupMeshes.Count -eq $expectedPickupParts.Count) `
+    'Cooked ammo pickup does not preserve its complete native-parent render subtree.'
+function Read-PickupTransformCoordinate($Component, [string]$Property,
+    [string]$Axis, [double]$DefaultValue) {
+    if (@(PropertyNames $Component) -ccontains $Property) {
+        return [double]$Component.Properties.$Property.$Axis
+    }
+    return $DefaultValue
+}
+foreach ($pickupPart in $expectedPickupParts) {
+    $componentName = [string]$pickupPart.componentName
+    $pickupNode = @($ammoPickupNodes | Where-Object {
+        $_.Properties.InternalVariableName -ceq $componentName
+    })
+    $pickupMesh = @($ammoPickupMeshes | Where-Object {
+        $_.Name -ceq ($componentName + '_GEN_VARIABLE')
+    })
+    Require ($pickupNode.Count -eq 1 -and $pickupMesh.Count -eq 1) `
+        ('Cooked ammo pickup child is missing or duplicated: ' + $componentName)
+    $expectedMeshPackage = ([string]$pickupPart.mesh).Substring(0,
+        ([string]$pickupPart.mesh).LastIndexOf('.'))
+    Require ($pickupMesh[0].Properties.StaticMesh.ObjectPath.StartsWith(
+        $expectedMeshPackage + '.', [StringComparison]::Ordinal)) `
+        ('Cooked ammo pickup child changed shared mesh: ' + $componentName)
+    Require ($pickupMesh[0].Properties.BodyInstance.CollisionEnabled -ceq
+        'ECollisionEnabled::NoCollision') `
+        ('Cooked ammo pickup child gained collision: ' + $componentName)
+    $transformContracts = @(
+        [pscustomobject]@{property='RelativeLocation';evidence='location';axes=@('X','Y','Z');default=0.0},
+        [pscustomobject]@{property='RelativeRotation';evidence='rotation';axes=@('Pitch','Yaw','Roll');default=0.0},
+        [pscustomobject]@{property='RelativeScale3D';evidence='scale';axes=@('X','Y','Z');default=1.0}
+    )
+    foreach ($contract in $transformContracts) {
+        $expectedCoordinates = @($pickupPart.($contract.evidence))
+        for ($i=0; $i -lt 3; $i++) {
+            $actualCoordinate = Read-PickupTransformCoordinate $pickupMesh[0] `
+                $contract.property $contract.axes[$i] $contract.default
+            Require (-not [double]::IsNaN($actualCoordinate) -and
+                -not [double]::IsInfinity($actualCoordinate) -and
+                [Math]::Abs($actualCoordinate -
+                    [double]$expectedCoordinates[$i]) -lt 0.001) `
+                ('Cooked ammo pickup transform mismatch: ' + $componentName +
+                    '/' + $contract.evidence + '/' + $contract.axes[$i])
+        }
+    }
+}
+foreach ($package in @($inventory.packages | Where-Object {
     $_ -like '*/Materials/*'
-}) + @($ammoCassetteInventory.materialPackages) | Sort-Object -Unique)) {
+} | Sort-Object -Unique)) {
     $exports = @(Read-Candidate $package)
     $parents = @($exports | ForEach-Object {
         if ((PropertyNames $_) -contains 'Parent' -and
@@ -2648,11 +2774,6 @@ foreach ($package in @(@($inventory.packages | Where-Object {
         exportTypes = @($exports | ForEach-Object { [string]$_.Type })
         parents = $parents
     }
-}
-foreach ($package in @($ammoCassetteInventory.texturePackages)) {
-    $textureExports = @(Read-Candidate $package)
-    Require (@($textureExports | Where-Object { $_.Type -ceq 'Texture2D' }).Count -eq 1) `
-        ('Expected one cooked ammo cassette texture: ' + $package)
 }
 $gun = @(Read-Candidate $gunItemPackage)
 $gunItem = @($gun | Where-Object { $_.Type -ceq 'VoyageItem' -and $_.Name -ceq 'DA_Item_Module_RailgunCannonMk01' })
@@ -2676,10 +2797,11 @@ Require ([Math]::Abs([double]$ammoInventoryProperties.MaxWeightLimit -
 Require ($null -ne $ammoProperties.Components) 'Ammo fabrication components are absent.'
 Require (@($ammoProperties.DropVariations | Where-Object {
     $_.RenderAsset.AssetPathName -ceq
-        '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette'
+        $ammoPickupCarrierMesh
 }).Count -ge 1) `
     'Ammo drop mesh mismatch.'
-Require ($ammoProperties.DroppedActor.AssetPathName -ceq '/Game/Blueprints/BP_DynamicMeshActor.BP_DynamicMeshActor_C') 'Ammo dropped actor mismatch.'
+Require ($ammoProperties.DroppedActor.AssetPathName -ceq $ammoPickupClass) `
+    'Ammo dropped actor mismatch.'
 $ammoIcon = @(Read-Candidate '/Game/Mods/Railgun/Fabricator/T_RailgunAmmoIcon')
 $ammoTexture = @($ammoIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunAmmoIcon' })
 Require ($ammoTexture.Count -eq 1 -and $ammoTexture[0].SizeX -eq 256 -and $ammoTexture[0].SizeY -eq 256) 'Ammo icon must be 256x256.'

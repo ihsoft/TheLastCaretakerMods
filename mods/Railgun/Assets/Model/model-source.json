@@ -9,6 +9,8 @@
     "muzzle": "Muzzle",
     "chargeIndicatorMesh": "ChargeIndicator",
     "powerSocketAnchor": "ElectricalSocket_Reference",
+    "ammoPickupRoot": "Slot_01_AmmoCassette",
+    "ammoPickupCarrier": "Slot_01_AmmoCassette_Case",
     "ammoInstances": [
       "Slot_01_AmmoCassette",
       "Slot_02_AmmoCassette",

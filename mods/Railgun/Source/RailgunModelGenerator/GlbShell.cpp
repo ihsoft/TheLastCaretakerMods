@@ -1,5 +1,6 @@
 #include "GlbShell.h"
 
+#include "AmmoPickup.h"
 #include "RailgunModelGeneratorPrivate.h"
 
 using namespace Railgun::ModelGenerator;
@@ -40,7 +41,8 @@ int32 Generate()
         if (Actors.Contains(Actor->GetActorLabel())) { UE_LOG(LogTemp, Error, TEXT("Duplicate GLB node name")); return 1; }
         Actors.Add(Actor->GetActorLabel(), Actor);
     }
-    for (const TCHAR* Key : {RootKey, BaseKey, YawKey, PitchKey, SightKey, MuzzleKey})
+    for (const TCHAR* Key : {RootKey, BaseKey, YawKey, PitchKey, SightKey,
+        MuzzleKey, AmmoPickupRootKey, AmmoPickupCarrierKey})
         if (!Actors.Contains(Roles->GetStringField(Key))) { UE_LOG(LogTemp, Error, TEXT("Missing GLB role %s"), Key); return 1; }
     const TArray<TSharedPtr<FJsonValue>>* AmmoInstances = nullptr;
     if (!Roles->TryGetArrayField(AmmoKey, AmmoInstances) ||
@@ -316,6 +318,13 @@ int32 Generate()
         }
         Body->InvalidatePhysicsData();
     }
+    TSharedPtr<FJsonObject> AmmoPickupEvidence;
+    if (!RailgunAmmoPickup::Generate(Actors,
+        Roles->GetStringField(AmmoPickupRootKey),
+        Roles->GetStringField(AmmoPickupCarrierKey), AmmoPickupEvidence))
+    {
+        return 1;
+    }
     UPackage* Package = CreatePackage(RailgunAssetNames::LeafProbePackageName);
     UBlueprint* BP = FKismetEditorUtilities::CreateBlueprint(AVoyageModuleActor::StaticClass(), Package,
         FName(RailgunAssetNames::LeafProbeAssetName), BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass(), RailgunAssetNames::GeneratorLeafProbeName);
@@ -447,6 +456,7 @@ int32 Generate()
     }
     if (!SaveGeneratedAsset(Package, BP)) return 1;
     PackageNames.Add(Package->GetName());
+    PackageNames.Add(RailgunAmmoPickup::PackageName);
     auto Inventory = MakeShared<FJsonObject>(); TArray<TSharedPtr<FJsonValue>> Packages;
     TArray<FString> Sorted = PackageNames.Array(); Sorted.Sort();
     for (const FString& Name : Sorted) Packages.Add(MakeShared<FJsonValueString>(Name));
@@ -454,6 +464,7 @@ int32 Generate()
     Inventory->SetObjectField(FabricatorKey, CollisionConfig);
     Inventory->SetObjectField(EntryKey, EntryConfig);
     Inventory->SetObjectField(InventoryInteractionKey, InventoryInteractionConfig);
+    Inventory->SetObjectField(AmmoPickupKey, AmmoPickupEvidence);
     Inventory->SetStringField(CollisionKey, CollisionMesh->GetOutermost()->GetName()); Inventory->SetObjectField(RolesKey, Roles);
     FString Json; FJsonSerializer::Serialize(Inventory, TJsonWriterFactory<>::Create(&Json));
     if (!FFileHelper::SaveStringToFile(Json, *FPaths::Combine(FPaths::ProjectDir(), InventoryFile))) return 1;

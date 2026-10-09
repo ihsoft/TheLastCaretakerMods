@@ -86,11 +86,10 @@ All mod-owned inputs live below this directory:
   Its `nodes.chargeIndicatorMesh` role identifies the model-authored render
   mesh used for the gun's local charge display; placement, dimensions and UVs
   remain properties of the GLB.
-- `Assets\Fabricator\RailgunAmmoCassette.glb` is the user-authored physical
-  single-round pickup model. Geometry and materials may be replaced while the
-  import still produces the stable owned mesh identity, nonempty render
-  geometry, finite nondegenerate bounds, simple pickup collision, and all
-  material and texture dependencies used by the current source.
+  Its `nodes.ammoPickupRoot` and `nodes.ammoPickupCarrier` roles also select the
+  complete physical-round render subtree and its native pickup carrier. The
+  pickup and all six gun slots therefore reuse the same imported meshes,
+  materials and textures from this one GLB.
 - `Assets\Fabricator\railgun-ammo-item.json`,
   `Assets\Fabricator\railgun-item.json` and
   `Assets\Skill\railgun-skill.json` are the editable authoritative serialized

@@ -2,7 +2,7 @@
 // by GAME_DERIVED_SOURCES.md. Runtime generation lives in RailgunRuntimeGenerator.
 
 #include "GenerateRailgunCommandlet.h"
-#include "AmmoCassetteImport.h"
+#include "AmmoPickup.h"
 #include "GlbShell.h"
 #include "RailgunAssetNames.h"
 #include "RailgunModelGeneratorPrivate.h"
@@ -55,7 +55,7 @@ int32 UGenerateRailgunCommandlet::Main(const FString& Params)
         FPackageName::DoesPackageExist(RailgunAssetNames::BaseMeshPackageName) ||
         FPackageName::DoesPackageExist(RailgunAssetNames::YawMeshPackageName) ||
         FPackageName::DoesPackageExist(RailgunAssetNames::PitchMeshPackageName) ||
-        FPackageName::DoesPackageExist(RailgunAmmoCassette::PackageName) ||
+        FPackageName::DoesPackageExist(RailgunAmmoPickup::PackageName) ||
         (RailgunAssetNames::IncludeBaseGameLoadedConnectorReference &&
             FPackageName::DoesPackageExist(RailgunAssetNames::LoadedConnectorPackageName)) ||
         (RailgunAssetNames::UsesStockCameraDroneClass &&
@@ -66,20 +66,7 @@ int32 UGenerateRailgunCommandlet::Main(const FString& Params)
         return 1;
     }
 
-    FString AmmoCassetteSource;
-    if (!FParse::Value(*Params, RailgunAmmoCassette::SourceArgument,
-        AmmoCassetteSource) || !FPaths::FileExists(AmmoCassetteSource))
-    {
-        UE_LOG(LogTemp, Error,
-            TEXT("GenerateRailgun requires -AmmoCassette=<owned GLB>"));
-        return 1;
-    }
-    const int32 ShellResult = RailgunGlb::Generate();
-    if (ShellResult != 0)
-    {
-        return ShellResult;
-    }
-    return RailgunAmmoCassette::Generate(AmmoCassetteSource);
+    return RailgunGlb::Generate();
 }
 
 #endif

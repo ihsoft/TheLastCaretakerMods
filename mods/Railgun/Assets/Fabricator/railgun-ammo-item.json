@@ -2,11 +2,11 @@
   "$type": "UAssetAPI.UAsset, UAssetAPI",
   "Info": "Serialized with UAssetAPI v2.0.0 (21c982f)",
   "NameMap": [
-    "/Game/Blueprints/BP_DynamicMeshActor",
-    "/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette",
+    "/Game/Mods/Railgun/Fabricator/AmmoCassette/BP_RailgunAmmoCassette",
+    "/Game/Mods/Railgun/Visual/Railgun/StaticMeshes/SM_Cassette_Case",
     "/Script/Voyage",
     "ArrayProperty",
-    "BP_DynamicMeshActor_C",
+    "BP_RailgunAmmoCassette_C",
     "ByteProperty",
     "Caliber",
     "Category",
@@ -38,7 +38,7 @@
     "PhysicalMaterialOverride",
     "Quality",
     "RenderAsset",
-    "SM_RailgunAmmoCassette",
+    "SM_Cassette_Case",
     "SoftObjectProperty",
     "StructProperty",
     "TextProperty",
@@ -433,8 +433,8 @@
                     "$type": "UAssetAPI.PropertyTypes.Objects.FSoftObjectPath, UAssetAPI",
                     "AssetPath": {
                       "$type": "UAssetAPI.PropertyTypes.Objects.FTopLevelAssetPath, UAssetAPI",
-                      "PackageName": "/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette",
-                      "AssetName": "SM_RailgunAmmoCassette"
+                      "PackageName": "/Game/Mods/Railgun/Visual/Railgun/StaticMeshes/SM_Cassette_Case",
+                      "AssetName": "SM_Cassette_Case"
                     },
                     "SubPathString": null
                   }
@@ -503,8 +503,8 @@
             "$type": "UAssetAPI.PropertyTypes.Objects.FSoftObjectPath, UAssetAPI",
             "AssetPath": {
               "$type": "UAssetAPI.PropertyTypes.Objects.FTopLevelAssetPath, UAssetAPI",
-              "PackageName": "/Game/Blueprints/BP_DynamicMeshActor",
-              "AssetName": "BP_DynamicMeshActor_C"
+              "PackageName": "/Game/Mods/Railgun/Fabricator/AmmoCassette/BP_RailgunAmmoCassette",
+              "AssetName": "BP_RailgunAmmoCassette_C"
             },
             "SubPathString": null
           }

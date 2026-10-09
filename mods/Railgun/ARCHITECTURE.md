@@ -6,9 +6,9 @@
   in self-contained headers, with ordinary implementations in matching `.cpp`
   files. `FGraph` is the shared graph-construction interface; its template node
   factory remains in the header while non-template operations are out of line.
-- `RailgunModelGenerator` separates the GLB shell and ammunition-cassette
-  import interfaces from their implementations and keeps common editor-only
-  helpers in its private support translation unit.
+- `RailgunModelGenerator` imports the gun and ammunition visuals once, builds
+  the shell and owned composite pickup from that shared scene, and keeps common
+  editor-only helpers in its private support translation unit.
 - Generator translation units include their own header first and build with
   unity disabled. Voyage mirror headers retain only trivial reflected native
   stubs inline; the nontrivial vehicle mirror constructor is out of line.
@@ -242,25 +242,27 @@ producer validates serialization, identity and required runtime references.
 | Recipe | Iron `1`, Copper `1`, Plastic `1` |
 | MaxDropCount | `1`; each physical pickup represents one round |
 
-The primary icon is mod-owned. Drop configuration uses the owned merged mesh
-`/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette` and the
-native `BP_DynamicMeshActor`. `WeaponData`, all projectile subexports, bullet/case
+The primary icon is mod-owned. The ammo JSON owns the stable drop RenderAsset
+path and the owned composite actor
+`/Game/Mods/Railgun/Fabricator/AmmoCassette/BP_RailgunAmmoCassette`. Its native
+stock `MeshComponent` renders the carrier selected by
+`nodes.ammoPickupCarrier`; direct SCS children reuse every other visible mesh,
+material and source-relative transform below `nodes.ammoPickupRoot`. The same
+imported assets remain in all six gun cassette slots. `WeaponData`, all projectile subexports, bullet/case
 fields, stock SFX/VFX, damage-type references, `SecondaryIcon` and `ScalePerItem`
 are absent. Imports are limited to the native item class/CDO, ammo category,
-recipe materials, owned icon and the owned drop-mesh dependencies. These
+recipe materials, owned icon and the shared model dependencies. These
 omissions are validated for fabrication and pickup, not for firing this item
 through a stock sniper rifle.
 
-`Assets/Fabricator/RailgunAmmoCassette.glb` is a user-authored rigid source for
-one physical round. The dedicated Interchange adapter combines the source's
-current mesh instances, preserves any imported materials and textures, applies
-simple box collision, and records the resulting packages and mesh readback in
-the build inventory. Validation requires the stable owned mesh identity,
-nonempty render geometry, simple pickup collision, finite nondegenerate bounds,
-and inclusion of every material and texture dependency actually imported from
-the current source. It does not freeze a model revision, topology, decorative
-nodes, former bounds, or material and texture counts. Build provenance hashes
-the actual source and rejects changes made while a build is in progress.
+The pickup generator transforms all eight local bounding-box corners of every
+selected render mesh into carrier space and assigns exactly one simple box to
+the shared carrier mesh. It records the selected roles, reused asset identities,
+transforms and collision in the model inventory. Validation requires a nonempty
+render subtree, finite transforms and bounds, the native physics carrier, and
+the current shared identities; it does not freeze topology, decorative names,
+counts, bounds or hashes. The stock `BP_DynamicMeshActor` stand-in exists only
+to compile the owned child during the editor build and is never packaged.
 
 After cook, the reviewed UAssetGUI/UAssetAPI writer converts the three owned
 JSON sources directly to staged `.uasset`/`.uexp` packages using UE 5.8.

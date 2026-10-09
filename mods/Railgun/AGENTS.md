@@ -28,12 +28,12 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   zero. Explicit valid INI values still override that fallback.
 - The user owns model geometry. Ada may move or wire model files and update the
   role manifest, but does not alter GLB geometry unless explicitly requested.
-- Replacement gun and cassette GLBs are gated by their behavior-critical roles,
-  stable owned identities, usable render geometry and collision, and the
-  dependencies actually produced for the current source. Do not freeze authored
-  models by revision hash, topology, decorative-node names, previous bounds, or
-  material and texture counts. Build provenance still hashes the actual inputs
-  and rejects source edits made during one build.
+- Replacement gun geometry and the model-selected composite cassette are gated
+  by behavior-critical roles, stable owned identities, usable render geometry
+  and collision, and the dependencies actually produced from the main GLB. Do
+  not freeze authored models by revision hash, topology, decorative-node names,
+  previous bounds, or material and texture counts. Build provenance still hashes
+  the actual inputs and rejects source edits made during one build.
 - The live model has the stable path `Assets/Model/Railgun.glb`. Model logic
   binds stable roles and explicit boxes from `Assets/Model/model-source.json`;
   do not hard-code vertex topology, offsets or incidental Blender object order.

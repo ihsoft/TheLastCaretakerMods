@@ -8,6 +8,8 @@ $engine = 'K:\Epic Games\UE_5.8\Engine'
 $editor = Join-Path $engine 'Binaries/Win64/UnrealEditor-Cmd.exe'
 $itemDiscoveryRoot = '/Game/Data/Assets'
 $skillDiscoveryRoot = '/Game/Data/Assets/Skill'
+$ammoPickupPackage = '/Game/Mods/Railgun/Fabricator/AmmoCassette/BP_RailgunAmmoCassette'
+$ammoPickupClass = $ammoPickupPackage + '.BP_RailgunAmmoCassette_C'
 $defaultVersion = 'build-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
 $tmpOwnerRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/Railgun'))
 $tmpBoundary = $tmpOwnerRoot + [IO.Path]::DirectorySeparatorChar
@@ -61,13 +63,11 @@ $expectedModelFields = @('entryInteraction','fabricatorCollision','inventoryInte
 if ($model.schemaVersion -ne 1 -or (Compare-Object $modelFields $expectedModelFields)) { throw 'Unsupported Railgun model registry.' }
 $glbPath = [IO.Path]::GetFullPath((Join-Path $modelDirectory 'Railgun.glb'))
 if (-not (Test-Path -LiteralPath $glbPath -PathType Leaf)) { throw "GLB not found: $glbPath" }
-$ammoCassettePath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'Assets/Fabricator/RailgunAmmoCassette.glb'))
 $ammoItemJsonPath = Join-Path $PSScriptRoot 'Assets/Fabricator/railgun-ammo-item.json'
 $skillJsonPath = Join-Path $PSScriptRoot 'Assets/Skill/railgun-skill.json'
 $gunJsonPath = Join-Path $PSScriptRoot 'Assets/Fabricator/railgun-item.json'
 $dataAssetContractPath = Join-Path $PSScriptRoot 'Assets/data-assets-contract.json'
-if (-not (Test-Path -LiteralPath $ammoCassettePath -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $ammoItemJsonPath -PathType Leaf) -or
+if (-not (Test-Path -LiteralPath $ammoItemJsonPath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $skillJsonPath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $gunJsonPath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $dataAssetContractPath -PathType Leaf)) {
@@ -165,6 +165,25 @@ if ($ammoWeightProperties.Count -ne 1 -or
     throw 'Railgun ammo JSON requires one positive Weight for the six-round magazine limit.'
 }
 $ammoWeightKg = [double]$ammoWeightProperties[0].Value
+$ammoDropVariationProperties = @($ammoItemAsset.primary.Data | Where-Object {
+    $_.Name -ceq 'DropVariations'
+})
+if ($ammoDropVariationProperties.Count -ne 1) {
+    throw 'Railgun ammo JSON requires one DropVariations property.'
+}
+$ammoRenderAssets = @($ammoDropVariationProperties[0].Value.Value | Where-Object {
+    $_.Name -ceq 'RenderAsset'
+})
+if ($ammoRenderAssets.Count -ne 1) {
+    throw 'Railgun ammo JSON requires one supported RenderAsset drop variation.'
+}
+$ammoRenderAssetIdentity = $ammoRenderAssets[0].Value.AssetPath
+$ammoPickupCarrierMesh = [string]$ammoRenderAssetIdentity.PackageName + '.' +
+    [string]$ammoRenderAssetIdentity.AssetName
+if ([string]::IsNullOrWhiteSpace([string]$ammoRenderAssetIdentity.PackageName) -or
+    [string]::IsNullOrWhiteSpace([string]$ammoRenderAssetIdentity.AssetName)) {
+    throw 'Railgun ammo JSON RenderAsset identity is incomplete.'
+}
 $skillAsset = Read-OwnedAssetJson $skillJsonPath `
     (Get-OwnedAssetContract 'Assets/Skill/railgun-skill.json') 'Railgun skill'
 $skillSource = $skillAsset.source
@@ -174,7 +193,10 @@ $gunSource = $gunAsset.source
 # The stable filename makes model replacement independent of revision names.
 # Build provenance hashes the actual file and rejects edits during a build.
 $sourcePaths += @($glbPath.Substring($repo.Length + 1).Replace('\','/'))
-$sourceStatus = @(& git -C $repo status --porcelain -- $sourcePaths)
+function Get-RailgunSourceStatus {
+    @(& git -C $repo status --porcelain -- $sourcePaths)
+}
+$sourceStatus = @(Get-RailgunSourceStatus)
 function Get-RailgunSourceHashes {
     @(& git -C $repo ls-files --cached --others --exclude-standard -- $sourcePaths | Sort-Object -Unique | Where-Object {
         Test-Path -LiteralPath (Join-Path $repo $_) -PathType Leaf
@@ -294,7 +316,7 @@ if (Test-Path -LiteralPath $content) {
 $ddc = [IO.Path]::GetFullPath($CacheRoot)
 [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'Process')
 $null = New-Item -ItemType Directory -Path $ddc -Force
-Invoke-NativeStage 'generate' $editor @($project,'-run=GenerateRailgun','-ShellOnly',('-AmmoCassette=' + $ammoCassettePath),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-unreal.log')))
+Invoke-NativeStage 'generate' $editor @($project,'-run=GenerateRailgun','-ShellOnly','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-unreal.log')))
 $inventoryPath = Join-Path $output 'model-inventory.json'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Saved/RailgunGlbInventory.json') -Destination $inventoryPath
 $inventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
@@ -304,29 +326,49 @@ if ($packages.Count -lt 2 -or @($packages | Where-Object {
     -not $_.StartsWith('/Game/Mods/Railgun/Fabricator/AmmoCassette/') -and
     $_ -cne '/Game/Mods/Railgun/Module/BP_Module_Railgun'
 }).Count) { throw 'GLB cook inventory escaped owned packages.' }
-$ammoCassetteInventory = $inventory.ammoCassette
-$ammoCassetteBounds = @($ammoCassetteInventory.boundsCm)
-if ($null -eq $ammoCassetteInventory -or
-    [IO.Path]::GetFullPath([string]$ammoCassetteInventory.sourceFile) -cne $ammoCassettePath -or
-    $ammoCassetteInventory.meshPackage -cne '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette' -or
-    $ammoCassetteInventory.objectPath -cne '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette' -or
-    [int]$ammoCassetteInventory.triangles -le 0 -or
-    [int]$ammoCassetteInventory.collisionPrimitives -lt 1 -or
-    $ammoCassetteBounds.Count -ne 3) {
-    throw 'Imported Railgun ammo cassette lost its functional mesh contract.'
+$ammoPickupInventory = $inventory.ammoPickup
+$ammoPickupCollisionSize = @($ammoPickupInventory.collisionSizeCm)
+$ammoPickupCollisionCenter = @($ammoPickupInventory.collisionCenterCm)
+if ($null -eq $ammoPickupInventory -or
+    $ammoPickupInventory.root -cne [string]$model.nodes.ammoPickupRoot -or
+    $ammoPickupInventory.carrier -cne [string]$model.nodes.ammoPickupCarrier -or
+    $ammoPickupInventory.package -cne $ammoPickupPackage -or
+    $ammoPickupInventory.classObjectPath -cne $ammoPickupClass -or
+    $ammoPickupInventory.carrierMesh -cne $ammoPickupCarrierMesh -or
+    @($ammoPickupInventory.parts).Count -lt 1 -or
+    $ammoPickupCollisionSize.Count -ne 3 -or
+    $ammoPickupCollisionCenter.Count -ne 3) {
+    throw 'Shared composite Railgun ammo pickup lost its functional role contract.'
 }
-foreach ($extent in $ammoCassetteBounds) {
+foreach ($extent in $ammoPickupCollisionSize) {
     $value = [double]$extent
     if ($value -le 0.0 -or [double]::IsNaN($value) -or
         [double]::IsInfinity($value)) {
-        throw 'Imported Railgun ammo cassette bounds are not finite and nondegenerate.'
+        throw 'Shared ammo pickup collision size is not finite and nondegenerate.'
     }
 }
-foreach ($dependencyPackage in @($ammoCassetteInventory.meshPackage) +
-    @($ammoCassetteInventory.materialPackages) +
-    @($ammoCassetteInventory.texturePackages)) {
-    if ($packages -cnotcontains $dependencyPackage) {
-        throw "Ammo cassette dependency is absent from cook inventory: $dependencyPackage"
+foreach ($center in $ammoPickupCollisionCenter) {
+    $value = [double]$center
+    if ([double]::IsNaN($value) -or [double]::IsInfinity($value)) {
+        throw 'Shared ammo pickup collision center is not finite.'
+    }
+}
+if ($packages -cnotcontains $ammoPickupPackage -or
+    $packages -cnotcontains $ammoPickupCarrierMesh.Substring(0,
+        $ammoPickupCarrierMesh.LastIndexOf('.'))) {
+    throw 'Shared ammo pickup package or carrier mesh is absent from cook inventory.'
+}
+$pickupAssetPaths = @($ammoPickupInventory.carrierMesh) +
+    @($ammoPickupInventory.carrierMaterials) +
+    @($ammoPickupInventory.parts | ForEach-Object {
+        @($_.mesh) + @($_.materials)
+    })
+foreach ($pickupAssetPath in $pickupAssetPaths) {
+    if ([string]::IsNullOrWhiteSpace([string]$pickupAssetPath)) { continue }
+    $separator = ([string]$pickupAssetPath).LastIndexOf('.')
+    if ($separator -le 0 -or $packages -cnotcontains
+        ([string]$pickupAssetPath).Substring(0, $separator)) {
+        throw "Shared ammo pickup dependency is absent from cook inventory: $pickupAssetPath"
     }
 }
 $shotSound = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Assets/Railgun_Shot_Blast.wav')).Path
@@ -370,6 +412,10 @@ $packages += @(
     '/Game/Mods/Railgun/Fabricator/T_RailgunIcon'
 )
 $packages = @($packages | Sort-Object -Unique)
+if ($packages -cnotcontains $ammoPickupPackage -or
+    $packages -ccontains '/Game/Blueprints/BP_DynamicMeshActor') {
+    throw 'Ammo pickup package set lost its owned-child/stock-parent boundary.'
+}
 $cookPackageManifest = Join-Path $output 'cook-packages.txt'
 $cookPackageManifestText = ($packages -join "`n") + "`n"
 [IO.File]::WriteAllText($cookPackageManifest, $cookPackageManifestText,
@@ -741,11 +787,83 @@ if ($cloneItems[0].Package -cne $newPackage -or
     [Math]::Abs([double]$cloneItems[0].Properties.Weight - $ammoWeightKg) -gt 0.00001 -or
     @($cloneItems[0].Properties.DropVariations | Where-Object {
         $_.RenderAsset.AssetPathName -ceq
-            '/Game/Mods/Railgun/Fabricator/AmmoCassette/SM_RailgunAmmoCassette.SM_RailgunAmmoCassette'
+            $ammoPickupCarrierMesh
     }).Count -lt 1 -or
-    $cloneItems[0].Properties.DroppedActor.AssetPathName -cne '/Game/Blueprints/BP_DynamicMeshActor.BP_DynamicMeshActor_C' -or
+    $cloneItems[0].Properties.DroppedActor.AssetPathName -cne $ammoPickupClass -or
     $null -eq $cloneItems[0].Properties.Components) {
     throw 'Railgun ammo lost a runtime identity, inventory, fabrication, or pickup contract.'
+}
+$pickupRelative = $ammoPickupPackage.Replace('/Game/', 'Voyage/Content/')
+$pickupInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
+    $pickupRelative -Source Mod -ModContainer $container `
+    -ModInspectionRoot $modInspectionRoot -AsJson) | ConvertFrom-Json
+$pickupDocument = Get-Content -LiteralPath $pickupInspection.jsonPath -Raw |
+    ConvertFrom-Json
+$pickupExports = @()
+foreach ($pickupExport in $pickupDocument) { $pickupExports += $pickupExport }
+function Get-PickupPropertyValue($Object, [string]$Name) {
+    if ($null -eq $Object) { return $null }
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $null }
+    $property.Value
+}
+$pickupClasses = @($pickupExports | Where-Object {
+    (Get-PickupPropertyValue $_ 'Type') -ceq 'BlueprintGeneratedClass' -and
+        (Get-PickupPropertyValue $_ 'Name') -ceq
+            'BP_RailgunAmmoCassette_C'
+})
+$pickupNodes = @($pickupExports | Where-Object {
+    if ((Get-PickupPropertyValue $_ 'Type') -cne 'SCS_Node') { return $false }
+    $properties = Get-PickupPropertyValue $_ 'Properties'
+    (Get-PickupPropertyValue $properties 'ParentComponentOrVariableName') -ceq
+        'MeshComponent' -and
+        (Get-PickupPropertyValue $properties 'bIsParentComponentNative') -eq $true
+})
+$pickupMeshes = @($pickupExports | Where-Object {
+    (Get-PickupPropertyValue $_ 'Type') -ceq 'StaticMeshComponent'
+})
+$pickupSuperPath = ''
+$pickupClass = $pickupClasses | Select-Object -First 1
+if ($pickupClasses.Count -eq 1) {
+    $pickupSuper = Get-PickupPropertyValue $pickupClass 'Super'
+    $pickupSuperPath = [string](Get-PickupPropertyValue $pickupSuper 'ObjectPath')
+}
+$expectedPickupParts = @()
+foreach ($pickupPart in $ammoPickupInventory.parts) {
+    $expectedPickupParts += $pickupPart
+}
+if ($pickupClasses.Count -ne 1 -or
+    $pickupSuperPath -cne '/Game/Blueprints/BP_DynamicMeshActor.0' -or
+    $pickupNodes.Count -ne $expectedPickupParts.Count -or
+    $pickupMeshes.Count -ne $expectedPickupParts.Count) {
+    throw 'Ammo pickup lost its exact stock parent or complete native-parent child set.'
+}
+foreach ($pickupPart in $expectedPickupParts) {
+    $componentName = [string]$pickupPart.componentName
+    $matchingNodes = @($pickupNodes | Where-Object {
+        $properties = Get-PickupPropertyValue $_ 'Properties'
+        (Get-PickupPropertyValue $properties 'InternalVariableName') -ceq
+            $componentName
+    })
+    $matchingMeshes = @($pickupMeshes | Where-Object {
+        (Get-PickupPropertyValue $_ 'Name') -ceq
+            ($componentName + '_GEN_VARIABLE')
+    })
+    if ($matchingNodes.Count -ne 1 -or $matchingMeshes.Count -ne 1) {
+        throw "Ammo pickup child is missing or duplicated: $componentName"
+    }
+    $meshProperties = Get-PickupPropertyValue $matchingMeshes[0] 'Properties'
+    $staticMesh = Get-PickupPropertyValue $meshProperties 'StaticMesh'
+    $bodyInstance = Get-PickupPropertyValue $meshProperties 'BodyInstance'
+    $meshObjectPath = [string](Get-PickupPropertyValue $staticMesh 'ObjectPath')
+    $collisionEnabled = [string](Get-PickupPropertyValue $bodyInstance 'CollisionEnabled')
+    $expectedMeshPackage = ([string]$pickupPart.mesh).Substring(
+        0, ([string]$pickupPart.mesh).LastIndexOf('.'))
+    if (-not $meshObjectPath.StartsWith($expectedMeshPackage + '.',
+            [StringComparison]::Ordinal) -or
+        $collisionEnabled -cne 'ECollisionEnabled::NoCollision') {
+        throw "Ammo pickup child lost shared mesh or no-collision identity: $componentName"
+    }
 }
 $gunInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
     $gunRelative -Source Mod -ModContainer $container `
@@ -867,7 +985,7 @@ try {
 finally {
     $archiveReadback.Dispose()
 }
-$sourceAfter = @(& git -C $repo status --porcelain -- $sourcePaths)
+$sourceAfter = @(Get-RailgunSourceStatus)
 if (($sourceAfter -join "`n") -cne ($sourceStatus -join "`n")) { throw 'Source status changed during preparation.' }
 if ((@(Get-RailgunSourceHashes) | ConvertTo-Json -Compress) -cne ($sourceHashes | ConvertTo-Json -Compress)) { throw 'Source content changed during preparation.' }
 if ((& git -C $repo rev-parse HEAD).Trim() -cne $sourceCommit) { throw 'Repository HEAD changed during preparation.' }
@@ -942,7 +1060,9 @@ $provenance = [ordered]@{
     (Join-Path $releaseStaging 'build-provenance.json'),
     (($provenance | ConvertTo-Json -Depth 8) + [Environment]::NewLine),
     (New-Object Text.UTF8Encoding($false)))
-$releaseSourcePaths = @($sourcePaths | ForEach-Object { [IO.Path]::GetFullPath((Join-Path $repo $_)) })
+$releaseSourcePaths = @($sourceHashes.path | ForEach-Object {
+    [IO.Path]::GetFullPath((Join-Path $repo $_))
+})
 $release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
     -ReleaseRoot $releaseStaging -Mod Railgun -Version $version -Container $container `
     -Archive $archivePath -SourcePath $releaseSourcePaths `
