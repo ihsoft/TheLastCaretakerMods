@@ -140,16 +140,11 @@ OpticsMousePercent=35
 YawLimitDegrees=80
 MinimumPitchDegrees=-30
 MaximumPitchDegrees=10
-ShotVolumePercent=600
-StatusIconOpacityPercent=50
-ChargeTextOpacityPercent=100
-ChargeTextFontSize=14
-ChargeTextFontPath=/Engine/EngineFonts/Roboto.Roboto
-ChargeTextTypeface=Regular
 HitDamage=350
 FullChargeEnergyKWh=0.85
 FullChargeTimeSeconds=5.5
-OfflineDischargeKW=10
+IdleConsumptionKW=1
+OfflineDischargeKW=50
 CameraRecoilStrength=1
 ShipRecoilStrength=1
 ```
@@ -159,9 +154,9 @@ takes an initial charge, ammunition, style and view-mode snapshot. Later charge
 and ammunition changes refresh their displays through the existing station and
 module event paths; settings reload and zoom changes refresh style and
 visibility directly. The radial fraction and numeric value show the station's
-cached charge without display interpolation. Charge text font, typeface, size
-and opacity are configured independently by the corresponding `ChargeText*`
-keys.
+cached charge without display interpolation. Shot volume and HUD label layout,
+opacity, font, typeface and size are fixed presentation contracts rather than
+user settings.
 
 The widget and station retain transient direct references to each other. A
 reconstructed widget unregisters its previous station first, and destruction
@@ -175,7 +170,10 @@ the gameplay HUD has no diagnostic status text and does not poll the module.
 Electricity storage is configured in the same `KWh` unit shown by the game.
 Voyage maps one displayed `KWh` to 1000 native electricity amount units; the
 generator converts that amount to the module's W demand for the configured
-charge time, plus the 1 kW idle load.
+charge time, plus `IdleConsumptionKW` converted to W. The idle setting defaults
+to `1` and accepts zero and fractional kW values. Like other numeric settings,
+nonnumeric input retains the template fallback and out-of-range input is
+clamped to the declared range.
 
 Station initialization caches the concrete module, binds its exact value,
 socket-connection and power-state delegates, and takes initial charge and
@@ -186,8 +184,8 @@ supported game fingerprint, the socket notification may precede freshness of
 next-tick snapshot for the same still-bound module. Power events consume their
 exact `bHasPower` payload immediately.
 A re-entry settings read forces one demand refresh so changed charge-time,
-capacity or offline-discharge values take effect without waiting for another
-resource event. Synchronous notifications raised by the native demand setter
+capacity, idle-consumption or offline-discharge values take effect without
+waiting for another resource event. Synchronous notifications raised by the native demand setter
 are coalesced into one final read; the desired mode is cached before the setter
 is called. Rebinding settles and stops the old module's drain timer, invalidates
 pending supply reconciliation, removes old delegates and clears stale state

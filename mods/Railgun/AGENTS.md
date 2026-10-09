@@ -22,6 +22,8 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   defaults, comments, order and formatting. `Settings/Railgun.settings.json`
   owns only runtime bindings, types and numeric ranges. Add each option to both,
   then wire only its consuming behavior by hand; never edit generated output.
+  Fixed presentation values that are intentionally not user options belong as
+  named constants with their audio or HUD owner and in neither settings file.
   `Build-Railgun.ps1` owns the internal validation and generation step. The
   only runtime safety fallback outside that file is disabled recoil: when the
   INI or either recoil key is missing or invalid, camera and ship recoil use

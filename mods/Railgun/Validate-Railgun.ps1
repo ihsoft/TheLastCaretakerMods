@@ -604,6 +604,57 @@ $operatorClass = @($operator | Where-Object {
 })
 Require ($operatorClass.Count -eq 1) `
     'Expected one Railgun operator generated class.'
+$removedSettingKeys = @(
+    'ShotVolumePercent','StatusIconOpacityPercent',
+    'TargetNameOffsetX','TargetNameOffsetY','TargetNameOpacityPercent',
+    'TargetNameFontSize','TargetNameFontPath','TargetNameTypeface',
+    'TargetDistanceOffsetX','TargetDistanceOffsetY',
+    'TargetDistanceOpacityPercent','TargetDistanceFontSize',
+    'TargetDistanceFontPath','TargetDistanceTypeface',
+    'ChargeTextOpacityPercent','ChargeTextFontSize','ChargeTextFontPath',
+    'ChargeTextTypeface','ChargeIndicatorSmoothingSpeed'
+)
+$removedSettingFields = @(
+    'RailgunShotVolumePercent','RailgunStatusIconOpacityPercent',
+    'RailgunTargetNameOffsetX','RailgunTargetNameOffsetY',
+    'RailgunTargetNameOpacityPercent','RailgunTargetNameFontSize',
+    'RailgunTargetNameFontPath','RailgunTargetNameTypeface',
+    'RailgunTargetDistanceOffsetX','RailgunTargetDistanceOffsetY',
+    'RailgunTargetDistanceOpacityPercent','RailgunTargetDistanceFontSize',
+    'RailgunTargetDistanceFontPath','RailgunTargetDistanceTypeface',
+    'RailgunChargeTextOpacityPercent','RailgunChargeTextFontSize',
+    'RailgunChargeTextFontPath','RailgunChargeTextTypeface'
+)
+foreach ($removedSetting in $removedSettingKeys + $removedSettingFields) {
+    Require (-not ($operatorPackageStrings -ccontains $removedSetting)) `
+        ('Removed configurable setting remains serialized: ' +
+            $removedSetting)
+}
+foreach ($removedField in $removedSettingFields) {
+    Require (@($operatorClass[0].ChildProperties | Where-Object {
+        $_.Name -ceq $removedField
+    }).Count -eq 0) `
+        ('Removed setting field remains on the station: ' + $removedField)
+}
+$idleConsumptionProperty = @($operatorClass[0].ChildProperties |
+    Where-Object { $_.Name -ceq 'RailgunIdleConsumptionKW' })
+Require ($idleConsumptionProperty.Count -eq 1 -and
+    $idleConsumptionProperty[0].Type -ceq 'DoubleProperty') `
+    'Idle consumption must remain one runtime double setting.'
+$fixedHudFonts = @(
+    @{Field='RailgunTargetNameFontObject'; Path='/Game/UI/Terminal/Fonts/ShareTech/ShareTechMono-Regular_Font.ShareTechMono-Regular_Font'},
+    @{Field='RailgunTargetDistanceFontObject'; Path='/Game/UI/Terminal/Fonts/DSEG/DSEG7Classic-Bold_Font.DSEG7Classic-Bold_Font'},
+    @{Field='RailgunChargeTextFontObject'; Path='/Game/UI/Fonts/NotoSans-Regular_Font.NotoSans-Regular_Font'}
+)
+foreach ($fixedHudFont in $fixedHudFonts) {
+    $property = @($operatorClass[0].ChildProperties | Where-Object {
+        $_.Name -ceq $fixedHudFont.Field
+    })
+    Require ($property.Count -eq 1 -and
+        $property[0].Type -ceq 'ObjectProperty' -and
+        ($operatorPackageStrings -ccontains $fixedHudFont.Path)) `
+        ('Fixed HUD font contract is missing: ' + $fixedHudFont.Field)
+}
 $entryProvider = @($operatorFunctions | Where-Object {
     $_.Name -ceq 'GetInteractiveProvidedActions'
 })
@@ -1192,6 +1243,7 @@ foreach ($requiredEnergyRefreshReference in @(
     'RailgunChargeAmount',
     'RailgunEnergyDemandInitialized',
     'RailgunEnergyDemandCharging',
+    'RailgunIdleConsumptionKW',
     'RailgunEnergyUpdateActive',
     'RailgunEnergyUpdatePending',
     "Class'VoyageModuleComponent:GetResourceAmount'",
@@ -1200,6 +1252,22 @@ foreach ($requiredEnergyRefreshReference in @(
     Require ($energyRefreshStrings -ccontains $requiredEnergyRefreshReference) `
         ('Railgun energy-refresh reference missing: ' +
             $requiredEnergyRefreshReference)
+}
+Require (@($energyRefreshStrings | Where-Object {
+        $_ -ceq "Class'VoyageModuleComponent:SetCustomConsumption'"
+    }).Count -eq 2 -and
+    ($energyRefreshStrings -ccontains
+        "Class'KismetMathLibrary:Multiply_DoubleDouble'") -and
+    ($energyRefreshStrings -ccontains
+        "Class'KismetMathLibrary:Add_DoubleDouble'")) `
+    'Energy demand must apply configured idle W in both idle and charging modes.'
+$netChargeW = (0.85 * 1000.0 * 1000.0) / 5.5
+foreach ($idleScenarioKW in @(0.0, 0.5)) {
+    $idleScenarioW = $idleScenarioKW * 1000.0
+    $chargingDemandW = $netChargeW + $idleScenarioW
+    Require ([Math]::Abs(($chargingDemandW - $idleScenarioW) -
+            $netChargeW) -lt 0.000001) `
+        'Idle demand must not alter the configured net charge rate.'
 }
 $energyCallback = @($operatorFunctions | Where-Object {
     $_.Name -ceq 'OnRailgunEnergyModuleValueChanged'
@@ -2243,9 +2311,9 @@ Require ($module[0].Properties.ItemAsset.ObjectPath -ceq ($gunItemPackage + '.0'
 Require ($gunItemPackage.StartsWith($itemDiscoveryRoot + '/', [StringComparison]::Ordinal)) 'Railgun item is outside the confirmed Item AssetManager discovery root.'
 Require ($skillPackage.StartsWith($skillDiscoveryRoot + '/', [StringComparison]::Ordinal)) 'Railgun skill is outside the confirmed Skill AssetManager discovery root.'
 $energy = $module[0].Properties.ConfigData
-Require ([Math]::Abs($energy.ResourceConsumptionOn - 1000) -lt 0.001) 'Idle ON consumption mismatch.'
-Require ([Math]::Abs($energy.ResourceConsumptionStandby - 1000) -lt 0.001) 'Idle standby consumption mismatch.'
-Require ([Math]::Abs($energy.ResourceBandwidthInput - 1000) -lt 0.001) 'Idle input bandwidth mismatch.'
+Require ([Math]::Abs($energy.ResourceConsumptionOn - 1000) -lt 0.001) 'Initial ON consumption mismatch.'
+Require ([Math]::Abs($energy.ResourceConsumptionStandby - 1000) -lt 0.001) 'Initial standby consumption mismatch.'
+Require ([Math]::Abs($energy.ResourceBandwidthInput - 1000) -lt 0.001) 'Initial input bandwidth mismatch.'
 Require ([Math]::Abs($energy.MaxResourceAmount - 1.0) -lt 0.000001) 'Idle buffer mismatch.'
 Require ($energy.bAutoStartModule -and $energy.bAcceptResourceOffer -and $energy.bAcceptResourceOfferProduction) 'Native receiver disabled.'
 Require ($energy.bAcceptResourceOfferOff) 'Empty/unpowered receiver cannot recover.'

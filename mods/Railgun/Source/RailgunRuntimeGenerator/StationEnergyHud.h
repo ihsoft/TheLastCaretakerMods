@@ -11,6 +11,7 @@ namespace EnergyHud
 {
 inline const FName ChargeRadial(TEXT("RailgunChargeRadial"));
 inline const FName ChargeText(TEXT("RailgunChargeText"));
+inline const FName ChargeTextFontObject(TEXT("RailgunChargeTextFontObject"));
 inline const FName ChargeBlock(TEXT("RailgunChargeBlock"));
 inline const FName AmmoIndicatorRow(TEXT("RailgunAmmoIndicatorRow"));
 inline const FName ScopeAmmoIndicatorRow(TEXT("RailgunScopeAmmoIndicatorRow"));
@@ -105,6 +106,12 @@ inline constexpr double BlinkDurationSeconds = 0.5;
 inline constexpr double BlinkHiddenTimeSeconds = 0.25;
 inline constexpr float StatusVisibleOpacity = 1.0f;
 inline constexpr float StatusHiddenOpacity = 0.0f;
+inline constexpr TCHAR StatusIconOpacity[] = TEXT("0.5");
+inline constexpr TCHAR ChargeTextOpacity[] = TEXT("0.7");
+inline constexpr TCHAR ChargeTextFontSize[] = TEXT("14");
+inline constexpr TCHAR ChargeTextFontPath[] = TEXT(
+    "/Game/UI/Fonts/NotoSans-Regular_Font.NotoSans-Regular_Font");
+inline constexpr TCHAR ChargeTextTypeface[] = TEXT("Regular");
 inline constexpr TCHAR AnimationStartTime[] = TEXT("0.0");
 inline constexpr TCHAR AnimationLoopForever[] = TEXT("0");
 inline constexpr TCHAR AnimationPlaybackSpeed[] = TEXT("1.0");

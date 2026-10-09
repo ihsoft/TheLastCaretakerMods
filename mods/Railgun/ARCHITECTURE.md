@@ -63,8 +63,12 @@
   hit resolution is authoritative.
 - Railgun settings and HUD use the game's displayed `KWh` scale. Voyage maps
   one displayed `KWh` to 1000 native electricity amount units; module demand
-  remains expressed in W and is derived from the configured charge time in
-  addition to standby demand.
+  remains expressed in W. `IdleConsumptionKW` is converted to W and applied to
+  the connected module whether it is full or charging. Charging adds the same
+  background demand to the separately derived net charge power, so changing
+  idle consumption does not change `FullChargeTimeSeconds`. Zero and fractional
+  values are valid; the standard numeric parser supplies the `1` kW template
+  fallback for nonnumeric input and clamps values to the declared range.
 - Station initialization resolves and caches the concrete module, binds the
   exact value, socket-connection and power-state delegates, and performs
   initial charge and supply snapshots. The value callback refreshes cached
@@ -126,11 +130,17 @@
   resolves that property by the scene name. The animation keeps display rate
   separate from evaluation precision: authored phase times are converted to a
   high-resolution tick scale so ordinary widget frames accumulate playback.
-  User status opacity lives in each image's color alpha; animation render
-  opacity remains an independent zero-or-one blink factor.
+  Fixed status opacity is `0.5` in each image's color alpha; animation render
+  opacity remains an independent zero-or-one blink factor. Target-name,
+  target-distance and charge-text layout/font contracts are compile-time
+  presentation constants; only the required loaded font-object references are
+  retained on the generated station. Target name uses offset `(0, 330)`,
+  opacity `0.7`, size `20`, ShareTech Mono and Bold; target distance uses
+  `(0, 185)`, `0.7`, size `25`, DSEG7 Classic Bold and Bold; charge text uses
+  opacity `0.7`, size `14`, Noto Sans Regular and Regular.
 - Loss of the module power connection discharges stored energy to zero at the
-  configured `OfflineDischargeKW` rate. The default is `10` kW; zero disables
-  offline discharge. This setting is independent of normal standby demand.
+  configured `OfflineDischargeKW` rate. The default is `50` kW; zero disables
+  offline discharge. This setting is independent of connected idle demand.
 - The model-authored charge-indicator render mesh keeps its GLB transform,
   ancestry, dimensions and UVs. The shell disables collision, overlap and shadow
   and tags it for runtime binding. That tagged component loads the stock
@@ -147,8 +157,8 @@
   unit. Structural, source and cooked contracts are statically checked.
   Display-specific save/load and multiplayer behavior remain outside the
   established compatibility coverage.
-- Shot audio is cooked as a `SoundWave`; its volume multiplier is read from
-  `Railgun.ini`. The accepted baseline is 600 percent.
+- Shot audio is cooked as a `SoundWave` with a fixed `6.0` volume multiplier,
+  equivalent to the former 600-percent baseline.
 - A successful shot has two independent recoil paths. The historical
   `CameraRecoilStrength` key now changes real station aim once per shot in a
   uniformly random yaw/pitch-plane direction, with a two-degree baseline and

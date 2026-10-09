@@ -440,10 +440,10 @@ int32 Generate()
     Module->ConfigData.bAcceptResourceOffer = true;
     Module->ConfigData.bAcceptResourceOfferOff = true; // an empty receiver must be able to recover power
     Module->ConfigData.bAcceptResourceOfferProduction = true;
-    Module->ConfigData.ResourceBandwidthInput = RailgunAssetNames::RailgunEnergyConsumptionOn;
+    Module->ConfigData.ResourceBandwidthInput = RailgunAssetNames::RailgunInitialEnergyConsumptionOn;
     Module->ConfigData.MaxResourceAmount = RailgunAssetNames::RailgunIdleBufferKJ;
-    Module->ConfigData.ResourceConsumptionOn = RailgunAssetNames::RailgunEnergyConsumptionOn;
-    Module->ConfigData.ResourceConsumptionStandby = RailgunAssetNames::RailgunEnergyConsumptionStandby;
+    Module->ConfigData.ResourceConsumptionOn = RailgunAssetNames::RailgunInitialEnergyConsumptionOn;
+    Module->ConfigData.ResourceConsumptionStandby = RailgunAssetNames::RailgunInitialEnergyConsumptionStandby;
     Module->SocketCustomTarget.ComponentProperty = RailgunAssetNames::ElectricSocketName;
     Module->bUseSocketCustomTarget = true;
     TSet<FString> PackageNames;

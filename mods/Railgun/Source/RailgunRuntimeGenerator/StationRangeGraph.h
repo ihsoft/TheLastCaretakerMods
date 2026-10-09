@@ -14,6 +14,23 @@ inline const FName PendingTargetName(TEXT("RailgunPendingTargetName"));
 inline const FName DisplayedTargetName(TEXT("RailgunDisplayedTargetName"));
 inline const FName DisplayedTargetRange(TEXT("RailgunDisplayedTargetRange"));
 inline const FName DisplayInitialized(TEXT("RailgunRangeDisplayInitialized"));
+inline const FName TargetNameFontObject(TEXT("RailgunTargetNameFontObject"));
+inline const FName TargetDistanceFontObject(
+    TEXT("RailgunTargetDistanceFontObject"));
+inline constexpr TCHAR TargetNameOffsetX[] = TEXT("0.0");
+inline constexpr TCHAR TargetNameOffsetY[] = TEXT("330.0");
+inline constexpr TCHAR TargetNameOpacity[] = TEXT("0.7");
+inline constexpr TCHAR TargetNameFontSize[] = TEXT("20");
+inline constexpr TCHAR TargetNameFontPath[] = TEXT(
+    "/Game/UI/Terminal/Fonts/ShareTech/ShareTechMono-Regular_Font.ShareTechMono-Regular_Font");
+inline constexpr TCHAR TargetNameTypeface[] = TEXT("Bold");
+inline constexpr TCHAR TargetDistanceOffsetX[] = TEXT("0.0");
+inline constexpr TCHAR TargetDistanceOffsetY[] = TEXT("185.0");
+inline constexpr TCHAR TargetDistanceOpacity[] = TEXT("0.7");
+inline constexpr TCHAR TargetDistanceFontSize[] = TEXT("25");
+inline constexpr TCHAR TargetDistanceFontPath[] = TEXT(
+    "/Game/UI/Terminal/Fonts/DSEG/DSEG7Classic-Bold_Font.DSEG7Classic-Bold_Font");
+inline constexpr TCHAR TargetDistanceTypeface[] = TEXT("Bold");
 inline constexpr TCHAR MaximumCentimeters[] = TEXT("100000.0");
 inline constexpr TCHAR MaximumDisplayedMeters[] = TEXT("999.0");
 inline constexpr TCHAR CentimetersPerMeter[] = TEXT("100.0");

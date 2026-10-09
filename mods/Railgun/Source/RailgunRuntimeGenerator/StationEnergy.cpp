@@ -32,13 +32,24 @@ UEdGraphPin* EnergyCapacityAmount(FGraph& G)
         RequiredEnergyAmount(G), Charge::IdleCapacityAmount);
 }
 
+UEdGraphPin* IdleConsumptionW(FGraph& G)
+{
+    return EnergyMath(G,
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+            Multiply_DoubleDouble),
+        G.Read(Charge::ConfiguredIdleConsumptionKW),
+        Charge::WattsPerKilowatt);
+}
+
 UEdGraphPin* ChargingInputW(FGraph& G)
 {
     auto* ChargeInput = EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
         RequiredEnergyAmount(G), Charge::WattsPerResourceUnit);
     auto* NetChargeW = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble),
         ChargeInput, G.Read(Charge::ConfiguredTimeSeconds));
-    return EnergyMath(G, GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble), NetChargeW, Charge::IdleW);
+    return G.Binary(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble),
+        NetChargeW, IdleConsumptionW(G));
 }
 
 UEdGraphPin* OfflineDrainAmount(FGraph& G, UEdGraphPin* DeltaSeconds,
@@ -126,13 +137,14 @@ void SetEnergyDemand(FGraph& G, bool Charging)
 {
     UEdGraphPin* RequestedAcceptance = Charging ? ChargingInputW(G) : nullptr;
     UEdGraphPin* RequestedCapacity = EnergyCapacityAmount(G);
+    UEdGraphPin* IdleW = IdleConsumptionW(G);
     auto* Set = G.Call(UVoyageModuleComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, SetCustomConsumption));
     G.Link(G.Read(Charge::Module), G.Pin(Set, P::FunctionTarget));
     if (RequestedAcceptance) G.Link(RequestedAcceptance, G.Pin(Set, Charge::Input));
-    else G.Default(Set, Charge::Input, Charge::IdleW);
+    else G.Link(IdleW, G.Pin(Set, Charge::Input));
     // A full gun keeps its stored charge; idle demand must not shrink capacity.
     G.Link(RequestedCapacity, G.Pin(Set, Charge::Capacity));
-    G.Default(Set, Charge::Idle, Charge::IdleW); G.Exec(Set);
+    G.Link(IdleW, G.Pin(Set, Charge::Idle)); G.Exec(Set);
 }
 
 UEdGraphPin* EnergyAmount(FGraph& G)

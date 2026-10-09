@@ -59,11 +59,12 @@ inline const FName ReconcileGenerationParameter(
     TEXT("ReconcileGeneration"));
 inline const FName ConfiguredEnergyKWh(TEXT("RailgunFullChargeEnergyKWh"));
 inline const FName ConfiguredTimeSeconds(TEXT("RailgunFullChargeTimeSeconds"));
+inline const FName ConfiguredIdleConsumptionKW(
+    TEXT("RailgunIdleConsumptionKW"));
 inline const FName Type(TEXT("Type")), RemoveAmount(TEXT("RemoveAmount")),
     AddAmount(TEXT("AddAmount")), RemovalType(TEXT("RemovalType"));
 inline const FName Input(TEXT("InAcceptanceFilter")), Capacity(TEXT("InMaxResourceAmount")), Idle(TEXT("InConsumptionON"));
 inline constexpr TCHAR Electricity[] = TEXT("Electricity"), ExactRemoval[] = TEXT("ConsumptionAfterModifiers");
-inline constexpr TCHAR IdleW[] = TEXT("1000.0");
 inline constexpr TCHAR IdleCapacityAmount[] = TEXT("1.0");
 inline constexpr TCHAR GameResourceUnitsPerKWh[] = TEXT("1000.0");
 inline constexpr TCHAR WattsPerResourceUnit[] = TEXT("1000.0");
@@ -90,6 +91,7 @@ UEdGraphPin* EnergyMath(FGraph& G, FName Function, UEdGraphPin* Left, const TCHA
 UEdGraphPin* RequiredEnergyAmount(FGraph& G, UEdGraphPin* EnergyKWh);
 UEdGraphPin* RequiredEnergyAmount(FGraph& G);
 UEdGraphPin* EnergyCapacityAmount(FGraph& G);
+UEdGraphPin* IdleConsumptionW(FGraph& G);
 UEdGraphPin* ChargingInputW(FGraph& G);
 UEdGraphPin* OfflineDrainAmount(FGraph& G, UEdGraphPin* DeltaSeconds,
     UEdGraphPin* StoredEnergy, UEdGraphPin* OfflineDischargeKW);

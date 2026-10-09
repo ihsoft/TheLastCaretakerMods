@@ -553,9 +553,9 @@ UClass* CreateDedicatedStation()
         UEdGraphSchema_K2::PC_Object, APawn::StaticClass());
     AddVariable(BP, ZoomTest::Mouse, UEdGraphSchema_K2::PC_Real);
     for (const auto& Setting : Settings::NumericSettings) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
-    for (const auto& Setting : Settings::TextSettings) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_String);
-    for (const auto& Setting : Settings::FontSettings)
-        AddVariable(BP, Setting.ObjectField, UEdGraphSchema_K2::PC_Object, UObject::StaticClass());
+    for (const auto& Font : Settings::FixedHudFonts)
+        AddVariable(BP, Font.ObjectField, UEdGraphSchema_K2::PC_Object,
+            UObject::StaticClass());
     AddVariable(BP, DS::Sight, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
     AddVariable(BP, CE::Ready, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, O::BaselineFov, UEdGraphSchema_K2::PC_Real);
@@ -1009,35 +1009,23 @@ UClass* CreateDedicatedStation()
     AddHudFunction(EnergyHud::RefreshStyleFunction,
         [&](FGraph& Function, UEdGraphPin* Station)
         {
-            auto ApplyTextStyle = [&](FName WidgetField, FName Opacity,
-                FName FontSize, FName FontObject, FName Typeface)
+            auto ApplyTextStyle = [&](FName WidgetField,
+                const TCHAR* Opacity, const TCHAR* FontSize,
+                FName FontObject, const TCHAR* Typeface)
             {
-                auto* NormalizedOpacity = Function.Call(
-                    UKismetMathLibrary::StaticClass(),
-                    GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
-                        Multiply_DoubleDouble));
-                Function.Link(ReadNativeInputField(Function, Station,
-                    BP->GeneratedClass, Opacity), Function.Pin(
-                        NormalizedOpacity, P::Binary::LeftOperand));
-                Function.Default(NormalizedOpacity,
-                    P::Binary::RightOperand, Settings::PercentMultiplier);
                 auto* SetOpacity = Function.Call(UWidget::StaticClass(),
                     GET_FUNCTION_NAME_CHECKED(UWidget, SetRenderOpacity));
                 Function.Link(Function.Read(WidgetField),
                     Function.Pin(SetOpacity, P::FunctionTarget));
-                Function.Link(Function.Pin(NormalizedOpacity,
-                    P::ReturnValue), Function.Pin(SetOpacity,
-                        Settings::OpacityPin));
+                Function.Default(SetOpacity, Settings::OpacityPin, Opacity);
                 Function.Exec(SetOpacity);
 
-                auto* SizeValue = ReadNativeInputField(Function, Station,
-                    BP->GeneratedClass, FontSize);
                 auto* SetSize = Function.Call(UTextBlock::StaticClass(),
                     GET_FUNCTION_NAME_CHECKED(UTextBlock, SetFontSize));
                 Function.Link(Function.Read(WidgetField),
                     Function.Pin(SetSize, P::FunctionTarget));
-                Function.Link(SizeValue, Function.Pin(SetSize,
-                    Settings::DisplayFontSizePin));
+                Function.Default(SetSize, Settings::DisplayFontSizePin,
+                    FontSize);
                 Function.Exec(SetSize);
 
                 auto* FontValue = ReadNativeInputField(Function, Station,
@@ -1048,9 +1036,8 @@ UClass* CreateDedicatedStation()
                     UKismetStringLibrary::StaticClass(),
                     GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary,
                         Conv_StringToName));
-                Function.Link(ReadNativeInputField(Function, Station,
-                    BP->GeneratedClass, Typeface), Function.Pin(TypefaceName,
-                        TextSettingsGraphNames::NumericString));
+                Function.Default(TypefaceName,
+                    TextSettingsGraphNames::NumericString, Typeface);
                 auto* FontInfo = Function.Call(
                     USlateFontInfoBlueprintLibrary::StaticClass(),
                     Settings::MakeSlateFontInfoFunction);
@@ -1058,8 +1045,7 @@ UClass* CreateDedicatedStation()
                     Settings::FontObjectPin));
                 Function.Link(Function.Pin(TypefaceName, P::ReturnValue),
                     Function.Pin(FontInfo, Settings::TypefaceFontNamePin));
-                Function.Link(SizeValue, Function.Pin(FontInfo,
-                    Settings::FontSizePin));
+                Function.Default(FontInfo, Settings::FontSizePin, FontSize);
                 auto* SetFont = Function.Call(UTextBlock::StaticClass(),
                     GET_FUNCTION_NAME_CHECKED(UTextBlock, SetFont));
                 Function.Link(Function.Read(WidgetField),
@@ -1069,20 +1055,17 @@ UClass* CreateDedicatedStation()
                 Function.Exec(SetFont);
                 StationMerge(Function, {Function.Tail, NoFont});
             };
-            auto ApplyTargetStyle = [&](FName WidgetField, FName OffsetX,
-                FName OffsetY, FName Opacity, FName FontSize,
-                FName FontObject, FName Typeface)
+            auto ApplyTargetStyle = [&](FName WidgetField,
+                const TCHAR* OffsetX, const TCHAR* OffsetY,
+                const TCHAR* Opacity, const TCHAR* FontSize,
+                FName FontObject, const TCHAR* Typeface)
             {
                 auto* Position = Function.Call(
                     UKismetMathLibrary::StaticClass(),
                     GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
                         MakeVector2D));
-                Function.Link(ReadNativeInputField(Function, Station,
-                    BP->GeneratedClass, OffsetX), Function.Pin(Position,
-                        Settings::XPin));
-                Function.Link(ReadNativeInputField(Function, Station,
-                    BP->GeneratedClass, OffsetY), Function.Pin(Position,
-                        Settings::YPin));
+                Function.Default(Position, Settings::XPin, OffsetX);
+                Function.Default(Position, Settings::YPin, OffsetY);
                 auto* Translation = Function.Call(UWidget::StaticClass(),
                     GET_FUNCTION_NAME_CHECKED(UWidget,
                         SetRenderTranslation));
@@ -1095,31 +1078,21 @@ UClass* CreateDedicatedStation()
                     Typeface);
             };
             ApplyTextStyle(EnergyHud::ChargeText,
-                Settings::ChargeTextOpacity, Settings::ChargeTextFontSize,
-                Settings::ChargeTextFontObject,
-                Settings::ChargeTextTypeface);
+                EnergyHud::ChargeTextOpacity, EnergyHud::ChargeTextFontSize,
+                EnergyHud::ChargeTextFontObject,
+                EnergyHud::ChargeTextTypeface);
             ApplyTargetStyle(Range::TargetName,
-                Settings::TargetNameOffsetX, Settings::TargetNameOffsetY,
-                Settings::TargetNameOpacity, Settings::TargetNameFontSize,
-                Settings::TargetNameFontObject,
-                Settings::TargetNameTypeface);
+                Range::TargetNameOffsetX, Range::TargetNameOffsetY,
+                Range::TargetNameOpacity, Range::TargetNameFontSize,
+                Range::TargetNameFontObject,
+                Range::TargetNameTypeface);
             ApplyTargetStyle(Range::TargetRange,
-                Settings::TargetDistanceOffsetX,
-                Settings::TargetDistanceOffsetY,
-                Settings::TargetDistanceOpacity,
-                Settings::TargetDistanceFontSize,
-                Settings::TargetDistanceFontObject,
-                Settings::TargetDistanceTypeface);
-            auto* NormalizedStatusOpacity = Function.Call(
-                UKismetMathLibrary::StaticClass(),
-                GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
-                    Multiply_DoubleDouble));
-            Function.Link(ReadNativeInputField(Function, Station,
-                BP->GeneratedClass, Settings::StatusIconOpacity),
-                Function.Pin(NormalizedStatusOpacity,
-                    P::Binary::LeftOperand));
-            Function.Default(NormalizedStatusOpacity,
-                P::Binary::RightOperand, Settings::PercentMultiplier);
+                Range::TargetDistanceOffsetX,
+                Range::TargetDistanceOffsetY,
+                Range::TargetDistanceOpacity,
+                Range::TargetDistanceFontSize,
+                Range::TargetDistanceFontObject,
+                Range::TargetDistanceTypeface);
             for (FName Field : {EnergyHud::StatusCharging,
                 EnergyHud::StatusOffline, EnergyHud::StatusReady})
             {
@@ -1127,9 +1100,8 @@ UClass* CreateDedicatedStation()
                     GET_FUNCTION_NAME_CHECKED(UImage, SetOpacity));
                 Function.Link(Function.Read(Field),
                     Function.Pin(Set, P::FunctionTarget));
-                Function.Link(Function.Pin(NormalizedStatusOpacity,
-                    P::ReturnValue), Function.Pin(Set,
-                        Settings::OpacityPin));
+                Function.Default(Set, Settings::OpacityPin,
+                    EnergyHud::StatusIconOpacity);
                 Function.Exec(Set);
             }
         });

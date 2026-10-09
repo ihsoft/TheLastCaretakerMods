@@ -1,6 +1,8 @@
 #pragma once
 #include "RailgunShot.h"
 #include "StationEnergy.h"
+#include "StationEnergyHud.h"
+#include "StationRangeGraph.h"
 #include "RailgunRuntimeGeneratorFwd.h"
 
 namespace Railgun::Runtime
@@ -11,7 +13,6 @@ inline const FName FilePath(TEXT("InPath")); // Voyage declaring signature.
 inline constexpr TCHAR RelativePath[] = TEXT("Paks/Railgun.ini");
 inline constexpr TCHAR Separator[] = TEXT("=");
 inline constexpr TCHAR OriginalPerPercent[] = TEXT("0.0128");
-inline constexpr TCHAR PercentMultiplier[] = TEXT("0.01");
 inline constexpr TCHAR Negate[] = TEXT("-1.0");
 inline constexpr TCHAR DisabledRecoilFallback[] = TEXT("0");
 inline const FName FontObjectPin(TEXT("FontObject"));
@@ -36,17 +37,16 @@ struct FNumericSetting
     const TCHAR* Maximum;
 };
 
-struct FTextSetting
+struct FFixedFont
 {
-    const TCHAR* Key;
-    FName Field;
-    const TCHAR* Default;
+    const TCHAR* ObjectPath;
+    FName ObjectField;
 };
 
-struct FFontSetting
-{
-    FName PathField;
-    FName ObjectField;
+inline const FFixedFont FixedHudFonts[] = {
+    {Range::TargetNameFontPath, Range::TargetNameFontObject},
+    {Range::TargetDistanceFontPath, Range::TargetDistanceFontObject},
+    {EnergyHud::ChargeTextFontPath, EnergyHud::ChargeTextFontObject},
 };
 
 #include "StationSettings.generated.h"

@@ -54,9 +54,8 @@ inline constexpr TCHAR Asset[] = TEXT("S_RailgunShotBlast");
 inline constexpr TCHAR SourceArgument[] = TEXT("ShotSound=");
 inline const FName PlayAtLocation(TEXT("PlaySoundAtLocation"));
 inline const FName SoundPin(TEXT("Sound"));
-inline const FName VolumePercent(TEXT("RailgunShotVolumePercent"));
 inline const FName VolumeMultiplierPin(TEXT("VolumeMultiplier"));
-inline constexpr TCHAR PercentMultiplier[] = TEXT("0.01");
+inline constexpr TCHAR VolumeMultiplier[] = TEXT("6.0");
 inline USoundWave* Wave = nullptr;
 }
 bool SaveDedicatedAsset(UObject* Asset);

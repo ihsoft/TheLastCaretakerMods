@@ -49,7 +49,6 @@ $settings = New-Object 'System.Collections.Generic.List[object]'
 $ids = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
 $keys = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
 $runtimeNames = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
-$fontObjectIds = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
 
 foreach ($group in $groups) {
     Require-Identifier ([string]$group.id).Replace('-', '_') 'group id'
@@ -61,7 +60,7 @@ foreach ($group in $groups) {
         if (-not $ids.Add($id)) { throw "Duplicate setting id: $id" }
         if (-not $keys.Add($key)) { throw "Duplicate setting key: $key" }
         if (-not $iniValues.ContainsKey($key)) { throw "Setting is missing from default INI: $key" }
-        if ([string]$setting.type -notin @('number', 'text')) { throw "Unsupported setting type for ${id}: $($setting.type)" }
+        if ([string]$setting.type -ne 'number') { throw "Unsupported setting type for ${id}: $($setting.type)" }
         $resolvedDefault = $iniValues[$key]
 
         $field = if ($setting.PSObject.Properties.Name -contains 'field') { [string]$setting.field } else { $id }
@@ -74,31 +73,16 @@ foreach ($group in $groups) {
             throw "External field must not declare runtimeName: $id"
         }
 
-        if ([string]$setting.type -eq 'number') {
-            foreach ($name in @('minimum', 'maximum')) {
-                if (-not ($setting.PSObject.Properties.Name -contains $name)) { throw "Missing $name for numeric setting: $id" }
-            }
-            $default = 0.0
-            if (-not [double]::TryParse($resolvedDefault, [Globalization.NumberStyles]::Float,
-                $invariant, [ref]$default)) { throw "Default INI value is not numeric for ${key}: $resolvedDefault" }
-            $minimum = [double]$setting.minimum
-            $maximum = [double]$setting.maximum
-            if ($minimum -gt $maximum -or $default -lt $minimum -or $default -gt $maximum) {
-                throw "Numeric default/range contract is invalid: $id"
-            }
-        } else {
-            if ($resolvedDefault.Contains("`r") -or $resolvedDefault.Contains("`n")) {
-                throw "Text default cannot contain a newline: $id"
-            }
+        foreach ($name in @('minimum', 'maximum')) {
+            if (-not ($setting.PSObject.Properties.Name -contains $name)) { throw "Missing $name for numeric setting: $id" }
         }
-
-        if ($setting.PSObject.Properties.Name -contains 'fontObjectId') {
-            if ([string]$setting.type -ne 'text') { throw "Font path must be text: $id" }
-            $fontObjectId = [string]$setting.fontObjectId
-            $fontObjectRuntimeName = [string]$setting.fontObjectRuntimeName
-            Require-Identifier $fontObjectId 'font object id'
-            if (-not $fontObjectIds.Add($fontObjectId)) { throw "Duplicate font object id: $fontObjectId" }
-            if (-not $runtimeNames.Add($fontObjectRuntimeName)) { throw "Duplicate runtimeName: $fontObjectRuntimeName" }
+        $default = 0.0
+        if (-not [double]::TryParse($resolvedDefault, [Globalization.NumberStyles]::Float,
+            $invariant, [ref]$default)) { throw "Default INI value is not numeric for ${key}: $resolvedDefault" }
+        $minimum = [double]$setting.minimum
+        $maximum = [double]$setting.maximum
+        if ($minimum -gt $maximum -or $default -lt $minimum -or $default -gt $maximum) {
+            throw "Numeric default/range contract is invalid: $id"
         }
 
         $setting | Add-Member -NotePropertyName resolvedField -NotePropertyValue $field
@@ -118,11 +102,6 @@ foreach ($setting in $settings) {
     }
 }
 foreach ($setting in $settings) {
-    if ($setting.PSObject.Properties.Name -contains 'fontObjectId') {
-        $header.Add(('inline const FName {0}(TEXT("{1}"));' -f $setting.fontObjectId, (Escape-CppString ([string]$setting.fontObjectRuntimeName))))
-    }
-}
-foreach ($setting in $settings) {
     $id = [string]$setting.id
     $header.Add(('inline constexpr TCHAR {0}Key[] = TEXT("{1}");' -f $id, (Escape-CppString ([string]$setting.key))))
     $header.Add(('inline constexpr TCHAR {0}Default[] = TEXT("{1}");' -f $id, (Escape-CppString ([string]$setting.resolvedDefault))))
@@ -136,17 +115,6 @@ foreach ($setting in @($settings | Where-Object { [string]$_.type -eq 'number' }
     $header.Add(('    {{{0}Key, {1}, {0}Default, {0}Minimum, {0}Maximum}},' -f $setting.id, $setting.resolvedField))
 }
 $header.Add('};')
-$header.Add('inline const FTextSetting TextSettings[] = {')
-foreach ($setting in @($settings | Where-Object { [string]$_.type -eq 'text' })) {
-    $header.Add(('    {{{0}Key, {1}, {0}Default}},' -f $setting.id, $setting.resolvedField))
-}
-$header.Add('};')
-$header.Add('inline const FFontSetting FontSettings[] = {')
-foreach ($setting in @($settings | Where-Object { $_.PSObject.Properties.Name -contains 'fontObjectId' })) {
-    $header.Add(('    {{{0}, {1}}},' -f $setting.resolvedField, $setting.fontObjectId))
-}
-$header.Add('};')
-
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 foreach ($path in @($HeaderPath, $IniPath)) {
     $directory = Split-Path -Parent ([IO.Path]::GetFullPath($path))

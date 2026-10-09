@@ -320,9 +320,8 @@ void AddRailgunFire(FGraph& G)
     check(ShotAudio::Wave);
     auto* Play=G.Call(UGameplayStatics::StaticClass(),ShotAudio::PlayAtLocation);
     G.Pin(Play,ShotAudio::SoundPin)->DefaultObject=ShotAudio::Wave;
-    auto* Volume=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Multiply_DoubleDouble));
-    G.Link(G.Read(ShotAudio::VolumePercent),G.Pin(Volume,P::Binary::LeftOperand)); G.Default(Volume,P::Binary::RightOperand,ShotAudio::PercentMultiplier);
-    G.Link(G.Pin(Volume,P::ReturnValue),G.Pin(Play,ShotAudio::VolumeMultiplierPin));
+    G.Default(Play, ShotAudio::VolumeMultiplierPin,
+        ShotAudio::VolumeMultiplier);
     G.Link(G.Read(Shot::SpawnLocation),G.Pin(Play,E::Location)); G.Link(G.Read(Shot::SpawnRotation),G.Pin(Play,Shot::ActorRotation)); G.Exec(Play);
     G.Tail = PostShot->GetThenPinGivenIndex(1);
     ApplyRailgunAimRecoil(G);
