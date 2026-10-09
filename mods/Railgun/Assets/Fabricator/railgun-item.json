@@ -42,6 +42,18 @@
     "DA_Part_LogicChip",
     "/Game/Data/Assets/Parts/DA_Part_TurbineBlade",
     "DA_Part_TurbineBlade",
+    "/Game/Data/Assets/Parts/DA_Part_AdvancedAlloyMesh",
+    "DA_Part_AdvancedAlloyMesh",
+    "/Game/Data/Assets/Parts/DA_Part_BatteryCell",
+    "DA_Part_BatteryCell",
+    "/Game/Data/Assets/Parts/DA_Part_ConduitWiring",
+    "DA_Part_ConduitWiring",
+    "/Game/Data/Assets/Parts/DA_Part_OpticalLens",
+    "DA_Part_OpticalLens",
+    "/Game/Data/Assets/Parts/DA_Part_NanoFabricMesh",
+    "DA_Part_NanoFabricMesh",
+    "/Game/Data/Assets/Parts/DA_Part_CoolingRadiator",
+    "DA_Part_CoolingRadiator",
     "Default__VoyagePropertyDescription",
     "Default__VoyagePropertyModuleResource",
     "Default__VoyagePropertyModuleResources",
@@ -339,7 +351,199 @@
                 "PropertyTagFlags": "None",
                 "PropertyTypeName": null,
                 "PropertyTagExtensions": "NoExtension",
+                "Value": 3
+              }
+            ],
+            [
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": -34
+              },
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.IntPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": 2
+              }
+            ],
+            [
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": -20
+              },
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.IntPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
                 "Value": 1
+              }
+            ],
+            [
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": -35
+              },
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.IntPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": 1
+              }
+            ],
+            [
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": -36
+              },
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.IntPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": 4
+              }
+            ],
+            [
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": -37
+              },
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.IntPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": 1
+              }
+            ],
+            [
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": -38
+              },
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.IntPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": 3
+              }
+            ],
+            [
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": -21
+              },
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.IntPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": 1
+              }
+            ],
+            [
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.ObjectPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": -39
+              },
+              {
+                "$type": "UAssetAPI.PropertyTypes.Objects.IntPropertyData, UAssetAPI",
+                "Name": "Components",
+                "ArrayIndex": 0,
+                "PropertyGuid": null,
+                "IsZero": false,
+                "PropertyTagFlags": "None",
+                "PropertyTypeName": null,
+                "PropertyTagExtensions": "NoExtension",
+                "Value": 2
               }
             ]
           ],
@@ -1194,6 +1398,114 @@
       "ClassName": "Texture2D",
       "PackageName": "T_RailgunIcon",
       "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "/Game/Data/Assets/Parts/DA_Part_AdvancedAlloyMesh",
+      "OuterIndex": 0,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Package",
+      "PackageName": "/Game/Data/Assets/Parts/DA_Part_AdvancedAlloyMesh",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "/Game/Data/Assets/Parts/DA_Part_BatteryCell",
+      "OuterIndex": 0,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Package",
+      "PackageName": "/Game/Data/Assets/Parts/DA_Part_BatteryCell",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "/Game/Data/Assets/Parts/DA_Part_ConduitWiring",
+      "OuterIndex": 0,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Package",
+      "PackageName": "/Game/Data/Assets/Parts/DA_Part_ConduitWiring",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "/Game/Data/Assets/Parts/DA_Part_OpticalLens",
+      "OuterIndex": 0,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Package",
+      "PackageName": "/Game/Data/Assets/Parts/DA_Part_OpticalLens",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "/Game/Data/Assets/Parts/DA_Part_NanoFabricMesh",
+      "OuterIndex": 0,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Package",
+      "PackageName": "/Game/Data/Assets/Parts/DA_Part_NanoFabricMesh",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "/Game/Data/Assets/Parts/DA_Part_CoolingRadiator",
+      "OuterIndex": 0,
+      "ClassPackage": "/Script/CoreUObject",
+      "ClassName": "Package",
+      "PackageName": "/Game/Data/Assets/Parts/DA_Part_CoolingRadiator",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "DA_Part_AdvancedAlloyMesh",
+      "OuterIndex": -28,
+      "ClassPackage": "/Script/Voyage",
+      "ClassName": "VoyageItemPart",
+      "PackageName": "DA_Part_AdvancedAlloyMesh",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "DA_Part_BatteryCell",
+      "OuterIndex": -29,
+      "ClassPackage": "/Script/Voyage",
+      "ClassName": "VoyageItemPart",
+      "PackageName": "DA_Part_BatteryCell",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "DA_Part_ConduitWiring",
+      "OuterIndex": -30,
+      "ClassPackage": "/Script/Voyage",
+      "ClassName": "VoyageItemPart",
+      "PackageName": "DA_Part_ConduitWiring",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "DA_Part_OpticalLens",
+      "OuterIndex": -31,
+      "ClassPackage": "/Script/Voyage",
+      "ClassName": "VoyageItemPart",
+      "PackageName": "DA_Part_OpticalLens",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "DA_Part_NanoFabricMesh",
+      "OuterIndex": -32,
+      "ClassPackage": "/Script/Voyage",
+      "ClassName": "VoyageItemPart",
+      "PackageName": "DA_Part_NanoFabricMesh",
+      "bImportOptional": false
+    },
+    {
+      "$type": "UAssetAPI.Import, UAssetAPI",
+      "ObjectName": "DA_Part_CoolingRadiator",
+      "OuterIndex": -33,
+      "ClassPackage": "/Script/Voyage",
+      "ClassName": "VoyageItemPart",
+      "PackageName": "DA_Part_CoolingRadiator",
+      "bImportOptional": false
     }
   ],
   "DependsMap": [
@@ -1215,7 +1527,7 @@
     {
       "$type": "UAssetAPI.FGenerationInfo, UAssetAPI",
       "ExportCount": 4,
-      "NameCount": 58
+      "NameCount": 70
     }
   ],
   "PackageGuid": "{00000000-0000-0000-0000-000000000000}",
@@ -1249,7 +1561,7 @@
   "SavedHash": "AAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   "CompressionFlags": 0,
   "AdditionalPackagesToCook": [],
-  "NamesReferencedFromExportDataCount": 58,
+  "NamesReferencedFromExportDataCount": 70,
   "PayloadTocOffset": -1,
   "DataResourceOffset": -1,
   "doWeHaveAssetRegistryData": true,

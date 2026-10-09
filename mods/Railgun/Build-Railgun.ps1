@@ -143,9 +143,9 @@ function ConvertTo-ComparableExportsJson($Exports) {
     $normalized = @($Exports | ForEach-Object {
         $export = [ordered]@{}
         foreach ($property in $_.PSObject.Properties) {
-            # The writer recomputes this physical file position. It is not
-            # authored UObject data and may change while semantics stay equal.
-            if ($property.Name -cne 'SerialOffset') {
+            # The writer recomputes these physical package-layout values. They
+            # are not authored UObject data and may change with payload size.
+            if ($property.Name -cnotin @('SerialOffset', 'SerialSize')) {
                 $export[$property.Name] = $property.Value
             }
         }
