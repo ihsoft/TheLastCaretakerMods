@@ -2,13 +2,20 @@
 
 ## Evidence boundary
 
-These findings come from user-tested authored `VoyageItemAmmo` packages in
-Railgun, not a claim about every item class. The game fingerprint is Steam
+This document separates item serialization, inventory ownership, transfer and
+notifications. General mechanisms are not tied to a particular mod or game
+build; static facts, runtime coverage and inferences are distinguished below.
+
+Where a section explicitly refers to a fingerprint, its binary/schema evidence
+was obtained on Steam
 build `25191271`, executable SHA-256
 `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`, parser
-profile `UE5_8`. Revalidate affected contracts when the fingerprint changes.
-The owning [Railgun architecture](../mods/Railgun/ARCHITECTURE.md) records the
-current item fields, values and release/install evidence.
+profile `UE5_8`. This provenance gates reuse of the corresponding extracted
+inputs and reconstructed binary contracts, not the general ownership and event
+patterns. A game update alone is not a reason to repeat the whole investigation.
+An optional implementation example is the
+[Railgun architecture](../mods/Railgun/ARCHITECTURE.md), which owns its item
+values and release evidence, not the general contracts described here.
 
 ## Distinct contracts
 
@@ -130,6 +137,72 @@ or partial inventories across save/load. The owning
 [checkpoint](../mods/Railgun/ARCHITECTURE.md#current-game-validated-checkpoint)
 records the release and installation evidence. These tested paths do not
 establish every native broadcast site or other modules' lifecycle contracts.
+
+### Manual transfer between character and module inventories
+
+**Static facts** describe the reflected API and ownership path; **runtime
+facts** cover normal character-to-module transfer, not every inventory subclass
+or combination of stacks. The mechanism does not depend on a particular mod.
+
+**Static facts.** For a character-to-module action, the source is the character's
+`VoyageBaseCharacter.WeightInventory`; the target is the physical module's
+`GetInternalInventory()` result. Capture the character before possession and
+retain that owned reference: querying the possessed pawn afterwards selects
+the operator station, not the character. Do not find these owners by periodic
+world scans or infer them from whichever inventory window is open.
+
+The native slot transfer is called on the **destination**:
+
+```text
+moved = destination.TransferSlot(source, sourceSlot, -1, requestedAmount)
+```
+
+`Source`/`SourceSlot` identify the live source entry; `TargetSlot=-1` requests
+native destination-slot placement. The return value is the amount moved, not
+the remaining count. Receiver and argument direction are part of the contract;
+do not infer them from another transfer method's name. Using the native transfer
+avoids implementing a separate remove/add transaction or synthesizing slot data.
+
+The established implementation pattern obtains indices using
+`source.FindSlotsByItem(exactItem)`, snapshots them in a function-local array,
+then reads each current slot with `GetSlot` before transferring. Recheck item
+identity and quantity, cap each positive request by the remaining transfer
+budget, and check that the returned count is positive and no greater than the
+request before continuing.
+Keep the snapshot, remaining budget, current slot and moved amount local to
+this invocation. Inventory callbacks can re-enter availability logic during a
+mutation; transaction scratch state must not share the actor members that
+those callbacks update.
+
+Eligibility is checked before mutation and again on execution, not only when
+rendering the action hint. The module's item validator must accept the exact
+item; native transfer remains responsible for its inventory transaction and
+capacity handling. A count budget is distinct from native mass/slot limits.
+See the [validator argument caveat](#component-and-interaction-contract): its
+inventory argument is not guaranteed to be the module's destination inventory.
+
+**Runtime facts.** Character-to-module slot transfer updates the displayed
+count and action availability and respects the consumer's item-count limit.
+Both source and target
+`OnInventoryChanged` subscriptions keep the availability cache current without
+a new polling timer. Initialization explicitly refreshes it; exit/EndPlay and
+re-entry unbind old subscriptions. The action's `Started` handler is the single
+mutation entry point; its provided-action delegate does not duplicate it.
+
+**Limits and reasonable inference.** The earlier symptoms of reversed transfer
+and occupied weight with no visible contents demonstrate that plausible
+inventory calls are not enough to validate a transaction. They do not prove
+that every other transfer API is broken, or uniquely identify the cause of
+every inconsistent state. Native slot transfer is the established choice here;
+exhaustive partial/split-stack conservation, failure paths and multiplayer
+remain outside confirmed runtime coverage. Function-local scratch state is a
+defence against synchronous callbacks, not proof that all delegates broadcast
+synchronously on every native path.
+
+See [action/hint ownership](vehicle-and-hud-modding-patterns.md#action-execution-and-action-presentation-are-separate-contracts).
+Optional implementation examples (Railgun):
+[transfer and lifecycle](../mods/Railgun/Source/RailgunRuntimeGenerator/RailgunReload.cpp)
+and [native inventory mirror](../mods/Railgun/Source/Voyage/VoyageBaseInventoryComponent.h).
 
 ### Native removal and compensating resource additions
 

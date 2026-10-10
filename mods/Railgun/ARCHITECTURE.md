@@ -41,6 +41,9 @@
   identity so the owned HUD can serialize that external class reference. The
   stand-in is excluded from cooking and release packaging, allowing the game to
   resolve its unchanged stock implementation.
+  Reusable action/label contracts, evidence levels and the limits of attributing
+  the layout fix to a single change live in
+  [the shared HUD patterns](../../docs/vehicle-and-hud-modding-patterns.md#evidence-levels-for-actions-and-hints).
 - Station entry and exit follow the exact inherited Pawn possession events.
   Each transition schedules one next-tick continuation so Voyage's native
   possession and camera work completes first. Repeated events at the same
