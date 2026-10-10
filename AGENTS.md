@@ -30,6 +30,32 @@ those details here.
   reason and verification in the active backlog; do not retain a chronological
   history of superseded rules in the normal agent reading path.
 
+## Subagent coordination
+
+- Before delegating, read [the subagent workflow](docs/subagent-workflow.md).
+  Use a real child agent for delegated work. Reuse only this parent's own
+  suitable coder, with verified ownership; never borrow another parent/chat's
+  coder merely because it shares the repository or role. Unknown ownership is
+  not permission to assign work. Verify two-way messaging before task mutations.
+  Do not create a separate user-owned chat as a substitute without the user's
+  explicit request.
+- The parent owns research, architecture, task scope, review and user-facing
+  conclusions; the designated coder owns implementation, build, validation and
+  authorized installation. Preserve explicit user restrictions on either role.
+  Send unknown game contracts back to the parent rather than inventing them.
+- Every assignment must name its parent return address, task ID, owned paths,
+  model/effort, evidence, acceptance criteria and allowed stages. A coder's
+  completion, failure or review-gate report must be sent to that parent without
+  a user reminder; a final answer only inside the child is not sufficient.
+  The parent must receive and review the report and continue authorized work,
+  not leave coordination or retrieval of missing reports to the user.
+- Every coding report includes scope/diff, validation and exact artifact or
+  installation identity, commit state, limitations, and a compact tool-use
+  report: intended operations, documented entry points invoked, successes and
+  evidence, failures/unexpected results, fallback/source inspection and its
+  trigger, and uncovered reusable operations. The parent explicitly requests
+  this report and triages reusable findings under the existing backlog rules.
+
 ## Research and knowledge protocol
 
 - Optimize research for understanding the producer, consumer, owner,
@@ -164,12 +190,6 @@ those details here.
   or speculative convenience work when it offers only a small improvement
   without a repeated failure, material risk reduction, or clear user need;
   work performed merely to keep improving the pipeline is itself a failure mode.
-- Every coding agent working in this repository must finish with a compact
-  tool-use report: intended operations, documented entry points invoked,
-  successes and evidence, failures or unexpected results, any fallback/source
-  inspection and its trigger, validation performed, and uncovered reusable
-  operation. A delegating agent must request this report explicitly and promote
-  reusable gaps or findings into the toolchain backlog or durable rules.
 - Triage cross-agent questions and pause/release requests before continuing a
   long local pipeline investigation. Give the owning feature agent the smallest
   decision, evidence, or explicit resume signal needed to keep independent work
@@ -276,6 +296,14 @@ those details here.
 - Never replace installed mod or game files while the game is running. The
   user may play while repository-only work continues; do not interrupt or
   alter his current game session.
+- Do not ask the user in advance whether the game is closed. Once installation
+  is authorized and the candidate has passed its required review/validation,
+  the installing agent checks the actual game process immediately before
+  mutation. If absent, install without another user question. If running, leave
+  installed files untouched, report the blocker and wait for the user; never
+  close the game yourself. Unknown process state is not proof that it is closed.
+  On resumption, check again. This rule does not grant installation authority
+  to research-only work or waive the manifest, backup and readback gates.
 - Before a risky test, preserve an exact known-good package, change one
   architectural variable, state the expected outcomes, and record the actual
   game result immediately.

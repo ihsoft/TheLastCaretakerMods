@@ -35,6 +35,25 @@ evidence remain outside cleanup.
 
 ## Prioritization gate
 
+### Subagent coordination rule adoption
+
+User-requested consolidation addresses repeated missing coder reports and
+advance game-closed questions. Root `AGENTS.md` now routes delegation through
+`docs/subagent-workflow.md`: one initial two-way handshake, explicit role/stage
+ownership, automatic parent reports, and installer-owned process checks.
+Expected delta: no user report-relay/reminder or advance game-status question
+per assignment, at the cost of one handshake per connection and maintenance of
+one shared protocol; no scheduler, new tool or global configuration is needed.
+Validation: document/link review and whitespace checks passed; the active
+coder received the rules and returned `RULES_ACK repo-subagents-20261009`,
+confirming the parent-report route, review hold and direct game-process gate.
+A clean new-agent startup under this complete protocol remains the next
+adoption check; do not claim it has been tested merely because an existing
+agent can exchange messages. Remove this adoption note once that check passes;
+the stable contract belongs in the root rules and linked workflow.
+
+### Pipeline changes
+
 Before implementing a backlog item, record:
 
 1. the recurring cost or correctness risk already observed;
