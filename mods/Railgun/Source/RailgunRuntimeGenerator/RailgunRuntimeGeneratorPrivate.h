@@ -69,7 +69,6 @@
 #include "Misc/Parse.h"
 #include "UObject/PackageFileSummary.h"
 #include "Blueprint/UserWidget.h"
-#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/WidgetTree.h"
 #include "Blueprint/WidgetBlueprintGeneratedClass.h"
 #include "WidgetBlueprint.h"

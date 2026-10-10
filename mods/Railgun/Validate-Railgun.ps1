@@ -17,6 +17,11 @@ $skillPackage = '/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun'
 $ammoPackage = '/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod'
 $operatorPackage = '/Game/Mods/Railgun/Station/BP_RailgunOperator'
 $hudPackage = '/Game/Mods/Railgun/Station/WBP_RailgunHUD'
+$exitActionPackage = '/Game/Mods/Railgun/Inputs/IA_RailgunExit'
+$zoomActionPackage = '/Game/Mods/Railgun/Inputs/IA_RailgunZoom'
+$fireActionPackage = '/Game/Mods/Railgun/Inputs/IA_RailgunFire'
+$reloadActionPackage = '/Game/Mods/Railgun/Inputs/IA_RailgunReload'
+$keyboardContextPackage = '/Game/Mods/Railgun/Inputs/IMC_RailgunKeyboard'
 $ammoIndicatorPackage = '/Game/Mods/Railgun/Station/T_RailgunAmmoIndicator'
 function Read-Candidate([string]$Query) {
     $result = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
@@ -596,6 +601,38 @@ foreach ($requiredVisualReference in @(
     Require ($syncVisualStrings -ccontains $requiredVisualReference) `
         ('Ammo-visual sync reference missing: ' + $requiredVisualReference)
 }
+$hintActions = @(
+    @{ Package=$exitActionPackage; Name='IA_RailgunExit'; Text='Exit Railgun' },
+    @{ Package=$zoomActionPackage; Name='IA_RailgunZoom'; Text='Toggle scope' },
+    @{ Package=$fireActionPackage; Name='IA_RailgunFire'; Text='Fire' },
+    @{ Package=$reloadActionPackage; Name='IA_RailgunReload'; Text='Reload' }
+)
+foreach ($hintActionContract in $hintActions) {
+    $hintAction = @(Read-Candidate $hintActionContract.Package)
+    Require ($hintAction.Count -eq 1 -and
+        $hintAction[0].Type -ceq 'InputAction' -and
+        $hintAction[0].Name -ceq $hintActionContract.Name -and
+        $hintAction[0].Properties.ActionDescription.SourceString -ceq
+            $hintActionContract.Text) `
+        ('Railgun hint action description mismatch: ' +
+            $hintActionContract.Name)
+}
+$keyboardContext = @(Read-Candidate $keyboardContextPackage)
+$keyboardMappings = @($keyboardContext | Where-Object {
+    $_.Type -ceq 'InputMappingContext'
+})
+Require ($keyboardMappings.Count -eq 1 -and
+    @($keyboardMappings[0].Properties.DefaultKeyMappings.Mappings).Count -eq 6) `
+    'Railgun keyboard context must contain exactly six mappings.'
+$reloadMappings = @(
+    $keyboardMappings[0].Properties.DefaultKeyMappings.Mappings |
+    Where-Object {
+        $_.Action.ObjectPath -ceq
+            '/Game/Mods/Railgun/Inputs/IA_RailgunReload.0' -and
+        $_.Key.KeyName -ceq 'R'
+    })
+Require ($reloadMappings.Count -eq 1) `
+    'Railgun reload input must map IA_RailgunReload to R exactly once.'
 $operator = @(Read-Candidate $operatorPackage)
 $operatorPackageStrings = @(JsonStringLeaves $operator)
 $operatorFunctions = @($operator | Where-Object { $_.Type -ceq 'Function' })
@@ -604,6 +641,352 @@ $operatorClass = @($operator | Where-Object {
 })
 Require ($operatorClass.Count -eq 1) `
     'Expected one Railgun operator generated class.'
+$operatorDefaults = @($operator | Where-Object {
+    $_.Name -ceq 'Default__BP_RailgunOperator_C'
+})
+Require ($operatorDefaults.Count -eq 1) `
+    'Expected one Railgun operator class default object.'
+$reloadProperties = @{
+    RailgunReloadAvailable = 'BoolProperty'
+    RailgunReloadSourceInventory = 'ObjectProperty'
+    RailgunReloadTargetInventory = 'ObjectProperty'
+    RailgunReloadAcceptedAmmo = 'ObjectProperty'
+    RailgunReloadSourceCount = 'IntProperty'
+    RailgunReloadTargetCount = 'IntProperty'
+}
+foreach ($reloadProperty in $reloadProperties.GetEnumerator()) {
+    $property = @($operatorClass[0].ChildProperties | Where-Object {
+        $_.Name -ceq $reloadProperty.Key
+    })
+    Require ($property.Count -eq 1 -and
+        $property[0].Type -ceq $reloadProperty.Value -and
+        $property[0].PropertyFlags -match '(^| \| )Transient($| \| )') `
+        ('Reload state must be exact and transient: ' + $reloadProperty.Key)
+}
+$reloadFunctions = @{}
+foreach ($reloadFunctionName in @(
+    'RefreshRailgunReloadAvailability','OnRailgunReloadInventoryChanged',
+    'BindRailgunReloadInventories','UnbindRailgunReloadInventories',
+    'ReloadRailgun','GetProvidedActionsBP','ReceivePossessed',
+    'ReceiveUnpossessed','ReceiveEndPlay','ReceiveTick')) {
+    $matches = @($operatorFunctions | Where-Object {
+        $_.Name -ceq $reloadFunctionName
+    })
+    Require ($matches.Count -eq 1) `
+        ('Expected one reload/lifecycle function: ' + $reloadFunctionName)
+    $reloadFunctions[$reloadFunctionName] = $matches[0]
+}
+$reloadRefreshStrings = @(JsonStringLeaves `
+    $reloadFunctions['RefreshRailgunReloadAvailability'])
+foreach ($requiredReloadPredicateReference in @(
+    'RailgunReloadAvailable','RailgunReloadSourceInventory',
+    'RailgunReloadTargetInventory','RailgunReloadAcceptedAmmo',
+    'RailgunReloadSourceCount','RailgunReloadTargetCount','Items','ItemCount',
+    'IsPlayerControlled',"Class'BlueprintMapLibrary:Map_Values'",
+    "Class'KismetMathLibrary:Add_IntInt'",
+    "Class'KismetMathLibrary:Greater_IntInt'",
+    "Class'KismetMathLibrary:Less_IntInt'")) {
+    Require ($reloadRefreshStrings -ccontains
+            $requiredReloadPredicateReference) `
+        ('Reload availability predicate reference missing: ' +
+            $requiredReloadPredicateReference)
+}
+$reloadBindStrings = @(JsonStringLeaves `
+    $reloadFunctions['BindRailgunReloadInventories'])
+foreach ($requiredReloadBindingReference in @(
+    'OriginalPlayerPawn','WeightInventory','RailgunEnergyModule',
+    'AcceptedRailgunAmmo',"Class'VoyageModuleComponent:GetInternalInventory'",
+    'OnInventoryChanged',
+    'OnRailgunReloadInventoryChanged','RefreshRailgunReloadAvailability',
+    'UnbindRailgunReloadInventories')) {
+    Require ($reloadBindStrings -ccontains $requiredReloadBindingReference) `
+        ('Reload binding reference missing: ' +
+            $requiredReloadBindingReference)
+}
+$reloadCallbackStrings = @(JsonStringLeaves `
+    $reloadFunctions['OnRailgunReloadInventoryChanged'])
+Require (($reloadCallbackStrings -ccontains
+        'RefreshRailgunReloadAvailability') -and
+    -not ($reloadCallbackStrings -ccontains
+        "Class'VoyageBaseInventoryComponent:TransferSlot'")) `
+    'Reload inventory callback must refresh availability without transferring.'
+$reloadExecuteStrings = @(JsonStringLeaves `
+    $reloadFunctions['ReloadRailgun'])
+Require (($reloadExecuteStrings -ccontains
+        'RefreshRailgunReloadAvailability') -and
+    ($reloadExecuteStrings -ccontains 'RailgunReloadAvailable') -and
+    ($reloadExecuteStrings -ccontains 'ValidateItem') -and
+    ($reloadExecuteStrings -ccontains
+        "Class'VoyageBaseInventoryComponent:FindSlotsByItem'") -and
+    ($reloadExecuteStrings -ccontains
+        "Class'VoyageBaseInventoryComponent:GetSlot'") -and
+    @($reloadExecuteStrings | Where-Object {
+        $_ -ceq "Class'VoyageBaseInventoryComponent:TransferSlot'"
+    }).Count -eq 1 -and
+    -not ($reloadExecuteStrings -ccontains
+        "Class'VoyageBaseInventoryComponent:TransferItems'")) `
+    'Reload must validate, snapshot/recheck slots, and use TransferSlot only.'
+foreach ($requiredReloadLocal in @(
+    'RailgunReloadSlotSnapshot','RailgunReloadRemaining',
+    'RailgunReloadMoved','RailgunReloadCurrentSlot',
+    'RailgunReloadRequested','RailgunReloadValidated')) {
+    Require ($reloadExecuteStrings -ccontains $requiredReloadLocal) `
+        ('Reload transaction local missing: ' + $requiredReloadLocal)
+}
+$reloadValidatorStatements = @(
+    $reloadFunctions['ReloadRailgun'].ScriptBytecode | Where-Object {
+        $_ -is [pscustomobject] -and
+        $_.Token -ceq 'EX_Context' -and
+        $null -ne $_.ObjectExpression -and
+        $_.ObjectExpression.Token -ceq 'EX_InterfaceContext' -and
+        $null -ne $_.ContextExpression -and
+        $_.ContextExpression.Token -ceq 'EX_VirtualFunction' -and
+        $_.ContextExpression.Function -ceq 'ValidateItem'
+    })
+Require ($reloadValidatorStatements.Count -eq 1) `
+    'Reload must contain one ValidateItem interface dispatch.'
+$reloadValidator = $reloadValidatorStatements[0]
+$reloadValidatorReceiver = `
+    $reloadValidator.ObjectExpression.InterfaceValue
+$reloadValidatorParameters = @($reloadValidator.ContextExpression.Parameters)
+Require ($reloadValidatorReceiver.Token -ceq 'EX_LocalVariable' -and
+    $reloadValidatorReceiver.Variable.Property.PropertyClass.ObjectName -ceq
+        "BlueprintGeneratedClass'BP_Module_Railgun_C'" -and
+    $reloadValidatorParameters.Count -eq 3 -and
+    $reloadValidatorParameters[0].Token -ceq 'EX_InstanceVariable' -and
+    $reloadValidatorParameters[0].Variable.Property.Name -ceq
+        'RailgunReloadTargetInventory' -and
+    $reloadValidatorParameters[1].Token -ceq 'EX_InstanceVariable' -and
+    $reloadValidatorParameters[1].Variable.Property.Name -ceq
+        'RailgunReloadAcceptedAmmo' -and
+    $reloadValidatorParameters[2].Token -ceq 'EX_LocalVariable' -and
+    $reloadValidatorParameters[2].Variable.Property.Name -ceq
+        'CallFunc_ValidateItem_bIsValid') `
+    'Reload ValidateItem must dispatch on the typed shell with target and ammo.'
+$reloadTransferStatements = @(
+    $reloadFunctions['ReloadRailgun'].ScriptBytecode | Where-Object {
+        $_ -is [pscustomobject] -and
+        @($_.PSObject.Properties.Name) -ccontains 'Expression' -and
+        $null -ne $_.Expression -and
+        $_.Expression.Token -ceq 'EX_Context' -and
+        $null -ne $_.Expression.ContextExpression -and
+        $null -ne $_.Expression.ContextExpression.Function -and
+        $_.Expression.ContextExpression.Function.ObjectName -ceq
+            "Class'VoyageBaseInventoryComponent:TransferSlot'"
+    })
+Require ($reloadTransferStatements.Count -eq 1) `
+    'Reload must contain one structural TransferSlot context call.'
+$reloadTransferExpression = $reloadTransferStatements[0].Expression
+$reloadTransferReceiver = $reloadTransferExpression.ObjectExpression
+$reloadTransferParameters = @(
+    $reloadTransferExpression.ContextExpression.Parameters)
+Require ($reloadTransferReceiver.Token -ceq 'EX_InstanceVariable' -and
+    $reloadTransferReceiver.Variable.Property.Name -ceq
+        'RailgunReloadTargetInventory' -and
+    $reloadTransferParameters.Count -eq 4 -and
+    $reloadTransferParameters[0].Token -ceq 'EX_InstanceVariable' -and
+    $reloadTransferParameters[0].Variable.Property.Name -ceq
+        'RailgunReloadSourceInventory' -and
+    $reloadTransferParameters[1].Token -ceq 'EX_LocalVariable' -and
+    $reloadTransferParameters[1].Variable.Property.Name -ceq
+        'RailgunReloadCurrentSlot' -and
+    $reloadTransferParameters[2].Token -ceq 'EX_IntConst' -and
+    $reloadTransferParameters[2].Value -eq -1 -and
+    $reloadTransferParameters[3].Token -ceq 'EX_LocalVariable' -and
+    $reloadTransferParameters[3].Variable.Property.Name -ceq
+        'RailgunReloadRequested') `
+    'Reload must call target.TransferSlot(source, currentSlot, -1, requested).'
+$reloadTransferBytecode = @(
+    JsonStringLeaves $reloadFunctions['ReloadRailgun'].ScriptBytecode)
+foreach ($requiredReloadTransferReference in @(
+    'RailgunReloadTargetInventory','RailgunReloadSourceInventory',
+    'RailgunReloadCurrentSlot','RailgunReloadRequested',
+    "Class'KismetMathLibrary:Greater_IntInt'",
+    "Class'KismetMathLibrary:LessEqual_IntInt'",
+    "Class'KismetMathLibrary:Subtract_IntInt'")) {
+    Require ($reloadTransferBytecode -ccontains
+            $requiredReloadTransferReference) `
+        ('Reload bounded transfer reference missing: ' +
+            $requiredReloadTransferReference)
+}
+$reloadProvider = $reloadFunctions['GetProvidedActionsBP']
+$reloadProviderStrings = @(JsonStringLeaves $reloadProvider)
+foreach ($requiredReloadHintReference in @(
+    'RailgunReloadAvailable','bEnabled')) {
+    Require ($reloadProviderStrings -ccontains $requiredReloadHintReference) `
+        ('Reload action-hint reference missing: ' +
+            $requiredReloadHintReference)
+}
+$providedActionAssignments = @{}
+foreach ($statement in @($reloadProvider.ScriptBytecode)) {
+    if ($statement -isnot [pscustomobject] -or
+        $statement.Token -notin @('EX_Let','EX_LetObj','EX_LetBool') -or
+        $statement.Variable -isnot [pscustomobject] -or
+        $statement.Variable.Token -cne 'EX_StructMemberContext' -or
+        @($statement.Variable.Property.Path).Count -ne 1 -or
+        $statement.Variable.StructExpression.Token -cne 'EX_LocalVariable') {
+        continue
+    }
+    $memberName = [string]$statement.Variable.Property.Path[0]
+    if ($memberName -notin @('InputAction','Text','bEnabled')) { continue }
+    $localName = [string]$statement.Variable.StructExpression.Variable.Property.Name
+    if (-not $providedActionAssignments.ContainsKey($localName)) {
+        $providedActionAssignments[$localName] = @{}
+    }
+    Require (-not $providedActionAssignments[$localName].ContainsKey($memberName)) `
+        ('Duplicate provided-action assignment for ' + $localName + '.' +
+            $memberName)
+    $providedActionAssignments[$localName][$memberName] = $statement.Expression
+}
+Require ($providedActionAssignments.Count -eq 4) `
+    'Provider must assign InputAction and Text on exactly four action structs.'
+$expectedProvidedActionPaths = @(
+    '/Game/Mods/Railgun/Inputs/IA_RailgunExit.0',
+    '/Game/Mods/Railgun/Inputs/IA_RailgunZoom.0',
+    '/Game/Mods/Railgun/Inputs/IA_RailgunFire.0',
+    '/Game/Mods/Railgun/Inputs/IA_RailgunReload.0'
+)
+$actualProvidedActionPaths = @()
+foreach ($entry in $providedActionAssignments.GetEnumerator()) {
+    $assignments = $entry.Value
+    Require ($assignments.ContainsKey('InputAction') -and
+        $assignments.ContainsKey('Text') -and
+        $assignments.ContainsKey('bEnabled')) `
+        ('Provided-action struct lacks InputAction, Text, or bEnabled: ' +
+            $entry.Key)
+    $inputExpression = $assignments['InputAction']
+    Require ($inputExpression.Token -ceq 'EX_ObjectConst' -and
+        $null -ne $inputExpression.Value -and
+        $expectedProvidedActionPaths -ccontains
+            [string]$inputExpression.Value.ObjectPath) `
+        ('Provided-action InputAction must be an exact Railgun action object: ' +
+            $entry.Key)
+    $actionPath = [string]$inputExpression.Value.ObjectPath
+    $actualProvidedActionPaths += $actionPath
+    $textExpression = $assignments['Text']
+    Require ($textExpression.Token -ceq 'EX_Context') `
+        ('Provided-action Text must use an object context: ' + $entry.Key)
+    $objectExpression = $textExpression.ObjectExpression
+    $literalContextMatches = $null -ne $objectExpression -and
+        $objectExpression.Token -ceq 'EX_ObjectConst' -and
+        $null -ne $objectExpression.Value -and
+        [string]$objectExpression.Value.ObjectPath -ceq $actionPath
+    $referenceProperty = if ($null -ne $objectExpression -and
+        $objectExpression.Token -ceq 'EX_InstanceVariable' -and
+        $null -ne $objectExpression.Variable -and
+        $null -ne $objectExpression.Variable.Property) {
+        $objectExpression.Variable.Property
+    } else { $null }
+    $referenceDefault = if ($null -ne $referenceProperty) {
+        $operatorDefaults[0].Properties.PSObject.Properties[
+            [string]$referenceProperty.Name]
+    } else { $null }
+    $typedReferenceContextMatches = $null -ne $objectExpression -and
+        $objectExpression.Token -ceq 'EX_InstanceVariable' -and
+        $null -ne $objectExpression.Variable -and
+        $null -ne $objectExpression.Variable.Owner -and
+        $objectExpression.Variable.Owner.ObjectName -ceq
+            "BlueprintGeneratedClass'BP_RailgunOperator_C'" -and
+        $objectExpression.Variable.Owner.ObjectPath -ceq
+            '/Game/Mods/Railgun/Station/BP_RailgunOperator.0' -and
+        $null -ne $referenceProperty -and
+        $referenceProperty.Type -ceq 'ObjectProperty' -and
+        $null -ne $referenceProperty.PropertyClass -and
+        $referenceProperty.PropertyClass.ObjectName -ceq
+            "Class'InputAction'" -and
+        $referenceProperty.PropertyClass.ObjectPath -ceq
+            '/Script/EnhancedInput' -and
+        $null -ne $referenceDefault -and
+        $null -ne $referenceDefault.Value -and
+        [string]$referenceDefault.Value.ObjectPath -ceq $actionPath
+    Require ($literalContextMatches -or $typedReferenceContextMatches) `
+        ('Provided-action Text context does not match InputAction: ' +
+            $entry.Key)
+    $descriptionExpression = $textExpression.ContextExpression
+    Require ($null -ne $descriptionExpression -and
+        $descriptionExpression.Token -ceq 'EX_InstanceVariable' -and
+        @($descriptionExpression.Variable.Path).Count -eq 1 -and
+        [string]$descriptionExpression.Variable.Path[0] -ceq
+            'ActionDescription' -and
+        $descriptionExpression.Variable.ResolvedOwner.ObjectName -ceq
+            "Class'InputAction'" -and
+        $descriptionExpression.Variable.ResolvedOwner.ObjectPath -ceq
+            '/Script/EnhancedInput') `
+        ('Provided-action Text must read exact UInputAction.ActionDescription: ' +
+            $entry.Key)
+    $enabledExpression = $assignments['bEnabled']
+    if ($actionPath -ceq
+        '/Game/Mods/Railgun/Inputs/IA_RailgunReload.0') {
+        Require ($enabledExpression.Token -ceq 'EX_InstanceVariable' -and
+            $null -ne $enabledExpression.Variable.Property -and
+            $enabledExpression.Variable.Property.Name -ceq
+                'RailgunReloadAvailable') `
+            'Reload bEnabled must read the cached production availability directly.'
+    } else {
+        Require ($enabledExpression.Token -ceq 'EX_LocalVariable' -and
+            $enabledExpression.Variable.Property.Name.StartsWith(
+                'CallFunc_IsPlayerControlled_ReturnValue',
+                [StringComparison]::Ordinal)) `
+            ('Non-reload bEnabled must remain IsPlayerControlled: ' +
+                $actionPath)
+    }
+}
+Require (@($actualProvidedActionPaths | Sort-Object -Unique).Count -eq 4) `
+    'Each Railgun provided action must use a distinct exact InputAction.'
+$reloadUbergraph = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'ExecuteUbergraph_BP_RailgunOperator'
+})
+$reloadUbergraphStrings = @(JsonStringLeaves $reloadUbergraph[0])
+Require ($reloadUbergraph.Count -eq 1 -and
+    @($reloadUbergraphStrings | Where-Object {
+        $_ -ceq 'BindRailgunReloadInventories'
+    }).Count -eq 1) `
+    'Confirmed possession continuation must bind reload inventories once.'
+Require (@($reloadUbergraphStrings | Where-Object {
+        $_ -ceq 'UnbindRailgunReloadInventories'
+    }).Count -eq 2) `
+    'Unpossession and EndPlay must each unbind reload inventory delegates.'
+Require (@($reloadUbergraphStrings | Where-Object {
+        $_ -ceq 'ReloadRailgun'
+    }).Count -eq 1) `
+    'R Started must call reload exactly once.'
+$reloadTickStrings = @(JsonStringLeaves $reloadFunctions['ReceiveTick'])
+foreach ($forbiddenReloadTickReference in @(
+    'ReloadRailgun',"Class'VoyageBaseInventoryComponent:TransferSlot'",
+    'BindRailgunReloadInventories',
+    'RefreshRailgunReloadAvailability')) {
+    Require (-not ($reloadTickStrings -ccontains
+            $forbiddenReloadTickReference)) `
+        ('Reload must not poll or transfer from tick: ' +
+            $forbiddenReloadTickReference)
+}
+foreach ($reloadModeIndependentFunction in @(
+    'RefreshRailgunReloadAvailability','ReloadRailgun',
+    'GetProvidedActionsBP')) {
+    Require (-not (@(JsonStringLeaves `
+            $reloadFunctions[$reloadModeIndependentFunction]) -ccontains
+            'RailgunWideMode')) `
+        ('Reload must remain independent of scope/wide mode: ' +
+            $reloadModeIndependentFunction)
+}
+$reloadCases = @(
+    @{Name='zero-player'; Player=@(); Gun=@(2); Enabled=$false; Transfer=0},
+    @{Name='partial'; Player=@(2); Gun=@(1); Enabled=$true; Transfer=2},
+    @{Name='full'; Player=@(5); Gun=@(6); Enabled=$false; Transfer=0},
+    @{Name='excess'; Player=@(9); Gun=@(4); Enabled=$true; Transfer=2},
+    @{Name='split-slots'; Player=@(1,2,3); Gun=@(1,1); Enabled=$true; Transfer=4}
+)
+foreach ($reloadCase in $reloadCases) {
+    $playerCount = [int](($reloadCase.Player | Measure-Object -Sum).Sum)
+    $gunCount = [int](($reloadCase.Gun | Measure-Object -Sum).Sum)
+    $enabled = $playerCount -gt 0 -and $gunCount -lt 6
+    $transfer = if ($enabled) {
+        [Math]::Min($playerCount, 6 - $gunCount)
+    } else { 0 }
+    Require ($enabled -eq $reloadCase.Enabled -and
+        $transfer -eq $reloadCase.Transfer) `
+        ('Reload predicate scenario failed: ' + $reloadCase.Name)
+}
 $removedSettingKeys = @(
     'ShotVolumePercent','StatusIconOpacityPercent',
     'TargetNameOffsetX','TargetNameOffsetY','TargetNameOpacityPercent',
@@ -1687,6 +2070,85 @@ $hudClass = @($hud | Where-Object {
 })
 Require ($hudClass.Count -eq 1) `
     'Expected one Railgun HUD generated class.'
+Require ($hudClass[0].SuperStruct.ObjectName -ceq
+    "Class'VoyageBaseUserWidget'") `
+    'Railgun HUD must retain VoyageBaseUserWidget as its base class.'
+$hudWidgetTree = @($hud | Where-Object {
+    $_.Type -ceq 'WidgetTree'
+})
+$hudInvalidationRoots = @($hud | Where-Object {
+    $_.Type -ceq 'InvalidationBox' -and
+    $_.Name -ceq 'RailgunHudInvalidationRoot'
+})
+$hudCanvases = @($hud | Where-Object {
+    $_.Type -ceq 'CanvasPanel' -and
+    $_.Name -ceq 'DiagnosticCanvas'
+})
+$hudHintWidgets = @($hud | Where-Object {
+    $_.Type -ceq 'BP_DynamicPlayerInputHorizontalWidget_C' -and
+    $_.Name -ceq 'RailgunActionHints'
+})
+Require ($hudWidgetTree.Count -eq 1 -and
+    $hudInvalidationRoots.Count -eq 1 -and
+    $hudCanvases.Count -eq 1 -and
+    $hudHintWidgets.Count -eq 1) `
+    'HUD must contain one InvalidationBox root, Canvas and exact stock hint widget.'
+Require ($hudWidgetTree[0].Properties.RootWidget.ObjectName -ceq
+    "InvalidationBox'WBP_RailgunHUD_C:WidgetTree.RailgunHudInvalidationRoot'") `
+    'Railgun HUD WidgetTree root must be its InvalidationBox.'
+$hudInvalidationSlots = @($hud | Where-Object {
+    $_.Type -ceq 'PanelSlot' -and
+    $_.Properties.Parent.ObjectName -ceq
+        "InvalidationBox'WBP_RailgunHUD_C:WidgetTree.RailgunHudInvalidationRoot'" -and
+    $_.Properties.Content.ObjectName -ceq
+        "CanvasPanel'WBP_RailgunHUD_C:WidgetTree.DiagnosticCanvas'"
+})
+Require ($hudInvalidationSlots.Count -eq 1) `
+    'Railgun HUD InvalidationBox must contain its existing Canvas directly.'
+$hudHintSlots = @($hud | Where-Object {
+    $_.Type -ceq 'CanvasPanelSlot' -and
+    $_.Properties.Parent.ObjectName -ceq
+        "CanvasPanel'WBP_RailgunHUD_C:WidgetTree.DiagnosticCanvas'" -and
+    $_.Properties.Content.ObjectName -ceq
+        "BP_DynamicPlayerInputHorizontalWidget_C'WBP_RailgunHUD_C:WidgetTree.RailgunActionHints'"
+})
+Require ($hudHintSlots.Count -eq 1) `
+    'Stock Railgun hint widget must be a direct Canvas child.'
+$hudHintLayout = $hudHintSlots[0].Properties.LayoutData
+Require ($hudHintSlots[0].Properties.bAutoSize -eq $true -and
+    $hudHintLayout.Offsets.Left -eq 24.0 -and
+    $hudHintLayout.Offsets.Top -eq -24.0 -and
+    $hudHintLayout.Anchors.Minimum.X -eq 0.0 -and
+    $hudHintLayout.Anchors.Minimum.Y -eq 1.0 -and
+    $hudHintLayout.Anchors.Maximum.X -eq 0.0 -and
+    $hudHintLayout.Anchors.Maximum.Y -eq 1.0 -and
+    $hudHintLayout.Alignment.X -eq 0.0 -and
+    $hudHintLayout.Alignment.Y -eq 1.0) `
+    'Railgun hint Canvas slot must preserve its anchor, alignment, offset and autosize.'
+Require ($hudHintWidgets[0].Properties.ContextAsset.ObjectName -ceq
+        "VoyageInputContextAsset'DA_RailgunInputContext'" -and
+    $hudHintWidgets[0].Properties.ContextAsset.ObjectPath -ceq
+        '/Game/Mods/Railgun/Inputs/DA_RailgunInputContext.0' -and
+    $hudHintWidgets[0].Properties.bFilterByActionType -eq $true) `
+    'Stock hint widget must use the Railgun context with action-type filtering.'
+$hudHintPropertyNames = @(
+    $hudHintWidgets[0].Properties.PSObject.Properties.Name)
+Require ($hudHintPropertyNames.Count -eq 3 -and
+    $hudHintPropertyNames -ccontains 'Slot' -and
+    $hudHintPropertyNames -ccontains 'ContextAsset' -and
+    $hudHintPropertyNames -ccontains 'bFilterByActionType') `
+    'Stock hint instance must not embed or override its stock implementation.'
+foreach ($obsoleteHintArtifact in @(
+    'RailgunHintHost','RailgunHintWidgetReady',
+    "Class'KismetSystemLibrary:MakeSoftClassPath'",
+    "Class'KismetSystemLibrary:LoadClassAsset_Blocking'",
+    "Class'WidgetBlueprintLibrary:Create'",
+    "Class'VerticalBox:AddChildToVerticalBox'"
+)) {
+    Require (-not ($hudPackageStrings -ccontains $obsoleteHintArtifact)) `
+        ('HUD retained obsolete runtime hint construction artifact: ' +
+            $obsoleteHintArtifact)
+}
 foreach ($displayState in @(
     @{Name='RailgunDisplayedTargetName'; Type='TextProperty'},
     @{Name='RailgunDisplayedTargetRange'; Type='TextProperty'},

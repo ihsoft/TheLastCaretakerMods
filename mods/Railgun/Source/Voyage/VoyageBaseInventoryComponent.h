@@ -64,4 +64,20 @@ public:
     {
         return 0;
     }
+
+    // Steam25191271 native slot transaction used by manual reload. The
+    // destination is the receiver; SourceInventory and SourceSlot identify the
+    // live source entry, TargetSlot=-1 requests native autoplacement, and the
+    // return value is the amount actually moved.
+    UFUNCTION(BlueprintCallable, Category="RailgunInventory")
+    int32 TransferSlot(UVoyageBaseInventoryComponent* Source,
+        int32 SourceSlot, int32 TargetSlot, int32 TransferAmount)
+    {
+        return 0;
+    }
+
+    UFUNCTION(BlueprintCallable, Category="RailgunInventory")
+    void FindSlotsByItem(UVoyageItem* Item, TArray<int32>& OutSlots) const
+    {
+    }
 };

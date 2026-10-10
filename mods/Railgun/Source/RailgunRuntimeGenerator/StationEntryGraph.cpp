@@ -9,6 +9,7 @@
 #include "StationOpticsGraph.h"
 #include "StationRangeGraph.h"
 #include "RailgunRuntimeGeneratorPrivate.h"
+#include "RailgunReload.h"
 
 namespace Railgun::Runtime
 {
@@ -406,6 +407,7 @@ void AddStationLifecycleTeardown(UBlueprint* BP)
     G.Write(EntryPending, nullptr, N::False);
     G.Write(ExitPending, nullptr, N::False);
     G.Write(TeardownPending, nullptr, N::False);
+    UnbindRailgunReload(G, BP->GeneratedClass);
     G.Write(ActiveHud, nullptr);
     auto* ClearAimReferences = G.Call(BP->GeneratedClass,
         Aim::ClearReferences);

@@ -17,6 +17,9 @@
 #include "StationSettings.h"
 #include "NativeVehicleGraphHelpers.h"
 #include "RailgunRuntimeGeneratorPrivate.h"
+#include "RailgunReload.h"
+#include "VoyageInputContextAsset.h"
+#include "Components/InvalidationBox.h"
 
 namespace Railgun::Runtime
 {
@@ -27,6 +30,34 @@ bool SaveDedicatedAsset(UObject* Asset)
     IFileManager::Get().MakeDirectory(*FPaths::GetPath(File), true);
     FSavePackageArgs Args; Args.TopLevelFlags = RF_Public | RF_Standalone; Args.SaveFlags = SAVE_NoError;
     return UPackage::SavePackage(Package, Asset, *File, Args);
+}
+
+UClass* CreateStockHintWidgetReference()
+{
+    UPackage* Package = CreatePackage(Hint::StockWidgetPackage);
+    auto* Blueprint = Cast<UWidgetBlueprint>(
+        FKismetEditorUtilities::CreateBlueprint(
+            UVoyageDynamicPlayerInputWidget::StaticClass(), Package,
+            FName(Hint::StockWidgetAsset), BPTYPE_Normal,
+            UWidgetBlueprint::StaticClass(),
+            UWidgetBlueprintGeneratedClass::StaticClass()));
+    if (!Blueprint)
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Cannot create exact editor-only stock hint reference"));
+        return nullptr;
+    }
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    if (Blueprint->Status == BS_Error || !Blueprint->GeneratedClass ||
+        Blueprint->GeneratedClass->GetName() != Hint::StockWidgetClass ||
+        Blueprint->GeneratedClass->GetPathName() != Hint::StockWidget ||
+        !SaveDedicatedAsset(Blueprint))
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Editor-only stock hint reference lost its exact identity"));
+        return nullptr;
+    }
+    return Blueprint->GeneratedClass;
 }
 
 UTexture2D* ImportUiTexture(const FString& Filename, const TCHAR* PackageName,
@@ -311,6 +342,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Branch(ObserveCall(G, APlayerController::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(APlayerController, IsLocalController),
         G.Read(DS::Controller)));
+    BindRailgunReloadOnEntry(G, BP->GeneratedClass);
     ReadStationSettings(G);
     auto* RefreshPossessedHudStyle = G.Call(BP->GeneratedClass,
         EnergyHud::RefreshStyleFunction);
@@ -385,6 +417,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Tail = G.Pin(Unpossessed, P::Then);
     G.Write(StationLifecycle::EntryPending, nullptr, N::False);
     G.Write(StationLifecycle::ExitPending, nullptr, N::True);
+    UnbindRailgunReload(G, BP->GeneratedClass);
     auto* ExitDelay = G.Call(UKismetSystemLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, DelayUntilNextTick));
     G.Exec(ExitDelay);
@@ -454,6 +487,7 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Tail = G.Pin(Wide, P::Else); SetZoom(true);
 
     AddRailgunFire(G);
+    AddRailgunReloadInput(G, BP->GeneratedClass);
     // Real Enhanced Input events on the possessed station, not observer key polling.
     auto ActionNode = [&](const TCHAR* Package, FName Trigger)
     {
@@ -588,6 +622,7 @@ UClass* CreateDedicatedStation()
     AddVariable(BP, O::Camera, UEdGraphSchema_K2::PC_Object, UCameraComponent::StaticClass());
     AddVariable(BP, O::RequestedFov, UEdGraphSchema_K2::PC_Real);
     AddVariable(BP, N::OriginalPawn, UEdGraphSchema_K2::PC_Object, APawn::StaticClass());
+    AddRailgunReloadVariables(BP);
     AddVariable(BP, S::Anchor, UEdGraphSchema_K2::PC_Object, USceneComponent::StaticClass());
     AddVariable(BP, Range::TargetName, UEdGraphSchema_K2::PC_Text);
     AddVariable(BP, Range::TargetRange, UEdGraphSchema_K2::PC_Text);
@@ -614,8 +649,6 @@ UClass* CreateDedicatedStation()
         CreatePackage(DS::HudPackage), *FPackageName::GetLongPackageAssetName(DS::HudPackage), BPTYPE_Normal,
         UWidgetBlueprint::StaticClass(), UWidgetBlueprintGeneratedClass::StaticClass()));
     if (!Hud->WidgetTree) Hud->WidgetTree = NewObject<UWidgetTree>(Hud, N::HudTree);
-    AddVariable(Hud, Hint::HintsReady, UEdGraphSchema_K2::PC_Boolean);
-    AddVariable(Hud, Hint::HintInstance, UEdGraphSchema_K2::PC_Object, UVoyageDynamicPlayerInputWidget::StaticClass());
     AddVariable(Hud, EnergyHud::AmmoInitialized, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(Hud, EnergyHud::Station, UEdGraphSchema_K2::PC_Object,
         BP->GeneratedClass);
@@ -633,8 +666,14 @@ UClass* CreateDedicatedStation()
         Range::DisplayedTargetRange, Range::DisplayInitialized,
         EnergyHud::StatusState, EnergyHud::StatusInitialized})
         MarkVariableTransient(Hud, RuntimeDisplayState);
-    auto* Canvas = Hud->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), N::HudCanvas); Canvas->bIsVariable = false;
-    Hud->WidgetTree->RootWidget = Canvas;
+    auto* InvalidationRoot = Hud->WidgetTree->ConstructWidget<UInvalidationBox>(
+        UInvalidationBox::StaticClass(), Hint::InvalidationRoot);
+    InvalidationRoot->bIsVariable = false;
+    auto* Canvas = Hud->WidgetTree->ConstructWidget<UCanvasPanel>(
+        UCanvasPanel::StaticClass(), N::HudCanvas);
+    Canvas->bIsVariable = false;
+    InvalidationRoot->AddChild(Canvas);
+    Hud->WidgetTree->RootWidget = InvalidationRoot;
     check(ZoomTest::OverlayTexture);
     const int32 MaskWidth = ZoomTest::OverlayTexture->Source.GetSizeX();
     const int32 MaskHeight = ZoomTest::OverlayTexture->Source.GetSizeY();
@@ -827,9 +866,23 @@ UClass* CreateDedicatedStation()
     AddScopeText(Range::TargetName, N::EmptyText, 0.0f, true);
     AddScopeText(Range::TargetRange, N::EmptyText, 0.0f, true);
     AddScopeText(ZoomTest::WideCenter, ZoomTest::WideCenterText, 0.0f, true);
-    auto* Host = Hud->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), Hint::Root); Host->bIsVariable = true;
-    auto* HostSlot = Canvas->AddChildToCanvas(Host); HostSlot->SetAnchors(FAnchors(0.0f, 1.0f));
-    HostSlot->SetAlignment(FVector2D(0.0f, 1.0f)); HostSlot->SetPosition(DS::HintHostOffset); HostSlot->SetAutoSize(true);
+    TSubclassOf<UVoyageDynamicPlayerInputWidget> StockHintClass =
+        CreateStockHintWidgetReference();
+    check(StockHintClass);
+    auto* HintWidget = Hud->WidgetTree->ConstructWidget<
+        UVoyageDynamicPlayerInputWidget>(StockHintClass,
+            Hint::HintInstance);
+    check(HintWidget && HintWidget->GetClass() == *StockHintClass);
+    auto* HintContext = LoadObject<UVoyageInputContextAsset>(nullptr,
+        RailgunInputNames::Context);
+    check(HintContext);
+    HintWidget->ContextAsset = HintContext;
+    HintWidget->bFilterByActionType = true;
+    auto* HintSlot = Canvas->AddChildToCanvas(HintWidget);
+    HintSlot->SetAnchors(FAnchors(0.0f, 1.0f));
+    HintSlot->SetAlignment(FVector2D(0.0f, 1.0f));
+    HintSlot->SetPosition(DS::HintHostOffset);
+    HintSlot->SetAutoSize(true);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud); FKismetEditorUtilities::CompileBlueprint(Hud);
     check(Hud->Status != BS_Error);
     UBlueprint* RailgunModule = LoadObject<UBlueprint>(
@@ -1315,11 +1368,7 @@ UClass* CreateDedicatedStation()
         UUserWidget::StaticClass());
     Construct->bOverrideFunction = true;
     HG.Node(Construct);
-    auto* ConstructWork = HG.Node(
-        NewObject<UK2Node_ExecutionSequence>(HudGraph));
-    HG.Link(HG.Pin(Construct, P::Then),
-        HG.Pin(ConstructWork, P::Execute));
-    HG.Tail = ConstructWork->GetThenPinGivenIndex(0);
+    HG.Tail = HG.Pin(Construct, P::Then);
     auto* ResetOnConstruct = HG.Call(Hud->GeneratedClass,
         EnergyHud::ResetStatusFunction);
     HG.Exec(ResetOnConstruct);
@@ -1360,9 +1409,6 @@ UClass* CreateDedicatedStation()
         HG.Exec(Refresh);
     }
     RefreshRangeDisplay(OwningStation->GetCastResultPin(), true);
-    AddStationHintConstruction(Hud,
-        ConstructWork->GetThenPinGivenIndex(1));
-
     auto* Destruct = NewObject<UK2Node_Event>(HudGraph);
     Destruct->EventReference.SetExternalMember(
         GET_FUNCTION_NAME_CHECKED(UUserWidget, Destruct),
@@ -1388,6 +1434,7 @@ UClass* CreateDedicatedStation()
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Hud); FKismetEditorUtilities::CompileBlueprint(Hud);
     check(Hud->Status != BS_Error);
     AddStationActions(BP);
+    AddRailgunReloadFunctions(BP);
     AddContextEntry(BP);
     AddNativeStationHudInterface(BP, Hud->GeneratedClass);
     AddRailgunEnergyFunctions(BP, Settings::OfflineDischarge);

@@ -392,6 +392,7 @@ $packages += @(
     '/Game/Mods/Railgun/Inputs/IA_RailgunExit',
     '/Game/Mods/Railgun/Inputs/IA_RailgunZoom',
     '/Game/Mods/Railgun/Inputs/IA_RailgunFire',
+    '/Game/Mods/Railgun/Inputs/IA_RailgunReload',
     '/Game/Mods/Railgun/Inputs/IMC_RailgunKeyboard',
     '/Game/Mods/Railgun/Inputs/DA_RailgunInputContext',
     '/Game/Mods/Railgun/Station/BP_RailgunOperator',
@@ -412,9 +413,12 @@ $packages += @(
     '/Game/Mods/Railgun/Fabricator/T_RailgunIcon'
 )
 $packages = @($packages | Sort-Object -Unique)
+$stockHintWidgetPackage =
+    '/Game/UI/Game/BP_DynamicPlayerInputHorizontalWidget'
 if ($packages -cnotcontains $ammoPickupPackage -or
-    $packages -ccontains '/Game/Blueprints/BP_DynamicMeshActor') {
-    throw 'Ammo pickup package set lost its owned-child/stock-parent boundary.'
+    $packages -ccontains '/Game/Blueprints/BP_DynamicMeshActor' -or
+    $packages -ccontains $stockHintWidgetPackage) {
+    throw 'Package set lost an owned-child/editor-only stock-reference boundary.'
 }
 $cookPackageManifest = Join-Path $output 'cook-packages.txt'
 $cookPackageManifestText = ($packages -join "`n") + "`n"
@@ -454,6 +458,11 @@ if ((Get-FileHash -LiteralPath $retoc -Algorithm SHA256).Hash -cne
 }
 $loose = Join-Path $output 'loose'
 $assetRelatives = @($packages | ForEach-Object { $_.Replace('/Game/', 'Voyage/Content/') })
+$stockHintWidgetRelative =
+    $stockHintWidgetPackage.Replace('/Game/', 'Voyage/Content/')
+if ($assetRelatives -ccontains $stockHintWidgetRelative) {
+    throw 'Editor-only stock hint reference entered the loose release inventory.'
+}
 foreach ($assetRelative in $assetRelatives) {
     $looseAsset = Join-Path $loose $assetRelative
     $null = New-Item -ItemType Directory -Path (Split-Path -Parent $looseAsset) -Force

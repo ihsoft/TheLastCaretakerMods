@@ -46,12 +46,18 @@ int32 UGenerateRailgunInputsCommandlet::Main(const FString& Params)
     auto* Leave = Asset<UInputAction>(Exit);
     auto* Optics = Asset<UInputAction>(Zoom);
     auto* Shot = Asset<UInputAction>(Fire);
+    auto* ReloadAction = Asset<UInputAction>(Reload);
     Shot->ValueType = EInputActionValueType::Boolean;
     Optics->ValueType = EInputActionValueType::Boolean;
     Yaw->ValueType = EInputActionValueType::Axis1D;
     Pitch->ValueType = EInputActionValueType::Axis1D;
     Leave->ValueType = EInputActionValueType::Boolean;
-    for (auto* Action : {Yaw, Pitch, Leave, Optics, Shot})
+    ReloadAction->ValueType = EInputActionValueType::Boolean;
+    Leave->ActionDescription = FText::FromString(ExitDescription);
+    Optics->ActionDescription = FText::FromString(ZoomDescription);
+    Shot->ActionDescription = FText::FromString(FireDescription);
+    ReloadAction->ActionDescription = FText::FromString(ReloadDescription);
+    for (auto* Action : {Yaw, Pitch, Leave, Optics, Shot, ReloadAction})
         Action->bConsumeInput = true;
 
     auto* Mapping = Asset<UInputMappingContext>(Keyboard);
@@ -60,6 +66,7 @@ int32 UGenerateRailgunInputsCommandlet::Main(const FString& Params)
     Mapping->MapKey(Leave, EKeys::E);
     Mapping->MapKey(Optics, EKeys::RightMouseButton);
     Mapping->MapKey(Shot, EKeys::LeftMouseButton);
+    Mapping->MapKey(ReloadAction, EKeys::R);
     check(Mapping->GetMappings().Num() == KeyboardMappingCount);
 
     auto* InputContext = Asset<UVoyageInputContextAsset>(Context);
@@ -70,7 +77,7 @@ int32 UGenerateRailgunInputsCommandlet::Main(const FString& Params)
     // No inherited Forklift bindings, modifier actions or driving inputs.
     // This gate authors assets only: it does not activate them or imply hints.
     const TArray<UObject*> Objects{
-        Yaw, Pitch, Leave, Optics, Shot, Mapping, InputContext};
+        Yaw, Pitch, Leave, Optics, Shot, ReloadAction, Mapping, InputContext};
     for (UObject* Object : Objects)
         if (!SaveAsset(Object)) return 1;
     return 0;

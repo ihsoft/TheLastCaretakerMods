@@ -32,6 +32,15 @@
 - Operator control uses a dedicated child of the common Voyage vehicle pawn.
   Entry, exit, camera, input context, HUD selection and action hints are owned by
   that station; the physical weapon remains stationary.
+- The HUD WidgetTree is `InvalidationBox -> Canvas ->` the exact stock
+  `BP_DynamicPlayerInputHorizontalWidget_C` instance. The instance owns only
+  the Railgun context, action-type filter and Canvas slot; it does not copy the
+  stock widget's internal tree or create the outer hint widget at runtime. The
+  stock class continues to own its internal action-row lifecycle. Generation
+  uses an empty editor-only Blueprint with the exact stock package/class
+  identity so the owned HUD can serialize that external class reference. The
+  stand-in is excluded from cooking and release packaging, allowing the game to
+  resolve its unchanged stock implementation.
 - Station entry and exit follow the exact inherited Pawn possession events.
   Each transition schedules one next-tick continuation so Voyage's native
   possession and camera work completes first. Repeated events at the same
@@ -306,6 +315,37 @@ without a C++ balance constant.
 The existing `ReceiveBeginPlay` chain calls native `SetMaxWeightLimit` to
 initialize effective capacity; serialized defaults alone were insufficient.
 
+Manual reload uses the character captured as `OriginalPlayerPawn` on station
+entry. After possession is confirmed, the operator casts that pawn to the
+exact `VoyageBaseCharacter` owner and caches its `WeightInventory`; it never
+uses the newly possessed player pawn or performs world discovery. The gun-side
+target is the concrete module's native `GetInternalInventory()` result, and
+the accepted item is the shell's exact `AcceptedRailgunAmmo` reference. Both
+inventory references are bound to their native `OnInventoryChanged` delegate;
+unpossession, EndPlay, and re-entry remove old bindings before clearing or
+replacing the cached references.
+
+One shared event-maintained predicate counts the exact accepted item across all
+source and target slots. It enables reload only during valid local station
+control, with a positive source count and fewer than six rounds in the target.
+The standard action provider reads the cached result for its `bEnabled` field,
+while the `R` handler repeats the live predicate and asks the shell's exact
+`VoyageInventoryItemValidatorInterface.ValidateItem` implementation to accept
+the configured ammunition. It snapshots the source slots for that item, then
+revalidates each live slot before calling native
+`target.TransferSlot(source, sourceSlot, -1, requestedAmount)`. The request is
+positive and capped by the function-local remaining six-round budget; the
+native return value must be positive and no larger than the request before the
+loop continues. `-1` retains stock target-slot autoplacement, and the native
+transaction owns capacity checks, weight checks, mutation, and inventory-change
+notifications. Synchronous inventory callbacks may refresh the cached display
+predicate, but cannot overwrite the transaction's local slot snapshot,
+remaining amount, current slot, request, or moved count. Enhanced Input
+`Started` is the sole execution path; the action-hint delegate does not also
+perform the transfer.
+Reload is independent of energy, scope mode, firing, and the existing
+event-driven ammunition visuals, and has no tick or polling fallback.
+
 The model binds six ordered cassette roots explicitly in `model-source.json`;
 their render descendants are hidden by default. Each gun instance binds a
 parameterless callback to its owned inventory's native `OnInventoryChanged`
@@ -455,6 +495,11 @@ writer, then reopened and compared field-for-field.
 - Firing consumes one round and rejects insufficient ammunition or energy.
   Exceptional native inventory mutation rejection after the live precheck is
   outside the established runtime coverage and does not lock later shots.
+- Manual reload and action-hint availability/refresh are established runtime
+  behavior. Exact input mapping, cached predicate, lifecycle bindings and the
+  native transfer call also have static and installed-package readback coverage.
+  Exhaustive partial and split-stack conservation across every source/target
+  combination remains outside established runtime coverage.
 - Railgun neither requires nor uses a shared placeholder registry pool. Shared
   allocation rules, duplicate-ID ownership and precedence between conflicting
   records are outside its supported contract.

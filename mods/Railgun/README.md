@@ -75,6 +75,22 @@ release-manifest paths; after TMP cleanup those paths are provenance text, not
 a supported reinstall entry point. Operational restore uses the durable
 install manifest and `previous-files` evidence.
 
+## Controls
+
+- Mouse aims the weapon; left mouse fires, right mouse toggles the scope, and
+  `E` exits the operator station.
+- `R` transfers the exact Railgun ammunition from the character who entered
+  the station into the gun's native magazine, up to its six-round capacity.
+  One press transfers as much as is available and fits; there is no automatic
+  reload or reload animation.
+- The standard action hint remains present while controlling the station. It
+  is disabled when the source inventory or ammunition is unavailable, the
+  magazine is full, or the player is outside valid station control. Charge and
+  power state do not affect reload availability. The unchanged stock hint
+  widget is a serialized direct child of the Railgun HUD canvas inside its
+  invalidation root; availability changes do not recreate that outer widget.
+  The stock class continues to own the lifecycle of its internal action rows.
+
 ## Inputs
 
 All mod-owned inputs live below this directory:
