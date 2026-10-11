@@ -1,46 +1,37 @@
-# ElectrifiedBoat rules
+# ElectrifiedBoat: non-obvious contracts
 
-These rules apply to `mods/ElectrifiedBoat`. Repository rules in
-`../../AGENTS.md` also apply.
+Repository rules in [../../AGENTS.md](../../AGENTS.md) apply. Read
+[GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md) for the fingerprint and exact
+game identities; [README.md](README.md) owns the build and installation steps.
 
-- The mod is additive and owns only
-  `/Game/Mods/ElectrifiedBoat/ModActor`. Never override the stock wall-socket
-  Blueprint.
-- Process only exact instances of the stock Electric Wall Socket class. Fuel,
-  Gas, Water, and mod subclasses keep stock behavior.
-- Bind `VoyagePersistentSubsystem.OnActorAttached` once and register a socket
-  synchronously from that event. The same event handles newly built and
-  restored sockets. `OnActorRestored` exists as a separate reflected signal
-  but is not bound by this mod.
-- Resolve the wall actor, module, and welded-root Boat once. Enumerate only the
-  resolved Boat's `VoyageLevelInstanceComponent.OwnedActors`, stop at the first
-  suitable exact stock electric external-port actor, and resolve its parent
-  module through stock `GetParentModule` plus native `GetModuleFromActor`.
-  Never scan the world or poll for ownership or lifecycle state.
-- If a resolved Boat has no suitable stock electric external-port reference,
-  return without mutating the wall socket. This is the explicit boundary for
-  an unsupported Boat topology.
-- Keep the runtime actor free of Tick, timers, startup discovery, diagnostic
-  UI, and input bindings. Bounded component and owned-actor iteration is
-  allowed only during one attachment event.
-- Never write a Boat or mod object into the stock `PairedModule` SaveGame
-  property. Clear both ends of an existing pair before external registration;
-  do not join a Boat secondary group.
-- Copy only the reference port's complete `Port` value and five registration
-  booleans. Initialize the wall socket through
-  `SetSocketID(GetObjectName(WallActor))`, then transfer its existing view with
-  `AddExternalSocket`. Do not copy IDs, transforms, cable references, or mesh.
-- Retain the transient actor/socket/expected-owner registry until actor
-  EndPlay. Call `RemoveExternalSocket` only if the registered view is still
-  owned by the recorded module; never edit module socket arrays manually.
-- The editor mirror must preserve native identities exactly. In particular,
-  `OwnedActors` remains a weak Actor array and is read through the validated
-  by-reference Blueprint opcode and generator canary.
-- Static validation must prove one owned package at the exact ElectrifiedBoat
-  virtual entry class, the lifecycle/registration calls, disabled Tick, and
-  absence of recurring diagnostics. Compile/cook/container validation is not
-  gameplay validation.
-- Distribution packaging must contain only the unsuffixed IoStore triplet at
-  the archive root. Do not add a `LogicMods` wrapper, bundle a loader, modify
-  DML settings, or include obsolete sidecars. Activation is the separate
-  `DML add ElectrifiedBoat` user step when the entry is not already enabled.
+- DML loads `/Game/Mods/ElectrifiedBoat/ModActor.ModActor_C`. Ship only this
+  additive package, not the generator's stock Blueprint stubs or native mirrors.
+  A physical `LogicMods` directory and `_P` suffix are not required; see the
+  [DML contract](../../docs/voyage-cooked-asset-toolchain.md#dml-actor-identity-and-physical-installation).
+- `OnActorAttached` handles construction **and save restoration**. Keep one
+  synchronous handler, with no separate restore scan, Tick, or retry timer.
+  A connected cable does not make a restored socket ineligible. The separate
+  `OnActorRestored` signal is not needed here; see
+  [lifecycle contracts](../../docs/vehicle-and-hud-modding-patterns.md#actor-attachment-and-save-restoration).
+- Match the exact stock Electric Wall Socket class, not subclasses. Resolve
+  its welded-root Boat once and use the first suitable stock electric port
+  from that Boat's `OwnedActors`. Resolve the port's parent through stock
+  `GetParentModule` (out parameter `Actor`) and native `GetModuleFromActor`,
+  not the port view's possibly uninitialized `ModuleOwner`. No suitable port
+  means a permitted nonmutating return, not a fatal error.
+- `OwnedActors` is a **weak** actor array. Keep the by-reference Blueprint
+  helper and weak/null/weak canary; a strong-array mirror or ordinary
+  `Array_Get` is not an equivalent replacement. See
+  [weak-array access](../../docs/voyage-cooked-asset-toolchain.md#reflected-weak-object-arrays).
+- Boat power sharing uses `AddExternalSocket`, not secondary-group membership.
+  Preserve the existing view and cable references, copy the complete live
+  `Port` and five stock registration flags, and initialize the ID from the wall
+  actor's own name. Do not copy the reference ID or add a collision scan.
+  The exact flags and native behavior are in
+  [external registration](../../docs/boat-resource-socket-architecture.md#external-socket-registration).
+- `PairedModule` is saved by the game: clear both ends of an old pair and their
+  `WallSocket` groups, but never put a Boat battery or mod object into that
+  property. Stock `UnpairModule` alone does not perform symmetric cleanup.
+- Keep EndPlay's recorded actor/socket/expected-owner association. Call
+  `RemoveExternalSocket` only while the current owner still matches; removal
+  does not clear the weak owner field. Never edit module socket arrays directly.

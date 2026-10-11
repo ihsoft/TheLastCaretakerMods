@@ -1,77 +1,50 @@
 # ElectrifiedBoat
 
-ElectrifiedBoat makes an exact stock Electric Wall Socket built on a Boat join
-that Boat's electric network. Off-Boat electric sockets retain stock pairing,
-and Fuel, Gas, Water, and subclass sockets are outside the mod's scope.
+ElectrifiedBoat lets you connect to your boat's electrical network anywhere
+you can build an **Electric Wall Socket**. On a boat, the socket connects to
+the boat's power supply instead of looking for a matching socket through the
+wall. Existing sockets are connected when you load your save, too.
 
-The asset-only mod owns one additive entry point:
-`/Game/Mods/ElectrifiedBoat/ModActor.ModActor_C`. It ships no native runtime
-DLL and does not override a stock package.
+Away from a boat, wall sockets work normally. Other resource sockets are not
+changed. No new building item, controls, or configuration are required.
 
-## Runtime contract
+## Distribution
 
-At BeginPlay the ModActor binds the persistent subsystem's
-`OnActorAttached(Child, ParentComponent)` delegate. For an exact electric wall
-socket on a welded-root Boat, the handler resolves the wall actor, its module,
-and the Boat once. It then inspects only that Boat's directly owned actors and
-uses the first suitable exact stock electric external-port actor. The stock
-actor's `GetParentModule` result and native `GetModuleFromActor` identify the
-Boat electric module.
+Requires **DML v0.6**.
 
-After the complete preflight succeeds, the mod clears any existing wall-socket
-pair symmetrically, copies the live reference port's complete `Port` value and
-five registration flags, assigns the stock-derived socket ID, disables the
-stock pair-search Tick, and calls `AddExternalSocket` for the existing wall
-view. It never copies a reference ID, transform, cable reference, or mesh and
-never joins a Boat secondary group. EndPlay cleanup is guarded by the exact
-socket and expected owner recorded at registration.
+1. Close the game and extract `ElectrifiedBoat.pak`, `ElectrifiedBoat.ucas`, and
+   `ElectrifiedBoat.utoc` together into the game's `Voyage/Content/Paks` folder
+   or a mod subfolder inside it. A `LogicMods` folder is not required.
+2. Start the game. If the mod is not already registered in DML, run
+   `DML add ElectrifiedBoat` in the console.
+3. Build an Electric Wall Socket on your boat and connect a cable to it.
 
-If the resolved Boat has no suitable stock electric external-port reference,
-the handler leaves the socket unchanged. The runtime has no actor Tick,
-recurring timer, startup/world scan, diagnostic UI, or input binding.
-
-The attachment event handles both newly built and restored sockets.
-`OnActorRestored` is a separate reflected delegate, but this mod does not bind
-it.
+Keep only one version of this mod installed. Back up your save before removing
+the mod; loading a save without it is not a guaranteed compatibility feature.
 
 ## Build and validation
 
-From the repository root:
+Building requires Windows, Unreal Engine **5.8.2** with its C++ build tools,
+the installed game, and the repository's prepared
+[build tools](../../tools/README.md). The build checks the supported game
+version; its exact fingerprint is in
+[GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md).
+
+Run this from the repository root:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File .\mods\ElectrifiedBoat\Build-ElectrifiedBoat.ps1
 ```
 
-The producer fingerprints the installed game, builds the editor-only mirror
-and generator, creates and cooks the single additive ModActor package, packages
-the IoStore triplet, and runs semantic validation. It writes a fresh result
-below `Tmp/ElectrifiedBoat/` and does not install it.
+The defaults are `K:\Epic Games\UE_5.8` for the engine and
+`P:\SteamLibrary\steamapps\common\Voyage` for the game. To use other locations,
+append `-EngineRoot 'C:\path\to\UE_5.8'` and
+`-GameRoot 'D:\path\to\Voyage'` to the command.
 
-To validate an existing candidate:
+The script builds the mod and checks the resulting package. Output goes to
+`Tmp/ElectrifiedBoat/build-<timestamp>/package/`. Install only the three
+`ElectrifiedBoat.pak/.ucas/.utoc` files as described above; the other files are
+build metadata. The script does not install the mod or produce a release ZIP.
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\mods\ElectrifiedBoat\Test-ElectrifiedBoatCandidate.ps1 `
-  -PackageRoot .\Tmp\ElectrifiedBoat\build-<identity>\package
-```
-
-## Distribution
-
-The distributable archive requires DML and contains
-`ElectrifiedBoat.pak/.ucas/.utoc` at the archive root, without a `LogicMods`
-wrapper directory, `_P` suffix, loader binaries, or an `.autoload` sidecar.
-Copy the triplet together into `Voyage/Content/Paks` or a mounted user-mod
-subfolder. If the mod is not already enabled, activate its virtual entry point
-with `DML add ElectrifiedBoat`. The archive itself does not edit DML
-configuration. Do not keep another version of ElectrifiedBoat enabled at the
-same time; duplicate ModActors would process the same attachment events.
-
-## Compatibility boundary
-
-This source targets Steam build `25191271`, executable SHA-256
-`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`,
-game runtime UE `5.8.1`, generating editor UE `5.8.2`, and DML v0.6. Other
-Boat layouts, dismantling edge cases, loading after removing the mod, and
-absence of a suitable stock electric external port are unsupported or
-unvalidated boundaries.
+For development contracts, see [AGENTS.md](AGENTS.md).
