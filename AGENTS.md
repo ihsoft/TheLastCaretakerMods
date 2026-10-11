@@ -324,6 +324,10 @@ those details here.
 
 ## Experiment and validation workflow
 
+- Install all new DML mods' container files together directly in
+  `Voyage/Content/Paks/LogicMods` so DML can discover them. A virtual actor path
+  or a previously registered mod working elsewhere is not proof of fresh
+  discovery. See the [DML installation contract](docs/voyage-cooked-asset-toolchain.md#dml-actor-identity-and-physical-installation).
 - Never replace installed mod or game files while the game is running. The
   user may play while repository-only work continues; do not interrupt or
   alter his current game session.

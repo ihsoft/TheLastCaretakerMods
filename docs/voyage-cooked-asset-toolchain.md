@@ -39,19 +39,20 @@ they must not require shipping a replacement Voyage module.
 
 ## DML actor identity and physical installation
 
-DML v0.6 loads a registered mod actor by virtual class identity:
-`/Game/Mods/<ModName>/ModActor.ModActor_C`. The three IoStore files must be
-mounted by the game and kept together, but their physical subdirectory does
-not define this actor path. `DML add <ModName>` registers the virtual mod name;
-containers may reside in `Content/Paks` or a mounted subdirectory.
+DML v0.6 discovers new mods in `Voyage/Content/Paks/LogicMods`. Install each
+mod's `.pak`, `.ucas`, and `.utoc` together directly in that directory. Its
+`WBP_DML.FindLogicMods` helper accepts both `<ModName>.pak` and
+`<ModName>_P.pak`. Release instructions must target this directory; a ZIP with
+files at its root must be extracted into `LogicMods`, not directly into Paks.
 
-Distinguish registration from automatic filename discovery. The v0.6
-`WBP_DML.FindLogicMods` helper enumerates `Content/Paks/LogicMods` and accepts
-both `<ModName>.pak` and `<ModName>_P.pak`. That helper's directory convention
-does not constrain loading an explicitly registered actor. A root-files
-distribution ZIP does not need a `LogicMods` directory or an `.autoload`
-sidecar when DML registration is the documented activation route. Do not
-promise automatic discovery from every physical folder.
+The actor's virtual class identity remains
+`/Game/Mods/<ModName>/ModActor.ModActor_C`; the physical directory does not
+rewrite it. Discovery and loading a previously registered name are different
+contracts. Existing saved registration can mask a wrong installation layout.
+Do not use a successful load of an already known mod, or the existence of
+`DML add <ModName>`, as proof that a fresh mod is discoverable outside
+`LogicMods`. Validate first-time discovery without relying on an existing
+registration; manual registration is not a substitute for the required layout.
 
 The `_P` suffix is not a universal DML requirement. Apply the repository's
 stock-package override suffix rule when a container actually overrides stock

@@ -13,10 +13,11 @@ changed. No new building item, controls, or configuration are required.
 Requires **DML v0.6**.
 
 1. Close the game and extract `ElectrifiedBoat.pak`, `ElectrifiedBoat.ucas`, and
-   `ElectrifiedBoat.utoc` together into the game's `Voyage/Content/Paks` folder
-   or a mod subfolder inside it. A `LogicMods` folder is not required.
-2. Start the game. If the mod is not already registered in DML, run
-   `DML add ElectrifiedBoat` in the console.
+   `ElectrifiedBoat.utoc` together directly into the game's
+   `Voyage/Content/Paks/LogicMods` folder. Create `LogicMods` if it is missing.
+   The ZIP contains files at its root, so select `LogicMods` as the extraction
+   destination. Do not leave another copy in Paks or a different subfolder.
+2. Start the game so DML can discover the mod in `LogicMods`.
 3. Build an Electric Wall Socket on your boat and connect a cable to it.
 
 Keep only one version of this mod installed. Back up your save before removing
