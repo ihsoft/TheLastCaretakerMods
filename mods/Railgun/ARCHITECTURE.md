@@ -169,8 +169,16 @@
   unit. Structural, source and cooked contracts are statically checked.
   Display-specific save/load and multiplayer behavior remain outside the
   established compatibility coverage.
-- Shot audio is cooked as a `SoundWave` with a fixed `6.0` volume multiplier,
-  equivalent to the former 600-percent baseline.
+- Shot audio is cooked as an owned `SoundWave` whose external class reference is
+  the stock `/Game/Audio/Shares/SoundClasses/SC_SFX.SC_SFX`; the editor-only
+  stand-in used to serialize that identity is excluded from cook and release.
+  `SC_SFX` is parented to `SC_Master`, so native Master and SFX category volume
+  processing remains intact. `ShotVolumePercent=600` preserves the established
+  six-times pre-category baseline, while zero mutes the shot. The numeric
+  baseline is unchanged; matching perceived loudness after stock SFX submix
+  processing is not promised. The shot-volume setting and live Master/SFX
+  response are confirmed in the real game. Restoration of saved audio settings
+  during a new game startup was not separately verified.
 - A successful shot has two independent recoil paths. The historical
   `CameraRecoilStrength` key now changes real station aim once per shot in a
   uniformly random yaw/pitch-plane direction, with a two-degree baseline and

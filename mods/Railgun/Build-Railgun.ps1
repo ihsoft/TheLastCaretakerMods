@@ -415,9 +415,11 @@ $packages += @(
 $packages = @($packages | Sort-Object -Unique)
 $stockHintWidgetPackage =
     '/Game/UI/Game/BP_DynamicPlayerInputHorizontalWidget'
+$stockSfxSoundClassPackage = '/Game/Audio/Shares/SoundClasses/SC_SFX'
 if ($packages -cnotcontains $ammoPickupPackage -or
     $packages -ccontains '/Game/Blueprints/BP_DynamicMeshActor' -or
-    $packages -ccontains $stockHintWidgetPackage) {
+    $packages -ccontains $stockHintWidgetPackage -or
+    $packages -ccontains $stockSfxSoundClassPackage) {
     throw 'Package set lost an owned-child/editor-only stock-reference boundary.'
 }
 $cookPackageManifest = Join-Path $output 'cook-packages.txt'
@@ -460,8 +462,11 @@ $loose = Join-Path $output 'loose'
 $assetRelatives = @($packages | ForEach-Object { $_.Replace('/Game/', 'Voyage/Content/') })
 $stockHintWidgetRelative =
     $stockHintWidgetPackage.Replace('/Game/', 'Voyage/Content/')
-if ($assetRelatives -ccontains $stockHintWidgetRelative) {
-    throw 'Editor-only stock hint reference entered the loose release inventory.'
+$stockSfxSoundClassRelative =
+    $stockSfxSoundClassPackage.Replace('/Game/', 'Voyage/Content/')
+if ($assetRelatives -ccontains $stockHintWidgetRelative -or
+    $assetRelatives -ccontains $stockSfxSoundClassRelative) {
+    throw 'Editor-only stock reference entered the loose release inventory.'
 }
 foreach ($assetRelative in $assetRelatives) {
     $looseAsset = Join-Path $loose $assetRelative

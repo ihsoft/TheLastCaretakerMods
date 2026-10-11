@@ -15,6 +15,12 @@
       ]
     },
     {
+      "id": "audio",
+      "settings": [
+        { "id": "ShotVolume", "field": "ShotAudio::VolumePercent", "key": "ShotVolumePercent", "type": "number", "minimum": 0, "maximum": 1000000000 }
+      ]
+    },
+    {
       "id": "gameplay",
       "comments": ["Gameplay tuning uses the same KWh energy unit shown by the game."],
       "settings": [

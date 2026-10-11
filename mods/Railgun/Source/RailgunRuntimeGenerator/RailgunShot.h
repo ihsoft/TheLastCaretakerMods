@@ -52,10 +52,14 @@ namespace ShotAudio
 inline constexpr TCHAR Package[] = TEXT("/Game/Mods/Railgun/Station/S_RailgunShotBlast");
 inline constexpr TCHAR Asset[] = TEXT("S_RailgunShotBlast");
 inline constexpr TCHAR SourceArgument[] = TEXT("ShotSound=");
+inline constexpr TCHAR SfxClassPackage[] = TEXT("/Game/Audio/Shares/SoundClasses/SC_SFX");
+inline constexpr TCHAR SfxClassAsset[] = TEXT("SC_SFX");
+inline constexpr TCHAR SfxClassObject[] = TEXT("/Game/Audio/Shares/SoundClasses/SC_SFX.SC_SFX");
 inline const FName PlayAtLocation(TEXT("PlaySoundAtLocation"));
 inline const FName SoundPin(TEXT("Sound"));
+inline const FName VolumePercent(TEXT("RailgunShotVolumePercent"));
 inline const FName VolumeMultiplierPin(TEXT("VolumeMultiplier"));
-inline constexpr TCHAR VolumeMultiplier[] = TEXT("6.0");
+inline constexpr TCHAR PercentMultiplier[] = TEXT("0.01");
 inline USoundWave* Wave = nullptr;
 }
 bool SaveDedicatedAsset(UObject* Asset);

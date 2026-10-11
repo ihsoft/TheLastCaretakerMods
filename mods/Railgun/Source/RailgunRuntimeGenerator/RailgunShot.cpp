@@ -16,6 +16,22 @@
 
 namespace Railgun::Runtime
 {
+USoundClass* CreateStockSfxSoundClassReference()
+{
+    UPackage* Package = CreatePackage(ShotAudio::SfxClassPackage);
+    auto* SoundClass = NewObject<USoundClass>(Package,
+        FName(ShotAudio::SfxClassAsset), RF_Public | RF_Standalone);
+    if (!SoundClass ||
+        SoundClass->GetPathName() != ShotAudio::SfxClassObject ||
+        !SaveDedicatedAsset(SoundClass))
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Editor-only stock SFX class reference lost its exact identity"));
+        return nullptr;
+    }
+    return SoundClass;
+}
+
 void DestroyDeferredShot(FGraph& G, UEdGraphPin* Actor)
 {
     G.Branch(G.Valid(Actor));
@@ -46,6 +62,9 @@ USoundWave* ImportShotSound(const FString& Filename)
     checkf(Imported.Num() == 1, TEXT("Expected one imported shot sound, got %d"), Imported.Num());
     auto* Sound = CastChecked<USoundWave>(Imported[0]);
     checkf(Sound->GetOutermost()->GetName() == ShotAudio::Package, TEXT("Shot sound package mismatch: %s"), *Sound->GetPathName());
+    Sound->SoundClassObject = CreateStockSfxSoundClassReference();
+    checkf(Sound->SoundClassObject,
+        TEXT("Cannot create exact editor-only stock SFX class reference"));
     check(SaveDedicatedAsset(Sound));
     return Sound;
 }
@@ -320,8 +339,9 @@ void AddRailgunFire(FGraph& G)
     check(ShotAudio::Wave);
     auto* Play=G.Call(UGameplayStatics::StaticClass(),ShotAudio::PlayAtLocation);
     G.Pin(Play,ShotAudio::SoundPin)->DefaultObject=ShotAudio::Wave;
-    G.Default(Play, ShotAudio::VolumeMultiplierPin,
-        ShotAudio::VolumeMultiplier);
+    auto* Volume=G.Call(UKismetMathLibrary::StaticClass(),GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,Multiply_DoubleDouble));
+    G.Link(G.Read(ShotAudio::VolumePercent),G.Pin(Volume,P::Binary::LeftOperand)); G.Default(Volume,P::Binary::RightOperand,ShotAudio::PercentMultiplier);
+    G.Link(G.Pin(Volume,P::ReturnValue),G.Pin(Play,ShotAudio::VolumeMultiplierPin));
     G.Link(G.Read(Shot::SpawnLocation),G.Pin(Play,E::Location)); G.Link(G.Read(Shot::SpawnRotation),G.Pin(Play,Shot::ActorRotation)); G.Exec(Play);
     G.Tail = PostShot->GetThenPinGivenIndex(1);
     ApplyRailgunAimRecoil(G);

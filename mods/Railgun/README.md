@@ -159,6 +159,7 @@ MaximumPitchDegrees=10
 HitDamage=350
 FullChargeEnergyKWh=0.85
 FullChargeTimeSeconds=5.5
+ShotVolumePercent=600
 IdleConsumptionKW=1
 OfflineDischargeKW=50
 CameraRecoilStrength=1
@@ -170,7 +171,13 @@ takes an initial charge, ammunition, style and view-mode snapshot. Later charge
 and ammunition changes refresh their displays through the existing station and
 module event paths; settings reload and zoom changes refresh style and
 visibility directly. The radial fraction and numeric value show the station's
-cached charge without display interpolation. Shot volume and HUD label layout,
+cached charge without display interpolation. `ShotVolumePercent` is the
+pre-category shot multiplier: `600` preserves the established six-times source
+baseline and `0` mutes it. The imported wave uses Voyage's stock `SC_SFX`, whose
+parent is `SC_Master`, so the game's saved/startup settings and live Master/SFX
+changes remain in the native path. The shot-volume setting and live Master/SFX
+response are confirmed in the real game; restoration of saved audio settings
+during a new game startup was not separately verified. HUD label layout,
 opacity, font, typeface and size are fixed presentation contracts rather than
 user settings.
 

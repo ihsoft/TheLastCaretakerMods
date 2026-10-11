@@ -23,6 +23,8 @@ $fireActionPackage = '/Game/Mods/Railgun/Inputs/IA_RailgunFire'
 $reloadActionPackage = '/Game/Mods/Railgun/Inputs/IA_RailgunReload'
 $keyboardContextPackage = '/Game/Mods/Railgun/Inputs/IMC_RailgunKeyboard'
 $ammoIndicatorPackage = '/Game/Mods/Railgun/Station/T_RailgunAmmoIndicator'
+$shotSoundPackage = '/Game/Mods/Railgun/Station/S_RailgunShotBlast'
+$stockSfxSoundClassPackage = '/Game/Audio/Shares/SoundClasses/SC_SFX'
 function Read-Candidate([string]$Query) {
     $result = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
         -Query $Query -Source Mod -ModContainer $Container `
@@ -988,7 +990,7 @@ foreach ($reloadCase in $reloadCases) {
         ('Reload predicate scenario failed: ' + $reloadCase.Name)
 }
 $removedSettingKeys = @(
-    'ShotVolumePercent','StatusIconOpacityPercent',
+    'StatusIconOpacityPercent',
     'TargetNameOffsetX','TargetNameOffsetY','TargetNameOpacityPercent',
     'TargetNameFontSize','TargetNameFontPath','TargetNameTypeface',
     'TargetDistanceOffsetX','TargetDistanceOffsetY',
@@ -998,7 +1000,7 @@ $removedSettingKeys = @(
     'ChargeTextTypeface','ChargeIndicatorSmoothingSpeed'
 )
 $removedSettingFields = @(
-    'RailgunShotVolumePercent','RailgunStatusIconOpacityPercent',
+    'RailgunStatusIconOpacityPercent',
     'RailgunTargetNameOffsetX','RailgunTargetNameOffsetY',
     'RailgunTargetNameOpacityPercent','RailgunTargetNameFontSize',
     'RailgunTargetNameFontPath','RailgunTargetNameTypeface',
@@ -1019,6 +1021,11 @@ foreach ($removedField in $removedSettingFields) {
     }).Count -eq 0) `
         ('Removed setting field remains on the station: ' + $removedField)
 }
+$shotVolumeProperty = @($operatorClass[0].ChildProperties |
+    Where-Object { $_.Name -ceq 'RailgunShotVolumePercent' })
+Require ($shotVolumeProperty.Count -eq 1 -and
+    $shotVolumeProperty[0].Type -ceq 'DoubleProperty') `
+    'Shot volume must remain one runtime double setting.'
 $idleConsumptionProperty = @($operatorClass[0].ChildProperties |
     Where-Object { $_.Name -ceq 'RailgunIdleConsumptionKW' })
 Require ($idleConsumptionProperty.Count -eq 1 -and
@@ -1270,6 +1277,7 @@ foreach ($forbiddenRecurringAimTag in @(
 }
 foreach ($requiredFireReference in @(
     'ShotSpawnedThisPress','ShotAmmoSlot','AcceptedRailgunAmmo','ItemCount',
+    'RailgunShotVolumePercent',
     "Class'VoyageModuleComponent:GetInternalInventory'",
     "Class'VoyageBaseInventoryComponent:GetLastOccupiedSlot'",
     "Class'VoyageBaseInventoryComponent:GetSlot'",
@@ -1277,6 +1285,7 @@ foreach ($requiredFireReference in @(
     "Class'VoyageBaseInventoryComponent:RemoveItem'",
     "Class'GameplayStatics:BeginDeferredActorSpawnFromClass'",
     "Class'GameplayStatics:FinishSpawningActor'",
+    "Class'KismetMathLibrary:Multiply_DoubleDouble'",
     "Class'GameplayStatics:PlaySoundAtLocation'",
     'K2_DestroyActor'
 )) {
@@ -2017,13 +2026,15 @@ $finishIndexes = @(StatementIndexesContaining $operatorStatements `
     "Class'GameplayStatics:FinishSpawningActor'" | Where-Object {
         $_ -gt [int]$removeAmmoCallIndexes[0]
     } | Sort-Object)
-$audioIndexes = @(StatementIndexesContaining $operatorStatements `
-    "Class'GameplayStatics:PlaySoundAtLocation'" | Where-Object {
-        $_ -gt [int]$removeAmmoCallIndexes[0]
-    } | Sort-Object)
+$shotAudioCalls = @($operatorStatements | Where-Object {
+    $_.Token -ceq 'EX_CallMath' -and
+    $_.Function.ObjectName -ceq "Class'GameplayStatics:PlaySoundAtLocation'" -and
+        [int]$_.StatementIndex -gt [int]$removeAmmoCallIndexes[0]
+    } | Sort-Object StatementIndex)
+$audioIndexes = @($shotAudioCalls | ForEach-Object { [int]$_.StatementIndex })
 $getSlotIndexes = @(StatementIndexesContaining $operatorStatements `
     "Class'VoyageBaseInventoryComponent:GetSlot'")
-Require ($finishIndexes.Count -ge 1 -and $audioIndexes.Count -ge 1 -and
+Require ($finishIndexes.Count -ge 1 -and $audioIndexes.Count -eq 1 -and
     $getSlotIndexes.Count -ge 1) `
     'Railgun fire ordering evidence is incomplete.'
 $shotBeginIndex = [int]$shotDeferredCalls[0].StatementIndex
@@ -2045,6 +2056,42 @@ Require ((($getSlotIndexes | Measure-Object -Maximum).Maximum) -lt
     $removeAmmoIndex -lt $shotFinishIndex -and
     $shotFinishIndex -lt $shotAudioIndex) `
     'Railgun fire must preflight, claim, debit both resources and only then activate the shot.'
+$shotAudioParameters = @($shotAudioCalls[0].Parameters)
+Require ($shotAudioParameters.Count -ge 5 -and
+    $shotAudioParameters[4].Token -ceq 'EX_LocalVariable') `
+    'Shot audio volume multiplier is not supplied by the generated graph.'
+$shotAudioVolumeFloat = $shotAudioParameters[4].Variable.Property.Name
+$shotAudioVolumeCasts = @($operatorStatements | Where-Object {
+    $_.Token -ceq 'EX_Let' -and
+    $_.Variable.Token -ceq 'EX_LocalVariable' -and
+    $_.Variable.Variable.Property.Name -ceq $shotAudioVolumeFloat -and
+    $_.Expression.Token -ceq 'EX_Cast' -and
+    $_.Expression.ConversionType -ceq 'CST_DoubleToFloat' -and
+    $_.Expression.Target.Token -ceq 'EX_LocalVariable'
+})
+Require ($shotAudioVolumeCasts.Count -eq 1) `
+    'Shot audio volume multiplier lost its double-to-float conversion.'
+$shotAudioVolumeDouble =
+    $shotAudioVolumeCasts[0].Expression.Target.Variable.Property.Name
+$shotAudioVolumeProducts = @($operatorStatements | Where-Object {
+    $_.Token -ceq 'EX_Let' -and
+    $_.Variable.Token -ceq 'EX_LocalVariable' -and
+    $_.Variable.Variable.Property.Name -ceq $shotAudioVolumeDouble -and
+    $_.Expression.Token -ceq 'EX_CallMath' -and
+    $_.Expression.Function.ObjectName -ceq
+        "Class'KismetMathLibrary:Multiply_DoubleDouble'"
+})
+Require ($shotAudioVolumeProducts.Count -eq 1) `
+    'Shot audio volume multiplier lost its percentage conversion.'
+$shotAudioVolumeInputs = @($shotAudioVolumeProducts[0].Expression.Parameters)
+Require ($shotAudioVolumeInputs.Count -eq 2 -and
+    $shotAudioVolumeInputs[0].Token -ceq 'EX_InstanceVariable' -and
+    $shotAudioVolumeInputs[0].Variable.Property.Name -ceq
+        'RailgunShotVolumePercent' -and
+    $shotAudioVolumeInputs[1].Token -ceq 'EX_DoubleConst' -and
+    [Math]::Abs([double]$shotAudioVolumeInputs[1].Value - 0.01) -lt
+        0.0000001) `
+    'PlaySoundAtLocation must receive RailgunShotVolumePercent multiplied by 0.01.'
 $shotDestroyIndexes = @(StatementIndexesContaining $operatorStatements `
     'K2_DestroyActor')
 Require ($shotDestroyIndexes.Count -eq 2) `
@@ -2766,6 +2813,14 @@ Require ($ammoIndicatorTexture.Count -eq 1 -and
     [int]$ammoIndicatorTexture[0].SizeY -eq 1254 -and
     $ammoIndicatorTexture[0].PixelFormat -ceq 'PF_B8G8R8A8') `
     'Ammo indicator texture dimensions or format changed.'
+$shotSound = @(Read-Candidate $shotSoundPackage)
+$shotSoundWaves = @($shotSound | Where-Object {
+    $_.Type -ceq 'SoundWave' -and $_.Name -ceq 'S_RailgunShotBlast'
+})
+Require ($shotSoundWaves.Count -eq 1 -and
+    $shotSoundWaves[0].Properties.SoundClassObject.ObjectPath -ceq
+        ($stockSfxSoundClassPackage + '.0')) `
+    'Cooked shot SoundWave must reference the external stock SC_SFX class.'
 $module = @($shell | Where-Object { $_.Name -ceq 'ModuleComponent' })
 Require ($module.Count -eq 1 -and $module[0].Type -ceq 'VoyageModuleComponent') 'Native buffer module missing.'
 Require (@(PropertyNames $module[0]) -contains 'ItemAsset') 'Module ItemAsset missing.'

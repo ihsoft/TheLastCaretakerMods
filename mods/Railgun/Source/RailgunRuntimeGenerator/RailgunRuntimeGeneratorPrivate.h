@@ -27,6 +27,7 @@
 #include "Engine/TimerHandle.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "Sound/SoundClass.h"
 #include "Sound/SoundWave.h"
 #include "AssetImportTask.h"
 #include "AssetToolsModule.h"
