@@ -53,9 +53,13 @@ are derived from the three owned data-asset JSON readbacks by the shared
 `tools\New-VoyageAssetRegistry.ps1` producer; no stock registry is read, shipped
 or replaced.
 
-Current releases are loader-free: the built module shell initializes its owned
+The generated module shell is loader-free and initializes its owned
 operator station from `ReceiveBeginPlay` and persistent post-load lifecycle
-events. The station reacts to inherited Pawn possession/unpossession events,
+events. Both paths schedule one next-tick attempt, and initialization is
+independent of whether the shell has an external parent. The owned station is
+still attached to the shell's tagged model root and validates its own entry
+component relationship. The station reacts to inherited Pawn
+possession/unpossession events,
 then performs one guarded next-tick continuation for camera and settings work;
 the main actor tick does not poll for entry or exit transitions. The station
 also observes its concrete shell owner's EndPlay event so dismantling blocks

@@ -546,6 +546,14 @@ Require ($postLoad.Count -eq 1 -and
     $postLoad[0].SuperStruct.ObjectName -ceq
         "Class'PersistentInterface:OnPersistentActorPostLoad'") `
     'Post-load refresh must override the exact inherited Voyage interface event.'
+$lifecycleDelayStatements = @(StatementIndexesContaining `
+    $ubergraph[0].ScriptBytecode `
+    "Class'KismetSystemLibrary:DelayUntilNextTick'")
+$lifecycleInitializerStatements = @(StatementIndexesContaining `
+    $ubergraph[0].ScriptBytecode 'InitializeRailgunStation')
+Require ($lifecycleDelayStatements.Count -eq 2 -and
+    $lifecycleInitializerStatements.Count -eq 2) `
+    'BeginPlay and persistent post-load must each retain one deferred station initialization.'
 $initializeStation = @($shellFunctions | Where-Object {
     $_.Name -ceq 'InitializeRailgunStation'
 })
@@ -571,6 +579,31 @@ foreach ($requiredInitializationReference in @(
         ('Station initialization reference missing: ' +
             $requiredInitializationReference)
 }
+$attachParentStatements = @($initializeStation[0].ScriptBytecode |
+    Where-Object {
+        @(JsonStringLeaves $_) -ccontains
+            "Class'SceneComponent:GetAttachParent'"
+    })
+$attachParentOutputNames = @(JsonStringLeaves $attachParentStatements |
+    Where-Object {
+        $_ -clike 'CallFunc_GetAttachParent_ReturnValue*'
+    } | Select-Object -Unique)
+$attachParentFlow = if ($attachParentOutputNames.Count -eq 1) {
+    @($initializeStation[0].ScriptBytecode | Where-Object {
+        @(JsonStringLeaves $_) -ccontains $attachParentOutputNames[0]
+    })
+} else {
+    @()
+}
+$attachParentStatementStrings = @(JsonStringLeaves $attachParentStatements)
+$attachParentFlowStrings = @(JsonStringLeaves $attachParentFlow)
+Require ($attachParentStatements.Count -eq 1 -and
+    $attachParentFlow.Count -eq 2 -and
+    $attachParentStatementStrings -ccontains 'RailgunEntryQuery' -and
+    $attachParentFlowStrings -ccontains 'RailgunInteraction' -and
+    $attachParentFlowStrings -ccontains
+        "Class'KismetMathLibrary:EqualEqual_ObjectObject'") `
+    'Only the station query-to-interaction parent contract may gate initialization.'
 foreach ($forbiddenDiscoveryReference in @(
     "Class'GameplayStatics:GetAllActorsOfClass'",
     "Class'GameplayStatics:GetPlayerController'"

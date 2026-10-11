@@ -43,15 +43,15 @@ void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     G.Branch(G.Valid(G.Read(CE::ModelEntry)));
     auto* Root = ObserveCall(G, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetRootComponent), Shell);
     G.Branch(G.Valid(Root)); G.Write(S::Anchor, Root);
-    // Fabricator visuals are not this class; the owned model-root role plus an
-    // external attachment also excludes transient/unattached editor previews.
+    // The owned model-root role distinguishes the real shell contract without
+    // requiring an external shell parent; the station's own attachment remains
+    // validated below after spawning.
     auto* HasRootTag = G.Call(UActorComponent::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UActorComponent, ComponentHasTag));
     G.Link(Root, G.Pin(HasRootTag, P::FunctionTarget));
     G.Default(HasRootTag, ActorScanGraphNames::ComponentTag,
         *RailgunModelContract::RootTag.ToString());
     G.Branch(G.Pin(HasRootTag, P::ReturnValue));
-    G.Branch(G.Valid(ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, GetAttachParent), Root)));
     auto* Rotation = ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_GetComponentRotation), Root);
     auto* AnchorTransform = G.Transform(ObserveCall(G, USceneComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_GetComponentLocation), Root), Rotation);
     auto* Transform = G.Transform(G.Offset(AnchorTransform, CombinedVehicleNames::Offset), Rotation);
@@ -202,8 +202,8 @@ bool ConfigureRailgunStationInitialization(UClass* StationClass)
         BP->GeneratedClass->FindFunctionByName(CE::InitializeStation));
 
     // Both paths schedule exactly one next-tick initialization attempt. This
-    // avoids player/controller readiness and global discovery. Whether native
-    // construction has attached a newly built shell by then is a runtime gate.
+    // avoids player/controller readiness and global discovery. The initializer
+    // intentionally does not require an external parent for the module shell.
     AddRailgunInventoryLimitInitialization(BP, CE::InitializeStation);
     AddRailgunAmmoVisualPostLoad(BP, CE::InitializeStation);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);

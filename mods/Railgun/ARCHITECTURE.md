@@ -208,16 +208,22 @@
   idempotent `InitializeRailgunStation` function and a transient direct station
   reference; no global actor discovery or autoload coordinator is packaged.
   `ReceiveBeginPlay` and the exact inherited persistent post-load event each
-  schedule one next-tick initialization attempt. Initialization requires the
-  model root tagged `Railgun.Model.Root` and an attached parent, so fabricator
-  visuals and unattached ghosts cannot spawn a station. The node selected by
+  schedule one next-tick initialization attempt. Initialization requires a
+  valid model root tagged `Railgun.Model.Root` and the owned entry component,
+  but deliberately does not require the shell to have an external parent. The
+  created station still attaches to the shell's tagged root, and its query box
+  must retain the station interaction component as its parent. The node selected
+  by
   `model-source.json`'s `nodes.root` is the shell's scene root and station
   anchor; no additional mount collider is needed. Physical collision remains
   on the configured `fabricatorCollision` mesh, and the dynamic-collision
   component retains auto-weld. An enclosing mount collider interferes with
   the attached power cable. Shell-owned initialization requires no
-  VoyageAutoLoader. There is no polling or retry
-  fallback. Its `VoyageModuleComponent.ItemAsset` points
+  VoyageAutoLoader. There is no polling, retry or global discovery fallback.
+  Because native fabrication helpers could still create a transient shell,
+  preview open/cancel behavior remains an explicit runtime-test boundary along
+  with a fresh build and save/load. Its
+  `VoyageModuleComponent.ItemAsset` points
   to `/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01`. The complete
   gun item object graph is authored in
   `Assets/Fabricator/railgun-item.json` and written directly to the staged
