@@ -74,6 +74,65 @@ for this value. The former had no active surveyed reference/call site; the
 latter owns meshes, materials, sounds, rotation, and leak effects rather than
 text or action data.
 
+## External socket registration
+
+This section applies to Steam build `25191271`, executable SHA-256
+`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
+It does not update the separate HUD contracts' version boundary above.
+
+The Boat's `VoyageLevelInstanceComponent.OwnedActors` contains its built-in
+actors, including battery modules and external ports. It is
+`TArray<TWeakObjectPtr<AActor>>`, not a strong actor array. All 14 stock
+Electricity external ports in `TestBoat` attach to the built-in battery's mesh.
+Use the resolved Boat's owned references rather than a world-wide search.
+
+`BP_AttachmentVirtualSocketActor_Electricity.GetParentModule` walks attachment
+parents to an actor with a module. Its public Blueprint-callable/event signature
+has one `AActor* Actor` **out parameter**, not a return value. Native static
+`VoyageMiscBlueprintFunctionLibrary.GetModuleFromActor(AActor* Actor)` is
+Blueprint-callable, not Blueprint-pure, and returns `VoyageModuleComponent*`.
+Together these functions resolve the same owner used by a stock external port,
+without depending on whether the port's own registration has already run.
+
+The actor's instance member is `VoyageModuleSocketView`.
+`VoyageModuleSocketView_GEN_VARIABLE` names its SCS template, not that member.
+The view derives from `ModuleSocketComponent`; a cable endpoint must be matched
+to the actual socket object, not an arbitrary socket from a module's list.
+
+Native `VoyageModuleComponent.AddExternalSocket(Socket)` transfers the same
+socket from the prior owner's socket list to the new owner's list, assigns
+`ModuleOwner`, and initializes the socket, including `ModuleOwnerOriginal`.
+It has no refusal based on an existing cable or connected peer. Preserve those
+references during registration instead of treating an already connected socket
+as ineligible. `RemoveExternalSocket` removes membership but does not clear the
+weak owner reference; cleanup should confirm the socket is still owned by the
+recorded owner. Do not edit either module's socket list manually.
+
+To reproduce a stock electric external port's registration, copy its complete
+`Port` value and `bAutoInitialize`, `bAddModuleRequirement`, `bIsVirtual`,
+`bIsVirtualGrouped`, and `bIsVirtualShareToGroup`. Do not infer absent serialized
+flags are false: inherited/native defaults still apply. Do not copy the reference
+socket's identity, transform, mesh, or cable references. Stock wall-socket
+post-load initializes its identity with
+`SetSocketID(Conv_StringToName(GetObjectName(Self)))`; this path contains no
+battery-wide collision scan.
+
+External battery ownership supports Boat power sharing with stable cable flow.
+Secondary-group membership alone is not equivalent to this ownership contract.
+The five registration flags are a combined stock configuration; this does not
+establish that any single flag independently determines flow stability.
+
+Wall-socket `PairedModule` is a stock SaveGame property: never store a Boat
+battery, Boat master, or mod object there. For an existing pair, clear both
+ends and their `WallSocket` group membership. Stock `UnpairModule` does not
+provide symmetric source-and-peer cleanup on its valid-pair branch.
+`SecondaryModuleGroupIds` lacks the native SaveGame flag, which alone does not
+exclude custom persistence. Runtime registration does not by itself establish
+safe removal of a mod from a saved game.
+
+See [attachment and restoration events](vehicle-and-hud-modding-patterns.md#actor-attachment-and-save-restoration)
+and [weak-array Blueprint access](voyage-cooked-asset-toolchain.md#reflected-weak-object-arrays).
+
 ## Rejected interception points
 
 - A relocated stock-path `WBP_InteractIndicator` child crashed during async

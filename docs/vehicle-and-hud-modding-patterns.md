@@ -19,6 +19,51 @@ A working mapping does not imply a visible standard hint. A changed HUD value
 does not prove movement consumes the same field. Diagnose the producer and
 consumer of each layer separately.
 
+## Actor attachment and save restoration
+
+On Steam build `25191271` (executable SHA-256
+`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`),
+`VoyagePersistentSubsystem` exposes two Blueprint-assignable lifecycle events:
+
+- `OnActorAttached(AActor* Child, USceneComponent* ParentComponent)` is
+  broadcast by successful attachment. It also fires for existing Electric
+  Wall Sockets during save restoration: the same synchronous handler supports
+  newly built and restored sockets, including sockets with connected cables.
+  A separate restore scan or polling loop is not required for that consumer.
+- `OnActorRestored(AActor* Actor)` is a separate reflected event. Its signature
+  is established, but its ordering relative to attachment and loader startup
+  is not a runtime contract. Do not subscribe to both merely because both exist;
+  account for duplicate processing if a consumer actually needs both.
+
+Use the attached actor supplied by the event rather than rediscovering it.
+The parent scene component identifies the immediate attachment target; for a
+welded structure, resolve the physical root with
+`VoyageMiscBlueprintFunctionLibrary.GetRootPrimitiveComponent` and
+`bIncludeWeldedParent=true`, then inspect its owning actor. An immediate parent
+need not itself be a Boat. Filter the intended class and vehicle before applying
+mod behavior; an unrelated attachment is not a failure.
+
+Module existence has its own events:
+`VoyageModuleSubsystem.OnModuleRegistered` and `OnModuleUnregistered` are
+Blueprint-assignable and carry one `VoyageModuleComponent* Module` parameter
+through `VoyageModuleRegisteredDelegate`. Module registration is not a
+substitute for completed actor attachment or proof of its final vehicle owner.
+
+The runtime contract above covers Electric Wall Sockets on Boats, not every
+actor type or arbitrary ordering of streamed levels. Revalidate the reflected
+signatures and lifecycle when the game fingerprint or consumer changes.
+See [external socket ownership](boat-resource-socket-architecture.md#external-socket-registration).
+
+### Feedback before the HUD is available
+
+`VoyagePlayerController.AddMessageBySlot(MessageContent, Slot, Argument0)`
+returns false if its HUD, game widget, or slot widget is unavailable; the native
+call does not itself queue delivery. It cannot guarantee user-visible failure
+feedback from an early-load callback. Development-only Blueprint helpers such
+as `PrintString` and `RaiseScriptError` are likewise not a Shipping failure
+channel. Distinguish a useful development diagnostic from a production outcome;
+do not silently treat an attempted notification as successful delivery.
+
 ## Post-physics kinematic correction
 
 When a mod must cancel or reshape stock physics, the observation and correction

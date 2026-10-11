@@ -16,6 +16,52 @@ lacks a documented operation required by the task. Diagnose from the outside
 in: inputs and fingerprint, paths and exact dependency commits, mapping gate,
 tool log/manifest, minimal reproducer, then source.
 
+## Reflected weak-object arrays
+
+An editor-only mirror must retain the real `FArrayProperty` inner type.
+In particular, Voyage `VoyageLevelInstanceComponent.OwnedActors` is a weak
+Actor array. Declaring it as a strong object array changes the element layout
+and is not a compatible Blueprint exposure workaround.
+
+For UE 5.8, an editor-only adapter can expose the exact weak property and
+generate `EX_ArrayGetByRef`. Its property copy to the script VM resolves a weak
+pointer to an object. An impure helper can materialize that result into a
+transient strong snapshot for ordinary Blueprint iteration or membership
+checks. Do not apply ordinary `Array_Get` or strong-object `Array_Contains`
+directly to the weak array: their compiled temporaries and comparison operands
+must match the native layout.
+
+Validate the generated Blueprint helper through `ProcessEvent` with live,
+null, and live weak elements, and verify the cooked by-reference opcode.
+Neither compilation nor a plausible node graph proves correct dereferencing.
+The adapter and reflected-visibility changes belong only to the editor mirror;
+they must not require shipping a replacement Voyage module.
+
+## DML actor identity and physical installation
+
+DML v0.6 loads a registered mod actor by virtual class identity:
+`/Game/Mods/<ModName>/ModActor.ModActor_C`. The three IoStore files must be
+mounted by the game and kept together, but their physical subdirectory does
+not define this actor path. `DML add <ModName>` registers the virtual mod name;
+containers may reside in `Content/Paks` or a mounted subdirectory.
+
+Distinguish registration from automatic filename discovery. The v0.6
+`WBP_DML.FindLogicMods` helper enumerates `Content/Paks/LogicMods` and accepts
+both `<ModName>.pak` and `<ModName>_P.pak`. That helper's directory convention
+does not constrain loading an explicitly registered actor. A root-files
+distribution ZIP does not need a `LogicMods` directory or an `.autoload`
+sidecar when DML registration is the documented activation route. Do not
+promise automatic discovery from every physical folder.
+
+The `_P` suffix is not a universal DML requirement. Apply the repository's
+stock-package override suffix rule when a container actually overrides stock
+packages; additive-only mods do not need it for that reason.
+
+This contract is bound to the DML v0.6 payload whose `dml_P.utoc` SHA-256 is
+`8DDE713A29CA21227E91757DFE64A9928135C3AD1C549E207EAED8BF412B7A2F`.
+Its `CM_DMG` implements the `DML add` command and virtual class construction;
+the widget's physical discovery helper is a separate path.
+
 ## Accepted checkpoint
 
 The accepted UE 5.8 checkpoint is:
