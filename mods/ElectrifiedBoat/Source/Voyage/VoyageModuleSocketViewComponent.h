@@ -1,4 +1,4 @@
-// EDITOR-ONLY IDENTITY MIRROR for Steam build 25191271 (UE 5.8).
+// EDITOR-ONLY IDENTITY MIRROR for Steam build 25880952 (UE 5.8).
 // Runtime implementation is supplied by Voyage; never ship this module.
 // Exact owner/property identity comes from the reviewed Voyage mappings.
 

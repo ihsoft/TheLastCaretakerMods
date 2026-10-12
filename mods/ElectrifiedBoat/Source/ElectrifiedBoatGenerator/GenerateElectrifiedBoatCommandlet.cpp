@@ -1,6 +1,6 @@
 // HAND-WRITTEN BUILD TOOL SOURCE: additive Electrified Boat generator.
-// Contracts were reconstructed for Steam build 25191271 / executable SHA-256
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+// Contracts were revalidated for Steam build 25880952 / executable SHA-256
+// 16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44.
 // The generator and Voyage mirrors are editor-only and never ship.
 
 #include "GenerateElectrifiedBoatCommandlet.h"
@@ -150,9 +150,9 @@ const FName ObjectPinName(TEXT("Object"));
 const FName SoftObjectPinName(TEXT("SoftObject"));
 const FName LeftOperandPin(TEXT("A"));
 const FName RightOperandPin(TEXT("B"));
-const FName PrimitiveComponentPin(TEXT("PrimitiveComponent"));
-const FName IncludeWeldedParentPin(TEXT("bIncludeWeldedParent"));
-const FName GroupNamePin(TEXT("GroupName"));
+const FName PrimitivePin(TEXT("Primitive"));
+const FName IgnoreAdjustGrabBoxesPin(TEXT("IgnoreAdjustGrabBoxes"));
+const FName GroupKeyPin(TEXT("Key"));
 const FName ComponentClassPin(TEXT("ComponentClass"));
 const FName TagPin(TEXT("Tag"));
 const FName NamePin(TEXT("Name"));
@@ -567,8 +567,9 @@ void AddHandleActorAttachedFunction(
         GET_FUNCTION_NAME_CHECKED(
             UVoyageMiscBlueprintFunctionLibrary,
             GetRootPrimitiveComponent));
-    Build.Link(StaticMesh, Build.Pin(RootPrimitive, PrimitiveComponentPin));
-    Build.Default(RootPrimitive, IncludeWeldedParentPin, TrueValue);
+    Build.Link(StaticMesh, Build.Pin(RootPrimitive, PrimitivePin));
+    Build.Default(RootPrimitive, IgnoreAdjustGrabBoxesPin, TrueValue);
+    Build.Exec(RootPrimitive);
     UEdGraphPin* RootOwner = CallOwner(
         Build, Build.Pin(RootPrimitive, K2Pins::ReturnValue));
     UK2Node_DynamicCast* Boat = AddCast(
@@ -876,7 +877,7 @@ void AddProcessFunction(
         -160);
     Apply.Link(PairModule->GetCastResultPin(),
         Apply.Pin(RemovePeerWallSocket, FunctionTargetPin));
-    Apply.Default(RemovePeerWallSocket, GroupNamePin, WallSocketGroup.ToString());
+    Apply.Default(RemovePeerWallSocket, GroupKeyPin, WallSocketGroup.ToString());
     Apply.Exec(RemovePeerWallSocket);
 
     // Second sequence branch: clear this end, remove legacy groups, move the
@@ -898,7 +899,7 @@ void AddProcessFunction(
             RemoveSecondaryGroup),
         160);
     Apply.Link(Module, Apply.Pin(RemoveOwnWallSocket, FunctionTargetPin));
-    Apply.Default(RemoveOwnWallSocket, GroupNamePin, WallSocketGroup.ToString());
+    Apply.Default(RemoveOwnWallSocket, GroupKeyPin, WallSocketGroup.ToString());
     Apply.Exec(RemoveOwnWallSocket);
 
     UK2Node_CallFunction* CurrentBoatGroup = Apply.Call(
@@ -908,7 +909,7 @@ void AddProcessFunction(
             GetSecondaryGroupId),
         160);
     Apply.Link(Module, Apply.Pin(CurrentBoatGroup, FunctionTargetPin));
-    Apply.Default(CurrentBoatGroup, GroupNamePin, BoatGroup.ToString());
+    Apply.Default(CurrentBoatGroup, GroupKeyPin, BoatGroup.ToString());
     UK2Node_CallFunction* HasLegacyBoatGroup = Apply.Call(
         UKismetMathLibrary::StaticClass(), NotEqualIntFunction, 160);
     Apply.Link(Apply.Pin(CurrentBoatGroup, K2Pins::ReturnValue),
@@ -929,7 +930,7 @@ void AddProcessFunction(
         Apply.Pin(RemoveLegacyBoatGroup, FunctionTargetPin));
     Apply.Default(
         RemoveLegacyBoatGroup,
-        GroupNamePin,
+        GroupKeyPin,
         BoatGroup.ToString());
     Apply.Exec(RemoveLegacyBoatGroup);
 

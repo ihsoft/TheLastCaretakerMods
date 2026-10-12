@@ -1,4 +1,4 @@
-// EDITOR-ONLY IDENTITY MIRROR for Steam build 25191271 (UE 5.8).
+// EDITOR-ONLY IDENTITY MIRROR for Steam build 25880952 (UE 5.8).
 // Runtime implementation is supplied by Voyage; never ship this module.
 
 #pragma once
@@ -24,7 +24,7 @@ public:
     }
 
     UFUNCTION(BlueprintPure)
-    int32 GetSecondaryGroupId(FName GroupName) const
+    int32 GetSecondaryGroupId(FName Key) const
     {
         return 0;
     }
@@ -33,7 +33,7 @@ public:
     void UpdateSecondaryGroup(FName GroupName, int32 GroupId) {}
 
     UFUNCTION(BlueprintCallable)
-    void RemoveSecondaryGroup(FName GroupName) {}
+    void RemoveSecondaryGroup(FName Key) {}
 
     UFUNCTION(BlueprintCallable)
     void AddExternalSocket(UModuleSocketComponent* Socket) {}

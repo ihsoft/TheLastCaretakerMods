@@ -6,9 +6,9 @@ remain in ignored storage and are not source inputs.
 
 ## Version gate
 
-- Steam build ID: `25191271`
+- Steam build ID: `25880952`
 - executable SHA-256:
-  `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`
+  `16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44`
 - Unreal family: `5.8`; generating editor: `5.8.2`
 - revalidate all reflected identities, bytecode assumptions, and cooked imports
   after any fingerprint change
@@ -21,6 +21,10 @@ remain in ignored storage and are not source inputs.
   `/Game/Blueprints/Modules/BP_AttachmentVirtualSocketActor_Electricity.BP_AttachmentVirtualSocketActor_Electricity_C`
 - generated-class wall member: `VoyageModuleSocketView`; the similarly named
   `_GEN_VARIABLE` export is an SCS template, not the runtime member
+- current stock wall bytecode calls
+  `GetRootPrimitiveComponent(USceneComponent* Primitive,
+  bool IgnoreAdjustGrabBoxes)` with `IgnoreAdjustGrabBoxes=true` for both wall
+  and other-socket surfaces; ElectrifiedBoat preserves that exact call contract
 - `VoyagePersistentSubsystem.OnActorAttached` is Blueprint-assignable with
   `(AActor* Child, USceneComponent* ParentComponent)` and broadcasts after a
   successful native attachment
@@ -54,9 +58,18 @@ remain in ignored storage and are not source inputs.
 
 ## Evidence ownership and runtime boundary
 
+The current fingerprint revalidated the reflected owners, property and function
+types, exact callable pin names, wall/external-port Blueprint bindings, TestBoat
+electric attachment identities, and stock surface-pairing bytecode used by the
+generator. The native lifecycle and external-transfer behavior described above
+was established on the prior game build and has not been re-disassembled for
+this fingerprint. The user confirmed that the installed adapted mod operates
+normally on the current build. Save restoration, cleanup/removal, and other
+unreported edge cases were not separately established.
+
 Detailed current-fingerprint evidence remains under ignored
-`Tmp/electric-wall-socket-research/`; reusable stock asset snapshots remain in
-the registered asset cache. Shared contracts and pitfalls are documented in:
+`Tmp/ElectrifiedBoatUpdate/`; reusable stock asset snapshots remain in the
+registered asset cache. Shared contracts and pitfalls are documented in:
 
 - [Actor attachment and save restoration](../../docs/vehicle-and-hud-modding-patterns.md#actor-attachment-and-save-restoration)
 - [External socket registration](../../docs/boat-resource-socket-architecture.md#external-socket-registration)

@@ -9,8 +9,8 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$expectedSteamBuildId = '25191271'
-$expectedExecutableSha256 = '747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B'
+$expectedSteamBuildId = '25880952'
+$expectedExecutableSha256 = '16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44'
 $expectedEditorVersion = '5.8.2'
 $containerName = 'ElectrifiedBoat'
 $entryClass = '/Game/Mods/ElectrifiedBoat/ModActor.ModActor_C'

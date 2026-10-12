@@ -1,4 +1,4 @@
-// EDITOR-ONLY IDENTITY MIRROR for Steam build 25191271 (UE 5.8).
+// EDITOR-ONLY IDENTITY MIRROR for Steam build 25880952 (UE 5.8).
 // Runtime implementation and the weak-object array layout are supplied by Voyage.
 
 #pragma once
