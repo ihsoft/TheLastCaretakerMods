@@ -261,7 +261,7 @@ void AddRailgunFire(FGraph& G)
     auto* GetSlot = G.Call(UVoyageBaseInventoryComponent::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UVoyageBaseInventoryComponent, GetSlot));
     G.Link(Inventory, G.Pin(GetSlot, P::FunctionTarget));
-    G.Link(G.Read(Shot::AmmoSlot), G.Pin(GetSlot, Shot::Slot));
+    G.Link(G.Read(Shot::AmmoSlot), G.Pin(GetSlot, Shot::SlotIndex));
     G.Branch(G.Pin(GetSlot, P::ReturnValue));
     auto* Record = NewObject<UK2Node_BreakStruct>(G.Graph);
     Record->StructType = FVoyageItemSerialize::StaticStruct();
@@ -313,10 +313,10 @@ void AddRailgunFire(FGraph& G)
     auto* RemoveAmmo = G.Call(UVoyageBaseInventoryComponent::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UVoyageBaseInventoryComponent, RemoveItem));
     G.Link(Inventory, G.Pin(RemoveAmmo, P::FunctionTarget));
-    G.Link(AcceptedAmmo, G.Pin(RemoveAmmo, Shot::Item));
-    G.Default(RemoveAmmo, Shot::Count, Shot::One);
-    G.Link(G.Read(Shot::AmmoSlot), G.Pin(RemoveAmmo, Shot::PreferredSlot));
-    G.Default(RemoveAmmo, Shot::Notify, N::True);
+    G.Link(AcceptedAmmo, G.Pin(RemoveAmmo, Shot::RemovedItem));
+    G.Default(RemoveAmmo, Shot::RemoveCount, Shot::One);
+    G.Link(G.Read(Shot::AmmoSlot), G.Pin(RemoveAmmo, Shot::DesiredSlot));
+    G.Default(RemoveAmmo, Shot::NotifyChanged, N::True);
     G.Exec(RemoveAmmo);
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Railgun,TypedRailgun);
     ContextSet(G,Typed->GetCastResultPin(),Shot::Class,Shot::Operator,G.Read(N::OriginalPawn));

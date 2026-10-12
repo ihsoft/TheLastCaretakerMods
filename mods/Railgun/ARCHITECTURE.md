@@ -20,8 +20,12 @@
   assets use mod-unique names inside the current game's confirmed AssetManager
   scan roots. The release must not override stock Cyclone packages.
 - The built shell is a `VoyageModuleActor` with tagged model components,
-  placement collision, dynamic collision and an electric socket linked to its
-  module component.
+  placement collision, dynamic collision and one electric socket. On the
+  current fingerprint the socket explicitly serializes `bAutoInitialize=false`
+  while retaining native `OwningModule=None` and `bStandalone=false` defaults;
+  the removed module-level custom-target fields are neither mirrored nor
+  serialized. Manual socket ownership and powered charging are confirmed in the
+  real game for the current fingerprint.
 - Interaction acquisition requires a query component that explicitly blocks the
   `Interact` channel and an exact `InteractiveInterface` implementation. The
   action provider and input action are separate contracts. Native pointer/query
@@ -85,7 +89,10 @@
   exact value, socket-connection and power-state delegates, and performs
   initial charge and supply snapshots. The value callback refreshes cached
   charge and switches `SetCustomConsumption` only when the charging versus idle
-  mode changes. On the currently supported Voyage fingerprint, an accepted
+  mode changes. The electric socket explicitly disables native automatic
+  initialization and stays on the manual port configuration path, which is
+  confirmed in the real game at the configured charging rate. On the currently
+  supported Voyage fingerprint, an accepted
   socket-change notification can run before `HasSocketConnection` exposes the
   post-transition value. The guarded callback therefore records no
   authoritative supply state and coalesces one next-tick reconciliation for
@@ -239,7 +246,7 @@
   from the owned UAssetAPI JSON readbacks through the shared Voyage registry
   profile and native writer; `Voyage/AssetRegistry.bin` is neither read nor
   packaged or replaced. Railgun owns no registry serializer or class defaults.
-- On Steam build `25191271`, the stock `DefaultGame.ini` scans `Skill` below
+- On Steam build `25827816`, the native Asset Manager settings scan `Skill` below
   `/Game/Data/Assets/Skill` and `Item` below `/Game/Data/Assets`. Registry
   membership alone is insufficient for discovery outside those roots.
 - Research unlocks both recipes; neither recipe is available before research.
@@ -309,9 +316,9 @@ complete set. Every import carries explicit
 that field null is not equivalent under the reviewed filtered-import writer.
 The build reopens the result and compares versions, custom versions, name map,
 imports and complete export graph against the JSON used for that build before
-packaging. The skill and gun item use the same direct writer/readback contract;
-their current tagged/unversioned formats and object graphs are preserved by
-their editable JSON rather than hard-coded count gates. See the shared
+packaging. The ammo and gun items retain their unversioned formats; the skill
+retains its tagged format. All three object graphs are preserved by their
+editable JSON rather than hard-coded count gates. See the shared
 [serialization contract](../../docs/voyage-cooked-asset-toolchain.md#package-serialization-is-a-separate-compatibility-contract).
 
 General consumer findings and limitations, including output grouping and
@@ -437,7 +444,7 @@ destroying or reconfiguring another hit's effect. The helper stores only a
 runtime reference to the stock system; no stock VFX package is copied, patched
 or registered by Railgun.
 
-For Steam build `25191271`, the editor-only native mirror for water lookup is
+For Steam build `25827816`, the editor-only native mirror for water lookup is
 `/Script/Voyage.VoyageMiscBlueprintFunctionLibrary`. Its confirmed signatures
 are `GetActorWorld(AActor*) -> UWorld*` and
 `GetWaterHeightAtLocation(UWorld*, FVector) -> float`. The latter may return
@@ -490,9 +497,9 @@ The three-record plugin-local registry is derived solely from owned package
 readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field.
 
-- Steam build: `25191271`; parser profile: `UE5_8`.
+- Steam build: `25827816`; parser profile: `UE5_8`.
 - Executable SHA-256:
-  `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
+  `C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33`.
 - Versioned release ZIPs live in `Voyage/Content/Paks/`. Ignored installation
   manifests under `artifacts/installations/Railgun/` identify exact installed
   hashes and rollback material; neither is a source dependency for rebuilding.
@@ -503,9 +510,15 @@ writer, then reopened and compared field-for-field.
 - Native mirrors, scan roots and reconstructed contracts are fingerprint-bound.
   A changed game fingerprint requires revalidation before cooking or making
   compatibility claims.
-- Generated packages use tagged properties for partial mirrors. The ammo item
-  is the sole bounded post-cook conversion exception; it is reopened before
-  packaging. Do not convert unrelated native-child assets by analogy.
+- The current fingerprint has static native-reflection, stock-reference,
+  serialization and producer-format evidence from the successful candidate
+  build. Manual socket ownership and powered charging also have real-game
+  validation. Registry discovery, research unlock and behavior beyond
+  the established single-player scope remain separate validation boundaries.
+- Generated packages use tagged properties for partial mirrors. The ammo and
+  gun items are the bounded post-cook unversioned conversion exceptions; both
+  are reopened before packaging. Do not convert unrelated native-child assets
+  by analogy.
 - The established runtime scope is single-player, including magazine
   save/reload. Multiplayer and exhaustive cable/operator-entry scenarios are
   outside that scope.

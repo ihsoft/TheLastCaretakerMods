@@ -3,7 +3,7 @@
 // 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
 // Public mappings: Type0, Name1, Description2. Railgun serializes only named
 // tagged properties from this reviewed prefix.
-// GAME_DERIVED_SOURCES.md owns revalidation on fingerprint change.
+// ../../ARCHITECTURE.md owns revalidation on fingerprint change.
 // Runtime module identity is required during cook; the game supplies this class.
 #include "Engine/DataAsset.h"
 #include "UObject/PrimaryAssetId.h"

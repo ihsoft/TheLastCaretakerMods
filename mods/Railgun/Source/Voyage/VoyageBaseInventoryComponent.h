@@ -1,7 +1,7 @@
-// HAND-RECONSTRUCTED GAME API MIRROR: Steam 25191271 / UE5.8 parser target;
-// executable SHA-256 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
-// Method: reviewed mapping for the authored container configuration fields and
-// the read-only Items map, plus the game-validated Railgun pickup probe.
+// HAND-RECONSTRUCTED GAME API MIRROR: Steam 25827816 / UE5.8 parser target;
+// executable SHA-256 C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
+// Method: current native metadata for the authored container configuration
+// fields, read-only Items map, enums and consumed function signatures.
 // Revalidate on fingerprint change. Editor-only: never package this definition.
 
 #pragma once
@@ -17,14 +17,19 @@ UENUM()
 enum class EVoyageInventoryType : uint8
 {
     Undefined = 0,
-    Container = 1
+    PlayerInventory = 1,
+    PlayerVault = 2,
+    Merchant_DEPRECATEAD = 3,
+    Container = 4,
+    Hidden = 5
 };
 
 UENUM()
 enum class EVoyageInventoryAccessType : uint8
 {
-    None = 0,
-    ReadWrite = 1
+    Read = 0,
+    Write = 1,
+    ReadWrite = 2
 };
 
 // The game owns the runtime implementation; only authored configuration fields
@@ -34,38 +39,38 @@ class VOYAGE_API UVoyageBaseInventoryComponent : public USceneComponent
 {
     GENERATED_BODY()
 public:
-    // Read-only Steam 25191271 runtime contents. The generated graph reads the
+    // Read-only Steam 25827816 runtime contents. The generated graph reads the
     // map to drive presentation; it never mutates or serializes this field.
     UPROPERTY(BlueprintReadOnly) TMap<int32, FVoyageItemSerialize> Items;
     UPROPERTY(BlueprintAssignable) FInventoryDelegate OnInventoryChanged;
     UPROPERTY() EVoyageInventoryType Type = EVoyageInventoryType::Undefined;
     UPROPERTY() TArray<EVoyageItemCategory> AcceptedItemCategories;
-    UPROPERTY() EVoyageInventoryAccessType Access = EVoyageInventoryAccessType::None;
+    UPROPERTY() EVoyageInventoryAccessType Access = EVoyageInventoryAccessType::Read;
     // Sentinel defaults force explicit false tags for the authored component.
     UPROPERTY() bool bAllowFiltering = true;
     UPROPERTY() TSet<TObjectPtr<UVoyageItemCategoryAsset>> DepositAllCategoryFilter;
     UPROPERTY() bool bAllowNearbyQueries = true;
     UPROPERTY() bool bAutoCloseHudWhenEmpty = true;
 
-    // Steam25191271 native inventory access used by the generated fire graph.
+    // Steam25827816 native inventory access used by the generated fire graph.
     // RemoveItem returns the number of items actually removed.
     UFUNCTION(BlueprintPure, Category="RailgunInventory")
     int32 GetLastOccupiedSlot() const { return -1; }
 
     UFUNCTION(BlueprintPure, Category="RailgunInventory")
-    bool GetSlot(int32 Slot, FVoyageItemSerialize& OutItemData) const
+    bool GetSlot(int32 SlotIndex, FVoyageItemSerialize& OutItemData) const
     {
         return false;
     }
 
     UFUNCTION(BlueprintCallable, Category="RailgunInventory")
-    int32 RemoveItem(UVoyageItem* Item, int32 Count, int32 PreferredSlot,
-        bool bNotify)
+    int32 RemoveItem(UVoyageItem* RemovedItem, int32 RemoveCount,
+        int32 DesiredSlot, bool bNotifyChanged)
     {
         return 0;
     }
 
-    // Steam25191271 native slot transaction used by manual reload. The
+    // Steam25827816 native slot transaction used by manual reload. The
     // destination is the receiver; SourceInventory and SourceSlot identify the
     // live source entry, TargetSlot=-1 requests native autoplacement, and the
     // return value is the amount actually moved.
@@ -77,7 +82,7 @@ public:
     }
 
     UFUNCTION(BlueprintCallable, Category="RailgunInventory")
-    void FindSlotsByItem(UVoyageItem* Item, TArray<int32>& OutSlots) const
+    void FindSlotsByItem(UVoyageItem* Item, TArray<int32>& OutSlotIndices) const
     {
     }
 };

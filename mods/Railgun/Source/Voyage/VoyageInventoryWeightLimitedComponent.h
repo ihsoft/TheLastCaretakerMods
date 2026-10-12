@@ -1,7 +1,7 @@
 #pragma once
-// SHELL-ONLY mirror: Steam25191271 / UE5.8, executable
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
-// Reviewed mapping and Diesel Refinery defaults. The generated Blueprint
+// SHELL-ONLY mirror: Steam25827816 / UE5.8, executable
+// C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
+// Current native metadata and retained authored defaults. The generated Blueprint
 // serializes only the named tagged fields; no mirror binary is shipped.
 
 #include "VoyageBaseInventoryComponent.h"
@@ -17,5 +17,5 @@ public:
     UPROPERTY() bool bAllowBeyondWeightLimit = true;
 
     UFUNCTION(BlueprintCallable, Category="RailgunInventory")
-    void SetMaxWeightLimit(float NewMaxWeightLimit) {}
+    void SetMaxWeightLimit(float NewDefaultMax) {}
 };

@@ -1,9 +1,9 @@
 #pragma once
-// READ-ONLY editor mirror: Steam25191271 / UE5.8 parser target, executable
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
-// Public mappings, three shark stock CDOs, and stock Uplink/Sitting Light
-// delegate consumers.
-// Exact prefix through ItemAsset7; no instance, native code or data asset shipped.
+// READ-ONLY editor mirror: Steam25827816 / UE5.8 parser target, executable
+// C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
+// Current reviewed mappings and the stock WindTurbine Small component contract.
+// Named fields consumed by the generator only; no instance, native code or data
+// asset shipped.
 // Revalidate after fingerprint change. Never use this stub to serialize a module.
 // Module descriptor is Runtime so UHT omits PKG_EditorOnly; editor usage only,
 // and the release inventory must still exclude every native binary.
@@ -33,8 +33,6 @@ public:
     UPROPERTY() TObjectPtr<UObject> ModuleConfigData;
     UPROPERTY(BlueprintReadOnly, Category="RailgunReadOnly") TObjectPtr<UObject> ItemAsset;
     UPROPERTY() FModuleConfigData ConfigData;
-    UPROPERTY() bool bUseSocketCustomTarget = false;
-    UPROPERTY() FComponentReference SocketCustomTarget;
     UPROPERTY(BlueprintAssignable, Category="RailgunEvents")
     FVoyageModuleCompDelegate OnModuleValueChanged;
     UPROPERTY(BlueprintAssignable, Category="RailgunEvents")
@@ -42,7 +40,7 @@ public:
     UPROPERTY(BlueprintAssignable, Category="RailgunEvents")
     FVoyageModuleCompPowerStateChanged OnModulePowerStateChanged;
 
-    // Steam25191271 native registration/thunk and stock FoodProcessor call.
+    // Steam25827816 native registration/thunk contract.
     // Read-only methods; module lifecycle/consumption is not ActorComponent activation.
     UFUNCTION(BlueprintPure, Category="RailgunReadOnly")
     bool HasPower() const { return false; }

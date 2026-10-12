@@ -12,8 +12,10 @@ primary export per input package for `/Script/Voyage.VoyageItem`,
 `VoyageItemAmmo`, or `VoyageSkill`; auxiliary exports are ignored. It writes
 format 24 with `filterEditorOnly=true`, empty bundles/dependencies/package data,
 and default chunk `0`. The profile records the game fingerprint that established
-its restored native-class defaults and its revalidation condition. Explicit
-serialized false, zero, and empty values override defaults.
+its restored native-class defaults and primary-asset scan roots, plus its
+revalidation condition. Format 24 is verified by the UE 5.8.2 writer's exact
+reopen comparison; real-game discovery remains the runtime acceptance gate.
+Explicit serialized false, zero, and empty values override defaults.
 
 The native writer itself is class-agnostic and accepts any positive record
 count, multiple assets in one package, and arbitrary chunk arrays. The normal

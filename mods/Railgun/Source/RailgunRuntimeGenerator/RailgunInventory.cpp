@@ -107,7 +107,7 @@ void AddRailgunInventoryLimitInitialization(UBlueprint* BP,
             UVoyageInventoryWeightLimitedComponent, SetMaxWeightLimit));
     G.Link(Inventory, G.Pin(SetLimit, P::FunctionTarget));
     G.Link(AuthoredLimit,
-        G.Pin(SetLimit, RailgunInventory::NewMaxWeightLimitParameter));
+        G.Pin(SetLimit, RailgunInventory::NewDefaultMaxParameter));
     G.Exec(SetLimit);
     G.Write(RailgunInventory::LastVisualCount, nullptr,
         RailgunInventory::InvalidVisualCount);

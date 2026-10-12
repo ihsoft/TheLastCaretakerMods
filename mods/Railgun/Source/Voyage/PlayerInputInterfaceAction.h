@@ -1,9 +1,10 @@
 #pragma once
-// HC28 bytecode-only mirror. Steam25191271, UE5.8, EXE747DC255...F58B.
-// Current mappings confirm these 17 fields, followed by six native delegates.
+// HC28 bytecode-only mirror. Steam25827816, UE5.8,
+// EXE C15F59073ADC...82DB1D33.
+// Current native metadata confirms these 16 fields, followed by six delegates.
 // Never serialize this partial struct as a CDO/default; MakeStruct writes only
-// named fields. Exact owner/precedent: DonkLift GetProvidedActionsBP, renewed in
-// GAME_DERIVED_SOURCES.md. Revalidate on fingerprint change. Editor-only.
+// named fields. Current native reflection owns the schema; the prior DonkLift
+// graph is historical precedent only. See ../../ARCHITECTURE.md. Editor-only.
 #include "CoreMinimal.h"
 #include "InputAction.h"
 #include "VoyageInputActionInstance.h"
@@ -32,7 +33,6 @@ struct VOYAGE_API FPlayerInputInterfaceAction
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TObjectPtr<UObject> CrosshairWidgetData = nullptr;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FVector2D CrosshairPosition = FVector2D::ZeroVector;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) EPlayerInputInterfaceActionType Type = EPlayerInputInterfaceActionType::Central;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<TObjectPtr<UInputAction>> SecondaryInputActions;
     // HC29 current named delegate identities. Still bytecode-only: native
     // non-reflected storage means sizeof(editor mirror) is NOT shipping ABI.
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FPlayerInputInterfaceOnAction OnValue;

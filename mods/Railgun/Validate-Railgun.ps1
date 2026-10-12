@@ -1686,6 +1686,9 @@ Require (@($energyRefreshStrings | Where-Object {
     ($energyRefreshStrings -ccontains
         "Class'KismetMathLibrary:Add_DoubleDouble'")) `
     'Energy demand must apply configured idle W in both idle and charging modes.'
+Require (-not ($energyRefreshStrings -ccontains
+        "Class'VoyageModuleComponent:RefreshSocketsPorts'")) `
+    'Manual socket initialization must not refresh native socket ports after demand changes.'
 $netChargeW = (0.85 * 1000.0 * 1000.0) / 5.5
 foreach ($idleScenarioKW in @(0.0, 0.5)) {
     $idleScenarioW = $idleScenarioKW * 1000.0
@@ -2867,8 +2870,11 @@ Require ([Math]::Abs($energy.ResourceBandwidthInput - 1000) -lt 0.001) 'Initial 
 Require ([Math]::Abs($energy.MaxResourceAmount - 1.0) -lt 0.000001) 'Idle buffer mismatch.'
 Require ($energy.bAutoStartModule -and $energy.bAcceptResourceOffer -and $energy.bAcceptResourceOfferProduction) 'Native receiver disabled.'
 Require ($energy.bAcceptResourceOfferOff) 'Empty/unpowered receiver cannot recover.'
-Require ($module[0].Properties.SocketCustomTarget.ComponentProperty -ceq 'ElectricSocket') 'Electric socket target mismatch.'
-Require ($module[0].Properties.bUseSocketCustomTarget -eq $true) 'Custom socket target disabled.'
+$modulePropertyNames = @(PropertyNames $module[0])
+Require (-not ($modulePropertyNames -ccontains 'SocketCustomTarget')) `
+    'Deleted module SocketCustomTarget override remains.'
+Require (-not ($modulePropertyNames -ccontains 'bUseSocketCustomTarget')) `
+    'Deleted module bUseSocketCustomTarget override remains.'
 $ammoInventory = @($shell | Where-Object {
     $_.Name -ceq 'RailgunAmmoInventory_GEN_VARIABLE' -and
     $_.Type -ceq 'VoyageInventoryWeightLimitedComponent'
@@ -2952,7 +2958,19 @@ $electric = @($shell | Where-Object { $_.Name -ceq 'ElectricSocket_GEN_VARIABLE'
 Require ($electric[0].Type -ceq 'VoyageModuleSocketViewComponent') 'Power socket native class mismatch.'
 Require ($electric[0].Properties.DataAsset.AssetPathName -like '*/DA_Socket_ElectricData.DA_Socket_ElectricData') 'Power socket data asset mismatch.'
 Require ($electric[0].Properties.Port.DefaultDirection -ceq 'EModuleSocketType::ST_Input') 'Power socket must default to input.'
-Require ($electric[0].Properties.SocketID -eq 2236302826 -and $electric[0].Properties.bAutoInitialize -eq $false) 'Power socket identity/initialization mismatch.'
+$electricPropertyNames = @(PropertyNames $electric[0])
+Require ($electric[0].Properties.SocketID -eq 2236302826) 'Power socket identity mismatch.'
+Require ($electricPropertyNames -ccontains 'bAutoInitialize' -and
+    $electric[0].Properties.bAutoInitialize -eq $false) `
+    'Power socket must retain explicit manual initialization.'
+if ($electricPropertyNames -ccontains 'OwningModule') {
+    Require ([string]$electric[0].Properties.OwningModule -ceq 'None') `
+        'Power socket has an invented owning-module override.'
+}
+if ($electricPropertyNames -ccontains 'bStandalone') {
+    Require ($electric[0].Properties.bStandalone -eq $false) `
+        'Power socket standalone override enabled.'
+}
 foreach ($name in @('PersistentComponent','DestructibleObjectComponent')) {
     $component = @($shell | Where-Object { $_.Name -ceq $name })
     Require ($component.Count -eq 1) ('Missing native template: ' + $name)

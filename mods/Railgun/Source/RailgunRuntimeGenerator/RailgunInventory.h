@@ -24,7 +24,7 @@ inline const FName InteractGetInventory(TEXT("InteractGetInventory"));
 inline const FName ItemParameter(TEXT("Item"));
 inline const FName IsValidParameter(TEXT("bIsValid"));
 inline const FName PartIdParameter(TEXT("PartId"));
-inline const FName NewMaxWeightLimitParameter(TEXT("NewMaxWeightLimit"));
+inline const FName NewDefaultMaxParameter(TEXT("NewDefaultMax"));
 using RailgunInventoryShared::SyncVisuals;
 inline const FName InventoryChangedCallback(TEXT("OnRailgunAmmoInventoryChanged"));
 inline const FName OnInventoryChanged(TEXT("OnInventoryChanged"));

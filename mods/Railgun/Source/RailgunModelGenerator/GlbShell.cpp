@@ -444,8 +444,6 @@ int32 Generate()
     Module->ConfigData.MaxResourceAmount = RailgunAssetNames::RailgunIdleBufferKJ;
     Module->ConfigData.ResourceConsumptionOn = RailgunAssetNames::RailgunInitialEnergyConsumptionOn;
     Module->ConfigData.ResourceConsumptionStandby = RailgunAssetNames::RailgunInitialEnergyConsumptionStandby;
-    Module->SocketCustomTarget.ComponentProperty = RailgunAssetNames::ElectricSocketName;
-    Module->bUseSocketCustomTarget = true;
     TSet<FString> PackageNames;
     for (UObject* Asset : Imported)
     {

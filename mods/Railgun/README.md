@@ -205,11 +205,13 @@ clamped to the declared range.
 Station initialization caches the concrete module, binds its exact value,
 socket-connection and power-state delegates, and takes initial charge and
 supply snapshots. Value changes refresh stored charge and change custom
-consumption only when the required charging/idle mode changes. For the
-supported game fingerprint, the socket notification may precede freshness of
-`HasSocketConnection`; an accepted event therefore schedules one coalesced
-next-tick snapshot for the same still-bound module. Power events consume their
-exact `bHasPower` payload immediately.
+consumption only when the required charging/idle mode changes. The electric
+socket explicitly disables native automatic initialization and uses the manual
+port configuration path, which is confirmed in the real game at the configured
+charging rate. For the supported game fingerprint, the socket notification may
+precede freshness of `HasSocketConnection`; an accepted event therefore
+schedules one coalesced next-tick snapshot for the same still-bound module.
+Power events consume their exact `bHasPower` payload immediately.
 A re-entry settings read forces one demand refresh so changed charge-time,
 capacity, idle-consumption or offline-discharge values take effect without
 waiting for another resource event. Synchronous notifications raised by the native demand setter
@@ -262,8 +264,12 @@ shot has consumed both charge and ammunition.
 
 ## Compatibility and validation
 
-The build is fingerprint-gated to the reviewed game and editor versions. Build,
-cook and container verification are not gameplay validation. Changes to runtime
-behavior require a proportional real-game check before they are treated as a
-new validated baseline. See [ARCHITECTURE.md](ARCHITECTURE.md) for the durable
-runtime contracts and current hypotheses.
+The update candidate is fingerprint-gated to Steam build `25827816`, executable
+SHA-256 `C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33`
+and UE `5.8.2`. Build, cook and container verification are not gameplay
+validation. Manual socket ownership and powered charging are confirmed in the
+real game for this fingerprint. Registry discovery, research unlock and
+behavior outside the established single-player scope retain their separate
+validation boundaries. See
+[ARCHITECTURE.md](ARCHITECTURE.md) for the durable runtime contracts and current
+hypotheses.

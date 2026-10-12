@@ -2,7 +2,7 @@
 // 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B,
 // UE5.8. Native registration and FFunctionParams independently decoded.
 // OnEnterVehicle: one ObjectProperty NewPossessor, Engine.Controller, void.
-// OnExitVehicle: no parameters, void. See GAME_DERIVED_SOURCES.md.
+// OnExitVehicle: no parameters, void. See ../../ARCHITECTURE.md.
 // No UNVERSIONED child/CDO authoring against this incomplete 38-property base.
 // HC26 isolated exception: tagged properties only, no native field/default-
 // subobject CDO deltas, independently verified before packaging/runtime test.

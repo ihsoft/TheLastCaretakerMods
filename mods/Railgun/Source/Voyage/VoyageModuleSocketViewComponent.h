@@ -1,13 +1,12 @@
-// EDITOR-ONLY IDENTITY MIRROR for Steam build 25191271 / UE5.8.
-// EXE SHA256 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
-// Method: Inspect-VoyageAsset mappings for both classes, ModuleSocketIOData
-// and EModuleSocketType; revalidate all on fingerprint change.
+// EDITOR-ONLY IDENTITY MIRROR for Steam build 25827816 / UE5.8.
+// EXE SHA256 C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
+// Method: current reviewed mappings plus the stock WindTurbine Small component
+// template for both classes, ModuleSocketIOData and EModuleSocketType.
 // The shipped Voyage module owns the runtime implementation.  This mirror is
 // only used by the Railgun editor generator to author a native socket
 // component into the generated Blueprint.
-// Contract evidence: stock BP_Module_WindTurbine_Small and
-// BP_Module_Turret component templates; see the ignored asset-cache evidence
-// and the mod's GAME_DERIVED_SOURCES.md revalidation gate.
+// Contract evidence: stock BP_Module_WindTurbine_Small component templates in
+// the current ignored asset cache. See ../../ARCHITECTURE.md.
 
 #pragma once
 

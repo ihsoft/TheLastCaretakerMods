@@ -3,7 +3,7 @@
 // 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
 // HC25: public mapping plus stock context JSON confirms property order/types;
 // reviewed mapping EnumName values recovered through published CUE4Parse after
-// Inspector Describe omitted enum names. GAME_DERIVED_SOURCES.md owns evidence.
+// Inspector Describe omitted enum names. ../../ARCHITECTURE.md owns evidence.
 // Editor-only, no runtime DLL. Revalidate complete schema on fingerprint change.
 #include "Engine/DataAsset.h"
 #include "InputMappingContext.h"

@@ -1,5 +1,5 @@
 // Editor-only GLB shell generator. Never shipped; native identities are gated
-// by GAME_DERIVED_SOURCES.md. Runtime generation lives in RailgunRuntimeGenerator.
+// by ../../ARCHITECTURE.md. Runtime generation lives in RailgunRuntimeGenerator.
 
 #include "GenerateRailgunCommandlet.h"
 #include "AmmoPickup.h"

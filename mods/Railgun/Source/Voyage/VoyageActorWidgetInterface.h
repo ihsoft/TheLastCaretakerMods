@@ -3,7 +3,7 @@
 // Current native registration: interface ctor1451fba80 -> registrar145216af0
 // -> one name/thunk pair14996acd0 (GetHUDOverrideWidget/1452203e0).
 // JetSki export: no inputs, ClassProperty<VoyageBaseUserWidget> return.
-// GAME_DERIVED_SOURCES.md owns full fingerprint and revalidation requirements.
+// ../../ARCHITECTURE.md owns full fingerprint and revalidation requirements.
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
 #include "VoyageBaseUserWidget.h"
