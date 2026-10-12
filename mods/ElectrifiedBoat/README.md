@@ -12,11 +12,12 @@ changed. No new building item, controls, or configuration are required.
 
 Requires **DML v0.6**.
 
-1. Close the game and extract `ElectrifiedBoat.pak`, `ElectrifiedBoat.ucas`, and
-   `ElectrifiedBoat.utoc` together directly into the game's
-   `Voyage/Content/Paks/LogicMods` folder. Create `LogicMods` if it is missing.
-   The ZIP contains files at its root, so select `LogicMods` as the extraction
-   destination. Do not leave another copy in Paks or a different subfolder.
+1. Close the game and extract the release ZIP into the game's
+   `Voyage/Content/Paks` folder, preserving its `LogicMods` directory.
+   The result must be `Paks/LogicMods/ElectrifiedBoat.pak`, with `.ucas` and
+   `.utoc` beside it. Do not extract into an existing `LogicMods` folder:
+   that would create an extra nested directory. Do not leave another copy
+   of the mod in Paks or a different subfolder.
 2. Start the game so DML can discover the mod in `LogicMods`.
 3. Build an Electric Wall Socket on your boat and connect a cable to it.
 
@@ -45,7 +46,8 @@ append `-EngineRoot 'C:\path\to\UE_5.8'` and
 
 The script builds the mod and checks the resulting package. Output goes to
 `Tmp/ElectrifiedBoat/build-<timestamp>/package/`. Install only the three
-`ElectrifiedBoat.pak/.ucas/.utoc` files as described above; the other files are
-build metadata. The script does not install the mod or produce a release ZIP.
+`ElectrifiedBoat.pak/.ucas/.utoc` files directly into `Voyage/Content/Paks/LogicMods`;
+the other files are build metadata. The script does not install the mod or
+produce a release ZIP.
 
 For development contracts, see [AGENTS.md](AGENTS.md).

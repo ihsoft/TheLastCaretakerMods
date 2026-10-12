@@ -7,7 +7,8 @@ game identities; [README.md](README.md) owns the build and installation steps.
 - DML loads `/Game/Mods/ElectrifiedBoat/ModActor.ModActor_C`. Ship only this
   additive package, not the generator's stock Blueprint stubs or native mirrors.
   Install the three container files directly in `Voyage/Content/Paks/LogicMods`
-  for DML discovery. This additive mod does not require an `_P` suffix; see the
+  for DML discovery. Release ZIPs contain these files under `LogicMods/` and
+  are extracted into Paks. This additive mod does not require an `_P` suffix; see the
   [DML contract](../../docs/voyage-cooked-asset-toolchain.md#dml-actor-identity-and-physical-installation).
 - `OnActorAttached` handles construction **and save restoration**. Keep one
   synchronous handler, with no separate restore scan, Tick, or retry timer.
