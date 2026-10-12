@@ -60,8 +60,9 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   subclass is selected only through the item data asset's `DroppedActor` path.
 - Preserve every stock Gyro keyboard mapping when replacing
   `IMC_GyroCopter_Keyboard`; the only added mapping is the mod-owned reset
-  action on X. The child `GetProvidedActionsBP` must append reset to the stock
-  Blueprint's returned actions so the conditional F cargo hint survives.
+  action on X. The child `GetProvidedActionsBP` must call the inherited native
+  action provider and append reset to its returned actions so base actions such
+  as the conditional F cargo hint survive.
 - Gameplay validation covers pitch in both directions, release hold, both
   limits, X, exit/re-entry, full-throttle altitude braking/hold, and horizontal
   damping under climb, descent, neutral, directional, and reversing input.

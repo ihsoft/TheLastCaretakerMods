@@ -1,7 +1,9 @@
-// HAND-RECONSTRUCTED GAME API MIRROR: Steam build 25191271, UE 5.8,
+// HAND-RECONSTRUCTED GAME API MIRROR: Steam build 25827816, UE 5.8.2
+// (parser target 5.8),
 // VoyageSteam-Win64-Shipping.exe SHA-256
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
-// Editor-only; never ship.
+// C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
+// The fields consumed by generated assets were revalidated from current native
+// reflection metadata. Revalidate on fingerprint change. Editor-only; never ship.
 
 #pragma once
 
@@ -38,5 +40,4 @@ struct VOYAGE_API FPlayerInputInterfaceAction
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TObjectPtr<UObject> CrosshairWidgetData = nullptr;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FVector2D CrosshairPosition = FVector2D::ZeroVector;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) EPlayerInputInterfaceActionType Type = EPlayerInputInterfaceActionType::Central;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<TObjectPtr<UInputAction>> SecondaryInputActions;
 };

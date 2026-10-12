@@ -1,6 +1,6 @@
 // HAND-WRITTEN BUILD TOOL SOURCE: generates the Gyro replacement child.
-// Contracts validated for Steam build 25191271 / executable SHA-256
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+// Contracts revalidated for Steam build 25827816 / executable SHA-256
+// C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
 // The generator is editor-only and never ships in the mod container.
 
 #include "GenerateStableGyroInheritanceCommandlet.h"
@@ -215,42 +215,6 @@ UEdGraphPin* FindInputPin(UEdGraphNode* Node)
     return nullptr;
 }
 
-bool AddEmptyProvidedActionsOverride(UBlueprint* Blueprint)
-{
-    UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(
-        Blueprint, ProvidedActionsFunctionName, UEdGraph::StaticClass(),
-        UEdGraphSchema_K2::StaticClass());
-    FBlueprintEditorUtils::AddFunctionGraph(
-        Blueprint, Graph, false, AVoyageVehiclePawn::StaticClass());
-    UK2Node_FunctionEntry* Entry = nullptr;
-    UK2Node_FunctionResult* Result = nullptr;
-    for (UEdGraphNode* Node : Graph->Nodes)
-    {
-        if (UK2Node_FunctionEntry* Candidate = Cast<UK2Node_FunctionEntry>(Node)) Entry = Candidate;
-        if (UK2Node_FunctionResult* Candidate = Cast<UK2Node_FunctionResult>(Node)) Result = Candidate;
-    }
-    if (Entry && !Result)
-    {
-        Result = FinishNode(NewObject<UK2Node_FunctionResult>(Graph), Graph, 400, 0);
-    }
-    if (!Entry || !Result)
-    {
-        UE_LOG(LogTemp, Error, TEXT("GetProvidedActionsBP stub entry/result nodes were not generated"));
-        return false;
-    }
-    UEdGraphPin* EntryThen = RequirePin(Entry, UEdGraphSchema_K2::PN_Then);
-    UEdGraphPin* ResultExec = RequirePin(Result, UEdGraphSchema_K2::PN_Execute);
-    UEdGraphPin* ResultValue = RequirePin(Result, PinNames::ReturnValue);
-    EntryThen->BreakAllPinLinks();
-    ResultExec->BreakAllPinLinks();
-    ResultValue->BreakAllPinLinks();
-    UK2Node_MakeArray* EmptyArray = NewObject<UK2Node_MakeArray>(Graph);
-    FinishNode(EmptyArray, Graph, 200, 100);
-    const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
-    return Schema->TryCreateConnection(EntryThen, ResultExec) &&
-        Schema->TryCreateConnection(EmptyArray->GetOutputPin(), ResultValue);
-}
-
 bool AddProvidedActionsBpOverride(UBlueprint* Blueprint, UInputAction* ResetAction)
 {
     UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(
@@ -277,9 +241,11 @@ bool AddProvidedActionsBpOverride(UBlueprint* Blueprint, UInputAction* ResetActi
 
     UFunction* ProvidedFunction = Blueprint->ParentClass->FindFunctionByName(
         ProvidedActionsFunctionName);
-    if (!ProvidedFunction || ProvidedFunction->GetOuterUClass() != Blueprint->ParentClass)
+    if (!ProvidedFunction ||
+        ProvidedFunction->GetOuterUClass() != AVoyageVehiclePawn::StaticClass())
     {
-        UE_LOG(LogTemp, Error, TEXT("Dummy Gyro parent does not own GetProvidedActionsBP"));
+        UE_LOG(LogTemp, Error,
+            TEXT("Inherited GetProvidedActionsBP is not declared by VoyageVehiclePawn"));
         return false;
     }
     UK2Node_CallParentFunction* Parent = NewObject<UK2Node_CallParentFunction>(Graph);
@@ -1147,11 +1113,6 @@ int32 UGenerateStableGyroInheritanceCommandlet::Main(const FString& Params)
     FEdGraphPinType DoubleType;
     DoubleType.PinCategory = UEdGraphSchema_K2::PC_Real;
     DoubleType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
-    if (!FBlueprintEditorUtils::AddMemberVariable(
-            Parent, CurrentThrottle, DoubleType, ArcadeAltitude::Zero)) return 1;
-    if (!FBlueprintEditorUtils::AddMemberVariable(
-            Parent, PropellerVelocity, DoubleType, ArcadeAltitude::Zero)) return 1;
-    if (!AddEmptyProvidedActionsOverride(Parent)) return 1;
     if (!SaveBlueprint(ParentPackage, Parent)) return 1;
 
     FEdGraphPinType BoolType;
@@ -1180,7 +1141,7 @@ int32 UGenerateStableGyroInheritanceCommandlet::Main(const FString& Params)
         !FBlueprintEditorUtils::AddMemberVariable(
             Helper, VerticalVelocitySampleValid,
             BoolType, ArcadeAltitude::Disabled) ||
-        !AddArcadeAltitudeHold(Helper, Parent->GeneratedClass) ||
+        !AddArcadeAltitudeHold(Helper, AVoyageVehicleGyroCopter::StaticClass()) ||
         !SaveBlueprint(Helper->GetOutermost(), Helper, TG_PostPhysics)) return 1;
 
     UPackage* ReplacementPackage = CreatePackage(ChildPackage);

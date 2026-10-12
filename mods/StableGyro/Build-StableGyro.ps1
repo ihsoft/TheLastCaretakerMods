@@ -47,6 +47,7 @@ if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
 }
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'artifacts'))
+$tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp'))
 $project = Join-Path $modRoot 'Voyage.uproject'
 $provenancePath = Join-Path $modRoot 'GAME_DERIVED_SOURCES.md'
 $buildBatch = Join-Path $EngineRoot 'Engine\Build\BatchFiles\Build.bat'
@@ -74,13 +75,22 @@ function Resolve-RequiredPath {
     return (Resolve-Path -LiteralPath $Path).Path
 }
 
-function Assert-UnderArtifacts {
+function Assert-UnderIgnoredBuildStorage {
     param([Parameter(Mandatory = $true)] [string]$Path, [Parameter(Mandatory = $true)] [string]$Label)
 
     $fullPath = [IO.Path]::GetFullPath($Path)
-    $prefix = $artifactsRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
-    if (-not $fullPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "$Label must stay below the ignored artifacts directory: $fullPath"
+    $allowedRoots = @($tmpRoot, $artifactsRoot)
+    $isAllowed = $false
+    foreach ($allowedRoot in $allowedRoots) {
+        $prefix = $allowedRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) +
+            [IO.Path]::DirectorySeparatorChar
+        if ($fullPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+            $isAllowed = $true
+            break
+        }
+    }
+    if (-not $isAllowed) {
+        throw "$Label must stay below the repository Tmp or artifacts directory: $fullPath"
     }
     return $fullPath
 }
@@ -289,9 +299,9 @@ if ($LASTEXITCODE -ne 0) {
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $buildIdentity = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
-    $OutputRoot = Join-Path $artifactsRoot "stable-gyro\build-$buildIdentity"
+    $OutputRoot = Join-Path $tmpRoot "StableGyro\build-$buildIdentity"
 }
-$releaseRoot = Assert-UnderArtifacts -Path $OutputRoot -Label 'OutputRoot'
+$releaseRoot = Assert-UnderIgnoredBuildStorage -Path $OutputRoot -Label 'OutputRoot'
 if (Test-Path -LiteralPath $releaseRoot) {
     throw "OutputRoot already exists: $releaseRoot"
 }
@@ -393,7 +403,7 @@ if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
     $OriginalsRoot = Join-Path $releaseRoot 'originals'
     & $prepareScript -GameRoot $GameRoot -Retoc $Retoc -OutputRoot $OriginalsRoot
 } else {
-    $OriginalsRoot = Assert-UnderArtifacts -Path $OriginalsRoot -Label 'OriginalsRoot'
+    $OriginalsRoot = Assert-UnderIgnoredBuildStorage -Path $OriginalsRoot -Label 'OriginalsRoot'
 }
 $originalInputs = Get-CleanOriginalInputs `
     -Root $OriginalsRoot `

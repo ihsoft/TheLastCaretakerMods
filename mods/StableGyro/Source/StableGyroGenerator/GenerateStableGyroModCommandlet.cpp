@@ -1,6 +1,6 @@
 // HAND-WRITTEN BUILD TOOL SOURCE: generates the runtime pitch integrator.
-// Game identities are bound to Steam build 25191271 / executable SHA-256
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+// Game identities are revalidated for Steam build 25827816 / executable SHA-256
+// C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
 // The C++ generator is editor-only and never ships in the mod container.
 
 #include "GenerateStableGyroModCommandlet.h"
