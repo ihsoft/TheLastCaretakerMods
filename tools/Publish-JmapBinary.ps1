@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$expectedSourceCommit = '4f88d8af758712839529f9eeeb02b82c9469e271'
+$expectedSourceCommit = 'fad7b923d31e098d958bd35867f3ed0bedc637a2'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $sourceGitPath = $source.Replace('\', '/')
 $destination = [IO.Path]::GetFullPath($OutputPath)

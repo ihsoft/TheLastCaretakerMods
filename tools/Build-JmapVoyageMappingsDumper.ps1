@@ -11,10 +11,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$expectedSourceCommit = '4f88d8af758712839529f9eeeb02b82c9469e271'
-$expectedSourceDescribe = 'v0.2.0-3-g4f88d8a'
+$expectedSourceCommit = 'fad7b923d31e098d958bd35867f3ed0bedc637a2'
+$expectedSourceDescribe = 'v0.2.0-rc2-1-gfad7b92'
 $upstreamBaseCommit = '3f189715f08a646a8c341bf80c2fe06e44177ac3'
-$expectedLibSha256 = '1DA7EBA1D4E6D93C77CE66FCC99A6A93F0DCAEB3F57BFCE37436CFD2E3761F85'
+$expectedLibSha256 = '12E04B342E5030E88570F4B4235425F7F2F7C4F55E405E6511EC7B3DD5985E0B'
 $expectedMemSha256 = '992AD2BAD423D9C118C8E7BBFE1B0FF5C1D7720DA20C8174820CAE6DF585E0F4'
 $expectedObjectsSha256 = 'D3E46A422BCEB9EA7CD400B239CF0673F2EB2A0E867924E2717E15C95CBC9DB7'
 
@@ -92,6 +92,7 @@ $manifest = [ordered]@{
     fixesAfterRelease = @(
         'UE5.6+ UStruct.MinAlignment width'
         'Nullable enum, interface, and object Blueprint metadata'
+        'Nullable soft-class and soft-object Blueprint metadata'
     )
     criticalSourceSha256 = $criticalSources
     executableSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $executable).Hash

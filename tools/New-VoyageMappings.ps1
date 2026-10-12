@@ -34,10 +34,10 @@ if ([string]::IsNullOrWhiteSpace($DumperPath)) {
     $DumperPath = Join-Path $PSScriptRoot '..\.tools\bin\jmap_dumper.exe'
 }
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
-    $OutputRoot = Join-Path $PSScriptRoot '..\artifacts\mappings'
+    $OutputRoot = Join-Path $PSScriptRoot '..\Tmp\mappings'
 }
 
-$expectedDumperCommit = '4f88d8af758712839529f9eeeb02b82c9469e271'
+$expectedDumperCommit = 'fad7b923d31e098d958bd35867f3ed0bedc637a2'
 $gameProcessName = 'VoyageSteam-Win64-Shipping'
 $engineVersion = '5.8'
 $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'

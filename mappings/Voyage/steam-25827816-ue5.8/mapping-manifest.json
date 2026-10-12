@@ -1,0 +1,31 @@
+{
+  "kind": "Voyage reflection mappings",
+  "game": "The Last Caretaker",
+  "internalProjectName": "Voyage",
+  "steamAppId": "1783560",
+  "steamBuildId": "25827816",
+  "executableName": "VoyageSteam-Win64-Shipping.exe",
+  "executableSha256": "C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33",
+  "engineVersion": "5.8",
+  "uassetApiEngineVersion": "VER_UE5_8",
+  "engineVersionBasis": "Voyage runtime crash metadata reports 5.8.2; dumper and parser use the UE 5.8 serialization contract",
+  "generator": "ihsoft/jmap Voyage UE 5.8 compatibility fork; temporary pre-commit executable from source byte-identical to the recorded commit",
+  "generatorCommit": "fad7b923d31e098d958bd35867f3ed0bedc637a2",
+  "generatorSourceTreeManifestSha256": "086E855C7B01DB7C09FABD32F12FA44F4442BC1598C6D6BB16AE7A091A2BAAB1",
+  "generatorSha256": "848574EB45A25E959E9E23D5534FD766235A0C368A39B4BAB34666B1807C8206",
+  "committedBuildSha256": "6C6E5B0A74BAD8389A1B287955004DC13A549470891D2FFFF514ACE3C270B26A",
+  "canonicalPublishedSha256": "6A56DFCA0654835160E94F3E1D83023A86DDB1C3D29356FC0C4B008B7190987D",
+  "generationWorkflow": "Temporary parent-reviewed exact-source-equivalent jmap build; explicit live GUObjectArray; --all; JMAP_CONCURRENCY=128; bounded 4096 MiB/240 seconds",
+  "observedObjectCount": 79908,
+  "mappingFile": "Voyage-25827816.usmap",
+  "mappingLength": 2426564,
+  "mappingSha256": "367FA2000A98AD7CDCDB1F7CDA46B501F14E2FBCB06431E427E8A1164934CCCC",
+  "generatedAtUtc": "2026-10-12T02:48:24.8349442Z",
+  "validation": {
+    "mappingGate": "Test-VoyageMappings.ps1 passed header, payload, fingerprint, hash and required names",
+    "assetParser": "Get-VoyageAssetJson.ps1 parsed current stock UDS_Utility_Opener_Interface, BP_Module_WindTurbine_Small, and DA_Ammo_Bolt_Sniper_Rod with this mapping",
+    "runtime": "Read-only live reflection capture and offline parser validation only; no gameplay compatibility claim",
+    "sourceEquivalence": "All 47 tracked source files were byte-identical between the live-tested candidate copy and generator commit fad7b923d31e098d958bd35867f3ed0bedc637a2"
+  },
+  "revalidateWhen": "Steam build ID or VoyageSteam-Win64-Shipping.exe SHA-256 changes"
+}

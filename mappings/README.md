@@ -12,7 +12,7 @@ Each mapping is immutable and scoped by:
 - generator repository/commit and mapping SHA-256.
 
 Never replace an existing file after a game update. Generate and validate the
-new mapping below ignored `artifacts/mappings/`, then add a new versioned
+new mapping below ignored `Tmp/`, then add a new versioned
 directory with its own manifest. Dumper logs, reflection scans, process
 addresses, `.jmap`, and other reproducible diagnostics remain ignored.
 
@@ -24,8 +24,8 @@ new game fingerprint.
 
 ## Reviewed entries
 
-The registry currently retains reviewed entries for Steam builds `25056839`
-and `25191271`. Each sibling `mapping-manifest.json` is the authority for its
+The registry currently retains reviewed entries for Steam builds `25056839`,
+`25191271`, and `25827816`. Each sibling `mapping-manifest.json` is the authority for its
 game hash, engine/parser profile, generator identity, mapping hash, validation
 and revalidation condition; do not duplicate those values into consumer code.
 

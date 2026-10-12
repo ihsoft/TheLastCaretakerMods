@@ -68,7 +68,7 @@ the widget's physical discovery helper is a separate path.
 The accepted UE 5.8 checkpoint is:
 
 - retoc fork `ihsoft/retoc` at `49b7721`;
-- jmap fork `ihsoft/jmap` at `4f88d8a`;
+- jmap fork `ihsoft/jmap` at `fad7b92`;
 - UAssetAPI fork `ihsoft/UAssetAPI` at `21c982f`;
 - UAssetGUI fork `ihsoft/UAssetGUI` at `df18b5f`, using that UAssetAPI commit;
 - unmodified CUE4Parse upstream at
@@ -78,9 +78,9 @@ The accepted UE 5.8 checkpoint is:
   `42837CD279A78DF57B537020A0169C5D2259A4570D3B62F4B96852F0F5C27F96`;
 - canonical retoc at `.tools/bin/retoc.exe`, size `6,833,664` bytes and SHA-256
   `6F8F86AE3FD747A3B785E787A33C24F9A11735D03664948D6B619F18861650F5`;
-- canonical jmap dumper at `.tools/bin/jmap_dumper.exe`, size `9,472,000` bytes
+- canonical jmap dumper at `.tools/bin/jmap_dumper.exe`, size `9,474,048` bytes
   and SHA-256
-  `75E693C2ACD22BB63671EF368C8608931CEF59E8F6F441AFFA3F7A72A3D11543`;
+  `6A56DFCA0654835160E94F3E1D83023A86DDB1C3D29356FC0C4B008B7190987D`;
 - canonical UAssetAPI at `.tools/bin/UAssetAPI/UAssetAPI.dll`, size `4,210,176`
   bytes and SHA-256
   `6DF2606BBA89987AEB4BF1EFBD3C64AC565DBC5D6113A0A7A5062C7CD8B249FD`;
