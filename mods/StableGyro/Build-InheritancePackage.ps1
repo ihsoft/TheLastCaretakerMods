@@ -1,6 +1,6 @@
 # INTERNAL BUILD STAGE with game-derived DroppedActor patch contracts validated for
-# Steam build 25827816, VoyageSteam-Win64-Shipping.exe SHA-256
-# C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
+# Steam build 25880952, VoyageSteam-Win64-Shipping.exe SHA-256
+# 16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44.
 # Revalidate per GAME_DERIVED_SOURCES.md after every game update.
 
 param(
@@ -22,8 +22,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$expectedSteamBuildId = '25827816'
-$expectedExecutableSha256 = 'C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33'
+$expectedSteamBuildId = '25880952'
+$expectedExecutableSha256 = '16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44'
 $retocCompatibilityVersion = 'UE5_8'
 $expectedItemFilter = 'Data/Assets/Modules/DA_Item_Module_GyroCopter'
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
@@ -129,7 +129,12 @@ $helperSource = Join-Path $cooked 'Content\Mods\StableGyro'
 foreach ($assetName in @('BP_GyroCopter_StablePilot.uasset', 'BP_GyroCopter_StablePilot.uexp')) {
     Copy-Item -LiteralPath (Join-Path $childSource $assetName) -Destination $childStage
 }
-foreach ($assetName in @('ModActor.uasset', 'ModActor.uexp')) {
+foreach ($assetName in @(
+    'ModActor.uasset',
+    'ModActor.uexp',
+    'PitchInputActor.uasset',
+    'PitchInputActor.uexp'
+)) {
     Copy-Item -LiteralPath (Join-Path $helperSource $assetName) -Destination $helperStage
 }
 foreach ($assetName in @('IAV_GyroPitchReset.uasset', 'IAV_GyroPitchReset.uexp')) {
@@ -243,6 +248,7 @@ $expectedAssetPaths = @(
     '../../../Voyage/Content/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.uasset'
     '../../../Voyage/Content/Mods/StableGyro/IAV_GyroPitchReset.uasset'
     '../../../Voyage/Content/Mods/StableGyro/ModActor.uasset'
+    '../../../Voyage/Content/Mods/StableGyro/PitchInputActor.uasset'
     '../../../Voyage/Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset'
 )
 $inventory = @(& $retocPath list --path --size --hash --package $utoc)

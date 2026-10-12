@@ -10,6 +10,8 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 - [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md) owns the game fingerprint
   gate, stock Gyro package/class/input/physics contracts, direct
   `PropellerVelocity` reference values, and tracked reconstructed inputs.
+- [StableGyro backlog](../../docs/stablegyro-backlog.md) owns the active restart
+  state, candidate evidence, pending gates, and next validation action.
 - [Vehicle and HUD modding patterns][postphysics-pattern]
   owns the reusable PostPhysics correction model, axis-local velocity writes,
   previous-command growth rejection, control-intent projection, state reset,
@@ -33,20 +35,33 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   Neutral controls reject physics-injected horizontal speed growth before
   decay. Apply horizontal correction as an additive XY-only velocity delta;
   never rewrite the full velocity vector or its Z component from the horizontal
-  path. The helper must tick in `TG_PostPhysics`, after the stock rotor/Chaos
-  force integration. Gate every kinematic horizontal or vertical stabilization
+  path. The stabilization helper must tick in `TG_PostPhysics`, explicitly after
+  the stock Gyro tick and its rotor/Chaos force integration. Gate every
+  kinematic horizontal or vertical stabilization
   correction on the stock rotor's measured `PropellerVelocity`; below the
   configured direct threshold, clear stabilization state and do not alter
   position or velocity. During vertical braking, reject positive
   Vz growth above the previous helper command before applying the configured
-  constant-rate deceleration. Do not alter A/D integration, yaw, camera,
+  constant-rate deceleration. Do not require full throttle for stabilization.
+  While Ctrl is held, clear vertical hold/braking state and let stock descent
+  operate; Ctrl takes precedence over Space, while rotor-gated horizontal
+  damping may continue. Re-entering with Space released must brake positive Vz
+  before exact hold, rather than discarding climb inertia. Do not alter A/D integration, yaw, camera,
   possession, save behavior, or other HUD/input behavior without a new user
   request.
-- W increases, S decreases, and releasing both leaves the integrated value
-  unchanged. X writes exact zero immediately. Treat only exact native digital
+- When pitch correction is enabled, W increases, S decreases, and releasing
+  both leaves the integrated value unchanged. X writes exact zero immediately.
+  Treat only exact native digital
   markers `-1`, `0`, and `1` as commands, clamp integrated pitch to
   `-0.9999..0.9999`, and reset helper plus native pitch state when the owning
-  Gyro is not player controlled.
+  Gyro is not player controlled. Run the pitch helper in `TG_PrePhysics`, order
+  it after the player controller and before the stock Gyro with explicit tick
+  prerequisites, and restore the stored integrated value before every controlled
+  Gyro tick, including neutral input. When pitch correction is disabled, the
+  pitch helper must not read or write native `TiltForwardInput` on any tick or
+  lifecycle path and must not append the mod-owned X reset hint; inherited
+  stock actions pass through. The independent PostPhysics horizontal damping
+  path may still read the two native tilt axes as control intent.
 - Build-StableGyro.ps1 is the only public producer. It owns fingerprinting,
   editor build, generation, cook, clean item-data extraction, surgical patching,
   packaging, verification, ZIP creation, and optional -Install.
@@ -61,10 +76,12 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 - Preserve every stock Gyro keyboard mapping when replacing
   `IMC_GyroCopter_Keyboard`; the only added mapping is the mod-owned reset
   action on X. The child `GetProvidedActionsBP` must call the inherited native
-  action provider and append reset to its returned actions so base actions such
-  as the conditional F cargo hint survive.
+  action provider and, only while pitch correction is enabled, append reset to
+  its returned actions so base actions such as the conditional F cargo hint
+  survive.
 - Gameplay validation covers pitch in both directions, release hold, both
-  limits, X, exit/re-entry, full-throttle altitude braking/hold, and horizontal
+  limits, X, exit/re-entry, altitude braking/hold across partial and full
+  throttle, Ctrl descent/reacquisition, and horizontal
   damping under climb, descent, neutral, directional, and reversing input.
 
 ## Settings contract
@@ -79,16 +96,22 @@ and validation metadata. For each option:
 - `id` is the generated C++ symbol;
 - `runtimeName` is the generated Blueprint member and output-pin name;
 - `key` is the exact name to the left of `=` in the INI;
-- `type` creates a `double` or `bool` member on the generated `ModActor`; and
+- `type` creates a `double` or `bool` member on the generated settings owner; and
 - `minimum` and `maximum` clamp a numeric value after parsing.
 
 To add a setting, add the canonical value and adjacent comments to the INI,
 then add one schema entry with matching identities. Include
 `StableGyroSettings.h` and use the existing
 `namespace Settings = StableGyroSettings;` alias. The public producer creates
-the member, initializes it from the canonical default, and builds the BeginPlay
-INI loader. Do not call `AddMemberVariable` for the setting and do not edit the
-generated header. A consuming graph on `ModActor` reads the generated self-member
+the member, initializes it from the canonical default, and builds the callable
+`ReloadSettings` loader. Both helpers call it at BeginPlay and synchronously on
+player entry through the owning Pawn's controller-changed delegate, resetting
+their defaults before every read. `ModActor` owns the full settings set for
+PostPhysics stabilization; `PitchInputActor` owns only the duplicated
+`PitchRampSeconds` and `EnablePitchCorrection` members needed by its PrePhysics
+graph and action-hint gate. Do not call `AddMemberVariable` separately for a schema
+setting and do not edit the generated header. A consuming graph reads its
+own generated self-member
 like this:
 
 ```cpp
@@ -101,8 +124,8 @@ Ok &= Connect(
     RequirePin(Consumer, ConsumerPin));
 ```
 
-The null owner is required: every generated setting belongs to `ModActor`, not
-the stock Gyro or the replacement child. `Settings::<id>` is an `FName`, not
+The null owner is required: every generated setting belongs to the helper whose
+graph consumes it, not the stock Gyro or the replacement child. `Settings::<id>` is an `FName`, not
 the configured numeric or boolean value; it names the self-member and its value
 pin, while the `VariableGet` output carries the runtime value. In the initial
 helper generator the equivalent helpers are named `Read`, `Pin`, and `Link`;

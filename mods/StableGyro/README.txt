@@ -13,25 +13,29 @@ W  - smoothly increase forward pitch
 S  - smoothly decrease forward pitch
 X  - immediately reset pitch to zero
 
-Releasing W or S keeps the current pitch value.
+These controls apply when EnablePitchCorrection=true. Set it to false to leave
+stock W/S pitch control unchanged and hide the mod-owned X reset hint.
+Releasing W or S keeps the current pitch value while correction is enabled.
 
 PitchRampSeconds in StableGyro.ini sets the time from zero to maximum
-pitch. Default: 3.0 seconds. Restart the game after editing the file.
+pitch. Default: 3.0 seconds. Settings are reread when you enter a Gyro; exit
+and re-enter after editing the file.
 Put comments on their own lines; inline comments after values are invalid.
 
 StabilizationMinimumPropellerVelocity sets the minimum measured rotor speed at
 which altitude and horizontal stabilization may operate, in the stock
-PropellerVelocity units. Default: 390.0. Approximate references: 392 at 10%
-throttle, 784 at 20%, and 1176 at 30%. Below the threshold, the mod does not
+PropellerVelocity units. Default: 390.0. Below the threshold, the mod does not
 change position or velocity and clears stabilization state. Set 0 to disable
 this gate.
 
 AltitudeStabilizationVerticalDeceleration controls how quickly positive
-vertical speed is reduced after releasing Space at full throttle. Default:
-100.0 cm/s^2. Physics-driven positive speed growth is rejected while braking,
-and all kinematic corrections run after the stock physics step. The current
-altitude is held after the climb stops; horizontal velocity is handled
-independently. Restart Voyage after editing the INI.
+vertical speed is reduced after releasing Space or entering stabilization with
+Space released. Default: 100.0 cm/s^2. Physics-driven positive speed growth is
+rejected while braking, and all kinematic corrections run after the stock
+physics step. The current altitude is held after the climb stops. Hold Ctrl to
+release vertical hold/braking for stock descent and landing; Ctrl wins over
+Space. Horizontal damping remains independent. Exit and re-enter the Gyro after
+editing the INI.
 
 HorizontalVelocityDecayAcceleration controls kinematic horizontal braking.
 With neutral controls, physics-injected horizontal speed growth is rejected and

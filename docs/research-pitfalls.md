@@ -98,6 +98,14 @@ no-op или неверную архитектуру. Цель — не повт
   и корректировать результат в `TG_PostPhysics`; горизонтальная коррекция должна
   быть additive XY delta, иначе полный XYZ write конкурирует с вертикальным
   режимом.
+- `TickGroup` только на CDO сгенерированного helper-класса не гарантирует тот же
+  порядок у экземпляра из `ChildActorComponent`. Одноаргументный
+  `SetChildActorClass` сохранил на `ChildActorTemplate` исходный override
+  `TG_PrePhysics`, хотя отдельный cooked CDO helper-а уже содержал
+  `TG_PostPhysics`. Generator должен явно задать и проверить tick group и флаги
+  включения созданного child template, а cooked readback — подтвердить либо эти
+  значения, либо отсутствие override при правильном CDO. Это подтверждённый
+  контракт сериализации; само по себе оно не является gameplay-проверкой.
 
 ## Стандартные подсказки
 

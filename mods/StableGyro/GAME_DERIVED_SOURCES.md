@@ -2,11 +2,11 @@
 
 ## Fingerprint gate
 
-- Steam build: 25827816
+- Steam build: 25880952
 - Unreal Editor: 5.8.2
 - Unreal parser target: 5.8
 - VoyageSteam-Win64-Shipping.exe SHA-256:
-  C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33
+  16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44
 
 Run tools/Get-VoyageBuildFingerprint.ps1 before every generation or package
 build. A mismatch invalidates all contracts below.
@@ -23,8 +23,12 @@ The stock cooked assets establish:
   IA_GyroCopterTiltBackward, and both feed the native float
   TiltForwardInput;
 - A/D feed the native float `TiltInput`;
-- current native reflection owns `CurrentThrottle` and `PropellerVelocity` as
-  protected, Blueprint-readable float properties on
+- native `TiltForwardInput` and `TiltInput` remain protected and
+  Blueprint-readable. The editor-only mirror exposes them as writable only to
+  emit the already established Blueprint assignments; it is not a native flag
+  claim;
+- current native reflection owns `PropellerVelocity` as a protected,
+  Blueprint-readable float property on
   `/Script/Voyage.VoyageVehicleGyroCopter`;
 - the current stock Blueprint overrides its tilt limits to `-15..15` and its
   interpolation speed to `5`. StableGyro does not copy those values or replace
@@ -41,8 +45,12 @@ The stock cooked assets establish:
   preserve its actions, and appends the mod-owned X reset action;
 - current native defaults retain `PropellerVelocityScale=50` and
   `PropellerLift=75`. The old Blueprint flight formula and derived percentage
-  estimates are not treated as current contracts. StableGyro only reads the
-  reflected rotor velocity and throttle values used by its existing gates;
+  estimates are not treated as current contracts. StableGyro reads only the
+  reflected rotor velocity for its stabilization gate;
+- the native Gyro primary tick is in `TG_PostPhysics`. The generated pitch
+  helper therefore runs in `TG_PrePhysics` and is an explicit prerequisite of
+  the Gyro, while the PostPhysics stabilization helper explicitly depends on
+  the Gyro tick;
 - the Blueprint property `MeshComponent` references a runtime component whose
   UObject name is `VehicleMesh`. Code that scans components through
   `GetObjectName` must compare the runtime UObject name, not the reflected

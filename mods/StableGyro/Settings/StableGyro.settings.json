@@ -11,6 +11,12 @@
       "maximum": 60.0
     },
     {
+      "id": "EnablePitchCorrection",
+      "runtimeName": "EnablePitchCorrection",
+      "key": "EnablePitchCorrection",
+      "type": "boolean"
+    },
+    {
       "id": "StabilizationMinimumPropellerVelocity",
       "runtimeName": "StabilizationMinimumPropellerVelocity",
       "key": "StabilizationMinimumPropellerVelocity",

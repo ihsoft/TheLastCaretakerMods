@@ -1,7 +1,7 @@
-// HAND-RECONSTRUCTED GAME API MIRROR: Steam build 25827816, UE 5.8.2
+// HAND-RECONSTRUCTED GAME API MIRROR: Steam build 25880952, UE 5.8.2
 // (parser target 5.8),
 // VoyageSteam-Win64-Shipping.exe SHA-256
-// C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
+// 16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44.
 // Consumed enum values and CustomSettings/LanguageType identities were
 // revalidated from current native reflection metadata. Revalidate on fingerprint
 // change. Editor-only; never ship.

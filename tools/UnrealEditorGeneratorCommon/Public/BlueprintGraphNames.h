@@ -31,8 +31,21 @@ namespace BlueprintGraphNames::ActorFunctions
 inline const FName GetController(TEXT("GetController"));
 }
 
+namespace BlueprintGraphNames::ActorDelegates
+{
+inline const FName ReceiveControllerChanged(TEXT("ReceiveControllerChangedDelegate"));
+inline constexpr TCHAR PawnControllerChangedSignaturePath[] =
+    TEXT("/Script/Engine.PawnControllerChangedSignature__DelegateSignature");
+}
+
+namespace BlueprintGraphNames::ActorProperties
+{
+inline const FName ChildActor(TEXT("ChildActor"));
+}
+
 namespace BlueprintGraphNames::Events
 {
+inline const FName ActorReceiveBeginPlay(TEXT("ReceiveBeginPlay"));
 inline const FName ActorReceiveTick(TEXT("ReceiveTick"));
 inline const FName ActorReceiveDestroyed(TEXT("ReceiveDestroyed"));
 inline const FName WidgetConstruct(TEXT("Construct"));
@@ -90,8 +103,10 @@ inline const FName Min(TEXT("Min"));
 inline const FName Object(TEXT("Object"));
 inline const FName Owner(TEXT("Owner"));
 inline const FName ParentActor(TEXT("ParentActor"));
+inline const FName Pawn(TEXT("Pawn"));
 inline const FName PlayerIndex(TEXT("PlayerIndex"));
 inline const FName Pressed(TEXT("Pressed"));
+inline const FName PrerequisiteActor(TEXT("PrerequisiteActor"));
 inline const FName ReturnValue(TEXT("ReturnValue"));
 inline const FName SecondArrayElement(TEXT("[1]"));
 inline const FName SpawnTransform(TEXT("SpawnTransform"));

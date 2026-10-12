@@ -384,7 +384,7 @@ Invoke-UnrealGenerator -Commandlet 'GenerateStableGyroInheritance' -LogDirectory
 $phase.Stop()
 $timings.Generation = $phase.Elapsed.TotalSeconds
 
-Write-Host '4/7 Cooking four generated production packages in one Unreal process'
+Write-Host '4/7 Cooking five generated production packages in one Unreal process'
 $phase.Restart()
 $cookedRoot = Join-Path $releaseRoot 'cooked'
 & $cookScript `
@@ -414,7 +414,7 @@ $originalInputs = Get-CleanOriginalInputs `
 $phase.Stop()
 $timings.Originals = $phase.Elapsed.TotalSeconds
 
-Write-Host '6/7 Building and verifying the five-asset IoStore container'
+Write-Host '6/7 Building and verifying the six-asset IoStore container'
 $phase.Restart()
 $containerRoot = Join-Path $releaseRoot 'container'
 if (@($originalInputs).Count -ne 1) {
