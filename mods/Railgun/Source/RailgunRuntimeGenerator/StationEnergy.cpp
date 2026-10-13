@@ -52,20 +52,20 @@ UEdGraphPin* ChargingInputW(FGraph& G)
         NetChargeW, IdleConsumptionW(G));
 }
 
-UEdGraphPin* OfflineDrainAmount(FGraph& G, UEdGraphPin* DeltaSeconds,
-    UEdGraphPin* StoredEnergy, UEdGraphPin* OfflineDischargeKW)
+UEdGraphPin* IdleDebitAmount(FGraph& G, UEdGraphPin* DeltaSeconds,
+    UEdGraphPin* StoredEnergy, UEdGraphPin* IdleConsumptionKW)
 {
-    UEdGraphPin* OfflineDischargeW = EnergyMath(G,
+    UEdGraphPin* IdleConsumptionW = EnergyMath(G,
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
-        OfflineDischargeKW, Charge::WattsPerKilowatt);
-    auto* OfflineEnergySeconds = G.Binary(
+        IdleConsumptionKW, Charge::WattsPerKilowatt);
+    auto* IdleEnergySeconds = G.Binary(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble),
-        DeltaSeconds, OfflineDischargeW);
-    UEdGraphPin* OfflineEnergyAmount = EnergyMath(G,
+        DeltaSeconds, IdleConsumptionW);
+    UEdGraphPin* IdleEnergyAmount = EnergyMath(G,
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble),
-        OfflineEnergySeconds, Charge::SecondsPerHour);
+        IdleEnergySeconds, Charge::SecondsPerHour);
     return G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMin),
-        StoredEnergy, OfflineEnergyAmount);
+        StoredEnergy, IdleEnergyAmount);
 }
 
 FMulticastDelegateProperty* RailgunModuleDelegateProperty(FName PropertyName)
@@ -144,7 +144,7 @@ void SetEnergyDemand(FGraph& G, bool Charging)
     else G.Link(IdleW, G.Pin(Set, Charge::Input));
     // A full gun keeps its stored charge; idle demand must not shrink capacity.
     G.Link(RequestedCapacity, G.Pin(Set, Charge::Capacity));
-    G.Link(IdleW, G.Pin(Set, Charge::Idle)); G.Exec(Set);
+    G.Default(Set, Charge::Idle, N::Zero); G.Exec(Set);
 }
 
 UEdGraphPin* EnergyAmount(FGraph& G)
@@ -238,57 +238,57 @@ UK2Node_FunctionEntry* AddRailgunEnergyFunctionEntry(UBlueprint* BP,
     return nullptr;
 }
 
-void AddRailgunDrainRuntime(UBlueprint* BP)
+void AddRailgunIdleDebitRuntime(UBlueprint* BP)
 {
     check(BP && BP->GeneratedClass && BP->UbergraphPages.Num() == 1);
 
     UEdGraph* SettleGraph = nullptr;
     UK2Node_FunctionEntry* SettleEntry = AddRailgunEnergyFunctionEntry(
-        BP, Charge::SettleDrainFunction, SettleGraph);
+        BP, Charge::SettleDebitFunction, SettleGraph);
     UEdGraphPin* CutoffTime = SettleEntry->CreateUserDefinedPin(
         Charge::CutoffTimeParameter, RailgunEnergyRealPinType(), EGPD_Output);
     check(CutoffTime);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
     check(BP->Status != BS_Error && BP->GeneratedClass &&
-        BP->GeneratedClass->FindFunctionByName(Charge::SettleDrainFunction));
+        BP->GeneratedClass->FindFunctionByName(Charge::SettleDebitFunction));
 
     SettleEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
     FGraph Settle(SettleGraph);
     Settle.Tail = Settle.Pin(SettleEntry, P::Then);
-    Settle.Branch(Settle.Read(Charge::OfflineDrainActive));
+    Settle.Branch(Settle.Read(Charge::IdleDebitActive));
     Settle.Branch(Settle.Compare(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
-        Settle.Read(Charge::OfflineDrainDebitActive), N::False));
+        Settle.Read(Charge::IdleDebitRemovalActive), N::False));
     Settle.Branch(Settle.Valid(Settle.Read(Charge::Module)));
     UEdGraphPin* Elapsed = EnergyMath(Settle,
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax),
         Settle.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
             Subtract_DoubleDouble), CutoffTime,
-            Settle.Read(Charge::OfflineDrainTimestamp)), N::Zero);
-    Settle.Write(Charge::OfflineDrainElapsed, Elapsed);
+            Settle.Read(Charge::IdleDebitTimestamp)), N::Zero);
+    Settle.Write(Charge::IdleDebitElapsed, Elapsed);
     // Advance the integration boundary before RemoveResource. A synchronous
     // OnModuleValueChanged callback therefore cannot debit the same interval.
-    Settle.Write(Charge::OfflineDrainTimestamp, CutoffTime);
+    Settle.Write(Charge::IdleDebitTimestamp, CutoffTime);
     Settle.Branch(Settle.Compare(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
             Greater_DoubleDouble),
-        Settle.Read(Charge::OfflineDrainElapsed), N::Zero));
+        Settle.Read(Charge::IdleDebitElapsed), N::Zero));
     UEdGraphPin* StoredEnergy = EnergyMath(Settle,
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FMax),
         EnergyAmount(Settle), N::Zero);
     Settle.Branch(Settle.Compare(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
             Greater_DoubleDouble), StoredEnergy, N::Zero));
-    UEdGraphPin* Amount = OfflineDrainAmount(Settle,
-        Settle.Read(Charge::OfflineDrainElapsed),
-        StoredEnergy, Settle.Read(Charge::OfflineDrainRate));
+    UEdGraphPin* Amount = IdleDebitAmount(Settle,
+        Settle.Read(Charge::IdleDebitElapsed),
+        StoredEnergy, Settle.Read(Charge::IdleDebitRate));
     Settle.Branch(Settle.Compare(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
             Greater_DoubleDouble), Amount, N::Zero));
-    Settle.Write(Charge::OfflineDrainDebitActive, nullptr, N::True);
+    Settle.Write(Charge::IdleDebitRemovalActive, nullptr, N::True);
     DebitEnergy(Settle, Amount);
-    Settle.Write(Charge::OfflineDrainDebitActive, nullptr, N::False);
+    Settle.Write(Charge::IdleDebitRemovalActive, nullptr, N::False);
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
@@ -296,7 +296,7 @@ void AddRailgunDrainRuntime(UBlueprint* BP)
 
     UEdGraph* StopGraph = nullptr;
     UK2Node_FunctionEntry* StopEntry = AddRailgunEnergyFunctionEntry(
-        BP, Charge::StopDrainFunction, StopGraph);
+        BP, Charge::StopDebitFunction, StopGraph);
     UEdGraphPin* StopCutoff = StopEntry->CreateUserDefinedPin(
         Charge::CutoffTimeParameter, RailgunEnergyRealPinType(), EGPD_Output);
     UEdGraphPin* ShouldSettle = StopEntry->CreateUserDefinedPin(
@@ -305,35 +305,35 @@ void AddRailgunDrainRuntime(UBlueprint* BP)
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
     check(BP->Status != BS_Error && BP->GeneratedClass &&
-        BP->GeneratedClass->FindFunctionByName(Charge::StopDrainFunction));
+        BP->GeneratedClass->FindFunctionByName(Charge::StopDebitFunction));
 
     StopEntry->FindPinChecked(P::Then)->BreakAllPinLinks();
     FGraph Stop(StopGraph);
     Stop.Tail = Stop.Pin(StopEntry, P::Then);
     auto* SettleRequested = Stop.Branch(ShouldSettle);
     auto* SettleCall = Stop.Call(BP->GeneratedClass,
-        Charge::SettleDrainFunction);
+        Charge::SettleDebitFunction);
     Stop.Link(StopCutoff, Stop.Pin(SettleCall, Charge::CutoffTimeParameter));
     Stop.Exec(SettleCall);
     UEdGraphPin* SettledTail = Stop.Tail;
     Stop.Tail = Stop.Pin(SettleRequested, P::Else);
     StationMerge(Stop, {SettledTail, Stop.Tail});
-    auto* WasActive = Stop.Branch(Stop.Read(Charge::OfflineDrainActive));
+    auto* WasActive = Stop.Branch(Stop.Read(Charge::IdleDebitActive));
     auto* ClearTimer = Stop.Call(UKismetSystemLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,
             K2_ClearAndInvalidateTimerHandle));
     Stop.Link(OpticalSelf(Stop), Stop.Pin(ClearTimer,
         Charge::WorldContextObjectPin));
-    Stop.Link(Stop.Read(Charge::OfflineDrainTimerHandle),
+    Stop.Link(Stop.Read(Charge::IdleDebitTimerHandle),
         Stop.Pin(ClearTimer, Charge::TimerHandlePin));
     Stop.Exec(ClearTimer);
     UEdGraphPin* ClearedTail = Stop.Tail;
     Stop.Tail = Stop.Pin(WasActive, P::Else);
     StationMerge(Stop, {ClearedTail, Stop.Tail});
-    Stop.Write(Charge::OfflineDrainActive, nullptr, N::False);
-    Stop.Write(Charge::OfflineDrainDebitActive, nullptr, N::False);
-    Stop.Write(Charge::OfflineDrainTimestamp, nullptr, N::Zero);
-    Stop.Write(Charge::OfflineDrainRate, nullptr, N::Zero);
+    Stop.Write(Charge::IdleDebitActive, nullptr, N::False);
+    Stop.Write(Charge::IdleDebitRemovalActive, nullptr, N::False);
+    Stop.Write(Charge::IdleDebitTimestamp, nullptr, N::Zero);
+    Stop.Write(Charge::IdleDebitRate, nullptr, N::Zero);
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
@@ -342,7 +342,7 @@ void AddRailgunDrainRuntime(UBlueprint* BP)
     UEdGraph* Ubergraph = BP->UbergraphPages[0];
     FGraph Timer(Ubergraph);
     auto* TimerEvent = NewObject<UK2Node_CustomEvent>(Ubergraph);
-    TimerEvent->CustomFunctionName = Charge::DrainTimerEvent;
+    TimerEvent->CustomFunctionName = Charge::DebitTimerEvent;
     Timer.Node(TimerEvent);
     Timer.Tail = Timer.Pin(TimerEvent, P::Then);
     auto* TimerNowCall = Timer.Call(UKismetSystemLibrary::StaticClass(),
@@ -350,11 +350,11 @@ void AddRailgunDrainRuntime(UBlueprint* BP)
             GetGameTimeInSeconds));
     UEdGraphPin* TimerNow = Timer.Pin(TimerNowCall, P::ReturnValue);
     auto* TimerSettle = Timer.Call(BP->GeneratedClass,
-        Charge::SettleDrainFunction);
+        Charge::SettleDebitFunction);
     Timer.Link(TimerNow,
         Timer.Pin(TimerSettle, Charge::CutoffTimeParameter));
     Timer.Exec(TimerSettle);
-    Timer.Branch(Timer.Read(Charge::OfflineDrainActive));
+    Timer.Branch(Timer.Read(Charge::IdleDebitActive));
     UEdGraphPin* RuntimeValid = Timer.Binary(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
         Timer.Valid(Timer.Read(Charge::Module)),
@@ -374,7 +374,7 @@ void AddRailgunDrainRuntime(UBlueprint* BP)
     Timer.Tail = Timer.Pin(HasLiveEnergy, P::Else);
     StationMerge(Timer, {InvalidRuntimeTail, Timer.Tail});
     auto* StopInvalid = Timer.Call(BP->GeneratedClass,
-        Charge::StopDrainFunction);
+        Charge::StopDebitFunction);
     Timer.Link(TimerNow,
         Timer.Pin(StopInvalid, Charge::CutoffTimeParameter));
     Timer.Default(StopInvalid, Charge::SettleParameter, N::False);
@@ -384,14 +384,13 @@ void AddRailgunDrainRuntime(UBlueprint* BP)
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
     check(BP->Status != BS_Error && BP->GeneratedClass &&
-        BP->GeneratedClass->FindFunctionByName(Charge::DrainTimerEvent));
+        BP->GeneratedClass->FindFunctionByName(Charge::DebitTimerEvent));
 }
 
-void AddRailgunActivityFunctions(UBlueprint* BP,
-    FName OfflineDischargeField)
+void AddRailgunActivityFunctions(UBlueprint* BP)
 {
     check(BP && BP->GeneratedClass);
-    AddRailgunDrainRuntime(BP);
+    AddRailgunIdleDebitRuntime(BP);
     UEdGraph* ActivityGraph = FBlueprintEditorUtils::CreateNewGraph(BP,
         DS::RefreshActivity, UEdGraph::StaticClass(),
         UEdGraphSchema_K2::StaticClass());
@@ -406,45 +405,36 @@ void AddRailgunActivityFunctions(UBlueprint* BP,
     FGraph Activity(ActivityGraph);
     Activity.Tail = Activity.Pin(ActivityEntry, P::Then);
 
-    UEdGraphPin* HasSupply = Activity.Binary(
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
-        Activity.Read(Charge::SocketConnected),
-        Activity.Read(Charge::PowerAvailable));
-    UEdGraphPin* MissingSupply = Activity.Compare(
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
-        HasSupply, N::False);
     UEdGraphPin* HasEnergy = Activity.Compare(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
             Greater_DoubleDouble), Activity.Read(Charge::Energy), N::Zero);
     UEdGraphPin* PositiveRate = Activity.Compare(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
-            Greater_DoubleDouble), Activity.Read(OfflineDischargeField),
-        N::Zero);
-    UEdGraphPin* CanDrain = Activity.Binary(
+            Greater_DoubleDouble),
+        Activity.Read(Charge::ConfiguredIdleConsumptionKW), N::Zero);
+    UEdGraphPin* CanDebit = Activity.Binary(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
-        Activity.Binary(GET_FUNCTION_NAME_CHECKED(
-            UKismetMathLibrary, BooleanAND), MissingSupply, HasEnergy),
-        PositiveRate);
+        HasEnergy, PositiveRate);
     UEdGraphPin* ModuleValid = Activity.Valid(
         Activity.Read(Charge::Module));
     UEdGraphPin* NotTeardown = Activity.Compare(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
         Activity.Read(StationLifecycle::TeardownPending), N::False);
-    UEdGraphPin* DrainActive = Activity.Binary(
+    UEdGraphPin* DebitEnabled = Activity.Binary(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
         Activity.Binary(GET_FUNCTION_NAME_CHECKED(
-            UKismetMathLibrary, BooleanAND), CanDrain, ModuleValid),
+            UKismetMathLibrary, BooleanAND), CanDebit, ModuleValid),
         NotTeardown);
     UEdGraphPin* RateMatches = Activity.Binary(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
             EqualEqual_DoubleDouble),
-        Activity.Read(Charge::OfflineDrainRate),
-        Activity.Read(OfflineDischargeField));
+        Activity.Read(Charge::IdleDebitRate),
+        Activity.Read(Charge::ConfiguredIdleConsumptionKW));
     UEdGraphPin* KeepTimer = Activity.Binary(
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
-        DrainActive, RateMatches);
+        DebitEnabled, RateMatches);
     auto* TimerWasActive = Activity.Branch(
-        Activity.Read(Charge::OfflineDrainActive));
+        Activity.Read(Charge::IdleDebitActive));
     auto* KeepExisting = Activity.Branch(KeepTimer);
     UEdGraphPin* ExistingTimerTail = Activity.Tail;
     Activity.Tail = Activity.Pin(KeepExisting, P::Else);
@@ -452,39 +442,39 @@ void AddRailgunActivityFunctions(UBlueprint* BP,
         GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,
             GetGameTimeInSeconds));
     UEdGraphPin* StopNow = Activity.Pin(StopNowCall, P::ReturnValue);
-    auto* StopDrain = Activity.Call(BP->GeneratedClass,
-        Charge::StopDrainFunction);
+    auto* StopDebit = Activity.Call(BP->GeneratedClass,
+        Charge::StopDebitFunction);
     Activity.Link(StopNow,
-        Activity.Pin(StopDrain, Charge::CutoffTimeParameter));
-    Activity.Default(StopDrain, Charge::SettleParameter, N::True);
-    Activity.Exec(StopDrain);
+        Activity.Pin(StopDebit, Charge::CutoffTimeParameter));
+    Activity.Default(StopDebit, Charge::SettleParameter, N::True);
+    Activity.Exec(StopDebit);
     UEdGraphPin* StoppedTimerTail = Activity.Tail;
     Activity.Tail = Activity.Pin(TimerWasActive, P::Else);
     StationMerge(Activity, {StoppedTimerTail, Activity.Tail});
 
-    auto* ShouldStart = Activity.Branch(DrainActive);
+    auto* ShouldStart = Activity.Branch(DebitEnabled);
     auto* StartNowCall = Activity.Call(UKismetSystemLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,
             GetGameTimeInSeconds));
     UEdGraphPin* StartNow = Activity.Pin(StartNowCall, P::ReturnValue);
-    Activity.Write(Charge::OfflineDrainRate,
-        Activity.Read(OfflineDischargeField));
-    Activity.Write(Charge::OfflineDrainTimestamp, StartNow);
-    Activity.Write(Charge::OfflineDrainActive, nullptr, N::True);
+    Activity.Write(Charge::IdleDebitRate,
+        Activity.Read(Charge::ConfiguredIdleConsumptionKW));
+    Activity.Write(Charge::IdleDebitTimestamp, StartNow);
+    Activity.Write(Charge::IdleDebitActive, nullptr, N::True);
     auto* SetTimer = Activity.Call(UKismetSystemLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, K2_SetTimer));
     Activity.Link(OpticalSelf(Activity),
         Activity.Pin(SetTimer, TimerGraphNames::Object));
     Activity.Default(SetTimer, TimerGraphNames::Function,
-        Charge::DrainTimerFunctionName);
+        Charge::DebitTimerFunctionName);
     Activity.Default(SetTimer, TimerGraphNames::Interval,
-        Charge::OfflineDrainIntervalSeconds);
+        Charge::IdleDebitIntervalSeconds);
     Activity.Default(SetTimer, TimerGraphNames::Looping, N::True);
     Activity.Default(SetTimer, Charge::TimerMaxOncePerFramePin, N::True);
     Activity.Default(SetTimer, Charge::TimerInitialDelayPin,
-        Charge::OfflineDrainIntervalSeconds);
+        Charge::IdleDebitIntervalSeconds);
     Activity.Exec(SetTimer);
-    Activity.Write(Charge::OfflineDrainTimerHandle,
+    Activity.Write(Charge::IdleDebitTimerHandle,
         Activity.Pin(SetTimer, P::ReturnValue));
     UEdGraphPin* StartedTimerTail = Activity.Tail;
     Activity.Tail = Activity.Pin(ShouldStart, P::Else);
@@ -583,22 +573,6 @@ void AddRailgunDeferredSupplyEvent(UBlueprint* BP)
         UVoyageModuleComponent::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UVoyageModuleComponent, HasPower),
         ReconcileModule);
-    UEdGraphPin* RestoredSupply = G.Binary(
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
-        DeferredSocket, DeferredPower);
-    UEdGraphPin* MustSettle = G.Binary(
-        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND),
-        G.Read(Charge::OfflineDrainActive), RestoredSupply);
-    auto* SettleBeforeRestore = G.Branch(MustSettle);
-    auto* StopDrain = G.Call(BP->GeneratedClass,
-        Charge::StopDrainFunction);
-    G.Link(G.Read(Charge::SupplyReconcileTime),
-        G.Pin(StopDrain, Charge::CutoffTimeParameter));
-    G.Default(StopDrain, Charge::SettleParameter, N::True);
-    G.Exec(StopDrain);
-    UEdGraphPin* SettledTail = G.Tail;
-    G.Tail = G.Pin(SettleBeforeRestore, P::Else);
-    StationMerge(G, {SettledTail, G.Tail});
     G.Write(Charge::SocketConnected, DeferredSocket);
     G.Write(Charge::PowerAvailable, DeferredPower);
     auto* RefreshActivity = G.Call(BP->GeneratedClass,
@@ -615,11 +589,10 @@ void AddRailgunDeferredSupplyEvent(UBlueprint* BP)
             Charge::DeferredSupplyEvent));
 }
 
-void AddRailgunEnergyFunctions(UBlueprint* BP,
-    FName OfflineDischargeField)
+void AddRailgunEnergyFunctions(UBlueprint* BP)
 {
     check(BP && BP->GeneratedClass);
-    AddRailgunActivityFunctions(BP, OfflineDischargeField);
+    AddRailgunActivityFunctions(BP);
     AddRailgunDeferredSupplyEvent(BP);
     FMulticastDelegateProperty* DelegateProperty =
         RailgunModuleDelegateProperty(Charge::OnModuleValueChanged);
@@ -727,12 +700,6 @@ void AddRailgunEnergyFunctions(UBlueprint* BP,
         }
         else
         {
-            auto* EventTimeCall = Callback.Call(
-                UKismetSystemLibrary::StaticClass(),
-                GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,
-                    GetGameTimeInSeconds));
-            Callback.Write(Charge::SupplyReconcileTime,
-                Callback.Pin(EventTimeCall, P::ReturnValue));
             auto* AlreadyPending = Callback.Branch(
                 Callback.Read(Charge::SupplyReconcilePending));
             UEdGraphPin* PendingTail = Callback.Tail;
@@ -792,12 +759,12 @@ void AddRailgunEnergyFunctions(UBlueprint* BP,
     auto* BindNowCall = Bind.Call(UKismetSystemLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,
             GetGameTimeInSeconds));
-    auto* StopPreviousDrain = Bind.Call(BP->GeneratedClass,
-        Charge::StopDrainFunction);
+    auto* StopPreviousDebit = Bind.Call(BP->GeneratedClass,
+        Charge::StopDebitFunction);
     Bind.Link(Bind.Pin(BindNowCall, P::ReturnValue),
-        Bind.Pin(StopPreviousDrain, Charge::CutoffTimeParameter));
-    Bind.Default(StopPreviousDrain, Charge::SettleParameter, N::True);
-    Bind.Exec(StopPreviousDrain);
+        Bind.Pin(StopPreviousDebit, Charge::CutoffTimeParameter));
+    Bind.Default(StopPreviousDebit, Charge::SettleParameter, N::True);
+    Bind.Exec(StopPreviousDebit);
     IncrementRailgunInteger(Bind,
         Charge::SupplyReconcileGeneration);
     Bind.Write(Charge::SupplyReconcilePending, nullptr, N::False);
@@ -923,12 +890,12 @@ void AddRailgunEnergyTeardown(UBlueprint* BP)
     auto* EndPlayNowCall = G.Call(UKismetSystemLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary,
             GetGameTimeInSeconds));
-    auto* StopDrain = G.Call(BP->GeneratedClass,
-        Charge::StopDrainFunction);
+    auto* StopDebit = G.Call(BP->GeneratedClass,
+        Charge::StopDebitFunction);
     G.Link(G.Pin(EndPlayNowCall, P::ReturnValue),
-        G.Pin(StopDrain, Charge::CutoffTimeParameter));
-    G.Default(StopDrain, Charge::SettleParameter, N::True);
-    G.Exec(StopDrain);
+        G.Pin(StopDebit, Charge::CutoffTimeParameter));
+    G.Default(StopDebit, Charge::SettleParameter, N::True);
+    G.Exec(StopDebit);
     IncrementRailgunInteger(G,
         Charge::SupplyReconcileGeneration);
     G.Write(Charge::SupplyReconcilePending, nullptr, N::False);

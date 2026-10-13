@@ -440,10 +440,10 @@ int32 Generate()
     Module->ConfigData.bAcceptResourceOffer = true;
     Module->ConfigData.bAcceptResourceOfferOff = true; // an empty receiver must be able to recover power
     Module->ConfigData.bAcceptResourceOfferProduction = true;
-    Module->ConfigData.ResourceBandwidthInput = RailgunAssetNames::RailgunInitialEnergyConsumptionOn;
+    Module->ConfigData.ResourceBandwidthInput = RailgunAssetNames::RailgunInitialEnergyInputBandwidth;
     Module->ConfigData.MaxResourceAmount = RailgunAssetNames::RailgunIdleBufferKJ;
-    Module->ConfigData.ResourceConsumptionOn = RailgunAssetNames::RailgunInitialEnergyConsumptionOn;
-    Module->ConfigData.ResourceConsumptionStandby = RailgunAssetNames::RailgunInitialEnergyConsumptionStandby;
+    Module->ConfigData.ResourceConsumptionOn = RailgunAssetNames::RailgunInitialNativeConsumption;
+    Module->ConfigData.ResourceConsumptionStandby = RailgunAssetNames::RailgunInitialNativeConsumption;
     TSet<FString> PackageNames;
     for (UObject* Asset : Imported)
     {

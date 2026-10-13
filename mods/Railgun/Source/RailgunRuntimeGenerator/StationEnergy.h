@@ -14,27 +14,25 @@ inline const FName UpdateActive(TEXT("RailgunEnergyUpdateActive"));
 inline const FName UpdatePending(TEXT("RailgunEnergyUpdatePending"));
 inline const FName SocketConnected(TEXT("RailgunSocketConnected"));
 inline const FName PowerAvailable(TEXT("RailgunPowerAvailable"));
-inline const FName OfflineDrainActive(TEXT("RailgunOfflineDrainActive"));
-inline const FName OfflineDrainDebitActive(
-    TEXT("RailgunOfflineDrainDebitActive"));
+inline const FName IdleDebitActive(TEXT("RailgunIdleDebitActive"));
+inline const FName IdleDebitRemovalActive(
+    TEXT("RailgunIdleDebitRemovalActive"));
 inline const FName SupplyReconcilePending(
     TEXT("RailgunSupplyReconcilePending"));
 inline const FName SupplyReconcileGeneration(
     TEXT("RailgunSupplyReconcileGeneration"));
-inline const FName SupplyReconcileTime(
-    TEXT("RailgunSupplyReconcileTime"));
-inline const FName OfflineDrainTimestamp(
-    TEXT("RailgunOfflineDrainTimestamp"));
-inline const FName OfflineDrainRate(TEXT("RailgunOfflineDrainRateKW"));
-inline const FName OfflineDrainElapsed(TEXT("RailgunOfflineDrainElapsed"));
-inline const FName OfflineDrainTimerHandle(
-    TEXT("RailgunOfflineDrainTimerHandle"));
+inline const FName IdleDebitTimestamp(
+    TEXT("RailgunIdleDebitTimestamp"));
+inline const FName IdleDebitRate(TEXT("RailgunIdleDebitRateKW"));
+inline const FName IdleDebitElapsed(TEXT("RailgunIdleDebitElapsed"));
+inline const FName IdleDebitTimerHandle(
+    TEXT("RailgunIdleDebitTimerHandle"));
 inline const FName RefreshFunction(TEXT("RefreshRailgunEnergy"));
 inline const FName RefreshHudFunction(TEXT("RefreshRailgunHudEnergy"));
 inline const FName RefreshSupplyFunction(TEXT("RefreshRailgunSupplyState"));
-inline const FName SettleDrainFunction(TEXT("SettleRailgunOfflineDrain"));
-inline const FName StopDrainFunction(TEXT("StopRailgunOfflineDrain"));
-inline const FName DrainTimerEvent(TEXT("OnRailgunOfflineDrainTimer"));
+inline const FName SettleDebitFunction(TEXT("SettleRailgunIdleDebit"));
+inline const FName StopDebitFunction(TEXT("StopRailgunIdleDebit"));
+inline const FName DebitTimerEvent(TEXT("OnRailgunIdleDebitTimer"));
 inline const FName DeferredSupplyEvent(
     TEXT("DeferredRailgunSupplyReconcile"));
 inline const FName BindFunction(TEXT("BindRailgunEnergy"));
@@ -70,9 +68,9 @@ inline constexpr TCHAR GameResourceUnitsPerKWh[] = TEXT("1000.0");
 inline constexpr TCHAR WattsPerResourceUnit[] = TEXT("1000.0");
 inline constexpr TCHAR WattsPerKilowatt[] = TEXT("1000.0");
 inline constexpr TCHAR SecondsPerHour[] = TEXT("3600.0");
-inline constexpr TCHAR OfflineDrainIntervalSeconds[] = TEXT("0.3333333333");
-inline constexpr TCHAR DrainTimerFunctionName[] =
-    TEXT("OnRailgunOfflineDrainTimer");
+inline constexpr TCHAR IdleDebitIntervalSeconds[] = TEXT("0.3333333333");
+inline constexpr TCHAR DebitTimerFunctionName[] =
+    TEXT("OnRailgunIdleDebitTimer");
 inline constexpr TCHAR TimerHandlePin[] = TEXT("Handle");
 inline constexpr TCHAR TimerMaxOncePerFramePin[] = TEXT("bMaxOncePerFrame");
 inline constexpr TCHAR TimerInitialDelayPin[] = TEXT("InitialStartDelay");
@@ -93,8 +91,8 @@ UEdGraphPin* RequiredEnergyAmount(FGraph& G);
 UEdGraphPin* EnergyCapacityAmount(FGraph& G);
 UEdGraphPin* IdleConsumptionW(FGraph& G);
 UEdGraphPin* ChargingInputW(FGraph& G);
-UEdGraphPin* OfflineDrainAmount(FGraph& G, UEdGraphPin* DeltaSeconds,
-    UEdGraphPin* StoredEnergy, UEdGraphPin* OfflineDischargeKW);
+UEdGraphPin* IdleDebitAmount(FGraph& G, UEdGraphPin* DeltaSeconds,
+    UEdGraphPin* StoredEnergy, UEdGraphPin* IdleConsumptionKW);
 FMulticastDelegateProperty* RailgunModuleDelegateProperty(FName PropertyName);
 
 FMulticastDelegateProperty* RailgunModulePowerDelegateProperty();
@@ -124,15 +122,13 @@ UEdGraphPin* DebitEnergy(FGraph& G, UEdGraphPin* Amount);
 UK2Node_FunctionEntry* AddRailgunEnergyFunctionEntry(UBlueprint* BP,
     FName FunctionName, UEdGraph*& Graph);
 
-void AddRailgunDrainRuntime(UBlueprint* BP);
+void AddRailgunIdleDebitRuntime(UBlueprint* BP);
 
-void AddRailgunActivityFunctions(UBlueprint* BP,
-    FName OfflineDischargeField);
+void AddRailgunActivityFunctions(UBlueprint* BP);
 
 void AddRailgunDeferredSupplyEvent(UBlueprint* BP);
 
-void AddRailgunEnergyFunctions(UBlueprint* BP,
-    FName OfflineDischargeField);
+void AddRailgunEnergyFunctions(UBlueprint* BP);
 
 void AddRailgunEnergyTeardown(UBlueprint* BP);
 UEdGraphPin* DebitEnergy(FGraph& G, UEdGraphPin* Amount);

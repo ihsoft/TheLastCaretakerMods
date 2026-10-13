@@ -1030,7 +1030,8 @@ $removedSettingKeys = @(
     'TargetDistanceOpacityPercent','TargetDistanceFontSize',
     'TargetDistanceFontPath','TargetDistanceTypeface',
     'ChargeTextOpacityPercent','ChargeTextFontSize','ChargeTextFontPath',
-    'ChargeTextTypeface','ChargeIndicatorSmoothingSpeed'
+    'ChargeTextTypeface','ChargeIndicatorSmoothingSpeed',
+    'OfflineDischargeKW'
 )
 $removedSettingFields = @(
     'RailgunStatusIconOpacityPercent',
@@ -1041,7 +1042,8 @@ $removedSettingFields = @(
     'RailgunTargetDistanceOpacityPercent','RailgunTargetDistanceFontSize',
     'RailgunTargetDistanceFontPath','RailgunTargetDistanceTypeface',
     'RailgunChargeTextOpacityPercent','RailgunChargeTextFontSize',
-    'RailgunChargeTextFontPath','RailgunChargeTextTypeface'
+    'RailgunChargeTextFontPath','RailgunChargeTextTypeface',
+    'RailgunOfflineDischargeKW'
 )
 foreach ($removedSetting in $removedSettingKeys + $removedSettingFields) {
     Require (-not ($operatorPackageStrings -ccontains $removedSetting)) `
@@ -1562,7 +1564,7 @@ foreach ($requiredEnergyBindReference in @(
     'RailgunEnergyUpdatePending',
     'RailgunSocketConnected',
     'RailgunPowerAvailable',
-    'StopRailgunOfflineDrain',
+    'StopRailgunIdleDebit',
     'RailgunSupplyReconcileGeneration',
     'RailgunSupplyReconcilePending',
     'OnModuleValueChanged',
@@ -1586,13 +1588,24 @@ $runtimeActivity = @($operatorFunctions | Where-Object {
 Require ($runtimeActivity.Count -eq 1) `
     'Expected one runtime activity reconciler.'
 $runtimeActivityStrings = @(JsonStringLeaves $runtimeActivity[0])
-foreach ($requiredActivityReference in @(
-    'RailgunEnergyModule','RailgunSocketConnected',
-    'RailgunPowerAvailable','RailgunChargeAmount',
-    'RailgunOfflineDrainActive','RailgunOfflineDischargeKW',
+foreach ($removedIdleDebitSymbol in @(
+    'RailgunOfflineDrainActive','RailgunOfflineDrainDebitActive',
     'RailgunOfflineDrainRateKW','RailgunOfflineDrainTimestamp',
-    'RailgunOfflineDrainTimerHandle','OnRailgunOfflineDrainTimer',
-    'StopRailgunOfflineDrain',"Class'KismetSystemLibrary:K2_SetTimer'",
+    'RailgunOfflineDrainElapsed','RailgunOfflineDrainTimerHandle',
+    'OnRailgunOfflineDrainTimer','SettleRailgunOfflineDrain',
+    'StopRailgunOfflineDrain','RailgunSupplyReconcileTime'
+)) {
+    Require (-not ($operatorPackageStrings -ccontains
+        $removedIdleDebitSymbol)) `
+        ('Retired offline-drain symbol remains serialized: ' +
+            $removedIdleDebitSymbol)
+}
+foreach ($requiredActivityReference in @(
+    'RailgunEnergyModule','RailgunChargeAmount','RailgunIdleConsumptionKW',
+    'RailgunIdleDebitActive',
+    'RailgunIdleDebitRateKW','RailgunIdleDebitTimestamp',
+    'RailgunIdleDebitTimerHandle','OnRailgunIdleDebitTimer',
+    'StopRailgunIdleDebit',"Class'KismetSystemLibrary:K2_SetTimer'",
     'RailgunOwnsView','RailgunTeardownPending','SetActorTickEnabled'
 )) {
     Require ($runtimeActivityStrings -ccontains $requiredActivityReference) `
@@ -1602,43 +1615,45 @@ foreach ($requiredActivityReference in @(
 foreach ($forbiddenActivityReference in @(
     "Class'VoyageModuleComponent:RemoveResource'",
     "Class'VoyageModuleComponent:HasSocketConnection'",
-    "Class'VoyageModuleComponent:HasPower'"
+    "Class'VoyageModuleComponent:HasPower'",
+    'RailgunSocketConnected','RailgunPowerAvailable',
+    'RailgunOfflineDischargeKW'
 )) {
     Require (-not ($runtimeActivityStrings -ccontains
         $forbiddenActivityReference)) `
         ('Runtime activity must only own timer lifecycle: ' +
             $forbiddenActivityReference)
 }
-$offlineDrainSettle = @($operatorFunctions | Where-Object {
-    $_.Name -ceq 'SettleRailgunOfflineDrain'
+$idleDebitSettle = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'SettleRailgunIdleDebit'
 })
-Require ($offlineDrainSettle.Count -eq 1) `
-    'Expected one elapsed-time offline-drain integrator.'
-$offlineDrainSettleStrings = @(JsonStringLeaves $offlineDrainSettle[0])
+Require ($idleDebitSettle.Count -eq 1) `
+    'Expected one elapsed-time idle-debit integrator.'
+$idleDebitSettleStrings = @(JsonStringLeaves $idleDebitSettle[0])
 foreach ($requiredSettleReference in @(
-    'RailgunOfflineDrainActive','RailgunOfflineDrainDebitActive',
-    'RailgunOfflineDrainTimestamp','RailgunOfflineDrainRateKW',
-    'RailgunOfflineDrainElapsed',
+    'RailgunIdleDebitActive','RailgunIdleDebitRemovalActive',
+    'RailgunIdleDebitTimestamp','RailgunIdleDebitRateKW',
+    'RailgunIdleDebitElapsed',
     "Class'VoyageModuleComponent:GetResourceAmount'",
     "Class'VoyageModuleComponent:RemoveResource'"
 )) {
-    Require ($offlineDrainSettleStrings -ccontains $requiredSettleReference) `
-        ('Offline-drain integrator reference missing: ' +
+    Require ($idleDebitSettleStrings -ccontains $requiredSettleReference) `
+        ('Idle-debit integrator reference missing: ' +
             $requiredSettleReference)
 }
-$offlineDrainStop = @($operatorFunctions | Where-Object {
-    $_.Name -ceq 'StopRailgunOfflineDrain'
+$idleDebitStop = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'StopRailgunIdleDebit'
 })
-Require ($offlineDrainStop.Count -eq 1) `
-    'Expected one idempotent offline-drain stop function.'
-$offlineDrainStopStrings = @(JsonStringLeaves $offlineDrainStop[0])
+Require ($idleDebitStop.Count -eq 1) `
+    'Expected one idempotent idle-debit stop function.'
+$idleDebitStopStrings = @(JsonStringLeaves $idleDebitStop[0])
 foreach ($requiredStopReference in @(
-    'SettleBeforeStop','SettleRailgunOfflineDrain',
-    'RailgunOfflineDrainTimerHandle','RailgunOfflineDrainActive',
+    'SettleBeforeStop','SettleRailgunIdleDebit',
+    'RailgunIdleDebitTimerHandle','RailgunIdleDebitActive',
     "Class'KismetSystemLibrary:K2_ClearAndInvalidateTimerHandle'"
 )) {
-    Require ($offlineDrainStopStrings -ccontains $requiredStopReference) `
-        ('Offline-drain stop reference missing: ' + $requiredStopReference)
+    Require ($idleDebitStopStrings -ccontains $requiredStopReference) `
+        ('Idle-debit stop reference missing: ' + $requiredStopReference)
 }
 $supplyRefresh = @($operatorFunctions | Where-Object {
     $_.Name -ceq 'RefreshRailgunSupplyState'
@@ -1686,6 +1701,27 @@ Require (@($energyRefreshStrings | Where-Object {
     ($energyRefreshStrings -ccontains
         "Class'KismetMathLibrary:Add_DoubleDouble'")) `
     'Energy demand must apply configured idle W in both idle and charging modes.'
+$customConsumptionStatements = @($energyRefresh[0].ScriptBytecode |
+    Where-Object {
+        $_ -is [pscustomobject] -and
+        $_.PSObject.Properties.Name -ccontains 'ContextExpression' -and
+        $null -ne $_.ContextExpression -and
+        $_.ContextExpression.PSObject.Properties.Name -ccontains
+            'Function' -and
+        $null -ne $_.ContextExpression.Function -and
+        $_.ContextExpression.Function.ObjectName -ceq
+            "Class'VoyageModuleComponent:SetCustomConsumption'"
+    })
+Require ($customConsumptionStatements.Count -eq 2) `
+    'Energy refresh must contain exactly two custom-consumption calls.'
+foreach ($customConsumptionStatement in $customConsumptionStatements) {
+    $parameters = @(
+        $customConsumptionStatement.ContextExpression.Parameters)
+    Require ($parameters.Count -eq 3 -and
+        $parameters[2].Token -ceq 'EX_DoubleConst' -and
+        [Math]::Abs([double]$parameters[2].Value) -lt 0.000001) `
+        'Native ON consumption must remain zero; idle debit is explicit.'
+}
 Require (-not ($energyRefreshStrings -ccontains
         "Class'VoyageModuleComponent:RefreshSocketsPorts'")) `
     'Manual socket initialization must not refresh native socket ports after demand changes.'
@@ -1820,23 +1856,23 @@ Require (@($operatorStrings | Where-Object {
         $_ -ceq 'RefreshRailgunHudEnergy'
     }).Count -eq 1) `
     'Deferred supply reconciliation must own one HUD status refresh.'
-$drainTimerEvent = @($operatorFunctions | Where-Object {
-    $_.Name -ceq 'OnRailgunOfflineDrainTimer'
+$debitTimerEvent = @($operatorFunctions | Where-Object {
+    $_.Name -ceq 'OnRailgunIdleDebitTimer'
 })
-$drainTimerParameters = if ($drainTimerEvent.Count -eq 1 -and
-    $drainTimerEvent[0].PSObject.Properties.Name -ccontains
+$debitTimerParameters = if ($debitTimerEvent.Count -eq 1 -and
+    $debitTimerEvent[0].PSObject.Properties.Name -ccontains
         'ChildProperties') {
-    @($drainTimerEvent[0].ChildProperties)
+    @($debitTimerEvent[0].ChildProperties)
 } else {
     @()
 }
-Require ($drainTimerEvent.Count -eq 1 -and
-    @($drainTimerParameters).Count -eq 0) `
-    'Expected one parameterless offline-drain timer event.'
+Require ($debitTimerEvent.Count -eq 1 -and
+    @($debitTimerParameters).Count -eq 0) `
+    'Expected one parameterless idle-debit timer event.'
 foreach ($requiredEnergyEventReference in @(
     'RailgunSupplyReconcileGeneration','RailgunSupplyReconcilePending',
-    'RailgunSupplyReconcileTime','SettleRailgunOfflineDrain',
-    'StopRailgunOfflineDrain',
+    'SettleRailgunIdleDebit',
+    'StopRailgunIdleDebit',
     "Class'KismetSystemLibrary:DelayUntilNextTick'"
 )) {
     Require ($operatorStrings -ccontains $requiredEnergyEventReference) `
@@ -1961,25 +1997,25 @@ $refundCallIndexes = @(NativeContextCallIndexes $operatorStatements `
     "Class'VoyageModuleComponent:AddResource'")
 Require ($removeEnergyCallIndexes.Count -eq 1) `
     'Railgun ubergraph must contain only the shot energy debit.'
-$offlineDrainStatements = @($offlineDrainSettle[0].ScriptBytecode)
-$offlineDrainRemoveIndexes = @(NativeContextCallIndexes `
-    $offlineDrainStatements "Class'VoyageModuleComponent:RemoveResource'")
-Require ($offlineDrainRemoveIndexes.Count -eq 1) `
-    'Offline-drain integrator must contain exactly one native energy debit.'
-$offlineDrainRemoveStatements = @($offlineDrainStatements | Where-Object {
-    [int]$_.StatementIndex -eq [int]$offlineDrainRemoveIndexes[0]
+$idleDebitStatements = @($idleDebitSettle[0].ScriptBytecode)
+$idleDebitRemoveIndexes = @(NativeContextCallIndexes `
+    $idleDebitStatements "Class'VoyageModuleComponent:RemoveResource'")
+Require ($idleDebitRemoveIndexes.Count -eq 1) `
+    'Idle-debit integrator must contain exactly one native energy debit.'
+$idleDebitRemoveStatements = @($idleDebitStatements | Where-Object {
+    [int]$_.StatementIndex -eq [int]$idleDebitRemoveIndexes[0]
 })
-Require ($offlineDrainRemoveStatements.Count -eq 1) `
-    'Offline-drain debit statement could not be resolved.'
-$offlineDrainRemoveParameters = @(
-    $offlineDrainRemoveStatements[0].Expression.ContextExpression.Parameters
+Require ($idleDebitRemoveStatements.Count -eq 1) `
+    'Idle-debit debit statement could not be resolved.'
+$idleDebitRemoveParameters = @(
+    $idleDebitRemoveStatements[0].Expression.ContextExpression.Parameters
 )
-Require ($offlineDrainRemoveParameters.Count -eq 3 -and
-    $offlineDrainRemoveParameters[1].Token -ceq 'EX_LocalVariable' -and
-    $offlineDrainRemoveParameters[1].Variable.Property.Name -clike
+Require ($idleDebitRemoveParameters.Count -eq 3 -and
+    $idleDebitRemoveParameters[1].Token -ceq 'EX_LocalVariable' -and
+    $idleDebitRemoveParameters[1].Variable.Property.Name -clike
         'CallFunc_FMin_ReturnValue*') `
-    'Offline idle drain must debit the amount capped by stored energy.'
-$offlineDrainMath = @($offlineDrainStatements | Where-Object {
+    'Idle debit must debit the amount capped by stored energy.'
+$idleDebitMath = @($idleDebitStatements | Where-Object {
     if ($_ -isnot [pscustomobject] -or
         -not ($_.PSObject.Properties.Name -ccontains 'Expression') -or
         $null -eq $_.Expression -or
@@ -1996,28 +2032,28 @@ $offlineDrainMath = @($offlineDrainStatements | Where-Object {
         [Math]::Abs([double]$_.Value - 3600.0) -lt 0.000001
     }).Count -eq 1
 })
-Require ($offlineDrainMath.Count -ge 1 -and
-    ($offlineDrainSettleStrings -ccontains
-        'RailgunOfflineDrainElapsed') -and
-    ($offlineDrainSettleStrings -ccontains
-        'RailgunOfflineDrainTimestamp') -and
-    ($offlineDrainSettleStrings -ccontains
-        'RailgunOfflineDrainRateKW')) `
-    'Offline drain must integrate captured elapsed game time at its active rate.'
+Require ($idleDebitMath.Count -ge 1 -and
+    ($idleDebitSettleStrings -ccontains
+        'RailgunIdleDebitElapsed') -and
+    ($idleDebitSettleStrings -ccontains
+        'RailgunIdleDebitTimestamp') -and
+    ($idleDebitSettleStrings -ccontains
+        'RailgunIdleDebitRateKW')) `
+    'Idle debit must integrate captured elapsed game time at its active rate.'
 $receiveTick = @($operatorFunctions | Where-Object {
     $_.Name -ceq 'ReceiveTick'
 })
 Require ($receiveTick.Count -eq 1) 'Expected one station ReceiveTick event.'
 $receiveTickStrings = @(JsonStringLeaves $receiveTick[0])
-foreach ($forbiddenTickDrainReference in @(
-    'RailgunOfflineDrainActive','SettleRailgunOfflineDrain',
+foreach ($forbiddenTickDebitReference in @(
+    'RailgunIdleDebitActive','SettleRailgunIdleDebit',
     "Class'VoyageModuleComponent:RemoveResource'",
     "Class'KismetSystemLibrary:K2_SetTimer'"
 )) {
     Require (-not ($receiveTickStrings -ccontains
-        $forbiddenTickDrainReference)) `
+        $forbiddenTickDebitReference)) `
         ('Station ReceiveTick must remain optics-only: ' +
-            $forbiddenTickDrainReference)
+            $forbiddenTickDebitReference)
 }
 Require (-not ($runtimeActivityStrings -ccontains
         "Class'VoyageModuleComponent:HasSocketConnection'") -and
@@ -2864,8 +2900,17 @@ Require ($module[0].Properties.ItemAsset.ObjectPath -ceq ($gunItemPackage + '.0'
 Require ($gunItemPackage.StartsWith($itemDiscoveryRoot + '/', [StringComparison]::Ordinal)) 'Railgun item is outside the confirmed Item AssetManager discovery root.'
 Require ($skillPackage.StartsWith($skillDiscoveryRoot + '/', [StringComparison]::Ordinal)) 'Railgun skill is outside the confirmed Skill AssetManager discovery root.'
 $energy = $module[0].Properties.ConfigData
-Require ([Math]::Abs($energy.ResourceConsumptionOn - 1000) -lt 0.001) 'Initial ON consumption mismatch.'
-Require ([Math]::Abs($energy.ResourceConsumptionStandby - 1000) -lt 0.001) 'Initial standby consumption mismatch.'
+$energyPropertyNames = @($energy.PSObject.Properties.Name)
+$initialConsumptionOn = if ($energyPropertyNames -ccontains
+    'ResourceConsumptionOn') { [double]$energy.ResourceConsumptionOn } else { 0.0 }
+$initialConsumptionStandby = if ($energyPropertyNames -ccontains
+    'ResourceConsumptionStandby') {
+        [double]$energy.ResourceConsumptionStandby
+    } else { 0.0 }
+Require ([Math]::Abs($initialConsumptionOn) -lt 0.001) `
+    'Initial ON consumption must remain absent or zero.'
+Require ([Math]::Abs($initialConsumptionStandby) -lt 0.001) `
+    'Initial standby consumption must remain absent or zero.'
 Require ([Math]::Abs($energy.ResourceBandwidthInput - 1000) -lt 0.001) 'Initial input bandwidth mismatch.'
 Require ([Math]::Abs($energy.MaxResourceAmount - 1.0) -lt 0.000001) 'Idle buffer mismatch.'
 Require ($energy.bAutoStartModule -and $energy.bAcceptResourceOffer -and $energy.bAcceptResourceOfferProduction) 'Native receiver disabled.'
@@ -3445,5 +3490,5 @@ $skillIcon = @(Read-Candidate '/Game/Mods/Railgun/Research/T_RailgunSkill')
 $skillTexture = @($skillIcon | Where-Object { $_.Type -ceq 'Texture2D' -and $_.Name -ceq 'T_RailgunSkill' })
 Require ($skillTexture.Count -eq 1 -and $skillTexture[0].SizeX -eq 256 -and $skillTexture[0].SizeY -eq 256) 'Railgun skill icon must be 256x256.'
 $reportPath = Join-Path $output 'validation.json'
-[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; exact Voyage module-value delegate bindings for guarded gameplay-energy maintenance and a separate visual observer, with idempotent remove/add, initial and settings snapshots, mode-cached demand changes, end-play unbinding, coalesced next-tick socket reconciliation, active-only elapsed-time offline-drain timer, and no tick-owned drain, demand or charge-indicator write; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; shell-owned BeginPlay and persistent post-load station initialization with a transient direct station reference, no global actor discovery and no player-controller startup gate; simple collision preserved; imported material packages remain readable and are recorded as evidence without constraining authored material type, parameters or parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+[ordered]@{status='passed';runtime='pending';containerSha256=(Get-FileHash -LiteralPath $Container -Algorithm SHA256).Hash;assetEvidence=$evidence;materialEvidence=$materialEvidence;assertions='owned native module parent with exact inherited inventory function; magazine-anchored stock-profile interaction query; exact discovered ItemAsset; confirmed Item and Skill AssetManager scan roots; weight-limited six-round inventory derived from the authored ammo mass, with native BeginPlay limit setter, exact valid-item predicate, owned-ammo binding, stock container overlay and no temporary inventory probe; exact Voyage inventory-change delegate binding with initial and deferred post-load visual synchronization and no ammo-visual polling accumulator; six persistent UV-cropped white/faint ammo indicators activated right-to-left from the event-maintained count cache, with a zero-count red tint independent of the charge ring, one guarded initial sync, no HUD inventory polling and whole-block optics visibility; exact Voyage module-value delegate bindings for guarded gameplay-energy maintenance and a separate visual observer, with idempotent remove/add, initial and settings snapshots, mode-cached demand changes, end-play unbinding, coalesced next-tick socket reconciliation, active-only elapsed-time idle-debit timer, and no tick-owned drain, demand or charge-indicator write; connected-and-powered insufficient-charge guard for subtle-red charge text and radial progress ring with opaque-white offline/ready recovery and unchanged radial background; no unreviewed native template values; auto-weld; inventory-matched component hierarchy and transforms; shell-owned BeginPlay and persistent post-load station initialization with a transient direct station reference, no global actor discovery and no player-controller startup gate; simple collision preserved; imported material packages remain readable and are recorded as evidence without constraining authored material type, parameters or parent; JSON-authored gun, ammo and skill primary assets preserve native identity, required runtime references and package integrity without pinning editable presentation or balance values; distinct 256x256 research icon'} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 [pscustomobject]@{status='passed';reportPath=$reportPath}

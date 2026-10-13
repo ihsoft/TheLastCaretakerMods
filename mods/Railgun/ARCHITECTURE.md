@@ -79,12 +79,18 @@
   hit resolution is authoritative.
 - Railgun settings and HUD use the game's displayed `KWh` scale. Voyage maps
   one displayed `KWh` to 1000 native electricity amount units; module demand
-  remains expressed in W. `IdleConsumptionKW` is converted to W and applied to
-  the connected module whether it is full or charging. Charging adds the same
-  background demand to the separately derived net charge power, so changing
-  idle consumption does not change `FullChargeTimeSeconds`. Zero and fractional
-  values are valid; the standard numeric parser supplies the `1` kW template
-  fallback for nonnumeric input and clamps values to the declared range.
+  remains expressed in W. `IdleConsumptionKW` is converted to W and requested
+  from the network whether the module is full or charging. A separate
+  elapsed-time timer continuously debits that amount from the stored resource,
+  independent of socket and power state. Native network input replenishes the
+  same store: full supply offsets idle debit, limited supply leaves the net
+  deficit, and missing supply pays the full idle cost. Charging requests the
+  same idle amount in addition to the separately derived net charge power, so
+  changing idle consumption does not change `FullChargeTimeSeconds` while the
+  requested input is available. Native ON and standby consumption remain zero
+  so this explicit debit is the only idle-loss path. Zero and fractional values
+  are valid; the standard numeric parser supplies the `1` kW template fallback
+  for nonnumeric input and clamps values to the declared range.
 - Station initialization resolves and caches the concrete module, binds the
   exact value, socket-connection and power-state delegates, and performs
   initial charge and supply snapshots. The value callback refreshes cached
@@ -103,24 +109,29 @@
   reconciliation. The desired demand mode is cached before the native setter;
   synchronous nested notifications are coalesced into one final non-forced
   read, which does not repeat the setter when the mode is unchanged. Rebinding
-  first settles and stops the old module's drain timer, invalidates pending
+  first settles and stops the old module's idle-debit timer, invalidates pending
   supply reconciliation, removes old delegates and clears cached module,
   charge and supply state. A failed replacement cannot retain stale work.
   EndPlay performs the same timer and binding teardown.
 - The station actor starts with Tick disabled and enables it only while the
   local station view is owned. Active optics/range work may remain per-frame
-  while aiming. Offline discharge is separate: cached supply and charge state
-  start one looping active-only timer at one-third-second intervals. The timer
-  never polls `HasSocketConnection` or `HasPower`; it integrates elapsed game
+  while aiming. Idle debit is separate: positive cached charge and a positive
+  idle rate start one looping active-only timer at one-third-second intervals.
+  The timer is independent of cached supply state and never polls
+  `HasSocketConnection` or `HasPower`; it integrates elapsed game
   time at the rate captured when the timer starts, advances its timestamp
   before native removal, and caps each debit by the live stored amount.
   Re-entrant value notifications therefore cannot debit the same interval.
-  Stop, rate change, rebind and teardown settle the final partial interval
-  against the old module and old rate, then clear the handle. Idle, supplied,
-  empty and zero-rate stations own no drain timer. Tick no longer discovers
+  Rate change, rebind and teardown settle the final partial interval
+  against the old module and old rate, then clear the handle. Empty and
+  zero-rate stations own no debit timer; a native value callback restarts it
+  after replenishment makes an empty store positive. Tick does not discover
   lifecycle or supply state, maintains demand, drains energy, or samples unused
   charge-rate state. Capacity, units, the fresh pre-shot balance check and exact
-  shot debit remain independent of the offline-drain path.
+  shot debit remain independent of the idle-debit path. The extra one-unit
+  service capacity absorbs the default one-third-second idle debit near full;
+  unusually high configured idle rates may exceed that buffer and cause
+  charging-mode transitions at the timer cadence.
 - The HUD resolves its exact owning station once from the owning player pawn in
   widget construction. It first identity-safely unregisters any prior station,
   stores reciprocal transient widget/station references, then takes initial
@@ -157,9 +168,6 @@
   opacity `0.7`, size `20`, ShareTech Mono and Bold; target distance uses
   `(0, 185)`, `0.7`, size `25`, DSEG7 Classic Bold and Bold; charge text uses
   opacity `0.7`, size `14`, Noto Sans Regular and Regular.
-- Loss of the module power connection discharges stored energy to zero at the
-  configured `OfflineDischargeKW` rate. The default is `50` kW; zero disables
-  offline discharge. This setting is independent of connected idle demand.
 - The model-authored charge-indicator render mesh keeps its GLB transform,
   ancestry, dimensions and UVs. The shell disables collision, overlap and shadow
   and tags it for runtime binding. That tagged component loads the stock
@@ -423,8 +431,9 @@ right-to-left updates, the zero-count tint and optics hiding.
 The charge text and filled part of the radial ring use the same subtle red tint
 whenever stored energy is below one shot. Shot-ready and invalid states use
 opaque white; the radial background color is never changed by this warning.
-When power is disconnected, configurable offline discharge eventually moves a
-previously shot-ready gun into the red incomplete-charge state.
+Continuous idle debit can move a previously shot-ready gun into the red
+incomplete-charge state whenever native network input does not fully replenish
+the configured loss.
 
 ## Shot visual effects
 

@@ -545,26 +545,24 @@ UClass* CreateDedicatedStation()
     for (FName Field : {Charge::DemandInitialized, Charge::DemandCharging,
         Charge::UpdateActive, Charge::UpdatePending,
         Charge::SocketConnected, Charge::PowerAvailable,
-        Charge::OfflineDrainActive, Charge::OfflineDrainDebitActive,
+        Charge::IdleDebitActive, Charge::IdleDebitRemovalActive,
         Charge::SupplyReconcilePending})
         AddVariable(BP, Field, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, Charge::SupplyReconcileGeneration,
         UEdGraphSchema_K2::PC_Int);
-    for (FName Field : {Charge::SupplyReconcileTime,
-        Charge::OfflineDrainTimestamp, Charge::OfflineDrainRate,
-        Charge::OfflineDrainElapsed})
+    for (FName Field : {Charge::IdleDebitTimestamp, Charge::IdleDebitRate,
+        Charge::IdleDebitElapsed})
         AddVariable(BP, Field, UEdGraphSchema_K2::PC_Real);
-    AddVariable(BP, Charge::OfflineDrainTimerHandle,
+    AddVariable(BP, Charge::IdleDebitTimerHandle,
         UEdGraphSchema_K2::PC_Struct, FTimerHandle::StaticStruct());
-    for (FName Field : {Charge::OfflineDrainActive,
-        Charge::OfflineDrainDebitActive,
+    for (FName Field : {Charge::IdleDebitActive,
+        Charge::IdleDebitRemovalActive,
         Charge::SupplyReconcilePending,
         Charge::SupplyReconcileGeneration,
-        Charge::SupplyReconcileTime,
-        Charge::OfflineDrainTimestamp,
-        Charge::OfflineDrainRate,
-        Charge::OfflineDrainElapsed,
-        Charge::OfflineDrainTimerHandle})
+        Charge::IdleDebitTimestamp,
+        Charge::IdleDebitRate,
+        Charge::IdleDebitElapsed,
+        Charge::IdleDebitTimerHandle})
         MarkVariableTransient(BP, Field);
     AddVariable(BP, RailgunChargeIndicator::Owner,
         UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
@@ -1437,7 +1435,7 @@ UClass* CreateDedicatedStation()
     AddRailgunReloadFunctions(BP);
     AddContextEntry(BP);
     AddNativeStationHudInterface(BP, Hud->GeneratedClass);
-    AddRailgunEnergyFunctions(BP, Settings::OfflineDischarge);
+    AddRailgunEnergyFunctions(BP);
     AddRailgunChargeIndicatorFunctions(BP);
     AddStationLifecycleFunctions(BP);
     BuildDedicatedStationGraph(BP);

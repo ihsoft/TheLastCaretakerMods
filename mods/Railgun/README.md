@@ -150,10 +150,13 @@ output.
 ## Settings
 
 The installed `Railgun.ini` is read when the player enters the weapon. Existing
-user settings are preserved by installation. A missing key uses its template
-default at runtime and is added to the installed file by the next installation.
-The installer also retains the existing one-time migration from the former
-`FullChargeEnergyKJ` key.
+user settings are preserved by installation except for retired keys;
+`OfflineDischargeKW` is removed because idle loss now uses
+`IdleConsumptionKW`. A missing key uses its template default at runtime and is
+added to the installed file by the next installation. The installer also
+retains the existing one-time migration from the former `FullChargeEnergyKJ`
+key. Settings replacement is process-guarded, backed up and recorded beside
+the common installation evidence.
 
 ```ini
 OpticsMousePercent=35
@@ -165,7 +168,6 @@ FullChargeEnergyKWh=0.85
 FullChargeTimeSeconds=5.5
 ShotVolumePercent=600
 IdleConsumptionKW=1
-OfflineDischargeKW=50
 CameraRecoilStrength=1
 ShipRecoilStrength=1
 ```
@@ -195,10 +197,15 @@ and power state, and the charging icon uses an authored looping UMG animation;
 the gameplay HUD has no diagnostic status text and does not poll the module.
 
 Electricity storage is configured in the same `KWh` unit shown by the game.
-Voyage maps one displayed `KWh` to 1000 native electricity amount units; the
+Voyage maps one displayed `KWh` to 1000 native electricity amount units. The
 generator converts that amount to the module's W demand for the configured
-charge time, plus `IdleConsumptionKW` converted to W. The idle setting defaults
-to `1` and accepts zero and fractional kW values. Like other numeric settings,
+charge time and requests `IdleConsumptionKW` in addition. A separate elapsed-time
+timer continuously debits the same idle amount from stored energy, independent
+of socket and power state. Native network input replenishes that store, so full
+supply offsets the idle debit, limited supply produces the corresponding net
+deficit, and disconnected or empty-grid operation pays the full idle cost. The
+idle setting defaults to `1`; zero disables both the background request and
+idle debit, and fractional kW values are valid. Like other numeric settings,
 nonnumeric input retains the template fallback and out-of-range input is
 clamped to the declared range.
 
@@ -213,22 +220,22 @@ precede freshness of `HasSocketConnection`; an accepted event therefore
 schedules one coalesced next-tick snapshot for the same still-bound module.
 Power events consume their exact `bHasPower` payload immediately.
 A re-entry settings read forces one demand refresh so changed charge-time,
-capacity, idle-consumption or offline-discharge values take effect without
+capacity or idle-consumption values take effect without
 waiting for another resource event. Synchronous notifications raised by the native demand setter
 are coalesced into one final read; the desired mode is cached before the setter
-is called. Rebinding settles and stops the old module's drain timer, invalidates
+is called. Rebinding settles and stops the old module's idle-debit timer, invalidates
 pending supply reconciliation, removes old delegates and clears stale state
 before resolving a replacement module. EndPlay performs the same timer and
 binding teardown.
 
 The station actor starts with Tick disabled and enables it only while the local
-station view is owned; Actor Tick owns optics and range work only. Offline
-discharge uses a separate looping timer that exists only while cached supply is
-missing, stored energy is positive and `OfflineDischargeKW` is positive. It
-runs at approximately 3 Hz, never polls socket or power, and integrates elapsed
-game time rather than assuming a fixed callback interval. Stop, rate change,
-rebind and teardown settle the last partial interval before clearing the timer;
-idle, supplied, empty and zero-rate stations own no drain timer.
+station view is owned; Actor Tick owns optics and range work only. Idle debit
+uses a separate looping timer while stored energy and `IdleConsumptionKW` are
+positive. It runs at approximately 3 Hz, never polls socket or power, and
+integrates elapsed game time rather than assuming a fixed callback interval.
+Rate change, rebind and teardown settle the last partial interval before
+clearing the timer. Empty and zero-rate stations own no debit timer; a native
+balance change restarts it when stored energy becomes positive.
 
 Actual station entry is driven by `ReceivePossessed`; it reloads the installed
 INI and refreshes camera and energy state after one next-tick continuation.

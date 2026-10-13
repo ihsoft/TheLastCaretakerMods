@@ -234,6 +234,66 @@ function Invoke-NativeStage([string]$Name, [string]$Executable, [string[]]$Nativ
     if ($LASTEXITCODE -ne 0) { throw "$Name failed ($LASTEXITCODE); log: $log" }
     Write-Host "$Name passed; log: $log"
 }
+function Remove-DeprecatedRailgunSettings([string]$SettingsPath) {
+    $bytes = [IO.File]::ReadAllBytes($SettingsPath)
+    $preambleLength = 0
+    $encoding = New-Object Text.UTF8Encoding($false, $true)
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and
+        $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        $encoding = New-Object Text.UTF8Encoding($true, $true)
+        $preambleLength = 3
+    } elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and
+        $bytes[1] -eq 0xFE) {
+        $encoding = New-Object Text.UnicodeEncoding($false, $true, $true)
+        $preambleLength = 2
+    } elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFE -and
+        $bytes[1] -eq 0xFF) {
+        $encoding = New-Object Text.UnicodeEncoding($true, $true, $true)
+        $preambleLength = 2
+    }
+    $text = $encoding.GetString($bytes, $preambleLength,
+        $bytes.Length - $preambleLength)
+    $deprecatedPattern = '(?im)^[\t ]*OfflineDischargeKW[\t ]*=.*(?:\r\n|\n|\r|$)'
+    $removedCount = [regex]::Matches($text, $deprecatedPattern).Count
+    if ($removedCount -eq 0) {
+        return [pscustomobject]@{removedCount=0;sha256=(Get-FileHash `
+            -LiteralPath $SettingsPath -Algorithm SHA256).Hash}
+    }
+    $updated = [regex]::Replace($text, $deprecatedPattern, '')
+    if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
+            -ErrorAction SilentlyContinue).Count -gt 0) {
+        throw 'Game started; deprecated settings removal refused.'
+    }
+    $body = $encoding.GetBytes($updated)
+    $preamble = $encoding.GetPreamble()
+    $updatedBytes = New-Object byte[] ($preamble.Length + $body.Length)
+    [Array]::Copy($preamble, 0, $updatedBytes, 0, $preamble.Length)
+    [Array]::Copy($body, 0, $updatedBytes, $preamble.Length, $body.Length)
+    $temporaryPath = $SettingsPath + '.railgun-' +
+        [guid]::NewGuid().ToString('N') + '.tmp'
+    $replacementBackupPath = $SettingsPath + '.railgun-' +
+        [guid]::NewGuid().ToString('N') + '.bak'
+    try {
+        [IO.File]::WriteAllBytes($temporaryPath, $updatedBytes)
+        $expectedHash = (Get-FileHash -LiteralPath $temporaryPath `
+            -Algorithm SHA256).Hash
+        [IO.File]::Replace($temporaryPath, $SettingsPath,
+            $replacementBackupPath, $true)
+        $actualHash = (Get-FileHash -LiteralPath $SettingsPath `
+            -Algorithm SHA256).Hash
+        if ($actualHash -cne $expectedHash) {
+            throw 'Deprecated settings removal readback hash mismatch.'
+        }
+    } finally {
+        if (Test-Path -LiteralPath $temporaryPath) {
+            Remove-Item -LiteralPath $temporaryPath -Force
+        }
+        if (Test-Path -LiteralPath $replacementBackupPath) {
+            Remove-Item -LiteralPath $replacementBackupPath -Force
+        }
+    }
+    return [pscustomobject]@{removedCount=$removedCount;sha256=$actualHash}
+}
 function Add-MissingRailgunSettings([string]$TemplatePath, [string]$SettingsPath) {
     $templateLines = @([IO.File]::ReadAllLines($TemplatePath))
     $lines = @([IO.File]::ReadAllLines($SettingsPath))
@@ -1098,13 +1158,135 @@ if ($Install) {
     $installation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
         -ReleaseManifest $manifestPath -AllowDirtySource -RetainArchiveOnRestore
     $settingsPath = Join-Path $installation.paksDirectory 'Railgun.ini'
-    if (-not (Test-Path -LiteralPath $settingsPath)) {
-        if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' -ErrorAction SilentlyContinue).Count -gt 0) { throw 'Game started; settings installation refused.' }
-        Copy-Item -LiteralPath (Join-Path $payload 'Railgun.ini') -Destination $settingsPath
-        $settingsInstallation = [pscustomobject]@{path=$settingsPath;created=$true;addedKeys=@();sha256=(Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash}
-    } else {
-        $addedKeys = @(Add-MissingRailgunSettings (Join-Path $payload 'Railgun.ini') $settingsPath)
-        $settingsInstallation = [pscustomobject]@{path=$settingsPath;created=$false;addedKeys=$addedKeys;sha256=(Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash}
+    $settingsTemplatePath = Join-Path $payload 'Railgun.ini'
+    $settingsEvidenceDirectory = Split-Path -Parent `
+        $installation.installManifestPath
+    $settingsRecordPath = Join-Path $settingsEvidenceDirectory `
+        'settings-installation.json'
+    $settingsBackupDirectory = Join-Path $settingsEvidenceDirectory `
+        'settings-previous'
+    $settingsBackupPath = Join-Path $settingsBackupDirectory 'Railgun.ini'
+    $settingsExisted = Test-Path -LiteralPath $settingsPath -PathType Leaf
+    $settingsPreviousHash = if ($settingsExisted) {
+        (Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash
+    } else { $null }
+    $settingsBackupVerified = $false
+    try {
+        if ($settingsExisted) {
+            $null = New-Item -ItemType Directory -Path `
+                $settingsBackupDirectory
+            Copy-Item -LiteralPath $settingsPath `
+                -Destination $settingsBackupPath
+            if ((Get-FileHash -LiteralPath $settingsBackupPath `
+                    -Algorithm SHA256).Hash -cne $settingsPreviousHash) {
+                throw 'Railgun settings backup hash mismatch.'
+            }
+            $settingsBackupVerified = $true
+        }
+        if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
+                -ErrorAction SilentlyContinue).Count -gt 0) {
+            throw 'Game started after container installation; settings mutation refused.'
+        }
+        $settingsProcessCheckedAtUtc = [DateTime]::UtcNow.ToString('o')
+        $addedKeys = @()
+        $removedKeys = @()
+        if (-not $settingsExisted) {
+            $temporarySettingsPath = $settingsPath + '.railgun-' +
+                [guid]::NewGuid().ToString('N') + '.tmp'
+            try {
+                Copy-Item -LiteralPath $settingsTemplatePath `
+                    -Destination $temporarySettingsPath
+                [IO.File]::Move($temporarySettingsPath, $settingsPath)
+            } finally {
+                if (Test-Path -LiteralPath $temporarySettingsPath) {
+                    Remove-Item -LiteralPath $temporarySettingsPath -Force
+                }
+            }
+            if ((Get-FileHash -LiteralPath $settingsPath `
+                    -Algorithm SHA256).Hash -cne
+                (Get-FileHash -LiteralPath $settingsTemplatePath `
+                    -Algorithm SHA256).Hash) {
+                throw 'Created Railgun settings readback hash mismatch.'
+            }
+        } else {
+            $removal = Remove-DeprecatedRailgunSettings $settingsPath
+            if ([int]$removal.removedCount -gt 0) {
+                $removedKeys = @('OfflineDischargeKW')
+            }
+            $addedKeys = @(Add-MissingRailgunSettings $settingsTemplatePath `
+                $settingsPath)
+        }
+        if (@([IO.File]::ReadAllLines($settingsPath) | Where-Object {
+                $_ -match '^\s*OfflineDischargeKW\s*='
+            }).Count -ne 0) {
+            throw 'Deprecated OfflineDischargeKW remains installed.'
+        }
+        $settingsHash = (Get-FileHash -LiteralPath $settingsPath `
+            -Algorithm SHA256).Hash
+        $settingsInstallation = [pscustomobject]@{
+            schemaVersion=1
+            status='installed'
+            path=$settingsPath
+            created=(-not $settingsExisted)
+            previousExisted=$settingsExisted
+            previousSha256=$settingsPreviousHash
+            previousBackupPath=$(if ($settingsExisted) {
+                $settingsBackupPath
+            } else { $null })
+            templateSha256=(Get-FileHash -LiteralPath $settingsTemplatePath `
+                -Algorithm SHA256).Hash
+            addedKeys=$addedKeys
+            removedKeys=$removedKeys
+            sha256=$settingsHash
+            processCheckedAtUtc=$settingsProcessCheckedAtUtc
+            installedAtUtc=[DateTime]::UtcNow.ToString('o')
+            releaseInstallManifestPath=$installation.installManifestPath
+        }
+        $settingsInstallation | ConvertTo-Json -Depth 5 |
+            Set-Content -LiteralPath $settingsRecordPath -Encoding UTF8
+        $settingsInstallation | Add-Member -NotePropertyName recordPath `
+            -NotePropertyValue $settingsRecordPath
+    } catch {
+        $settingsFailure = $_
+        if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
+                -ErrorAction SilentlyContinue).Count -gt 0) {
+            throw ('Railgun settings failed and the game is now running; ' +
+                'installed containers were not restored. Actual error: ' +
+                $settingsFailure.Exception.Message)
+        }
+        $settingsRollbackError = $null
+        try {
+            if ($settingsExisted -and $settingsBackupVerified) {
+                Copy-Item -LiteralPath $settingsBackupPath `
+                    -Destination $settingsPath -Force
+                if ((Get-FileHash -LiteralPath $settingsPath `
+                        -Algorithm SHA256).Hash -cne $settingsPreviousHash) {
+                    throw 'Railgun settings rollback hash mismatch.'
+                }
+            } elseif (-not $settingsExisted -and
+                (Test-Path -LiteralPath $settingsPath)) {
+                Remove-Item -LiteralPath $settingsPath -Force
+            }
+        } catch {
+            $settingsRollbackError = $_.Exception.Message
+        }
+        $releaseRollbackError = $null
+        try {
+            $null = & (Join-Path $repo `
+                'tools/Restore-VoyageReleaseInstallation.ps1') `
+                -InstallManifest $installation.installManifestPath
+        } catch {
+            $releaseRollbackError = $_.Exception.Message
+        }
+        if ($null -ne $settingsRollbackError -or
+            $null -ne $releaseRollbackError) {
+            throw ('Railgun settings/install recovery failed. Settings=' +
+                [string]$settingsRollbackError + '; release=' +
+                [string]$releaseRollbackError + '; original=' +
+                $settingsFailure.Exception.Message)
+        }
+        throw ('Railgun settings failed; prior settings and release were ' +
+            'restored. Actual error: ' + $settingsFailure.Exception.Message)
     }
     $restoreValidation = & (Join-Path $repo `
         'tools/Restore-VoyageReleaseInstallation.ps1') `
