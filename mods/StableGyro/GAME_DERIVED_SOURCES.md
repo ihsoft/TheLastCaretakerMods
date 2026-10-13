@@ -13,7 +13,8 @@ build. A mismatch invalidates all contracts below.
 
 ## Game contracts
 
-The stock cooked assets establish:
+The stock cooked assets, current native reflection metadata, and bounded
+native-code analysis establish:
 
 - the vehicle package is /Game/Blueprints/Vehicles/BP_GyroCopter_Possessable;
 - its native parent is /Script/Voyage.VoyageVehicleGyroCopter;
@@ -33,6 +34,18 @@ The stock cooked assets establish:
 - the current stock Blueprint overrides its tilt limits to `-15..15` and its
   interpolation speed to `5`. StableGyro does not copy those values or replace
   the native flight implementation;
+- native forward input targets `TiltForwardAngle * TiltForwardInput` in
+  `CommandedTilt`; normalized rotation interpolation uses
+  `DeltaSeconds * TiltInterpSpeed`. The native control pass then computes
+  `speedRatio = clamp(PropellerVelocity / GovernedRotorSpeed, 0, 1)` when
+  `GovernedRotorSpeed > 0`, otherwise zero. It sets
+  `HullAttitudeTarget = CommandedTilt * speedRatio * HullAttitudeFollow`
+  and applies `CommandedTilt - HullAttitudeTarget` as the tilt component's
+  relative rotation. The native default `HullAttitudeFollow=0.7` has no stock
+  Blueprint override. At `speedRatio=1`, this leaves 30% of the commanded
+  angle on the rotor relative to the hull (4.5 degrees at full forward input),
+  not a halved input integration rate. These are static native-code contracts
+  for the fingerprint above, not measurements of a particular flight;
 - the game settings reader
   VoyageEditorBlueprintFunctionLibrary.LoadFileToArray(FString) retains the
   exact signature already established by Railgun on this fingerprint;

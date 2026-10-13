@@ -18,7 +18,7 @@ stock W/S pitch control unchanged and hide the mod-owned X reset hint.
 Releasing W or S keeps the current pitch value while correction is enabled.
 
 PitchRampSeconds in StableGyro.ini sets the time from zero to maximum
-pitch. Default: 3.0 seconds. Settings are reread when you enter a Gyro; exit
+pitch. Default: 1.5 seconds. Settings are reread when you enter a Gyro; exit
 and re-enter after editing the file.
 Put comments on their own lines; inline comments after values are invalid.
 

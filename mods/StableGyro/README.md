@@ -18,7 +18,7 @@ StableGyro improves both direct controls and flight stability. With
   unchanged.
 
 Assets/StableGyro.ini is copied beside the container. The default
-PitchRampSeconds=3.0 means three seconds from neutral to either limit.
+PitchRampSeconds=1.5 means 1.5 seconds from neutral to either limit.
 Accepted values are clamped to 0.05..60.0. Set
 `EnablePitchCorrection=false` to leave stock W/S pitch control unchanged and
 hide the mod-owned X reset hint. Settings are reread whenever the player enters
