@@ -142,6 +142,20 @@ UClass* CreateRailgunShot()
     G.Write(RailgunWaterWake::PreviewDistance,nullptr,N::Zero);
     SpawnRailgunWaterWakeController(G);
     G.Write(Shot::Direction,ObserveCall(G,AActor::StaticClass(),GET_FUNCTION_NAME_CHECKED(AActor,GetActorForwardVector),OpticalSelf(G)));
+    auto* SetObjectType = G.Call(UPrimitiveComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, SetCollisionObjectType));
+    G.Link(G.Read(Shot::Body), G.Pin(SetObjectType, P::FunctionTarget));
+    G.Default(SetObjectType, Shot::CollisionChannel,
+        Shot::WorldDynamicObjectType);
+    G.Exec(SetObjectType);
+    auto* SetAllResponses = G.Call(UPrimitiveComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent,
+            SetCollisionResponseToAllChannels));
+    G.Link(G.Read(Shot::Body),
+        G.Pin(SetAllResponses, P::FunctionTarget));
+    G.Default(SetAllResponses, Shot::NewCollisionResponse,
+        Shot::BlockAllResponse);
+    G.Exec(SetAllResponses);
     for(FName Name:{Shot::Railgun,Shot::Operator,Shot::Station}) {
         auto* Ignore=G.Call(UPrimitiveComponent::StaticClass(),GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent,IgnoreActorWhenMoving));
         G.Link(G.Read(Shot::Body),G.Pin(Ignore,P::FunctionTarget)); G.Link(G.Read(Name),G.Pin(Ignore,Shot::IgnoreActor)); G.Default(Ignore,Shot::ShouldIgnore,N::True); G.Exec(Ignore);

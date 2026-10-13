@@ -262,14 +262,22 @@ Ship recoil applies a backward impulse only when the module's attachment chain
 reaches a simulated physical body. Recoil is emitted only after a successful
 shot has consumed both charge and ammunition.
 
+The projectile initializes its collision component at runtime as
+`WorldDynamic` with every channel blocked. This is explicit because cooked
+serialization may omit an editor template value that equals the authoring
+default while native runtime component construction supplies a different
+collision profile or object type.
+
 ## Compatibility and validation
 
-The update candidate is fingerprint-gated to Steam build `25827816`, executable
-SHA-256 `C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33`
-and UE `5.8.2`. Build, cook and container verification are not gameplay
-validation. Manual socket ownership and powered charging are confirmed in the
-real game for this fingerprint. Registry discovery, research unlock and
-behavior outside the established single-player scope retain their separate
+The mod is fingerprint-gated to Steam build `25880952`, executable SHA-256
+`16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44`,
+parser profile `UE5_8` and authoring editor `5.8.2`. In the current game,
+validated behavior covers direct hits and damage against a Talon shark,
+impact fire and smoke, and the fountain-only effect for a water miss. This
+does not establish behavior for every target, submerged collision order,
+multiplayer or save/load. Powered charging was not separately revalidated for
+this fingerprint. Registry discovery and research unlock retain their separate
 validation boundaries. See
 [ARCHITECTURE.md](ARCHITECTURE.md) for the durable runtime contracts and current
 hypotheses.

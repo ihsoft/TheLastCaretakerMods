@@ -12,14 +12,20 @@ namespace RailgunVfx
 inline constexpr TCHAR SeaMinePath[] =
     TEXT("/Game/VFX/Environment/Interactive/NS_Explosion_SeaMine.NS_Explosion_SeaMine");
 
-inline const FName ShockwaveEmitter(TEXT("shockwave"));
-inline const FName MainEmitter(TEXT("main"));
+inline const FName DropTowerEmitter(TEXT("Drop_Tower"));
+inline const FName TowerEmitter(TEXT("Tower"));
+inline const FName SpikesEmitter(TEXT("Spikes"));
+inline const FName CoreDropsEmitter(TEXT("Core_Drops"));
+inline const FName FireExplodeEmitter(TEXT("FireExplode"));
 inline const FName SparkEmitter(TEXT("spark"));
 inline const FName LargeSparkEmitter(TEXT("spark_l"));
-inline const FName RefractionEmitter(TEXT("refr"));
-inline const FName ProjectileEmitter(TEXT("project"));
-inline const FName PuffEmitter(TEXT("puff"));
-inline const FName DirtMainEmitter(TEXT("dirt_main"));
+inline const FName ShockwaveEmitter(TEXT("shockwave"));
+inline const FName NapalmSparkEmitter(TEXT("Spark001"));
+inline const FName CoreSmokeEmitter(TEXT("Core_Smoke001"));
+inline const FName SmallerPiecesEmitter(TEXT("SmallerPieces"));
+inline const FName BigPiecesEmitter(TEXT("BigPieces"));
+inline const FName BigPieceSplashEmitter(TEXT("BigPieceSplash"));
+inline const FName SmallPieceSplashEmitter(TEXT("SmallPieceSplash"));
 
 inline const FName EmitterName(TEXT("EmitterName"));
 inline const FName EmitterEnabled(TEXT("bNewEnableState"));
@@ -31,7 +37,7 @@ void SetRailgunVfxEmitterEnabled(FGraph& G, UEdGraphPin* Component,
     FName EmitterName, bool Enabled);
 
 void ConfigureRailgunSeaMineEmitters(FGraph& G, UEdGraphPin* Component,
-    bool DirtMainOnly);
+    bool WaterOnly);
 
 namespace RailgunImpactVfx
 {
@@ -44,13 +50,13 @@ inline const FName Asset(TEXT("InAsset"));
 inline const FName ResetOverrides(TEXT("bResetExistingOverrideParameters"));
 inline const FName AutoDestroyEnabled(TEXT("bInAutoDestroy"));
 inline const FName Reset(TEXT("bReset"));
-inline const FName DirtMainOnly(TEXT("DirtMainOnly"));
+inline const FName WaterOnly(TEXT("WaterOnly"));
 inline UClass* Class = nullptr;
 }
 
 UClass* CreateRailgunImpactVfx();
 
-void SpawnRailgunVfx(FGraph& G, UEdGraphPin* Location, bool DirtMainOnly);
+void SpawnRailgunVfx(FGraph& G, UEdGraphPin* Location, bool WaterOnly);
 
 void SpawnRailgunImpactVfx(FGraph& G, UEdGraphPin* HitResult);
 }

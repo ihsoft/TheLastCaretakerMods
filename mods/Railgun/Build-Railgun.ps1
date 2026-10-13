@@ -206,7 +206,7 @@ function Get-RailgunSourceHashes {
 }
 $sourceHashes = @(Get-RailgunSourceHashes)
 $fingerprint = (& (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -OutputPath (Join-Path $output 'fingerprint.json')) | ConvertFrom-Json
-if ([string]$fingerprint.steam.buildId -cne '25827816' -or $fingerprint.executable.sha256 -cne 'C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33') { throw 'Railgun game provenance mismatch.' }
+if ([string]$fingerprint.steam.buildId -cne '25880952' -or $fingerprint.executable.sha256 -cne '16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44') { throw 'Railgun game provenance mismatch.' }
 if ($Install) {
     $legacyAutoload = [IO.Path]::GetFullPath((Join-Path $fingerprint.gameRoot `
         'Voyage/Content/Paks/Railgun.autoload'))

@@ -431,10 +431,13 @@ previously shot-ready gun into the red incomplete-charge state.
 The stock
 `/Game/VFX/Environment/Interactive/NS_Explosion_SeaMine` system can be split
 per spawned Niagara component without copying or modifying the stock asset.
-Calling `UFXSystemComponent.SetEmitterEnable` before activation with
-`dirt_main` disabled and `shockwave`, `main`, `spark`, `spark_l`, `refr`,
-`project` and `puff` enabled produces the explosion without the water fountain.
-The inverse mask produces only the fountain.
+Calling `UFXSystemComponent.SetEmitterEnable` before activation uses two
+explicit masks from the current 14-emitter stock system. Fountain mode enables
+`Drop_Tower`, `Tower`, `Spikes` and `Core_Drops`; impact mode enables
+`FireExplode`, `spark`, `spark_l`, `shockwave`, `Spark001`, `Core_Smoke001`,
+`SmallerPieces` and `BigPieces`. `BigPieceSplash` and `SmallPieceSplash` remain
+disabled in both modes. Real-game validation covers a fountain-only water miss
+and fire and smoke on a damaging Talon-shark impact.
 
 Production effects use a mod-owned transient Blueprint helper with an owned
 inactive Niagara component. Each instance applies one of these masks,
@@ -444,12 +447,13 @@ destroying or reconfiguring another hit's effect. The helper stores only a
 runtime reference to the stock system; no stock VFX package is copied, patched
 or registered by Railgun.
 
-For Steam build `25827816`, the editor-only native mirror for water lookup is
-`/Script/Voyage.VoyageMiscBlueprintFunctionLibrary`. Its confirmed signatures
-are `GetActorWorld(AActor*) -> UWorld*` and
-`GetWaterHeightAtLocation(UWorld*, FVector) -> float`. The latter may return
-the `-100000 cm` sentinel, and its native implementation filters candidates by
-water-body bounds and query results. A valid gameplay world, bounded segment
+For Steam build `25880952`, the editor-only native mirror for water lookup is
+`/Script/Voyage.VoyageMiscBlueprintFunctionLibrary`. Current reflection
+revalidation confirms `GetActorWorld(AActor*) -> UWorld*` and
+`GetWaterHeightAtLocation(UWorld*, FVector) -> float`. Earlier native behavior
+evidence established that the latter may return the `-100000 cm` sentinel and
+filters candidates by water-body bounds and query results; its body was not
+re-disassembled for this build. A valid gameplay world, bounded segment
 sampling and a verified near-surface residual are therefore required; a
 single endpoint value, zero height, or the function alone is not a universal
 exact-surface contract. This API and its limits are fingerprint-bound.
@@ -497,9 +501,9 @@ The three-record plugin-local registry is derived solely from owned package
 readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field.
 
-- Steam build: `25827816`; parser profile: `UE5_8`.
+- Steam build: `25880952`; parser profile: `UE5_8`; authoring editor: `5.8.2`.
 - Executable SHA-256:
-  `C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33`.
+  `16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44`.
 - Versioned release ZIPs live in `Voyage/Content/Paks/`. Ignored installation
   manifests under `artifacts/installations/Railgun/` identify exact installed
   hashes and rollback material; neither is a source dependency for rebuilding.
@@ -512,9 +516,11 @@ writer, then reopened and compared field-for-field.
   compatibility claims.
 - The current fingerprint has static native-reflection, stock-reference,
   serialization and producer-format evidence from the successful candidate
-  build. Manual socket ownership and powered charging also have real-game
-  validation. Registry discovery, research unlock and behavior beyond
-  the established single-player scope remain separate validation boundaries.
+  build. Real-game validation covers direct hits and damage against a Talon
+  shark, impact fire and smoke, and a fountain-only water miss. Powered
+  charging was not separately revalidated for this fingerprint. Registry
+  discovery, research unlock and behavior beyond the established single-player
+  scope remain separate validation boundaries.
 - Generated packages use tagged properties for partial mirrors. The ammo and
   gun items are the bounded post-cook unversioned conversion exceptions; both
   are reopened before packaging. Do not convert unrelated native-child assets

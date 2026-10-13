@@ -22,25 +22,26 @@ void SetRailgunVfxEmitterEnabled(FGraph& G, UEdGraphPin* Component,
 }
 
 void ConfigureRailgunSeaMineEmitters(FGraph& G, UEdGraphPin* Component,
-    bool DirtMainOnly)
+    bool WaterOnly)
 {
-    const bool MainEffectsEnabled = !DirtMainOnly;
+    for (FName Emitter : {RailgunVfx::DropTowerEmitter,
+        RailgunVfx::TowerEmitter, RailgunVfx::SpikesEmitter,
+        RailgunVfx::CoreDropsEmitter})
+    {
+        SetRailgunVfxEmitterEnabled(G, Component, Emitter, WaterOnly);
+    }
+    for (FName Emitter : {RailgunVfx::FireExplodeEmitter,
+        RailgunVfx::SparkEmitter, RailgunVfx::LargeSparkEmitter,
+        RailgunVfx::ShockwaveEmitter, RailgunVfx::NapalmSparkEmitter,
+        RailgunVfx::CoreSmokeEmitter, RailgunVfx::SmallerPiecesEmitter,
+        RailgunVfx::BigPiecesEmitter})
+    {
+        SetRailgunVfxEmitterEnabled(G, Component, Emitter, !WaterOnly);
+    }
     SetRailgunVfxEmitterEnabled(G, Component,
-        RailgunVfx::ShockwaveEmitter, MainEffectsEnabled);
+        RailgunVfx::BigPieceSplashEmitter, false);
     SetRailgunVfxEmitterEnabled(G, Component,
-        RailgunVfx::MainEmitter, MainEffectsEnabled);
-    SetRailgunVfxEmitterEnabled(G, Component,
-        RailgunVfx::SparkEmitter, MainEffectsEnabled);
-    SetRailgunVfxEmitterEnabled(G, Component,
-        RailgunVfx::LargeSparkEmitter, MainEffectsEnabled);
-    SetRailgunVfxEmitterEnabled(G, Component,
-        RailgunVfx::RefractionEmitter, MainEffectsEnabled);
-    SetRailgunVfxEmitterEnabled(G, Component,
-        RailgunVfx::ProjectileEmitter, MainEffectsEnabled);
-    SetRailgunVfxEmitterEnabled(G, Component,
-        RailgunVfx::PuffEmitter, MainEffectsEnabled);
-    SetRailgunVfxEmitterEnabled(G, Component,
-        RailgunVfx::DirtMainEmitter, DirtMainOnly);
+        RailgunVfx::SmallPieceSplashEmitter, false);
 }
 
 UClass* CreateRailgunImpactVfx()
@@ -60,7 +61,7 @@ UClass* CreateRailgunImpactVfx()
     auto* ComponentTemplate = CastChecked<UNiagaraComponent>(
         ComponentNode->ComponentTemplate);
     ComponentTemplate->SetAutoActivate(false);
-    AddVariable(BP, RailgunImpactVfx::DirtMainOnly,
+    AddVariable(BP, RailgunImpactVfx::WaterOnly,
         UEdGraphSchema_K2::PC_Boolean);
 
     FKismetEditorUtilities::CompileBlueprint(BP);
@@ -114,7 +115,7 @@ UClass* CreateRailgunImpactVfx()
         RailgunVfx::False);
     G.Exec(DisableAutoDestroy);
 
-    auto* FountainMode = G.Branch(G.Read(RailgunImpactVfx::DirtMainOnly));
+    auto* FountainMode = G.Branch(G.Read(RailgunImpactVfx::WaterOnly));
     ConfigureRailgunSeaMineEmitters(G, Component, true);
     UEdGraphPin* FountainMaskTail = G.Tail;
     G.Tail = G.Pin(FountainMode, P::Else);
@@ -133,7 +134,7 @@ UClass* CreateRailgunImpactVfx()
     return BP->GeneratedClass;
 }
 
-void SpawnRailgunVfx(FGraph& G, UEdGraphPin* Location, bool DirtMainOnly)
+void SpawnRailgunVfx(FGraph& G, UEdGraphPin* Location, bool WaterOnly)
 {
     check(RailgunImpactVfx::Class);
     auto* Transform = G.Call(UKismetMathLibrary::StaticClass(),
@@ -161,8 +162,8 @@ void SpawnRailgunVfx(FGraph& G, UEdGraphPin* Location, bool DirtMainOnly)
     G.Link(Actor, Typed->GetCastSourcePin());
     G.Tail = Typed->GetValidCastPin();
     ContextSet(G, Typed->GetCastResultPin(), RailgunImpactVfx::Class,
-        RailgunImpactVfx::DirtMainOnly, nullptr,
-        DirtMainOnly ? RailgunVfx::True : RailgunVfx::False);
+        RailgunImpactVfx::WaterOnly, nullptr,
+        WaterOnly ? RailgunVfx::True : RailgunVfx::False);
     auto* Finish = G.Call(UGameplayStatics::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UGameplayStatics, FinishSpawningActor));
     G.Link(Actor, G.Pin(Finish, P::Actor));
