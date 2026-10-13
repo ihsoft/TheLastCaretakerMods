@@ -1,0 +1,13 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Modding",
+  "Description": "Editor-only project for the Container Lid Label IoStore asset generator.",
+  "Modules": [
+    { "Name": "Voyage", "Type": "Runtime", "LoadingPhase": "Default" },
+    { "Name": "ContainerLidLabelGenerator", "Type": "Editor", "LoadingPhase": "Default" }
+  ],
+  "Plugins": [
+    { "Name": "EditorScriptingUtilities", "Enabled": true }
+  ]
+}
