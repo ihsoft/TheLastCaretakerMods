@@ -37,24 +37,26 @@ Current headers and all other export bytes are preserved. X's exact physical
 axis in the native aiming implementation has not been verified; it should not
 be described simply as world-space height.
 
-## Version-bound evidence
+## Validated evidence
 
-- Steam build: `25056839`; Unreal Engine: `5.8.1`, profile `UE5_8`.
-- Executable SHA256:
-  `CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`.
-- Accepted feature checkpoint: `604fe6fdf3b202623c3126efb9c8f57de9617a6d`.
+The accepted feature checkpoint is
+`604fe6fdf3b202623c3126efb9c8f57de9617a6d`, from Steam build `25056839` with
+executable SHA256
+`CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`.
 
 Method: fresh stock JSON and package extraction through
 `Get-VoyageAssetJson.ps1` and `Extract-VoyagePackage.ps1`, guarded byte patch,
 retoc packaging/verification, semantic reopen and export-payload roundtrip.
 Both modified assets reopened with zero RawExports and the expected values;
-re-extraction preserved both export payload hashes. The user accepted the
-long-range/close-range tradeoff in the real game. Separate attachment
-configurations and other weapons were not reported as tested.
+re-extraction preserved both export payload hashes. On that build, the user
+accepted the long-range/close-range tradeoff in the real game. Separate
+attachment configurations and other weapons were not reported as tested.
 
 Revalidate packages, property contracts and game behavior on any changed
 fingerprint before building for that game version. Generated assets stay in
-ignored `artifacts/` directories; the repository keeps the method.
+ignored temporary output; the repository keeps the method.
 
-The tested installation also passed the closed-game check and hash readback
-for its container triplet and archive.
+The tested installation also passed the closed-game check and hash readback for
+its container triplet and archive. Current compatibility work and superseded
+candidate identities belong in the
+[compatibility backlog](compatibility-backlog.md).

@@ -17,8 +17,9 @@ shared RedDot sight's own offset. Other sight assets are unchanged. RedDot's
 adjustment also applies when fitted to other compatible weapons, although
 those combinations were not separately reported as tested.
 
-See [Aiming configuration](docs/aiming-configuration.md) for the reasoning,
-exact values and supported game fingerprint.
+See [Aiming configuration](docs/aiming-configuration.md) for the reasoning and
+exact values. Check the [compatibility backlog](docs/compatibility-backlog.md)
+for the current game fingerprint and validation status.
 
 ## Installation
 
@@ -36,7 +37,7 @@ and `Restore-VoyageReleaseInstallation.ps1` with their respective manifests.
 From the repository root, with Windows PowerShell 5.1 or later:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/ScopeFix/Build-ScopeFix.ps1 -OutputRoot artifacts/scope-fix/build-new
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/ScopeFix/Build-ScopeFix.ps1 -OutputRoot Tmp/scopefix-build-new
 ```
 
 The output directory must be new. The builder reads the installed game's
