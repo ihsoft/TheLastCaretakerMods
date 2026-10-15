@@ -168,10 +168,6 @@ threshold rather than proving an inverse-length spring constant. Actual N/W,
 their relationship to the two 6000 limits, and the current live tightness still
 need measurement. A threefold behavioral change is not yet established.
 
-Evidence: ignored `artifacts/mooring60/tension-25191271.json`,
-`tension-prologue-25191271.json`, `tension-fields-25191271.json`; registration
-reports `artifacts/inspection/executable-7d2975834bc1419bbcd32448ed5fa169.txt`
-and `executable-4c952127181544eba41e8ca9f0792aac.txt`.
 Tool report: documented mapping generator failed as above; source read was
 limited to its failed process launch. Two compact executable queries succeeded;
 decoded member analysis was necessary because correlations alone cannot show

@@ -203,7 +203,7 @@ container and evidence, without installation.
 | Verify one IoStore container and its expected package set | `Test-VoyageContainer.ps1` | Bounded integrity check with a transient package inventory, exact-set differences and file hashes |
 | Restore/remove a common release installation | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded predecessor restoration and recovery evidence |
 | Regression-test Git mutation coordination | [`Test-RepositoryGitCoordination.ps1`](repository-git-coordination.md#regression-test) | PowerShell 5.1 semaphore and isolated fixture-repository checks |
-| Locate native names, references, or correlated member offsets | `Invoke-VoyageExecutableInspector.ps1` | Compact fingerprinted result plus retained read-only executable report |
+| Locate native names, references, or correlated member offsets | `Invoke-VoyageExecutableInspector.ps1` | Compact fingerprinted result plus a temporary read-only executable report |
 | Reuse semantic C++ names while generating Blueprint graphs | `UnrealEditorGeneratorCommon` | Header-only build-time helpers; not a command-line tool |
 
 When an existing producer needs only the current game's `scriptobjects.bin`,
@@ -731,8 +731,11 @@ Use `-RequireMatch` when absence is itself a failed assertion. Per-package parse
 errors remain failures in both modes, so `no-match` never means "nothing could
 be parsed".
 
-Every query writes to a new fingerprinted directory and refuses to overwrite a
-previous result. Choose a new `-OutputRoot` for a repeated investigation.
+By default, every call writes to a distinct run directory under
+`Tmp/inspection/`, containing its fingerprinted query directory. An explicit
+`-OutputRoot` refuses to overwrite a previous result for the same query; choose
+a new root for a repeated investigation. Retain selected evidence under
+`artifacts/` only when its owner and continuing use are established.
 
 ### Compact Blueprint structure
 
@@ -1334,9 +1337,9 @@ offsets.
 The wrapper resolves the manifest-validated canonical EXE, fingerprints the
 installed game, refuses to overwrite a report, and returns only the match count,
 hashes, game identity, report/log paths, and analysis boundary. By default, the
-full report goes to `artifacts/inspection/` and the disposable log to
-`Tmp/tool-runs/`. Use
-`-TargetVirtualAddress` or `-MemberOffset` for their respective correlation
+full report goes to `Tmp/inspection/` and the disposable log to
+`Tmp/tool-runs/`. Use `-OutputPath` for explicitly selected retained evidence.
+Use `-TargetVirtualAddress` or `-MemberOffset` for their respective correlation
 modes. A zero-result string query returns structured `no-match` unless
 `-RequireMatch` is selected.
 

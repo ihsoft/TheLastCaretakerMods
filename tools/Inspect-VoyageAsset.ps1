@@ -22,7 +22,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
-    $OutputRoot = Join-Path $PSScriptRoot '..\artifacts\inspection'
+    $OutputRoot = Join-Path $PSScriptRoot (
+        '..\Tmp\inspection\asset-' + [Guid]::NewGuid().ToString('N'))
 }
 
 $root = (Resolve-Path -LiteralPath $GameRoot).Path

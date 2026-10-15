@@ -43,7 +43,7 @@ $gameExecutable = Join-Path $resolvedGameRoot (
 
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $OutputPath = Join-Path $repositoryRoot (
-        'artifacts\inspection\executable-' + [Guid]::NewGuid().ToString('N') + '.txt')
+        'Tmp\inspection\executable-' + [Guid]::NewGuid().ToString('N') + '.txt')
 }
 $resolvedOutputPath = [IO.Path]::GetFullPath($OutputPath)
 if ([IO.Path]::GetExtension($resolvedOutputPath) -cne '.txt') {

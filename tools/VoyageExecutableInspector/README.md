@@ -37,7 +37,7 @@ reported instructions before drawing conclusions.
 
 Normal work must use the wrapper above. It fingerprints the installed game,
 resolves `.tools/bin/VoyageExecutableInspector.exe` through its hash and input
-manifest, writes the full report to ignored `artifacts/inspection/` by default
+manifest, writes the full report to ignored `Tmp/inspection/` by default
 and the disposable log to `Tmp/tool-runs/`, and returns a compact result. Use
 `Get-VoyageExecutableInspectorBinary.ps1` only to resolve or audit the accepted
 binary. After an intentional committed change to
