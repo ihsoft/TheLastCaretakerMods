@@ -13,8 +13,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$expectedBuild = '25880952'
-$expectedExecutableHash = '16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44'
+$expectedBuild = '25929985'
+$expectedExecutableHash = '608A4BCD1A0A392477970F455234571946D061E61C1D27F82DE9589EBBA3D69F'
 $retocVersion = 'UE5_8'
 $containerName = 'ContainerLidLabel_P'
 $sourcePackage = '/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Large'
@@ -25,6 +25,33 @@ $assetFilter = 'Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Large'
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
 $tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp\ContainerLidLabel'))
+$configSource = Join-Path $modRoot 'Assets\ContainerLidLabel.ini'
+$configKey = 'LargeContainerMaxWeightKg'
+if (-not (Test-Path -LiteralPath $configSource -PathType Leaf)) {
+    throw "Authored config is missing: $configSource"
+}
+$defaultMaxWeightKg = $null
+$matchingConfigKeys = 0
+foreach ($rawLine in Get-Content -LiteralPath $configSource) {
+    $line = $rawLine.Trim()
+    if ($line.Length -eq 0 -or $line.StartsWith(';') -or $line.StartsWith('#')) { continue }
+    $separatorIndex = $line.IndexOf('=')
+    if ($separatorIndex -lt 0 -or $line.Substring(0, $separatorIndex).Trim() -cne $configKey) { continue }
+    $matchingConfigKeys++
+    $valueText = $line.Substring($separatorIndex + 1).Trim()
+    $parsed = 0.0
+    if (-not [double]::TryParse($valueText, [Globalization.NumberStyles]::Float,
+            [Globalization.CultureInfo]::InvariantCulture, [ref]$parsed) -or
+        [double]::IsNaN($parsed) -or [double]::IsInfinity($parsed) -or
+        $parsed -le 0.0 -or $parsed -gt [single]::MaxValue) {
+        throw "Authored $configKey must be a finite positive float: $configSource"
+    }
+    $defaultMaxWeightKg = [single]$parsed
+}
+if ($matchingConfigKeys -ne 1 -or $null -eq $defaultMaxWeightKg) {
+    throw "Authored config must contain exactly one ${configKey}: $configSource"
+}
+$defaultMaxText = $defaultMaxWeightKg.ToString('R', [Globalization.CultureInfo]::InvariantCulture)
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $stamp = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
     $OutputRoot = Join-Path $tmpRoot "releases\ContainerLidLabel-$Version-$stamp"
@@ -90,6 +117,7 @@ if ($FinalizeExisting) {
     $packageRoot = Join-Path $releaseRoot 'package'
     $utoc = Join-Path $packageRoot "$containerName.utoc"
     $archive = Join-Path $releaseRoot "ContainerLidLabel-$Version.zip"
+    $releaseConfig = Join-Path $releaseRoot 'ContainerLidLabel.ini'
     $releaseManifestPath = Join-Path $releaseRoot 'release-manifest.json'
     $expectedList = Join-Path $releaseRoot 'expected-packages.txt'
     $verification = Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'container-check') `
@@ -97,7 +125,7 @@ if ($FinalizeExisting) {
     $stockUexp = Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'work\stock-extraction') `
         -Recurse -File -Filter "$assetName.uexp" | Select-Object -First 1
     $relocatedUexp = Join-Path $releaseRoot "work\stage\Voyage\Content\Mods\ContainerLidLabel\StockOrigin\$assetName.uexp"
-    foreach ($required in @($utoc, $archive, $releaseManifestPath, $expectedList, $verification.FullName, $stockUexp.FullName, $relocatedUexp)) {
+    foreach ($required in @($utoc, $archive, $releaseConfig, $releaseManifestPath, $expectedList, $verification.FullName, $stockUexp.FullName, $relocatedUexp)) {
         if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "FinalizeExisting input missing: $required" }
     }
     $verificationRecord = Get-Content -LiteralPath $verification.FullName -Raw | ConvertFrom-Json
@@ -138,11 +166,16 @@ if ($FinalizeExisting) {
     if ($stockHash -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $relocatedUexp).Hash) {
         throw 'FinalizeExisting found a changed relocated stock export payload.'
     }
+    if ((Get-FileHash -Algorithm SHA256 -LiteralPath $configSource).Hash -cne
+        (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash) {
+        throw 'FinalizeExisting found a changed shipped config.'
+    }
     Write-Host 'Finalize 3/4 Hashing authored source and artifacts'
     $sourceFiles = @(
         Get-Item -LiteralPath (Join-Path $modRoot '.gitignore')
         Get-Item -LiteralPath (Join-Path $modRoot 'Voyage.uproject')
         Get-Item -LiteralPath (Join-Path $modRoot 'Build-ContainerLidLabel.ps1')
+        Get-ChildItem -LiteralPath (Join-Path $modRoot 'Assets') -Recurse -File
         Get-ChildItem -LiteralPath (Join-Path $modRoot 'Source') -Recurse -File
         Get-ChildItem -LiteralPath $modRoot -File -Filter '*.md'
     ) | Sort-Object FullName -Unique
@@ -151,6 +184,7 @@ if ($FinalizeExisting) {
         (Join-Path $packageRoot "$containerName.pak"),
         (Join-Path $packageRoot "$containerName.ucas"),
         $utoc,
+        $releaseConfig,
         $archive,
         $releaseManifestPath)
     $buildManifest = [ordered]@{
@@ -158,6 +192,7 @@ if ($FinalizeExisting) {
         createdUtc = [DateTime]::UtcNow.ToString('o'); steamBuildId = $expectedBuild
         executableSha256 = $expectedExecutableHash; engine = '5.8.2'; retocEngineVersion = $retocVersion
         runtimePackages = [IO.File]::ReadAllLines($expectedList)
+        config = [ordered]@{ path = $releaseConfig; defaultMaxWeightKg = $defaultMaxWeightKg; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash }
         relocation = [ordered]@{ source = $sourcePackage; destination = $relocatedPackage; replacementCount = 2; sourceUexpSha256 = $stockHash; relocatedUexpSha256 = $stockHash }
         containerCheckReport = $verification.FullName; releaseManifest = $releaseManifestPath
         sourceFiles = @($sourceFiles | ForEach-Object { [ordered]@{ path = $_.FullName.Substring($repoRoot.Length + 1).Replace('\', '/'); length = $_.Length; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash } })
@@ -186,6 +221,8 @@ Invoke-LoggedProcess -FilePath $buildBatch -Name 'editor-build' -Arguments @(
     'VoyageEditor', 'Win64', 'Development', ('-Project="{0}"' -f $project), '-WaitMutex', '-NoHotReload')
 
 Write-Host '3/8 Generating Blueprint assets'
+$releaseConfig = Join-Path $releaseRoot 'ContainerLidLabel.ini'
+Copy-Item -LiteralPath $configSource -Destination $releaseConfig
 $content = [IO.Path]::GetFullPath((Join-Path $modRoot 'Content'))
 $contentPrefix = $modRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 if (-not $content.StartsWith($contentPrefix, [StringComparison]::OrdinalIgnoreCase) -or
@@ -196,7 +233,8 @@ if (Test-Path -LiteralPath $content) {
     Remove-Item -LiteralPath $content -Recurse -Force
 }
 Invoke-LoggedProcess -FilePath $editor -Name 'generate' -Arguments @(
-    ('"{0}"' -f $project), '-run=GenerateContainerLidLabel', '-unattended', '-nop4', '-nosplash', '-nullrhi', '-nosound')
+    ('"{0}"' -f $project), '-run=GenerateContainerLidLabel',
+    ('-DefaultMaxWeightKg={0}' -f $defaultMaxText), '-unattended', '-nop4', '-nosplash', '-nullrhi', '-nosound')
 
 Write-Host '4/8 Cooking exact replacement package'
 Invoke-LoggedProcess -FilePath $editor -Name 'cook' -Arguments @(
@@ -267,7 +305,8 @@ $archive = Join-Path $releaseRoot "ContainerLidLabel-$Version.zip"
 Compress-Archive -LiteralPath @(
     (Join-Path $packageRoot "$containerName.pak"),
     (Join-Path $packageRoot "$containerName.ucas"),
-    $utoc) -DestinationPath $archive -CompressionLevel Optimal
+    $utoc,
+    $releaseConfig) -DestinationPath $archive -CompressionLevel Optimal
 $manifestArgs = @{
     ReleaseRoot = $releaseRoot
     Mod = 'ContainerLidLabel'
@@ -291,12 +330,14 @@ $payload = @(
     (Join-Path $packageRoot "$containerName.pak"),
     (Join-Path $packageRoot "$containerName.ucas"),
     $utoc,
+    $releaseConfig,
     $archive,
     $releaseManifestPath)
 $sourceFiles = @(
     Get-Item -LiteralPath (Join-Path $modRoot '.gitignore')
     Get-Item -LiteralPath (Join-Path $modRoot 'Voyage.uproject')
     Get-Item -LiteralPath (Join-Path $modRoot 'Build-ContainerLidLabel.ps1')
+    Get-ChildItem -LiteralPath (Join-Path $modRoot 'Assets') -Recurse -File
     Get-ChildItem -LiteralPath (Join-Path $modRoot 'Source') -Recurse -File
     Get-ChildItem -LiteralPath $modRoot -File -Filter '*.md'
 ) | Sort-Object FullName -Unique
@@ -310,6 +351,11 @@ $buildManifest = [ordered]@{
     engine = '5.8.2'
     retocEngineVersion = $retocVersion
     runtimePackages = [IO.File]::ReadAllLines($expectedList)
+    config = [ordered]@{
+        path = $releaseConfig
+        defaultMaxWeightKg = $defaultMaxWeightKg
+        sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash
+    }
     relocation = [ordered]@{
         source = $sourcePackage
         destination = $relocatedPackage

@@ -85,8 +85,9 @@ user reported that the prior sectioned `v4-test` works. That report does not
 independently establish installed hashes or detailed coverage of new/existing
 boxes, persistent reload, a non-default value, cache behavior, or lowering the
 limit below current contents. After the recorded installation, the user also
-confirmed the flat `v5-test` works. The renamed `v6-test` key is a subsequent
-change and requires its own runtime confirmation.
+confirmed the flat `v5-test` works. The renamed `v6-test` key was subsequently
+confirmed working with a temporary 1000 kg test value. The authored INI and
+embedded fallback remain 200 kg, preserving stock capacity by default.
 
 Use the [shared release workflow](../../tools/README.md#release-producers) for
 build output and the [common installation and restore

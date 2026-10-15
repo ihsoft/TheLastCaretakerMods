@@ -236,3 +236,12 @@ the disposable validation script. Candidate v6-test-20261015-065220 is not insta
 Its ZIP SHA256 is DB8CA6D6D3F7BFFF7840DC058C4AFB5E163FD4618C052F69DD967AF5715211AF.
 User authorized committing documentation only; code/config/build-script changes
 remain in the working tree. No new token measurement was run for this follow-up.
+
+Finalization follow-up: v6 was installed with hash readback, then the user
+confirmed it works with a temporary 1000 kg value and authorized the code commit.
+Authored INI and build-manifest default were independently checked as 200 kg;
+all implementation source hashes still matched the validated v6 build. Only
+documentation had changed. No rebuild or new runtime experiment was needed.
+The personal installed INI was not imported into source. Original build/release
+manifests and the 19-assertion report were retained with installation evidence;
+the versioned installed ZIP preserves the payload independently of Tmp.

@@ -38,3 +38,13 @@ That evidence does not validate the new capacity behavior or the rebuilt
 presentation on Steam build `25929985`; it also does not claim separate coverage
 of long localized names, extreme count widths, lid animation, asynchronous icon
 refresh, or save/load presentation.
+
+The installed `v6-test-20261015-065220` capacity extension was subsequently
+user-validated on the current fingerprint, including the container-specific
+INI key with a temporary 1000 kg value. Default remains 200 kg. Exact installation
+and predecessor backup evidence is under
+`artifacts/installations/ContainerLidLabel/20261015-065622-v6-test-2dc3ea33/`;
+its `validation/` directory preserves the original build/release manifests and
+cooked semantic report. The installed versioned ZIP retains the validated
+payload independently of disposable build staging. This report does not imply
+separate testing of every lifecycle or overfilled-inventory edge case.

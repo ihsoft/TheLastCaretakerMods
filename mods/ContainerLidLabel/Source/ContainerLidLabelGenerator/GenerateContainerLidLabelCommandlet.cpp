@@ -6,6 +6,7 @@
 #include "BlueprintEditorLibrary.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/MeshComponent.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetComponent.h"
 #include "Dom/JsonObject.h"
@@ -21,26 +22,38 @@
 #include "K2Node_CallFunction.h"
 #include "K2Node_CallParentFunction.h"
 #include "K2Node_DynamicCast.h"
+#include "K2Node_Event.h"
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
+#include "K2Node_IfThenElse.h"
+#include "K2Node_MacroInstance.h"
 #include "K2Node_VariableGet.h"
+#include "K2Node_VariableSet.h"
+#include "Kismet/BlueprintPathsLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetStringLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
+#include "Misc/Parse.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "UObject/SavePackage.h"
 #include "WidgetBlueprint.h"
 #include "VoyageBaseInventoryComponent.h"
+#include "VoyageEditorBlueprintFunctionLibrary.h"
 #include "VoyageInventoryWeightLimitedComponent.h"
+#include "VoyageMiscBlueprintFunctionLibrary.h"
 #include "VoyageWidgetComponent.h"
 
 namespace
 {
 constexpr TCHAR StockParentPackage[] = TEXT("/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox");
 constexpr TCHAR StockParentAsset[] = TEXT("BP_Inventory_PlayerBox");
+constexpr TCHAR StockContainerBasePackage[] = TEXT("/Game/Blueprints/Interactives/Containers/BP_Container_Base");
+constexpr TCHAR StockContainerBaseAsset[] = TEXT("BP_Container_Base");
 constexpr TCHAR StockInventoryParentPackage[] = TEXT("/Game/Blueprints/Interactives/Containers/BP_Inventory_Container_Base_WeightLimited");
 constexpr TCHAR StockInventoryParentAsset[] = TEXT("BP_Inventory_Container_Base_WeightLimited");
 constexpr TCHAR RelocatedLargePackage[] = TEXT("/Game/Mods/ContainerLidLabel/StockOrigin/BP_Inventory_PlayerBox_Large");
@@ -52,8 +65,14 @@ constexpr TCHAR StockWidgetClassPath[] = TEXT("/Game/UI/Game/Inventory/BP_Player
 constexpr TCHAR PlaneMeshPath[] = TEXT("/Engine/BasicShapes/Plane.Plane");
 constexpr TCHAR StockFontPackage[] = TEXT("/Game/UI/VoyageRoboto");
 constexpr TCHAR StockFontAsset[] = TEXT("VoyageRoboto");
+constexpr TCHAR LoopPackage[] = TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros");
+constexpr TCHAR ConfigRelativePath[] = TEXT("Paks/ContainerLidLabel.ini");
+constexpr TCHAR ConfigKey[] = TEXT("LargeContainerMaxWeightKg");
+constexpr TCHAR ConfigSeparator[] = TEXT("=");
+constexpr TCHAR FloatMaximumLiteral[] = TEXT("3.402823466e+38");
 
 const FName ParentBlueprintContext(TEXT("GenerateContainerLidLabelStockParent"));
+const FName ContainerBaseBlueprintContext(TEXT("GenerateContainerLidLabelContainerBase"));
 const FName InventoryParentBlueprintContext(TEXT("GenerateContainerLidLabelInventoryParent"));
 const FName RelocatedBlueprintContext(TEXT("GenerateContainerLidLabelRelocatedLarge"));
 const FName ReplacementBlueprintContext(TEXT("GenerateContainerLidLabelReplacement"));
@@ -62,13 +81,21 @@ const FName WidgetBlueprintContext(TEXT("GenerateContainerLidLabelStockWidget"))
 const FName InitTextWidget(TEXT("InitTextWidget"));
 const FName UpdateTextWidget(TEXT("UpdateTextWidget"));
 const FName UpdateIconMaterial(TEXT("UpdateIconMaterial"));
+const FName ReceiveBeginPlay(TEXT("ReceiveBeginPlay"));
+const FName OnPersistentActorPostLoad(TEXT("OnPersistentActorPostLoad"));
+const FName PersistentVersion(TEXT("Version"));
+const FName ApplyConfiguredCapacity(TEXT("ApplyConfiguredCapacity"));
+const FName EnsureCachedSettings(TEXT("EnsureCachedSettings"));
 const FName PlayerBoxLid(TEXT("PlayerBox_Lid"));
+const FName ResourceMeter(TEXT("ResourceMeter"));
 const FName LeftIconPlane(TEXT("LeftIconPlane"));
 const FName RightIconPlane(TEXT("RightIconPlane"));
 const FName LeftIconDynamicMaterial(TEXT("LeftIconDynamicMaterial"));
 const FName RightIconDynamicMaterial(TEXT("RightIconDynamicMaterial"));
 const FName Inventory(TEXT("VoyageInventoryWeightLimited"));
 const FName InventoryName(TEXT("Name"));
+const FName ConfiguredMaxWeightKg(TEXT("ConfiguredMaxWeightKg"));
+const FName SettingsLoaded(TEXT("ContainerLidLabelSettingsLoaded"));
 
 const FName LidWidget(TEXT("LidLabelWidget"));
 const FName LidLeftIcon(TEXT("LidLeftIconPlane"));
@@ -89,6 +116,26 @@ const FName MaterialIndexParameter(TEXT("ElementIndex"));
 const FName VisibilityParameter(TEXT("bNewVisibility"));
 const FName PropagateVisibilityParameter(TEXT("bPropagateToChildren"));
 const FName BoldTypeface(TEXT("Bold"));
+const FName LoopGraphName(TEXT("ForEachLoop"));
+const FName LoopArray(TEXT("Array"));
+const FName LoopElement(TEXT("Array Element"));
+const FName LoopBody(TEXT("LoopBody"));
+const FName LoopCompleted(TEXT("Completed"));
+const FName SourceString(TEXT("SourceString"));
+const FName SplitDelimiter(TEXT("InStr"));
+const FName SplitLeft(TEXT("LeftS"));
+const FName SplitRight(TEXT("RightS"));
+const FName NumericString(TEXT("InString"));
+const FName InputPath(TEXT("InPath"));
+const FName BinaryLeft(TEXT("A"));
+const FName BinaryRight(TEXT("B"));
+const FName FloatInput(TEXT("InDouble"));
+const FName DoubleInput(TEXT("InFloat"));
+const FName ClassParameter(TEXT("Class"));
+const FName NewDefaultMax(TEXT("NewDefaultMax"));
+const FName ParameterName(TEXT("ParameterName"));
+const FName ParameterValue(TEXT("ParameterValue"));
+const FName ProgressLevel(TEXT("ProgressLevel"));
 
 const FVector LidRowCenter(0.0, 66.4, 13.73);
 const FVector LidLeftIconCenter(-17.0, 62.27709, 13.73);
@@ -121,6 +168,21 @@ FEdGraphPinType BoolPin()
 {
     FEdGraphPinType Type;
     Type.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+    return Type;
+}
+
+FEdGraphPinType FloatPin()
+{
+    FEdGraphPinType Type;
+    Type.PinCategory = UEdGraphSchema_K2::PC_Real;
+    Type.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+    return Type;
+}
+
+FEdGraphPinType IntPin()
+{
+    FEdGraphPinType Type;
+    Type.PinCategory = UEdGraphSchema_K2::PC_Int;
     return Type;
 }
 
@@ -169,6 +231,74 @@ UK2Node_VariableGet* ReadSelf(UEdGraph* Graph, const FName Name, int32 X, int32 
     UK2Node_VariableGet* Node = NewObject<UK2Node_VariableGet>(Graph);
     Node->VariableReference.SetSelfMember(Name);
     return FinishNode(Node, Graph, X, Y);
+}
+
+UK2Node_VariableSet* WriteSelf(UEdGraph* Graph, const FName Name, int32 X, int32 Y)
+{
+    UK2Node_VariableSet* Node = NewObject<UK2Node_VariableSet>(Graph);
+    Node->VariableReference.SetSelfMember(Name);
+    return FinishNode(Node, Graph, X, Y);
+}
+
+void MarkVariableTransient(UBlueprint* Blueprint, const FName Name)
+{
+    FBPVariableDescription* Variable = Blueprint->NewVariables.FindByPredicate(
+        [Name](const FBPVariableDescription& Candidate)
+        {
+            return Candidate.VarName == Name;
+        });
+    check(Variable);
+    Variable->PropertyFlags |= CPF_Transient;
+}
+
+UK2Node_IfThenElse* Branch(UEdGraph* Graph, UEdGraphPin* Execute, UEdGraphPin* Condition, int32 X, int32 Y)
+{
+    UK2Node_IfThenElse* Node = FinishNode(NewObject<UK2Node_IfThenElse>(Graph), Graph, X, Y);
+    check(Link(Execute, Pin(Node, UEdGraphSchema_K2::PN_Execute)));
+    check(Link(Condition, Pin(Node, UEdGraphSchema_K2::PN_Condition)));
+    return Node;
+}
+
+UK2Node_MacroInstance* AddForEachLoop(UEdGraph* Graph, int32 X, int32 Y)
+{
+    UBlueprint* Macros = LoadObject<UBlueprint>(nullptr, LoopPackage);
+    check(Macros);
+    UEdGraph* LoopGraph = nullptr;
+    for (UEdGraph* Candidate : Macros->MacroGraphs)
+    {
+        if (Candidate->GetFName() == LoopGraphName) LoopGraph = Candidate;
+    }
+    check(LoopGraph);
+    UK2Node_MacroInstance* Loop = NewObject<UK2Node_MacroInstance>(Graph);
+    Loop->SetMacroGraph(LoopGraph);
+    return FinishNode(Loop, Graph, X, Y);
+}
+
+UEdGraphPin* FirstExecInput(UEdGraphNode* Node)
+{
+    for (UEdGraphPin* Candidate : Node->Pins)
+    {
+        if (Candidate->Direction == EGPD_Input &&
+            Candidate->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
+        {
+            return Candidate;
+        }
+    }
+    checkNoEntry();
+    return nullptr;
+}
+
+UEdGraphPin* Trimmed(UEdGraph* Graph, UEdGraphPin* Source, int32 X, int32 Y)
+{
+    UK2Node_CallFunction* Leading = Call(Graph,
+        UKismetStringLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Trim)), X, Y);
+    check(Link(Source, Pin(Leading, SourceString)));
+    UK2Node_CallFunction* Trailing = Call(Graph,
+        UKismetStringLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, TrimTrailing)), X + 220, Y);
+    check(Link(Pin(Leading, UEdGraphSchema_K2::PN_ReturnValue), Pin(Trailing, SourceString)));
+    return Pin(Trailing, UEdGraphSchema_K2::PN_ReturnValue);
 }
 
 UK2Node_VariableGet* ReadExternal(
@@ -251,6 +381,31 @@ void AddVoidFunction(UBlueprint* Blueprint, const FName Name, const EFunctionFla
     }
 }
 
+void AddVoidFunctionWithInput(
+    UBlueprint* Blueprint, const FName Name, const FName Parameter,
+    const FEdGraphPinType& Type, const EFunctionFlags Flags)
+{
+    UEdGraph* Graph = nullptr;
+    UK2Node_FunctionEntry* Entry = AddFunction(Blueprint, Name, Graph, Flags);
+    check(Entry->CreateUserDefinedPin(Parameter, Type, EGPD_Output));
+    TArray<UK2Node_FunctionResult*> Results;
+    Graph->GetNodesOfClass(Results);
+    if (Results.Num() == 1)
+    {
+        check(Link(Pin(Entry, UEdGraphSchema_K2::PN_Then), Pin(Results[0], UEdGraphSchema_K2::PN_Execute)));
+    }
+}
+
+void AddBeginPlayPlaceholder(UBlueprint* Blueprint)
+{
+    UEdGraph* Graph = FBlueprintEditorUtils::FindEventGraph(Blueprint);
+    check(Graph);
+    UK2Node_Event* Event = FinishNode(NewObject<UK2Node_Event>(Graph), Graph, 0, 0);
+    Event->EventReference.SetExternalMember(ReceiveBeginPlay, AActor::StaticClass());
+    Event->bOverrideFunction = true;
+    Event->ReconstructNode();
+}
+
 void AddWidgetFunction(UBlueprint* Blueprint, const FName Name, const FName Parameter, const FEdGraphPinType& Type)
 {
     UEdGraph* Graph = nullptr;
@@ -277,11 +432,19 @@ UWidgetBlueprint* CreateStockWidgetPlaceholder()
 
 UBlueprint* CreateStockParentPlaceholder()
 {
+    UBlueprint* ContainerBase = CreateActorBlueprint(
+        StockContainerBasePackage, StockContainerBaseAsset,
+        AActor::StaticClass(), ContainerBaseBlueprintContext);
+    AddVoidFunctionWithInput(
+        ContainerBase, OnPersistentActorPostLoad, PersistentVersion, IntPin(),
+        FUNC_Public | FUNC_BlueprintCallable | FUNC_BlueprintEvent);
+    Save(ContainerBase);
     UBlueprint* InventoryParent = CreateActorBlueprint(
         StockInventoryParentPackage, StockInventoryParentAsset,
-        AActor::StaticClass(), InventoryParentBlueprintContext);
+        ContainerBase->GeneratedClass, InventoryParentBlueprintContext);
     check(FBlueprintEditorUtils::AddMemberVariable(
         InventoryParent, Inventory, ObjectPin(UVoyageInventoryWeightLimitedComponent::StaticClass())));
+    AddBeginPlayPlaceholder(InventoryParent);
     Save(InventoryParent);
     UBlueprint* Parent = CreateActorBlueprint(
         StockParentPackage, StockParentAsset, InventoryParent->GeneratedClass, ParentBlueprintContext);
@@ -289,6 +452,9 @@ UBlueprint* CreateStockParentPlaceholder()
     USCS_Node* Lid = Parent->SimpleConstructionScript->CreateNode(
         UStaticMeshComponent::StaticClass(), PlayerBoxLid);
     Parent->SimpleConstructionScript->AddNode(Lid);
+    USCS_Node* Meter = Parent->SimpleConstructionScript->CreateNode(
+        UStaticMeshComponent::StaticClass(), ResourceMeter);
+    Parent->SimpleConstructionScript->AddNode(Meter);
     check(FBlueprintEditorUtils::AddMemberVariable(Parent, LeftIconPlane, ObjectPin(UStaticMeshComponent::StaticClass())));
     check(FBlueprintEditorUtils::AddMemberVariable(Parent, RightIconPlane, ObjectPin(UStaticMeshComponent::StaticClass())));
     check(FBlueprintEditorUtils::AddMemberVariable(Parent, LeftIconDynamicMaterial, ObjectPin(UMaterialInstanceDynamic::StaticClass())));
@@ -296,6 +462,8 @@ UBlueprint* CreateStockParentPlaceholder()
     AddVoidFunction(Parent, InitTextWidget, FUNC_Public | FUNC_BlueprintCallable | FUNC_BlueprintEvent);
     AddVoidFunction(Parent, UpdateTextWidget, FUNC_Public | FUNC_BlueprintCallable | FUNC_BlueprintEvent);
     AddVoidFunction(Parent, UpdateIconMaterial, FUNC_BlueprintCallable | FUNC_BlueprintEvent);
+    AddBeginPlayPlaceholder(Parent);
+    check(UBlueprintEditorLibrary::AddFunctionOverride(Parent, OnPersistentActorPostLoad));
     Save(Parent);
     return Parent;
 }
@@ -457,13 +625,225 @@ void AddIconOverride(UBlueprint* Child)
         Pin(ShowLeft, UEdGraphSchema_K2::PN_Then), 1300, 0);
 }
 
+void AddCachedSettingsFunction(UBlueprint* Child, const FString& DefaultMaxWeightKg)
+{
+    UEdGraph* Graph = nullptr;
+    UK2Node_FunctionEntry* Entry = AddFunction(
+        Child, EnsureCachedSettings, Graph, FUNC_Public | FUNC_BlueprintCallable);
+    TArray<UK2Node_FunctionResult*> Results;
+    Graph->GetNodesOfClass(Results);
+    check(Results.Num() <= 1);
+    Pin(Entry, UEdGraphSchema_K2::PN_Then)->BreakAllPinLinks();
+
+    UK2Node_VariableGet* Loaded = ReadSelf(Graph, SettingsLoaded, 220, -360);
+    UK2Node_IfThenElse* NeedsLoad = Branch(
+        Graph, Pin(Entry, UEdGraphSchema_K2::PN_Then), Pin(Loaded, SettingsLoaded), 450, -600);
+    UK2Node_VariableSet* SetDefault = WriteSelf(Graph, ConfiguredMaxWeightKg, 680, -480);
+    Pin(SetDefault, ConfiguredMaxWeightKg)->DefaultValue = DefaultMaxWeightKg;
+    check(Link(Pin(NeedsLoad, UEdGraphSchema_K2::PN_Else), Pin(SetDefault, UEdGraphSchema_K2::PN_Execute)));
+    UK2Node_CallFunction* Content = Call(Graph,
+        UBlueprintPathsLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UBlueprintPathsLibrary, ProjectContentDir)), 910, -240);
+    UK2Node_CallFunction* Path = Call(Graph,
+        UKismetStringLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Concat_StrStr)), 1140, -240);
+    Pin(Path, BinaryRight)->DefaultValue = ConfigRelativePath;
+    check(Link(Pin(Content, UEdGraphSchema_K2::PN_ReturnValue), Pin(Path, BinaryLeft)));
+    UK2Node_CallFunction* Load = Call(Graph,
+        UVoyageEditorBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UVoyageEditorBlueprintFunctionLibrary, LoadFileToArray)), 1370, -480);
+    check(Link(Pin(SetDefault, UEdGraphSchema_K2::PN_Then), Pin(Load, UEdGraphSchema_K2::PN_Execute)));
+    check(Link(Pin(Path, UEdGraphSchema_K2::PN_ReturnValue), Pin(Load, InputPath)));
+    UK2Node_MacroInstance* Loop = AddForEachLoop(Graph, 1600, -480);
+    check(Link(Pin(Load, UEdGraphSchema_K2::PN_Then), FirstExecInput(Loop)));
+    check(Link(Pin(Load, UEdGraphSchema_K2::PN_ReturnValue), Pin(Loop, LoopArray)));
+
+    UEdGraphPin* Line = Trimmed(Graph, Pin(Loop, LoopElement), 1830, -240);
+    UK2Node_CallFunction* Split = Call(Graph,
+        UKismetStringLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Split)), 2520, -300);
+    Pin(Split, SplitDelimiter)->DefaultValue = ConfigSeparator;
+    check(Link(Line, Pin(Split, SourceString)));
+    UK2Node_IfThenElse* HasPair = Branch(
+        Graph, Pin(Loop, LoopBody),
+        Pin(Split, UEdGraphSchema_K2::PN_ReturnValue), 2520, -520);
+
+    UEdGraphPin* Key = Trimmed(Graph, Pin(Split, SplitLeft), 2750, -260);
+    UEdGraphPin* ValueText = Trimmed(Graph, Pin(Split, SplitRight), 2750, 40);
+    UK2Node_CallFunction* KeyMatches = Call(Graph,
+        UKismetStringLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr)), 3210, -260);
+    Pin(KeyMatches, BinaryRight)->DefaultValue = ConfigKey;
+    check(Link(Key, Pin(KeyMatches, BinaryLeft)));
+    UK2Node_IfThenElse* IsKey = Branch(
+        Graph, Pin(HasPair, UEdGraphSchema_K2::PN_Then),
+        Pin(KeyMatches, UEdGraphSchema_K2::PN_ReturnValue), 3440, -520);
+    UK2Node_CallFunction* IsNumeric = Call(Graph,
+        UKismetStringLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, IsNumeric)), 3440, -220);
+    check(Link(ValueText, Pin(IsNumeric, SourceString)));
+    UK2Node_IfThenElse* Numeric = Branch(
+        Graph, Pin(IsKey, UEdGraphSchema_K2::PN_Then),
+        Pin(IsNumeric, UEdGraphSchema_K2::PN_ReturnValue), 3670, -520);
+
+    UK2Node_CallFunction* Parsed = Call(Graph,
+        UKismetStringLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Conv_StringToDouble)), 3670, -220);
+    check(Link(ValueText, Pin(Parsed, NumericString)));
+    UK2Node_CallFunction* Positive = Call(Graph,
+        UKismetMathLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble)), 3900, -320);
+    Pin(Positive, BinaryRight)->DefaultValue = ZeroLiteral;
+    check(Link(Pin(Parsed, UEdGraphSchema_K2::PN_ReturnValue), Pin(Positive, BinaryLeft)));
+    UK2Node_CallFunction* FitsFloat = Call(Graph,
+        UKismetMathLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, LessEqual_DoubleDouble)), 3900, -140);
+    Pin(FitsFloat, BinaryRight)->DefaultValue = FloatMaximumLiteral;
+    check(Link(Pin(Parsed, UEdGraphSchema_K2::PN_ReturnValue), Pin(FitsFloat, BinaryLeft)));
+    UK2Node_CallFunction* Valid = Call(Graph,
+        UKismetMathLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND)), 4130, -230);
+    check(Link(Pin(Positive, UEdGraphSchema_K2::PN_ReturnValue), Pin(Valid, BinaryLeft)));
+    check(Link(Pin(FitsFloat, UEdGraphSchema_K2::PN_ReturnValue), Pin(Valid, BinaryRight)));
+    UK2Node_IfThenElse* ValidValue = Branch(
+        Graph, Pin(Numeric, UEdGraphSchema_K2::PN_Then),
+        Pin(Valid, UEdGraphSchema_K2::PN_ReturnValue), 4360, -520);
+    UK2Node_CallFunction* ToFloat = Call(Graph,
+        UKismetMathLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Conv_DoubleToFloat)), 4360, -230);
+    check(Link(Pin(Parsed, UEdGraphSchema_K2::PN_ReturnValue), Pin(ToFloat, FloatInput)));
+    UK2Node_CallFunction* ConvertedDouble = Call(Graph,
+        UKismetMathLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Conv_FloatToDouble)), 4590, -230);
+    check(Link(Pin(ToFloat, UEdGraphSchema_K2::PN_ReturnValue), Pin(ConvertedDouble, DoubleInput)));
+    UK2Node_CallFunction* ConvertedPositive = Call(Graph,
+        UKismetMathLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble)), 4820, -230);
+    Pin(ConvertedPositive, BinaryRight)->DefaultValue = ZeroLiteral;
+    check(Link(Pin(ConvertedDouble, UEdGraphSchema_K2::PN_ReturnValue), Pin(ConvertedPositive, BinaryLeft)));
+    UK2Node_IfThenElse* Representable = Branch(
+        Graph, Pin(ValidValue, UEdGraphSchema_K2::PN_Then),
+        Pin(ConvertedPositive, UEdGraphSchema_K2::PN_ReturnValue), 5050, -520);
+    UK2Node_VariableSet* SetConfigured = WriteSelf(Graph, ConfiguredMaxWeightKg, 5280, -520);
+    check(Link(Pin(Representable, UEdGraphSchema_K2::PN_Then), Pin(SetConfigured, UEdGraphSchema_K2::PN_Execute)));
+    check(Link(Pin(ToFloat, UEdGraphSchema_K2::PN_ReturnValue), Pin(SetConfigured, ConfiguredMaxWeightKg)));
+
+    UK2Node_VariableSet* MarkLoaded = WriteSelf(Graph, SettingsLoaded, 1830, 160);
+    Pin(MarkLoaded, SettingsLoaded)->DefaultValue = TEXT("true");
+    check(Link(Pin(Loop, LoopCompleted), Pin(MarkLoaded, UEdGraphSchema_K2::PN_Execute)));
+    if (Results.Num() == 1)
+    {
+        check(Link(Pin(MarkLoaded, UEdGraphSchema_K2::PN_Then), Pin(Results[0], UEdGraphSchema_K2::PN_Execute)));
+    }
+}
+
+void AddCapacityFunction(UBlueprint* Child)
+{
+    UEdGraph* Graph = nullptr;
+    UK2Node_FunctionEntry* Entry = AddFunction(
+        Child, ApplyConfiguredCapacity, Graph, FUNC_Public | FUNC_BlueprintCallable);
+    TArray<UK2Node_FunctionResult*> Results;
+    Graph->GetNodesOfClass(Results);
+    check(Results.Num() <= 1);
+    Pin(Entry, UEdGraphSchema_K2::PN_Then)->BreakAllPinLinks();
+
+    UK2Node_CallFunction* GetDefaults = Call(Graph,
+        UVoyageMiscBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UVoyageMiscBlueprintFunctionLibrary, GetClassDefaultObject)), 220, -200);
+    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultObject(
+        *Pin(GetDefaults, ClassParameter), Child->GeneratedClass);
+    check(Pin(GetDefaults, ClassParameter)->DefaultObject == Child->GeneratedClass);
+    check(Link(Pin(Entry, UEdGraphSchema_K2::PN_Then), Pin(GetDefaults, UEdGraphSchema_K2::PN_Execute)));
+
+    UK2Node_DynamicCast* DefaultsCast = NewObject<UK2Node_DynamicCast>(Graph);
+    DefaultsCast->TargetType = Child->GeneratedClass;
+    FinishNode(DefaultsCast, Graph, 450, -200);
+    check(Link(Pin(GetDefaults, UEdGraphSchema_K2::PN_Then), Pin(DefaultsCast, UEdGraphSchema_K2::PN_Execute)));
+    check(Link(Pin(GetDefaults, UEdGraphSchema_K2::PN_ReturnValue), DefaultsCast->GetCastSourcePin()));
+
+    UFunction* Ensure = Child->GeneratedClass->FindFunctionByName(
+        EnsureCachedSettings, EIncludeSuperFlag::ExcludeSuper);
+    check(Ensure && Ensure->GetOwnerClass() == Child->GeneratedClass);
+    UK2Node_CallFunction* EnsureCall = Call(Graph, Ensure, 680, -200);
+    check(Link(DefaultsCast->GetValidCastPin(), Pin(EnsureCall, UEdGraphSchema_K2::PN_Execute)));
+    check(Link(DefaultsCast->GetCastResultPin(), Pin(EnsureCall, UEdGraphSchema_K2::PN_Self)));
+
+    UK2Node_VariableGet* InventoryGet = ReadSelf(Graph, Inventory, 680, 100);
+    UK2Node_VariableGet* Configured = NewObject<UK2Node_VariableGet>(Graph);
+    Configured->VariableReference.SetExternalMember(ConfiguredMaxWeightKg, Child->GeneratedClass);
+    FinishNode(Configured, Graph, 900, 300);
+    check(Link(DefaultsCast->GetCastResultPin(), Pin(Configured, UEdGraphSchema_K2::PN_Self)));
+    UK2Node_CallFunction* SetLimit = Call(Graph,
+        UVoyageInventoryWeightLimitedComponent::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UVoyageInventoryWeightLimitedComponent, SetMaxWeightLimit)), 1130, -40);
+    check(Link(Pin(EnsureCall, UEdGraphSchema_K2::PN_Then), Pin(SetLimit, UEdGraphSchema_K2::PN_Execute)));
+    check(Link(Pin(InventoryGet, Inventory), Pin(SetLimit, UEdGraphSchema_K2::PN_Self)));
+    check(Link(Pin(Configured, ConfiguredMaxWeightKg), Pin(SetLimit, NewDefaultMax)));
+    UK2Node_CallFunction* WeightUsed = Call(Graph,
+        UVoyageInventoryWeightLimitedComponent::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UVoyageInventoryWeightLimitedComponent, GetPercentWeightUsed)), 1360, 220);
+    check(Link(Pin(InventoryGet, Inventory), Pin(WeightUsed, UEdGraphSchema_K2::PN_Self)));
+    UK2Node_VariableGet* Meter = ReadSelf(Graph, ResourceMeter, 1360, 360);
+    UK2Node_CallFunction* RefreshMeter = Call(Graph,
+        UMeshComponent::StaticClass()->FindFunctionByName(
+            GET_FUNCTION_NAME_CHECKED(UMeshComponent, SetScalarParameterValueOnMaterials)), 1590, -40);
+    Pin(RefreshMeter, ParameterName)->DefaultValue = ProgressLevel.ToString();
+    check(Link(Pin(SetLimit, UEdGraphSchema_K2::PN_Then), Pin(RefreshMeter, UEdGraphSchema_K2::PN_Execute)));
+    check(Link(Pin(Meter, ResourceMeter), Pin(RefreshMeter, UEdGraphSchema_K2::PN_Self)));
+    check(Link(Pin(WeightUsed, UEdGraphSchema_K2::PN_ReturnValue), Pin(RefreshMeter, ParameterValue)));
+    if (Results.Num() == 1)
+    {
+        check(Link(Pin(RefreshMeter, UEdGraphSchema_K2::PN_Then), Pin(Results[0], UEdGraphSchema_K2::PN_Execute)));
+    }
+}
+
+void AddCapacityLifecycleOverride(UBlueprint* Child, const FName Function)
+{
+    FOverrideGraph Override = AddOverride(Child, Function);
+    UFunction* Apply = Child->GeneratedClass->FindFunctionByName(
+        ApplyConfiguredCapacity, EIncludeSuperFlag::ExcludeSuper);
+    check(Apply && Apply->GetOwnerClass() == Child->GeneratedClass);
+    UK2Node_CallFunction* ApplyCall = Call(Override.Graph, Apply, 400, 0);
+    check(Link(
+        Pin(Override.Parent, UEdGraphSchema_K2::PN_Then),
+        Pin(ApplyCall, UEdGraphSchema_K2::PN_Execute)));
+}
+
+void AddBeginPlayCapacityOverride(UBlueprint* Child)
+{
+    check(Child && Child->GeneratedClass && Child->ParentClass);
+    UEdGraph* Graph = FBlueprintEditorUtils::FindEventGraph(Child);
+    check(Graph);
+    UK2Node_Event* Event = FinishNode(NewObject<UK2Node_Event>(Graph), Graph, 0, 0);
+    Event->EventReference.SetExternalMember(ReceiveBeginPlay, AActor::StaticClass());
+    Event->bOverrideFunction = true;
+    Event->ReconstructNode();
+
+    UFunction* Inherited = Child->ParentClass->FindFunctionByName(ReceiveBeginPlay);
+    check(Inherited && Inherited->GetOwnerClass()->GetPathName() ==
+        FString(TEXT("/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C")));
+    UK2Node_CallParentFunction* Parent = NewObject<UK2Node_CallParentFunction>(Graph);
+    Parent->SetFromFunction(Inherited);
+    FinishNode(Parent, Graph, 240, 0);
+    check(Link(Pin(Event, UEdGraphSchema_K2::PN_Then), Pin(Parent, UEdGraphSchema_K2::PN_Execute)));
+
+    UFunction* Apply = Child->GeneratedClass->FindFunctionByName(
+        ApplyConfiguredCapacity, EIncludeSuperFlag::ExcludeSuper);
+    check(Apply && Apply->GetOwnerClass() == Child->GeneratedClass);
+    UK2Node_CallFunction* ApplyCall = Call(Graph, Apply, 480, 0);
+    check(Link(Pin(Parent, UEdGraphSchema_K2::PN_Then), Pin(ApplyCall, UEdGraphSchema_K2::PN_Execute)));
+}
+
 void ValidateGenerated(UBlueprint* Child)
 {
     check(Child && Child->GeneratedClass && Child->SimpleConstructionScript);
     check(Child->ParentClass && Child->ParentClass->GetPathName() ==
         FString(TEXT("/Game/Mods/ContainerLidLabel/StockOrigin/BP_Inventory_PlayerBox_Large.BP_Inventory_PlayerBox_Large_C")));
     check(Child->SimpleConstructionScript->GetAllNodes().Num() == 3);
-    for (const FName Function : {InitTextWidget, UpdateTextWidget, UpdateIconMaterial})
+    for (const FName Function : {
+        InitTextWidget, UpdateTextWidget, UpdateIconMaterial,
+        ReceiveBeginPlay, OnPersistentActorPostLoad,
+        EnsureCachedSettings, ApplyConfiguredCapacity})
     {
         UFunction* Owned = Child->GeneratedClass->FindFunctionByName(Function, EIncludeSuperFlag::ExcludeSuper);
         check(Owned && Owned->GetOwnerClass() == Child->GeneratedClass);
@@ -474,6 +854,9 @@ void ValidateGenerated(UBlueprint* Child)
         check(ParentFunction && ParentFunction->GetOwnerClass()->GetPathName() ==
             FString(TEXT("/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C")));
     }
+    UFunction* PostLoadParent = Child->ParentClass->FindFunctionByName(OnPersistentActorPostLoad);
+    check(PostLoadParent && PostLoadParent->GetOwnerClass()->GetPathName() ==
+        FString(TEXT("/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C")));
 }
 }
 
@@ -487,7 +870,11 @@ UGenerateContainerLidLabelCommandlet::UGenerateContainerLidLabelCommandlet()
 
 int32 UGenerateContainerLidLabelCommandlet::Main(const FString& Params)
 {
+    FString DefaultMaxWeightKg;
+    checkf(FParse::Value(*Params, TEXT("DefaultMaxWeightKg="), DefaultMaxWeightKg) &&
+        !DefaultMaxWeightKg.IsEmpty(), TEXT("Missing -DefaultMaxWeightKg=<positive-float>"));
     if (FPackageName::DoesPackageExist(StockWidgetPackage) ||
+        FPackageName::DoesPackageExist(StockContainerBasePackage) ||
         FPackageName::DoesPackageExist(StockInventoryParentPackage) ||
         FPackageName::DoesPackageExist(StockParentPackage) ||
         FPackageName::DoesPackageExist(RelocatedLargePackage) ||
@@ -514,6 +901,10 @@ int32 UGenerateContainerLidLabelCommandlet::Main(const FString& Params)
     UBlueprint* Child = CreateActorBlueprint(
         StockLargePackage, StockLargeAsset, RelocatedLarge->GeneratedClass, ReplacementBlueprintContext);
     check(Child->SimpleConstructionScript);
+    check(FBlueprintEditorUtils::AddMemberVariable(Child, ConfiguredMaxWeightKg, FloatPin()));
+    check(FBlueprintEditorUtils::AddMemberVariable(Child, SettingsLoaded, BoolPin()));
+    MarkVariableTransient(Child, ConfiguredMaxWeightKg);
+    MarkVariableTransient(Child, SettingsLoaded);
     check(FBlueprintEditorUtils::AddMemberVariable(
         Child, LidFont, StructPin(FSlateFontInfo::StaticStruct())));
 
@@ -559,6 +950,12 @@ int32 UGenerateContainerLidLabelCommandlet::Main(const FString& Params)
     Font->TypefaceFontName = BoldTypeface;
     Font->Size = LidFontSize;
 
+    AddCachedSettingsFunction(Child, DefaultMaxWeightKg);
+    Compile(Child);
+    AddCapacityFunction(Child);
+    Compile(Child);
+    AddBeginPlayCapacityOverride(Child);
+    AddCapacityLifecycleOverride(Child, OnPersistentActorPostLoad);
     AddInitOverride(Child, Widget->GeneratedClass);
     AddTextOverride(Child, Widget->GeneratedClass);
     AddIconOverride(Child);

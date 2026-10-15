@@ -2,7 +2,18 @@
 
 ## Restart state
 
-- Current independently recorded installation is `v5-test-20261015-054306`,
+- Current installation is `v6-test-20261015-065220`, installed while the game
+  was closed, 2026-10-14 23:56 America/Los_Angeles (2026-10-15 06:56 UTC).
+  All container/archive hashes matched. The user's INI comment and 200 kg value
+  were preserved while renaming the key to `LargeContainerMaxWeightKg`.
+  Exact v5 predecessor backups, install/readback manifest and separate INI
+  migration/restore record are under
+  `artifacts/installations/ContainerLidLabel/20261015-065622-v6-test-2dc3ea33/`.
+  Restore the INI backup as well as containers when rolling back to v5.
+  User confirmed v6 works on 2026-10-15 (America/Los_Angeles), using 1000 kg
+  as a temporary test value. Authored and embedded defaults remain 200 kg;
+  the installed personal test setting is not a source change or release default.
+- Previous independently recorded installation is `v5-test-20261015-054306`,
   installed by the parent directly at 2026-10-15 06:09 UTC on Steam `25929985`.
   Triplet/archive hashes matched; the existing INI retained `MaxWeightKg=200`
   while its obsolete section header was removed. Exact predecessor backups,
@@ -19,7 +30,7 @@
   cooked assertions passed. UToc SHA256:
   `D4C8BC0F774F6701DD187A41B711F7E525DE4DC49A21653D0EA305B465F12527`.
   Release is under `Tmp/ContainerLidLabel/releases/ContainerLidLabel-v6-test-20261015-065220/`.
-  Not installed. Do not alter the running game.
+  Installed as recorded above. Do not alter the running game.
 - The earlier `v3-test` presentation was game-validated
   on Steam build `25880952`. It duplicates the container name on
   the black lid plate, keeps that name visible with icons, uses fixed 5 cm icon
@@ -44,8 +55,8 @@
   `artifacts/installations/ContainerLidLabel/20261013-070846-v3-test-6b391a6f/`.
   Its predecessor backup restores the exact installed `v2-test` triplet; older
   provenance ZIPs remain installed.
-- Next gate is authorized installation of `v6-test` with the INI rename and
-  runtime confirmation. Unenumerated
+- Requested behavior is user-validated; no runtime gate remains for this change.
+  Unenumerated
   edge cases remain existing/new boxes, persistent reload, lowering below
   contents and cache retention until class reload/restart.
 
@@ -56,7 +67,8 @@ icon, and simultaneous lower name plus icons for `v3-test` on Steam build
 `25880952`. The user reported the manually installed sectioned `v4-test` works,
 without independently verified installed hashes or detailed edge-case coverage.
 The user confirmed that the installed flat `v5-test` works. The renamed-key
-`v6-test` is not yet runtime-validated. Long localized names, extreme count widths, lid animation,
+`v6-test` was also user-validated with a temporary 1000 kg setting. Default
+capacity remains the stock 200 kg. Long localized names, extreme count widths, lid animation,
 asynchronous icon refresh, and save/load presentation were not individually
 exercised. A changed game fingerprint invalidates the reconstructed contracts
 and requires fresh extraction, build and validation.

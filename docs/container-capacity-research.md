@@ -15,8 +15,10 @@ with hash readback and the user confirmed it works. Individual edge cases were
 not enumerated. Identity and effort are in the ledger. The next narrow change,
 CAP-03/v6-test, renames the external key to LargeContainerMaxWeightKg; parent
 performs this known bounded edit/build directly under the routine-operation rule.
-Candidate v6-test-20261015-065220 built successfully with 19 cooked assertions
-passing; not installed. Its exact identity and next gate are in the mod backlog.
+Candidate v6-test-20261015-065220 built successfully with 19 cooked assertions,
+was installed with hash readback, and was user-confirmed working with a temporary
+1000 kg test value. Authored INI and embedded default remain 200 kg. Exact
+installation identity and validation boundaries are in the mod backlog.
 
 CAP-01 implementation authorized 2026-10-14 (UTC 2026-10-15). User chose
 extending ContainerLidLabel rather than a separate DML lifecycle manager, with
@@ -24,7 +26,8 @@ extending ContainerLidLabel rather than a separate DML lifecycle manager, with
 /root/container_capacity_coder owns the existing mod's source and build.
 At that initial gate only build preparation was authorized; subsequent
 installation and documentation-only commit instructions are recorded in the
-mod backlog and process ledger. Code changes remain uncommitted.
+mod backlog and process ledger. After runtime confirmation the user authorized
+committing the implementation while excluding the personal 1000 kg test setting.
 Process observations live in [the task ledger](container-capacity-process.md).
 
 Selected candidate: preserve stock lifecycle calls, then apply the INI limit
