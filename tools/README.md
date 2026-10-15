@@ -1333,7 +1333,9 @@ offsets.
 
 The wrapper resolves the manifest-validated canonical EXE, fingerprints the
 installed game, refuses to overwrite a report, and returns only the match count,
-hashes, game identity, report/log paths, and analysis boundary. Use
+hashes, game identity, report/log paths, and analysis boundary. By default, the
+full report goes to `artifacts/inspection/` and the disposable log to
+`Tmp/tool-runs/`. Use
 `-TargetVirtualAddress` or `-MemberOffset` for their respective correlation
 modes. A zero-result string query returns structured `no-match` unless
 `-RequireMatch` is selected.

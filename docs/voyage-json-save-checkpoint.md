@@ -76,7 +76,7 @@ separately because name-map hashes may be recomputed.
 
 Native tools run through `Invoke-VoyageBoundedTool.ps1`, which applies timeout
 and memory limits to the process tree and retains stdout, stderr and a result
-manifest below ignored `artifacts/tool-runs/`. Use `-AllowFailure` only for an
+manifest below ignored `Tmp/tool-runs/` by default. Use `-AllowFailure` only for an
 expected diagnostic failure and inspect the returned status explicitly.
 
 ## GitHub RC3 publication

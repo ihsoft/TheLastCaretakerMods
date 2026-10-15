@@ -63,7 +63,7 @@ if ($targetAddresses.Count -gt 0) {
 $arguments += $queries
 
 $logRoot = Join-Path $repositoryRoot (
-    'artifacts\tool-runs\executable-inspector-' + [Guid]::NewGuid().ToString('N'))
+    'Tmp\tool-runs\executable-inspector-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($logRoot) | Out-Null
 $logPath = Join-Path $logRoot 'inspector.log'
 $savedPreference = $ErrorActionPreference
