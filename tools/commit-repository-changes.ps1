@@ -75,7 +75,15 @@ function Assert-SamePathSet(
 $inputPaths = @(
     $Path |
         ForEach-Object { $_ -split ',' } |
-        ForEach-Object { $_.Trim() } |
+        ForEach-Object {
+            $value = $_.Trim()
+            if ($value.Length -ge 2 -and
+                ($value[0] -eq "'" -or $value[0] -eq '"') -and
+                $value[$value.Length - 1] -eq $value[0]) {
+                $value = $value.Substring(1, $value.Length - 2)
+            }
+            $value
+        } |
         Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 )
 $relativePaths = @($inputPaths | ForEach-Object { Convert-ToRepositoryPath $_ } | Sort-Object -Unique)

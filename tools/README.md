@@ -1128,6 +1128,11 @@ This is the exceptional refresh path after a confirmed game update:
 .\tools\New-VoyageMappings.ps1
 ```
 
+Run this command outside the restricted sandbox from its first invocation.
+The sandbox does not expose the running Voyage process to this tool: an
+in-sandbox attempt reports that Voyage is not running even when it is open.
+Check the process from the same outside-sandbox context used for generation.
+
 Start Voyage first; exactly one running shipping process is a precondition.
 The script never starts or stops the game. It fingerprints the installation,
 verifies the canonical `.tools/bin/jmap_dumper.exe`, waits for the process to

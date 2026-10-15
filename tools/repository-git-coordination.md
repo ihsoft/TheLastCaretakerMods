@@ -22,6 +22,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\commit-repository-
 Use `-ExpectedHead <commit>` when the commit depends on a reviewed HEAD. A busy
 lock waits for up to five minutes by default and records its owner under the
 ignored `.tools/repository-locks/` directory.
+At a `powershell.exe -File` boundary, a quoted comma-separated `-Path` list
+may arrive as one string with literal quotes around each path. The wrapper
+accepts that form as well as the unquoted list shown above.
 
 `-UseExistingIndex` is only for a coordinated recovery of an already staged
 exact path set. The wrapper requires the supplied paths to equal the entire

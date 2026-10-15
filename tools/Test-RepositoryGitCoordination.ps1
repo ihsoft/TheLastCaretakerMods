@@ -112,6 +112,21 @@ if ($remainingStatus.Count -ne 1 -or $remainingStatus[0] -ne " M two.txt") {
     throw "Unrelated worktree change was not preserved: $($remainingStatus -join ', ')."
 }
 
+foreach ($name in @("quoted-one.txt", "quoted-two.txt")) {
+    [System.IO.File]::WriteAllText((Join-Path $fixtureRoot $name), "$name`n")
+}
+& $powerShell -NoProfile -ExecutionPolicy Bypass -File $fixtureCommit `
+    -Path "'quoted-one.txt','quoted-two.txt'" -Message "Commit two quoted paths" `
+    -Owner "coordination-test" | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "Quoted multi-path commit test failed with exit code $LASTEXITCODE."
+}
+$quotedCommitPaths = @(& git -C $fixtureRoot diff-tree --no-commit-id --name-only -r HEAD)
+$expectedQuotedPaths = @("quoted-one.txt", "quoted-two.txt")
+if (@(Compare-Object $expectedQuotedPaths $quotedCommitPaths).Count -ne 0) {
+    throw "Quoted multi-path commit included unexpected paths: $($quotedCommitPaths -join ', ')."
+}
+
 & git -C $fixtureRoot add -- two.txt
 [System.IO.File]::WriteAllText((Join-Path $fixtureRoot "three.txt"), "new three`n")
 $previousPreference = $ErrorActionPreference
@@ -139,4 +154,4 @@ if ($LASTEXITCODE -ne 0) {
     throw "Explicit existing-index recovery failed with exit code $LASTEXITCODE."
 }
 
-Write-Host "Repository Git coordination passed: serialized processes, exact commit scope, occupied-index rejection, and explicit recovery."
+Write-Host "Repository Git coordination passed: serialized processes, exact and quoted multi-path commits, occupied-index rejection, and explicit recovery."

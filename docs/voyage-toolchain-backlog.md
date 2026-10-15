@@ -95,6 +95,18 @@ or its expected return no longer exceeds implementation and maintenance cost.
 Tool count and 100% coverage are not goals. Accumulate low-impact observations
 until they recur or create a correctness, safety or provenance risk.
 
+Mapping refresh and Git commit maintenance (2026-10-15): the restricted sandbox
+hid a running Voyage process, costing one failed generator call before the
+successful outside-sandbox call; this has recurred across mapping refreshes.
+The quoted two-path `powershell.exe -File` commit argument kept literal quotes
+after comma splitting, costing two rejected calls and a corrective Git rewrite.
+The small documented boundary and parser fix should make the next refresh use
+one generator call and one exact-scope commit, avoiding those retries and
+history repair. The implementation and maintenance cost is limited to the
+argument parser, one fixture case and owning command docs. Verification:
+Windows PowerShell 5.1 Git coordination regression passed with both new files
+in one fixture commit; the next live mapping refresh remains the adoption check.
+
 ## Triggered work queue
 
 | Gap | Current evidence | Start only when | Expected return |
