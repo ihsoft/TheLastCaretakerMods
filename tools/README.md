@@ -71,15 +71,15 @@ count; creating or rendering the source model does not.
 Reasoning, code editing,
 documentation, and novel diagnosis after a black-box failure are not counted.
 The target is at least 80% public-tool coverage. A fallback is evidence of a
-coverage gap, not a new normal workflow: add it to
-`../docs/voyage-toolchain-backlog.md` when it can recur.
+coverage gap, not a new normal workflow; report its impact in the task's normal
+tool-use report.
 
 Reports inform prioritization; they do not automatically authorize tool
 implementation. Fix current workflow failures first, then remove demonstrated
 recurring friction. The target is 80%, not exhaustive automation of every
-historical activity. Keep deferred gaps visible without starting unrelated
-work. Preserve old measurements as superseded history when the user changes
-scope; recompute the scoped sample explicitly, not as an apparent improvement.
+historical activity. Preserve old measurements as superseded history when the
+user changes scope; recompute the scoped sample explicitly, not as an apparent
+improvement.
 Read the routing table and the selected tool's contract; unrelated recipes and
 implementation files are not mandatory reading on a successful supported path.
 

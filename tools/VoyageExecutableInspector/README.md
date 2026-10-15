@@ -27,6 +27,9 @@ executable or loading it into the game process:
   -TargetVirtualAddress 0x14AD1B8D8
 ```
 
+Use the target-address reference report to establish whether that address was
+found; a nearby name or string-match count alone does not establish a reference.
+
 `--member-offsets` searches executable sections for little-endian member
 displacements and reports pages containing at least three distinct requested
 offsets. This is a correlation aid, not a full x86 decoder; inspect the

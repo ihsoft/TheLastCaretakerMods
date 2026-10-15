@@ -27,7 +27,7 @@ those details here.
   merge duplicates, and put command syntax and implementation conventions in
   the owning tool documentation rather than repeating them here. Replace a
   rule only after preserving its still-valid safety/data contract. Record the
-  reason and verification in the active backlog; do not retain a chronological
+  reason and verification with the change; do not retain a chronological
   history of superseded rules in the normal agent reading path.
 
 ## Subagent coordination
@@ -159,8 +159,8 @@ those details here.
   installation and restoration. Source-only modeling, image/video production
   and unrelated development are outside this metric. Do not inflate or dilute the
   metric with reasoning, source editing, documentation, or genuinely novel
-  diagnosis after a black-box failure. Record uncovered operations in
-  `docs/voyage-toolchain-backlog.md` instead of normalizing ad-hoc commands.
+  diagnosis after a black-box failure. Report uncovered operations and their
+  impact in the task's tool-use report instead of normalizing ad-hoc commands.
 - The pipeline's primary outcome is low agent effort and low context/token use
   for ordinary predictable work, while preserving correctness, provenance and
   safety gates. A black-box wrapper is only one means to that outcome: it is not
@@ -172,12 +172,12 @@ those details here.
 - A reported gap is evidence, not automatic authorization or a requirement to
   build another tool. Prioritize defects and recurring friction in actual
   user-requested workflows. The 80% target is not a mandate for 100% feature
-  coverage: keep lower-priority gaps deferred rather than inventing new work
-  to fill the queue or improve the score. New workflow families require a
+  coverage: defer lower-priority gaps rather than inventing new work to improve
+  the score. New workflow families require a
   clear user need; an old one-off report alone is insufficient.
 - Do not interrupt active work, change a tool or rule, or create a standalone
   commit for every low-impact observation. Keep a single occurrence in the
-  owning agent report or active backlog and review such observations in a batch
+  owning agent report and review such observations in a batch
   at the next natural checkpoint. Act sooner only when the current workflow is
   blocked, correctness/safety/provenance is at risk, or the same friction recurs
   in multiple independent real-task iterations. Repetition is the normal trigger
@@ -233,9 +233,6 @@ those details here.
   result, stop normal research and diagnose the tool before touching its store.
 - Durable cooked-asset toolchain contracts, accepted fork checkpoints, and the
   validation ladder live in `docs/voyage-cooked-asset-toolchain.md`.
-- Active cross-cutting tool and pipeline work lives in
-  `docs/voyage-toolchain-backlog.md`; mod backlogs must not absorb general
-  toolchain investigations.
 - Durable findings about the Boat's Diesel socket hover card live in
   `docs/boat-resource-socket-architecture.md`; active feature work alone belongs
   in `docs/boat-hud-total-resources-backlog.md`.

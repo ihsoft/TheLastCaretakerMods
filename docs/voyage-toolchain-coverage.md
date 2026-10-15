@@ -67,5 +67,4 @@ Collect another sample only from actual requested work. Record intended
 operations, public entry points, retries, implementation reads, validation and
 reusable gaps in the coding agent's normal tool-use report. Do not request
 duplicate reports or invent synthetic work to improve the percentage. Active
-cross-cutting gaps and their start conditions belong in
-[`voyage-toolchain-backlog.md`](voyage-toolchain-backlog.md).
+cross-cutting gaps are evaluated in the requested workflow where they arise.
