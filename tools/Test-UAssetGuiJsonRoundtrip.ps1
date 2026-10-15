@@ -1,4 +1,4 @@
-# Development regression. Inputs are read-only; outputs remain under artifacts.
+# Development regression. Inputs are read-only; outputs stay in Tmp.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$CandidateGui,
@@ -13,7 +13,7 @@ $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $gui = (Resolve-Path -LiteralPath $CandidateGui).Path
 $inputPath = (Resolve-Path -LiteralPath $InputAsset).Path
 $mappingPath = (Resolve-Path -LiteralPath $Mappings).Path
-$run = Join-Path $repo ('artifacts\tests\gui-json-' + [Guid]::NewGuid().ToString('N'))
+$run = Join-Path $repo ('Tmp\tests\gui-json-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($run) | Out-Null
 $bounded = Join-Path $PSScriptRoot 'Invoke-VoyageBoundedTool.ps1'
 function Invoke-Gui([string[]]$GuiArguments) {

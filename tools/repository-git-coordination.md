@@ -54,7 +54,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 ```
 
 The test removes and recreates the fixed ignored directory
-`artifacts/tests/repository-git-coordination`, so do not run two instances at
+`Tmp/tests/repository-git-coordination`, so do not run two instances at
 the same time. Its two hidden worker processes contend for the real
 repository `git-transaction` mutex and assert that their lock intervals do not
 overlap; the test may therefore wait for or briefly compete with ordinary

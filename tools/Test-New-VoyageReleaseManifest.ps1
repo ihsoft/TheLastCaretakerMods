@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$testParent = Join-Path $repositoryRoot 'artifacts\tests\new-voyage-release-manifest'
+$testParent = Join-Path $repositoryRoot 'Tmp\tests\new-voyage-release-manifest'
 $testRoot = Join-Path $testParent ([Guid]::NewGuid().ToString('N'))
 $producer = Join-Path $PSScriptRoot 'New-VoyageReleaseManifest.ps1'
 $steamApps = Join-Path $testRoot 'steamapps'

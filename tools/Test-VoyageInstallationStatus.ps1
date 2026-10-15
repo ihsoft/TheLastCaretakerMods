@@ -2,7 +2,7 @@
 param()
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$root = Join-Path (Split-Path -Parent $PSScriptRoot) ('artifacts\tests\installation-status-' + [Guid]::NewGuid().ToString('N'))
+$root = Join-Path (Split-Path -Parent $PSScriptRoot) ('Tmp\tests\installation-status-' + [Guid]::NewGuid().ToString('N'))
 $game = Join-Path $root 'steamapps\common\Voyage'
 $paks = Join-Path $game 'Voyage\Content\Paks'
 $exe = Join-Path $game 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe'

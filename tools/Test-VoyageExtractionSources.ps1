@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$run = Join-Path $repo ('artifacts\tests\extraction-sources-' + [Guid]::NewGuid().ToString('N'))
+$run = Join-Path $repo ('Tmp\tests\extraction-sources-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($run) | Out-Null
 $extract = Join-Path $PSScriptRoot 'Extract-VoyagePackage.ps1'
 $candidate = (Resolve-Path -LiteralPath $Retoc).Path

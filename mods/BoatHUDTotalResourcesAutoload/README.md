@@ -98,14 +98,18 @@ family is installed, the installer backs it up by hash and retires it so two
 containers cannot export the same runtime packages:
 
 ```powershell
+$evidenceRoot = Join-Path '..\..\artifacts\installations\BoatHUDTotalResources' `
+  ([Guid]::NewGuid().ToString('N'))
 .\Install-BoatHUDTotalResources.ps1 `
   -PackageRoot '..\..\artifacts\builds\boat-hud-total-resources\package' `
-  -EvidenceRoot '..\..\artifacts\tests\boat-hud-total-resources-install'
+  -EvidenceRoot $evidenceRoot
 ```
 
 Remove only while Voyage is closed:
 
 ```powershell
 .\Remove-BoatHUDTotalResources.ps1 `
-  -InstallManifest '..\..\artifacts\tests\boat-hud-total-resources-install\install-manifest.json'
+  -InstallManifest (Join-Path $evidenceRoot 'install-manifest.json')
 ```
+
+For removal in a later session, use the manifest path printed by the installer.

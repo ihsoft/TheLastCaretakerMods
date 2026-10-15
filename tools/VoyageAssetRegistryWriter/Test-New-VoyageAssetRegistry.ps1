@@ -4,7 +4,7 @@ param([string]$EngineRoot = 'K:\Epic Games\UE_5.8\Engine')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-$root = Join-Path $repo ('artifacts\tests\voyage-asset-registry-' +
+$root = Join-Path $repo ('Tmp\tests\voyage-asset-registry-' +
     [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss-fff'))
 $null = New-Item -ItemType Directory -Path $root
 $utf8 = New-Object Text.UTF8Encoding($false)

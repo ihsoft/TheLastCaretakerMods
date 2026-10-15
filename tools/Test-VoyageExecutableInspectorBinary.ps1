@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $testRoot = Join-Path $repositoryRoot (
-    'artifacts\tests\executable-inspector-binary-' + [Guid]::NewGuid().ToString('N'))
+    'Tmp\tests\executable-inspector-binary-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($testRoot) | Out-Null
 $checks = [Collections.Generic.List[string]]::new()
 

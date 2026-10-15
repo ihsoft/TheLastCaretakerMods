@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$testRoot = Join-Path $repoRoot "artifacts/tests/repository-git-coordination"
+$testRoot = Join-Path $repoRoot "Tmp/tests/repository-git-coordination"
 if (Test-Path -LiteralPath $testRoot) {
     Remove-Item -LiteralPath $testRoot -Recurse -Force
 }

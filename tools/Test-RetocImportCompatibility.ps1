@@ -22,7 +22,7 @@ if ($fp.steam.buildId -cne '25056839' -or $fp.executable.sha256 -cne 'CA84428CF4
     throw 'Revalidate this Voyage fixture contract for the new game fingerprint.'
 }
 $filter = 'Equipment/ToolAbilities/BP_ToolAbility_Maintenance_Dismantle'
-$run = Join-Path $repo ('artifacts\tests\retoc-imports-' + [Guid]::NewGuid().ToString('N'))
+$run = Join-Path $repo ('Tmp\tests\retoc-imports-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($run) | Out-Null
 $extract = Join-Path $PSScriptRoot 'Extract-VoyagePackage.ps1'
 $bounded = Join-Path $PSScriptRoot 'Invoke-VoyageBoundedTool.ps1'

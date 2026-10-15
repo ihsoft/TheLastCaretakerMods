@@ -387,7 +387,7 @@ container contents, or establishes gameplay compatibility.
 
 Regression: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File
 tools/Test-VoyageInstallationStatus.ps1`. Synthetic fixtures/results remain
-under ignored `artifacts/tests/installation-status-*/`.
+under ignored `Tmp/tests/installation-status-*/`.
 
 ## Common setup and safety
 
@@ -920,7 +920,7 @@ Supply a real differing stock override fixture. The test checks stock/mod
 separation, renamed-mod priority, stock-only provenance, unchanged candidate
 serialization versus canonical retoc after excluding competing overrides,
 Windows PowerShell default-path binding, and rejection of unowned queries.
-Its copied mod fixture and reports stay below ignored `artifacts/tests/`;
+Its copied mod fixture and reports stay below ignored `Tmp/tests/`;
 it does not install anything or replace the canonical binary. Synthetic retoc
 unit tests separately exercise broken unselected containers, duplicates,
 missing paths, empty selection, version mismatch, and unchanged directory
@@ -950,7 +950,7 @@ container header. Raw Zen bytes must agree except CookedHeaderSize, whose
 version-bound field and value are independently checked against the legacy
 source. Nothing is installed or published. A changed fingerprint/control
 requires deliberate revalidation, not silently accepting the new input.
-The compact result returns the full `reportPath` under ignored `artifacts/`.
+The compact result returns the full `reportPath` under ignored `Tmp/tests/`.
 This is compatibility evidence for the candidate reader, not permission to
 use upstream readers on the fork's expanded output or to claim runtime success.
 
@@ -963,7 +963,7 @@ Run its public `-File` entry point with Windows PowerShell 5.1. The input
 must already have matching provenance and parse fully. `-TestCanPlace` is
 specific to `BP_FabricationPlacementComponent.GenerateAndSetLocation`;
 omit it for other inputs. All outputs and the returned `reportPath` stay in
-a unique ignored `artifacts/tests/gui-json-*` directory.
+a unique ignored `Tmp/tests/gui-json-*` directory.
 
 Cases cover unchanged JSON, obsolete candidate JSON containing an ignored
 engine hint, and optionally the `CanPlace = True` edit. Every write explicitly
@@ -1061,10 +1061,8 @@ tries to invoke them. It checks publisher reuse, a narrow legacy query, both
 reference-search absence contracts, public stock inventory and compact JSON
 output, formatter-independent asset JSON, compact Blueprint overview/exact-
 function focus, plus normal JSON retrieval and reuse.
-The current test writes diagnostic output under ignored `artifacts/tests/`;
-that output is disposable test state under the lifecycle policy and the path
-remains only until the producer is migrated. Game files and the mapping
-registry are never changed.
+The test writes disposable diagnostic output under ignored `Tmp/tests/`.
+Game files and the mapping registry are never changed.
 This is tool validation, not new coding-agent adoption evidence.
 
 ### Canonical retoc, jmap, UAssetAPI, and CUE4Parse binaries

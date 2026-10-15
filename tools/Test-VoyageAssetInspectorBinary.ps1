@@ -1,11 +1,11 @@
-# Read-only against the installed game; diagnostics stay under artifacts/tests.
+# Read-only against the installed game; diagnostics stay under Tmp/tests.
 [CmdletBinding()]
 param([string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage')
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$run = Join-Path $repo ('artifacts\tests\inspector-binary-' + [Guid]::NewGuid().ToString('N'))
+$run = Join-Path $repo ('Tmp\tests\inspector-binary-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($run) | Out-Null
 $checks = [Collections.Generic.List[string]]::new()
 function Assert-InspectorTest([bool]$Condition, [string]$Message) {
