@@ -57,7 +57,8 @@ inputs are still fingerprint-gated and must be reviewed after an update.
   [`mods/Railgun`](mods/Railgun/README.md).
 - [`tools/`](tools/README.md) — catalog and usage guide for reproducible
   extraction, inspection, and patching utilities.
-- `docs/` — durable architecture findings, workflow, and research pitfalls.
+- `docs/` — reusable cross-mod architecture, methods and research pitfalls;
+  mod-specific knowledge belongs under its owning `mods/` directory.
 - `artifacts/` — ignored local scratch space for extracted assets, mappings,
   generated Blueprints, cooked files, packages, and backups; it is never part
   of the repository.
@@ -66,6 +67,8 @@ inputs are still fingerprint-gated and must be reviewed after an update.
 
 ## Shared game research
 
+- [Runtime configuration](docs/runtime-configuration-patterns.md) — setting
+  ownership, shared cache lifetime, native setters and validation boundaries.
 - [Item fabrication and pickup](docs/voyage-item-fabrication-and-pickup.md) —
   separate registration, serialization and drop contracts; tested ammo
   dependencies, output grouping and numeric caliber defaults.

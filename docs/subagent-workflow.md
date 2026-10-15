@@ -5,6 +5,10 @@ resuming delegated work, together with the root and closest `AGENTS.md` and
 the owning backlog's restart section. It supplements, not replaces, runtime
 tool permissions, installation safeguards and Git coordination.
 
+When the user explicitly requests resource or delegation diagnostics, use
+[agent work measurement](agent-work-measurement.md). Do not collect per-task
+metrics routinely or put individual measurement results in shared documentation.
+
 ## Roles and startup
 
 - Do not delegate trivial operations that require no material expansion of the

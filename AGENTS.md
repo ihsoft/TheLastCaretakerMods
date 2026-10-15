@@ -6,6 +6,12 @@ those details here.
 
 ## Rule and knowledge ownership
 
+- Shared `docs/` content must have a concrete or reasonably expected use across
+  mods. Keep mod-only contracts and open questions under the owning `mods/<mod>/`.
+  Write reusable conclusions without tying them to one mod; link to a mod as an
+  example when useful. Do not keep task histories or per-run measurements in the
+  shared reading path. Explicitly requested diagnostics use the opt-in method
+  linked from the subagent workflow.
 - Repository-level README files and the shared tool index contain only verified,
   established capabilities, current interfaces and safety/compatibility limits.
   Keep candidate IDs, experimental hypotheses, trial instructions and progress
