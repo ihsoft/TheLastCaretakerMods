@@ -7,9 +7,38 @@ tool permissions, installation safeguards and Git coordination.
 
 ## Roles and startup
 
+- Do not delegate trivial operations that require no material expansion of the
+  parent's context. If the inputs and procedure are already known, perform them
+  directly, especially when two or three documented tool calls with compact
+  output suffice. This is a useful indicator, not a call-count quota; account
+  for discovery and output volume as well as execution.
+- Treat these two cases as established direct-execution choices: installing an
+  already reviewed release through its documented installer, and committing
+  already reviewed changes with a known exact file scope through
+  `tools/commit-repository-changes.ps1`. Do not repeatedly investigate whether
+  these prepared operations deserve delegation. Status/hash checks and small
+  documentation updates usually qualify too. A commit already included in a
+  coder's ongoing assignment may remain with that coder; do not wake a coder
+  just to perform a prepared commit. Existing action authorization and explicit
+  user restrictions still apply; this role choice adds no permission gate.
+- Evaluate discovery cost before calling a task trivial. If the procedure or
+  required inputs are unknown and meaningful searching, source/log inspection
+  or debugging seems likely, delegation can pay off by isolating that work.
+  Do not first consume the discovery context merely to prove delegation useful.
+  Delegate bounded procedural discovery when justified, while retaining parent
+  ownership of architectural decisions and unknown game contracts. Conversely,
+  do not invent an investigation for an already understood operation. Resolving
+  mixed changes, merge conflicts or history rewriting is not a prepared commit.
+- Delegate implementation and work with substantial build/debugging context.
+  A short request is not necessarily a trivial task. If a direct operation
+  uncovers substantial implementation or debugging, reassess delegation at
+  that boundary. Direct execution never waives process checks, manifest and
+  fingerprint validation, backups, readback, review gates, or Git coordination.
 - The parent researches game contracts, selects the architecture, supplies a
   bounded implementation brief, reviews evidence and speaks to the user.
-  The coder implements, builds, validates and performs authorized installation.
+  For delegated implementation work, the coder implements, builds, validates
+  and performs authorized installation; the routine-operation exception above
+  lets the parent complete an already prepared stage directly.
   Local compiler/API diagnosis belongs to the coder; an unknown native contract,
   new architectural hypothesis or material scope expansion returns to the parent.
 - For the designated coding role, the repository default is GPT-5.6 Sol,
@@ -102,7 +131,7 @@ Suggested initial brief:
 ## Installation handoff
 
 Follow the root process-check rule: no advance question about whether the game
-is closed. At the authorized installation stage, the coder checks it directly.
+is closed. At the authorized installation stage, the installing agent checks it directly.
 If closed, proceed through the documented guarded installer. If running or the
 check is inconclusive, do not mutate installed files; report and wait for the
 user. Never stop the game or treat an earlier check as current.

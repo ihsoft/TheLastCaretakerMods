@@ -37,6 +37,32 @@ evidence remain outside cleanup.
 
 ### Subagent coordination rule adoption
 
+User-requested routine-operation exception (2026-10-15): the parent should
+perform short, established operations directly instead of delegating by role
+alone. The observed cost is handoff/context recovery/report/review on small
+follow-ups; the ContainerLidLabel flat-format task exchanged about 10k message
+characters. Its later direct installation took 102 seconds, 9,093 uncached
+input tokens and 2,165 output tokens, with six top-level tool calls and no coder.
+Expected delta for comparable prepared installations: remove the assignment,
+child recovery/report and duplicate parent review, while keeping the existing
+installer and safety gates. A delegated installation was not measured, so no
+causal token-saving percentage is established. Cost of this change is three
+small documentation edits and consistency review, with no runtime code, tests,
+new tool or per-task measurement requirement. Repeated routine installations
+are the intended consumer; substantial implementation/debugging stays delegated.
+Verification: root role wording, workflow criteria and installation ownership
+were aligned; authorization, rollback/process/readback and Git gates remain.
+
+User refinement (2026-10-14, America/Los_Angeles): prepared installation and
+prepared exact-scope commits are accepted as established direct-execution cases.
+General criterion is negligible context growth, often two or three known tools
+with compact output. Discovery counts toward cost: unknown procedures with
+likely substantial searching may warrant delegation before the parent absorbs
+that context. This extends the same overhead reduction with a small wording
+change, not new tooling. Installation has the measurement above; no measured
+direct-versus-delegated commit comparison is claimed. Document consistency and
+whitespace review preserve the existing safety and Git transaction contracts.
+
 User-requested consolidation addresses repeated missing coder reports and
 advance game-closed questions. Root `AGENTS.md` now routes delegation through
 `docs/subagent-workflow.md`: one initial two-way handshake, explicit role/stage

@@ -1,10 +1,11 @@
 # Container Lid Label
 
 Container Lid Label adds a second label row to the black lid plate of the large
-FortiHold container while leaving the stock side label, count, capacity bar,
-inventory component, and lid mesh behavior in place. The row duplicates the
-stock container name. When the stock icon selection is visible, the lid also
-shows the same one or two icon materials while keeping the name row visible.
+FortiHold container and lets one external INI set that container's mass
+capacity. The stock side label, count, inventory contents, capacity bar, and lid
+mesh behavior remain in place. The lid row duplicates the stock container name.
+When the stock icon selection is visible, the lid also shows the same one or two
+icon materials while keeping the name row visible.
 
 The release contains exactly two cooked packages. The exact stock large-box
 Blueprint is relocated to
@@ -13,22 +14,51 @@ generated child at the original package path inherits that snapshot and adds
 one `VoyageWidgetComponent` plus two icon planes under inherited
 `PlayerBox_Lid`. The child overrides only `InitTextWidget`,
 `UpdateTextWidget`, and `UpdateIconMaterial`, and each override calls the exact
-stock parent function first.
+stock parent function first. The same exact Large-only child calls its stock
+parent first from `ReceiveBeginPlay` and `OnPersistentActorPostLoad`. It then
+uses the exact generated Large class default object as a shared settings cache,
+calls the stock inventory setter, and refreshes the existing capacity bar from
+the inventory's current percent used.
+
+The authored default is [ContainerLidLabel.ini](Assets/ContainerLidLabel.ini):
+
+```ini
+# Installed beside the mod containers in Voyage/Content/Paks/ContainerLidLabel.ini.
+; Read once per generated-class load. Use a decimal point and no inline comments.
+LargeContainerMaxWeightKg=200
+```
+
+At runtime the generated Large class reads
+`Voyage/Content/Paks/ContainerLidLabel.ini` once while that generated class and
+its class default object remain loaded. Every Large container and persistent
+load callback reuses the cached result. If the class is unloaded and loaded
+again, it may read the file again. The flat-file parser trims whitespace,
+matches the key, ignores blank lines and full-line `;` or `#` comments, and
+uses the last valid matching key. A missing file or key, or no
+valid finite positive float value, uses the embedded `200` kg authored default.
+Inline comments are not supported. Lowering the limit preserves existing
+contents; the mod never clears, recreates, or trims inventory stacks.
+The key applies only to the large container. When upgrading from `v5-test`,
+rename `MaxWeightKg` to `LargeContainerMaxWeightKg` in the installed INI,
+preserving its value and comments. The old key is not an alias.
 
 Build with Windows PowerShell 5.1 from the repository root:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
   .\mods\ContainerLidLabel\Build-ContainerLidLabel.ps1 `
-  -Version v3-test -AllowDirtySource
+  -Version v6-test -AllowDirtySource
 ```
 
 The producer requires Unreal Engine 5.8 at `K:\Epic Games\UE_5.8` and the
 current Voyage installation at `P:\SteamLibrary\steamapps\common\Voyage` by
 default. It writes a fresh release below `Tmp/ContainerLidLabel`, validates the
-exact two-package inventory, creates the `_P` IoStore triplet and ZIP, and
-publishes `release-manifest.json` through the common validate-only installer
-gate. It never installs the release.
+exact two-package inventory, creates the `_P` IoStore triplet, ships the INI
+both beside the triplet and inside the ZIP, and publishes
+`release-manifest.json` through the common validate-only installer gate. It
+never installs the release. The common installer does not deploy this extra INI;
+a later installation workflow must place it without overwriting an existing
+user-edited copy.
 
 To recreate only `build-manifest.json` for an existing validated release, pass
 its exact `-OutputRoot`, matching `-Version`, and `-FinalizeExisting`. This mode
@@ -49,7 +79,14 @@ The user validated the requested presentation in the real game on Steam build
 the icon size and positions look correct, a sole icon stays on its native side,
 and the lower name remains visible together with icons. Long localized names,
 extreme count widths, lid animation, asynchronous icon refresh, and save/load
-were not individually exercised by that report.
+were not individually exercised by that report. The capacity extension and the
+rebuilt presentation on Steam build `25929985` was manually installed and the
+user reported that the prior sectioned `v4-test` works. That report does not
+independently establish installed hashes or detailed coverage of new/existing
+boxes, persistent reload, a non-default value, cache behavior, or lowering the
+limit below current contents. After the recorded installation, the user also
+confirmed the flat `v5-test` works. The renamed `v6-test` key is a subsequent
+change and requires its own runtime confirmation.
 
 Use the [shared release workflow](../../tools/README.md#release-producers) for
 build output and the [common installation and restore

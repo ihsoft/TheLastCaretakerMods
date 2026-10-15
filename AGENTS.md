@@ -41,7 +41,11 @@ those details here.
   explicit request.
 - The parent owns research, architecture, task scope, review and user-facing
   conclusions; the designated coder owns implementation, build, validation and
-  authorized installation. Preserve explicit user restrictions on either role.
+  authorized installation for delegated implementation work. The parent performs
+  known trivial operations directly when they need no material context growth;
+  include discovery cost when deciding whether delegation pays off. Use the
+  established cases and scope criteria in the subagent workflow. Preserve
+  explicit user restrictions on either role and all operation-specific gates.
   Send unknown game contracts back to the parent rather than inventing them.
 - Every assignment must name its parent return address, task ID, owned paths,
   model/effort, evidence, acceptance criteria and allowed stages. A coder's
