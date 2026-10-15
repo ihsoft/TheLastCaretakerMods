@@ -30,7 +30,8 @@ Set-StrictMode -Version Latest
 
 $summarySchemaVersion = 4
 $getAssetScript = Join-Path $PSScriptRoot 'Get-VoyageAssetJson.ps1'
-$summaryRoot = Join-Path $PSScriptRoot '..\artifacts\asset-summaries'
+$gameCacheRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\artifacts\asset-cache'))
+$modSummaryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Tmp\asset-summaries\mod'))
 $keySeparator = [char]31
 
 function Get-OptionalPropertyValue {
@@ -217,12 +218,27 @@ if ($jsonSha256 -cne [string]$assetResult.jsonSha256) {
 }
 
 $summaryDirectory = if ($Source -eq 'Game') {
-    Join-Path (Join-Path ([IO.Path]::GetFullPath($summaryRoot)) 'game') $jsonSha256
+    $relativeJsonPath = [IO.Path]::ChangeExtension(
+        [string]$assetResult.virtualPath, '.json').Replace(
+        '/', [IO.Path]::DirectorySeparatorChar)
+    $expectedSuffix = [IO.Path]::DirectorySeparatorChar + $relativeJsonPath
+    if (-not $jsonPath.EndsWith(
+        $expectedSuffix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Game asset JSON path does not match its virtual identity: $jsonPath"
+    }
+    $cacheVersionRoot = $jsonPath.Substring(
+        0, $jsonPath.Length - $expectedSuffix.Length)
+    if (-not [string]::Equals(
+        [IO.Path]::GetDirectoryName($cacheVersionRoot), $gameCacheRoot,
+        [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Game asset JSON is outside the versioned cache: $jsonPath"
+    }
+    Join-Path (Join-Path $cacheVersionRoot '_summaries') $jsonSha256
 }
 else {
     $runName = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '-' +
         [guid]::NewGuid().ToString('N').Substring(0, 8)
-    Join-Path (Join-Path ([IO.Path]::GetFullPath($summaryRoot)) 'mod') $runName
+    Join-Path $modSummaryRoot $runName
 }
 $summaryPath = Join-Path $summaryDirectory 'summary.json'
 

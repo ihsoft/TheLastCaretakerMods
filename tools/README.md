@@ -765,9 +765,11 @@ generated-class overview or selected records, total counts, `resultCount`, and
 a hash-verified `summaryPath`; the complete summary contains all focus families
 and their source-function correlations. Normal repeated game calls reuse a
 content-addressed derived summary. The wrapper supports both Windows PowerShell
-5.1 and PowerShell 7, including missing/null optional export properties. Explicit
-`-Source Mod -ModContainer <exact.utoc>` remains a one-off uncached diagnostic,
-matching the underlying asset-retrieval contract.
+5.1 and PowerShell 7, including missing/null optional export properties. Game
+summaries live under `_summaries` in the validated asset cache version, so
+removing that version removes its derived summaries. Explicit
+`-Source Mod -ModContainer <exact.utoc>` remains a one-off uncached diagnostic under
+`Tmp/asset-summaries/mod/`, matching the underlying asset-retrieval contract.
 
 This is a cooked-bytecode summary, not a native runtime call graph, ownership/
 lifecycle proof, or provider-precedence model. It reports serialized function
