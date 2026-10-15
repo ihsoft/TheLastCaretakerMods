@@ -1,7 +1,7 @@
 #pragma once
-// Editor-only mirror, never shipped as a DLL. Steam 25191271, EXE SHA-256
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
-// Method: current reflected member registrations and stock asset JSON.
+// Editor-only mirror, never shipped as a DLL. Steam 25956314, UE 5.8,
+// EXE SHA-256 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
+// Method: reviewed reflection mappings and stock cable/socket JSON.
 // Revalidate names/types/ownership on executable change. No binary layout claim.
 #include "GameFramework/Actor.h"
 #include "Components/SceneComponent.h"

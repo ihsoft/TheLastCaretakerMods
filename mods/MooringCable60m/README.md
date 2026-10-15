@@ -5,8 +5,9 @@ with the original 20 m automatic payout parameter for connected cables.
 Game-validated on Steam build 25191271: an existing save loaded, three connected
 cables read 2000, a free cable read 6000, and the user physically deployed it
 to 59 m. The user accepted the towing behavior and requested this final release.
-The final containers are byte-identical to the tested 60m-test5 candidate;
-only release packaging and source/documentation cleanup changed.
+The original final containers were byte-identical to the tested 60m-test5
+candidate. For Steam build `25956314`, stock contracts and a rebuilt candidate
+passed structural validation; gameplay on that build is not yet validated.
 
 Strength, stretch, tightness and snap defaults remain stock. Other cable types
 are unchanged. A connected cable's displayed ceiling may show 20 m; manual
@@ -20,28 +21,31 @@ can produce a larger physical separation. A new-save/reload roundtrip after
 installation was not separately reported; loading the existing save was tested.
 No UE4SS, native DLL or autoload actor is installed. Editor mirror code is build-only.
 
-Build from Windows PowerShell 5.1, using fresh ignored output directories:
+Build from Windows PowerShell 5.1, outside the restricted sandbox:
 
 ```powershell
-# Unreal producer: run outside the restricted sandbox.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/MooringCable60m/Build-LimitGraph.ps1 -OutputRoot R:\Codex\TheLastCaretakerMods\artifacts\mooring60\my-graph
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/MooringCable60m/Build-Candidate.ps1 -OutputRoot R:\Codex\TheLastCaretakerMods\artifacts\releases\my-mooring-candidate -GraphManifest R:\Codex\TheLastCaretakerMods\artifacts\mooring60\my-graph\graph-manifest.json
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/MooringCable60m/Build-MooringCable60m.ps1
 ```
 
-The graph producer compiles/generates/cooks the child with tagged properties;
+The script creates a fresh run under `Tmp/MooringCable60m/`, with intermediate
+graph output in `graph/` and the validated release in `release/`. Its result
+returns `releaseRoot` and `releaseManifest`; use the latter for installation.
+Optional `-OutputRoot` selects a fresh run directory below `Tmp/MooringCable60m`.
+`-GameRoot` and `-EngineRoot` select the installed game and UE 5.8 respectively.
+
+The producer compiles/generates/cooks the child with tagged properties;
 the minimal mirror's inherited property indices must not enter an unversioned
-runtime CDO. Its temporary editor parent is never packaged. The candidate
-producer independently checks both stock roundtrips, the relocated parent
+runtime CDO. Its temporary editor parent is never packaged. It independently
+checks both stock roundtrips, the relocated parent
 against stock, child inheritance/events/CDO/absence of active SCS roots, and
 exact three-package contents. It emits a schema-2 release manifest and never
-installs. Inputs are pinned to executable SHA-256
-`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`;
+installs. Inputs are pinned to Steam build `25956314` and executable SHA-256
+`0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`;
 resolve mappings through tools/Get-VoyageMappings.ps1. A fingerprint change
 requires fresh stock extraction and contract revalidation.
 
 Install/restore through tools/Install-VoyageRelease.ps1 and
 Restore-VoyageReleaseInstallation.ps1, using exact manifests and a closed game.
-Final release: `artifacts/releases/MooringCable60m-1.0.0/`.
-Its `release-manifest.json` records source revision, payload hashes and game
-fingerprint; `promotion-report.json` links the exact accepted test5 payload.
-Use the install manifest returned by the common installer for rollback.
+The generated `release-manifest.json` records source revision, payload hashes
+and game fingerprint. Use the install manifest returned by the common installer
+for rollback.

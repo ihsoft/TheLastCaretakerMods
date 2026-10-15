@@ -1,28 +1,77 @@
+# Public release producer: build, cook, package and validate one candidate.
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][string]$OutputRoot,
-    [Parameter(Mandatory = $true)][string]$GraphManifest,
-    [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage'
+    [string]$OutputRoot,
+    [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
+    [string]$EngineRoot = 'K:\Epic Games\UE_5.8'
 )
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+
+$repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $tools = Join-Path $repo 'tools'
+$expectedBuild = '25956314'
+$expectedExe = '0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A'
+$tmpOwnerRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/MooringCable60m'))
+$version = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version.txt') -Raw).Trim()
+if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid owning mod version.' }
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $identity = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' +
+        [Guid]::NewGuid().ToString('N').Substring(0, 8)
+    $OutputRoot = Join-Path $tmpOwnerRoot "build-$version-$identity"
+}
+$runRoot = [IO.Path]::GetFullPath($OutputRoot)
+$tmpBoundary = $tmpOwnerRoot.TrimEnd('\') + [IO.Path]::DirectorySeparatorChar
+if (-not $runRoot.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "OutputRoot must be a fresh directory below $tmpOwnerRoot."
+}
+if (Test-Path -LiteralPath $runRoot) { throw "OutputRoot already exists: $runRoot" }
+
+$graphRoot = Join-Path $runRoot 'graph'
+$releaseRoot = Join-Path $runRoot 'release'
+
+# Build and cook the generated child.
+$output = $graphRoot
+$fp = & (Join-Path $tools 'Get-VoyageBuildFingerprint.ps1') -GameRoot $GameRoot | ConvertFrom-Json
+if ($fp.steam.buildId -ne $expectedBuild -or $fp.executable.sha256 -ne $expectedExe) {
+    throw 'Game fingerprint changed. Revalidate the mooring contract before generation.'
+}
+[IO.Directory]::CreateDirectory($output)|Out-Null
+$project=Join-Path $PSScriptRoot 'Voyage.uproject'
+$engine=Join-Path $EngineRoot 'Engine'
+$editor=Join-Path $engine 'Binaries/Win64/UnrealEditor-Cmd.exe'
+function Invoke-Stage([string]$Name,[string]$Executable,[string[]]$Arguments){
+    $log=Join-Path $output ($Name+'.log')
+    & $Executable @Arguments *> $log
+    if($LASTEXITCODE -ne 0){throw "$Name failed ($LASTEXITCODE): $log"}
+}
+Invoke-Stage 'build' (Join-Path $engine 'Build/BatchFiles/Build.bat') @('VoyageEditor','Win64','Development',$project,'-WaitMutex','-NoHotReloadFromIDE')
+$content=Join-Path $PSScriptRoot 'Content'
+if(Test-Path -LiteralPath $content){
+    $resolved=(Resolve-Path -LiteralPath $content).Path
+    if($resolved -cne [IO.Path]::GetFullPath($content)){throw 'Unexpected generated content location.'}
+    Move-Item -LiteralPath $resolved -Destination (Join-Path $output 'previous-content')
+}
+[Environment]::SetEnvironmentVariable('UE-LocalDataCachePath',(Join-Path $PSScriptRoot '.ddc'),'Process')
+Invoke-Stage 'generate' $editor @($project,'-run=GenerateMooring','-unattended','-nop4','-nosplash','-nullrhi',('-abslog='+(Join-Path $output 'generate-unreal.log')))
+# Tagged properties keep the minimal editor mirror's property indices out of
+# the runtime CDO contract; stock packages retain their original serialization.
+Invoke-Stage 'cook' $editor @($project,'-run=cook','-targetplatform=Windows','-SkipZenStore','-CookSinglePackageNoRefs','-Package=/Game/Blueprints/Cables/BP_ModuleCable_Mooring','-unattended','-nop4','-nosplash','-nullrhi',('-abslog='+(Join-Path $output 'cook-unreal.log')))
+$relative='Voyage/Content/Blueprints/Cables/BP_ModuleCable_Mooring'
+$cooked=Join-Path $PSScriptRoot ('Saved/Cooked/Windows/'+$relative)
+$graph = [pscustomobject]@{graphAsset=$cooked+'.uasset';graphPayload=$cooked+'.uexp'}
+foreach($p in @($graph.graphAsset,$graph.graphPayload)){if(-not(Test-Path -LiteralPath $p)){throw "Missing cooked file: $p"}}
+
+# Extract stock packages, assemble the override and validate the release.
 $assetPath = 'Voyage/Content/Blueprints/Cables/BP_MooringCable_Socket_Male.uasset'
 $query = '/Game/Blueprints/Cables/BP_MooringCable_Socket_Male'
 $componentName = 'VoyageModuleSocketView_GEN_VARIABLE'
-$expectedBuild = '25191271'
-$expectedExe = '747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B'
-$version = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version.txt') -Raw).Trim()
-if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid owning mod version.' }
 $originalCableName = 'BP_ModuleCable_Mooring'
 $relocatedCableName = 'BP_ModuleCable_Orig060'
-$graph = Get-Content -LiteralPath $GraphManifest -Raw | ConvertFrom-Json
-if ($graph.status -ne 'cooked' -or $graph.gameBuild -ne $expectedBuild -or $graph.gameHash -ne $expectedExe) { throw 'Graph provenance mismatch.' }
 $gui = Join-Path $repo '.tools/bin/UAssetGUI.exe'
 $retoc = Join-Path $repo '.tools/bin/retoc.exe'
-$root = [IO.Path]::GetFullPath($OutputRoot)
-if (Test-Path -LiteralPath $root) { throw 'Use a new output directory.' }
+$root = $releaseRoot
 $fingerprint = & "$tools/Get-VoyageBuildFingerprint.ps1" -GameRoot $GameRoot | ConvertFrom-Json
 if ($fingerprint.steam.buildId -ne $expectedBuild -or $fingerprint.executable.sha256 -ne $expectedExe) {
     throw 'Game fingerprint changed. Revalidate the mooring contract first.'
@@ -137,7 +186,7 @@ $report = [ordered]@{
     status = 'candidate-validated'; runtimeValidated = $false
     lengthCm = 6000; attachedPayoutLimitCm = 2000; packageCount = 3
     semanticChanges = @('Male mooring socket IntegratedCableLength: 2000 -> 6000', 'Fresh stock mooring parent relocated with MaxLengthBase 6000', 'Child refreshes MaxLength: both sockets valid 2000, otherwise 6000')
-    graphManifest = (Resolve-Path $GraphManifest).Path; childSummaryPath = $childSummary.summaryPath; childJsonPath = $childJson.jsonPath
+    childSummaryPath = $childSummary.summaryPath; childJsonPath = $childJson.jsonPath
     steamBuildId = $expectedBuild; executableSha256 = $expectedExe
     extractionManifest = $extract.manifestPath; roundtripReport = $roundtrip.reportPath
     cableExtractionManifest = $cableExtract.manifestPath; cableRoundtripReport = $cableRoundtrip.reportPath
@@ -146,4 +195,13 @@ $report = [ordered]@{
     archive = $archive; release = $release
 }
 [IO.File]::WriteAllText("$root/build-report.json", ($report | ConvertTo-Json -Depth 20))
-[pscustomobject]@{ status = $report.status; reportPath = "$root/build-report.json"; archive = $archive; releaseManifest = "$root/release-manifest.json" }
+[pscustomobject][ordered]@{
+    status = 'candidate-validated'
+    version = $version
+    runRoot = $runRoot
+    releaseRoot = $releaseRoot
+    releaseManifest = Join-Path $root 'release-manifest.json'
+    archive = $archive
+    buildReport = Join-Path $root 'build-report.json'
+    runtimeValidated = $false
+}

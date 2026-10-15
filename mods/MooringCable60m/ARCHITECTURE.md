@@ -1,9 +1,11 @@
 # MooringCable60m architecture
 
-The public behavior, build interface and validated game fingerprint are in
-[README.md](README.md). The game-derived contracts below were established on
-Steam builds `25056839` and `25191271`; revalidate them against a changed
-executable and stock assets before rebuilding for a new game version.
+The public behavior and build interface are in [README.md](README.md).
+Stock asset and reflected-class contracts were checked again on Steam build
+`25956314` (game version `0.10.0.653158`). The native payout and force behavior
+below was established on `25191271` and is a working assumption for the new
+candidate until tested in game. Recheck game-derived inputs after another
+fingerprint change.
 
 ## Stock length ownership
 
