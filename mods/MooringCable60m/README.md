@@ -8,15 +8,10 @@ to 59 m. The user accepted the towing behavior and requested this final release.
 The final containers are byte-identical to the tested 60m-test5 candidate;
 only release packaging and source/documentation cleanup changed.
 
-The selected behavior is 60 m manual deployment and the original 20 m automatic
-payout ceiling. The mod preserves the freshly extracted stock mooring class as
-`/Game/Blueprints/Cables/BP_ModuleCable_Orig060`, with MaxLengthBase=6000, and
-puts a generated child at the original BP_ModuleCable_Mooring identity. Its
-BeginPlay starts a 0.05 s timer: two valid cached sockets set MaxLength=2000;
-a free end sets MaxLength=6000. The male socket supplies IntegratedCableLength=6000.
 Strength, stretch, tightness and snap defaults remain stock. Other cable types
-are unchanged. A connected cable's displayed ceiling may therefore show 20 m;
-manual deployment must still show and physically allow 60 m.
+are unchanged. A connected cable's displayed ceiling may show 20 m; manual
+deployment of a free end allows 60 m. Package ownership, native length
+contracts and the runtime refresh are described in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 The original asset/class identity is retained for saves. Existing unusually
 long connected cables are not forcibly cut short; the native reeling behavior
@@ -50,6 +45,3 @@ Final release: `artifacts/releases/MooringCable60m-1.0.0/`.
 Its `release-manifest.json` records source revision, payload hashes and game
 fingerprint; `promotion-report.json` links the exact accepted test5 payload.
 Use the install manifest returned by the common installer for rollback.
-
-Research, detailed evidence and compact tool-use report:
-[mooring-cable-length-research.md](../../docs/mooring-cable-length-research.md).
