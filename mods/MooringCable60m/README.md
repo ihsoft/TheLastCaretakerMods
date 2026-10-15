@@ -2,12 +2,8 @@
 
 **Version 1.0.0.** Only mooring cables change: manual deployment up to 60 m,
 with the original 20 m automatic payout parameter for connected cables.
-Game-validated on Steam build 25191271: an existing save loaded, three connected
-cables read 2000, a free cable read 6000, and the user physically deployed it
-to 59 m. The user accepted the towing behavior and requested this final release.
-The original final containers were byte-identical to the tested 60m-test5
-candidate. For Steam build `25956314`, stock contracts and a rebuilt candidate
-passed structural validation; gameplay on that build is not yet validated.
+Game-validation evidence by version lives in [ARCHITECTURE.md](ARCHITECTURE.md).
+For a later game build, create a new candidate and test it in game.
 
 Strength, stretch, tightness and snap defaults remain stock. Other cable types
 are unchanged. A connected cable's displayed ceiling may show 20 m; manual
@@ -32,6 +28,23 @@ graph output in `graph/` and the validated release in `release/`. Its result
 returns `releaseRoot` and `releaseManifest`; use the latter for installation.
 Optional `-OutputRoot` selects a fresh run directory below `Tmp/MooringCable60m`.
 `-GameRoot` and `-EngineRoot` select the installed game and UE 5.8 respectively.
+On a new game build, the default invocation stops at its pinned-version gate.
+Retry with `-IgnorePinnedGameVersion`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/MooringCable60m/Build-MooringCable60m.ps1 -IgnorePinnedGameVersion
+```
+
+That flag skips only the pinned Steam build ID comparison. The script
+still requires the installed game's exact reviewed mappings,
+extracts fresh stock assets, checks their roundtrips and expected fields,
+compares the packaged overrides with stock, and validates the release manifest.
+The mapping resolver and release manifest still record the executable hash for
+provenance; the builder does not compare it with a hard-coded old hash.
+If the build passes, test the candidate in game. A successful runtime test
+completes compatibility validation; investigate reflected classes or native
+behavior only if the build or game test exposes a problem. A missing current
+mapping remains a separate prerequisite and is not bypassed by this flag.
 
 The producer compiles/generates/cooks the child with tagged properties;
 the minimal mirror's inherited property indices must not enter an unversioned
@@ -39,10 +52,9 @@ runtime CDO. Its temporary editor parent is never packaged. It independently
 checks both stock roundtrips, the relocated parent
 against stock, child inheritance/events/CDO/absence of active SCS roots, and
 exact three-package contents. It emits a schema-2 release manifest and never
-installs. Inputs are pinned to Steam build `25956314` and executable SHA-256
-`0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`;
-resolve mappings through tools/Get-VoyageMappings.ps1. A fingerprint change
-requires fresh stock extraction and contract revalidation.
+installs. A successful build establishes a structurally validated candidate,
+not gameplay behavior. The producer performs the routine stock-asset checks;
+manual asset analysis is reserved for a failed gate or runtime discrepancy.
 
 Install/restore through tools/Install-VoyageRelease.ps1 and
 Restore-VoyageReleaseInstallation.ps1, using exact manifests and a closed game.

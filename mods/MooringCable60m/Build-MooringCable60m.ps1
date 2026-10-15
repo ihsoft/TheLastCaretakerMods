@@ -3,7 +3,8 @@
 param(
     [string]$OutputRoot,
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
-    [string]$EngineRoot = 'K:\Epic Games\UE_5.8'
+    [string]$EngineRoot = 'K:\Epic Games\UE_5.8',
+    [switch]$IgnorePinnedGameVersion
 )
 
 $ErrorActionPreference = 'Stop'
@@ -12,7 +13,6 @@ Set-StrictMode -Version Latest
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $tools = Join-Path $repo 'tools'
 $expectedBuild = '25956314'
-$expectedExe = '0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A'
 $tmpOwnerRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/MooringCable60m'))
 $version = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version.txt') -Raw).Trim()
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid owning mod version.' }
@@ -33,10 +33,20 @@ $releaseRoot = Join-Path $runRoot 'release'
 
 # Build and cook the generated child.
 $output = $graphRoot
-$fp = & (Join-Path $tools 'Get-VoyageBuildFingerprint.ps1') -GameRoot $GameRoot | ConvertFrom-Json
-if ($fp.steam.buildId -ne $expectedBuild -or $fp.executable.sha256 -ne $expectedExe) {
-    throw 'Game fingerprint changed. Revalidate the mooring contract before generation.'
+$game = (Resolve-Path -LiteralPath $GameRoot).Path
+$steamApps = Split-Path -Parent (Split-Path -Parent $game)
+$steamManifest = Join-Path $steamApps 'appmanifest_1783560.acf'
+if (-not (Test-Path -LiteralPath $steamManifest -PathType Leaf)) {
+    throw "Steam app manifest not found: $steamManifest"
 }
+$buildMatch = [regex]::Match([IO.File]::ReadAllText($steamManifest), '"buildid"\s+"(?<id>\d+)"')
+if (-not $buildMatch.Success) { throw "Steam build ID not found: $steamManifest" }
+$steamBuildId = $buildMatch.Groups['id'].Value
+$pinnedGameVersionMatches = $steamBuildId -eq $expectedBuild
+if (-not $pinnedGameVersionMatches -and -not $IgnorePinnedGameVersion) {
+    throw 'Steam build ID differs from the pinned build. Retry with -IgnorePinnedGameVersion to build from current stock assets and validate the candidate in game.'
+}
+$mapping = & (Join-Path $tools 'Get-VoyageMappings.ps1') -GameRoot $GameRoot
 [IO.Directory]::CreateDirectory($output)|Out-Null
 $project=Join-Path $PSScriptRoot 'Voyage.uproject'
 $engine=Join-Path $EngineRoot 'Engine'
@@ -72,10 +82,6 @@ $relocatedCableName = 'BP_ModuleCable_Orig060'
 $gui = Join-Path $repo '.tools/bin/UAssetGUI.exe'
 $retoc = Join-Path $repo '.tools/bin/retoc.exe'
 $root = $releaseRoot
-$fingerprint = & "$tools/Get-VoyageBuildFingerprint.ps1" -GameRoot $GameRoot | ConvertFrom-Json
-if ($fingerprint.steam.buildId -ne $expectedBuild -or $fingerprint.executable.sha256 -ne $expectedExe) {
-    throw 'Game fingerprint changed. Revalidate the mooring contract first.'
-}
 if ((Get-FileHash $gui).Hash -ne '42837CD279A78DF57B537020A0169C5D2259A4570D3B62F4B96852F0F5C27F96') {
     throw 'Revalidate the selected UAssetGUI checkpoint.'
 }
@@ -83,7 +89,6 @@ if ((Get-FileHash $retoc).Hash -ne '6F8F86AE3FD747A3B785E787A33C24F9A11735D03664
     throw 'Revalidate the selected retoc checkpoint.'
 }
 [void](New-Item -ItemType Directory -Path $root)
-$mapping = & "$tools/Get-VoyageMappings.ps1" -GameRoot $GameRoot
 $extract = & "$tools/Extract-VoyagePackage.ps1" -Filter 'Blueprints/Cables/BP_MooringCable_Socket_Male' -GameRoot $GameRoot -OutputRoot "$root/source"
 if ($extract.assetCount -ne 1) { throw 'Extraction must contain exactly one asset.' }
 $inputAsset = Join-Path $extract.outputPath $assetPath
@@ -187,7 +192,9 @@ $report = [ordered]@{
     lengthCm = 6000; attachedPayoutLimitCm = 2000; packageCount = 3
     semanticChanges = @('Male mooring socket IntegratedCableLength: 2000 -> 6000', 'Fresh stock mooring parent relocated with MaxLengthBase 6000', 'Child refreshes MaxLength: both sockets valid 2000, otherwise 6000')
     childSummaryPath = $childSummary.summaryPath; childJsonPath = $childJson.jsonPath
-    steamBuildId = $expectedBuild; executableSha256 = $expectedExe
+    steamBuildId = $mapping.steamBuildId; executableSha256 = $mapping.executableSha256
+    pinnedGameVersionMatches = $pinnedGameVersionMatches
+    ignorePinnedGameVersion = [bool]$IgnorePinnedGameVersion
     extractionManifest = $extract.manifestPath; roundtripReport = $roundtrip.reportPath
     cableExtractionManifest = $cableExtract.manifestPath; cableRoundtripReport = $cableRoundtrip.reportPath
     cableIndependentJsonPath = $cableCandidateResult.jsonPath

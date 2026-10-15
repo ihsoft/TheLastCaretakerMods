@@ -242,12 +242,16 @@ those details here.
 - Durable findings about the Boat's Diesel socket hover card live in
   `docs/boat-resource-socket-architecture.md`; active feature work alone belongs
   in `docs/boat-hud-total-resources-backlog.md`.
-- Before reusing any game-derived input, obtain the installed game's Steam
-  build ID and executable hash with `tools/Get-VoyageBuildFingerprint.ps1` and
-  compare them with the owning mod's provenance registry.
+- Before reusing a saved game-derived input, compare the installed game's Steam
+  build ID and executable hash with its provenance. A producer that fingerprints
+  the game and re-extracts current stock inputs during the run satisfies this
+  gate; do not add a separate manual fingerprint call before that producer.
 - A changed fingerprint invalidates extracted snapshots and reconstructed
-  contracts alike. Re-extract or revalidate every affected item before build,
-  cook, packaging, or compatibility claims.
+  contracts alike. A mod producer may attempt a candidate build on the new
+  fingerprint when it re-extracts affected stock inputs and checks its required
+  asset contracts during that run. A successful build is structural evidence;
+  require the real-game test before a new gameplay compatibility claim. Diagnose
+  a failed build or game test with focused inspection of the affected contract.
 - Keep mod version, artifact version, user-facing game version, Steam build ID,
   executable hash, and Unreal Engine version as separate identities. A game
   update neither proves incompatibility nor requires a mod-version bump; it
