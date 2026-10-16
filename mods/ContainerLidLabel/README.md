@@ -14,7 +14,7 @@ Runtime file: `Voyage/Content/Paks/ContainerLidLabel.ini`.
 Authored default: [ContainerLidLabel.ini](Assets/ContainerLidLabel.ini).
 
 ```ini
-; Large-container mass limit in kilograms.
+# Large-container mass limit in kilograms.
 LargeContainerMaxWeightKg=200
 ```
 
