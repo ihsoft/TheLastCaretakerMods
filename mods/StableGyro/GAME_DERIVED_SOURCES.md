@@ -60,6 +60,11 @@ sources establish:
   graph preserves the property's reflected readonly flags. The version-bound
   calibration formula, field offsets and reset boundary are documented in
   [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md);
+- the current stock `/Game/UI/Game/HUD/WBP_VoyageIngameGyroCopter` binds the
+  `Value` property of its `Throttle` slider directly to
+  `GyroCopter.Collective`. The widget has no `MinValue` or `MaxValue` override,
+  so the UE 5.8.2 native Slider defaults `0..1` establish the displayed
+  percentage as `Collective * 100`;
 - the current stock Blueprint overrides its tilt limits to `-15..15` and its
   interpolation speed to `5`. StableGyro does not copy those values or replace
   the native flight implementation;

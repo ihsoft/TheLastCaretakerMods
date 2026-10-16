@@ -34,6 +34,15 @@ according to negative climb rate and supplies a damped `AssistPitch`. Engine
 throttle can therefore rise without new player input. Kinematic support is not
 engine propulsion.
 
+For this fingerprint, the stock HUD Blueprint
+`/Game/UI/Game/HUD/WBP_VoyageIngameGyroCopter` binds its `Throttle` slider's
+`Value` directly to `GyroCopter.Collective`. The widget does not override the
+Engine `Slider` range, whose native defaults are `0..1`; the displayed throttle
+percentage is therefore `Collective * 100`. StableGyro's configurable minimum
+altitude throttle compares `Collective >= configuredPercent / 100`. This is an
+inclusive vertical-only gate and does not replace the separate governed
+`CurrentThrottle > 0` propulsion gate.
+
 With automatic hover calibration enabled, calibration additionally requires:
 
 - neither upward nor downward input beyond the native deadzone;
@@ -109,8 +118,9 @@ helper through the owned child components; it does not rediscover them per tick.
 Before each native control pass, it computes the same neutral stabilization
 eligibility used by the PostPhysics helper: the Gyro is player-controlled, a
 player controller exists, the engine is running, `CurrentThrottle` is positive,
-`PropellerVelocity` meets the configured threshold, neither Ctrl nor Space is
-held, and the collision-release deadline has expired. On first acquisition it
+`PropellerVelocity` meets the configured threshold, `Collective` meets the
+configured displayed-throttle percentage, neither Ctrl nor Space is held, and
+the collision-release deadline has expired. On first acquisition it
 captures the exact current values of `bAutoHoverCollective` and
 `bAltitudeAssist`, then temporarily sets both false. This prevents the native
 controller from learning an equilibrium created by the mod's neutral hold or
@@ -135,6 +145,13 @@ At `0`, positive observed Vz bypasses both the damping and growth rejection,
 performs no Z position or velocity write, and clears the old vertical sample.
 This does not disable horizontal stabilization or later exact-hold acquisition
 after Vz naturally becomes nonpositive.
+
+The minimum displayed-throttle setting defaults to `50%`. Below its configured
+inclusive threshold, PostPhysics still performs eligible horizontal damping but
+skips every Z braking, exact-hold and Space-floor correction, then clears the
+vertical state for fresh reacquisition. PrePhysics uses the same threshold and
+restores the captured native assistance booleans while vertical stabilization is
+ineligible.
 
 ## Entry reset and remaining limits
 

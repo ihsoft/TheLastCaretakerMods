@@ -44,6 +44,13 @@ below the stored altitude floor. Exit and re-enter the Gyro after editing the
 INI. It still requires the propulsion
 gates and an inactive collision-release interval.
 
+AltitudeStabilizationMinimumThrottlePercent sets an additional inclusive
+minimum for altitude stabilization using the displayed throttle indicator that
+changes with Space/Ctrl. Default: 50.0; accepted range: 0..100. Below the
+configured percentage, all Z corrections are skipped and vertical state is
+cleared for fresh reacquisition. Horizontal stabilization is unaffected. This
+is separate from the native governed current-throttle propulsion check.
+
 During eligible neutral stabilization, the mod temporarily suspends the stock
 automatic hover and altitude assistance before the native Gyro tick, then
 restores their exact previous values when ownership ends. This prevents stock

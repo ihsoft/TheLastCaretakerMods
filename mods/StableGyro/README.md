@@ -44,6 +44,14 @@ positive Z velocity and position untouched and discards the stale vertical
 sample. This is not a global altitude-stabilization toggle. When vertical speed
 naturally reaches zero or becomes negative, the current altitude can still
 become an exact hold target. Horizontal stabilization remains independent.
+`AltitudeStabilizationMinimumThrottlePercent` sets an additional inclusive
+minimum for altitude stabilization, using the displayed throttle indicator that
+changes with Space/Ctrl. The default is `50.0` and accepted values are clamped to
+`0..100`; `0` preserves the previous behavior. Below the configured percentage,
+the mod skips all Z braking, exact-hold, and Space-floor corrections and clears
+its vertical state so a later eligible frame reacquires from a fresh observation.
+This setting does not gate horizontal stabilization and is distinct from the
+native governed `CurrentThrottle` propulsion check.
 Pressing Space returns to the one-sided altitude floor without clamping any
 positive upward velocity, even
 when the Gyro is still at or below its prior floor. Holding Ctrl releases

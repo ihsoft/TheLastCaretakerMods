@@ -56,8 +56,13 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   sample. It does not disable later exact-hold acquisition once Vz becomes
   non-positive or any horizontal stabilization. Space must preserve all
   positive Vz, including when current altitude is at or below the stored floor;
-  raise the floor only when current altitude exceeds it. Do not require full
-  throttle for stabilization.
+  raise the floor only when current altitude exceeds it. Gate only the vertical
+  path on `Collective >= AltitudeStabilizationMinimumThrottlePercent / 100`,
+  after horizontal damping and before Ctrl/Space/hold processing. Below that
+  threshold, clear only vertical lock, exact-hold, Space, braking and sample
+  state; do not clear or gate horizontal state. Keep the setting inclusive,
+  configurable over `0..100`, and default it to `50` rather than hardcoding a
+  full-throttle requirement.
   While Ctrl is held, clear vertical hold/braking state and let stock descent
   operate; Ctrl takes precedence over Space, while propulsion- and contact-gated
   horizontal damping may continue. Re-entering with Space released must brake positive Vz
@@ -67,7 +72,8 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 - Native altitude-assistance ownership is independent of
   `EnablePitchCorrection`. In the PrePhysics helper, derive ownership from the
   same player-control, propulsion, input and contact eligibility used by the
-  PostPhysics stabilization path. Cache the owned Gyro and sibling helper once,
+  PostPhysics vertical stabilization path, including its configured minimum
+  `Collective` percentage. Cache the owned Gyro and sibling helper once,
   capture `bAutoHoverCollective` and `bAltitudeAssist` on first acquisition,
   disable them before the native Gyro tick, and restore the exact captured
   values on every ownership loss, controller change and EndPlay. On each change

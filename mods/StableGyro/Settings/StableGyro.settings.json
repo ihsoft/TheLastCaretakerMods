@@ -33,6 +33,14 @@
       "maximum": 10000.0
     },
     {
+      "id": "AltitudeStabilizationMinimumThrottlePercent",
+      "runtimeName": "AltitudeStabilizationMinimumThrottlePercent",
+      "key": "AltitudeStabilizationMinimumThrottlePercent",
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 100.0
+    },
+    {
       "id": "HorizontalVelocityDecayAcceleration",
       "runtimeName": "HorizontalVelocityDecayAcceleration",
       "key": "HorizontalVelocityDecayAcceleration",

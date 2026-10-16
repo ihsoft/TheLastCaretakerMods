@@ -35,6 +35,9 @@ public:
 
 protected:
     UPROPERTY(BlueprintReadOnly, SaveGame, Category = "GyroCopter")
+    float Collective = 0.0f;
+
+    UPROPERTY(BlueprintReadOnly, SaveGame, Category = "GyroCopter")
     float HoverPitchScale = 1.0f;
 
     UPROPERTY(BlueprintReadOnly, SaveGame, Category = "GyroCopter")

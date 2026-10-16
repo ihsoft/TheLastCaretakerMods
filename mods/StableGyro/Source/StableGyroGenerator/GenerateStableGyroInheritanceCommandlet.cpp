@@ -84,6 +84,7 @@ const FName RootComponent(TEXT("RootComponent"));
 const FName TiltForwardInput(TEXT("TiltForwardInput"));
 const FName TiltInput(TEXT("TiltInput"));
 const FName PropellerVelocity(TEXT("PropellerVelocity"));
+const FName Collective(TEXT("Collective"));
 const FName HoverPitchScale(TEXT("HoverPitchScale"));
 const FName CurrentThrottle(TEXT("CurrentThrottle"));
 const FName EngineRunning(TEXT("bEngineRunning"));
@@ -111,6 +112,7 @@ namespace ArcadeAltitude
 constexpr TCHAR Disabled[] = TEXT("false");
 constexpr TCHAR Enabled[] = TEXT("true");
 constexpr TCHAR Zero[] = TEXT("0.0");
+constexpr TCHAR PercentScale[] = TEXT("100.0");
 constexpr TCHAR SpaceKey[] = TEXT("SpaceBar");
 constexpr TCHAR DescentKey[] = TEXT("LeftControl");
 constexpr TCHAR NoBone[] = TEXT("None");
@@ -823,6 +825,19 @@ bool AddUpdateNativeAltitudeOwnership(UBlueprint* Blueprint, UClass* Stabilizati
     UK2Node_CallFunction* RotorReady = AddCall(
         Graph, UKismetMathLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), 680, 520);
+    UK2Node_VariableGet* CollectiveValue = AddRead(
+        Graph, Collective, AVoyageVehicleGyroCopter::StaticClass(), 1140, -260);
+    UK2Node_VariableGet* MinimumThrottlePercent = AddRead(
+        Graph, Settings::AltitudeStabilizationMinimumThrottlePercent,
+        StabilizationClass, 1140, -100);
+    UK2Node_CallFunction* MinimumCollective = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble), 1370, -100);
+    SetDefault(MinimumCollective, BlueprintGraphNames::Pins::Binary::RightOperand,
+        ArcadeAltitude::PercentScale);
+    UK2Node_CallFunction* CollectiveReady = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), 1600, -180);
 
     UK2Node_CallFunction* Controller = AddCall(
         Graph, APawn::StaticClass(), BlueprintGraphNames::ActorFunctions::GetController, 450, 770);
@@ -859,6 +874,7 @@ bool AddUpdateNativeAltitudeOwnership(UBlueprint* Blueprint, UClass* Stabilizati
     Eligibility.Add(RequirePin(Engine, EngineRunning));
     Eligibility.Add(RequirePin(PositiveThrottle, P::ReturnValue));
     Eligibility.Add(RequirePin(RotorReady, P::ReturnValue));
+    Eligibility.Add(RequirePin(CollectiveReady, P::ReturnValue));
     Eligibility.Add(RequirePin(SpaceNeutral, P::ReturnValue));
     Eligibility.Add(RequirePin(DescentNeutral, P::ReturnValue));
     Eligibility.Add(RequirePin(CooldownExpired, P::ReturnValue));
@@ -922,7 +938,8 @@ bool AddUpdateNativeAltitudeOwnership(UBlueprint* Blueprint, UClass* Stabilizati
     Ok &= Connect(RequirePin(StabilizationValid, P::ReturnValue),
         RequirePin(ReferencesValid, BlueprintGraphNames::Pins::Binary::RightOperand));
     const TArray<UEdGraphNode*> GyroTargets = {
-        Controlled, Engine, Throttle, Rotor, Controller, CurrentAuto, CurrentAssist};
+        Controlled, Engine, Throttle, Rotor, CollectiveValue, Controller,
+        CurrentAuto, CurrentAssist};
     for (UEdGraphNode* Node : GyroTargets)
         Ok &= Connect(RequirePin(Gyro, CachedGyro), RequirePin(Node, P::FunctionTarget));
     Ok &= Connect(RequirePin(Throttle, CurrentThrottle),
@@ -933,6 +950,15 @@ bool AddUpdateNativeAltitudeOwnership(UBlueprint* Blueprint, UClass* Stabilizati
         RequirePin(MinimumRotor, P::FunctionTarget));
     Ok &= Connect(RequirePin(MinimumRotor, Settings::StabilizationMinimumPropellerVelocity),
         RequirePin(RotorReady, BlueprintGraphNames::Pins::Binary::RightOperand));
+    Ok &= Connect(RequirePin(Stabilization, CachedStabilizationHelper),
+        RequirePin(MinimumThrottlePercent, P::FunctionTarget));
+    Ok &= Connect(RequirePin(MinimumThrottlePercent,
+        Settings::AltitudeStabilizationMinimumThrottlePercent),
+        RequirePin(MinimumCollective, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(RequirePin(CollectiveValue, Collective),
+        RequirePin(CollectiveReady, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(RequirePin(MinimumCollective, P::ReturnValue),
+        RequirePin(CollectiveReady, BlueprintGraphNames::Pins::Binary::RightOperand));
     Ok &= Connect(RequirePin(Controller, P::ReturnValue), Player->GetCastSourcePin());
     Ok &= Connect(Player->GetCastResultPin(), RequirePin(SpaceHeld, P::FunctionTarget));
     Ok &= Connect(Player->GetCastResultPin(), RequirePin(DescentHeld, P::FunctionTarget));
@@ -1649,6 +1675,41 @@ bool AddArcadeAltitudeHold(
     UK2Node_IfThenElse* CollisionReleaseBranch = FinishNode(
         NewObject<UK2Node_IfThenElse>(Graph), Graph, 2290, 0);
 
+    UK2Node_VariableGet* CollectiveValue = AddRead(
+        Graph, Collective, GyroOwner, 2060, 620);
+    UK2Node_VariableGet* MinimumThrottlePercent = AddRead(
+        Graph, Settings::AltitudeStabilizationMinimumThrottlePercent, nullptr, 2060, 760);
+    UK2Node_CallFunction* MinimumCollective = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Divide_DoubleDouble), 2290, 700);
+    SetDefault(MinimumCollective, Binary::RightOperand, ArcadeAltitude::PercentScale);
+    UK2Node_CallFunction* CollectiveReady = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), 2520, 620);
+    UK2Node_IfThenElse* VerticalThrottleGateBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 2750, 620);
+
+    UK2Node_VariableSet* ClearWhenBelowMinimumThrottle = AddWrite(
+        Graph, AltitudeLockActive, 2980, 620);
+    SetDefault(ClearWhenBelowMinimumThrottle,
+        AltitudeLockActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ClearExactWhenBelowMinimumThrottle = AddWrite(
+        Graph, AltitudeExactHoldActive, 3210, 620);
+    SetDefault(ClearExactWhenBelowMinimumThrottle,
+        AltitudeExactHoldActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ClearSpaceWhenBelowMinimumThrottle = AddWrite(
+        Graph, SpaceWasHeld, 3440, 620);
+    SetDefault(ClearSpaceWhenBelowMinimumThrottle,
+        SpaceWasHeld, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* StopBrakingWhenBelowMinimumThrottle = AddWrite(
+        Graph, AltitudeBrakingActive, 3670, 620);
+    SetDefault(StopBrakingWhenBelowMinimumThrottle,
+        AltitudeBrakingActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ResetVerticalSampleWhenBelowMinimumThrottle = AddWrite(
+        Graph, VerticalVelocitySampleValid, 3900, 620);
+    SetDefault(ResetVerticalSampleWhenBelowMinimumThrottle,
+        VerticalVelocitySampleValid, ArcadeAltitude::Disabled);
+
     UK2Node_CallFunction* Controller = AddCall(Graph, APawn::StaticClass(),
         BlueprintGraphNames::ActorFunctions::GetController, 2060, 1100);
     UK2Node_DynamicCast* PlayerController = NewObject<UK2Node_DynamicCast>(Graph);
@@ -1662,7 +1723,7 @@ bool AddArcadeAltitudeHold(
         GET_FUNCTION_NAME_CHECKED(APlayerController, IsInputKeyDown), 2520, 1220);
     SetDefault(DescentHeld, P::Key, ArcadeAltitude::DescentKey);
     UK2Node_IfThenElse* DescentBranch = FinishNode(
-        NewObject<UK2Node_IfThenElse>(Graph), Graph, 2750, 700);
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 4130, 700);
 
     UK2Node_VariableSet* ClearWhenUncontrolled = AddWrite(
         Graph, AltitudeLockActive, 1600, -220);
@@ -2028,7 +2089,29 @@ bool AddArcadeAltitudeHold(
         RequirePin(CollisionReleaseBranch, P::Condition));
     Ok &= AddHorizontalVelocityDamping(
         Graph, TickEvent, Gyro, RequirePin(CollisionReleaseBranch, P::Else),
-        DescentBranch, GyroOwner);
+        VerticalThrottleGateBranch, GyroOwner);
+    Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(CollectiveValue, P::FunctionTarget));
+    Ok &= Connect(RequirePin(MinimumThrottlePercent,
+        Settings::AltitudeStabilizationMinimumThrottlePercent),
+        RequirePin(MinimumCollective, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(CollectiveValue, Collective),
+        RequirePin(CollectiveReady, Binary::LeftOperand));
+    Ok &= Connect(RequirePin(MinimumCollective, P::ReturnValue),
+        RequirePin(CollectiveReady, Binary::RightOperand));
+    Ok &= Connect(RequirePin(CollectiveReady, P::ReturnValue),
+        RequirePin(VerticalThrottleGateBranch, P::Condition));
+    Ok &= Connect(RequirePin(VerticalThrottleGateBranch, P::Then),
+        RequirePin(DescentBranch, P::Execute));
+    Ok &= Connect(RequirePin(VerticalThrottleGateBranch, P::Else),
+        RequirePin(ClearWhenBelowMinimumThrottle, P::Execute));
+    Ok &= Connect(RequirePin(ClearWhenBelowMinimumThrottle, P::Then),
+        RequirePin(ClearExactWhenBelowMinimumThrottle, P::Execute));
+    Ok &= Connect(RequirePin(ClearExactWhenBelowMinimumThrottle, P::Then),
+        RequirePin(ClearSpaceWhenBelowMinimumThrottle, P::Execute));
+    Ok &= Connect(RequirePin(ClearSpaceWhenBelowMinimumThrottle, P::Then),
+        RequirePin(StopBrakingWhenBelowMinimumThrottle, P::Execute));
+    Ok &= Connect(RequirePin(StopBrakingWhenBelowMinimumThrottle, P::Then),
+        RequirePin(ResetVerticalSampleWhenBelowMinimumThrottle, P::Execute));
     Ok &= Connect(RequirePin(CollisionReleaseBranch, P::Then),
         RequirePin(ClearWhenCollisionReleased, P::Execute));
     Ok &= Connect(RequirePin(ClearWhenCollisionReleased, P::Then),
