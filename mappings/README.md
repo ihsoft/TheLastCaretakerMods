@@ -25,7 +25,8 @@ new game fingerprint.
 ## Reviewed entries
 
 The registry currently retains reviewed entries for Steam builds `25056839`,
-`25191271`, `25827816`, `25880952`, and `25929985`. Each sibling
+`25191271`, `25827816`, `25880952`, `25929985`, `25956314`, and
+`25982825`. Each sibling
 `mapping-manifest.json` is the authority for its
 game hash, engine/parser profile, generator identity, mapping hash, validation
 and revalidation condition; do not duplicate those values into consumer code.
