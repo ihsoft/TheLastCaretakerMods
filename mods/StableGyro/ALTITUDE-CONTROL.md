@@ -10,6 +10,15 @@ that build. Revalidate them after an executable fingerprint change. The public
 producer separately re-extracts and checks the stock cooked assets consumed by
 each candidate build.
 
+For Steam build `25982825`, executable SHA-256
+`08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734`,
+current mapping metadata revalidated the native owner and float/bool types of
+the fields consumed by these graphs, and the stock HUD binding described below
+was re-extracted unchanged. The offsets, reflected access flags, CDO defaults,
+and native formulas in this document remain bounded to `25956314`. Resetting
+`HoverPitchScale` to `1.0` is the user's selected recovery target based on that
+older proven default; it is not a current-fingerprint CDO claim.
+
 ## Native producer and calibration
 
 The Gyro control pass samples physical vertical velocity into `ClimbRate`, then
@@ -127,13 +136,22 @@ performs no Z position or velocity write, and clears the old vertical sample.
 This does not disable horizontal stabilization or later exact-hold acquisition
 after Vz naturally becomes nonpositive.
 
-## Recovery and remaining limits
+## Entry reset and remaining limits
 
-StableGyro prevention does not write `HoverPitchScale`, `Collective`, calibration
-limits or saved data. It has no automatic reset or migration for a scale already
-stored by an earlier session. Native calibration can still operate when the mod
-does not own neutral altitude control, but that is not a guaranteed recovery
-procedure for every vehicle or physical load.
+On every change to a player controller, the PostPhysics helper writes the
+chosen recovery baseline `1.0` to saved `HoverPitchScale` through the Engine's
+validated `SetDoublePropertyByName` route. That value is the stock default
+proven on Steam build `25956314`; the current fingerprint's CDO was not
+independently revalidated. BeginPlay only binds the controller-change delegate;
+it does not invoke the callback for an already controlled Gyro. The reset runs
+only from a genuine later player-entry event and never from polling or a
+per-tick write. It does not write `Collective`, calibration limits, or any other
+saved flight field.
+
+The reset deliberately discards a scale learned in an earlier session or while
+another controller owned the Gyro. Native calibration can still adjust the
+scale later whenever StableGyro does not own neutral altitude control; the next
+player entry restores `1.0` again.
 
 The rotor-force path at `0x1454ab013..0x1454ab10e` multiplies rotor speed by
 `PropellerLift`, positive blade pitch, ground effect and an exponential altitude
@@ -144,9 +162,10 @@ world gravity divided by this lift coefficient. The virtual query is consistent
 with mass, but its exact Shipping identity is not independently verified, so a
 complete mass-normalized formula is not established.
 
-Native CDO scale `1` is a startup baseline rather than proof that every saved
-vehicle should be reset to `1`; altitude, orientation, ground effect and load
-affect equilibrium. The reported yaw-related recovery mechanism also remains
+Resetting every player-entered Gyro to the proven `25956314` baseline `1.0` is
+the deliberate recovery policy selected for this candidate. Altitude,
+orientation, ground effect and load still affect the equilibrium reached by
+later native calibration. The reported yaw-related recovery mechanism remains
 unproven.
 
 ## Gameplay validation boundary

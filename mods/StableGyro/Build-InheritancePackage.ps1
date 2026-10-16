@@ -1,6 +1,6 @@
 # INTERNAL BUILD STAGE with game-derived DroppedActor patch contracts validated for
-# Steam build 25956314, VoyageSteam-Win64-Shipping.exe SHA-256
-# 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
+# Steam build 25982825, VoyageSteam-Win64-Shipping.exe SHA-256
+# 08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734.
 # Revalidate per GAME_DERIVED_SOURCES.md after every game update.
 
 param(
@@ -22,8 +22,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$expectedSteamBuildId = '25956314'
-$expectedExecutableSha256 = '0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A'
+$expectedSteamBuildId = '25982825'
+$expectedExecutableSha256 = '08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734'
 $retocCompatibilityVersion = 'UE5_8'
 $expectedItemFilter = 'Data/Assets/Modules/DA_Item_Module_GyroCopter'
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path

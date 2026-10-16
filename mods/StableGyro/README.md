@@ -66,7 +66,10 @@ values, disables both before the native Gyro tick, and restores the exact values
 when Space or Ctrl is held, propulsion or player control is lost, contact release
 is active, the controller changes, or the helper ends. This prevents native
 hover calibration from learning an equilibrium created by the later kinematic
-hold. It does not reset or migrate saved `HoverPitchScale` or `Collective`.
+hold. Whenever a player enters the Gyro, the stabilization helper also resets
+the saved native `HoverPitchScale` to the selected baseline `1.0`. Startup only
+binds the entry event and does not reset an already controlled Gyro. The reset
+does not run every tick and does not write `Collective`.
 See [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md) for the version-bound native
 formula, ownership order and recovery limits.
 
@@ -139,3 +142,6 @@ he reported that the latest installed build works. This does not establish a
 separate test matrix for both values, strong waves, every collision shape or
 every saved calibration state. The public producer still freshly extracts and
 asserts the consumed stock asset contracts for each candidate build.
+
+On Steam build `25982825`, the user verified the entry-only reset of
+`HoverPitchScale` to `1.0` in the real game.

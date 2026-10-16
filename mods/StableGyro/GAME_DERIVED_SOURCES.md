@@ -2,11 +2,11 @@
 
 ## Fingerprint gate
 
-- Steam build: 25956314
+- Steam build: 25982825
 - Unreal Editor: 5.8.2
 - Unreal parser target: 5.8
 - VoyageSteam-Win64-Shipping.exe SHA-256:
-  0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A
+  08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734
 
 Run tools/Get-VoyageBuildFingerprint.ps1 before every generation or package
 build. A mismatch invalidates the current-fingerprint contracts below and
@@ -16,11 +16,12 @@ only their explicitly named fingerprint.
 ## Game contracts
 
 The public producer freshly extracts the stock cooked inputs and asserts the
-asset contracts consumed by each candidate build. Current native reflection
-metadata independently establishes the fields consumed by the stabilization
-and calibration-prevention graphs. Earlier bounded native-code findings retain
-their explicit historical fingerprint below rather than being silently carried
-forward. Together, these sources establish:
+asset contracts consumed by each candidate build. Current mapping metadata
+independently revalidates the native owner and property types consumed by the
+stabilization and calibration-prevention graphs. Access flags, offsets, CDO
+defaults and bounded native-code findings retain their explicit older
+fingerprints below rather than being silently carried forward. Together, these
+sources establish:
 
 - the vehicle package is /Game/Blueprints/Vehicles/BP_GyroCopter_Possessable;
 - its native parent is /Script/Voyage.VoyageVehicleGyroCopter;
@@ -34,23 +35,31 @@ forward. Together, these sources establish:
   Blueprint-readable. The editor-only mirror exposes them as writable only to
   emit the already established Blueprint assignments; it is not a native flag
   claim;
-- current native reflection owns `PropellerVelocity` as a protected,
-  Blueprint-readable float property on
+- current mapping metadata owns float `PropellerVelocity`, `CurrentThrottle`,
+  `Collective`, and `HoverPitchScale`, plus bool `bEngineRunning`,
+  `bAutoHoverCollective`, and `bAltitudeAssist`, on
   `/Script/Voyage.VoyageVehicleGyroCopter`;
-- current native reflection owns `CurrentThrottle` and `bEngineRunning` as
-  protected, Blueprint-readable SaveGame properties on that class. Native
-  control flow updates throttle while the engine runs, decays it while stopped,
-  and zeros both engine and throttle state on engine cut;
-- current native reflection owns public Blueprint-readonly, non-SaveGame
-  booleans `bAutoHoverCollective` and `bAltitudeAssist`. The prevention graph
+- Steam build `25956314`, executable SHA-256
+  `0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`,
+  established the protected Blueprint-readable SaveGame flags for
+  `PropellerVelocity`, `CurrentThrottle`, `bEngineRunning`, `Collective`, and
+  `HoverPitchScale`, the public Blueprint-readonly non-SaveGame flags for
+  `bAutoHoverCollective` and `bAltitudeAssist`, and the stock CDO
+  `HoverPitchScale` value `1`. Those flags and the CDO value were not
+  independently revalidated for the current fingerprint;
+- the prevention graph
   temporarily writes them through the current Engine
   `KismetSystemLibrary.SetBoolPropertyByName(UObject, FName, bool)` contract and
   restores their captured values; it does not alter their reflected flags;
-- current native reflection owns protected BlueprintReadOnly SaveGame floats
-  `Collective` and `HoverPitchScale`; the latter has native, stock Blueprint and
-  mod-child CDO value `1`. StableGyro does not write or migrate either saved
-  value. The version-bound calibration formula, field offsets and recovery
-  limits are documented in [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md);
+- StableGyro leaves `Collective` untouched and resets `HoverPitchScale` to the
+  user-selected target `1.0` once on player entry. That target uses the older
+  proven stock default above; it is not a current-fingerprint CDO claim. The
+  reset uses the Engine
+  `KismetSystemLibrary.SetDoublePropertyByName(UObject, FName, double)` contract,
+  whose implementation accepts a native float property fallback. The generated
+  graph preserves the property's reflected readonly flags. The version-bound
+  calibration formula, field offsets and reset boundary are documented in
+  [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md);
 - the current stock Blueprint overrides its tilt limits to `-15..15` and its
   interpolation speed to `5`. StableGyro does not copy those values or replace
   the native flight implementation;
@@ -107,8 +116,9 @@ revalidated for the current fingerprint and are not consumed by this build.
 The original Gyro item data asset, scriptobjects.bin, mappings, extracted JSON,
 cooked packages, containers, inventories, and build logs are game-derived and
 must remain below ignored `Tmp` or registered `artifacts` paths. The native
-fields and setter consumed by the calibration-prevention graph were revalidated
-from current reflection metadata for the fingerprint above. The public producer
+owner and field types consumed by the altitude graphs were revalidated from
+current mapping metadata for the fingerprint above. Their mirror access flags
+retain the explicitly bounded older evidence. The public producer
 must freshly extract and assert every consumed stock asset contract for a
 candidate build. Older native implementation details remain historical unless
 stated otherwise. Build and static validation do not establish current runtime

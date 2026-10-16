@@ -70,9 +70,13 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   PostPhysics stabilization path. Cache the owned Gyro and sibling helper once,
   capture `bAutoHoverCollective` and `bAltitudeAssist` on first acquisition,
   disable them before the native Gyro tick, and restore the exact captured
-  values on every ownership loss, controller change and EndPlay. Do not reset or
-  migrate saved `HoverPitchScale` or `Collective`. The version-bound native
-  formula and remaining recovery limits live in
+  values on every ownership loss, controller change and EndPlay. On each change
+  to a player controller, the PostPhysics helper must reset the owning Gyro's
+  saved `HoverPitchScale` to the selected recovery baseline `1.0` through the
+  validated Engine property setter. Reset only from the genuine
+  controller-change event; BeginPlay binds the delegate but does not invoke the
+  callback. Do not poll, reset per tick, or write `Collective`. The
+  version-bound native formula and recovery boundary live in
   [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md).
 - When pitch correction is enabled, W increases, S decreases, and releasing
   both leaves the integrated value unchanged. X writes exact zero immediately.

@@ -84,6 +84,7 @@ const FName RootComponent(TEXT("RootComponent"));
 const FName TiltForwardInput(TEXT("TiltForwardInput"));
 const FName TiltInput(TEXT("TiltInput"));
 const FName PropellerVelocity(TEXT("PropellerVelocity"));
+const FName HoverPitchScale(TEXT("HoverPitchScale"));
 const FName CurrentThrottle(TEXT("CurrentThrottle"));
 const FName EngineRunning(TEXT("bEngineRunning"));
 const FName CollisionReleaseUntilTime(TEXT("CollisionReleaseUntilTime"));
@@ -152,6 +153,13 @@ const FName PropertyName(TEXT("PropertyName"));
 const FName ComponentClass(TEXT("ComponentClass"));
 const FName Array(TEXT("Array"));
 const FName ArrayElement(TEXT("Array Element"));
+}
+
+namespace HoverPitchReset
+{
+constexpr TCHAR DefaultScale[] = TEXT("1.0");
+const FName SetDoublePropertyByName(TEXT("SetDoublePropertyByName"));
+const FName PropertyName(TEXT("PropertyName"));
 }
 
 namespace ArcadeHorizontal
@@ -360,6 +368,28 @@ bool ValidateNativeAltitudeOwnershipContracts()
         Value->HasAnyPropertyFlags(CPF_Parm);
 }
 
+bool ValidateHoverPitchResetContracts()
+{
+    const FFloatProperty* Scale = FindFProperty<FFloatProperty>(
+        AVoyageVehicleGyroCopter::StaticClass(), HoverPitchScale);
+    if (!Scale || !Scale->HasAllPropertyFlags(
+            CPF_BlueprintVisible | CPF_BlueprintReadOnly | CPF_SaveGame |
+            CPF_NativeAccessSpecifierProtected) ||
+        Scale->HasAnyPropertyFlags(CPF_Transient)) return false;
+
+    UFunction* Setter = UKismetSystemLibrary::StaticClass()->FindFunctionByName(
+        HoverPitchReset::SetDoublePropertyByName);
+    if (!Setter || Setter->GetOuterUClass() != UKismetSystemLibrary::StaticClass() ||
+        !Setter->HasAllFunctionFlags(FUNC_BlueprintCallable | FUNC_Static)) return false;
+    const FObjectProperty* Object = FindFProperty<FObjectProperty>(Setter, P::Object);
+    const FNameProperty* Name = FindFProperty<FNameProperty>(
+        Setter, HoverPitchReset::PropertyName);
+    const FDoubleProperty* Value = FindFProperty<FDoubleProperty>(Setter, P::Value);
+    return Object && Object->PropertyClass == UObject::StaticClass() && Name && Value &&
+        Object->HasAnyPropertyFlags(CPF_Parm) && Name->HasAnyPropertyFlags(CPF_Parm) &&
+        Value->HasAnyPropertyFlags(CPF_Parm);
+}
+
 UEdGraph* StandardForEachLoop()
 {
     UBlueprint* Macros = LoadObject<UBlueprint>(nullptr, CollisionRelease::StandardMacros);
@@ -534,6 +564,17 @@ bool AddControllerChangedCallback(UBlueprint* Blueprint, const bool PitchHelper)
             RequirePin(PawnAfterHelper, P::FunctionTarget));
         Ok &= Connect(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
             RequirePin(PawnAfterHelper, P::PrerequisiteActor));
+    }
+    else
+    {
+        UK2Node_CallFunction* ResetScale = AddCall(
+            Graph, UKismetSystemLibrary::StaticClass(),
+            HoverPitchReset::SetDoublePropertyByName, 910, -400);
+        SetDefault(ResetScale, HoverPitchReset::PropertyName, *HoverPitchScale.ToString());
+        SetDefault(ResetScale, P::Value, HoverPitchReset::DefaultScale);
+        Ok &= Connect(RequirePin(ReloadCall, P::Then), RequirePin(ResetScale, P::Execute));
+        Ok &= Connect(RequirePin(Entry, BlueprintGraphNames::Pins::Pawn),
+            RequirePin(ResetScale, P::Object));
     }
     return Ok;
 }
@@ -2245,7 +2286,8 @@ int32 UGenerateStableGyroInheritanceCommandlet::Main(const FString& Params)
     UBlueprint* PitchHelper = LoadObject<UBlueprint>(nullptr, PitchHelperPath);
     if (!StabilizationHelper || !StabilizationHelper->GeneratedClass ||
         !PitchHelper || !PitchHelper->GeneratedClass ||
-        !ValidateNativeAltitudeOwnershipContracts()) return 1;
+        !ValidateNativeAltitudeOwnershipContracts() ||
+        !ValidateHoverPitchResetContracts()) return 1;
     UVoyageInputAction* ResetAction = LoadObject<UVoyageInputAction>(
         nullptr, StableGyroAssetNames::ResetActionObjectPath);
     if (!ResetAction) return 1;

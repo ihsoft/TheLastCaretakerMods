@@ -47,8 +47,10 @@ gates and an inactive collision-release interval.
 During eligible neutral stabilization, the mod temporarily suspends the stock
 automatic hover and altitude assistance before the native Gyro tick, then
 restores their exact previous values when ownership ends. This prevents stock
-hover calibration from learning the later kinematic hold. The mod does not
-reset or migrate saved HoverPitchScale or Collective values.
+hover calibration from learning the later kinematic hold. On player entry, the
+mod resets saved HoverPitchScale to the selected baseline 1.0. Startup only
+binds the entry event and does not reset an already controlled Gyro. It does
+not reset this field every tick and does not write Collective.
 
 External collision hits release both stabilization paths for 0.25 seconds so
 stock physics can separate the Gyro from moving decks and other obstacles. A
