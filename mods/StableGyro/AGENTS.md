@@ -10,6 +10,9 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 - [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md) owns the game fingerprint
   gate, stock Gyro package/class/input/physics contracts, direct
   `PropellerVelocity` reference values, and tracked reconstructed inputs.
+- [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md) owns the version-bound native hover
+  calibration formula, assistance-ownership order, recovery limits and exact
+  gameplay-validation boundary.
 - [StableGyro backlog](../../docs/stablegyro-backlog.md) owns the active restart
   state, candidate evidence, pending gates, and next validation action.
 - [Vehicle and HUD modding patterns][postphysics-pattern]
@@ -32,23 +35,45 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   It includes W/S integration of native TiltForwardInput, X reset and HUD
   hint, arcade altitude stabilization, and kinematic horizontal-velocity
   damping guided by the two-axis control intent in the vehicle's local frame.
-  Neutral controls reject physics-injected horizontal speed growth before
-  decay. Apply horizontal correction as an additive XY-only velocity delta;
+  Away from external contact, neutral controls reject physics-injected
+  horizontal speed growth before decay. Apply horizontal correction as an additive XY-only velocity delta;
   never rewrite the full velocity vector or its Z component from the horizontal
   path. The stabilization helper must tick in `TG_PostPhysics`, explicitly after
   the stock Gyro tick and its rotor/Chaos force integration. Gate every
   kinematic horizontal or vertical stabilization
-  correction on the stock rotor's measured `PropellerVelocity`; below the
-  configured direct threshold, clear stabilization state and do not alter
-  position or velocity. During vertical braking, reject positive
-  Vz growth above the previous helper command before applying the configured
-  constant-rate deceleration. Do not require full throttle for stabilization.
+  correction on `bEngineRunning`, positive `CurrentThrottle`, and the stock
+  rotor's measured `PropellerVelocity`; when any gate fails, clear stabilization
+  state and do not alter position or velocity. External collision hits release
+  both correction paths for 0.25 seconds. Enable hit notification once on the
+  owned primitive components, and use a swept Z correction whose blocking-hit
+  or initial-penetration result enters the same release interval. During that
+  interval, perform no kinematic correction. During vertical braking away from
+  contact, a positive configured deceleration rejects positive Vz growth above
+  the previous helper command before applying the constant-rate deceleration.
+  A zero vertical-deceleration setting disables that positive-Vz kinematic
+  damping, including the growth rejection: while observed Vz is positive,
+  perform no Z position or velocity correction and clear the previous vertical
+  sample. It does not disable later exact-hold acquisition once Vz becomes
+  non-positive or any horizontal stabilization. Space must preserve all
+  positive Vz, including when current altitude is at or below the stored floor;
+  raise the floor only when current altitude exceeds it. Do not require full
+  throttle for stabilization.
   While Ctrl is held, clear vertical hold/braking state and let stock descent
-  operate; Ctrl takes precedence over Space, while rotor-gated horizontal
-  damping may continue. Re-entering with Space released must brake positive Vz
+  operate; Ctrl takes precedence over Space, while propulsion- and contact-gated
+  horizontal damping may continue. Re-entering with Space released must brake positive Vz
   before exact hold, rather than discarding climb inertia. Do not alter A/D integration, yaw, camera,
   possession, save behavior, or other HUD/input behavior without a new user
   request.
+- Native altitude-assistance ownership is independent of
+  `EnablePitchCorrection`. In the PrePhysics helper, derive ownership from the
+  same player-control, propulsion, input and contact eligibility used by the
+  PostPhysics stabilization path. Cache the owned Gyro and sibling helper once,
+  capture `bAutoHoverCollective` and `bAltitudeAssist` on first acquisition,
+  disable them before the native Gyro tick, and restore the exact captured
+  values on every ownership loss, controller change and EndPlay. Do not reset or
+  migrate saved `HoverPitchScale` or `Collective`. The version-bound native
+  formula and remaining recovery limits live in
+  [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md).
 - When pitch correction is enabled, W increases, S decreases, and releasing
   both leaves the integrated value unchanged. X writes exact zero immediately.
   Treat only exact native digital

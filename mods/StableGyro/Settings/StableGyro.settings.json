@@ -29,7 +29,7 @@
       "runtimeName": "AltitudeStabilizationVerticalDeceleration",
       "key": "AltitudeStabilizationVerticalDeceleration",
       "type": "number",
-      "minimum": 1.0,
+      "minimum": 0.0,
       "maximum": 10000.0
     },
     {

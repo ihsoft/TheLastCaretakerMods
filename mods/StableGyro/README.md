@@ -29,21 +29,27 @@ formatting. Settings/StableGyro.settings.json declares only runtime
 bindings, types, and numeric ranges; the public build validates both and
 generates the Blueprint settings bindings internally.
 
-Whenever the measured rotor-speed gate is satisfied, releasing Space after
-holding it starts a kinematic braking phase for positive vertical speed.
+Whenever the engine is running, current throttle is positive, and the measured
+rotor-speed gate is satisfied, releasing Space after holding it starts a
+kinematic braking phase for positive vertical speed.
 Entering stabilization without Space held, including after releasing Ctrl,
 uses the same braking path instead of discarding existing climb inertia.
 `AltitudeStabilizationVerticalDeceleration`
-sets that deceleration in cm/s^2; the default is `100.0` and accepted values
-are clamped to `1..10000`. During braking, positive growth above the previous
-commanded vertical speed is rejected before deceleration, so continued rotor
-force cannot undo the configured braking rate. Horizontal velocity is
-preserved. When vertical speed reaches zero, or is already non-positive, the
-current altitude becomes an exact hold target. Pressing Space returns to the
-one-sided altitude floor without clamping upward velocity. Holding Ctrl releases
+sets that deceleration in cm/s^2; the default is `500.0` and accepted values
+are clamped to `0..10000`. With a positive value, positive growth above the
+previous commanded vertical speed is rejected before deceleration, so continued
+rotor force cannot undo the configured braking rate. At `0`, both that growth
+rejection and positive-vertical-speed damping are disabled: the mod leaves
+positive Z velocity and position untouched and discards the stale vertical
+sample. This is not a global altitude-stabilization toggle. When vertical speed
+naturally reaches zero or becomes negative, the current altitude can still
+become an exact hold target. Horizontal stabilization remains independent.
+Pressing Space returns to the one-sided altitude floor without clamping any
+positive upward velocity, even
+when the Gyro is still at or below its prior floor. Holding Ctrl releases
 vertical hold and braking so the stock descent and landing controls remain in
 charge; Ctrl wins if Space and Ctrl are both held. Horizontal damping remains
-active while Ctrl is held when the rotor-speed gate is satisfied.
+active while Ctrl is held when the propulsion and contact gates permit it.
 
 The pitch-input helper runs in `TG_PrePhysics` before the stock Gyro tick and
 while pitch correction is enabled restores the stored integrated forward tilt
@@ -52,13 +58,33 @@ stabilization helper runs in `TG_PostPhysics` after the stock Gyro tick: stock
 rotor and Chaos forces are integrated first, then the mod applies its kinematic
 vertical and horizontal corrections. Explicit tick prerequisites enforce both
 relationships.
-Both corrections require the measured rotor speed to be at least
+
+Independently of `EnablePitchCorrection`, the PrePhysics helper temporarily
+owns the native altitude-assistance booleans while neutral stabilization is
+eligible. It captures the current `bAutoHoverCollective` and `bAltitudeAssist`
+values, disables both before the native Gyro tick, and restores the exact values
+when Space or Ctrl is held, propulsion or player control is lost, contact release
+is active, the controller changes, or the helper ends. This prevents native
+hover calibration from learning an equilibrium created by the later kinematic
+hold. It does not reset or migrate saved `HoverPitchScale` or `Collective`.
+See [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md) for the version-bound native
+formula, ownership order and recovery limits.
+
+Both corrections require a running engine, positive `CurrentThrottle`, and a
+measured rotor speed of at least
 `StabilizationMinimumPropellerVelocity` in the native Gyro's direct
 `PropellerVelocity` units. The default is `390.0`; accepted values are clamped
-to `0..100000`, and `0` disables this gate. Below the threshold the helper
-clears its altitude-lock and velocity-sample state without changing location or
-velocity. This prevents the Gyro from being held against an obstacle after a
-rotor collision removes lift.
+to `0..100000`, and `0` disables the rotor-speed part of this gate. When any
+part of the propulsion gate fails, the helper clears its altitude-lock,
+braking, and velocity-sample state without changing location or velocity.
+
+An external collision hit releases both stabilization paths for 0.25 seconds,
+allowing the stock physics response to separate the Gyro from moving decks and
+other obstacles. The exact Z correction is swept; a blocking hit or initial
+penetration enters the same release interval and skips the subsequent Z-velocity
+correction. After the interval expires, stabilization reacquires from a fresh
+observation. Horizontal speed-growth rejection and vertical braking apply only
+away from that collision interval.
 
 Horizontal speed is damped kinematically at the rate configured by
 `HorizontalVelocityDecayAcceleration`, in cm/s^2. With both rotor-tilt axes
@@ -106,3 +132,10 @@ Steam build `25827816` remains the last broadly game-validated checkpoint. On
 build `25880952`, the user verified settings reload on Gyro entry and the
 `EnablePitchCorrection` enabled/disabled A/B switch; the remaining detailed
 flight-stability cases still require proportional real-game validation.
+On Steam build `25956314`, the user reported that the intermittent takeoff
+failure no longer reproduced in his test and that throttle no longer adjusted
+itself during hold. After the requested default-`500` and zero-setting update,
+he reported that the latest installed build works. This does not establish a
+separate test matrix for both values, strong waves, every collision shape or
+every saved calibration state. The public producer still freshly extracts and
+asserts the consumed stock asset contracts for each candidate build.

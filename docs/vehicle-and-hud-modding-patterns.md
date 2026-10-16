@@ -80,13 +80,17 @@ separate vertical state machine even when its Z value was copied from the same
 observation. A vertical correction likewise owns only Z velocity or Z position
 and preserves the live X/Y state.
 
-To prevent continuous stock force from rebuilding speed, retain the previous
+Within an eligible free-flight stabilization mode, to prevent continuous stock
+force from rebuilding speed, retain the previous
 velocity commanded by the helper. In each stabilized subspace, first reject
 observed growth beyond that previous command, then apply the configured
 constant-rate decay. On first entry there is no trustworthy previous sample;
 seed it from the observation. Clear sample validity whenever control ownership,
 the actuator-speed gate, throttle eligibility, or stabilization mode changes so
-stale commands cannot create a transition jump.
+stale commands cannot create a transition jump. A previous-command clamp cannot
+distinguish actuator acceleration from an external collision impulse: contact
+must have priority over both horizontal and vertical correction, and invalidate
+their old samples and position targets before they can be reused.
 
 Use local control intent, not a moving component's world orientation, to decide
 which motion is permitted. Combine the vehicle's world-horizontal forward and
@@ -98,10 +102,29 @@ For a smooth transition from physical climb to exact altitude hold, brake only
 positive vertical speed at a constant configured rate. Reject renewed positive
 growth relative to the previous command before each braking step. Once the
 result becomes non-positive, capture the current Z and activate exact hold in
-that same tick; an already descending vehicle enters hold immediately. Gate all
-kinematic corrections on a measured live actuator state such as rotor speed,
-and clear their state below the threshold, otherwise a disabled or obstructed
-vehicle can be pinned unnaturally to an obstacle.
+that same tick; an already descending vehicle enters hold immediately. If zero
+is an accepted disable value for the braking rate, bypass the previous-command
+growth rejection as well as the decay while observed vertical speed is positive,
+and invalidate the old sample. Otherwise the growth clamp remains a hidden
+kinematic brake at a nominally disabled rate.
+
+Gate all kinematic corrections on verified propulsion eligibility as well as
+measured actuator speed, and clear their state when either fails. A coasting
+rotor is not proof that its engine is running or its throttle is nonzero;
+neutral input is not proof that throttle is zero. Otherwise a disabled or
+obstructed vehicle can be pinned unnaturally to an obstacle.
+
+An unswept post-physics position correction can undo the solver's separation
+from a moving obstacle. A swept correction must inspect its hit result and
+yield on blocking contact or initial penetration before any subsequent velocity
+write. The move's Boolean return means movement occurred, not that the path
+was clear. An actor-root sweep tests the root primitive's represented collision
+body. Treat welded child shapes as covered only when engine and component
+evidence shows that they are represented by that body; independent child bodies
+require separate handling. Contact notifications and the actual collision
+hierarchy therefore remain part of the contract.
+During commanded takeoff, an altitude floor must not erase positive vertical
+velocity merely because the current position has not yet risen above the floor.
 
 ## Replacing a Blueprint while preserving original behavior
 
