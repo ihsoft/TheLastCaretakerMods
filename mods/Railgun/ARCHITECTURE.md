@@ -1,5 +1,99 @@
 # Railgun architecture
 
+## Stock aiming and input integration boundaries
+
+The following native contracts were inspected on Steam build `25956314`, EXE
+SHA-256 `0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`.
+Railgun uses these contracts for stock actions, mapping-context lifecycle and
+ADS processing. Controller hardware behavior remains unverified. Revalidate
+native contracts when the executable changes. Reusable input integration rules
+live in [Voyage input integration](../../docs/voyage-input-integration.md).
+
+Each shell clones the live character and vehicle context assets and their
+device mappings. The character allowlist retains Primary Action, ADS, Reload
+and both look axes; the vehicle allowlist retains Exit Vehicle. The current
+filter requires empty mapping-profile overrides and no alternate
+`SwitchGamepadMappingContext`; an unsupported shape rejects station preparation.
+Entry uses the original character's `IAV_InteractTwo` through the interaction
+provider, independently of the possessed station's contexts.
+
+- `VoyageMiscBlueprintFunctionLibrary::CalculateCameraMovementValue` is a
+  callable, non-pure function taking a Voyage player controller and a Vector2D.
+  It applies stock camera settings. Its ADS input comes from the controller's
+  current Pawn, that Pawn's `VoyageWeaponHolsterComponent`, and
+  `GetActiveSlotActor(false)->GetInterpStateAmount(ADS)`. A station scope boolean
+  alone does not supply this state. The helper does not expose an ADS-amount
+  argument; character aiming also applies additional character multipliers.
+- Holster initialization derives `OverlaySlotIndex` from the first entry in
+  `HolsterSlots` with `EVoyageHolsterSlotType::Overlay`. Without such an entry,
+  the index remains invalid and the overlay-slot application path returns.
+  Treat the index as derived state, not a field to fabricate manually.
+- The stock first-person character has five `HolsterSlots` (the fifth is
+  Overlay) but only four ordinary `Slots` entries. Overlay does not require a
+  matching `BarSlotConfig`. The native overlay path can insert an absent
+  inventory slot record. Slot acceptance checks the holster configuration and,
+  for hand equipment, requires `DesiredSlot` to match its holster slot type.
+  A station-only overlay therefore uses `HolsterSlots=[Overlay]` and equipment
+  `DesiredSlot=Overlay`; it must not fabricate internal slot indices. Inventory
+  insertion also requires a nonempty item primary-asset identity.
+- `AddOverlayState` accepts a key, `VoyageHolsterSlotOverride` and a force flag.
+  The override holds a weak `VoyageItemBaseEquipment` reference and priority.
+  This is not an API for inserting an arbitrary spawned actor. The inspected
+  slot-actor creation path handles `VoyageItemHandEquipment` and
+  `VoyageItemConsumable`, resolving their configured equipment actor class.
+  A bare base-equipment definition is therefore insufficient for that path.
+  `RemoveOverlayState(const FName& InKey)` is BlueprintCallable and returns
+  bool; an absent key returns false. Reset the station equipment's ADS before
+  removing its overlay on possession loss, including forced exit. Removal is
+  not evidence of immediate actor destruction or completed slot transition.
+- `VoyageInputControlsComponent` sets up input on its owner's pawn-restart
+  notification and tears it down for the old controller on controller changes.
+  Context refresh removes all mappings referenced by its `InputContextAsset`
+  before adding the selected device context. Context lifetime must have a
+  single owner; removing a shared stock context can affect another consumer.
+- The station uses one stock action-hint widget for its complete provided-action
+  list. Separate character and exit input contexts do not require separate
+  renderers: two widgets render duplicate complete lists. Input-component
+  ownership and hint rendering remain separate.
+- The base component's device-change callback only stores the device type,
+  but the gameplay `VoyagePlayerController` additionally enumerates all
+  `VoyageInputControlsComponent` instances on its current Pawn and invokes
+  each component's native context refresh with the new device type. The stock
+  `/Game/Game/BP_VoyagePlayerController` inherits this controller. Mapping
+  refresh therefore belongs to the gameplay controller, not the component's
+  notification callback. Multiple such components participate in this path;
+  no station-specific device polling or synthetic pawn restart is needed
+  to reproduce this stock mapping-switch mechanism.
+  `OnPawnRestarted` is reflected but is not BlueprintCallable in this build;
+  an editor mirror must not invent callability to use it as a refresh API.
+- `DrawFromHolster` checks the owner's animation instance and the equipment's
+  draw animation. If either is absent, or playing the animation returns zero,
+  it takes a native fallback branch. Its equipment-interface call sets
+  `bEquipped` before the animation attempt. Absence of a character animation
+  is not itself an unconditional rejection of drawing equipment.
+- `AttachEquipmentToHand` first considers the equipment's skeleton socket,
+  then the holster's `SkeletonSocketTag`, then `EquipmentComponentTag`. When
+  all are empty, it attaches to the owner's root component and applies the
+  equipment attachment transform. This branch does not require a hand socket
+  or skeletal mesh.
+- `VoyageEquipmentActor::SetInterpState(InType, bIsSet)` is BlueprintCallable
+  and returns void. `HasInterpState(InType)` is a const BlueprintPure boolean
+  query of the live native state, separate from `GetInterpStateAmount(InType)`.
+  Toggle commands and scope presentation can use that state instead of an
+  independent station toggle. The equipment's native per-frame path updates interpolation
+  state amounts using its configuration and delta time. The draw-interface
+  receiver is an adjusted interface pointer; field offsets must be interpreted
+  relative to the actor before assigning property identities. A station
+  integration must use the native ADS state and updater rather than duplicating
+  their transition formula or treating a setter call as completion evidence.
+
+The station owns the overlay equipment actor without character animation or
+hand sockets. Both input components participate in native device switching;
+one HUD widget renders the complete provided-action list. Look values pass
+through the native camera helper, then X is added to yaw and Y is subtracted
+from direct rotator pitch before clamping, in both eye and scope modes.
+This coordinate conversion does not replace the game's inversion setting.
+
 ## Source organization
 
 - `RailgunRuntimeGenerator` keeps graph-building declarations and stable names
@@ -510,9 +604,9 @@ The three-record plugin-local registry is derived solely from owned package
 readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field.
 
-- Steam build: `25880952`; parser profile: `UE5_8`; authoring editor: `5.8.2`.
+- Steam build: `25956314`; parser profile: `UE5_8`; authoring editor: `5.8.2`.
 - Executable SHA-256:
-  `16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44`.
+  `0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`.
 - Versioned release ZIPs live in `Voyage/Content/Paks/`. Ignored installation
   manifests under `artifacts/installations/Railgun/` identify exact installed
   hashes and rollback material; neither is a source dependency for rebuilding.
@@ -523,13 +617,11 @@ writer, then reopened and compared field-for-field.
 - Native mirrors, scan roots and reconstructed contracts are fingerprint-bound.
   A changed game fingerprint requires revalidation before cooking or making
   compatibility claims.
-- The current fingerprint has static native-reflection, stock-reference,
-  serialization and producer-format evidence from the successful candidate
-  build. Real-game validation covers direct hits and damage against a Talon
-  shark, impact fire and smoke, and a fountain-only water miss. Powered
-  charging was not separately revalidated for this fingerprint. Registry
-  discovery, research unlock and behavior beyond the established single-player
-  scope remain separate validation boundaries.
+- Native reflection, stock references, serialization and producer formats
+  have separate structural checks. Controller hardware, exhaustive remapping,
+  target-specific damage and effects, powered charging, registry discovery,
+  research unlock and save restoration require their own runtime evidence;
+  acceptance of keyboard controls does not establish all of these behaviors.
 - Generated packages use tagged properties for partial mirrors. The ammo and
   gun items are the bounded post-cook unversioned conversion exceptions; both
   are reopened before packaging. Do not convert unrelated native-child assets

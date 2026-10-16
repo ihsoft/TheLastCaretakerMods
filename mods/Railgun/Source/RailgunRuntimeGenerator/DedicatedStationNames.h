@@ -4,7 +4,6 @@ namespace DedicatedStationNames
 {
 inline constexpr TCHAR OperatorPackage[] = TEXT("/Game/Mods/Railgun/Station/BP_RailgunOperator");
 inline constexpr TCHAR HudPackage[] = TEXT("/Game/Mods/Railgun/Station/WBP_RailgunHUD");
-inline constexpr TCHAR ContextPath[] = TEXT("/Game/Mods/Railgun/Inputs/DA_RailgunInputContext.DA_RailgunInputContext");
 inline const FName Sight(TEXT("RailgunSightComponent"));
 inline const FVector2D HintHostOffset(24.0f, -24.0f);
 inline constexpr TCHAR VerifySwitch[] = TEXT("VerifyTagged");
@@ -17,6 +16,9 @@ inline const FName ViewOwned(TEXT("RailgunOwnsView"));
 inline const FName RefreshActivity(TEXT("RefreshRailgunRuntimeActivity"));
 inline constexpr float ContinuousTickInterval = 0.0f;
 inline const FName ActionValue(TEXT("ActionValue"));
+inline const FName CameraControllerInput(TEXT("Controller"));
+inline const FName CameraMovementInput(TEXT("InputValue"));
+inline const FName VectorInput(TEXT("InVec"));
 inline const FName Triggered(TEXT("Triggered"));
 inline const FName Started(TEXT("Started"));
 }

@@ -20,14 +20,19 @@
       "class": "VoyageSkill"
     }
   ],
+  "structuralValidation": {
+    "method": "Canonical UAssetGUI fromjson/tojson roundtrip with the reviewed mapping",
+    "result": "All three authored graphs preserve package versions, custom versions, names, imports, complete normalized exports, folder identity and unversioned state without raw exports",
+    "scope": "serialized-source-roundtrip"
+  },
   "serialization": {
     "engineVersion": "5.8",
     "uassetGuiCommit": "df18b5fd0d263d78fdb0cd5f49de1ee5cf6a9520",
     "uassetGuiSha256": "42837CD279A78DF57B537020A0169C5D2259A4570D3B62F4B96852F0F5C27F96",
     "uassetApiCommit": "21c982fa8f04e12d5d216fdf330a2f206e81156f",
-    "mappingSha256": "EB11CF2D96E0C7CE9430C4A90B4784AF423172B65A36FC3BA13BD1DAC44A8953",
-    "steamBuildId": "25880952",
-    "executableSha256": "16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44"
+    "mappingSha256": "1B777468894C071262FE5821DAFC1B509EFD5B8481213CC197C1B4B74177542E",
+    "steamBuildId": "25956314",
+    "executableSha256": "0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A"
   },
   "revalidateWhen": "The game fingerprint, reviewed mapping, UAssetAPI JSON schema, UAssetGUI/API writer checkpoint, native asset identity, required runtime references, or serialized format changes."
 }

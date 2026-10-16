@@ -9,13 +9,11 @@ namespace Railgun::Runtime
 namespace ZoomTest
 {
 inline const FName Wide(TEXT("RailgunWideView"));
-inline const FName Mouse(TEXT("RailgunActiveMousePercent"));
 inline const FName Mask(TEXT("RailgunOpticalMask"));
 inline const FName MaskImage(TEXT("RailgunOpticalMaskImage"));
 inline constexpr TCHAR MaskPackage[] = TEXT("/Game/Mods/Railgun/Station/T_RailgunOpticalMask");
 inline constexpr TCHAR MaskAsset[] = TEXT("T_RailgunOpticalMask");
 inline constexpr TCHAR OverlaySourceArgument[] = TEXT("ScopeOverlay=");
-inline constexpr TCHAR NormalMouse[] = TEXT("100.0");
 inline constexpr TCHAR Hidden[] = TEXT("Collapsed");
 inline constexpr TCHAR Shown[] = TEXT("HitTestInvisible");
 inline const FName WideCenter(TEXT("RailgunWideCenter"));

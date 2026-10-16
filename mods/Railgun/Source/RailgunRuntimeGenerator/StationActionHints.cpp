@@ -4,10 +4,34 @@
 #include "StationOpticsGraph.h"
 #include "RailgunRuntimeGeneratorPrivate.h"
 #include "RailgunReload.h"
+#include "VoyageInputAction.h"
 #include "K2Node_Literal.h"
+#include "Misc/PackageName.h"
 
 namespace Railgun::Runtime
 {
+UInputAction* StockInputActionReference(const TCHAR* ObjectPath,
+    const TCHAR* Description, bool VoyageAction,
+    EInputActionValueType ValueType)
+{
+    if (auto* Existing = FindObject<UInputAction>(nullptr, ObjectPath))
+        return Existing;
+    FString PackageName;
+    FString ObjectName;
+    check(FString(ObjectPath).Split(RailgunInputNames::ObjectPathSeparator,
+        &PackageName, &ObjectName, ESearchCase::CaseSensitive,
+        ESearchDir::FromEnd));
+    UInputAction* Action = VoyageAction
+        ? static_cast<UInputAction*>(NewObject<UVoyageInputAction>(
+            CreatePackage(*PackageName), *ObjectName,
+            RF_Public | RF_Standalone))
+        : NewObject<UInputAction>(CreatePackage(*PackageName), *ObjectName,
+            RF_Public | RF_Standalone);
+    Action->ValueType = ValueType;
+    Action->ActionDescription = FText::FromString(Description);
+    return Action;
+}
+
 void AddStationActions(UBlueprint* BP)
 {
     const FName Name = GET_FUNCTION_NAME_CHECKED(AVoyageVehiclePawn, GetProvidedActionsBP);
@@ -39,7 +63,8 @@ void AddStationActions(UBlueprint* BP)
     G.Link(G.Tail, G.Pin(Result, P::Execute));
     auto* Action = NewObject<UK2Node_MakeStruct>(Graph); Action->StructType = FPlayerInputInterfaceAction::StaticStruct();
     Action->bMadeAfterOverridePinRemoval = true; G.Node(Action);
-    auto* ExitAction = LoadObject<UInputAction>(nullptr, RailgunInputNames::Exit); check(ExitAction);
+    auto* ExitAction = StockInputActionReference(RailgunInputNames::Exit,
+        RailgunInputNames::ExitDescription, true);
     G.Pin(Action, Hint::InputAction)->DefaultObject = ExitAction;
     G.Default(Action, Hint::Name, Hint::ActionName); G.Default(Action, Hint::Category, Hint::ActionCategory);
     G.Link(ReadActionDescription(ExitAction), G.Pin(Action, Hint::Text));
@@ -52,7 +77,8 @@ void AddStationActions(UBlueprint* BP)
     check(ActionOutput && FirstElement); G.Link(ActionOutput, FirstElement);
     auto* ZoomAction = NewObject<UK2Node_MakeStruct>(Graph); ZoomAction->StructType = FPlayerInputInterfaceAction::StaticStruct();
     ZoomAction->bMadeAfterOverridePinRemoval = true; G.Node(ZoomAction);
-    auto* ZoomInput = LoadObject<UInputAction>(nullptr, RailgunInputNames::Zoom); check(ZoomInput);
+    auto* ZoomInput = StockInputActionReference(RailgunInputNames::Zoom,
+        RailgunInputNames::ZoomDescription, true);
     G.Pin(ZoomAction, Hint::InputAction)->DefaultObject = ZoomInput;
     G.Default(ZoomAction, Hint::Name, Hint::ZoomName); G.Default(ZoomAction, Hint::Category, Hint::ActionCategory);
     G.Link(ReadActionDescription(ZoomInput), G.Pin(ZoomAction, Hint::Text));
@@ -64,7 +90,8 @@ void AddStationActions(UBlueprint* BP)
     for (auto* Pin : ZoomAction->Pins) if (Pin->Direction == EGPD_Output) G.Link(Pin, LastElement);
     auto* FireAction = NewObject<UK2Node_MakeStruct>(Graph); FireAction->StructType = FPlayerInputInterfaceAction::StaticStruct();
     FireAction->bMadeAfterOverridePinRemoval = true; G.Node(FireAction);
-    auto* FireInput = LoadObject<UInputAction>(nullptr, RailgunInputNames::Fire); check(FireInput);
+    auto* FireInput = StockInputActionReference(RailgunInputNames::Fire,
+        RailgunInputNames::FireDescription, false);
     G.Pin(FireAction, Hint::InputAction)->DefaultObject = FireInput;
     G.Default(FireAction, Hint::Name, Hint::FireName); G.Default(FireAction, Hint::Category, Hint::ActionCategory);
     G.Link(ReadActionDescription(FireInput), G.Pin(FireAction, Hint::Text));
@@ -75,7 +102,8 @@ void AddStationActions(UBlueprint* BP)
     for (auto* Pin : FireAction->Pins) if (Pin->Direction == EGPD_Output) G.Link(Pin, LastElement);
     auto* ReloadAction = NewObject<UK2Node_MakeStruct>(Graph); ReloadAction->StructType = FPlayerInputInterfaceAction::StaticStruct();
     ReloadAction->bMadeAfterOverridePinRemoval = true; G.Node(ReloadAction);
-    auto* ReloadInput = LoadObject<UInputAction>(nullptr, RailgunInputNames::Reload); check(ReloadInput);
+    auto* ReloadInput = StockInputActionReference(RailgunInputNames::Reload,
+        RailgunInputNames::ReloadDescription, false);
     G.Pin(ReloadAction, Hint::InputAction)->DefaultObject = ReloadInput;
     G.Default(ReloadAction, Hint::Name, Hint::ReloadName); G.Default(ReloadAction, Hint::Category, Hint::ActionCategory);
     G.Link(ReadActionDescription(ReloadInput), G.Pin(ReloadAction, Hint::Text));

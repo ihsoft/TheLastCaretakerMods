@@ -22,8 +22,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods\Railgun\Build-Railg
 Add `-Install` to install the verified result when the game is closed. The
 default preparation-only output is a unique temporary directory below
 `Tmp\Railgun\`. `-OutputRoot` may select an exact fresh directory only below
-that same owner root. The candidate contains loose installation inputs and one
-ZIP whose user-facing layout is exactly:
+that same owner root. `-ArtifactVersion` assigns a distinct safe release and
+archive identity; otherwise the producer uses a UTC build timestamp. The
+candidate contains loose installation inputs and one ZIP whose user-facing
+layout is exactly:
 
 - `Mods\RailgunCatalogue\RailgunCatalogue.uplugin`
 - `Content\Paks\Railgun.pak`
@@ -81,19 +83,26 @@ install manifest and `previous-files` evidence.
 
 ## Controls
 
-- Mouse aims the weapon; left mouse fires, right mouse toggles the scope, and
-  `E` exits the operator station.
-- `R` transfers the exact Railgun ammunition from the character who entered
+- The station uses the game's look actions, Primary Action, Aim Down Sight,
+  Reload and Exit Vehicle, preserving their game-configured mappings. With
+  default keyboard/mouse bindings, mouse aims, left mouse fires, right mouse
+  toggles the scope, and `E` exits the operator station. Keyboard/mouse
+  operation, corrected look direction and action hints have been verified in
+  the current game. Gamepad behavior and an exhaustive set of custom remappings
+  have not been verified.
+- Reload (`R` by default) transfers the exact Railgun ammunition from the character who entered
   the station into the gun's native magazine, up to its six-round capacity.
   One press transfers as much as is available and fits; there is no automatic
   reload or reload animation.
-- The standard action hint remains present while controlling the station. It
+- The standard action hints remain present while controlling the station. Reload
   is disabled when the source inventory or ammunition is unavailable, the
   magazine is full, or the player is outside valid station control. Charge and
-  power state do not affect reload availability. The unchanged stock hint
-  widget is a serialized direct child of the Railgun HUD canvas inside its
-  invalidation root; availability changes do not recreate that outer widget.
-  The stock class continues to own the lifecycle of its internal action rows.
+  power state do not affect reload availability. One unchanged stock hint
+  widget is serialized inside a vertical box that is a direct child of the
+  Railgun HUD canvas inside its invalidation root. It reads the live character
+  input context; the stock class renders the provider's complete action list.
+  Availability changes do not recreate the host or widget. The stock class
+  continues to own the lifecycle of its internal action rows.
 
 ## Inputs
 
@@ -150,16 +159,17 @@ output.
 ## Settings
 
 The installed `Railgun.ini` is read when the player enters the weapon. Existing
-user settings are preserved by installation except for retired keys;
+user settings are preserved by installation except for retired keys.
 `OfflineDischargeKW` is removed because idle loss now uses
-`IdleConsumptionKW`. A missing key uses its template default at runtime and is
+`IdleConsumptionKW`; `OpticsMousePercent` is removed because aiming now uses
+the game's live sensitivity, ADS sensitivity, inversion, and deadzone settings.
+A missing key uses its template default at runtime and is
 added to the installed file by the next installation. The installer also
 retains the existing one-time migration from the former `FullChargeEnergyKJ`
 key. Settings replacement is process-guarded, backed up and recorded beside
 the common installation evidence.
 
 ```ini
-OpticsMousePercent=35
 YawLimitDegrees=80
 MinimumPitchDegrees=-30
 MaximumPitchDegrees=10
@@ -277,14 +287,15 @@ collision profile or object type.
 
 ## Compatibility and validation
 
-The mod is fingerprint-gated to Steam build `25880952`, executable SHA-256
-`16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44`,
+The mod is fingerprint-gated to Steam build `25956314`, executable SHA-256
+`0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`,
 parser profile `UE5_8` and authoring editor `5.8.2`. In the current game,
-validated behavior covers direct hits and damage against a Talon shark,
-impact fire and smoke, and the fountain-only effect for a water miss. This
-does not establish behavior for every target, submerged collision order,
-multiplayer or save/load. Powered charging was not separately revalidated for
-this fingerprint. Registry discovery and research unlock retain their separate
-validation boundaries. See
+validated behavior covers the keyboard/mouse stock-input path, corrected look
+direction, action hints and ADS/scope operation. Gamepad input, exhaustive
+custom remappings, every target, submerged collision order, multiplayer and
+save/load remain outside the current validation boundary. Direct-hit damage,
+impact fire and smoke, the fountain-only water-miss effect, powered charging,
+registry discovery and research unlock retain their separate fingerprint and
+runtime validation boundaries. See
 [ARCHITECTURE.md](ARCHITECTURE.md) for the durable runtime contracts and current
 hypotheses.

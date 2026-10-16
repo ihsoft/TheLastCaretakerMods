@@ -1,6 +1,6 @@
 #pragma once
-// Editor-only mirror; never shipped. Steam25191271, UE5.8, executable SHA256
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+// Editor-only mirror; never shipped. Steam25956314, UE5.8, executable SHA256
+// 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
 // Reconstructed from native Voyage registration/thunks and cooked Blueprint
 // bytecode. BP_CraftingLocationGenerator_Default calls GetActorWorld(AActor*)
 // and then GetWaterHeightAtLocation(UWorld*, FVector), whose native return is
@@ -8,6 +8,7 @@
 // GetDestructibleInterface(UObject*) and consumes its UObject return.
 // Revalidate owner, parameter order/types and return type on fingerprint change.
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "VoyagePlayerController.h"
 #include "VoyageMiscBlueprintFunctionLibrary.generated.h"
 
 UCLASS()
@@ -16,6 +17,19 @@ class VOYAGE_API UVoyageMiscBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 public:
+    UFUNCTION(BlueprintCallable, Category="Voyage Mirror")
+    static UObject* DuplicateObjectVoyage(UObject* Obj, UObject* Outer)
+    {
+        return nullptr;
+    }
+
+    UFUNCTION(BlueprintCallable, Category="Voyage Mirror")
+    static FVector2D CalculateCameraMovementValue(
+        AVoyagePlayerController* Controller, const FVector2D& InputValue)
+    {
+        return FVector2D::ZeroVector;
+    }
+
     UFUNCTION(BlueprintPure, Category="Voyage Mirror")
     static UWorld* GetActorWorld(AActor* Actor) { return nullptr; }
 

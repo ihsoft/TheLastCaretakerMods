@@ -1,9 +1,8 @@
 #pragma once
-// Seven-property serialization mirror. Steam25191271 / UE5.8, EXE
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
-// HC25: public mapping plus stock context JSON confirms property order/types;
-// reviewed mapping EnumName values recovered through published CUE4Parse after
-// Inspector Describe omitted enum names. ../../ARCHITECTURE.md owns evidence.
+// Eight-property serialization mirror. Steam25956314 / UE5.8, EXE
+// 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
+// Current reviewed mapping plus stock context JSON confirms property
+// order/types. ../../ARCHITECTURE.md owns the runtime contract and limits.
 // Editor-only, no runtime DLL. Revalidate complete schema on fingerprint change.
 #include "Engine/DataAsset.h"
 #include "InputMappingContext.h"
@@ -22,7 +21,10 @@ class VOYAGE_API UVoyageInputContextAsset : public UDataAsset
 {
     GENERATED_BODY()
 public:
-    UPROPERTY() TMap<EInputDeviceType, TObjectPtr<UInputMappingContext>> InputMappingContext;
+    UPROPERTY(BlueprintReadOnly)
+    TMap<EInputDeviceType, TObjectPtr<UInputMappingContext>> InputMappingContext;
+    UPROPERTY(BlueprintReadOnly)
+    TObjectPtr<UInputMappingContext> SwitchGamepadMappingContext;
     UPROPERTY() EInputControlContextType ContextType = EInputControlContextType::Default;
     UPROPERTY() EInputControlBindType BindType = EInputControlBindType::Default;
     UPROPERTY() int32 InputPriorityOffset = 0;

@@ -3,9 +3,11 @@
 #include "EyeAimGraph.h"
 #include "GraphCallHelpers.h"
 #include "RailgunChargeIndicator.h"
+#include "RailgunAds.h"
 #include "RailgunRecoil.h"
 #include "RailgunShot.h"
 #include "RailgunStationInitialization.h"
+#include "RailgunStockInput.h"
 #include "StationAttachmentGraph.h"
 #include "StationActionHints.h"
 #include "StationEnergy.h"
@@ -336,12 +338,23 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Branch(G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
         EqualEqual_ObjectObject), Controller,
         G.Pin(Possessed, ActorLifecycleGraphNames::NewController)));
-    auto* Cast = NewObject<UK2Node_DynamicCast>(Graph); Cast->TargetType = APlayerController::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
+    auto* Cast = NewObject<UK2Node_DynamicCast>(Graph); Cast->TargetType = AVoyagePlayerController::StaticClass(); Cast->SetPurity(false); G.Node(Cast);
     G.Link(G.Tail, G.Pin(Cast, P::Execute)); G.Link(Controller, Cast->GetCastSourcePin()); G.Tail = Cast->GetValidCastPin();
     G.Write(DS::Controller, Cast->GetCastResultPin());
     G.Branch(ObserveCall(G, APlayerController::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(APlayerController, IsLocalController),
         G.Read(DS::Controller)));
+    auto* EnsureAds = G.Call(BP->GeneratedClass, RailgunAds::Ensure);
+    G.Exec(EnsureAds);
+    auto* AdsAccepted = G.Branch(G.Read(RailgunAds::Accepted));
+    UEdGraphPin* AdsAcceptedTail = G.Tail;
+    G.Tail = G.Pin(AdsAccepted, P::Else);
+    auto* PrintAdsFailure = G.Call(UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, PrintString));
+    G.Default(PrintAdsFailure, ActorLifecycleGraphNames::StringValue,
+        RailgunAds::AcceptanceDiagnostic);
+    G.Exec(PrintAdsFailure);
+    StationMerge(G, {AdsAcceptedTail, G.Tail});
     BindRailgunReloadOnEntry(G, BP->GeneratedClass);
     ReadStationSettings(G);
     auto* RefreshPossessedHudStyle = G.Call(BP->GeneratedClass,
@@ -355,7 +368,6 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
         RailgunChargeIndicator::RefreshFunction);
     G.Exec(RefreshChargeIndicator);
     G.Write(ZoomTest::Wide, nullptr, N::True);
-    G.Write(ZoomTest::Mouse, nullptr, ZoomTest::NormalMouse);
     BindFirstPersonCamera(G);
     ClearStationRangeDisplay(G);
     auto* FindSight = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, GetComponentsByTag));
@@ -418,6 +430,8 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Write(StationLifecycle::EntryPending, nullptr, N::False);
     G.Write(StationLifecycle::ExitPending, nullptr, N::True);
     UnbindRailgunReload(G, BP->GeneratedClass);
+    auto* ResetAds = G.Call(BP->GeneratedClass, RailgunAds::Reset);
+    G.Exec(ResetAds);
     auto* ExitDelay = G.Call(UKismetSystemLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, DelayUntilNextTick));
     G.Exec(ExitDelay);
@@ -449,6 +463,22 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Exec(FinalizeTeardown);
     G.Tail = G.Pin(Teardown, P::Else);
 
+    auto ApplyScopeMode = [&](bool ToWide)
+    {
+        if (!ToWide) ConvergeEyeAim(G);
+        PlaceModeCamera(G, ToWide);
+        G.Write(ZoomTest::Wide, nullptr, ToWide ? N::True : N::False);
+        auto* Set = G.Call(UCameraComponent::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UCameraComponent, SetFieldOfView));
+        G.Link(G.Read(O::Camera), G.Pin(Set, P::FunctionTarget));
+        G.Link(G.Read(ToWide ? O::BaselineFov : O::RequestedFov),
+            G.Pin(Set, OP::FieldOfView));
+        G.Exec(Set);
+        auto* RefreshHudMode = G.Call(BP->GeneratedClass,
+            EnergyHud::RefreshModeFunction);
+        G.Exec(RefreshHudMode);
+    };
+
     // Independent sequence: misses/classification failures cannot block view setup or exit.
     G.Tail = TickTail;
     G.Branch(G.Valid(G.Read(S::Anchor)));
@@ -458,64 +488,111 @@ void BuildDedicatedStationGraph(UBlueprint* BP)
     G.Link(G.Tail, G.Pin(OpticalWork, P::Execute)); G.Tail = OpticalWork->GetThenPinGivenIndex(0);
     G.Branch(G.Read(DS::ViewOwned)); G.Branch(G.Valid(G.Read(O::Camera)));
     G.Branch(G.Valid(G.Read(N::OriginalPawn))); G.Branch(G.Valid(G.Read(S::Anchor)));
+    auto* AdsServiceReady = G.Branch(G.Read(RailgunAds::Ready));
+    UEdGraphPin* AdsServiceUnavailable = G.Pin(AdsServiceReady, P::Else);
+    G.Write(RailgunAds::Amount, ReadRailgunAdsAmount(G, BP->GeneratedClass));
+    auto* AdsActive = G.Branch(ReadRailgunAdsActive(G, BP->GeneratedClass));
+    auto* AlreadyOptical = G.Branch(G.Compare(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_BoolBool),
+        G.Read(ZoomTest::Wide), N::False));
+    UEdGraphPin* OpticalUnchanged = G.Tail;
+    G.Tail = G.Pin(AlreadyOptical, P::Else);
+    ApplyScopeMode(false);
+    UEdGraphPin* OpticalChanged = G.Tail;
+    G.Tail = G.Pin(AdsActive, P::Else);
+    auto* AlreadyWide = G.Branch(G.Read(ZoomTest::Wide));
+    UEdGraphPin* WideUnchanged = G.Tail;
+    G.Tail = G.Pin(AlreadyWide, P::Else);
+    ApplyScopeMode(true);
+    StationMerge(G, {OpticalUnchanged, OpticalChanged, WideUnchanged, G.Tail});
+    StationMerge(G, {G.Tail, AdsServiceUnavailable});
     auto* EyeMode = G.Branch(G.Read(ZoomTest::Wide));
     UpdateEyeCameraPosition(G); ConvergeEyeAim(G); StationMerge(G, {G.Tail, G.Pin(EyeMode, P::Else)});
     UpdateStationRange(G);
+    G.Tail = OpticalWork->GetThenPinGivenIndex(1);
+    G.Branch(G.Compare(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+        EqualEqual_BoolBool), G.Read(StationLifecycle::ExitPending),
+        N::False));
+    G.Branch(G.Read(RailgunAds::Accepted));
+    SyncRailgunAdsService(G, BP->GeneratedClass);
 
-    // Action event, not polling: one toggle on RMB Started while possessed.
-    auto* ZoomInput = LoadObject<UInputAction>(nullptr, RailgunInputNames::Zoom); check(ZoomInput);
+    // Preserve the stock Tap trigger: toggle only from Triggered.
+    auto* ZoomInput = StockInputActionReference(RailgunInputNames::Zoom,
+        RailgunInputNames::ZoomDescription, true);
     auto* ZoomEvent = NewObject<UK2Node_EnhancedInputAction>(Graph); ZoomEvent->InputAction = ZoomInput; G.Node(ZoomEvent);
-    G.Tail = G.Pin(ZoomEvent, DS::Started);
+    G.Tail = G.Pin(ZoomEvent, DS::Triggered);
     G.Branch(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self()));
     G.Branch(G.Read(DS::ViewOwned)); G.Branch(G.Valid(G.Read(O::Camera)));
     G.Branch(G.Valid(G.Read(DS::Controller)));
-    auto* Wide = G.Branch(G.Read(ZoomTest::Wide));
-    auto SetZoom = [&](bool ToWide)
-    {
-        if (!ToWide) ConvergeEyeAim(G);
-        PlaceModeCamera(G, ToWide);
-        G.Write(ZoomTest::Wide, nullptr, ToWide ? N::True : N::False);
-        G.Write(ZoomTest::Mouse, ToWide ? nullptr : G.Read(Settings::Mouse), ToWide ? ZoomTest::NormalMouse : nullptr);
-        auto* Set = G.Call(UCameraComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UCameraComponent, SetFieldOfView));
-        G.Link(G.Read(O::Camera), G.Pin(Set, P::FunctionTarget));
-        G.Link(G.Read(ToWide ? O::BaselineFov : O::RequestedFov), G.Pin(Set, OP::FieldOfView)); G.Exec(Set);
-        auto* RefreshHudMode = G.Call(BP->GeneratedClass,
-            EnergyHud::RefreshModeFunction);
-        G.Exec(RefreshHudMode);
-    };
-    SetZoom(false);
-    G.Tail = G.Pin(Wide, P::Else); SetZoom(true);
+    G.Branch(G.Read(RailgunAds::Ready));
+    auto* WasAdsActive = G.Branch(ReadRailgunAdsActive(G, BP->GeneratedClass));
+    SetRailgunAdsState(G, BP->GeneratedClass, false);
+    G.Tail = G.Pin(WasAdsActive, P::Else);
+    SetRailgunAdsState(G, BP->GeneratedClass, true);
 
     AddRailgunFire(G);
     AddRailgunReloadInput(G, BP->GeneratedClass);
     // Real Enhanced Input events on the possessed station, not observer key polling.
-    auto ActionNode = [&](const TCHAR* Package, FName Trigger)
+    auto ActionNode = [&](UInputAction* Action, FName Trigger)
     {
-        auto* Action = LoadObject<UInputAction>(nullptr, Package); check(Action);
         auto* Event = NewObject<UK2Node_EnhancedInputAction>(Graph); Event->InputAction = Action; G.Node(Event);
         G.Tail = G.Pin(Event, Trigger);
         G.Branch(ObserveCall(G, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled), Self()));
         return Event;
     };
-    ActionNode(RailgunInputNames::Exit, DS::Started);
+    ActionNode(StockInputActionReference(RailgunInputNames::Exit,
+        RailgunInputNames::ExitDescription, true), DS::Started);
     auto* Exit = G.Call(AVoyageVehiclePawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(AVoyageVehiclePawn, OnExitVehicle));
     G.Link(Self(), G.Pin(Exit, P::FunctionTarget)); G.Exec(Exit);
     for (bool Horizontal : {true, false})
     {
-        auto* Action = ActionNode(Horizontal ? RailgunInputNames::LookYaw : RailgunInputNames::LookPitch, DS::Triggered);
+        auto* Action = ActionNode(StockInputActionReference(
+            Horizontal ? RailgunInputNames::LookYaw : RailgunInputNames::LookPitch,
+            Horizontal ? RailgunInputNames::LookYawDescription :
+                RailgunInputNames::LookPitchDescription,
+            false, EInputActionValueType::Axis1D), DS::Triggered);
         G.Branch(G.Read(DS::ViewOwned));
         G.Branch(G.Valid(G.Read(DS::Camera)));
-        auto* Scale = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble));
-        auto* Scalar = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Multiply_DoubleDouble));
-        G.Link(G.Read(ZoomTest::Mouse), G.Pin(Scalar, P::Binary::LeftOperand)); G.Default(Scalar, P::Binary::RightOperand, Settings::OriginalPerPercent);
-        G.Link(G.Pin(Action, DS::ActionValue), G.Pin(Scale, P::Binary::LeftOperand)); G.Link(G.Pin(Scalar, P::ReturnValue), G.Pin(Scale, P::Binary::RightOperand));
+        auto* RawInput = G.Call(UKismetMathLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeVector2D));
+        if (Horizontal)
+        {
+            G.Link(G.Pin(Action, DS::ActionValue), G.Pin(RawInput, Settings::XPin));
+            G.Default(RawInput, Settings::YPin, N::Zero);
+        }
+        else
+        {
+            G.Default(RawInput, Settings::XPin, N::Zero);
+            G.Link(G.Pin(Action, DS::ActionValue), G.Pin(RawInput, Settings::YPin));
+        }
+        auto* CameraInput = G.Call(UVoyageMiscBlueprintFunctionLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UVoyageMiscBlueprintFunctionLibrary,
+                CalculateCameraMovementValue));
+        G.Link(G.Read(DS::Controller), G.Pin(CameraInput,
+            DS::CameraControllerInput));
+        G.Link(G.Pin(RawInput, P::ReturnValue),
+            G.Pin(CameraInput, DS::CameraMovementInput));
+        G.Exec(CameraInput);
+        auto* BreakInput = G.Call(UKismetMathLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BreakVector2D));
+        G.Link(G.Pin(CameraInput, P::ReturnValue),
+            G.Pin(BreakInput, DS::VectorInput));
+        UEdGraphPin* Scale = G.Pin(BreakInput,
+            Horizontal ? Settings::XPin : Settings::YPin);
+        // Voyage's camera helper returns look-axis Y, while both Railgun pitch
+        // values feed rotators directly. Convert that coordinate convention
+        // here, after all stock sensitivity/inversion/deadzone processing.
+        const FName AccumulateInput = Horizontal
+            ? GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble)
+            : GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary,
+                Subtract_DoubleDouble);
         auto* EyeInput = G.Branch(G.Read(ZoomTest::Wide));
         const FName EyeValue = Horizontal ? EyeAim::Yaw : EyeAim::Pitch;
-        auto* EyeSum = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble), G.Read(EyeValue), G.Pin(Scale, P::ReturnValue));
+        auto* EyeSum = G.Binary(AccumulateInput, G.Read(EyeValue), Scale);
         G.Write(EyeValue, ClampStationAim(G, Horizontal, EyeSum)); RotateEyeCamera(G);
         G.Tail = G.Pin(EyeInput, P::Else);
         const FName Value = Horizontal ? Aim::Yaw : Aim::Pitch;
-        auto* Sum = G.Binary(GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Add_DoubleDouble), G.Read(Value), G.Pin(Scale, P::ReturnValue));
+        auto* Sum = G.Binary(AccumulateInput, G.Read(Value), Scale);
         G.Write(Value, ClampStationAim(G, Horizontal, Sum)); DedicatedAim(G);
     }
 }
@@ -524,6 +601,8 @@ UClass* CreateDedicatedStation()
 {
     auto* BP = FKismetEditorUtilities::CreateBlueprint(AVoyageVehiclePawn::StaticClass(), CreatePackage(DS::OperatorPackage),
         *FPackageName::GetLongPackageAssetName(DS::OperatorPackage), BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
+    AddRailgunStockInputComponents(BP);
+    AddRailgunAdsSupport(BP);
     AddVariable(BP, Shot::SpawnedThisPress, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, Shot::AmmoSlot, UEdGraphSchema_K2::PC_Int);
     AddVariable(BP, Shot::SpawnLocation, UEdGraphSchema_K2::PC_Struct,
@@ -583,7 +662,6 @@ UClass* CreateDedicatedStation()
         UEdGraphSchema_K2::PC_Object, UCameraComponent::StaticClass());
     AddVariable(BP, EyeAim::FirstPersonCameraOwner,
         UEdGraphSchema_K2::PC_Object, APawn::StaticClass());
-    AddVariable(BP, ZoomTest::Mouse, UEdGraphSchema_K2::PC_Real);
     for (const auto& Setting : Settings::NumericSettings) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
     for (const auto& Font : Settings::FixedHudFonts)
         AddVariable(BP, Font.ObjectField, UEdGraphSchema_K2::PC_Object,
@@ -610,7 +688,7 @@ UClass* CreateDedicatedStation()
     QueryTemplate->SetGenerateOverlapEvents(false); QueryTemplate->SetSimulatePhysics(false);
     AddVariable(BP, DS::ViewOwned, UEdGraphSchema_K2::PC_Boolean);
     AddVariable(BP, DS::Camera, UEdGraphSchema_K2::PC_Object, ACameraActor::StaticClass());
-    AddVariable(BP, DS::Controller, UEdGraphSchema_K2::PC_Object, APlayerController::StaticClass());
+    AddVariable(BP, DS::Controller, UEdGraphSchema_K2::PC_Object, AVoyagePlayerController::StaticClass());
     AddVariable(BP, StationLifecycle::ShellOwner,
         UEdGraphSchema_K2::PC_Object, AActor::StaticClass());
     for (FName Field : {StationLifecycle::EntryPending,
@@ -867,16 +945,20 @@ UClass* CreateDedicatedStation()
     TSubclassOf<UVoyageDynamicPlayerInputWidget> StockHintClass =
         CreateStockHintWidgetReference();
     check(StockHintClass);
+    auto* HintHost = Hud->WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), Hint::HintHost);
     auto* HintWidget = Hud->WidgetTree->ConstructWidget<
         UVoyageDynamicPlayerInputWidget>(StockHintClass,
             Hint::HintInstance);
     check(HintWidget && HintWidget->GetClass() == *StockHintClass);
+    HintWidget->bIsVariable = true;
     auto* HintContext = LoadObject<UVoyageInputContextAsset>(nullptr,
-        RailgunInputNames::Context);
+        RailgunInputNames::CharacterContextObject);
     check(HintContext);
     HintWidget->ContextAsset = HintContext;
     HintWidget->bFilterByActionType = true;
-    auto* HintSlot = Canvas->AddChildToCanvas(HintWidget);
+    HintHost->AddChildToVerticalBox(HintWidget);
+    auto* HintSlot = Canvas->AddChildToCanvas(HintHost);
     HintSlot->SetAnchors(FAnchors(0.0f, 1.0f));
     HintSlot->SetAlignment(FVector2D(0.0f, 1.0f));
     HintSlot->SetPosition(DS::HintHostOffset);
@@ -1392,6 +1474,12 @@ UClass* CreateDedicatedStation()
         OwningStation->GetCastSourcePin());
     HG.Tail = OwningStation->GetValidCastPin();
     HG.Write(EnergyHud::Station, OwningStation->GetCastResultPin());
+    ContextSet(HG, HG.Read(Hint::HintInstance),
+        UVoyageDynamicPlayerInputWidget::StaticClass(),
+        GET_MEMBER_NAME_CHECKED(UVoyageDynamicPlayerInputWidget,
+            ContextAsset),
+        ReadNativeInputField(HG, OwningStation->GetCastResultPin(),
+            BP->GeneratedClass, StockInput::CharacterContext));
     auto* RegisterHud = HG.Call(BP->GeneratedClass,
         EnergyHud::RegisterFunction);
     HG.Link(OwningStation->GetCastResultPin(),
@@ -1445,7 +1533,7 @@ UClass* CreateDedicatedStation()
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP); FKismetEditorUtilities::CompileBlueprint(BP); check(BP->Status != BS_Error);
     auto* CDO = CastChecked<APawn>(BP->GeneratedClass->GetDefaultObject());
     check(CDO->GetRootComponent() && CDO->GetRootComponent()->IsA<UVoyageFastSceneComponent>());
-    check(BP->SimpleConstructionScript->GetAllNodes().Num() == 2);
+    check(BP->SimpleConstructionScript->GetAllNodes().Num() == 4);
     check(Interaction->GetChildNodes().Num() == 1 && Interaction->GetChildNodes()[0] == Query);
     check(Interaction->bIsParentComponentNative && Interaction->ParentComponentOrVariableName == CDO->GetRootComponent()->GetFName());
     CDO->PrimaryActorTick.bCanEverTick = true;

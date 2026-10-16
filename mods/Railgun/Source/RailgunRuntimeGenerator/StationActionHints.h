@@ -1,5 +1,6 @@
 #pragma once
 #include "RailgunRuntimeGeneratorFwd.h"
+#include "InputAction.h"
 
 namespace Railgun::Runtime
 {
@@ -7,6 +8,7 @@ namespace Railgun::Runtime
 namespace Hint
 {
 inline const FName HintInstance(TEXT("RailgunActionHints"));
+inline const FName HintHost(TEXT("RailgunActionHintHost"));
 inline const FName InvalidationRoot(TEXT("RailgunHudInvalidationRoot"));
 inline const FName InputAction(TEXT("InputAction"));
 inline const FName Name(TEXT("Name"));
@@ -30,5 +32,8 @@ inline constexpr TCHAR ReloadName[] = TEXT("RailgunReload");
 inline constexpr TCHAR Central[] = TEXT("EPlayerInputInterfaceActionType::Central");
 }
 
+UInputAction* StockInputActionReference(const TCHAR* ObjectPath,
+    const TCHAR* Description, bool VoyageAction,
+    EInputActionValueType ValueType = EInputActionValueType::Boolean);
 void AddStationActions(UBlueprint* BP);
 }

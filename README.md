@@ -67,6 +67,8 @@ inputs are still fingerprint-gated and must be reviewed after an update.
 
 ## Shared game research
 
+- [Game input integration](docs/voyage-input-integration.md) — stock action
+  identity, remapping, context ownership, camera settings and action hints.
 - [Runtime configuration](docs/runtime-configuration-patterns.md) — setting
   ownership, shared cache lifetime, native setters and validation boundaries.
 - [Item fabrication and pickup](docs/voyage-item-fabrication-and-pickup.md) —

@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param([string]$OutputRoot = '', [switch]$SkipBuild, [switch]$Install, [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
+param([string]$OutputRoot = '', [switch]$SkipBuild, [switch]$Install,
+    [string]$ArtifactVersion = '',
+    [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -10,7 +12,14 @@ $itemDiscoveryRoot = '/Game/Data/Assets'
 $skillDiscoveryRoot = '/Game/Data/Assets/Skill'
 $ammoPickupPackage = '/Game/Mods/Railgun/Fabricator/AmmoCassette/BP_RailgunAmmoCassette'
 $ammoPickupClass = $ammoPickupPackage + '.BP_RailgunAmmoCassette_C'
-$defaultVersion = 'build-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
+$defaultVersion = if ($ArtifactVersion) {
+    if ($ArtifactVersion -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$') {
+        throw 'ArtifactVersion must be a safe 1-80 character identity.'
+    }
+    $ArtifactVersion
+} else {
+    'build-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
+}
 $tmpOwnerRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/Railgun'))
 $tmpBoundary = $tmpOwnerRoot + [IO.Path]::DirectorySeparatorChar
 if (-not $OutputRoot) {
@@ -111,6 +120,9 @@ $dataAssetContractFields = @($dataAssetContract.PSObject.Properties.Name |
     Sort-Object)
 $serializationFields = @($dataAssetContract.serialization.PSObject.Properties.Name |
     Sort-Object)
+$structuralValidationFields = @(
+    $dataAssetContract.structuralValidation.PSObject.Properties.Name |
+        Sort-Object)
 $expectedAssetSources = @(
     'Assets/Fabricator/railgun-ammo-item.json',
     'Assets/Fabricator/railgun-item.json',
@@ -121,7 +133,16 @@ $actualAssetSources = @($dataAssetContract.assets | ForEach-Object {
 } | Sort-Object)
 if ($dataAssetContract.schemaVersion -ne 3 -or
     (Compare-Object $dataAssetContractFields @(
-        'assets','revalidateWhen','schemaVersion','serialization')) -or
+        'assets','revalidateWhen','schemaVersion','serialization',
+        'structuralValidation')) -or
+    (Compare-Object $structuralValidationFields @(
+        'method','result','scope')) -or
+    $dataAssetContract.structuralValidation.method -cne
+        'Canonical UAssetGUI fromjson/tojson roundtrip with the reviewed mapping' -or
+    $dataAssetContract.structuralValidation.scope -cne
+        'serialized-source-roundtrip' -or
+    [string]::IsNullOrWhiteSpace(
+        [string]$dataAssetContract.structuralValidation.result) -or
     (Compare-Object $serializationFields @(
         'engineVersion','executableSha256','mappingSha256','steamBuildId',
         'uassetApiCommit','uassetGuiCommit','uassetGuiSha256')) -or
@@ -206,7 +227,7 @@ function Get-RailgunSourceHashes {
 }
 $sourceHashes = @(Get-RailgunSourceHashes)
 $fingerprint = (& (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -OutputPath (Join-Path $output 'fingerprint.json')) | ConvertFrom-Json
-if ([string]$fingerprint.steam.buildId -cne '25880952' -or $fingerprint.executable.sha256 -cne '16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44') { throw 'Railgun game provenance mismatch.' }
+if ([string]$fingerprint.steam.buildId -cne '25956314' -or $fingerprint.executable.sha256 -cne '0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A') { throw 'Railgun game provenance mismatch.' }
 if ($Install) {
     $legacyAutoload = [IO.Path]::GetFullPath((Join-Path $fingerprint.gameRoot `
         'Voyage/Content/Paks/Railgun.autoload'))
@@ -253,10 +274,13 @@ function Remove-DeprecatedRailgunSettings([string]$SettingsPath) {
     }
     $text = $encoding.GetString($bytes, $preambleLength,
         $bytes.Length - $preambleLength)
-    $deprecatedPattern = '(?im)^[\t ]*OfflineDischargeKW[\t ]*=.*(?:\r\n|\n|\r|$)'
+    $removedKeys = @(@('OfflineDischargeKW','OpticsMousePercent') |
+        Where-Object { $text -match ('(?im)^[\t ]*' +
+            [regex]::Escape($_) + '[\t ]*=') })
+    $deprecatedPattern = '(?im)^[\t ]*(?:OfflineDischargeKW|OpticsMousePercent)[\t ]*=.*(?:\r\n|\n|\r|$)'
     $removedCount = [regex]::Matches($text, $deprecatedPattern).Count
     if ($removedCount -eq 0) {
-        return [pscustomobject]@{removedCount=0;sha256=(Get-FileHash `
+        return [pscustomobject]@{removedCount=0;removedKeys=@();sha256=(Get-FileHash `
             -LiteralPath $SettingsPath -Algorithm SHA256).Hash}
     }
     $updated = [regex]::Replace($text, $deprecatedPattern, '')
@@ -292,7 +316,7 @@ function Remove-DeprecatedRailgunSettings([string]$SettingsPath) {
             Remove-Item -LiteralPath $replacementBackupPath -Force
         }
     }
-    return [pscustomobject]@{removedCount=$removedCount;sha256=$actualHash}
+    return [pscustomobject]@{removedCount=$removedCount;removedKeys=$removedKeys;sha256=$actualHash}
 }
 function Add-MissingRailgunSettings([string]$TemplatePath, [string]$SettingsPath) {
     $templateLines = @([IO.File]::ReadAllLines($TemplatePath))
@@ -447,14 +471,10 @@ $ammoWeightText = $ammoWeightKg.ToString(
     'R', [Globalization.CultureInfo]::InvariantCulture)
 Invoke-NativeStage 'generate-runtime' $editor @($project,'-run=GenerateRailgunRuntime','-DedicatedStation',('-AmmoWeightKg=' + $ammoWeightText),('-ShotSound=' + $shotSound),('-ScopeOverlay=' + $scopeOverlay),('-ChargingStatusIcon=' + $chargingStatusIcon),('-OfflineStatusIcon=' + $offlineStatusIcon),('-ReadyStatusIcon=' + $readyStatusIcon),('-AmmoIndicator=' + $ammoIndicator),('-AmmoIcon=' + $ammoIcon),('-GunIcon=' + $gunIcon),('-SkillIcon=' + $skillIcon),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'generate-runtime-unreal.log')))
 $packages += @(
-    '/Game/Mods/Railgun/Inputs/IA_RailgunLookYaw',
-    '/Game/Mods/Railgun/Inputs/IA_RailgunLookPitch',
-    '/Game/Mods/Railgun/Inputs/IA_RailgunExit',
-    '/Game/Mods/Railgun/Inputs/IA_RailgunZoom',
-    '/Game/Mods/Railgun/Inputs/IA_RailgunFire',
-    '/Game/Mods/Railgun/Inputs/IA_RailgunReload',
-    '/Game/Mods/Railgun/Inputs/IMC_RailgunKeyboard',
-    '/Game/Mods/Railgun/Inputs/DA_RailgunInputContext',
+    '/Game/Mods/Railgun/Inputs/DA_RailgunCharacterContext',
+    '/Game/Mods/Railgun/Inputs/DA_RailgunExitContext',
+    '/Game/Mods/Railgun/Inputs/DA_RailgunADSServiceEquipment',
+    '/Game/Mods/Railgun/Inputs/BP_RailgunADSServiceEquipment',
     '/Game/Mods/Railgun/Station/BP_RailgunOperator',
     '/Game/Mods/Railgun/Station/WBP_RailgunHUD',
     '/Game/Mods/Railgun/Station/T_RailgunOpticalMask',
@@ -1211,15 +1231,15 @@ if ($Install) {
         } else {
             $removal = Remove-DeprecatedRailgunSettings $settingsPath
             if ([int]$removal.removedCount -gt 0) {
-                $removedKeys = @('OfflineDischargeKW')
+                $removedKeys = @($removal.removedKeys)
             }
             $addedKeys = @(Add-MissingRailgunSettings $settingsTemplatePath `
                 $settingsPath)
         }
         if (@([IO.File]::ReadAllLines($settingsPath) | Where-Object {
-                $_ -match '^\s*OfflineDischargeKW\s*='
+                $_ -match '^\s*(?:OfflineDischargeKW|OpticsMousePercent)\s*='
             }).Count -ne 0) {
-            throw 'Deprecated OfflineDischargeKW remains installed.'
+            throw 'A deprecated Railgun setting remains installed.'
         }
         $settingsHash = (Get-FileHash -LiteralPath $settingsPath `
             -Algorithm SHA256).Hash

@@ -1,4 +1,5 @@
 #include "StationEntryGraph.h"
+#include "RailgunAds.h"
 
 #include "GraphCallHelpers.h"
 #include "NativeVehicleGraphHelpers.h"
@@ -89,7 +90,7 @@ void AddContextEntry(UBlueprint* BP)
     UEdGraphPin* InstanceInput = nullptr;
     for (auto* Pin : Instance->Pins) if (Pin->Direction == EGPD_Input) { InstanceInput = Pin; break; }
     check(InstanceInput); C.Link(C.Pin(Entry, CE::ActionInstance), InstanceInput);
-    auto* PC = NewObject<UK2Node_DynamicCast>(CallbackGraph); PC->TargetType = APlayerController::StaticClass(); PC->SetPurity(false); C.Node(PC);
+    auto* PC = NewObject<UK2Node_DynamicCast>(CallbackGraph); PC->TargetType = AVoyagePlayerController::StaticClass(); PC->SetPurity(false); C.Node(PC);
     C.Link(C.Tail, C.Pin(PC, P::Execute)); C.Link(C.Pin(Instance, CE::Controller), PC->GetCastSourcePin()); C.Tail = PC->GetValidCastPin();
     C.Write(DS::Controller, PC->GetCastResultPin());
     C.Branch(ObserveCall(C, APlayerController::StaticClass(), GET_FUNCTION_NAME_CHECKED(APlayerController, IsLocalController), C.Read(DS::Controller)));
@@ -223,6 +224,8 @@ void AddStationLifecycleFunctions(UBlueprint* BP)
     Finalize.Write(TeardownPending, nullptr, N::False);
     Finalize.Write(ExitPending, nullptr, N::False);
     Finalize.Write(ActiveHud, nullptr);
+    auto* ResetAds = Finalize.Call(BP->GeneratedClass, RailgunAds::Reset);
+    Finalize.Exec(ResetAds);
     RestoreDedicatedViewIfOwned(Finalize);
     auto* ClearAimReferences = Finalize.Call(BP->GeneratedClass,
         Aim::ClearReferences);

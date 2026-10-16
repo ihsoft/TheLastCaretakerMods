@@ -4,7 +4,9 @@
 #include "GraphCallHelpers.h"
 #include "NativeVehicleGraphHelpers.h"
 #include "RailgunChargeIndicator.h"
+#include "RailgunAds.h"
 #include "RailgunInventory.h"
+#include "RailgunStockInput.h"
 #include "StationAimNames.h"
 #include "StationAttachmentGraph.h"
 #include "StationEnergy.h"
@@ -63,6 +65,12 @@ void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     auto* Station = Cast->GetCastResultPin(); G.Write(V::Vehicle, Station);
     ContextSet(G, Station, StationClass, S::Anchor, G.Read(S::Anchor));
     ContextSet(G, Station, StationClass, CE::EntryAction, G.Read(CE::EntryAction));
+    ContextSet(G, Station, StationClass, StockInput::CharacterContext,
+        G.Read(StockInput::CharacterContext));
+    ContextSet(G, Station, StationClass, StockInput::ExitContext,
+        G.Read(StockInput::ExitContext));
+    ContextSet(G, Station, StationClass, RailgunAds::ServiceItem,
+        G.Read(StockInput::ServiceItem));
     auto* Body = NewObject<UK2Node_DynamicCast>(G.Graph); Body->TargetType = UPrimitiveComponent::StaticClass(); Body->SetPurity(false); G.Node(Body);
     G.Link(G.Tail, G.Pin(Body, P::Execute));
     G.Link(ObserveCall(G, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetRootComponent), Station), Body->GetCastSourcePin()); G.Tail = Body->GetValidCastPin(); G.Write(V::Body, Body->GetCastResultPin());
@@ -71,9 +79,6 @@ void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     auto* Collision = G.Call(UPrimitiveComponent::StaticClass(), GET_FUNCTION_NAME_CHECKED(UPrimitiveComponent, SetCollisionEnabled));
     const FName CollisionType(TEXT("NewType")); const TCHAR* NoCollision = TEXT("ECollisionEnabled::NoCollision");
     G.Link(G.Read(V::Body), G.Pin(Collision, P::FunctionTarget)); G.Default(Collision, CollisionType, NoCollision); G.Exec(Collision);
-    auto* Controls = ReadNativeInputField(G, Station, AVoyageVehiclePawn::StaticClass(), NativeInputNames::ControlsField);
-    G.Require(G.Valid(Controls));
-    NativeInputFieldGuard(G, Controls, UVoyageInputControlsComponent::StaticClass(), NativeInputNames::ContextField, NativeInputNames::Context, true);
     auto* Finish = G.Call(UGameplayStatics::StaticClass(), GET_FUNCTION_NAME_CHECKED(UGameplayStatics, FinishSpawningActor));
     G.Link(Station, G.Pin(Finish, P::Actor)); G.Link(Transform, G.Pin(Finish, P::SpawnTransform)); G.Exec(Finish); G.Require(G.Valid(G.Pin(Finish, P::ReturnValue)));
     auto* Attach = G.Call(AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_AttachToComponent));
@@ -81,7 +86,18 @@ void PrepareRailgunStation(FGraph& G, UClass* StationClass, UEdGraphPin* Shell)
     G.Default(Attach, E::LocationRule, N::KeepWorld); G.Default(Attach, E::RotationRule, N::KeepWorld); G.Default(Attach, E::ScaleRule, N::KeepWorld);
     G.Default(Attach, E::WeldBodies, N::False); G.Exec(Attach); G.Require(G.Pin(Attach, P::ReturnValue));
     ConfigureCombinedOperatorPoint(G);
-    NativeInputFieldGuard(G, Controls, UVoyageInputControlsComponent::StaticClass(), NativeInputNames::ContextField, NativeInputNames::Context, false);
+    auto* Controls = ReadNativeInputField(G, Station,
+        AVoyageVehiclePawn::StaticClass(), NativeInputNames::ControlsField);
+    G.Require(G.Valid(Controls));
+    NativeInputFieldGuard(G, Controls,
+        UVoyageInputControlsComponent::StaticClass(),
+        NativeInputNames::ContextField, StockInput::CharacterContext, false);
+    auto* ExitControls = ReadNativeInputField(G, Station, StationClass,
+        StockInput::ExitControls);
+    G.Require(G.Valid(ExitControls));
+    NativeInputFieldGuard(G, ExitControls,
+        UVoyageInputControlsComponent::StaticClass(),
+        NativeInputNames::ContextField, StockInput::ExitContext, false);
     auto* Interaction = ReadNativeInputField(G, Station, StationClass, CE::Interaction);
     auto* Query = ReadNativeInputField(G, Station, StationClass, CE::QueryBox);
     G.Require(G.Valid(Interaction)); G.Require(G.Valid(Query));
@@ -120,8 +136,6 @@ void AddRailgunStationInitializationFunction(UBlueprint* BP,
     check(BP && StationClass);
     AddVariable(BP, CE::ModelEntry, UEdGraphSchema_K2::PC_Object, UBoxComponent::StaticClass());
     AddVariable(BP, CE::EntryAction, UEdGraphSchema_K2::PC_Object, UInputAction::StaticClass());
-    AddVariable(BP, NativeInputNames::Context, UEdGraphSchema_K2::PC_Object,
-        UVoyageInputContextAsset::StaticClass());
     AddVariable(BP, S::Anchor, UEdGraphSchema_K2::PC_Object,
         USceneComponent::StaticClass());
     AddVariable(BP, V::Vehicle, UEdGraphSchema_K2::PC_Object,
@@ -129,7 +143,7 @@ void AddRailgunStationInitializationFunction(UBlueprint* BP,
     AddVariable(BP, V::Body, UEdGraphSchema_K2::PC_Object,
         UPrimitiveComponent::StaticClass());
     for (FName RuntimeReference : {CE::ModelEntry, CE::EntryAction,
-        NativeInputNames::Context, S::Anchor, V::Vehicle, V::Body})
+        S::Anchor, V::Vehicle, V::Body})
     {
         MarkVariableTransient(BP, RuntimeReference);
     }
@@ -185,7 +199,17 @@ void AddRailgunStationInitializationFunction(UBlueprint* BP,
     G.Branch(ObserveCall(G, AActor::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(AActor, HasAuthority), OpticalSelf(G)));
     G.Write(CE::EntryAction, LoadStockInputReference(G, CE::InteractActionPath, UInputAction::StaticClass()));
-    G.Write(NativeInputNames::Context, LoadStockInputReference(G, DS::ContextPath, UVoyageInputContextAsset::StaticClass()));
+    auto* PrepareInput = G.Call(BP->GeneratedClass, StockInput::Prepare);
+    G.Exec(PrepareInput);
+    auto* InputReady = G.Branch(G.Read(StockInput::Ready));
+    UEdGraphPin* ReadyTail = G.Tail;
+    G.Tail = G.Pin(InputReady, P::Else);
+    auto* PrintInputFailure = G.Call(UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, PrintString));
+    G.Link(G.Read(StockInput::FailureStage),
+        G.Pin(PrintInputFailure, ActorLifecycleGraphNames::StringValue));
+    G.Exec(PrintInputFailure);
+    G.Tail = ReadyTail;
     PrepareRailgunStation(G, StationClass, OpticalSelf(G));
 }
 
@@ -195,6 +219,7 @@ bool ConfigureRailgunStationInitialization(UClass* StationClass)
     UBlueprint* BP = LoadObject<UBlueprint>(nullptr,
         RailgunInventoryShared::ModuleObjectPath);
     check(BP && BP->ParentClass == AVoyageModuleActor::StaticClass());
+    AddRailgunStockInputPreparation(BP);
     AddRailgunStationInitializationFunction(BP, StationClass);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);

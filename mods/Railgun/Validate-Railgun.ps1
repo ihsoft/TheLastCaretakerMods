@@ -17,11 +17,10 @@ $skillPackage = '/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun'
 $ammoPackage = '/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod'
 $operatorPackage = '/Game/Mods/Railgun/Station/BP_RailgunOperator'
 $hudPackage = '/Game/Mods/Railgun/Station/WBP_RailgunHUD'
-$exitActionPackage = '/Game/Mods/Railgun/Inputs/IA_RailgunExit'
-$zoomActionPackage = '/Game/Mods/Railgun/Inputs/IA_RailgunZoom'
-$fireActionPackage = '/Game/Mods/Railgun/Inputs/IA_RailgunFire'
-$reloadActionPackage = '/Game/Mods/Railgun/Inputs/IA_RailgunReload'
-$keyboardContextPackage = '/Game/Mods/Railgun/Inputs/IMC_RailgunKeyboard'
+$characterContextPackage = '/Game/Mods/Railgun/Inputs/DA_RailgunCharacterContext'
+$exitContextPackage = '/Game/Mods/Railgun/Inputs/DA_RailgunExitContext'
+$adsServiceItemPackage = '/Game/Mods/Railgun/Inputs/DA_RailgunADSServiceEquipment'
+$adsServiceActorPackage = '/Game/Mods/Railgun/Inputs/BP_RailgunADSServiceEquipment'
 $ammoIndicatorPackage = '/Game/Mods/Railgun/Station/T_RailgunAmmoIndicator'
 $shotSoundPackage = '/Game/Mods/Railgun/Station/S_RailgunShotBlast'
 $stockSfxSoundClassPackage = '/Game/Audio/Shares/SoundClasses/SC_SFX'
@@ -460,7 +459,8 @@ $expectedShellFunctions = @(
     'ExecuteUbergraph_BP_Module_Railgun','InteractGetInventory',
     'InitializeRailgunStation',
     'OnPersistentActorPostLoad','OnRailgunAmmoInventoryChanged',
-    'ReceiveBeginPlay','SyncRailgunAmmoVisuals','ValidateItem'
+    'PrepareRailgunStockInput','ReceiveBeginPlay',
+    'SyncRailgunAmmoVisuals','ValidateItem'
 )
 Require (@(Compare-Object -ReferenceObject $expectedShellFunctions `
     -DifferenceObject @($shellFunctions.Name) -CaseSensitive).Count -eq 0) `
@@ -562,7 +562,9 @@ Require ($initializeStation.Count -eq 1) `
 $initializeStationStrings = @(JsonStringLeaves $initializeStation[0])
 foreach ($requiredInitializationReference in @(
     'NativeStation','RailgunModelEntryReference','RailgunEntryAction',
-    'ExpectedVehicleInputContext','Railgun.Model.Root',
+    'RailgunCharacterInputContext','RailgunExitInputContext',
+    'RailgunADSServiceItem','PrepareRailgunStockInput',
+    'RailgunStockInputReady','Railgun.Model.Root',
     "Class'Actor:HasAuthority'",
     "Class'Actor:GetComponentsByTag'",
     "Class'GameplayStatics:BeginDeferredActorSpawnFromClass'",
@@ -636,38 +638,62 @@ foreach ($requiredVisualReference in @(
     Require ($syncVisualStrings -ccontains $requiredVisualReference) `
         ('Ammo-visual sync reference missing: ' + $requiredVisualReference)
 }
-$hintActions = @(
-    @{ Package=$exitActionPackage; Name='IA_RailgunExit'; Text='Exit Railgun' },
-    @{ Package=$zoomActionPackage; Name='IA_RailgunZoom'; Text='Toggle scope' },
-    @{ Package=$fireActionPackage; Name='IA_RailgunFire'; Text='Fire' },
-    @{ Package=$reloadActionPackage; Name='IA_RailgunReload'; Text='Reload' }
-)
-foreach ($hintActionContract in $hintActions) {
-    $hintAction = @(Read-Candidate $hintActionContract.Package)
-    Require ($hintAction.Count -eq 1 -and
-        $hintAction[0].Type -ceq 'InputAction' -and
-        $hintAction[0].Name -ceq $hintActionContract.Name -and
-        $hintAction[0].Properties.ActionDescription.SourceString -ceq
-            $hintActionContract.Text) `
-        ('Railgun hint action description mismatch: ' +
-            $hintActionContract.Name)
-}
-$keyboardContext = @(Read-Candidate $keyboardContextPackage)
-$keyboardMappings = @($keyboardContext | Where-Object {
-    $_.Type -ceq 'InputMappingContext'
+$prepareStockInput = @($shellFunctions | Where-Object {
+    $_.Name -ceq 'PrepareRailgunStockInput'
 })
-Require ($keyboardMappings.Count -eq 1 -and
-    @($keyboardMappings[0].Properties.DefaultKeyMappings.Mappings).Count -eq 6) `
-    'Railgun keyboard context must contain exactly six mappings.'
-$reloadMappings = @(
-    $keyboardMappings[0].Properties.DefaultKeyMappings.Mappings |
-    Where-Object {
-        $_.Action.ObjectPath -ceq
-            '/Game/Mods/Railgun/Inputs/IA_RailgunReload.0' -and
-        $_.Key.KeyName -ceq 'R'
-    })
-Require ($reloadMappings.Count -eq 1) `
-    'Railgun reload input must map IA_RailgunReload to R exactly once.'
+Require ($prepareStockInput.Count -eq 1) `
+    'Expected one shell-owned stock-input preparation function.'
+$prepareStockInputStrings = @(JsonStringLeaves $prepareStockInput[0])
+foreach ($requiredStockPreparationReference in @(
+    '/Game/Game/Input/Character/DA_Input_Context_Character.DA_Input_Context_Character',
+    '/Game/Game/Input/Vehicle/DA_Input_Context_Vehicle.DA_Input_Context_Vehicle',
+    '/Game/Game/Input/Character/IA_PrimaryAction.IA_PrimaryAction',
+    '/Game/Game/Input/Character/IAV_ADS.IAV_ADS',
+    '/Game/Game/Input/Character/IA_Reload.IA_Reload',
+    '/Game/Game/Input/Character/IA_LookRight.IA_LookRight',
+    '/Game/Game/Input/Character/IA_LookUp.IA_LookUp',
+    '/Game/Game/Input/Vehicle/IAV_VehicleExit.IAV_VehicleExit',
+    "Class'VoyageMiscBlueprintFunctionLibrary:DuplicateObjectVoyage'",
+    "Class'BlueprintMapLibrary:Map_Find'",
+    "Class'InputMappingContext:UnmapAllKeysFromAction'",
+    'RailgunStockInputReady')) {
+    Require ($prepareStockInputStrings -ccontains
+        $requiredStockPreparationReference) `
+        ('Stock-input preparation reference missing: ' +
+            $requiredStockPreparationReference)
+}
+$characterContext = @(Read-Candidate $characterContextPackage | Where-Object {
+    $_.Type -ceq 'VoyageInputContextAsset'
+})
+$exitContext = @(Read-Candidate $exitContextPackage | Where-Object {
+    $_.Type -ceq 'VoyageInputContextAsset'
+})
+Require ($characterContext.Count -eq 1 -and $exitContext.Count -eq 1) `
+    'Expected the two owned input-context placeholders.'
+foreach ($context in @($characterContext[0],$exitContext[0])) {
+    Require ($null -ne $context -and
+        (ArrayPropertyCount $context.Properties 'InputMappingContext') -eq 0) `
+        'Authored input contexts must remain empty runtime-clone placeholders.'
+}
+$adsServiceItem = @(Read-Candidate $adsServiceItemPackage)
+$adsServiceItems = @($adsServiceItem | Where-Object {
+    $_.Type -ceq 'VoyageItemHandEquipment' -and
+    $_.Name -ceq 'DA_RailgunADSServiceEquipment'
+})
+Require ($adsServiceItems.Count -eq 1 -and
+    $adsServiceItems[0].Properties.DesiredSlot -ceq
+        'EVoyageHolsterSlotType::Overlay' -and
+    $adsServiceItems[0].Properties.EquipmentClass.AssetPathName -ceq
+        '/Game/Mods/Railgun/Inputs/BP_RailgunADSServiceEquipment.BP_RailgunADSServiceEquipment_C' -and
+    $adsServiceItems[0].Properties.Type.Name -ceq 'Item') `
+    'ADS service item must target Overlay and the owned equipment actor.'
+$adsServiceActor = @(Read-Candidate $adsServiceActorPackage)
+$adsServiceActorStrings = @(JsonStringLeaves $adsServiceActor)
+Require (($adsServiceActorStrings -ccontains
+        'EVoyageEquipmentInterpStateType::ADS') -and
+    -not ($adsServiceActorStrings -ccontains
+        "VoyageInputAction'IAV_ADS'")) `
+    'ADS service actor must own native interpolation without a second input binding.'
 $operator = @(Read-Candidate $operatorPackage)
 $operatorPackageStrings = @(JsonStringLeaves $operator)
 $operatorFunctions = @($operator | Where-Object { $_.Type -ceq 'Function' })
@@ -875,12 +901,21 @@ foreach ($statement in @($reloadProvider.ScriptBytecode)) {
 }
 Require ($providedActionAssignments.Count -eq 4) `
     'Provider must assign InputAction and Text on exactly four action structs.'
-$expectedProvidedActionPaths = @(
-    '/Game/Mods/Railgun/Inputs/IA_RailgunExit.0',
-    '/Game/Mods/Railgun/Inputs/IA_RailgunZoom.0',
-    '/Game/Mods/Railgun/Inputs/IA_RailgunFire.0',
-    '/Game/Mods/Railgun/Inputs/IA_RailgunReload.0'
-)
+$expectedProvidedActions = @{
+    '/Game/Game/Input/Vehicle/IAV_VehicleExit.1' = @{
+        ObjectName="VoyageInputAction'IAV_VehicleExit'"
+        ClassObjectName="Class'VoyageInputAction'";ClassObjectPath='/Script/Voyage' }
+    '/Game/Game/Input/Character/IAV_ADS.1' = @{
+        ObjectName="VoyageInputAction'IAV_ADS'"
+        ClassObjectName="Class'VoyageInputAction'";ClassObjectPath='/Script/Voyage' }
+    '/Game/Game/Input/Character/IA_PrimaryAction.0' = @{
+        ObjectName="InputAction'IA_PrimaryAction'"
+        ClassObjectName="Class'InputAction'";ClassObjectPath='/Script/EnhancedInput' }
+    '/Game/Game/Input/Character/IA_Reload.0' = @{
+        ObjectName="InputAction'IA_Reload'"
+        ClassObjectName="Class'InputAction'";ClassObjectPath='/Script/EnhancedInput' }
+}
+$expectedProvidedActionPaths = @($expectedProvidedActions.Keys)
 $actualProvidedActionPaths = @()
 foreach ($entry in $providedActionAssignments.GetEnumerator()) {
     $assignments = $entry.Value
@@ -890,13 +925,16 @@ foreach ($entry in $providedActionAssignments.GetEnumerator()) {
         ('Provided-action struct lacks InputAction, Text, or bEnabled: ' +
             $entry.Key)
     $inputExpression = $assignments['InputAction']
+    $candidateActionPath = [string]$inputExpression.Value.ObjectPath
+    $expectedAction = $expectedProvidedActions[$candidateActionPath]
     Require ($inputExpression.Token -ceq 'EX_ObjectConst' -and
         $null -ne $inputExpression.Value -and
-        $expectedProvidedActionPaths -ccontains
-            [string]$inputExpression.Value.ObjectPath) `
-        ('Provided-action InputAction must be an exact Railgun action object: ' +
+        $null -ne $expectedAction -and
+        [string]$inputExpression.Value.ObjectName -ceq
+            $expectedAction.ObjectName) `
+        ('Provided-action InputAction must be an exact stock action object: ' +
             $entry.Key)
-    $actionPath = [string]$inputExpression.Value.ObjectPath
+    $actionPath = $candidateActionPath
     $actualProvidedActionPaths += $actionPath
     $textExpression = $assignments['Text']
     Require ($textExpression.Token -ceq 'EX_Context') `
@@ -928,12 +966,14 @@ foreach ($entry in $providedActionAssignments.GetEnumerator()) {
         $referenceProperty.Type -ceq 'ObjectProperty' -and
         $null -ne $referenceProperty.PropertyClass -and
         $referenceProperty.PropertyClass.ObjectName -ceq
-            "Class'InputAction'" -and
+            $expectedAction.ClassObjectName -and
         $referenceProperty.PropertyClass.ObjectPath -ceq
-            '/Script/EnhancedInput' -and
+            $expectedAction.ClassObjectPath -and
         $null -ne $referenceDefault -and
         $null -ne $referenceDefault.Value -and
-        [string]$referenceDefault.Value.ObjectPath -ceq $actionPath
+        [string]$referenceDefault.Value.ObjectPath -ceq $actionPath -and
+        [string]$referenceDefault.Value.ObjectName -ceq
+            $expectedAction.ObjectName
     Require ($literalContextMatches -or $typedReferenceContextMatches) `
         ('Provided-action Text context does not match InputAction: ' +
             $entry.Key)
@@ -951,7 +991,7 @@ foreach ($entry in $providedActionAssignments.GetEnumerator()) {
             $entry.Key)
     $enabledExpression = $assignments['bEnabled']
     if ($actionPath -ceq
-        '/Game/Mods/Railgun/Inputs/IA_RailgunReload.0') {
+        '/Game/Game/Input/Character/IA_Reload.0') {
         Require ($enabledExpression.Token -ceq 'EX_InstanceVariable' -and
             $null -ne $enabledExpression.Variable.Property -and
             $enabledExpression.Variable.Property.Name -ceq
@@ -1339,10 +1379,36 @@ foreach ($forbiddenDiagnosticReference in @(
         ('Gameplay operator retained diagnostic text/reference: ' +
             $forbiddenDiagnosticReference)
 }
+$requiredAdsFailureDiagnostic = 'Railgun ADS overlay request was rejected'
+Require ($operatorStrings -ccontains $requiredAdsFailureDiagnostic) `
+    'ADS overlay-rejection failure diagnostic is missing.'
+foreach ($removedAdsDiagnostic in @(
+    'Railgun ADS active-slot identity confirmed',
+    'Railgun native ADS amount is advancing'
+)) {
+    Require (-not ($operatorPackageStrings -ccontains $removedAdsDiagnostic)) `
+        ('Operator retained positive ADS canary diagnostic: ' +
+            $removedAdsDiagnostic)
+}
+$adsFailurePrints = @($operatorStatements | Where-Object {
+    @(JsonStringLeaves $_) -ccontains
+        "Class'KismetSystemLibrary:PrintString'"
+})
+Require ($adsFailurePrints.Count -eq 1) `
+    'Operator must retain exactly the ADS overlay-rejection failure print.'
+$adsFailureStatementIndex = [int]$adsFailurePrints[0].StatementIndex
+$adsFailureGuards = @($operatorStatements | Where-Object {
+    $_.Token -ceq 'EX_JumpIfNot' -and
+    [int]$_.CodeOffset -eq $adsFailureStatementIndex -and
+    $_.BooleanExpression.Token -ceq 'EX_InstanceVariable' -and
+    $_.BooleanExpression.Variable.Property.Name -ceq
+        'RailgunADSOverlayAccepted'
+})
+Require ($adsFailureGuards.Count -eq 1) `
+    'ADS overlay rejection must remain guarded by the native acceptance result.'
 foreach ($forbiddenFireReference in @(
     'Items','RailgunAmmoLastVisualCount','AddItem','ShotRefundFaulted',
-    'ShotEnergyBeforeDebit',"Class'VoyageModuleComponent:AddResource'",
-    "Class'KismetSystemLibrary:PrintString'"
+    'ShotEnergyBeforeDebit',"Class'VoyageModuleComponent:AddResource'"
 )) {
     Require (-not ($operatorStrings -ccontains $forbiddenFireReference)) `
         ('Railgun fire must not use presentation state or direct mutation: ' +
@@ -1476,18 +1542,11 @@ $modeWrites = @($operatorStatements | Where-Object {
     $_.Variable.Token -ceq 'EX_InstanceVariable' -and
     $_.Variable.Variable.Property.Name -ceq 'RailgunWideView'
 } | Sort-Object StatementIndex)
-$mouseWrites = @($operatorStatements | Where-Object {
-    $_.Token -ceq 'EX_Let' -and
-    $null -ne $_.Variable -and
-    $_.Variable.Token -ceq 'EX_InstanceVariable' -and
-    $_.Variable.Variable.Property.Name -ceq
-        'RailgunActiveMousePercent'
-} | Sort-Object StatementIndex)
 $modeNotifications = @($operatorStatements | Where-Object {
     $_.Token -ceq 'EX_LocalVirtualFunction' -and
     $_.Function -ceq 'RefreshRailgunHudMode'
 } | Sort-Object StatementIndex)
-Require ($modeWrites.Count -eq 3 -and $mouseWrites.Count -eq 3 -and
+Require ($modeWrites.Count -eq 3 -and
     $modeNotifications.Count -eq 3 -and
     @($modeWrites | Where-Object {
         $_.Expression.Token -ceq 'EX_True'
@@ -1495,49 +1554,85 @@ Require ($modeWrites.Count -eq 3 -and $mouseWrites.Count -eq 3 -and
     @($modeWrites | Where-Object {
         $_.Expression.Token -ceq 'EX_False'
     }).Count -eq 1) `
-    'Entry and zoom paths must each assign mode/mouse and notify the HUD once.'
-for ($modeIndex = 0; $modeIndex -lt $modeWrites.Count; $modeIndex++) {
-    $modeWriteIndex = [int]$modeWrites[$modeIndex].StatementIndex
-    $nextModeWriteIndex = if ($modeIndex + 1 -lt $modeWrites.Count) {
-        [int]$modeWrites[$modeIndex + 1].StatementIndex
-    } else { [int]::MaxValue }
-    $pathMouseWrites = @($mouseWrites | Where-Object {
-        $_.StatementIndex -gt $modeWriteIndex -and
-        $_.StatementIndex -lt $nextModeWriteIndex
-    })
-    $pathFovWrites = @($operatorStatements | Where-Object {
-        $_.StatementIndex -gt $modeWriteIndex -and
-        $_.StatementIndex -lt $nextModeWriteIndex -and
-        @(JsonStringLeaves $_) -ccontains 'SetFieldOfView'
-    } | Sort-Object StatementIndex)
-    $pathNotifications = @($modeNotifications | Where-Object {
-        $_.StatementIndex -gt $modeWriteIndex -and
-        $_.StatementIndex -lt $nextModeWriteIndex
-    })
-    $orderedFovWrites = @($pathFovWrites | Where-Object {
-        $_.StatementIndex -gt $pathMouseWrites[0].StatementIndex -and
-        $_.StatementIndex -lt $pathNotifications[0].StatementIndex
-    })
-    Require ($pathMouseWrites.Count -eq 1 -and
-        $pathFovWrites.Count -ge 1 -and
-        $pathNotifications.Count -eq 1 -and
-        $pathMouseWrites[0].StatementIndex -lt
-            $pathNotifications[0].StatementIndex -and
-        $orderedFovWrites.Count -ge 1) `
-        'Each mode assignment must set its mouse/FOV state before HUD notify.'
+    'Entry and native ADS-state paths must assign mode and notify the HUD.'
+foreach ($requiredStockInputReference in @(
+    "Class'VoyageMiscBlueprintFunctionLibrary:CalculateCameraMovementValue'",
+    "Class'VoyageEquipmentActor:SetInterpState'",
+    "Class'VoyageEquipmentActor:HasInterpState'",
+    "Class'VoyageEquipmentActor:GetInterpStateAmount'",
+    'RailgunADSServiceReady','RailgunADSServiceActor','RailgunADSAmount',
+    'RailgunADSOverlayAccepted')) {
+    Require ($operatorStrings -ccontains $requiredStockInputReference) `
+        ('Stock camera/ADS integration reference missing: ' +
+            $requiredStockInputReference)
 }
-$entryModeWindow = @($operatorStatements | Where-Object {
-    $_.StatementIndex -gt $modeWrites[0].StatementIndex -and
-    $_.StatementIndex -le $modeNotifications[0].StatementIndex
+$cameraMovementCalls = @($operatorStatements | Where-Object {
+    @(JsonStringLeaves $_) -ccontains
+        "Class'VoyageMiscBlueprintFunctionLibrary:CalculateCameraMovementValue'"
 })
-Require ($modeWrites[0].Expression.Token -ceq 'EX_True' -and
-    $mouseWrites[0].Expression.Token -ceq 'EX_DoubleConst' -and
-    [Math]::Abs([double]$mouseWrites[0].Expression.Value - 100.0) -lt
-        0.000001 -and
-    @(JsonStringLeaves $entryModeWindow) -ccontains
-        "Class'Actor:K2_AttachToComponent'" -and
-    @(JsonStringLeaves $entryModeWindow) -ccontains 'RailgunOwnsView') `
-    'Possession must restore wide camera/mouse state before notifying the HUD.'
+Require ($cameraMovementCalls.Count -eq 2) `
+    'Horizontal and vertical input must each execute the stock camera helper.'
+$aimInputContracts = @(
+    @{ Function="Class'KismetMathLibrary:Add_DoubleDouble'";
+        Axis='X'; Targets=@('RailgunEyeYaw','RailgunLocalAimYaw') },
+    @{ Function="Class'KismetMathLibrary:Subtract_DoubleDouble'";
+        Axis='Y'; Targets=@('RailgunEyePitch','RailgunLocalAimPitch') }
+)
+foreach ($contract in $aimInputContracts) {
+    $accumulations = @($operatorStatements | Where-Object {
+        $_.Token -ceq 'EX_Let' -and
+        $_.Variable.Token -ceq 'EX_LocalVariable' -and
+        $_.Expression.Token -ceq 'EX_CallMath' -and
+        $_.Expression.Function.ObjectName -ceq $contract.Function -and
+        @($_.Expression.Parameters).Count -eq 2 -and
+        $_.Expression.Parameters[0].Token -ceq 'EX_InstanceVariable' -and
+        $contract.Targets -ccontains
+            $_.Expression.Parameters[0].Variable.Property.Name -and
+        $_.Expression.Parameters[1].Token -ceq 'EX_LocalVariable' -and
+        $_.Expression.Parameters[1].Variable.Property.Name -cmatch
+            ('^CallFunc_BreakVector2D_' + $contract.Axis + '(_[0-9]+)?$')
+    })
+    Require ($accumulations.Count -eq 2 -and
+        @($accumulations | ForEach-Object {
+            $_.Expression.Parameters[0].Variable.Property.Name
+        } | Sort-Object -Unique).Count -eq 2) `
+        ('Aim input coordinate conversion mismatch for axis ' +
+            $contract.Axis + '.')
+    foreach ($accumulation in $accumulations) {
+        $targetName =
+            $accumulation.Expression.Parameters[0].Variable.Property.Name
+        $resultName = $accumulation.Variable.Variable.Property.Name
+        $clamps = @($operatorStatements | Where-Object {
+            $_.StatementIndex -gt $accumulation.StatementIndex -and
+            $_.Token -ceq 'EX_Let' -and
+            $_.Variable.Token -ceq 'EX_LocalVariable' -and
+            $_.Expression.Token -ceq 'EX_CallMath' -and
+            $_.Expression.Function.ObjectName -ceq
+                "Class'KismetMathLibrary:FClamp'" -and
+            @($_.Expression.Parameters).Count -eq 3 -and
+            $_.Expression.Parameters[0].Token -ceq 'EX_LocalVariable' -and
+            $_.Expression.Parameters[0].Variable.Property.Name -ceq
+                $resultName
+        })
+        Require ($clamps.Count -eq 1) `
+            ('Aim input must clamp the converted value for ' + $targetName + '.')
+        $clamp = $clamps[0]
+        $clampResult = $clamp.Variable.Variable.Property.Name
+        $writes = @($operatorStatements | Where-Object {
+            $_.StatementIndex -gt $clamp.StatementIndex -and
+            $_.Token -ceq 'EX_Let' -and
+            $_.Variable.Token -ceq 'EX_InstanceVariable' -and
+            $_.Variable.Variable.Property.Name -ceq $targetName -and
+            $_.Expression.Token -ceq 'EX_LocalVariable' -and
+            $_.Expression.Variable.Property.Name -ceq $clampResult
+        })
+        Require ($writes.Count -eq 1) `
+            ('Aim input must store the converted/clamped value for ' +
+                $targetName + '.')
+    }
+}
+Require (-not ($operatorStrings -ccontains 'RailgunActiveMousePercent')) `
+    'Legacy Railgun scope sensitivity must not remain in the operator.'
 Require (@($operatorStrings | Where-Object {
     $_ -ceq 'OnExitVehicle'
 }).Count -eq 1) `
@@ -2207,11 +2302,14 @@ $hudHintWidgets = @($hud | Where-Object {
     $_.Type -ceq 'BP_DynamicPlayerInputHorizontalWidget_C' -and
     $_.Name -ceq 'RailgunActionHints'
 })
+$hudHintHosts = @($hud | Where-Object {
+    $_.Type -ceq 'VerticalBox' -and $_.Name -ceq 'RailgunActionHintHost'
+})
 Require ($hudWidgetTree.Count -eq 1 -and
     $hudInvalidationRoots.Count -eq 1 -and
     $hudCanvases.Count -eq 1 -and
-    $hudHintWidgets.Count -eq 1) `
-    'HUD must contain one InvalidationBox root, Canvas and exact stock hint widget.'
+    $hudHintHosts.Count -eq 1 -and $hudHintWidgets.Count -eq 1) `
+    'HUD must contain one hint host and one exact stock hint widget.'
 Require ($hudWidgetTree[0].Properties.RootWidget.ObjectName -ceq
     "InvalidationBox'WBP_RailgunHUD_C:WidgetTree.RailgunHudInvalidationRoot'") `
     'Railgun HUD WidgetTree root must be its InvalidationBox.'
@@ -2229,10 +2327,10 @@ $hudHintSlots = @($hud | Where-Object {
     $_.Properties.Parent.ObjectName -ceq
         "CanvasPanel'WBP_RailgunHUD_C:WidgetTree.DiagnosticCanvas'" -and
     $_.Properties.Content.ObjectName -ceq
-        "BP_DynamicPlayerInputHorizontalWidget_C'WBP_RailgunHUD_C:WidgetTree.RailgunActionHints'"
+        "VerticalBox'WBP_RailgunHUD_C:WidgetTree.RailgunActionHintHost'"
 })
 Require ($hudHintSlots.Count -eq 1) `
-    'Stock Railgun hint widget must be a direct Canvas child.'
+    'Railgun hint host must be a direct Canvas child.'
 $hudHintLayout = $hudHintSlots[0].Properties.LayoutData
 Require ($hudHintSlots[0].Properties.bAutoSize -eq $true -and
     $hudHintLayout.Offsets.Left -eq 24.0 -and
@@ -2244,25 +2342,19 @@ Require ($hudHintSlots[0].Properties.bAutoSize -eq $true -and
     $hudHintLayout.Alignment.X -eq 0.0 -and
     $hudHintLayout.Alignment.Y -eq 1.0) `
     'Railgun hint Canvas slot must preserve its anchor, alignment, offset and autosize.'
-Require ($hudHintWidgets[0].Properties.ContextAsset.ObjectName -ceq
-        "VoyageInputContextAsset'DA_RailgunInputContext'" -and
-    $hudHintWidgets[0].Properties.ContextAsset.ObjectPath -ceq
-        '/Game/Mods/Railgun/Inputs/DA_RailgunInputContext.0' -and
-    $hudHintWidgets[0].Properties.bFilterByActionType -eq $true) `
-    'Stock hint widget must use the Railgun context with action-type filtering.'
-$hudHintPropertyNames = @(
-    $hudHintWidgets[0].Properties.PSObject.Properties.Name)
-Require ($hudHintPropertyNames.Count -eq 3 -and
-    $hudHintPropertyNames -ccontains 'Slot' -and
-    $hudHintPropertyNames -ccontains 'ContextAsset' -and
-    $hudHintPropertyNames -ccontains 'bFilterByActionType') `
-    'Stock hint instance must not embed or override its stock implementation.'
+Require ($hudHintWidgets[0].Properties.bFilterByActionType -eq $true) `
+    'Stock hint widget must retain action-type filtering.'
+foreach ($runtimeHintReference in @(
+    'RailgunCharacterInputContext','RailgunActionHints')) {
+    Require ($hudUbergraphStrings -ccontains $runtimeHintReference) `
+        ('HUD must bind its hint widget to the runtime context: ' +
+            $runtimeHintReference)
+}
 foreach ($obsoleteHintArtifact in @(
-    'RailgunHintHost','RailgunHintWidgetReady',
+    'RailgunExitActionHint','RailgunHintWidgetReady',
     "Class'KismetSystemLibrary:MakeSoftClassPath'",
     "Class'KismetSystemLibrary:LoadClassAsset_Blocking'",
-    "Class'WidgetBlueprintLibrary:Create'",
-    "Class'VerticalBox:AddChildToVerticalBox'"
+    "Class'WidgetBlueprintLibrary:Create'"
 )) {
     Require (-not ($hudPackageStrings -ccontains $obsoleteHintArtifact)) `
         ('HUD retained obsolete runtime hint construction artifact: ' +

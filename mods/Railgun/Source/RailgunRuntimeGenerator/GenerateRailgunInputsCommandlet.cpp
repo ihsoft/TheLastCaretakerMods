@@ -1,8 +1,11 @@
 #include "GenerateRailgunInputsCommandlet.h"
 #include "VoyageInputContextAsset.h"
-#include "InputAction.h"
-#include "InputMappingContext.h"
-#include "InputCoreTypes.h"
+#include "VoyageItemHandEquipment.h"
+#include "VoyageEquipmentActor.h"
+#include "VoyageInputAction.h"
+#include "Engine/Blueprint.h"
+#include "Engine/BlueprintGeneratedClass.h"
+#include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/PackageName.h"
 #include "HAL/FileManager.h"
 #include "UObject/SavePackage.h"
@@ -26,6 +29,18 @@ bool SaveAsset(UObject* Object)
     Args.SaveFlags = SAVE_NoError;
     return UPackage::SavePackage(Package, Object, *Filename, Args);
 }
+
+template<class T> T* Reference(const TCHAR* ObjectPath)
+{
+    FString PackageName;
+    FString ObjectName;
+    check(FString(ObjectPath).Split(RailgunInputNames::ObjectPathSeparator,
+        &PackageName, &ObjectName,
+        ESearchCase::CaseSensitive, ESearchDir::FromEnd));
+    if (auto* Existing = FindObject<T>(nullptr, ObjectPath)) return Existing;
+    return NewObject<T>(CreatePackage(*PackageName), *ObjectName,
+        RF_Public | RF_Standalone);
+}
 }
 
 UGenerateRailgunInputsCommandlet::UGenerateRailgunInputsCommandlet()
@@ -41,43 +56,63 @@ int32 UGenerateRailgunInputsCommandlet::Main(const FString& Params)
         ++PropertyCount;
     checkf(PropertyCount == ContextPropertyCount, TEXT("Unexpected native input-context schema count: %d"), PropertyCount);
 
-    auto* Yaw = Asset<UInputAction>(LookYaw);
-    auto* Pitch = Asset<UInputAction>(LookPitch);
-    auto* Leave = Asset<UInputAction>(Exit);
-    auto* Optics = Asset<UInputAction>(Zoom);
-    auto* Shot = Asset<UInputAction>(Fire);
-    auto* ReloadAction = Asset<UInputAction>(Reload);
-    Shot->ValueType = EInputActionValueType::Boolean;
-    Optics->ValueType = EInputActionValueType::Boolean;
-    Yaw->ValueType = EInputActionValueType::Axis1D;
-    Pitch->ValueType = EInputActionValueType::Axis1D;
-    Leave->ValueType = EInputActionValueType::Boolean;
-    ReloadAction->ValueType = EInputActionValueType::Boolean;
-    Leave->ActionDescription = FText::FromString(ExitDescription);
-    Optics->ActionDescription = FText::FromString(ZoomDescription);
-    Shot->ActionDescription = FText::FromString(FireDescription);
-    ReloadAction->ActionDescription = FText::FromString(ReloadDescription);
-    for (auto* Action : {Yaw, Pitch, Leave, Optics, Shot, ReloadAction})
-        Action->bConsumeInput = true;
+    auto* Character = Asset<UVoyageInputContextAsset>(CharacterContext);
+    auto* VehicleExit = Asset<UVoyageInputContextAsset>(ExitContext);
+    for (UVoyageInputContextAsset* Context : {Character, VehicleExit})
+    {
+        Context->ContextType = EInputControlContextType::Default;
+        Context->BindType = EInputControlBindType::Default;
+        Context->InputPriorityOffset = ContextPriority;
+        check(Context->InputMappingContext.IsEmpty());
+    }
+    auto ReferenceAction = [](const TCHAR* Path, EInputActionValueType Type,
+        const TCHAR* Description, bool VoyageAction)
+    {
+        UInputAction* Action = VoyageAction
+            ? static_cast<UInputAction*>(Reference<UVoyageInputAction>(Path))
+            : Reference<UInputAction>(Path);
+        Action->ValueType = Type;
+        Action->ActionDescription = FText::FromString(Description);
+        return Action;
+    };
+    const TArray<UInputAction*> StockActionReferences {
+        ReferenceAction(LookYaw, EInputActionValueType::Axis1D,
+            LookYawDescription, false),
+        ReferenceAction(LookPitch, EInputActionValueType::Axis1D,
+            LookPitchDescription, false),
+        ReferenceAction(Fire, EInputActionValueType::Boolean,
+            FireDescription, false),
+        ReferenceAction(Reload, EInputActionValueType::Boolean,
+            ReloadDescription, false),
+        ReferenceAction(Zoom, EInputActionValueType::Boolean,
+            ZoomDescription, true),
+        ReferenceAction(Exit, EInputActionValueType::Boolean,
+            ExitDescription, true)};
+    auto* EquipmentActorBlueprint = FKismetEditorUtilities::CreateBlueprint(
+        AVoyageEquipmentActor::StaticClass(), CreatePackage(ServiceEquipmentActor),
+        *FPackageName::GetLongPackageAssetName(ServiceEquipmentActor),
+        BPTYPE_Normal, UBlueprint::StaticClass(),
+        UBlueprintGeneratedClass::StaticClass());
+    check(EquipmentActorBlueprint);
+    FKismetEditorUtilities::CompileBlueprint(EquipmentActorBlueprint);
+    check(EquipmentActorBlueprint->Status != BS_Error &&
+        EquipmentActorBlueprint->GeneratedClass);
+    auto* EquipmentActor = CastChecked<AVoyageEquipmentActor>(
+        EquipmentActorBlueprint->GeneratedClass->GetDefaultObject());
+    EquipmentActor->ADSAction = nullptr;
+    FVoyageEquipmentInterpStateConfig AdsConfig;
+    EquipmentActor->InterpStates.Add(EVoyageEquipmentInterpStateType::ADS,
+        AdsConfig);
+    check(EquipmentActor->InterpStates.Contains(
+        EVoyageEquipmentInterpStateType::ADS));
 
-    auto* Mapping = Asset<UInputMappingContext>(Keyboard);
-    Mapping->MapKey(Yaw, EKeys::MouseX);
-    Mapping->MapKey(Pitch, EKeys::MouseY);
-    Mapping->MapKey(Leave, EKeys::E);
-    Mapping->MapKey(Optics, EKeys::RightMouseButton);
-    Mapping->MapKey(Shot, EKeys::LeftMouseButton);
-    Mapping->MapKey(ReloadAction, EKeys::R);
-    check(Mapping->GetMappings().Num() == KeyboardMappingCount);
-
-    auto* InputContext = Asset<UVoyageInputContextAsset>(Context);
-    InputContext->InputMappingContext.Add(EInputDeviceType::MouseKeyboard, Mapping);
-    InputContext->ContextType = EInputControlContextType::Default;
-    InputContext->BindType = EInputControlBindType::Default;
-    InputContext->InputPriorityOffset = ContextPriority;
-    // No inherited Forklift bindings, modifier actions or driving inputs.
-    // This gate authors assets only: it does not activate them or imply hints.
-    const TArray<UObject*> Objects{
-        Yaw, Pitch, Leave, Optics, Shot, ReloadAction, Mapping, InputContext};
+    auto* Equipment = Asset<UVoyageItemHandEquipment>(ServiceEquipment);
+    Equipment->Type = FPrimaryAssetType(ItemPrimaryAssetType);
+    Equipment->EquipmentClass = EquipmentActorBlueprint->GeneratedClass;
+    Equipment->DesiredSlot = EVoyageHolsterSlotType::Overlay;
+    TArray<UObject*> Objects{Character, VehicleExit,
+        EquipmentActorBlueprint, Equipment};
+    for (UInputAction* Action : StockActionReferences) Objects.Add(Action);
     for (UObject* Object : Objects)
         if (!SaveAsset(Object)) return 1;
     return 0;

@@ -8,7 +8,6 @@
         "Exact case-sensitive keys, decimal point, no inline comments."
       ],
       "settings": [
-        { "id": "Mouse", "runtimeName": "RailgunMousePercent", "key": "OpticsMousePercent", "type": "number", "minimum": 1, "maximum": 100 },
         { "id": "Yaw", "runtimeName": "RailgunYawLimitDegrees", "key": "YawLimitDegrees", "type": "number", "minimum": 1, "maximum": 170 },
         { "id": "PitchMin", "runtimeName": "RailgunMinimumPitchDegrees", "key": "MinimumPitchDegrees", "type": "number", "minimum": -89, "maximum": 0 },
         { "id": "PitchMax", "runtimeName": "RailgunMaximumPitchDegrees", "key": "MaximumPitchDegrees", "type": "number", "minimum": 0, "maximum": 89 }

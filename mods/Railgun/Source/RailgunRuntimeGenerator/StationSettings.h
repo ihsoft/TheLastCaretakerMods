@@ -12,7 +12,6 @@ namespace Settings
 inline const FName FilePath(TEXT("InPath")); // Voyage declaring signature.
 inline constexpr TCHAR RelativePath[] = TEXT("Paks/Railgun.ini");
 inline constexpr TCHAR Separator[] = TEXT("=");
-inline constexpr TCHAR OriginalPerPercent[] = TEXT("0.0128");
 inline constexpr TCHAR Negate[] = TEXT("-1.0");
 inline constexpr TCHAR DisabledRecoilFallback[] = TEXT("0");
 inline const FName FontObjectPin(TEXT("FontObject"));
