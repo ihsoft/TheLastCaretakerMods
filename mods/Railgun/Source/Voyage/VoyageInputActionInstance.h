@@ -1,6 +1,6 @@
 #pragma once
 // HC29 named-field/delegate mirror; Steam25191271, UE5.8,
-/. Current mapping and BP_CameraDrone callback metadata.
+// Current mapping and BP_CameraDrone callback metadata.
 // Bytecode only, no native struct default/CDO serialization. Renew on update.
 #include "CoreMinimal.h"
 #include "InputAction.h"
