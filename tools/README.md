@@ -20,6 +20,25 @@ those paths deserves long-term retention.
 
 Agents should start here instead of reading every implementation file.
 
+## New mod skeleton
+
+Use [`New-ModSkeleton.ps1`](New-ModSkeleton.ps1) after choosing a mod directory
+name and one-sentence goal. It creates only `AGENTS.md`, `ARCHITECTURE.md`,
+`README.md`, and `version.txt` (`0`) under a new `mods/<Mod>/` directory.
+It does not inspect the game, select an implementation, build, install, or
+overwrite an existing directory. The command emits a compact JSON result with
+the new path and files. See the [new-mod workflow](../docs/new-mod-rule.md)
+for when to add other files.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\New-ModSkeleton.ps1 `
+  -Name BlueLargeContainers `
+  -Summary 'Make all large containers blue.'
+```
+
+`Name` must be 1-64 ASCII letters or digits, starting with a letter; Windows
+device names are excluded. `Summary` is one line of 3-240 characters.
+
 ## Low-cost normal path
 
 The table and documented commands are the public interface of this toolset.

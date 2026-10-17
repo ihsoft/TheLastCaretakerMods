@@ -32,6 +32,10 @@ To continue an existing mod:
 > a requested candidate, run the documented producer first and report the next
 > validation step. Do not reuse stale extracted assets.
 
+To start a mod that has no directory yet, follow the
+[new-mod workflow](docs/new-mod-rule.md). It finds relevant existing knowledge
+and creates a minimal directory without assuming an implementation.
+
 Tell the agent where your game is installed if it is not at the path currently
 used by the scripts. Also say explicitly when you want **research only**, when
 the game is running, and when you are ready for files to be installed.

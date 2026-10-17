@@ -4,6 +4,7 @@ Start here for repository work. This file is a map, not a replacement for the
 linked documents. For a mod task, open its `mods/<Mod>/AGENTS.md` first: it
 identifies the architecture to read before working on that mod, any binding
 mod rules, and the README for behavior and public build/installation steps.
+When no mod exists yet, start with the new-mod workflow below.
 
 Shared `docs/` contains repository-wide rules and reusable knowledge. A
 `-rule.md` file constrains work; follow it or raise a conflict with the user.
@@ -15,6 +16,8 @@ do not load every document just because it is indexed here.
 
 - [Documentation ownership](docs/repository-documentation-rule.md): what belongs
   in shared docs, mod docs, an ignored backlog, or generated storage.
+- [Starting a new mod](docs/new-mod-rule.md): find related game knowledge and
+  create a minimal, honest mod directory before selecting an implementation.
 - [Research workflow](docs/research-workflow-rule.md): investigate, record
   evidence, maintain a large-task backlog, and commit intermediate findings.
 - [Generated-output lifecycle](docs/artifact-lifecycle-rule.md): choose `Tmp/`
