@@ -1,6 +1,5 @@
 #pragma once
 // Editor-only mirror of /Script/Voyage.VoyageSkill for Steam 25191271,
-// executable 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
 // Only tagged properties used by the Railgun skill are declared here.
 // Revalidate against the reviewed mapping and stock skill on a game update.
 

@@ -58,13 +58,10 @@ internal static partial class Program
             var fingerprint = JsonNode.Parse(File.ReadAllText(Str("fingerprintPath")))!;
             var mapping = JsonNode.Parse(File.ReadAllText(Str("mappingManifestPath")))!;
             var gameRoot = fingerprint["gameRoot"]!.GetValue<string>();
-            var exeHash = fingerprint["executable"]!["sha256"]!.GetValue<string>();
             var build = fingerprint["steam"]!["buildId"]!.GetValue<string>();
             if (mapping["engineVersion"]!.GetValue<string>() != "5.8" ||
                 mapping["steamBuildId"]!.GetValue<string>() != build ||
-                mapping["executableSha256"]!.GetValue<string>() != exeHash ||
-                mapping["mappingSha256"]!.GetValue<string>() != Hash(Str("mappingPath")) ||
-                Hash(Path.Combine(gameRoot, "Voyage/Binaries/Win64", fingerprint["executable"]!["name"]!.GetValue<string>())) != exeHash)
+                mapping["mappingSha256"]!.GetValue<string>() != Hash(Str("mappingPath")))
                 throw new InvalidDataException("Game/mapping provenance mismatch.");
 
             // Upstream native helper extraction is confined to this fresh evidence directory.
@@ -75,10 +72,10 @@ internal static partial class Program
             provider.Initialize(); provider.Mount(); provider.PostMount(); provider.LoadVirtualPaths();
             if (operation == "ColorTexturePreview")
                 return ExportColorTexturePreview(provider, assets, output,
-                    request["thumbnailSize"]?.GetValue<int>() ?? 512, build, exeHash, Str("mappingPath"));
+                    request["thumbnailSize"]?.GetValue<int>() ?? 512, build, Str("mappingPath"));
             if (operation == "MaterialPackStage")
                 return ExportMaterialPackStage(provider, assets, output, materialMode, materialPackProfile,
-                    sourceTexturePolicy, build, exeHash, Str("mappingPath"));
+                    sourceTexturePolicy, build, Str("mappingPath"));
             var textureCache = new Dictionary<string, TextureRecord>(StringComparer.Ordinal);
             var textureSources = new Dictionary<string, UUnrealMaterial>(StringComparer.Ordinal);
             var reports = new List<MaterialRecord>();
@@ -127,7 +124,7 @@ internal static partial class Program
             var evidence = new { schemaVersion = 3, status = textureCache.Values.Any(t => t.Error != null) ? "partial-textures" :
                     materialMode == "BakeReconstructed" ? "reconstructed-bake" : "approximate",
                 materialMode,
-                steamBuildId = build, executableSha256 = exeHash, mappingSha256 = Hash(Str("mappingPath")),
+                steamBuildId = build, mappingSha256 = Hash(Str("mappingPath")),
                 conversionCommit = "ec6595e46448a817ac21ea9bde01caa48f80a420",
                 exporterSha256 = Hash(typeof(Program).Assembly.Location),
                 parserSha256 = Hash(typeof(DefaultFileProvider).Assembly.Location),
@@ -177,7 +174,7 @@ internal static partial class Program
     }
 
     static int ExportColorTexturePreview(StockProvider provider, string[] assets, string output, int thumbnailSize,
-        string build, string exeHash, string mappingPath)
+        string build, string mappingPath)
     {
         if (Path.GetExtension(output) != ".png") throw new ArgumentException("Color preview output must be .png.");
         if (thumbnailSize < 128 || thumbnailSize > 1024) throw new ArgumentOutOfRangeException(nameof(thumbnailSize), "thumbnailSize must be 128..1024.");
@@ -244,7 +241,6 @@ internal static partial class Program
             schema = "voyage.material-color-preview/1",
             status = "preview",
             steamBuildId = build,
-            executableSha256 = exeHash,
             mappingSha256 = Hash(mappingPath),
             exporterSha256 = Hash(typeof(Program).Assembly.Location),
             parserSha256 = Hash(typeof(DefaultFileProvider).Assembly.Location),

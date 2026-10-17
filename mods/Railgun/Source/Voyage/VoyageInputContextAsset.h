@@ -1,9 +1,8 @@
 #pragma once
-// Eight-property serialization mirror. Steam25956314 / UE5.8, EXE
-// 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
+// Eight-property serialization mirror. Steam25956314 / UE5.8.
 // Current reviewed mapping plus stock context JSON confirms property
 // order/types. ../../ARCHITECTURE.md owns the runtime contract and limits.
-// Editor-only, no runtime DLL. Revalidate complete schema on fingerprint change.
+// Editor-only, no runtime DLL. Revalidate complete schema on Steam build ID change.
 #include "Engine/DataAsset.h"
 #include "InputMappingContext.h"
 #include "VoyageInputAction.h"

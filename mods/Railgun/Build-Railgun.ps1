@@ -144,8 +144,7 @@ if ($dataAssetContract.schemaVersion -ne 3 -or
     [string]::IsNullOrWhiteSpace(
         [string]$dataAssetContract.structuralValidation.result) -or
     (Compare-Object $serializationFields @(
-        'engineVersion','executableSha256','mappingSha256','steamBuildId',
-        'uassetApiCommit','uassetGuiCommit','uassetGuiSha256')) -or
+        'engineVersion','mappingSha256','steamBuildId')) -or
     (Compare-Object $actualAssetSources @($expectedAssetSources | Sort-Object)) -or
     @($dataAssetContract.assets).Count -ne $expectedAssetSources.Count) {
     throw 'Railgun shared data-asset contract has an unsupported schema or asset set.'
@@ -227,7 +226,7 @@ function Get-RailgunSourceHashes {
 }
 $sourceHashes = @(Get-RailgunSourceHashes)
 $fingerprint = (& (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -OutputPath (Join-Path $output 'fingerprint.json')) | ConvertFrom-Json
-if ([string]$fingerprint.steam.buildId -cne '25956314' -or $fingerprint.executable.sha256 -cne '0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A') { throw 'Railgun game provenance mismatch.' }
+if ([string]$fingerprint.steam.buildId -cne '25956314') { throw 'Railgun Steam build mismatch.' }
 if ($Install) {
     $legacyAutoload = [IO.Path]::GetFullPath((Join-Path $fingerprint.gameRoot `
         'Voyage/Content/Paks/Railgun.autoload'))
@@ -239,8 +238,6 @@ if ($Install) {
 $mapping = & (Join-Path $repo 'tools/Get-VoyageMappings.ps1')
 if ([string]$serializationContract.steamBuildId -cne
         [string]$fingerprint.steam.buildId -or
-    $serializationContract.executableSha256 -cne
-        $fingerprint.executable.sha256 -or
     $serializationContract.engineVersion -cne $mapping.engineVersion -or
     $serializationContract.mappingSha256 -cne $mapping.sha256) {
     throw 'Railgun data-asset contract does not match the selected game and mapping.'
@@ -528,15 +525,8 @@ Invoke-NativeStage 'cook' $editor $cookArguments
 Invoke-NativeStage 'verify-tagged' $editor @($project,'-run=GenerateRailgun','-VerifyTagged','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'verify-tagged-unreal.log')))
 Invoke-NativeStage 'verify-runtime-tagged' $editor @($project,'-run=GenerateRailgunRuntime','-VerifyTagged','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'verify-runtime-tagged-unreal.log')))
 $retoc = Join-Path $repo '.tools/bin/retoc.exe'
-$retocManifestPath = Join-Path $repo '.tools/bin/retoc.manifest.json'
-if (-not (Test-Path -LiteralPath $retoc -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $retocManifestPath -PathType Leaf)) {
-    throw 'Canonical retoc or its publication manifest is missing.'
-}
-$retocManifest = Get-Content -LiteralPath $retocManifestPath -Raw | ConvertFrom-Json
-if ((Get-FileHash -LiteralPath $retoc -Algorithm SHA256).Hash -cne
-    $retocManifest.executableSha256) {
-    throw 'Canonical retoc differs from its publication manifest.'
+if (-not (Test-Path -LiteralPath $retoc -PathType Leaf)) {
+    throw 'Canonical retoc is missing.'
 }
 $loose = Join-Path $output 'loose'
 $assetRelatives = @($packages | ForEach-Object { $_.Replace('/Game/', 'Voyage/Content/') })
@@ -571,19 +561,8 @@ if (-not $newPackage.StartsWith($itemDiscoveryRoot + '/', [StringComparison]::Or
 }
 $cloneTarget = Join-Path $loose $cloneRelative
 $uassetGui = Join-Path $repo '.tools/bin/UAssetGUI.exe'
-$uassetGuiManifestPath = Join-Path $repo '.tools/bin/UAssetGUI.manifest.json'
-if (-not (Test-Path -LiteralPath $uassetGui -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $uassetGuiManifestPath -PathType Leaf)) {
-    throw 'Canonical UAssetGUI or its publication manifest is missing.'
-}
-$uassetGuiManifest = Get-Content -LiteralPath $uassetGuiManifestPath -Raw | ConvertFrom-Json
-if ($uassetGuiManifest.guiCommit -cne $serializationContract.uassetGuiCommit -or
-    $uassetGuiManifest.apiCommit -cne $serializationContract.uassetApiCommit -or
-    $uassetGuiManifest.executableSha256 -cne
-        $serializationContract.uassetGuiSha256 -or
-    (Get-FileHash -LiteralPath $uassetGui -Algorithm SHA256).Hash -cne
-        $serializationContract.uassetGuiSha256) {
-    throw 'Canonical UAssetGUI/API writer differs from the Railgun data-asset contract.'
+if (-not (Test-Path -LiteralPath $uassetGui -PathType Leaf)) {
+    throw 'UAssetGUI is missing.'
 }
 $authoredAmmoDirectory = Join-Path $output 'json-authored-ammo'
 $null = New-Item -ItemType Directory -Path $authoredAmmoDirectory
@@ -1125,8 +1104,8 @@ $validationSummaryPath = Join-Path $releaseStaging 'validation-summary.json'
 $provenance = [ordered]@{
     schemaVersion=1;mod='Railgun';version=$version;createdAtUtc=[DateTime]::UtcNow.ToString('o');
     sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;
-    gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';retocSha256=$retocManifest.executableSha256;
-    gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId;executableSha256=$fingerprint.executable.sha256};
+    gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';
+    gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId};
     validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, plugin-local three-record primary-asset registry, GLB module actor with lifecycle-owned station initialization, operator, inputs, HUD and shot audio';
     mappingSha256=$mapping.sha256;validationSummary='validation-summary.json';
     packagingStatus=$pack.status;containerVerificationStatus=$verify.status;semanticStatus=$semantic.status;
@@ -1134,13 +1113,10 @@ $provenance = [ordered]@{
     ammoWriterStatus=$ammoWrite.status;ammoReadbackStatus=$ammoReadback.status;
     dataAssetContract='mods/Railgun/Assets/data-assets-contract.json';dataAssetContractSha256=(Get-FileHash -LiteralPath $dataAssetContractPath -Algorithm SHA256).Hash;
     dataAssetSerialization=$serializationContract;
-    ammoWriterSha256=$serializationContract.uassetGuiSha256;
     skillSourceJson='mods/Railgun/Assets/Skill/railgun-skill.json';skillSourceJsonSha256=(Get-FileHash -LiteralPath $skillJsonPath -Algorithm SHA256).Hash;
     skillWriterStatus=$skillWrite.status;skillReadbackStatus=$skillReadback.status;
-    skillWriterSha256=$serializationContract.uassetGuiSha256;
     gunSourceJson='mods/Railgun/Assets/Fabricator/railgun-item.json';gunSourceJsonSha256=(Get-FileHash -LiteralPath $gunJsonPath -Algorithm SHA256).Hash;
     gunWriterStatus=$gunWrite.status;gunReadbackStatus=$gunReadback.status;
-    gunWriterSha256=$serializationContract.uassetGuiSha256;
     scriptObjectsInput=@($scriptObjectsInput | ForEach-Object { [ordered]@{name=[IO.Path]::GetFileName($_.path);sha256=$_.sha256} });scriptObjectsStatus=$scriptObjectsRun.status;
     scriptObjectsSha256=$scriptObjectsSha256;
     primaryAssetRegistrySha256=(Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash;

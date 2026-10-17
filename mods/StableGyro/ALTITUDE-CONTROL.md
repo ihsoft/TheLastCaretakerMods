@@ -2,16 +2,13 @@
 
 ## Version and evidence boundary
 
-The native contracts in this document were decoded from Steam build `25956314`,
-`VoyageSteam-Win64-Shipping.exe` SHA-256
-`0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`.
+The native contracts in this document were decoded from Steam build `25956314`.
 Names, owners, offsets, property types and flags were matched to reflection from
-that build. Revalidate them after an executable fingerprint change. The public
+that build. Revalidate them after a Steam build ID change. The public
 producer separately re-extracts and checks the stock cooked assets consumed by
 each candidate build.
 
-For Steam build `25982825`, executable SHA-256
-`08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734`,
+For Steam build `25982825`,
 current mapping metadata revalidated the native owner and float/bool types of
 the fields consumed by these graphs, and the stock HUD binding described below
 was re-extracted unchanged. The offsets, reflected access flags, CDO defaults,
@@ -194,4 +191,4 @@ default-`500` and zero-setting update, he reported that the latest installed
 build works. This validates the reported workflow at the level the user tested.
 It does not establish a separate scenario matrix for both `0` and `500`, strong
 waves, every collision shape, every saved calibration state or compatibility
-with another executable fingerprint.
+with another Steam build ID.

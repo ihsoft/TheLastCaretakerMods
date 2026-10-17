@@ -1,7 +1,6 @@
 // SHELL-ONLY mirror revalidated for Steam25191271 / UE5.8 parser target.
-// Executable 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
 // Method: public mappings plus stock Sniper Rod JSON. Railgun serializes only
-// the named tagged fields declared below. Revalidate on fingerprint change.
+// the named tagged fields declared below. Revalidate on Steam build ID change.
 
 #pragma once
 

@@ -11,8 +11,8 @@ headers, objects, and other native build output must never be added to the
 released IoStore container.
 
 Every game-derived header begins with `HAND-RECONSTRUCTED GAME API MIRROR` and
-records the validated Steam build, engine version, executable SHA-256, and
-reproduction tools. When the current game fingerprint differs, stop before
+records the validated Steam build, engine version, and reconstruction method.
+When the current Steam build ID differs, stop before
 building: recreate or revalidate every mirror against the new game version,
 then update its provenance header.
 

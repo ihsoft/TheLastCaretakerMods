@@ -1,6 +1,5 @@
-// TYPE/CALL-ONLY MIRROR. Steam25191271, EXE
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B,
-// UE5.8. Native registration and FFunctionParams independently decoded.
+// TYPE/CALL-ONLY MIRROR. Steam build 25191271, UE5.8.
+// Native registration and FFunctionParams independently decoded.
 // OnEnterVehicle: one ObjectProperty NewPossessor, Engine.Controller, void.
 // OnExitVehicle: no parameters, void. See ../../ARCHITECTURE.md.
 // No UNVERSIONED child/CDO authoring against this incomplete 38-property base.

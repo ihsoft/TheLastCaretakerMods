@@ -1,5 +1,4 @@
 // EDITOR-ONLY IDENTITY MIRROR for Steam build 25827816 / UE5.8.
-// EXE SHA256 C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
 // Method: current reviewed mappings plus the stock WindTurbine Small component
 // template for both classes, ModuleSocketIOData and EModuleSocketType.
 // The shipped Voyage module owns the runtime implementation.  This mirror is

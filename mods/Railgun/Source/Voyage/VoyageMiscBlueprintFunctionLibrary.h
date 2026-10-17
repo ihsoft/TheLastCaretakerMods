@@ -1,12 +1,11 @@
 #pragma once
-// Editor-only mirror; never shipped. Steam25956314, UE5.8, executable SHA256
-// 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
+// Editor-only mirror; never shipped. Steam25956314, UE5.8.
 // Reconstructed from native Voyage registration/thunks and cooked Blueprint
 // bytecode. BP_CraftingLocationGenerator_Default calls GetActorWorld(AActor*)
 // and then GetWaterHeightAtLocation(UWorld*, FVector), whose native return is
 // float. BP_ToolAbility_Maintenance_Dismantle calls
 // GetDestructibleInterface(UObject*) and consumes its UObject return.
-// Revalidate owner, parameter order/types and return type on fingerprint change.
+// Revalidate owner, parameter order/types and return type on Steam build ID change.
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "VoyagePlayerController.h"
 #include "VoyageMiscBlueprintFunctionLibrary.generated.h"

@@ -8,8 +8,6 @@ metadata and targeted native executable inspection on 2026-09-26:
 
 - Steam build: `25191271`.
 - Executable: `VoyageSteam-Win64-Shipping.exe`.
-- Executable SHA-256:
-  `747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
 - Asset parser profile: `UE5_8`.
 
 These are static findings, not validation of a mod calling the same functions.

@@ -1,11 +1,9 @@
 #pragma once
 
-// Game-derived UE 5.8 editor mirror. Provenance: Voyage Steam build 25191271,
-// executable SHA-256
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+// Game-derived UE 5.8 editor mirror. Provenance: Voyage Steam build 25191271.
 // Reconstructed with Inspect-VoyageAsset.ps1 from the reviewed mapping and
 // the stock projectile's cooked AddFluidImpulse call. Revalidate whenever that
-// fingerprint changes.
+// Steam build ID changes.
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"

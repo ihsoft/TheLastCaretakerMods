@@ -144,8 +144,7 @@ if ($InstallManifest) {
         artifactVersion = Get-Value $manifest 'artifactVersion'
         filesMatch = @($results | Where-Object state -ne 'match').Count -eq 0
         gameFingerprintMatches = (
-            [string](Get-Value $manifest 'steamBuildId') -ceq [string]$fingerprint.steam.buildId -and
-            [string](Get-Value $manifest 'executableSha256') -ieq $fingerprint.executable.sha256)
+            [string](Get-Value $manifest 'steamBuildId') -ceq [string]$fingerprint.steam.buildId)
         files = $results
     }
 }
@@ -154,7 +153,6 @@ $fullResult = [pscustomobject][ordered]@{
     capturedAtUtc = [DateTime]::UtcNow.ToString('o')
     gameRoot = $root
     steamBuildId = $fingerprint.steam.buildId
-    executableSha256 = $fingerprint.executable.sha256
     gameProcessObserved = $processes.Count -gt 0
     processes = $processes
     inventoryScope = 'Paks top-level only; not a runtime mount or compatibility check'
@@ -188,7 +186,6 @@ if ($Summary) {
         capturedAtUtc = $fullResult.capturedAtUtc
         gameRoot = $fullResult.gameRoot
         steamBuildId = $fullResult.steamBuildId
-        executableSha256 = $fullResult.executableSha256
         gameProcessObserved = $fullResult.gameProcessObserved
         processCount = @($fullResult.processes).Count
         topLevelFileCount = @($fullResult.files).Count

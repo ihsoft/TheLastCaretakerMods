@@ -1,5 +1,5 @@
 #pragma once
-// HC28 runtime-field-only mirror. Steam25191271 / UE5.8 / EXE747DC255...F58B.
+// HC28 runtime-field-only mirror. Steam25191271 / UE5.8.
 // Get-VoyageAssetJson stock horizontal widget + current mapping confirm parent
 // and names. An exact-identity editor-only Blueprint stand-in may serialize
 // tagged ContextAsset/filter INSTANCE values in an owned HUD. Never author or

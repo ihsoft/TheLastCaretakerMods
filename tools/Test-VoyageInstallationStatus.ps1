@@ -58,7 +58,7 @@ $checks.Add('compact-summary')
 $manifest = [ordered]@{
     schemaVersion = 1; kind = 'Voyage release installation'; status = 'installed'
     gameRoot = $game; paksDirectory = $paks; mod = 'Probe'; artifactVersion = 'test'
-    steamBuildId = $status.steamBuildId; executableSha256 = $status.executableSha256
+    steamBuildId = $status.steamBuildId
     files = @(
         [ordered]@{
             kind = 'container'; name = 'Probe_P.utoc'; destinationPath = $target

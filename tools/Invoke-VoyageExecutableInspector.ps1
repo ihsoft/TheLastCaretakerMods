@@ -115,7 +115,6 @@ $result = [pscustomobject][ordered]@{
     inspectorBinaryManifestPath = $binary.ManifestPath
     steamBuildId = [string]$fingerprint.steam.buildId
     executablePath = $gameExecutable
-    executableSha256 = [string]$fingerprint.executable.sha256
     boundary = 'Correlation aid only; names, bytes, pointers, and offsets do not prove reflected ownership, call relations, or lifecycle.'
 }
 if ($AsJson) {

@@ -1,8 +1,7 @@
 // HAND-RECONSTRUCTED GAME API MIRROR: Steam 25827816 / UE5.8 parser target;
-// executable SHA-256 C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
 // Method: current native metadata for the authored container configuration
 // fields, read-only Items map, enums and consumed function signatures.
-// Revalidate on fingerprint change. Editor-only: never package this definition.
+// Revalidate on Steam build ID change. Editor-only: never package this definition.
 
 #pragma once
 

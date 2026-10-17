@@ -1,6 +1,5 @@
 // HAND-WRITTEN BUILD TOOL SOURCE: BoatHUDTotalResources Blueprint generator validated for
-// Steam build 25056839 (UE 5.8.1), VoyageSteam-Win64-Shipping.exe SHA-256
-// CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933.
+// Steam build 25056839 (UE 5.8.1).
 // The C++ tool is never shipped. Revalidate after every game update.
 
 #include "GenerateBoatHUDTotalResourcesCommandlet.h"

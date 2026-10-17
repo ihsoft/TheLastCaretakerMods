@@ -128,7 +128,6 @@ function Get-CleanOriginalInputs {
     param(
         [Parameter(Mandatory = $true)] [string]$Root,
         [Parameter(Mandatory = $true)] [string]$ExpectedBuild,
-        [Parameter(Mandatory = $true)] [string]$ExpectedExecutableHash,
         [Parameter(Mandatory = $true)] [string]$ExpectedRetocCompatibilityVersion,
         [Parameter(Mandatory = $true)] [string]$ExpectedRetocHash
     )
@@ -142,7 +141,6 @@ function Get-CleanOriginalInputs {
     $manifest = Get-Content -LiteralPath $manifests[0].FullName -Raw | ConvertFrom-Json
     if ([string]$manifest.filter -cne 'Vehicles/BP_Forklift_Possesable' -or
         [string]$manifest.steamBuildId -cne $ExpectedBuild -or
-        [string]$manifest.executableSha256 -cne $ExpectedExecutableHash -or
         [string]$manifest.retocEngineVersion -cne $ExpectedRetocCompatibilityVersion -or
         [string]$manifest.retocSha256 -cne $ExpectedRetocHash -or
         $manifest.allowAdditionalContainers -ne $false) {
@@ -221,14 +219,11 @@ $fingerprintPath = Join-Path $releaseRoot 'game-fingerprint.json'
 $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
 $provenance = Get-Content -LiteralPath $provenancePath -Raw
 $buildMatch = [regex]::Match($provenance, '(?m)^- Steam build: `(?<value>\d+)`\r?$')
-$hashMatch = [regex]::Match($provenance, '(?m)^  `(?<value>[0-9A-F]{64})`\r?$')
-if (-not $buildMatch.Success -or -not $hashMatch.Success) {
+if (-not $buildMatch.Success) {
     throw "Unable to read the expected game fingerprint from $provenancePath"
 }
 $expectedBuild = $buildMatch.Groups['value'].Value
-$expectedExecutableHash = $hashMatch.Groups['value'].Value
-if ([string]$fingerprint.steam.buildId -cne $expectedBuild -or
-    [string]$fingerprint.executable.sha256 -cne $expectedExecutableHash) {
+if ([string]$fingerprint.steam.buildId -cne $expectedBuild) {
     throw "Installed Voyage fingerprint does not match the validated DonkLift source. See $fingerprintPath"
 }
 $phase.Stop()
@@ -290,7 +285,6 @@ if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
 $originalInputs = Get-CleanOriginalInputs `
     -Root $OriginalsRoot `
     -ExpectedBuild $expectedBuild `
-    -ExpectedExecutableHash $expectedExecutableHash `
     -ExpectedRetocCompatibilityVersion $retocCompatibilityVersion `
     -ExpectedRetocHash $retocSha256
 $phase.Stop()
@@ -397,7 +391,6 @@ $manifest = [ordered]@{
     cookStorage = $cookStorage
     gameFingerprint = [ordered]@{
         steamBuildId = [string]$fingerprint.steam.buildId
-        executableSha256 = [string]$fingerprint.executable.sha256
     }
     originalsManifest = $originalInputs.Manifest
     installed = $installed

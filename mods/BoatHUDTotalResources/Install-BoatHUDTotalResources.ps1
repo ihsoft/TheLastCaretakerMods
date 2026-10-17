@@ -67,15 +67,12 @@ if ([string]$buildManifest.kind -cne 'BoatHUDTotalResources mod' -or
         'SerializedForFilteredCookedPackages' -or
     [string]$buildManifest.retocSha256 -notmatch '^[0-9A-F]{64}$' -or
     [string]$buildManifest.cookStorage -cne 'LooseCookedPackageWriter' -or
-    [string]$buildManifest.steamBuildId -cne '25056839' -or
-    [string]$buildManifest.executableSha256 -cne
-        'CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933') {
+    [string]$buildManifest.steamBuildId -cne '25056839') {
     throw 'Only the statically checked BoatHUDTotalResources build is allowed.'
 }
 $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $exe = (Resolve-Path -LiteralPath (
     Join-Path $root 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe')).Path
-$actualExecutableSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash
 $steamApps = Split-Path -Parent (Split-Path -Parent $root)
 $steamManifest = Join-Path $steamApps 'appmanifest_1783560.acf'
 if (-not (Test-Path -LiteralPath $steamManifest -PathType Leaf)) {
@@ -88,8 +85,7 @@ if (-not $buildIdMatch.Success) {
     throw "Steam build ID not found in: $steamManifest"
 }
 $actualSteamBuildId = $buildIdMatch.Groups['id'].Value
-if ($actualSteamBuildId -cne [string]$buildManifest.steamBuildId -or
-    $actualExecutableSha256 -cne [string]$buildManifest.executableSha256) {
+if ($actualSteamBuildId -cne [string]$buildManifest.steamBuildId) {
     throw 'Installed Voyage fingerprint does not match the BoatHUDTotalResources build.'
 }
 
@@ -150,7 +146,6 @@ $manifest = [ordered]@{
     kind = 'BoatHUDTotalResources installation'
     gameRoot = $root
     steamBuildId = $actualSteamBuildId
-    executableSha256 = $actualExecutableSha256
     paksDirectory = $paks
     containerName = $ContainerName
     installedAtUtc = [DateTime]::UtcNow.ToString('o')

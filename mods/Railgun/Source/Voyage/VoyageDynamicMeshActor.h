@@ -1,7 +1,6 @@
-// READ-ONLY editor mirror: Steam 25191271 / UE5.8, executable SHA-256
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+// READ-ONLY editor mirror: Steam 25191271 / UE5.8.
 // Method: reviewed mappings + stock BP_DynamicMeshActor + native Loot provider.
-// Revalidate on fingerprint change. Never spawn or ship this native mirror.
+// Revalidate on Steam build ID change. Never spawn or ship this native mirror.
 #pragma once
 
 #include "GameFramework/Actor.h"

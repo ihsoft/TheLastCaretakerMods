@@ -39,8 +39,8 @@ That flag skips only the pinned Steam build ID comparison. The script
 still requires the installed game's exact reviewed mappings,
 extracts fresh stock assets, checks their roundtrips and expected fields,
 compares the packaged overrides with stock, and validates the release manifest.
-The mapping resolver and release manifest still record the executable hash for
-provenance; the builder does not compare it with a hard-coded old hash.
+The mapping resolver and release manifest record the Steam build ID for
+game provenance.
 If the build passes, test the candidate in game. A successful runtime test
 completes compatibility validation; investigate reflected classes or native
 behavior only if the build or game test exposes a problem. A missing current

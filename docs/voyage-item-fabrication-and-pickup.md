@@ -6,11 +6,9 @@ This document separates item serialization, inventory ownership, transfer and
 notifications. General mechanisms are not tied to a particular mod or game
 build; static facts, runtime coverage and inferences are distinguished below.
 
-Where a section explicitly refers to a fingerprint, its binary/schema evidence
-was obtained on Steam
-build `25191271`, executable SHA-256
-`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`, parser
-profile `UE5_8`. This provenance gates reuse of the corresponding extracted
+Where a section explicitly refers to a game build, its binary/schema evidence
+was obtained on Steam build `25191271`, parser profile `UE5_8`.
+This provenance gates reuse of the corresponding extracted
 inputs and reconstructed binary contracts, not the general ownership and event
 patterns. A game update alone is not a reason to repeat the whole investigation.
 An optional implementation example is the

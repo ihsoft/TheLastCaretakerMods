@@ -80,7 +80,7 @@ internal static partial class Program
     }
 
     static int ExportMaterialPackStage(StockProvider provider, string[] assets, string output, string materialMode,
-        MaterialPackProfile profile, SourceTexturePolicy sourceTexturePolicy, string build, string exeHash, string mappingPath)
+        MaterialPackProfile profile, SourceTexturePolicy sourceTexturePolicy, string build, string mappingPath)
     {
         if (assets.Length != 1) throw new ArgumentException("MaterialPackStage exports exactly one material.");
         if (profile == MaterialPackProfile.AnalysisCompact && sourceTexturePolicy != SourceTexturePolicy.MetadataOnly)
@@ -180,7 +180,6 @@ internal static partial class Program
             ["provenance"] = new JsonObject
             {
                 ["steamBuildId"] = build,
-                ["executableSha256"] = exeHash,
                 ["mappingSha256"] = Hash(mappingPath),
                 ["conversionCommit"] = "ec6595e46448a817ac21ea9bde01caa48f80a420",
                 ["exporterSha256"] = Hash(typeof(Program).Assembly.Location)

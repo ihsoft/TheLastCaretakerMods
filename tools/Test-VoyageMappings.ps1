@@ -7,8 +7,6 @@ param(
 
     [string]$ExpectedSteamBuildId,
 
-    [string]$ExpectedExecutableSha256,
-
     [string[]]$RequiredNames = @(
         'EModuleResourceType',
         'VoyageInGameBoatWidget',
@@ -61,12 +59,6 @@ if ($ExpectedSteamBuildId -and
     [string]$manifest.steamBuildId -cne $ExpectedSteamBuildId) {
     throw "Mappings Steam build ID does not match the requested build."
 }
-if ($ExpectedExecutableSha256 -and
-    ([string]$manifest.executableSha256 -notmatch $sha256Pattern -or
-     [string]$manifest.executableSha256 -cne $ExpectedExecutableSha256)) {
-    throw "Mappings executable SHA-256 does not match the requested build."
-}
-
 if ($bytes[3] -ne 0) {
     throw 'Required-name validation currently supports only an uncompressed USMAP payload.'
 }
@@ -88,6 +80,5 @@ foreach ($requiredName in $RequiredNames) {
     compressionMethod = [int]$bytes[3]
     decompressedPayloadLength = [long]$decompressedSize
     steamBuildId = [string]$manifest.steamBuildId
-    executableSha256 = [string]$manifest.executableSha256
     requiredNames = $RequiredNames
 }

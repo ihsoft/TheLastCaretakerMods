@@ -192,7 +192,7 @@ $report = [ordered]@{
     lengthCm = 6000; attachedPayoutLimitCm = 2000; packageCount = 3
     semanticChanges = @('Male mooring socket IntegratedCableLength: 2000 -> 6000', 'Fresh stock mooring parent relocated with MaxLengthBase 6000', 'Child refreshes MaxLength: both sockets valid 2000, otherwise 6000')
     childSummaryPath = $childSummary.summaryPath; childJsonPath = $childJson.jsonPath
-    steamBuildId = $mapping.steamBuildId; executableSha256 = $mapping.executableSha256
+    steamBuildId = $mapping.steamBuildId
     pinnedGameVersionMatches = $pinnedGameVersionMatches
     ignorePinnedGameVersion = [bool]$IgnorePinnedGameVersion
     extractionManifest = $extract.manifestPath; roundtripReport = $roundtrip.reportPath

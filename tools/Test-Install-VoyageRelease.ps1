@@ -57,8 +57,7 @@ function New-SyntheticRelease {
         [Parameter(Mandatory = $true)]
         [string]$ContentMarker,
 
-        [Parameter(Mandatory = $true)]
-        [string]$ExecutableSha256
+        [string]$SteamBuildId = $buildId
     )
 
     $releaseRoot = Join-Path $testRoot "release-$Version"
@@ -117,8 +116,7 @@ function New-SyntheticRelease {
         sourceCommit = $sourceCommit
         dirtySource = $false
         gameFingerprint = [ordered]@{
-            steamBuildId = $buildId
-            executableSha256 = $ExecutableSha256
+            steamBuildId = $SteamBuildId
         }
         payload = $records
         archive = [ordered]@{
@@ -188,7 +186,6 @@ function Assert-Rejected {
     $steamManifest,
     '"AppState" { "appid" "1783560" "buildid" "' + $buildId + '" }',
     [Text.UTF8Encoding]::new($false))
-$executableSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $gameExecutable).Hash
 
 try {
     $previousHashes = @{}
@@ -203,7 +200,7 @@ try {
     }
 
     $firstRelease = New-SyntheticRelease -Version 'test-v1' `
-        -ContentMarker 'first' -ExecutableSha256 $executableSha256
+        -ContentMarker 'first'
     $validationEvidence = Join-Path $testRoot 'validation-must-not-exist'
     $validationResult = & $installer -ReleaseManifest $firstRelease.manifestPath `
         -GameRoot $gameRoot -EvidenceRoot $validationEvidence `
@@ -215,14 +212,14 @@ try {
     }
 
     $wrongFingerprintRelease = New-SyntheticRelease -Version 'wrong-fingerprint' `
-        -ContentMarker 'wrong-fingerprint' -ExecutableSha256 ('A' * 64)
+        -ContentMarker 'wrong-fingerprint' -SteamBuildId '88888888'
     Assert-Rejected -Pattern 'fingerprint does not match' -Action {
         & $installer -ReleaseManifest $wrongFingerprintRelease.manifestPath `
             -GameRoot $gameRoot -ValidateOnly
     }
     if ($WithAutoLoadSidecar) {
         $wrongSidecarRelease = New-SyntheticRelease -Version 'wrong-sidecar' `
-            -ContentMarker 'wrong-sidecar' -ExecutableSha256 $executableSha256
+            -ContentMarker 'wrong-sidecar'
         $wrongSidecarManifest = Get-Content -LiteralPath $wrongSidecarRelease.manifestPath -Raw | ConvertFrom-Json
         $wrongSidecarManifest.payload[-1].name = 'DifferentMod.autoload'
         Write-Utf8Json -Path $wrongSidecarRelease.manifestPath -Value $wrongSidecarManifest
@@ -231,7 +228,7 @@ try {
         }
     }
     $wrongArchiveRelease = New-SyntheticRelease -Version 'wrong-archive' `
-        -ContentMarker 'archived-content' -ExecutableSha256 $executableSha256
+        -ContentMarker 'archived-content'
     $wrongArchivePayloadPath = Join-Path $wrongArchiveRelease.root (
         'container\package\' + $containerName + '.pak')
     [IO.File]::WriteAllText($wrongArchivePayloadPath, 'different-payload')
@@ -247,7 +244,7 @@ try {
     }
     if ($WithContentPluginDescriptor) {
         $unsafePluginRelease = New-SyntheticRelease -Version 'unsafe-plugin-path' `
-            -ContentMarker 'unsafe-plugin' -ExecutableSha256 $executableSha256
+            -ContentMarker 'unsafe-plugin'
         $unsafePluginManifest = Get-Content -LiteralPath `
             $unsafePluginRelease.manifestPath -Raw | ConvertFrom-Json
         $unsafePluginManifest.contentPlugin.installRelativePath =
@@ -390,7 +387,7 @@ try {
 
     $secondEvidenceParent = Join-Path $testRoot 'failure-evidence'
     $secondRelease = New-SyntheticRelease -Version 'test-v2' `
-        -ContentMarker 'second' -ExecutableSha256 $executableSha256
+        -ContentMarker 'second'
     $global:VoyageInstallerTestMoveCount = 0
     function Move-Item {
         [CmdletBinding()]

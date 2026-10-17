@@ -1,8 +1,7 @@
 // HAND-RECONSTRUCTED GAME API MIRROR: Steam build 25929985, UE 5.8.2
-// (parser target 5.8), executable SHA-256
-// 608A4BCD1A0A392477970F455234571946D061E61C1D27F82DE9589EBBA3D69F.
+// (parser target 5.8).
 // Signature shared with the game-validated Railgun settings reader. Revalidate
-// owner and parameters after a fingerprint change. Editor-only; never ship.
+// owner and parameters after a Steam build ID change. Editor-only; never ship.
 
 #pragma once
 

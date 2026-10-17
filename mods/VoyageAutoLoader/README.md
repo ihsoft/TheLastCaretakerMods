@@ -8,9 +8,7 @@ or external runtime preprocessor.
 
 ## Provenance and validation scope
 
-The source contract is bound to Steam build `25056839`, game UE `5.8.1`, and
-executable SHA-256
-`CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`.
+The source contract is bound to Steam build `25056839` and game UE `5.8.1`.
 Revalidate reflected game identities after a fingerprint change. Generated
 Content, cooked packages, extracted game data, logs and release evidence remain
 ignored.

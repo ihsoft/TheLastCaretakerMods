@@ -28,20 +28,20 @@
 
 ## Начало исследования новой версии
 
-1. Получить fingerprint текущей установки (Steam `buildid`, SHA-256 exe и
-   hashes IoStore metadata):
+1. Получить Steam `buildid` текущей установки и сведения о контейнерах:
 
    ```powershell
    .\tools\Get-VoyageBuildFingerprint.ps1 `
-     -OutputPath .\artifacts\fingerprints\current.json
+     -OutputPath .\Tmp\fingerprints\current.json
    ```
 
-2. Сверить Steam `buildid` и SHA-256 executable с последней документированной
+2. Сверить Steam `buildid` с последней документированной
    сборкой и с `mods/DonkLiftKeyboardControl/GAME_DERIVED_SOURCES.md`. Windows
-   product version (`UE5-CL-0`) не считать версией игры. При несовпадении
-   invalidated не только локальные артефакты, но и сохранённые mirror headers,
-   embedded generator contracts и relocation assumptions: каждый пункт
-   реестра должен быть заново извлечён или проверен до сборки.
+   product version (`UE5-CL-0`) не считать версией игры. При смене build ID
+   повторно извлечь игровые ассеты и проверить зависящие от них mirror headers,
+   generator contracts и relocation assumptions. Общие контракты движка
+   проверять по версии сериализации и структуре результата, без автоматической
+   привязки к каждому Steam build.
 3. Перечитать активный backlog, релевантный раздел
    `game-architecture-observations.md` и `research-pitfalls.md`.
 4. Сформулировать гипотезу, один изменяемый контракт и различимые ожидаемые
@@ -101,7 +101,7 @@
 `tools/Test-VoyageMappings.ps1`. Сырые кандидаты остаются в `artifacts/`.
 Только отдельно просмотренный и полностью валидированный mapping можно
 перенести в неизменяемый каталог `mappings/Voyage/` вместе с manifest для
-точного Steam build, fingerprint executable и версии движка.
+точного Steam build ID и версии движка.
 
 ## Выбор стоимости исследования
 

@@ -50,7 +50,7 @@ $fingerprintPath = Join-Path $evidence 'fingerprint.json'
 $fingerprintText = (& (Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1') -GameRoot $GameRoot -OutputPath $fingerprintPath) -join [Environment]::NewLine
 $fingerprint = $fingerprintText | ConvertFrom-Json
 $mapping = & (Join-Path $PSScriptRoot 'Get-VoyageMappings.ps1') -GameRoot $GameRoot
-if ($mapping.engineVersion -ne '5.8' -or $mapping.executableSha256 -cne $fingerprint.executable.sha256) { throw 'Unsupported/mismatched game mapping.' }
+if ($mapping.engineVersion -ne '5.8' -or $mapping.steamBuildId -cne $fingerprint.steam.buildId) { throw 'Unsupported/mismatched game mapping.' }
 $previewGlb = Join-Path $evidence 'preview-source.glb'
 $requestPath = Join-Path $evidence 'request.json'
 $request = [ordered]@{ operation = 'MaterialGlb'; output = $previewGlb; materials = @($Materials); materialMode = $MaterialMode;

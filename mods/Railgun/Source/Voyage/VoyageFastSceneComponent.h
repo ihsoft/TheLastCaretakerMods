@@ -1,5 +1,5 @@
 #pragma once
-// Steam25827816 / UE5.8, full fingerprint in ../../ARCHITECTURE.md.
+// Steam25827816 / UE5.8, game-build evidence in ../../ARCHITECTURE.md.
 // Public HC26 mapping: StaticMeshComponent parent, ZERO own properties.
 // Stock VehicleMesh identity and shared constructor evidence; no stock mesh.
 #include "Components/StaticMeshComponent.h"

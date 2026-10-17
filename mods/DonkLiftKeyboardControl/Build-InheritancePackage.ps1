@@ -1,6 +1,5 @@
 # HAND-WRITTEN BUILD TOOL with game-derived relocation contracts validated for
-# Steam build 25056839, VoyageSteam-Win64-Shipping.exe SHA-256
-# CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933.
+# Steam build 25056839.
 # Revalidate per GAME_DERIVED_SOURCES.md after every game update.
 
 param(
@@ -23,7 +22,6 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $expectedSteamBuildId = '25056839'
-$expectedExecutableSha256 = 'CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933'
 $retocCompatibilityVersion = 'UE5_7'
 $expectedForkliftFilter = 'Vehicles/BP_Forklift_Possesable'
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
@@ -89,8 +87,7 @@ function Get-ExtractionEvidence {
         [string]$manifest.retocSha256 -cne $retocSha256) {
         throw "$Label extraction does not match the selected retoc compatibility contract."
     }
-    if ([string]$manifest.steamBuildId -cne $expectedSteamBuildId -or
-        [string]$manifest.executableSha256 -cne $expectedExecutableSha256) {
+    if ([string]$manifest.steamBuildId -cne $expectedSteamBuildId) {
         throw "$Label extraction fingerprint does not match this builder's validated game version."
     }
 

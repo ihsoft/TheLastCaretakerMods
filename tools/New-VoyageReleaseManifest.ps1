@@ -257,10 +257,8 @@ if ($dirtySource -and -not $AllowDirtySource) {
 $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'
 $fingerprint = (& $fingerprintScript -GameRoot $GameRoot | ConvertFrom-Json)
 $buildId = [string]$fingerprint.steam.buildId
-$executableSha256 = [string]$fingerprint.executable.sha256
-if ([string]::IsNullOrWhiteSpace($buildId) -or
-    $executableSha256 -notmatch '^[0-9A-F]{64}$') {
-    throw 'The installed game did not return a complete release fingerprint.'
+if ($buildId -notmatch '^\d+$') {
+    throw 'The installed game did not return a valid Steam build ID.'
 }
 
 $contentPlugin = $null
@@ -278,7 +276,6 @@ $manifest = [ordered]@{
     sourcePaths = $sourceRecords
     gameFingerprint = [ordered]@{
         steamBuildId = $buildId
-        executableSha256 = $executableSha256
     }
     payload = @($payloadPaths | ForEach-Object { New-ArtifactRecord -Path $_ })
     archive = New-ArtifactRecord -Path $resolvedArchive
@@ -333,7 +330,6 @@ $result = [pscustomobject][ordered]@{
     sourceCommit = $sourceCommit
     dirtySource = $dirtySource
     steamBuildId = $buildId
-    executableSha256 = $executableSha256
     payloadCount = $payloadPaths.Count
     contentPlugin = if ($null -eq $contentPlugin) { $null } else { $contentPlugin.pluginName }
     archiveName = [IO.Path]::GetFileName($resolvedArchive)

@@ -2,8 +2,7 @@
 
 ## Restart
 
-- Current installed game: Steam build `25902891`, executable SHA256
-  `AF69E3A0D24A9D3BA0AE0C5424F7803F3401D5E4B7A4417EAF7F41CD8B6E9FE5`.
+- Current installed game: Steam build `25902891`.
   The two newest crash contexts report engine `5.8.2`.
 - The builder remains gated to `25880952`; no new build is required. The user
   installed the correct archive on `25902891` and reported that it works.
@@ -39,9 +38,7 @@ the user's wrong-archive explanation, but the original archive remains unknown.
 
 ## Candidate built for 25880952
 
-The `v1-steam-25880952-test` candidate targeted Steam build `25880952`,
-executable SHA256
-`16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44`.
+The `v1-steam-25880952-test` candidate targeted Steam build `25880952`.
 Its fresh stock JSON hashes were:
 
 - electric rifle:

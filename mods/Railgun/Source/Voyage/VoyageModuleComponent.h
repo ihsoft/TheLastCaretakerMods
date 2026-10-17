@@ -1,11 +1,10 @@
 #pragma once
-// READ-ONLY editor mirror: Steam25827816 / UE5.8 parser target, executable
-// C15F59073ADCE2730487A04A0A29D6D142B5066FD3EDCD4B82689A7A82DB1D33.
+// READ-ONLY editor mirror: Steam25827816 / UE5.8 parser target.
 // Current reviewed mappings and the stock WindTurbine Small component contract.
 // Named fields consumed by the generator only; no instance, native code or data
 // asset shipped.
-// Revalidate after fingerprint change. Never use this stub to serialize a module.
-// Module descriptor is Runtime so UHT omits PKG_EditorOnly; editor usage only,
+// Revalidate after Steam build ID change. Never use this stub to serialize a module.
+// Module descriptor is Runtime so UHT omits PKG_EditorOnly; editor usage only.
 // and the release inventory must still exclude every native binary.
 #include "Components/ActorComponent.h"
 #include "Engine/EngineTypes.h"

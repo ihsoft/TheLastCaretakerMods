@@ -1,8 +1,7 @@
 #pragma once
 // Editor-only named-bytecode mirrors. Steam25191271 / UE5.8,
-// EXE747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
 // Reconstructed from reviewed mappings, stock PerformAttack and native registration.
-// Revalidate on executable change. NEVER serialize FVoyageAttack defaults/CDOs,
+// Revalidate on Steam build ID change. NEVER serialize FVoyageAttack defaults/CDOs.
 // use sizeof as shipping ABI, or add padding for unreflected native trailing state.
 // The shipping constructor owns all omitted fields and private state.
 #include "CoreMinimal.h"

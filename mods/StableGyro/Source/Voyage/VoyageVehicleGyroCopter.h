@@ -1,13 +1,11 @@
 // HAND-RECONSTRUCTED GAME API MIRROR: Steam build 25982825, UE 5.8.2
-// (parser target 5.8),
-// VoyageSteam-Win64-Shipping.exe SHA-256
-// 08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734.
+// (parser target 5.8).
 // Current mapping metadata revalidated the exact native owner and property
 // types used here. Access/SaveGame flags and defaults retain evidence from
-// Steam build 25956314 / executable 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
+// Steam build 25956314.
 // The Tilt input mirrors intentionally remain writable for the generator and
 // do not claim exact native access flags.
-// Revalidate on fingerprint change. Editor-only; never ship.
+// Revalidate on Steam build ID change. Editor-only; never ship.
 
 #pragma once
 

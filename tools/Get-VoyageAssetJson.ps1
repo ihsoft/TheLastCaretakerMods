@@ -247,10 +247,7 @@ function Invoke-Inspector {
 function Resolve-ValidatedMappings {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$SteamBuildId,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ExecutableSha256
+        [string]$SteamBuildId
     )
 
     if ($MappingsManifestPath -and -not $MappingsPath) {
@@ -271,8 +268,7 @@ function Resolve-ValidatedMappings {
         & $testMappingsScript `
             -MappingsPath $mapping `
             -ManifestPath $manifest `
-            -ExpectedSteamBuildId $SteamBuildId `
-            -ExpectedExecutableSha256 $ExecutableSha256 | Out-Null
+            -ExpectedSteamBuildId $SteamBuildId | Out-Null
         return [pscustomobject]@{
             mappingsPath = $mapping
             manifestPath = (Resolve-Path -LiteralPath $manifest).Path
@@ -281,8 +277,7 @@ function Resolve-ValidatedMappings {
     }
 
     $resolved = & $getMappingsScript -GameRoot $GameRoot
-    if ([string]$resolved.steamBuildId -cne $SteamBuildId -or
-        [string]$resolved.executableSha256 -cne $ExecutableSha256) {
+    if ([string]$resolved.steamBuildId -cne $SteamBuildId) {
         throw 'The reviewed mapping resolver returned a mismatched game fingerprint.'
     }
     [pscustomobject]@{
@@ -366,9 +361,6 @@ function Get-PackageIndex {
         [string]$SteamBuildId,
 
         [Parameter(Mandatory = $true)]
-        [string]$ExecutableSha256,
-
-        [Parameter(Mandatory = $true)]
         [string]$Cue4ParseBinarySha256,
 
         [Parameter(Mandatory = $true)]
@@ -386,7 +378,6 @@ function Get-PackageIndex {
             [string](Get-OptionalPropertyValue -Object $manifest -Name 'source') -ceq 'Game' -and
             [string]$manifest.kind -ceq 'Voyage asset package index' -and
             [string]$manifest.steamBuildId -ceq $SteamBuildId -and
-            [string]$manifest.executableSha256 -ceq $ExecutableSha256 -and
             [string]$manifest.cue4ParseBinarySha256 -ceq $Cue4ParseBinarySha256 -and
             [string]$manifest.inspectorSourceSha256 -ceq $inspector.SourceSha256 -and
             [string](Get-OptionalPropertyValue -Object $manifest -Name 'inspectorBinarySha256') -ceq $inspector.Sha256 -and
@@ -434,7 +425,6 @@ function Get-PackageIndex {
         kind = 'Voyage asset package index'
         source = 'Game'
         steamBuildId = $SteamBuildId
-        executableSha256 = $ExecutableSha256
         cue4ParseBinarySha256 = $Cue4ParseBinarySha256
         engineVersion = $EngineVersion
         gameContainers = @($GameContainerSet.gameContainers)
@@ -525,15 +515,14 @@ $cue4ParseBinarySha256 = $inspector.Cue4ParseSha256
 $fingerprintText = (& $fingerprintScript -GameRoot $GameRoot) -join [Environment]::NewLine
 $fingerprint = $fingerprintText | ConvertFrom-Json
 $steamBuildId = [string]$fingerprint.steam.buildId
-$executableSha256 = [string]$fingerprint.executable.sha256
-if ($steamBuildId -notmatch '^\d+$' -or $executableSha256 -notmatch $sha256Pattern) {
-    throw 'The installed game fingerprint has no valid Steam build ID or executable SHA-256.'
+if ($steamBuildId -notmatch '^\d+$') {
+    throw 'The installed game has no valid Steam build ID.'
 }
 
 $resolvedGameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
 $paksDirectory = Join-Path $resolvedGameRoot 'Voyage\Content\Paks'
 $gameContainerSet = Get-GameContainerSet -PaksDirectory $paksDirectory
-$versionName = "steam-$steamBuildId-$($executableSha256.Substring(0, 12))-game-$($gameContainerSet.gameContainersSha256.Substring(0, 12))"
+$versionName = "steam-$steamBuildId-game-$($gameContainerSet.gameContainersSha256.Substring(0, 12))"
 $cacheVersionRoot = Join-Path ([IO.Path]::GetFullPath($cacheRoot)) $versionName
 
 if ($Source -eq 'Mod') {
@@ -562,7 +551,6 @@ if ($Source -eq 'Mod') {
             kind = 'Voyage one-off mod package listing'
             source = 'Mod'
             steamBuildId = $steamBuildId
-            executableSha256 = $executableSha256
             engineVersion = $EngineVersion
             modContainer = $selectedMod
             packageListPath = $listResult.packageListPath
@@ -580,9 +568,7 @@ if ($Source -eq 'Mod') {
         return
     }
 
-    $mapping = Resolve-ValidatedMappings `
-        -SteamBuildId $steamBuildId `
-        -ExecutableSha256 $executableSha256
+    $mapping = Resolve-ValidatedMappings -SteamBuildId $steamBuildId
     $virtualPath = Resolve-AssetVirtualPath -PackageIndexPath $packageIndexPath
     $exportRoot = Join-Path $runRoot 'export'
     [IO.Directory]::CreateDirectory($exportRoot) | Out-Null
@@ -617,7 +603,6 @@ if ($Source -eq 'Mod') {
         kind = 'Voyage one-off mod asset inspection'
         source = 'Mod'
         steamBuildId = $steamBuildId
-        executableSha256 = $executableSha256
         engineVersion = $EngineVersion
         modContainer = $selectedMod
         virtualPath = $virtualPath
@@ -652,7 +637,6 @@ $packageIndexPath = Get-PackageIndex `
     -PaksDirectory $paksDirectory `
     -CacheVersionRoot $cacheVersionRoot `
     -SteamBuildId $steamBuildId `
-    -ExecutableSha256 $executableSha256 `
     -Cue4ParseBinarySha256 $cue4ParseBinarySha256 `
     -GameContainerSet $gameContainerSet
 if ($ListPackages) {
@@ -661,9 +645,7 @@ if ($ListPackages) {
     return
 }
 
-$mapping = Resolve-ValidatedMappings `
-    -SteamBuildId $steamBuildId `
-    -ExecutableSha256 $executableSha256
+$mapping = Resolve-ValidatedMappings -SteamBuildId $steamBuildId
 $virtualPath = Resolve-AssetVirtualPath -PackageIndexPath $packageIndexPath
 
 $relativeJsonPath = [IO.Path]::ChangeExtension($virtualPath, '.json').Replace('/', [IO.Path]::DirectorySeparatorChar)
@@ -684,7 +666,6 @@ if ((Test-Path -LiteralPath $jsonPath -PathType Leaf) -and
     if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'source') -cne 'Game') { $provenanceFailures.Add('source') }
     if ([string]$manifest.kind -cne 'Voyage cached asset JSON') { $provenanceFailures.Add('kind') }
     if ([string]$manifest.steamBuildId -cne $steamBuildId) { $provenanceFailures.Add('steamBuildId') }
-    if ([string]$manifest.executableSha256 -cne $executableSha256) { $provenanceFailures.Add('executableSha256') }
     if ([string]$manifest.gameContainersSha256 -cne [string]$gameContainerSet.gameContainersSha256) { $provenanceFailures.Add('gameContainersSha256') }
     if ([string]$manifest.virtualPath -cne $virtualPath) { $provenanceFailures.Add('virtualPath') }
     if ([string]$manifest.mappingsSha256 -cne [string]$mapping.sha256) { $provenanceFailures.Add('mappingsSha256') }
@@ -764,7 +745,6 @@ $assetManifest = [ordered]@{
     kind = 'Voyage cached asset JSON'
     source = 'Game'
     steamBuildId = $steamBuildId
-    executableSha256 = $executableSha256
     engineVersion = $EngineVersion
     gameContainers = @($gameContainerSet.gameContainers)
     gameContainersSha256 = [string]$gameContainerSet.gameContainersSha256

@@ -1,6 +1,5 @@
 #pragma once
-// Tagged-data mirror. Steam25956314 / UE5.8, EXE
-// 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
+// Tagged-data mirror. Steam25956314 / UE5.8.
 // EquipmentClass and DesiredSlot are authored for the Railgun ADS service item.
 #include "VoyageItem.h"
 #include "VoyageEquipmentActor.h"

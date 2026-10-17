@@ -5,8 +5,7 @@ for mod balancing. It is not an experiment log.
 
 ## Provenance
 
-The values below were re-read from Steam build `25191271`, executable SHA-256
-`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
+The values below were re-read from Steam build `25191271`.
 They are version-bound and require revalidation after the executable
 fingerprint changes.
 

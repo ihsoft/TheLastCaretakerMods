@@ -44,7 +44,6 @@ if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
 }
 
 $version = (Get-Item -LiteralPath $exe).VersionInfo.ProductVersion
-$exeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash
 $steamApps = Split-Path -Parent (Split-Path -Parent $root)
 $steamManifest = Join-Path $steamApps 'appmanifest_1783560.acf'
 $steamBuildId = 'unknown'
@@ -64,8 +63,7 @@ if ($MappingsPath) {
     & $testMappingsScript `
         -MappingsPath $MappingsPath `
         -ManifestPath $mappingsManifestPath `
-        -ExpectedSteamBuildId $steamBuildId `
-        -ExpectedExecutableSha256 $exeHash | Out-Null
+        -ExpectedSteamBuildId $steamBuildId | Out-Null
 }
 elseif (-not $Query.StartsWith('list:', [StringComparison]::OrdinalIgnoreCase)) {
     $resolvedMappings = & $getMappingsScript -GameRoot $GameRoot
@@ -99,7 +97,7 @@ if ($Source -eq 'Mod') {
     $sourceIdentity = 'mod-' + $sourceLocation + '-' + $selectedModItem.BaseName +
         '-' + $selectedMod.sha256.Substring(0, 12)
 }
-$buildId = "steam-$steamBuildId-$($exeHash.Substring(0, 12))-$sourceIdentity"
+$buildId = "steam-$steamBuildId-$sourceIdentity"
 $querySafe = ($Query -replace '[^A-Za-z0-9._-]', '_').Trim('_')
 if (-not $querySafe) {
     $querySafe = 'query'
@@ -184,7 +182,6 @@ $manifest = [ordered]@{
     steamAppId = '1783560'
     steamBuildId = $steamBuildId
     gameVersion = $version
-    executableSha256 = $exeHash
     query = $Query
     mappingsPath = $MappingsPath
     mappingsManifestPath = $mappingsManifestPath

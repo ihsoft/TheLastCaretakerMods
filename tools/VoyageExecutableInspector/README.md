@@ -15,7 +15,7 @@ stored as wide literals next to their native function tables.
   -WindowBytes 8192
 ```
 
-Treat offsets as version-specific. Always record the executable hash beside
+Treat offsets as version-specific. Record the Steam build ID beside
 any stable conclusion derived from this output.
 
 Use `--target-va` to find absolute pointers and common RIP-relative code reads

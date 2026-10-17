@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "game": {
+    "steamBuildId": "25191271",
+    "reviewedMappingEngineVersion": "5.8"
+  },
+  "producer": {
+    "engineVersion": "5.8.2",
+    "engineRoot": "K:/Epic Games/UE_5.8"
+  },
+  "parser": {
+    "engineVersion": "5.8",
+    "uassetApiEngineVersion": "VER_UE5_8",
+    "mappingSha256": "E25620FB2D0674B26A3E4EF059AC2C5AF58E28CE1B4F07307860F7FADB9A0F68"
+  },
+  "authoredComposition": {
+    "path": "K:/Downloads/_NewConcept/SampleModels/Pallet-4x-LargeBoxes.glb",
+    "sha256": "CA7DE5B5014F9A6E551EDB79C4E8DF2A1917E9068CD48D42A6FC0A1FB08AD472",
+    "slots": [
+      { "node": "PlayerBox1", "gltfTranslationMetersYUp": [0.6069177985191345, 0.5092664957046509, 0.5706093311309814], "palletLocalTranslationCentimeters": [60.6917798519, 57.0609331131, 50.9266495705], "palletLocalRotationDegrees": [0.0, 0.0, 0.0] },
+      { "node": "PlayerBox2", "gltfTranslationMetersYUp": [0.6069177985191345, 0.5092664957046509, -0.5955998301506042], "palletLocalTranslationCentimeters": [60.6917798519, -59.5599830151, 50.9266495705], "palletLocalRotationDegrees": [0.0, 0.0, 0.0] },
+      { "node": "PlayerBox3", "gltfTranslationMetersYUp": [-0.5924485325813293, 0.5092664957046509, -0.5955998301506042], "palletLocalTranslationCentimeters": [-59.2448532581, -59.5599830151, 50.9266495705], "palletLocalRotationDegrees": [0.0, 0.0, 0.0] },
+      { "node": "PlayerBox4", "gltfTranslationMetersYUp": [-0.5924485325813293, 0.5092664957046509, 0.5706093311309814], "palletLocalTranslationCentimeters": [-59.2448532581, 57.0609331131, 50.9266495705], "palletLocalRotationDegrees": [0.0, 0.0, 0.0] }
+    ],
+    "conversion": "UE cm -> glTF m is (UE.X, UE.Z, UE.Y) * 0.01"
+  },
+  "assets": {
+    "generator": "/Game/Mods/PalletContainerSnap/BP_CraftingLocationGenerator_PalletContainerSnap",
+    "container": "/Game/Mods/PalletContainerSnap/BP_Inventory_PalletContainerSnap",
+    "item": "/Game/Data/Assets/Items/PalletContainerSnap/DA_Item_PalletSnapCanary",
+    "skill": "/Game/Data/Assets/Skill/PalletContainerSnap/DA_Skill_PalletSnapCanary"
+  },
+  "recipe": {
+    "itemDisplayName": "Pallet Snap Canary FortiHold",
+    "skillDisplayName": "Pallet Snap Canary Recipe",
+    "unlockMethod": "Tier",
+    "requirement": 11,
+    "cost": 0,
+    "component": "/Game/Data/Assets/Parts/DA_Part_AlloyFrame",
+    "componentCount": 1,
+    "craftFilter": 9,
+    "craftTimeSeconds": 1.0,
+    "craftElectricityCost": 0.0,
+    "stockReference": {
+      "skill": "/Game/Data/Assets/Skill/Utility/Containers/DA_Skill_Engineering_FortiHold_Storage_Container",
+      "jsonSha256": "8486ED1F137F83528D8B3B680C80BCCFEBF83BF5DD75DDD52A6B200D5514ECBC",
+      "unlockMethod": "Tier",
+      "requirement": 11,
+      "item": "/Game/Data/Assets/Items/DA_Item_PlayerBoxLarge"
+    }
+  },
+  "release": {
+    "artifactVersion": "0.6-canary-four-slot-snap-mode",
+    "archiveName": "PalletContainerSnap_0.6-canary-four-slot-snap-mode.zip"
+  },
+  "validationExperiment": {
+    "kind": "diagnostic single-variable discriminator",
+    "guard": "exact stock pallet attachment component owner",
+    "temporaryFlag": "IgnoreNoFabrication",
+    "temporaryValue": true,
+    "restore": "snapshot before mutation and restore immediately after parent ValidateLocation",
+    "bypassedChecks": [
+      "target hierarchy NoFabrication without component AllowFabrication",
+      "overlap hierarchy NoFabrication"
+    ],
+    "preservedChecks": [
+      "skeletal mesh overlap",
+      "cable overlap",
+      "collision object and response filtering",
+      "physics collision",
+      "bottom support",
+      "water",
+      "surface presence"
+    ]
+  },
+  "checkOriginExperiment": {
+    "kind": "diagnostic single-input correction",
+    "guard": "exact stock pallet hit actor",
+    "formula": "AuthoredSlotWorld + PalletActorWorldUpUnit * PlacementComponent.CheckOffset",
+    "replaces": "parent hover-derived CheckLocation minus PlacementLocation delta",
+    "preserved": "authored slot, rotation, attachment target, inherited support/overlap/water/surface checks and collision filters"
+  },
+  "palletSupportExperiment": {
+    "kind": "exact-pallet placement support policy canary",
+    "guard": "blocking Out Hit on exact stock pallet with valid HitComponent reference-equal to AttachToComponent",
+    "acceptedSupport": "fresh blocking pallet target plus owned snapped-slot or hit-based free placement",
+    "truePath": "preserve the complete Setup-produced Out Hit without writes",
+    "fallback": "exact parent ValidateBottomAlignment",
+    "preserved": "overlap, water, surface policy, occupancy hypothesis, attachment target, collision filters and outside-pallet support validation"
+  },
+  "placementModes": {
+    "state": "BP_FabricationPlacementComponent.AngularGranularity_Last Double equals 0.0",
+    "enabled": "nearest squared world distance from fresh Out Hit.ImpactPoint to four pallet-transformed authored slots; strict ties keep array order; pallet-relative identity rotation",
+    "disabled": "CalculateOffset(Out Hit.ImpactPoint, Out Hit.ImpactNormal, Offset) without TransformToGridFunc positional output; preserve parent PlacementRotation",
+    "checkLocation": "selected world placement plus pallet unit world-up times live PlacementComponent.CheckOffset",
+    "occupancy": "nearest slot is selected regardless occupied; inherited local physical overlap decides rejection"
+  },
+  "humanSeedRuntimeExperiment": {
+    "artifactVersion": "0.14-canary-seed-item-name",
+    "item": "/Game/Data/Assets/Consumables/DA_HumanSeed",
+    "generator": "/Game/Mods/PalletContainerSnap/BP_CraftingLocationGenerator_HumanSeedPalletSnap",
+    "placeEnablement": "once-per-world SetBoolPropertyByName bAllowPlacement=true; void dispatch is not success",
+    "surface": "exact recognized pallet PrimitiveComponent K2_LineTraceComponent along pallet world-up at selected authored XY",
+    "surfaceTraceHalfLengthCentimeters": 100.0,
+    "height": "BP_FabricationPlacementComponent.CalculateLocalMinimumZ then CalculateOffset(Point, Normal, 0)",
+    "snapEnabled": "same four authored XY cells; trace height projected along pallet world-up so trace cannot shift XY",
+    "snapDisabled": "raw fresh ImpactPoint and ImpactNormal; preserve inherited player rotation",
+    "fallback": "exact stock Default SetupLocation result when target, component, preview components, or surface trace gate fails",
+    "testSpawn": {
+      "actor": "/Game/Mods/PalletContainerSnap/BP_Item_HumanSeed_PlaceDiagnostic",
+      "parentActor": "/Game/Blueprints/Items/HumanGrow/BP_Item_HumanSeed",
+      "interface": "/Script/Voyage.VoyageItemInterface",
+      "getItem": "/Game/Data/Assets/Consumables/DA_HumanSeed",
+      "trigger": "F6 Pressed",
+      "forwardOffsetCentimeters": 200.0,
+      "upOffsetCentimeters": 100.0,
+      "collisionHandling": "AdjustIfPossibleButDontSpawnIfColliding",
+      "policy": "one actor per manual Pressed event; no repeat, polling, automatic retry, scan, or world-load spawn"
+    },
+    "placeDiagnostic": {
+      "storedActor": "strong reflected LastSpawnedHumanSeed reference assigned only after a valid F6 spawn",
+      "inspectTrigger": "F7 Pressed",
+      "inspectStates": "no saved actor, no VoyageItemInterface, null GetItem, exact DA_HumanSeed, or other item; actor and non-null item object paths plus friendly non-identity class display names are shown",
+      "placeTrigger": "F9 Pressed",
+      "placeTarget": "/Game/Blueprints/BP_FirstPersonCharacter_New.BP_FirstPersonCharacter_New_C:Place(Actor Source, Controller Controller) -> bool",
+      "userPrecondition": "press F9 only while holding the saved F6 Human Seed; no held-state accessor is invented",
+      "meaning": "Place return is dispatch-only; preview and the owned Seed generator callback are the downstream evidence",
+      "excluded": "no Bool readback, action injection, confirmation, scan, polling, Pod mutation, common Place patch, or stock package override"
+    }
+  },
+  "ownedRegistryMetadata": {
+    "kind": "user-approved owned canary metadata design",
+    "policyPath": "Registry/pallet-container-snap-registry-policy.json",
+    "itemObjectPath": "/Game/Data/Assets/Items/PalletContainerSnap/DA_Item_PalletSnapCanary.DA_Item_PalletSnapCanary",
+    "bIsDestructible": false,
+    "bIsRepairable": false,
+    "quality": "Poor",
+    "tag": "None"
+  },
+  "runtimeStatus": "not-run",
+  "revalidateWhen": "The Steam build ID, authored GLB hash, stock pallet/container geometry or defaults, exporter axis convention, or serialized mirror contract changes."
+}

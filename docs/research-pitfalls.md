@@ -341,7 +341,7 @@ native-коллекций само по себе не объясняет сбо�
   Ложный automatic `GUObjectArray` resolver для Voyage UE 5.8 создал корректный
   по заголовку 28-байтовый USMAP с нулевым payload, тогда как полный manual dump
   имел размер 2,141,952 байта. Любой parser workflow обязан проверять manifest,
-  fingerprint, hash, payload size и несколько обязательных schema names до
+  Steam build ID, хеш маппинга, payload size и несколько обязательных schema names до
   чтения asset. Даже текущий jmap с исправленным UE 5.6+ `MinAlignment`
   повторил ложный automatic result; только structural `.data` scan и явный
   `GUObjectArray` дали полный dump, байт-в-байт совпавший с прежним. Но одного

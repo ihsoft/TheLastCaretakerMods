@@ -2,11 +2,10 @@
 
 ## Stock aiming and input integration boundaries
 
-The following native contracts were inspected on Steam build `25956314`, EXE
-SHA-256 `0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`.
+The following native contracts were inspected on Steam build `25956314`.
 Railgun uses these contracts for stock actions, mapping-context lifecycle and
 ADS processing. Controller hardware behavior remains unverified. Revalidate
-native contracts when the executable changes. Reusable input integration rules
+native contracts when the Steam build ID changes. Reusable input integration rules
 live in [Voyage input integration](../../docs/voyage-input-integration.md).
 
 Each shell clones the live character and vehicle context assets and their
@@ -605,8 +604,6 @@ readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field.
 
 - Steam build: `25956314`; parser profile: `UE5_8`; authoring editor: `5.8.2`.
-- Executable SHA-256:
-  `0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`.
 - Versioned release ZIPs live in `Voyage/Content/Paks/`. Ignored installation
   manifests under `artifacts/installations/Railgun/` identify exact installed
   hashes and rollback material; neither is a source dependency for rebuilding.

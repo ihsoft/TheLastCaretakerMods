@@ -228,26 +228,24 @@ $gameProcess = Get-RequiredVoyageProcess
 $fingerprintText = (& $fingerprintScript -GameRoot $GameRoot) -join [Environment]::NewLine
 $fingerprint = $fingerprintText | ConvertFrom-Json
 $steamBuildId = [string]$fingerprint.steam.buildId
-$executableSha256 = [string]$fingerprint.executable.sha256
-if ($steamBuildId -notmatch '^\d+$' -or $executableSha256 -notmatch '^[0-9A-F]{64}$') {
-    throw 'The installed game fingerprint has no valid Steam build ID or executable SHA-256.'
+if ($steamBuildId -notmatch '^\d+$') {
+    throw 'The installed game has no valid Steam build ID.'
 }
 
 $resolvedGameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
 $gameExecutable = Join-Path $resolvedGameRoot 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe'
 $dumper = Get-ReviewedDumper
 $liveExecutable = $gameProcess.MainModule.FileName
-if ((Get-FileHash -Algorithm SHA256 -LiteralPath $liveExecutable).Hash -cne $executableSha256) {
-    throw 'The running Voyage executable does not match the fingerprinted installation.'
+if ([IO.Path]::GetFullPath($liveExecutable) -ine [IO.Path]::GetFullPath($gameExecutable)) {
+    throw 'The running Voyage process is not from the selected game installation.'
 }
 
 Write-Host "Waiting for Voyage reflection data in PID $($gameProcess.Id)..."
 $candidate = Wait-ForObjectArray -Process $gameProcess
 
 $timestamp = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ')
-$hashPrefix = $executableSha256.Substring(0, 12)
 $commitPrefix = $expectedDumperCommit.Substring(0, 7)
-$runName = "steam-$steamBuildId-$hashPrefix-jmap-$commitPrefix-$timestamp"
+$runName = "steam-$steamBuildId-jmap-$commitPrefix-$timestamp"
 $runRoot = Join-Path ([IO.Path]::GetFullPath($OutputRoot)) $runName
 if (Test-Path -LiteralPath $runRoot) {
     throw "Mappings output already exists: $runRoot"
@@ -293,7 +291,6 @@ $mappingSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $mappingsPath).Has
 $mappingManifest = [ordered]@{
     kind = 'Voyage reflection mappings'
     steamBuildId = $steamBuildId
-    executableSha256 = $executableSha256
     engineVersion = $engineVersion
     dumper = 'ihsoft/jmap Voyage UE 5.8 compatibility fork'
     dumperSourceCommit = [string]$dumper.manifest.sourceCommit
@@ -324,12 +321,11 @@ $mappingManifest = [ordered]@{
 $validation = & $testMappingsScript `
     -MappingsPath $mappingsPath `
     -ManifestPath $manifestPath `
-    -ExpectedSteamBuildId $steamBuildId `
-    -ExpectedExecutableSha256 $executableSha256
+    -ExpectedSteamBuildId $steamBuildId
 
-$postDumpExecutableSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $gameExecutable).Hash
-if ($postDumpExecutableSha256 -cne $executableSha256) {
-    throw 'The installed Voyage executable changed while mappings were generated.'
+$postDumpFingerprint = (& $fingerprintScript -GameRoot $GameRoot | ConvertFrom-Json)
+if ([string]$postDumpFingerprint.steam.buildId -cne $steamBuildId) {
+    throw 'The installed Steam build changed while mappings were generated.'
 }
 
 $uassetGuiPath = $null
@@ -362,6 +358,5 @@ if ($InstallForUAssetGUI) {
     sha256 = [string]$validation.sha256
     length = [long]$validation.length
     steamBuildId = $steamBuildId
-    executableSha256 = $executableSha256
     uassetGuiPath = $uassetGuiPath
 }

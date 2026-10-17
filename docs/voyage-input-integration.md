@@ -84,8 +84,7 @@ Validate remapping, settings changes, repeated possession and release, and
 device switching as distinct behaviors. A successful keyboard test alone does
 not exercise a gamepad's axis modifiers or device-change lifecycle.
 
-Native APIs described here were inspected on Steam build `25956314`, UE 5.8,
-EXE SHA-256 `0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`.
-Revalidate native identities and lifecycle contracts on an executable change.
+Native APIs described here were inspected on Steam build `25956314`, UE 5.8.
+Revalidate game-specific identities and lifecycle contracts on a Steam build change.
 The [Railgun architecture](../mods/Railgun/ARCHITECTURE.md) owns its concrete
 station, filtered-context constraints and equipment implementation.

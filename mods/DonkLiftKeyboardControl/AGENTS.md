@@ -32,7 +32,7 @@ contract and workflow detail.
   because Steam published a new game build.
 - `GAME_DERIVED_SOURCES.md` is a hard build gate. Before generation, cook, or
   packaging, run `../../tools/Get-VoyageBuildFingerprint.ps1` and compare the
-  Steam build ID and executable SHA-256.
+  Steam build ID.
 - A fingerprint mismatch invalidates all hand-reconstructed Voyage headers,
   embedded generator contracts, action/mapping assumptions, package paths,
   relocation assertions, original Blueprint snapshots, mappings, and
@@ -149,7 +149,7 @@ contract and workflow detail.
   in `release-manifest.json`. Publication screenshots under `Slideshow` are not
   runtime source and are excluded from this gate.
 - `-OriginalsRoot` may reuse only an explicit clean extraction whose manifest
-  matches the current build/hash, canonical filter, and
+  matches the current Steam build ID, canonical filter, and
   `allowAdditionalContainers=false`. The package builder repeats these checks.
 - Build `VoyageEditor` with Unreal Engine 5.8.2 and `-NoUBA`.
 - Run commandlets with `-ddc=NoZenLocalFallback` and a workspace-local

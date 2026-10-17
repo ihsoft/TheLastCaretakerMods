@@ -1,11 +1,10 @@
 #pragma once
 
 // Editor-only identity mirror, not a shipped native implementation.
-// Voyage Steam 25056839 / UE5.8.1, executable SHA256
-// CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933.
+// Voyage Steam 25056839 / UE5.8.1.
 // Hand-reconstructed from reviewed reflection/Empty-map inspection; inherited
 // from the owned test14 generator. Evidence is in README, Current game API evidence.
-// Revalidate class/property identities and map defaults after fingerprint change.
+// Revalidate class/property identities and map defaults after Steam build ID change.
 
 #include "CoreMinimal.h"
 #include "GameFramework/WorldSettings.h"

@@ -7,8 +7,7 @@ version-specific reports remain under ignored `artifacts/`.
 ## Observed data path
 
 The original producer result from Steam build `24990438` was structurally
-revalidated on build `25056839`, executable SHA-256
-`CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`.
+revalidated on build `25056839`.
 `BP_Boat_Base` loads `/Game/Maps/Boats/TestBoat` through its
 `VoyageLevelInstanceComponent`. The level contains a real
 `BP_Module_Battery` and a real `BP_Module_Diesel_Container`; the large side
@@ -76,8 +75,7 @@ text or action data.
 
 ## External socket registration
 
-This section applies to Steam build `25191271`, executable SHA-256
-`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
+This section applies to Steam build `25191271`.
 It does not update the separate HUD contracts' version boundary above.
 
 The Boat's `VoyageLevelInstanceComponent.OwnedActors` contains its built-in

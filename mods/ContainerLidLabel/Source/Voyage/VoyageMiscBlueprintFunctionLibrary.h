@@ -1,6 +1,5 @@
 // EDITOR-ONLY IDENTITY MIRROR for Steam build 25929985 (UE 5.8).
-// Executable SHA-256: 608A4BCD1A0A392477970F455234571946D061E61C1D27F82DE9589EBBA3D69F
-// Reconstructed from current native metadata; revalidate when the executable fingerprint changes.
+// Reconstructed from current native metadata; revalidate when the Steam build ID changes.
 // Runtime implementation is supplied by Voyage; never ship this module.
 
 #pragma once

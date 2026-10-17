@@ -1,8 +1,7 @@
 // SHELL-ONLY mirror revalidated for Steam25191271 / UE5.8 parser target.
-// Executable 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
 // Method: reviewed mappings plus the DieselGenerators v5.5 fabricator-component
 // defaults. Railgun references only the three named tagged properties below.
-// Revalidate on fingerprint change.
+// Revalidate on Steam build ID change.
 
 #pragma once
 

@@ -1,6 +1,5 @@
 // HAND-WRITTEN BUILD TOOL SOURCE: additive Electrified Boat generator.
-// Contracts were revalidated for Steam build 25880952 / executable SHA-256
-// 16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44.
+// Contracts were revalidated for Steam build 25880952.
 // The generator and Voyage mirrors are editor-only and never ship.
 
 #include "GenerateElectrifiedBoatCommandlet.h"

@@ -21,8 +21,7 @@ consumer of each layer separately.
 
 ## Actor attachment and save restoration
 
-On Steam build `25191271` (executable SHA-256
-`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`),
+On Steam build `25191271`,
 `VoyagePersistentSubsystem` exposes two Blueprint-assignable lifecycle events:
 
 - `OnActorAttached(AActor* Child, USceneComponent* ParentComponent)` is

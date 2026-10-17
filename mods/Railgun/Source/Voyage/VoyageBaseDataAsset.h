@@ -1,9 +1,8 @@
 #pragma once
-// READ-ONLY editor prefix: Steam25191271 / UE5.8, executable
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+// READ-ONLY editor prefix: Steam25191271 / UE5.8.
 // Public mappings: Type0, Name1, Description2. Railgun serializes only named
 // tagged properties from this reviewed prefix.
-// ../../ARCHITECTURE.md owns revalidation on fingerprint change.
+// ../../ARCHITECTURE.md owns revalidation on Steam build ID change.
 // Runtime module identity is required during cook; the game supplies this class.
 #include "Engine/DataAsset.h"
 #include "UObject/PrimaryAssetId.h"

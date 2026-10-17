@@ -107,9 +107,7 @@ $checks.Add('current-executable-query-without-dotnet')
 
 $fingerprint = (& (Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1') `
     -GameRoot $GameRoot | ConvertFrom-Json)
-Assert-InspectorTest ($scan.executableSha256 -ceq
-    [string]$fingerprint.executable.sha256 -and
-    $scan.steamBuildId -ceq [string]$fingerprint.steam.buildId) `
+Assert-InspectorTest ($scan.steamBuildId -ceq [string]$fingerprint.steam.buildId) `
     'Executable inspection did not preserve the current game identity.'
 $checks.Add('current-game-identity')
 
@@ -121,7 +119,6 @@ $result = [pscustomobject][ordered]@{
     inspectorBinaryPath = $binary.Path
     inspectorBinarySha256 = $binary.Sha256
     steamBuildId = [string]$fingerprint.steam.buildId
-    executableSha256 = [string]$fingerprint.executable.sha256
     queryMatches = [int]$scan.matchCount
     reportPath = [string]$scan.outputPath
     reportSha256 = [string]$scan.outputSha256

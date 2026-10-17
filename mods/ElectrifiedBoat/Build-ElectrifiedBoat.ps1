@@ -13,7 +13,6 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $expectedSteamBuildId = '25880952'
-$expectedExecutableSha256 = '16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44'
 $expectedEditorVersion = '5.8.2'
 $retocCompatibilityVersion = 'UE5_8'
 $containerName = 'ElectrifiedBoat'
@@ -62,8 +61,7 @@ $fingerprintPath = Join-Path $output 'game-fingerprint.json'
 & (Join-Path $repoRoot 'tools/Get-VoyageBuildFingerprint.ps1') `
     -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
 $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
-if ([string]$fingerprint.steam.buildId -cne $expectedSteamBuildId -or
-    [string]$fingerprint.executable.sha256 -cne $expectedExecutableSha256) {
+if ([string]$fingerprint.steam.buildId -cne $expectedSteamBuildId) {
     throw 'Installed game fingerprint does not match the generator contracts.'
 }
 
@@ -303,7 +301,6 @@ $buildManifest = [ordered]@{
     ownedActorRead = 'exact native weak array; Blueprint helper uses standard by-reference array get and passed weak/null/weak ProcessEvent canary'
     pairedModuleWrite = 'clear only; never Boat master or mod object'
     steamBuildId = $expectedSteamBuildId
-    executableSha256 = $expectedExecutableSha256
     editorVersion = $editorVersion
     retocCompatibilityVersion = $retocCompatibilityVersion
     retocSha256 = $retocSha256

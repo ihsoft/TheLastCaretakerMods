@@ -85,7 +85,6 @@ $selectedRecords = @($selected | ForEach-Object {
 })
 
 $version = (Get-Item -LiteralPath $exe).VersionInfo.ProductVersion
-$exeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash
 $steamApps = Split-Path -Parent (Split-Path -Parent $root)
 $steamManifest = Join-Path $steamApps 'appmanifest_1783560.acf'
 $steamBuildId = 'unknown'
@@ -95,7 +94,7 @@ if (Test-Path -LiteralPath $steamManifest -PathType Leaf) {
         $steamBuildId = $buildMatch.Groups['id'].Value
     }
 }
-$buildId = "steam-$steamBuildId-$($exeHash.Substring(0, 12))"
+$buildId = "steam-$steamBuildId"
 $filterSafe = ($Filter -replace '[^A-Za-z0-9._-]', '_').Trim('_')
 if (-not $filterSafe) {
     $filterSafe = 'query'
@@ -143,7 +142,6 @@ $manifest = [ordered]@{
     steamAppId = '1783560'
     steamBuildId = $steamBuildId
     gameVersion = $version
-    executableSha256 = $exeHash
     retocEngineVersion = $RetocEngineVersion
     retocPath = $retocPath
     retocSha256 = $retocSha256

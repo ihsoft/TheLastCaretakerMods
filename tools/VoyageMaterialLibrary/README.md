@@ -184,8 +184,8 @@ hashes and dimensions are validated independently.
 ## What is transferred
 
 - CUE4Parse reads inherited parameters, scalar/vector overrides, switches and
-  referenced textures from stock containers only. Game, mapping and tool hashes
-  gate the operation. The GLB also records source identities, parent chains,
+  referenced textures from stock containers only. Steam build ID and mapping
+  integrity gate the operation. The GLB also records source identities, parent chains,
   extracted parameters, approximation warnings and texture provenance in extras.
 - In `PbrApproximation`, CUE4Parse-Conversion/AssetRipper decodes only selected Texture2D dependencies.
   **Every embedded PNG must be used by an exported material.** Unknown,

@@ -40,9 +40,7 @@ be described simply as world-space height.
 ## Validated evidence
 
 The accepted feature checkpoint is
-`604fe6fdf3b202623c3126efb9c8f57de9617a6d`, from Steam build `25056839` with
-executable SHA256
-`CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`.
+`604fe6fdf3b202623c3126efb9c8f57de9617a6d`, from Steam build `25056839`.
 
 Method: fresh stock JSON and package extraction through
 `Get-VoyageAssetJson.ps1` and `Extract-VoyagePackage.ps1`, guarded byte patch,

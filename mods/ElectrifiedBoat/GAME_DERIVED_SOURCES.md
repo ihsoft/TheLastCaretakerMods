@@ -7,11 +7,9 @@ remain in ignored storage and are not source inputs.
 ## Version gate
 
 - Steam build ID: `25880952`
-- executable SHA-256:
-  `16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44`
 - Unreal family: `5.8`; generating editor: `5.8.2`
 - revalidate all reflected identities, bytecode assumptions, and cooked imports
-  after any fingerprint change
+  after a Steam build ID change
 
 ## Stock identities and lifecycle
 

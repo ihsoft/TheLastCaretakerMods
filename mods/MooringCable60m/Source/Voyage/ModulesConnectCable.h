@@ -1,6 +1,5 @@
 #pragma once
 // Editor-only mirror, never shipped as a DLL. Steam 25956314, UE 5.8,
-// EXE SHA-256 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
 // Method: reviewed reflection mappings and stock cable/socket JSON.
 // On a new build, use the producer's fresh-stock gates and a game test;
 // investigate names/types/ownership if either fails. No binary layout claim.

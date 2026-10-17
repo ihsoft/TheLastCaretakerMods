@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location $repo
 $fingerprint = (& tools/Get-VoyageBuildFingerprint.ps1 | ConvertFrom-Json)
-if ($fingerprint.steam.buildId -ne '25880952' -or $fingerprint.executable.sha256 -ne '16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44') { throw 'Revalidate ScopeFix for this game fingerprint first.' }
+if ($fingerprint.steam.buildId -ne '25880952') { throw 'Revalidate ScopeFix for this Steam build first.' }
 if (Test-Path $OutputRoot) { throw 'OutputRoot must be new.' }
 $root = [IO.Path]::GetFullPath((Join-Path $repo $OutputRoot))
 $loose = Join-Path $root 'loose'

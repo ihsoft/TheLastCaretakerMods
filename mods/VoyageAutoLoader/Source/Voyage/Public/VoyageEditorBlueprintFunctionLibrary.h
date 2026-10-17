@@ -1,10 +1,9 @@
 #pragma once
 
 // Editor-only identity mirror, never shipped as native code.
-// Voyage Steam 25056839 / UE 5.8.1, executable SHA256
-// CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933.
+// Voyage Steam 25056839 / UE 5.8.1.
 // Reconstructed from canonical jmap live reflection (2026-09-05).
-// Revalidate owner, parameter types/flags and return type after fingerprint change.
+// Revalidate owner, parameter types/flags and return type after Steam build ID change.
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "VoyageEditorBlueprintFunctionLibrary.generated.h"
 

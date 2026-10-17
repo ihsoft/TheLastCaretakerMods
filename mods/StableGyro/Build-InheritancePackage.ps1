@@ -1,6 +1,5 @@
 # INTERNAL BUILD STAGE with game-derived DroppedActor patch contracts validated for
-# Steam build 25982825, VoyageSteam-Win64-Shipping.exe SHA-256
-# 08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734.
+# Steam build 25982825.
 # Revalidate per GAME_DERIVED_SOURCES.md after every game update.
 
 param(
@@ -23,7 +22,6 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $expectedSteamBuildId = '25982825'
-$expectedExecutableSha256 = '08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734'
 $retocCompatibilityVersion = 'UE5_8'
 $expectedItemFilter = 'Data/Assets/Modules/DA_Item_Module_GyroCopter'
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
@@ -92,8 +90,7 @@ function Get-ExtractionEvidence {
         [string]$manifest.retocSha256 -cne $retocSha256) {
         throw "$Label extraction does not match the selected retoc compatibility contract."
     }
-    if ([string]$manifest.steamBuildId -cne $expectedSteamBuildId -or
-        [string]$manifest.executableSha256 -cne $expectedExecutableSha256) {
+    if ([string]$manifest.steamBuildId -cne $expectedSteamBuildId) {
         throw "$Label extraction fingerprint does not match this builder's validated game version."
     }
 

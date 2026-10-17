@@ -1,17 +1,13 @@
 # Game-derived source and build inputs
 
-## Fingerprint gate
+## Game-build gate
 
 - Steam build: 25982825
-- Unreal Editor: 5.8.2
 - Unreal parser target: 5.8
-- VoyageSteam-Win64-Shipping.exe SHA-256:
-  08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734
 
-Run tools/Get-VoyageBuildFingerprint.ps1 before every generation or package
-build. A mismatch invalidates the current-fingerprint contracts below and
-requires the producer to re-extract its stock inputs; historical findings retain
-only their explicitly named fingerprint.
+The producer checks the Steam build ID while extracting current stock inputs.
+A different build ID requires revalidation of the asset contracts below;
+historical findings retain only their explicitly named build.
 
 ## Game contracts
 
@@ -39,8 +35,7 @@ sources establish:
   `Collective`, and `HoverPitchScale`, plus bool `bEngineRunning`,
   `bAutoHoverCollective`, and `bAltitudeAssist`, on
   `/Script/Voyage.VoyageVehicleGyroCopter`;
-- Steam build `25956314`, executable SHA-256
-  `0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`,
+- Steam build `25956314`
   established the protected Blueprint-readable SaveGame flags for
   `PropellerVelocity`, `CurrentThrottle`, `bEngineRunning`, `Collective`, and
   `HoverPitchScale`, the public Blueprint-readonly non-SaveGame flags for
@@ -92,8 +87,7 @@ sources establish:
 
 ## Historical native context
 
-Steam build `25880952`, executable SHA-256
-`16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44`,
+Steam build `25880952`
 established that native forward input targets
 `TiltForwardAngle * TiltForwardInput` in `CommandedTilt`; normalized rotation
 interpolation uses `DeltaSeconds * TiltInterpSpeed`. The native control pass

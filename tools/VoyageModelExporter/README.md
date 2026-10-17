@@ -128,8 +128,7 @@ source/binary manifest. The normal wrapper validates those hashes, current game
 fingerprint and reviewed UE 5.8 mapping before mounting stock containers only.
 
 Validated real sample: `/Game/Blueprints/Modules/Utility/BP_Module_Fabricator`
-on Steam build `25191271`, executable SHA-256
-`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
+on Steam build `25191271`.
 It produced 39 nodes, 13 mesh instances from 11 unique meshes, 19,657 triangles,
 14 used materials and 20 images with zero texture failures. Structural readback
 and Blender 5.2.2 import/render passed. This validates the bounded static/default

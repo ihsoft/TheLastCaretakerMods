@@ -15,9 +15,7 @@ is closed; additional container features require their own scope.
 
 ## Version-bound contracts
 
-These findings were inspected on Steam build `25880952`, Unreal Engine 5.8,
-executable SHA-256
-`16D0726AF6545CDFCCC2722444DB4DAD7236B93514368E8FE4758171E758EF44`.
+These findings were inspected on Steam build `25880952`, Unreal Engine 5.8.
 A changed fingerprint requires revalidation before reusing the reconstructed
 native mirrors, Blueprint contracts or relocated stock parent.
 

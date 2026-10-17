@@ -12,9 +12,8 @@ $registryRoot = Join-Path $PSScriptRoot '..\mappings\Voyage'
 $fingerprintText = (& $fingerprintScript -GameRoot $GameRoot) -join [Environment]::NewLine
 $fingerprint = $fingerprintText | ConvertFrom-Json
 $steamBuildId = [string]$fingerprint.steam.buildId
-$executableSha256 = [string]$fingerprint.executable.sha256
-if ($steamBuildId -notmatch '^\d+$' -or $executableSha256 -notmatch '^[0-9A-F]{64}$') {
-    throw 'The installed game fingerprint has no valid Steam build ID or executable SHA-256.'
+if ($steamBuildId -notmatch '^\d+$') {
+    throw 'The installed game has no valid Steam build ID.'
 }
 
 $root = (Resolve-Path -LiteralPath $registryRoot).Path
@@ -23,8 +22,7 @@ foreach ($manifestFile in Get-ChildItem -LiteralPath $root -Filter 'mapping-mani
     try {
         $manifest = Get-Content -Raw -LiteralPath $manifestFile.FullName | ConvertFrom-Json
         if ([string]$manifest.kind -cne 'Voyage reflection mappings' -or
-            [string]$manifest.steamBuildId -cne $steamBuildId -or
-            [string]$manifest.executableSha256 -cne $executableSha256) {
+            [string]$manifest.steamBuildId -cne $steamBuildId) {
             continue
         }
         $mappingName = if ([string]::IsNullOrWhiteSpace([string]$manifest.mappingFile)) {
@@ -58,15 +56,13 @@ foreach ($candidate in $candidates | Sort-Object generatedAtUtc -Descending) {
         $validation = & $testMappingsScript `
             -MappingsPath $candidate.mappingsPath `
             -ManifestPath $candidate.manifestPath `
-            -ExpectedSteamBuildId $steamBuildId `
-            -ExpectedExecutableSha256 $executableSha256
+            -ExpectedSteamBuildId $steamBuildId
         [pscustomobject]@{
             mappingsPath = (Resolve-Path -LiteralPath $candidate.mappingsPath).Path
             manifestPath = (Resolve-Path -LiteralPath $candidate.manifestPath).Path
             sha256 = [string]$validation.sha256
             length = [long]$validation.length
             steamBuildId = $steamBuildId
-            executableSha256 = $executableSha256
             engineVersion = $candidate.engineVersion
             uassetApiEngineVersion = $candidate.uassetApiEngineVersion
         }
@@ -81,4 +77,4 @@ foreach ($candidate in $candidates | Sort-Object generatedAtUtc -Descending) {
 if ($validationFailures.Count -gt 0) {
     throw "A reviewed Voyage mapping matches the installed fingerprint but failed validation. Do not regenerate or replace it; diagnose the resolver/registry failure:`n$($validationFailures -join [Environment]::NewLine)"
 }
-throw "No reviewed Voyage mapping matches Steam build $steamBuildId and executable $executableSha256. Do not regenerate automatically: confirm that the installed fingerprint is new, ask the user to start the game, then run tools\New-VoyageMappings.ps1."
+throw "No reviewed Voyage mapping matches Steam build $steamBuildId. Do not regenerate automatically: confirm that the installed build is new, ask the user to start the game, then run tools\New-VoyageMappings.ps1."

@@ -1,5 +1,5 @@
 #pragma once
-// Steam25827816 / UE5.8; exact fingerprint and method in ../../ARCHITECTURE.md.
+// Steam25827816 / UE5.8; exact Steam build ID and method in ../../ARCHITECTURE.md.
 // Identity-only SceneComponent mirror for TAGGED SCS authoring. The game owns
 // all 20 native properties and constructor defaults (InteractType=Direct).
 // Never serialize guessed native fields or use this as a complete native ABI.

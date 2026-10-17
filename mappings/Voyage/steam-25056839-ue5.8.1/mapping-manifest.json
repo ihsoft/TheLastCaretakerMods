@@ -6,7 +6,7 @@
   "steamBuildId": "25056839",
   "executableName": "VoyageSteam-Win64-Shipping.exe",
   "executableLength": 198655048,
-  "executableSha256": "CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933",
+
   "gameEngineVersion": "5.8.1",
   "engineVersion": "5.8",
   "uassetApiEngineVersion": "VER_UE5_8",
@@ -23,5 +23,5 @@
     "uassetGuiStress": "1067 attempted; 1057 clean, 10 reviewed notices, 0 failures; every package binary-equal",
     "changedSaveCanary": "/Game/Blueprints/Equipment/ToolAbilities/BP_ToolAbility_Maintenance_Dismantle loaded in Voyage and applied Duration = 1"
   },
-  "revalidateWhen": "Steam build ID or VoyageSteam-Win64-Shipping.exe SHA-256 changes"
+  "revalidateWhen": "Steam build ID changes"
 }

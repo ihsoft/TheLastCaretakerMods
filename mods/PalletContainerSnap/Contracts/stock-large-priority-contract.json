@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "artifactVersion": "0.8-canary-stock-large-priority",
+  "containerStem": "PalletContainerSnap_P",
+  "baseline": {
+    "installManifest": "artifacts/installations/PalletContainerSnap/20261009-052421-0.7-canary-stock-large-route-948e6385/install-manifest.json",
+    "installManifestSha256": "20EC100EE46CFE25038B3D0C2629AF10735E4E3288468944149E5B5D56C3A592",
+    "archiveName": "PalletContainerSnap_0.7-canary-stock-large-route.zip",
+    "archiveSha256": "3CF0EFBAB16990D661510DF3E4A06A32F275729B285D6147D6413E20421A7C05",
+    "container": {
+      "pakSha256": "32A16D46B3A7D324C813DB10092A5BA18B21F3660C6AA23E87512E2E46FD0B92",
+      "ucasSha256": "64B89100C49D418F47121C5716D866255C7AFE7A561D8600E6E8FFDEFDDE8D43",
+      "utocSha256": "FFE487E72DD2D0A9BA110EB59A4ACF19308D729F82E91D33FA9A6F44B0E0CEE9"
+    },
+    "stockUexpSha256": "5EE8F55D77D4AA35F821A0AF55FF6C421FA8C31D24D4643351309677628E7579"
+  },
+  "packageSet": [
+    "Voyage/Content/Mods/PalletContainerSnap/BP_CraftingLocationGenerator_PalletContainerSnap.uasset",
+    "Voyage/Content/Mods/PalletContainerSnap/BP_Inventory_PalletContainerSnap.uasset",
+    "Voyage/Content/Data/Assets/Items/PalletContainerSnap/DA_Item_PalletSnapCanary.uasset",
+    "Voyage/Content/Data/Assets/Skill/PalletContainerSnap/DA_Skill_PalletSnapCanary.uasset",
+    "Voyage/Content/Data/Assets/Items/DA_Item_PlayerBoxLarge.uasset"
+  ],
+  "runtimeStatus": "not-run"
+}

@@ -287,9 +287,8 @@ collision profile or object type.
 
 ## Compatibility and validation
 
-The mod is fingerprint-gated to Steam build `25956314`, executable SHA-256
-`0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A`,
-parser profile `UE5_8` and authoring editor `5.8.2`. In the current game,
+The mod build is gated to Steam build `25956314`, parser profile `UE5_8`
+and authoring editor `5.8.2`. In the current game,
 validated behavior covers the keyboard/mouse stock-input path, corrected look
 direction, action hints and ADS/scope operation. Gamepad input, exhaustive
 custom remappings, every target, submerged collision order, multiplayer and

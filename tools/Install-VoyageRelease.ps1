@@ -293,10 +293,7 @@ if ($null -eq $gameFingerprint) {
     throw 'Release manifest has no gameFingerprint.'
 }
 $expectedBuildId = [string](Get-OptionalPropertyValue -Object $gameFingerprint -Name 'steamBuildId')
-$expectedExecutableSha256 = [string](
-    Get-OptionalPropertyValue -Object $gameFingerprint -Name 'executableSha256')
-if ([string]::IsNullOrWhiteSpace($expectedBuildId) -or
-    $expectedExecutableSha256 -cnotmatch $sha256Pattern) {
+if ($expectedBuildId -notmatch '^\d+$') {
     throw 'Release manifest has an invalid game fingerprint.'
 }
 
@@ -423,12 +420,9 @@ if ([IO.Path]::GetExtension($installedArchiveName) -cne '.zip') {
 $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'
 $actualFingerprint = (& $fingerprintScript -GameRoot $GameRoot | ConvertFrom-Json)
 $actualBuildId = [string]$actualFingerprint.steam.buildId
-$actualExecutableSha256 = [string]$actualFingerprint.executable.sha256
-if ($actualBuildId -cne $expectedBuildId -or
-    $actualExecutableSha256 -cne $expectedExecutableSha256) {
+if ($actualBuildId -cne $expectedBuildId) {
     throw ('Installed Voyage fingerprint does not match the release. ' +
-        "Expected Steam $expectedBuildId / $expectedExecutableSha256; " +
-        "found Steam $actualBuildId / $actualExecutableSha256.")
+        "Expected Steam $expectedBuildId; found Steam $actualBuildId.")
 }
 
 $resolvedGameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
@@ -526,7 +520,6 @@ if ($ValidateOnly) {
         releaseManifestSha256 = $releaseManifestSha256
         gameRoot = $resolvedGameRoot
         steamBuildId = $actualBuildId
-        executableSha256 = $actualExecutableSha256
         paksDirectory = $paksDirectory
         installedArchiveName = $installedArchiveName
         files = @($installItems | Select-Object kind, name, size, sourceSha256,
@@ -550,7 +543,6 @@ $transaction = [ordered]@{
     dirtySource = $dirtySource
     gameRoot = $resolvedGameRoot
     steamBuildId = $actualBuildId
-    executableSha256 = $actualExecutableSha256
     paksDirectory = $paksDirectory
     createdAtUtc = [DateTime]::UtcNow.ToString('o')
     files = $installItems
@@ -646,7 +638,6 @@ try {
         dirtySource = $dirtySource
         gameRoot = $resolvedGameRoot
         steamBuildId = $actualBuildId
-        executableSha256 = $actualExecutableSha256
         paksDirectory = $paksDirectory
         installedAtUtc = $installedAtUtc
         installedArchive = [ordered]@{

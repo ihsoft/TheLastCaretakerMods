@@ -5,8 +5,6 @@ Current gate:
 - Steam app: `1783560`
 - Steam build ID: `25056839`
 - engine: Unreal Engine `5.8.1`
-- `VoyageSteam-Win64-Shipping.exe` SHA-256:
-  `CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`
 
 Reconstructed editor-only identities:
 
@@ -24,7 +22,7 @@ Reconstructed editor-only identities:
 - stock package `/Game/UI/Game/HUD/BP_VoyageIngameBoatHud`
 
 The reflected identities above were revalidated from a live UE 5.8.1 process
-with `jmap_dumper 0.2.0`. Its automatic `GUObjectArray` resolver returned a
+with the reviewed mapping dumper. Its automatic `GUObjectArray` resolver returned a
 false address for this executable; a bounded scan of the writable image data
 located the structurally valid array, after which both `.usmap` and full
 reflection dumps succeeded. The current mapping keeps `Petrol = 1` and
@@ -62,12 +60,12 @@ the checked relocation and retoc pipeline consumes loose `.uasset`/`.uexp`
 pairs. The build manifest records `LooseCookedPackageWriter`, and installation
 rejects another cook-storage contract.
 
-Upstream retoc `0.1.5` also omits `FObjectImport.PackageName` while reading and
+The unpatched retoc reader omits `FObjectImport.PackageName` while reading and
 writing filtered legacy packages, although UE 5.8 serializes the field with an
 `ObjectName` placeholder. Mixed conversion shifted every later import and
 panicked on invalid outer indices. `tools/Build-RetocUe58Compatibility.ps1`
-reproduces the narrow correction from a hash-gated upstream source. Extraction
-and build manifests must record the same patched executable SHA-256.
+reproduces the narrow correction from a reviewed upstream source. Extraction
+and build use the patched tool through its documented interface.
 
 The freshly extracted stock package is relocated to the equal-length package path
 `/Game/Mods/Boat/BP_VoyageIngameBoatHud_O`. The current stock `.uasset`

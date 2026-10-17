@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "experiment": "one exact existing stock item same-path provider route",
+  "artifactVersion": "0.7-canary-stock-large-route",
+  "archiveName": "PalletContainerSnap_0.7-canary-stock-large-route.zip",
+  "game": {
+    "steamBuildId": "25191271"
+  },
+  "parser": {
+    "engineVersion": "5.8",
+    "mappingSha256": "E25620FB2D0674B26A3E4EF059AC2C5AF58E28CE1B4F07307860F7FADB9A0F68"
+  },
+  "baseline": {
+    "artifactVersion": "0.6-canary-four-slot-snap-mode",
+    "installManifest": "artifacts/installations/PalletContainerSnap/20261009-034111-0.6-canary-four-slot-snap-mode-5631b2f1/install-manifest.json",
+    "installedContainer": {
+      "pakSha256": "D32671558DF53975A04041B656B6EEAB8C852A952AF04B5022C1322831925B0A",
+      "ucasSha256": "77398108D4CDB7F416F953DB15618B0B8E05859AC886E8732C752F3A010F26FD",
+      "utocSha256": "01B3B8DE75DBE0A7DDF7BEE8D0E3BDF9F76839DC10E0305E549EB2254ACF5D95"
+    },
+    "ownedClassReadbackSha256": "A3E195955537DDD8AB9D955C7B1D8AE8EBF4641B2579B992E60C22A3CA52B7BE",
+    "compactReadbackHashes": {
+      "generator": "A3E195955537DDD8AB9D955C7B1D8AE8EBF4641B2579B992E60C22A3CA52B7BE",
+      "container": "73DA1A6A336E63F5819B13B02136B56B5045818C26FC9EE6284A8816171D4D81",
+      "item": "BAADAC9589E81A301D663260B18E80B741970F95545699400F330CA6693BCFAA",
+      "skill": "71E2F3B44B965796E6473A20966A5487CD5B530B64E6D852DAB9046AAC138C28"
+    },
+    "registrySha256": "8C7ECC66BEB3AD4E0949C6C0B6CA9D22C71622ACE121C8EDF77664D5ADD7CDF8",
+    "legacyPayloadHashes": {
+      "generatorUexp": "813A4A40235BEF31958389CC7C2C25036FF7237CFD35A560455D3CF7D248CF88",
+      "containerUexp": "A73B2CD9518E9B7C0000FD448E43482D414922589151BC80352FD31D138E6D6C",
+      "itemUexp": "613446547C41E5236A305C467E17A97AFFB31197106C079807EA8A4334804F62",
+      "skillUexp": "799E12BB268E79DFE7A439E6DAFB380E297A3D641791E00A812A894F934BCD66"
+    }
+  },
+  "stockItem": {
+    "package": "/Game/Data/Assets/Items/DA_Item_PlayerBoxLarge",
+    "object": "DA_Item_PlayerBoxLarge",
+    "sourceUassetSha256": "F768DC90CE353541F4E79A2F9CA7725DC996606EF246858AE29A3D4990CFEE1C",
+    "sourcePropertyCount": 16,
+    "sourceImportCount": 13,
+    "sourceCustomVersionCount": 14,
+    "addedProperty": "CraftingLocationGenerator",
+    "generatorPackage": "/Game/Mods/PalletContainerSnap/BP_CraftingLocationGenerator_PalletContainerSnap",
+    "generatorClass": "BP_CraftingLocationGenerator_PalletContainerSnap_C",
+    "generatorInstance": "BP_CraftingLocationGenerator_PalletContainerSnap_C_0"
+  },
+  "packageSet": [
+    "Voyage/Content/Mods/PalletContainerSnap/BP_CraftingLocationGenerator_PalletContainerSnap.uasset",
+    "Voyage/Content/Mods/PalletContainerSnap/BP_Inventory_PalletContainerSnap.uasset",
+    "Voyage/Content/Data/Assets/Items/PalletContainerSnap/DA_Item_PalletSnapCanary.uasset",
+    "Voyage/Content/Data/Assets/Skill/PalletContainerSnap/DA_Skill_PalletSnapCanary.uasset",
+    "Voyage/Content/Data/Assets/Items/DA_Item_PlayerBoxLarge.uasset"
+  ],
+  "registry": "reuse unchanged two-record plugin-local 0.6 canary registry; no stock record and no global registry replacement",
+  "runtimeStatus": "not-run"
+}

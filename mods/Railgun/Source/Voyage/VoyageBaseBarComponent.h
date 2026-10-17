@@ -1,6 +1,5 @@
 #pragma once
-// Field-only mirror. Steam25956314 / UE5.8, EXE
-// 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
+// Field-only mirror. Steam25956314 / UE5.8.
 #include "VoyageInventoryWeightLimitedComponent.h"
 #include "VoyageBaseBarComponent.generated.h"
 

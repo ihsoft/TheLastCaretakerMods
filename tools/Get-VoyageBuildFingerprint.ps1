@@ -15,8 +15,6 @@ if (-not (Test-Path -LiteralPath $paks -PathType Container)) {
     throw "Voyage Paks directory not found: $paks"
 }
 
-$exeItem = Get-Item -LiteralPath $exe
-$exeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash
 $steamApps = Split-Path -Parent (Split-Path -Parent $root)
 $steamManifest = Join-Path $steamApps 'appmanifest_1783560.acf'
 $steamBuildId = $null
@@ -28,17 +26,6 @@ if (Test-Path -LiteralPath $steamManifest -PathType Leaf) {
         $steamBuildId = $buildMatch.Groups['id'].Value
     }
 }
-$containers = Get-ChildItem -LiteralPath $paks -Filter '*.utoc' -File |
-    Where-Object { $_.Name -notmatch 'DonkLift|KeyboardControl|HudProbe' } |
-    Sort-Object Name |
-    ForEach-Object {
-        [ordered]@{
-            name = $_.Name
-            length = $_.Length
-            sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
-        }
-    }
-
 $fingerprint = [ordered]@{
     capturedAtUtc = [DateTime]::UtcNow.ToString('o')
     gameRoot = $root
@@ -46,14 +33,6 @@ $fingerprint = [ordered]@{
         appId = '1783560'
         buildId = $steamBuildId
     }
-    executable = [ordered]@{
-        name = $exeItem.Name
-        length = $exeItem.Length
-        fileVersion = $exeItem.VersionInfo.FileVersion
-        productVersion = $exeItem.VersionInfo.ProductVersion
-        sha256 = $exeHash
-    }
-    containers = @($containers)
 }
 
 $json = $fingerprint | ConvertTo-Json -Depth 5

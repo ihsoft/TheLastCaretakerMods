@@ -4,9 +4,9 @@ This file is the update gate for anything whose correctness depends on a
 specific The Last Caretaker build, whether it was extracted automatically or
 reconstructed by hand.
 
-## Validated game fingerprint
+## Validated game build
 
-This fingerprint binds the sources and build inputs used to produce the current
+This Steam build ID binds the sources and build inputs used to produce the current
 package. It is not a runtime compatibility allowlist: a different game build
 requires review before rebuilding or claiming support, but may still run an
 existing package correctly. Player-facing mod and tested-game versions live in
@@ -14,11 +14,9 @@ existing package correctly. Player-facing mod and tested-game versions live in
 
 - Steam build: `25056839`
 - Unreal Engine: `5.8.1`
-- `VoyageSteam-Win64-Shipping.exe` SHA-256:
-  `CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`
 
 Run `tools/Get-VoyageBuildFingerprint.ps1` before generation or packaging. If
-the current fingerprint differs, do not reuse this checklist as proof of
+the current Steam build ID differs, do not reuse this checklist as proof of
 compatibility: re-extract the build inputs and revalidate every source contract
 below against the new version.
 
@@ -53,7 +51,7 @@ The installed UE 5.8.2 editor is the build tool for the UE 5.8.1 game. Cooking
 must use `-SkipZenStore` to preserve loose packages. The canonical patched
 retoc at `.tools/bin/retoc.exe` still uses its explicit `UE5_7` compatibility
 profile for the matching current IoStore format; extraction and packaging
-must bind to the exact executable hash recorded in their manifests.
+must bind to the selected Steam build ID recorded in their manifests.
 
 With Voyage closed, the original forklift package and `scriptobjects.bin` were
 freshly extracted for build `25056839`. Their manifest passed the builder's

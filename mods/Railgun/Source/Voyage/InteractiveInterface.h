@@ -1,6 +1,6 @@
 #pragma once
 // HC29 one-function identity mirror, current BP_CameraDrone / BP_Module_Turret
-// SuperStruct+parameter metadata. Steam25191271, UE5.8, EXE747DC255...F58B.
+// SuperStruct+parameter metadata. Steam25191271, UE5.8.
 // Inherited interface, not a complete reconstruction. No native CDO deltas.
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"

@@ -1,8 +1,7 @@
 #pragma once
-// Editor-only, tagged partial mirror. Steam25191271 / UE5.8, EXE
-// 747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
+// Editor-only, tagged partial mirror. Steam25191271 / UE5.8.
 // Public ModuleConfigData mappings and stock battery/refinery CDOs.
-// Revalidate with the game fingerprint; never ship native mirrors.
+// Revalidate with the Steam build ID; never ship native mirrors.
 #include "CoreMinimal.h"
 #include "ModuleResourceType.h"
 #include "ModuleConfigData.generated.h"

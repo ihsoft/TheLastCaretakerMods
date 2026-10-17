@@ -13,9 +13,8 @@ the shipped container; the running game supplies the real native classes.
 The project scaffold (`Voyage.uproject`, `Config`, targets, and module setup)
 is maintained for the installed Unreal Engine 5.8.2 editor. The
 game-API mirror headers are reconstructed inputs, not copied engine headers;
-each carries the Steam build, executable SHA-256, and current reproduction
-tools in its file header. Revalidate every mirror after the game executable
-changes.
+each carries the Steam build and reconstruction method in its file header.
+Revalidate game-specific mirrors after the Steam build ID changes.
 
 ## Versioning and compatibility
 
@@ -26,7 +25,7 @@ Last Caretaker `5.5`, Steam build `25056839`, running game UE `5.8.1`.
 
 A tested game version is evidence, not an allowlist or a hard runtime check. A
 future game update may remain compatible and does not automatically require a
-new mod version. The exact Steam build, executable hash, and UE version remain
+new mod version. The Steam build and UE serialization version remain
 hard build-time provenance gates for reconstructed headers, extracted assets,
 and cooked-package production. `v1` is known to be incompatible with game
 `5.5`, primarily because it was cooked and mirrored for the earlier UE `5.7.4`
@@ -44,7 +43,7 @@ The code is split by role:
   the two Unreal commandlets.
 
 See `GAME_DERIVED_SOURCES.md` before generation after any game update. A
-changed executable fingerprint is a hard stop until the listed headers,
+changed Steam build ID is a hard stop until the listed headers,
 generator contracts, original assets, and packaging inputs have been
 re-extracted or revalidated.
 
@@ -91,7 +90,7 @@ Useful explicit options:
   also keeps the exact release archive in the Paks directory as
   `DonkLiftKeyboardControl_<artifact-version>.zip` and verifies its hash;
 - `-OriginalsRoot <path>` reuses an explicitly selected clean extraction only
-  when its manifest proves the current build/hash, canonical filter, and no
+  when its manifest proves the current Steam build ID, canonical filter, and no
   additional containers;
 - `-AllowDirtySource` permits a development artifact from uncommitted DonkLift
   source and records that fact in the manifest. Omit it for a real release.

@@ -1,13 +1,8 @@
 # Game-derived source contract
 
-Supported identities:
+Validated game build:
 
 - Steam build: `25929985`.
-- Unreal Engine: `5.8.2`.
-- `VoyageSteam-Win64-Shipping.exe` SHA256:
-  `608A4BCD1A0A392477970F455234571946D061E61C1D27F82DE9589EBBA3D69F`.
-- Reviewed mapping: `mappings/Voyage/steam-25929985-ue5.8/Voyage-25929985.usmap`.
-- Mapping SHA256: `4EA5D93EBF41FDE3C45C7DB938763E942179DC8EF24951A97EDB94FB1FA9E2FF`.
 
 Editor-only mirrors reproduce native identities confirmed by current registration
 metadata and stock Blueprint calls: `LoadFileToArray(FString) -> TArray<FString>`,
@@ -24,7 +19,7 @@ requires the `.uexp` payload to remain byte-identical. Extracted, relocated and
 cooked files are generated output, not tracked source.
 
 Revalidate mirrors, function/property owners, relocation assumptions and layouts
-after a fingerprint change. Static compilation, container verification and
+after a Steam build ID change. Static compilation, container verification and
 cooked readback do not substitute for runtime validation.
 
 The installed `v6-test-20261015-065220` is user-validated for the requested

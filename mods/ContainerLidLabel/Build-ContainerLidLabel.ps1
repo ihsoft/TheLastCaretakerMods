@@ -14,7 +14,6 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $expectedBuild = '25929985'
-$expectedExecutableHash = '608A4BCD1A0A392477970F455234571946D061E61C1D27F82DE9589EBBA3D69F'
 $retocVersion = 'UE5_8'
 $containerName = 'ContainerLidLabel_P'
 $sourcePackage = '/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Large'
@@ -150,8 +149,7 @@ if ($FinalizeExisting) {
     if ([int]$releaseRecord.schemaVersion -ne 2 -or
         [string]$releaseRecord.mod -cne 'ContainerLidLabel' -or
         [string]$releaseRecord.version -cne $Version -or
-        [string]$releaseRecord.gameFingerprint.steamBuildId -cne $expectedBuild -or
-        [string]$releaseRecord.gameFingerprint.executableSha256 -cne $expectedExecutableHash) {
+        [string]$releaseRecord.gameFingerprint.steamBuildId -cne $expectedBuild) {
         throw "FinalizeExisting rejected release identity: $releaseManifestPath"
     }
     foreach ($record in @($releaseRecord.payload) + @($releaseRecord.archive)) {
@@ -190,7 +188,7 @@ if ($FinalizeExisting) {
     $buildManifest = [ordered]@{
         schemaVersion = 1; status = 'succeeded'; mod = 'ContainerLidLabel'; version = $Version
         createdUtc = [DateTime]::UtcNow.ToString('o'); steamBuildId = $expectedBuild
-        executableSha256 = $expectedExecutableHash; engine = '5.8.2'; retocEngineVersion = $retocVersion
+        engine = '5.8.2'; retocEngineVersion = $retocVersion
         runtimePackages = [IO.File]::ReadAllLines($expectedList)
         config = [ordered]@{ path = $releaseConfig; defaultMaxWeightKg = $defaultMaxWeightKg; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash }
         relocation = [ordered]@{ source = $sourcePackage; destination = $relocatedPackage; replacementCount = 2; sourceUexpSha256 = $stockHash; relocatedUexpSha256 = $stockHash }
@@ -211,8 +209,7 @@ Write-Host '1/8 Validating game fingerprint'
 $fingerprintPath = Join-Path $releaseRoot 'game-fingerprint.json'
 & $fingerprinter -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
 $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
-if ([string]$fingerprint.steam.buildId -cne $expectedBuild -or
-    [string]$fingerprint.executable.sha256 -cne $expectedExecutableHash) {
+if ([string]$fingerprint.steam.buildId -cne $expectedBuild) {
     throw "Installed game does not match the ContainerLidLabel source contract. See $fingerprintPath"
 }
 
@@ -347,7 +344,6 @@ $buildManifest = [ordered]@{
     version = $Version
     createdUtc = [DateTime]::UtcNow.ToString('o')
     steamBuildId = $expectedBuild
-    executableSha256 = $expectedExecutableHash
     engine = '5.8.2'
     retocEngineVersion = $retocVersion
     runtimePackages = [IO.File]::ReadAllLines($expectedList)

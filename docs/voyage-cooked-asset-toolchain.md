@@ -63,45 +63,23 @@ This contract is bound to the DML v0.6 payload whose `dml_P.utoc` SHA-256 is
 Its `CM_DMG` implements the `DML add` command and virtual class construction;
 the widget's physical discovery helper is a separate path.
 
-## Accepted checkpoint
+## Tool boundary
 
-The accepted UE 5.8 checkpoint is:
+The public scripts in [`tools/README.md`](../tools/README.md) select the
+published retoc, jmap, UAssetAPI/UAssetGUI, CUE4Parse and executable-inspection
+tools needed for each operation. Run the selected public interface first and
+evaluate its result. Publisher manifests retain binary provenance for diagnosis;
+normal callers do not compare tool commits, sizes or hashes in advance.
 
-- retoc fork `ihsoft/retoc` at `49b7721`;
-- jmap fork `ihsoft/jmap` at `fad7b92`;
-- UAssetAPI fork `ihsoft/UAssetAPI` at `21c982f`;
-- UAssetGUI fork `ihsoft/UAssetGUI` at `df18b5f`, using that UAssetAPI commit;
-- unmodified CUE4Parse upstream at
-  `ec6595e46448a817ac21ea9bde01caa48f80a420`;
-- canonical compact GUI executable at `.tools/bin/UAssetGUI.exe`, published by
-  `tools/Publish-UAssetGuiBinary.ps1`, size `12,762,803` bytes and SHA-256
-  `42837CD279A78DF57B537020A0169C5D2259A4570D3B62F4B96852F0F5C27F96`;
-- canonical retoc at `.tools/bin/retoc.exe`, size `6,833,664` bytes and SHA-256
-  `6F8F86AE3FD747A3B785E787A33C24F9A11735D03664948D6B619F18861650F5`;
-- canonical jmap dumper at `.tools/bin/jmap_dumper.exe`, size `9,474,048` bytes
-  and SHA-256
-  `6A56DFCA0654835160E94F3E1D83023A86DDB1C3D29356FC0C4B008B7190987D`;
-- canonical UAssetAPI at `.tools/bin/UAssetAPI/UAssetAPI.dll`, size `4,210,176`
-  bytes and SHA-256
-  `6DF2606BBA89987AEB4BF1EFBD3C64AC565DBC5D6113A0A7A5062C7CD8B249FD`;
-- canonical managed CUE4Parse at `.tools/bin/CUE4Parse/CUE4Parse.dll`, size
-  `4,025,344` bytes and SHA-256
-  `F304981BAD4C53D209DFDABA9EB65A01D825572E543A04914BEBFD3538DCF4FD`;
-- canonical VoyageExecutableInspector at
-  `.tools/bin/VoyageExecutableInspector.exe`, size `196,700` bytes and SHA-256
-  `3A33483362EF5BA122C370C76322A6A4012BEB298D58A07C67CD6045A2F6C718`,
-  built from source checkpoint `79d01b3`.
-
-For Steam build `25056839`, game UE `5.8.1`, executable SHA-256
-`CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933`,
+For Steam build `25056839`, game UE `5.8.1`,
 the reviewed mapping is
 `mappings/Voyage/steam-25056839-ue5.8.1/Voyage-25056839.usmap`.
 Its sibling manifest owns the generator identity, file hash, validation
 evidence, and invalidation condition.
 
-Do not infer that a newer fork checkout, similarly named binary, or mapping at
-another path has the same guarantees. Builders and tests should use or verify
-these identities explicitly.
+If a tool fails or produces unexpected output, inspect its diagnostics and
+publication identity before changing the asset contract. The reviewed mapping
+still has its own file-integrity and schema gates.
 
 Promotion, runtime-only JSON version handling, validation and exact manifests
 are recorded in [the JSON save checkpoint](voyage-json-save-checkpoint.md).
@@ -168,8 +146,7 @@ Voyage primary assets must still satisfy the independently configured Item and
 Skill scan roots and native class/primary-ID contracts; enabling a content
 plugin alone does not prove Asset Manager registration or recipe availability.
 
-Inspection on Steam build `25191271`, executable SHA-256
-`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`,
+Inspection on Steam build `25191271`,
 first confirmed this layout in an external mod: a loose content-only descriptor,
 one plugin-local registry in its PAK, and Item/Skill packages under the stock
 `/Game/Data/Assets` roots in IoStore. Structural inspection confirmed a native
@@ -200,11 +177,9 @@ not a supported equivalent layout.
 
 ## Stock AssetRegistry access and PAK encryption
 
-The following offline findings apply only to Steam build `25191271`, executable
-`VoyageSteam-Win64-Shipping.exe`, SHA-256
-`747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B`.
-Re-fingerprint the installation before using these addresses; a changed EXE
-requires new validation, not reuse of its predecessor's offsets.
+The following offline findings apply to Steam build `25191271`.
+Check the installed Steam build ID before using these addresses. A different
+build requires new validation of the addresses.
 
 - Stock `Voyage/Content/Paks/pakchunk0-Windows.pak` has a version-12 PAK footer
   with `bEncryptedIndex = 1` and a zero encryption-key GUID. The zero GUID
@@ -232,8 +207,8 @@ or a distributed mod package. Railgun no longer consumes this path.
 
 Passing a lower level never implies a higher one:
 
-1. fingerprint and dependency provenance match;
-2. the mapping passes header, payload, required-schema, hash, and fingerprint
+1. relevant Steam build and asset provenance match;
+2. the mapping passes header, payload, required-schema, hash, and Steam build
    gates;
 3. the asset opens with no unexpected `RawExport` fallback;
 4. unchanged save is binary-equal and reopens;

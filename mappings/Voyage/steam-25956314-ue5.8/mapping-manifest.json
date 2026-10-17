@@ -7,7 +7,6 @@
   "steamAppId": "1783560",
   "steamBuildId": "25956314",
   "executableName": "VoyageSteam-Win64-Shipping.exe",
-  "executableSha256": "0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A",
   "engineVersion": "5.8",
   "uassetApiEngineVersion": "VER_UE5_8",
   "engineVersionBasis": "Reviewed Voyage UE 5.8 mapping generator and parser contract",
@@ -24,5 +23,5 @@
     "mappingGate": "New-VoyageMappings.ps1 completed successfully and Test-VoyageMappings.ps1 passed USMAP header, payload, fingerprint, hash, and required Voyage schema checks",
     "runtime": "Read-only reflection capture from main menu; no changed-save or gameplay compatibility claim"
   },
-  "revalidateWhen": "Steam build ID or VoyageSteam-Win64-Shipping.exe SHA-256 changes"
+  "revalidateWhen": "Steam build ID changes"
 }

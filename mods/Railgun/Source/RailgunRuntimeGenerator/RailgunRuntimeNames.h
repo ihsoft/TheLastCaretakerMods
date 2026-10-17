@@ -1,13 +1,12 @@
 #pragma once
 #include "CoreMinimal.h"
 
-// HC13 Engine-only emission renewed for Steam25191271 / UE5.8 parser target,
-// executable747DC2553F7E68D8EA7ED0B2E0CAC6D08943EA3F50DD6ED822E9293E0B45F58B.
-// See ../../ARCHITECTURE.md.
+// HC13 engine-only emission uses the UE5.8 parser target.
+// See ../../ARCHITECTURE.md for its engine contract.
 
 // Mod-owned experiment tuning. Game identity revalidated using public stock
-// JSON on Steam 25056839 / UE5.8.1, exe CA84428CF4562C703BEDFF053DB727D14CC70C593451C09BE75A92828EFD9933.
-// Renew the generated runtime contract on fingerprint change. No Voyage mirror.
+// JSON on Steam 25056839 / UE5.8.1.
+// Renew the generated runtime contract on Steam build ID change. No Voyage mirror.
 namespace RailgunRuntimeNames
 {
 inline const FName HudTree(TEXT("WidgetTree"));

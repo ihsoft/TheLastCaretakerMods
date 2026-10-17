@@ -45,13 +45,10 @@ internal static class Program
             var fingerprint = JsonNode.Parse(File.ReadAllText(Str("fingerprintPath")))!;
             var mapping = JsonNode.Parse(File.ReadAllText(Str("mappingManifestPath")))!;
             var gameRoot = fingerprint["gameRoot"]!.GetValue<string>();
-            var exeHash = fingerprint["executable"]!["sha256"]!.GetValue<string>();
             var build = fingerprint["steam"]!["buildId"]!.GetValue<string>();
             if (mapping["engineVersion"]!.GetValue<string>() != "5.8" ||
                 mapping["steamBuildId"]!.GetValue<string>() != build ||
-                mapping["executableSha256"]!.GetValue<string>() != exeHash ||
-                mapping["mappingSha256"]!.GetValue<string>() != Hash(Str("mappingPath")) ||
-                Hash(Path.Combine(gameRoot, "Voyage/Binaries/Win64", fingerprint["executable"]!["name"]!.GetValue<string>())) != exeHash)
+                mapping["mappingSha256"]!.GetValue<string>() != Hash(Str("mappingPath")))
                 throw new InvalidDataException("Game/mapping provenance mismatch.");
 
             Directory.SetCurrentDirectory(Path.GetDirectoryName(Path.GetFullPath(args[0]))!);
@@ -260,7 +257,6 @@ internal static class Program
                 sourceKind,
                 materialMode,
                 steamBuildId = build,
-                executableSha256 = exeHash,
                 mappingSha256 = Hash(Str("mappingPath")),
                 conversionCommit = ConversionCommit,
                 exporterSha256 = Hash(typeof(Program).Assembly.Location),

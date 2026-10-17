@@ -1,9 +1,7 @@
 // HAND-WRITTEN BUILD TOOL SOURCE: generates the Gyro replacement child.
-// Contracts revalidated for Steam build 25929985 / executable SHA-256
-// 608A4BCD1A0A392477970F455234571946D061E61C1D27F82DE9589EBBA3D69F.
+// Contracts revalidated for Steam build 25929985.
 // Native altitude-assistance fields and SetBoolPropertyByName were separately
-// revalidated for Steam build 25956314 / executable SHA-256
-// 0DAC6826ED94666064D06463597487970B8397CA0C124B74764AD37E8705135A.
+// revalidated for Steam build 25956314.
 // The generator is editor-only and never ships in the mod container.
 
 #include "GenerateStableGyroInheritanceCommandlet.h"
