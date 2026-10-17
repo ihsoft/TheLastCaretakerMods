@@ -1,20 +1,12 @@
 # MooringCable60m architecture
 
 The public behavior and build interface are in [README.md](README.md).
-Stock asset and reflected-class contracts were checked again on Steam build
-`25956314` (game version `0.10.0.653158`). On 2026-10-15 the user reported that
-the installed candidate works in game. Its installation record is
-`artifacts/installations/MooringCable60m/20261015-224120-1.0.0-f1800d39/`;
-the release manifest SHA-256 is
-`455F52B5BD69F03F1385FFC468EA1493694B204DBA363569F9CFDA0E6149A17A`.
-The report confirms the requested runtime behavior on that build without a
-separate claim about individual native calculations. The native payout and
-force behavior below was established on `25191271` and was not re-disassembled
-for `25956314`. The original final containers were byte-identical to the tested
-60m-test5 candidate: an existing save loaded, three connected cables read 2000,
-a free cable read 6000, and the user physically deployed it to 59 m. The current
-builder extracts and checks fresh stock assets on each run; deeper class/native
-investigation follows a failed build or game test.
+The mod supports Steam build `25956314` (game version `0.10.0.653158`).
+Connected cables retain the 2000 cm limit; a free end can deploy to 60 m.
+Existing saves resolve the replacement cable class. The native payout and
+force contract below was inspected on build `25191271`; it was not independently
+re-derived for `25956314`. The builder extracts and checks fresh stock assets
+on each run.
 
 ## Stock length ownership
 

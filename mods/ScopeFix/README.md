@@ -6,16 +6,15 @@ mod, UE4SS or mod loader is required.
 
 ## Behavior
 
-The mod adjusts the camera position used while aiming. The accepted settings
-prioritize long-range alignment: the user observed improved aiming at long
-range and shots below the aim point at close range, and accepted that tradeoff.
-Weapon animation makes precise impact assessment difficult, so this is a
-qualitative game-tested result rather than a measured accuracy guarantee.
+The mod adjusts the camera position used while aiming. Its settings prioritize
+long-range alignment; shots can land below the aim point at close range.
+Weapon animation makes precise impact assessment difficult, so the alignment
+is qualitative rather than a measured accuracy guarantee.
 
 Two settings are involved: the electric rifle's aiming-camera offset and the
 shared RedDot sight's own offset. Other sight assets are unchanged. RedDot's
-adjustment also applies when fitted to other compatible weapons, although
-those combinations were not separately reported as tested.
+adjustment also applies when fitted to other compatible weapons. Their exact
+aiming behavior is outside this mod's established scope.
 
 See [Aiming configuration](docs/aiming-configuration.md) for the reasoning and
 exact values and the validation boundaries for later Steam builds.

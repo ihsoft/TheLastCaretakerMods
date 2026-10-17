@@ -19,11 +19,11 @@ Revalidate game-specific mirrors after the Steam build ID changes.
 ## Versioning and compatibility
 
 `VERSION.json` is the source of truth for the player-facing mod version and
-tested game versions. `v1` and `v2` identify releases of this mod; they are not
-aliases for game versions. The current release is `v2`, game-validated on The
-Last Caretaker `5.5`, Steam build `25056839`, running game UE `5.8.1`.
+supported game versions. `v1` and `v2` identify releases of this mod; they are not
+aliases for game versions. The current release is `v2` for The Last Caretaker
+`5.5`, Steam build `25056839`, running game UE `5.8.1`.
 
-A tested game version is evidence, not an allowlist or a hard runtime check. A
+A supported game version is not an allowlist or a hard runtime check. A
 future game update may remain compatible and does not automatically require a
 new mod version. The Steam build and UE serialization version remain
 hard build-time provenance gates for reconstructed headers, extracted assets,

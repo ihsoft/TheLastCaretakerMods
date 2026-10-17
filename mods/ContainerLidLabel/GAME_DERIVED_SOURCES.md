@@ -1,6 +1,6 @@
 # Game-derived source contract
 
-Validated game build:
+Supported game build for these asset contracts:
 
 - Steam build: `25929985`.
 
@@ -22,10 +22,6 @@ Revalidate mirrors, function/property owners, relocation assumptions and layouts
 after a Steam build ID change. Static compilation, container verification and
 cooked readback do not substitute for runtime validation.
 
-The installed `v6-test-20261015-065220` is user-validated for the requested
-presentation and capacity setting, including a nondefault value. The release
-default remains 200 kg. Exact installation/rollback evidence is under
-`artifacts/installations/ContainerLidLabel/20261015-065622-v6-test-2dc3ea33/`;
-`validation/` retains the original build/release manifests and cooked semantic
-report. The versioned installed ZIP retains the payload independently of `Tmp/`.
-See [current state](BACKLOG.md) for unenumerated edge cases.
+The release provides the documented presentation and configurable capacity,
+including nondefault values. Its default remains 200 kg. Retained installation
+and rollback evidence belongs to the installation artifact family.

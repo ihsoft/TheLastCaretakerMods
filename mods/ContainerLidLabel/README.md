@@ -51,10 +51,9 @@ It never installs. For manifest-only refresh of an existing validated release,
 use `-FinalizeExisting` with its exact `-OutputRoot` and matching `-Version`;
 this does not rebuild or modify the payload.
 
-The mod is user-validated on Steam build 25929985. Exact source and compatibility
-identities belong to [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md).
-[Current state](BACKLOG.md) identifies the validated checkpoint, rollback evidence
-and limits. [Architecture](ARCHITECTURE.md) describes package/component ownership,
+The current release supports Steam build `25929985`. Source and build inputs
+belong to [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md);
+[Architecture](ARCHITECTURE.md) describes package/component ownership,
 lifecycle calls and cache behavior. Another mod overriding the same stock Large
 Blueprint can conflict with this one.
 

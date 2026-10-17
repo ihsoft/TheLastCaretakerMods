@@ -54,20 +54,14 @@ remain in ignored storage and are not source inputs.
 - The mod records each successful external registration and removes it at
   actor EndPlay only when the current owner is still the recorded module.
 
-## Evidence ownership and runtime boundary
+## Compatibility boundary
 
-The current fingerprint revalidated the reflected owners, property and function
-types, exact callable pin names, wall/external-port Blueprint bindings, TestBoat
-electric attachment identities, and stock surface-pairing bytecode used by the
-generator. The native lifecycle and external-transfer behavior described above
-was established on the prior game build and has not been re-disassembled for
-this fingerprint. The user confirmed that the installed adapted mod operates
-normally on the current build. Save restoration, cleanup/removal, and other
-unreported edge cases were not separately established.
-
-Detailed current-fingerprint evidence remains under ignored
-`Tmp/ElectrifiedBoatUpdate/`; reusable stock asset snapshots remain in the
-registered asset cache. Shared contracts and pitfalls are documented in:
+The current build's reflected owners, property and function types, callable
+pins, Blueprint bindings, TestBoat attachment identities and stock
+surface-pairing bytecode match the generator's contracts. The native lifecycle
+and external-transfer behavior was inspected on an earlier build and has not
+been re-derived for this one. Save restoration and cleanup/removal remain
+outside the established compatibility scope. Shared contracts are documented in:
 
 - [Actor attachment and save restoration](../../docs/vehicle-and-hud-modding-patterns.md#actor-attachment-and-save-restoration)
 - [External socket registration](../../docs/boat-resource-socket-architecture.md#external-socket-registration)

@@ -12,16 +12,15 @@ The electric rifle and RedDot have separate offset settings, so the mod
 configures both owners. RedDot is a shared attachment asset: its adjustment
 is not restricted to the electric rifle. This is not a fix for every sight.
 
-The accepted values improve long-range alignment according to the user's
-in-game observation. The same test found close-range impacts below the aim
-point. Alignment can depend on distance when the aiming reference and firing
-path are spatially separated, but the exact camera/weapon geometry and the
-cause of this game's remaining offset have not been established. Do not
-present that general explanation as a verified diagnosis.
+The configured values improve long-range alignment while close-range impacts
+can fall below the aim point. Alignment can depend on distance when the aiming
+reference and firing path are spatially separated, but the exact camera/weapon
+geometry and the cause of this game's remaining offset have not been
+established. Do not present that general explanation as a verified diagnosis.
 
-The user prioritizes distant shots and accepts the close-range undershoot.
+The configuration prioritizes distant shots and accepts close-range undershoot.
 There is therefore no requirement to chase a single apparent alignment at
-all distances. These values are an accepted configuration, not the result of
+all distances. These values define the mod configuration, not the result of
 an exact calibration or a universally correct geometric formula.
 
 ## Property contract
@@ -37,40 +36,14 @@ Current headers and all other export bytes are preserved. X's exact physical
 axis in the native aiming implementation has not been verified; it should not
 be described simply as world-space height.
 
-## Validated evidence
+## Build and compatibility boundary
 
-The accepted feature checkpoint is
-`604fe6fdf3b202623c3126efb9c8f57de9617a6d`, from Steam build `25056839`.
+The builder is gated to Steam build `25880952`. It extracts both stock assets,
+checks their camera vectors, changes only the two intended X values and
+verifies the resulting package structure. A release built for that version
+also starts on Steam build `25902891`; aiming behavior on that later build has
+no separate compatibility claim.
 
-Method: fresh stock JSON and package extraction through
-`Get-VoyageAssetJson.ps1` and `Extract-VoyagePackage.ps1`, guarded byte patch,
-retoc packaging/verification, semantic reopen and export-payload roundtrip.
-Both modified assets reopened with zero RawExports and the expected values;
-re-extraction preserved both export payload hashes. On that build, the user
-accepted the long-range/close-range tradeoff in the real game. Separate
-attachment configurations and other weapons were not reported as tested.
-
-Revalidate the affected stock packages, property contracts and game behavior
-before claiming compatibility with another Steam build. Generated assets stay
-in ignored temporary output; the repository keeps the method.
-
-The tested installation also passed the closed-game check and hash readback for
-its container triplet and archive.
-
-## Later-build evidence
-
-The `v1-steam-25880952-test` candidate was built from fresh stock assets for
-Steam build `25880952`. Static checks confirmed the exact two-package set,
-both modified vectors after semantic reopen, and byte changes confined to the
-two intended X values. These checks establish package structure, not aiming
-behavior in the game. The builder remains gated to that Steam build.
-
-The user subsequently installed the correct archive on Steam build `25902891`
-and reported that the game works. This establishes successful startup with
-that archive on that build; aiming behavior was not separately confirmed, and
-the candidate was not rebuilt from `25902891` stock assets. Earlier startup
-crashes involved rifle asset deserialization, but the supplying archive was
-not identified. They cannot be attributed to this candidate.
-
-A future build for another Steam build needs reviewed mappings and fresh stock
-assets for that build, followed by the relevant structural and gameplay checks.
+A build for another Steam build needs reviewed mappings and fresh stock assets
+for that build, followed by the relevant structural and gameplay checks.
+Generated assets remain ignored output; the repository keeps the method.

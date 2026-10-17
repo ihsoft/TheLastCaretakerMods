@@ -4,7 +4,7 @@ This file is the update gate for anything whose correctness depends on a
 specific The Last Caretaker build, whether it was extracted automatically or
 reconstructed by hand.
 
-## Validated game build
+## Build-bound game identity
 
 This Steam build ID binds the sources and build inputs used to produce the current
 package. It is not a runtime compatibility allowlist: a different game build
@@ -20,7 +20,7 @@ the current Steam build ID differs, do not reuse this checklist as proof of
 compatibility: re-extract the build inputs and revalidate every source contract
 below against the new version.
 
-## Current revalidation evidence
+## Game asset contracts
 
 The reviewed mapping
 `mappings/Voyage/steam-25056839-ue5.8.1/Voyage-25056839.usmap` confirms that:
@@ -53,19 +53,12 @@ retoc at `.tools/bin/retoc.exe` still uses its explicit `UE5_7` compatibility
 profile for the matching current IoStore format; extraction and packaging
 must bind to the selected Steam build ID recorded in their manifests.
 
-With Voyage closed, the original forklift package and `scriptobjects.bin` were
-freshly extracted for build `25056839`. Their manifest passed the builder's
-exact relocation occurrence assertions. The resulting six-asset container
-passed `retoc verify`, independent package inventory and exact mod-asset
-inspection, archive creation, installation, and installed-hash readback. The
-replacement child resolves its parent to the relocated current forklift and
-its action override to the current native function owner and 160-byte struct.
-
-The user subsequently confirmed the full in-game behavior on game version
-`5.5`: input integration, native percentage display, X/C hints, pause, exit,
-and re-entry all work. This fingerprint is therefore the game-validated `v2`
-checkpoint. The older `v1` package is known to be incompatible with game `5.5`,
-primarily because it targets the previous UE `5.7.4` generation.
+The builder freshly extracts the original forklift package and `scriptobjects.bin`,
+checks exact relocation occurrences, and verifies the six-asset container and
+replacement child's parent and native action owner. DonkLift `v2` supports
+input integration, native percentage display, X/C hints, pause, exit and
+re-entry on game version `5.5`. The older `v1` package is incompatible with
+that version because it targets the previous UE `5.7.4` generation.
 
 ## Version-bound files kept in Git
 

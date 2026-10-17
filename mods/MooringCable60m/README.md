@@ -2,8 +2,8 @@
 
 **Version 1.0.0.** Only mooring cables change: manual deployment up to 60 m,
 with the original 20 m automatic payout parameter for connected cables.
-Game-validation evidence by version lives in [ARCHITECTURE.md](ARCHITECTURE.md).
-For a later game build, create a new candidate and test it in game.
+The supported game build and asset contracts live in
+[ARCHITECTURE.md](ARCHITECTURE.md). Revalidate them for a later game build.
 
 Strength, stretch, tightness and snap defaults remain stock. Other cable types
 are unchanged. A connected cable's displayed ceiling may show 20 m; manual
@@ -13,8 +13,8 @@ contracts and the runtime refresh are described in [ARCHITECTURE.md](ARCHITECTUR
 The original asset/class identity is retained for saves. Existing unusually
 long connected cables are not forcibly cut short; the native reeling behavior
 continues. The 20 m parameter retains stock payout logic; stretching under load
-can produce a larger physical separation. A new-save/reload roundtrip after
-installation was not separately reported; loading the existing save was tested.
+can produce a larger physical separation. Existing saves resolve the
+replacement cable class; new-save/reload behavior has no separate claim.
 No UE4SS, native DLL or autoload actor is installed. Editor mirror code is build-only.
 
 Build from Windows PowerShell 5.1, outside the restricted sandbox:

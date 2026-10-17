@@ -26,29 +26,14 @@ This composition avoids adding Tick state to the unversioned inherited Voyage
 HUD child. Shared cooked-asset contracts are documented separately in
 [`../../docs/voyage-cooked-asset-toolchain.md`](../../docs/voyage-cooked-asset-toolchain.md).
 
-## Validation status
+## Compatibility
 
-The aggregation path was validated in game on the previous Steam build
-`23962331`: the
-lower-right value changed from the main-tank-only `1911 L` to the confirmed
-total `18966 L` without disturbing neighboring HUD elements.
-
-Steam build `24990438` moved Voyage to Unreal Engine `5.8.1` and invalidated
-that cooked package. Fresh runtime reflection confirms that the HUD field,
-Diesel enum value, and both aggregation functions are unchanged. The available
-editor is UE 5.8.2. Its output for the UE 5.8.1 game passed the static
-container gates and loaded successfully in the game.
-
-On 2026-08-31 the user confirmed that the installed build `24990438` works in
-the real game and shows the intended total-Diesel HUD value. Petrol stored in
-tanks on the ship was also confirmed not to enter the displayed sum.
-
-The repository's current game fingerprint is Steam build `25056839`, still on
-game UE `5.8.1`. On 2026-09-02 the user confirmed that the two-resource HUD
-candidate works in the real game. Its graphs were then rebuilt without
-behavior changes under the final `BoatHUDTotalResources` identities; the exact
-renamed container passed build, cook, four-asset inventory, and `retoc verify`,
-then loaded and worked in the real game. This is the current release checkpoint.
+The two-resource HUD supports Steam build `25056839`, game UE `5.8.1`.
+It displays the Boat's grid-wide Diesel and Electricity totals without adding
+Petrol or disturbing the neighboring HUD elements. The builder uses the
+available UE 5.8.2 editor and a fresh stock HUD package for the target build.
+Its game-derived contracts are recorded in
+[GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md).
 
 ## Build
 

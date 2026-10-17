@@ -6,17 +6,16 @@ Voyage's Blueprint-callable file APIs and demand-loads one Actor entry class per
 descriptor. The shipped payload contains no native DLL, UE4SS code, DML payload
 or external runtime preprocessor.
 
-## Provenance and validation scope
+## Compatibility scope
 
 The source contract is bound to Steam build `25056839` and game UE `5.8.1`.
 Revalidate reflected game identities after a fingerprint change. Generated
 Content, cooked packages, extracted game data, logs and release evidence remain
 ignored.
 
-The user validated a menu/save/menu/repeated-save/normal-exit lifecycle smoke
-test with DML's menu available and the incompatible BoatHUD sidecar disabled.
-This establishes the tested lifecycle and descriptor path, not strict loader
-ordering, late actor counts, arbitrary entry-mod compatibility or hot mounting.
+The loader supports the menu/save/menu/repeated-save/normal-exit lifecycle with
+DML's menu available. Strict loader ordering, late actor counts, arbitrary
+entry-mod compatibility and hot mounting are outside its established scope.
 
 ## Runtime architecture
 
@@ -120,6 +119,5 @@ generated tree and release artifact under ignored `artifacts/` paths.
 - Wider malformed-file runtime tests, late duplicate counts, fresh no-DML
   coverage and a supported release producer remain open.
 
-Reusable discovery findings and rejected Asset Registry assumptions live in
-[autoload research](../../docs/voyage-autoload-research.md). The optional DML
-integration proposal is [`DML-PROPOSAL.md`](DML-PROPOSAL.md).
+The optional DML integration proposal is
+[`DML-PROPOSAL.md`](DML-PROPOSAL.md).

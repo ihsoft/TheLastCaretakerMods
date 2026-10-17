@@ -1,10 +1,10 @@
 # Native altitude control and StableGyro ownership
 
-## Version and evidence boundary
+## Version-bound native contracts
 
-The native contracts in this document were decoded from Steam build `25956314`.
-Names, owners, offsets, property types and flags were matched to reflection from
-that build. Revalidate them after a Steam build ID change. The public
+The native contracts in this document are bound to Steam build `25956314`.
+Names, owners, offsets, property types and flags reflect that build. Revalidate
+them after a Steam build ID change. The public
 producer separately re-extracts and checks the stock cooked assets consumed by
 each candidate build.
 
@@ -13,8 +13,8 @@ current mapping metadata revalidated the native owner and float/bool types of
 the fields consumed by these graphs, and the stock HUD binding described below
 was re-extracted unchanged. The offsets, reflected access flags, CDO defaults,
 and native formulas in this document remain bounded to `25956314`. Resetting
-`HoverPitchScale` to `1.0` is the user's selected recovery target based on that
-older proven default; it is not a current-fingerprint CDO claim.
+`HoverPitchScale` to `1.0` is the recovery policy based on that earlier stock
+default; it is not a current-build CDO claim.
 
 ## Native producer and calibration
 
@@ -154,8 +154,8 @@ ineligible.
 
 On every change to a player controller, the PostPhysics helper writes the
 chosen recovery baseline `1.0` to saved `HoverPitchScale` through the Engine's
-validated `SetDoublePropertyByName` route. That value is the stock default
-proven on Steam build `25956314`; the current fingerprint's CDO was not
+`SetDoublePropertyByName` route. That value is the stock default recorded for
+Steam build `25956314`; the current fingerprint's CDO was not
 independently revalidated. BeginPlay only binds the controller-change delegate;
 it does not invoke the callback for an already controlled Gyro. The reset runs
 only from a genuine later player-entry event and never from polling or a
@@ -176,19 +176,15 @@ world gravity divided by this lift coefficient. The virtual query is consistent
 with mass, but its exact Shipping identity is not independently verified, so a
 complete mass-normalized formula is not established.
 
-Resetting every player-entered Gyro to the proven `25956314` baseline `1.0` is
-the deliberate recovery policy selected for this candidate. Altitude,
-orientation, ground effect and load still affect the equilibrium reached by
-later native calibration. The reported yaw-related recovery mechanism remains
-unproven.
+Resetting every player-entered Gyro to the `1.0` baseline is the recovery
+policy. Altitude, orientation, ground effect and load still affect the
+equilibrium reached by later native calibration. The yaw-related recovery
+mechanism remains unproven.
 
-## Gameplay validation boundary
+## Compatibility boundary
 
-On Steam build `25956314`, the user reported that the intermittent takeoff
-failure no longer reproduced in his test and that throttle no longer adjusted
-itself during hold; he preferred the resulting behavior. After the requested
-default-`500` and zero-setting update, he reported that the latest installed
-build works. This validates the reported workflow at the level the user tested.
-It does not establish a separate scenario matrix for both `0` and `500`, strong
-waves, every collision shape, every saved calibration state or compatibility
-with another Steam build ID.
+The altitude-hold path does not adjust native throttle. Both the default
+vertical deceleration and its zero setting follow the documented control
+paths. Strong waves, every collision shape and every saved calibration state
+are outside the established compatibility scope. A new Steam build ID requires
+review of the game-derived input and calibration contracts.

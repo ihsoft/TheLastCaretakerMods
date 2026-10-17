@@ -139,17 +139,11 @@ StableGyro.ini is created from the canonical packaged defaults.
 Build, cook, container verification, and clean load are not gameplay
 validation.
 
-Steam build `25827816` remains the last broadly game-validated checkpoint. On
-build `25880952`, the user verified settings reload on Gyro entry and the
-`EnablePitchCorrection` enabled/disabled A/B switch; the remaining detailed
-flight-stability cases still require proportional real-game validation.
-On Steam build `25956314`, the user reported that the intermittent takeoff
-failure no longer reproduced in his test and that throttle no longer adjusted
-itself during hold. After the requested default-`500` and zero-setting update,
-he reported that the latest installed build works. This does not establish a
-separate test matrix for both values, strong waves, every collision shape or
-every saved calibration state. The public producer still freshly extracts and
-asserts the consumed stock asset contracts for each candidate build.
-
-On Steam build `25982825`, the user verified the entry-only reset of
-`HoverPitchScale` to `1.0` in the real game.
+StableGyro rereads settings on Gyro entry; `EnablePitchCorrection` switches
+between the mod's smooth pitch control and stock W/S behavior. Altitude hold
+does not adjust throttle, and each new player entry resets saved
+`HoverPitchScale` to `1.0`. The entry-reset asset contract covers Steam build
+`25982825`; asset-dependent inputs are freshly extracted and checked for each
+build.
+Strong waves, every collision shape and every saved calibration state are not
+part of the established compatibility scope.

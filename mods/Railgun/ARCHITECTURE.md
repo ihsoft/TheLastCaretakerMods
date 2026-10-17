@@ -2,7 +2,7 @@
 
 ## Stock aiming and input integration boundaries
 
-The following native contracts were inspected on Steam build `25956314`.
+The following native contracts are bound to Steam build `25956314`.
 Railgun uses these contracts for stock actions, mapping-context lifecycle and
 ADS processing. Controller hardware behavior remains unverified. Revalidate
 native contracts when the Steam build ID changes. Reusable input integration rules
@@ -518,8 +518,8 @@ inherit the dynamic charge-ring color.
 The icon row and charge text form one centered block, and the existing optics
 gate hides that whole block together with the charge radial. The source image,
 crop, six-slot order, colors, cached-count path and absence of HUD inventory
-polling are statically validated. Real-game validation confirms placement,
-right-to-left updates, the zero-count tint and optics hiding.
+polling follow the package contract. The runtime places the row, updates it
+right-to-left, applies the zero-count tint and hides it with the optics gate.
 
 The charge text and filled part of the radial ring use the same subtle red tint
 whenever stored energy is below one shot. Shot-ready and invalid states use
@@ -538,8 +538,8 @@ explicit masks from the current 14-emitter stock system. Fountain mode enables
 `Drop_Tower`, `Tower`, `Spikes` and `Core_Drops`; impact mode enables
 `FireExplode`, `spark`, `spark_l`, `shockwave`, `Spark001`, `Core_Smoke001`,
 `SmallerPieces` and `BigPieces`. `BigPieceSplash` and `SmallPieceSplash` remain
-disabled in both modes. Real-game validation covers a fountain-only water miss
-and fire and smoke on a damaging Talon-shark impact.
+disabled in both modes. A water miss uses only the fountain effect; a damaging
+Talon-shark impact uses fire and smoke.
 
 Production effects use a mod-owned transient Blueprint helper with an owned
 inactive Niagara component. Each instance applies one of these masks,

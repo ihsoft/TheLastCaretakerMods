@@ -21,38 +21,19 @@ Reconstructed editor-only identities:
 - `VoyageModuleSubsystem.GetModulesInSameGrid(VoyageModuleComponent, out Array<VoyageModuleComponent>)`
 - stock package `/Game/UI/Game/HUD/BP_VoyageIngameBoatHud`
 
-The reflected identities above were revalidated from a live UE 5.8.1 process
-with the reviewed mapping dumper. Its automatic `GUObjectArray` resolver returned a
-false address for this executable; a bounded scan of the writable image data
-located the structurally valid array, after which both `.usmap` and full
-reflection dumps succeeded. The current mapping keeps `Petrol = 1` and
-`Diesel = 16`; the two native function owners, parameters, and return types are
-unchanged. A fresh current-build base-container export also confirms that
-`BatteryTB` and `PetrolTB` remain separate `UTextBlock` leaves. Both use size
+The mapping records `Petrol = 1` and `Diesel = 16`. `BatteryTB` and
+`PetrolTB` are separate `UTextBlock` leaves in the stock HUD. Both use size
 `10`, `VoyageRoboto` Regular, specified color `(0.5, 0.5, 0.5, 1.0)`, centered
 justification, and uppercase transformation.
 
-CUE4Parse with the explicit UE 5.8 serializer loaded the current stock Boat HUD
-from the base container. Its generated pseudocode is byte-for-byte identical to
-the preserved build `23962331` stock report, including the native parent,
-widget identities, native-Tick requirement, and absence of Blueprint Tick.
-
-Current Voyage still uses IoStore TOC `ReplaceIoChunkHashWithIoHash` and
+The supported game build uses IoStore TOC `ReplaceIoChunkHashWithIoHash` and
 container header `SoftPackageReferencesOffset`, matching retoc's `UE5_7`
 profile. That compatibility profile remains explicit in the scripts because
-the installed retoc does not yet name `UE5_8`. The fresh stock HUD extracted
-successfully with the corrected converter and no shaders, and preserves the
-exact `2`/`0` relocation path counts. The final four-package container passed
-`retoc verify` and independent CUE4Parse UE5_8 inspection while mounted with
-the base game.
-The installed UE 5.8.2 editor is used to cook for the UE 5.8.1 game. Static
-container checks passed, and on 2026-08-31 the user confirmed that the
-installed container loads and the total-Diesel HUD works in the real game.
-Petrol present in tanks on the same ship was confirmed not to enter the sum.
-This validates the 5.8.2-editor/5.8.1-game combination for the primary path.
-On 2026-09-02, the final `BoatHUDTotalResources_P` container for build
-`25056839` passed the exact four-asset gates and was confirmed working after a
-real-save load.
+the installed retoc does not yet name `UE5_8`. The stock HUD's relocation
+contract requires exactly two source-path occurrences in `.uasset` and none
+in `.uexp`. The UE 5.8.2 editor cooks for the UE 5.8.1 game. The release
+contains four packages and displays grid-wide Diesel and Electricity totals
+after a save load; Petrol is excluded.
 
 UE 5.8.2 enables ZenStore for a direct cook commandlet through its effective
 packaging defaults. The mod build passes `-SkipZenStore` explicitly because

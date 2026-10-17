@@ -14,7 +14,6 @@
   Use existing-actor guards, not a claimed strict activation order. Validate
   repeated travel separately: DML can recreate itself independently. Do not
   claim arbitrary async mod initialization has completed when spawning returns.
-- The current source is the accepted lifecycle-smoke checkpoint. Retain reusable
-  discovery conclusions in `docs/voyage-autoload-research.md`.
+- The current source owns the loader lifecycle and descriptor contract.
   Never launch Voyage without permission or install while it is running.
 - Generated Content, build/cook output and package evidence remain ignored.
