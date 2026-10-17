@@ -134,7 +134,7 @@ those details here.
   state or make the next clean run require manual recovery. Do not delete
   existing `artifacts/` content until its value and dependencies are understood.
 - Every tracked `.usmap` must live in its own Steam-build/engine-version
-  directory and have a sibling manifest containing the executable fingerprint,
+  directory and have a sibling manifest containing the Steam build ID,
   exact engine/parser version, generator commit, file hash, validation evidence,
   and revalidation condition. Never overwrite an older mapping for a new game
   build. Keep a selected candidate and the evidence required to review it as a
@@ -144,7 +144,7 @@ those details here.
   `tools/Get-VoyageMappings.ps1`; it fingerprints the installed game, selects
   the matching reviewed entry from `mappings/Voyage/`, validates it, and returns
   the path. Run `New-VoyageMappings.ps1` only after that resolver reports that
-  no reviewed mapping matches a genuinely new fingerprint, and ask the user to
+  no reviewed mapping matches a genuinely new Steam build ID, and ask the user to
   start the game before generation.
 - Except for the reviewed mapping registry, commit the method, not the snapshot.
   Reusable fingerprinting, extraction, inspection, patching, and disassembly
@@ -155,7 +155,10 @@ those details here.
 - Treat the documented scripts as black boxes on their supported path. Select
   the tool by intent in `tools/README.md`, run its documented interface, and
   evaluate its exit code, manifest, summary, and output before reading source
-  or tracing third-party internals. Inspect implementation only when the tool
+  or tracing third-party internals. Do not demand a separate tool version,
+  commit, or binary hash check before a normal call unless the documented
+  interface requires it for an actual format or safety contract. Inspect
+  implementation only when the tool
   fails, hangs, rejects valid-looking inputs, produces an unexpected result,
   or the documented contract is insufficient for the task.
 - Toolchain coverage must reach at least 80% of recurring mechanical operations
@@ -237,23 +240,26 @@ those details here.
   an asset, choose or override a store root, or manually copy, move, merge,
   promote, rewrite, or delete entries. If the tool fails or returns an unexpected
   result, stop normal research and diagnose the tool before touching its store.
-- Durable cooked-asset toolchain contracts, accepted fork checkpoints, and the
+- Durable cooked-asset toolchain contracts, tool boundaries, and the
   validation ladder live in `docs/voyage-cooked-asset-toolchain.md`.
 - Durable findings about the Boat's Diesel socket hover card live in
   `docs/boat-resource-socket-architecture.md`; active feature work alone belongs
   in `docs/boat-hud-total-resources-backlog.md`.
 - Before reusing a saved game-derived input, compare the installed game's Steam
-  build ID and executable hash with its provenance. A producer that fingerprints
+  build ID with its provenance. A producer that identifies
   the game and re-extracts current stock inputs during the run satisfies this
   gate; do not add a separate manual fingerprint call before that producer.
-- A changed fingerprint invalidates extracted snapshots and reconstructed
-  contracts alike. A mod producer may attempt a candidate build on the new
-  fingerprint when it re-extracts affected stock inputs and checks its required
+- A changed Steam build ID invalidates extracted snapshots and reconstructed
+  game-specific contracts. A mod producer may attempt a candidate build on the
+  new build when it re-extracts affected stock inputs and checks its required
   asset contracts during that run. A successful build is structural evidence;
-  require the real-game test before a new gameplay compatibility claim. Diagnose
-  a failed build or game test with focused inspection of the affected contract.
+  require the real-game test before a new gameplay compatibility claim. General
+  engine behavior is governed by its engine/serialization contract and structural
+  checks; it does not acquire a game-build gate solely because it was observed
+  on one build. Diagnose a failed build or game test with focused inspection of
+  the affected contract.
 - Keep mod version, artifact version, user-facing game version, Steam build ID,
-  executable hash, and Unreal Engine version as separate identities. A game
+  and Unreal Engine version as separate identities. A game
   update neither proves incompatibility nor requires a mod-version bump; it
   invalidates version-bound build inputs and requires new evidence before a new
   compatibility claim. Record whether a display/marketing version came from a
@@ -270,8 +276,9 @@ those details here.
   and manifest identity must use the artifact version, so distinct candidates
   such as `v2` and `v2-test` cannot masquerade as the same source.
 - Any generated or reconstructed game-derived file that must remain in Git as
-  a source input needs a provenance header naming its game fingerprint, engine
-  version, reconstruction method/tools, and revalidation condition. If the
+  a source input needs a provenance header naming its Steam build ID when the
+  contract is game-specific, engine version, reconstruction method/tools, and
+  revalidation condition. If the
   format cannot contain comments, record the same metadata in its owning
   README or registry.
 

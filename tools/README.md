@@ -24,8 +24,10 @@ Agents should start here instead of reading every implementation file.
 The table and documented commands are the public interface of this toolset.
 On the normal path, choose a tool by intent, run it unchanged, and judge the
 result from its exit code, manifest, summary, and produced files. Do not first
-survey the script, re-derive its dependencies, or manually reproduce its
-steps.
+survey the script, re-derive its dependencies, compare tool commits or hashes,
+or manually reproduce its steps. Investigate tool identity when a failure or
+unexpected result makes it relevant, unless the documented interface requires
+an identity gate for a specific format or safety contract.
 
 The goal is not to maximize wrappers. It is to minimize agent work and context
 consumption for predictable operations. A good normal path usually means one
@@ -170,7 +172,7 @@ container and evidence, without installation.
 | Goal | Start with | Result |
 | --- | --- | --- |
 | Run a potentially failing native diagnostic with resource limits | `Invoke-VoyageBoundedTool.ps1` | Time/memory-bounded process tree, separate TMP logs, exit and peak-memory report |
-| Identify the installed game build | `Get-VoyageBuildFingerprint.ps1` | Steam build ID, executable hash, and container metadata/hashes |
+| Identify the installed game build | `Get-VoyageBuildFingerprint.ps1` | Steam build ID and game root |
 | Inspect installed containers and running game processes without mutation | `Get-VoyageInstallationStatus.ps1` | JSON inventory, process snapshot, optional installed-manifest hash comparison |
 | Get one cooked asset as JSON or list every package | `Get-VoyageAssetJson.ps1` | Validated JSON or package-list path; game storage and reuse are automatic |
 | Summarize one Blueprint without reading its full JSON | `Get-VoyageAssetSummary.ps1` | Compact focused structure plus a complete summary path |
@@ -467,8 +469,9 @@ under ignored `Tmp/tests/installation-status-*/`.
 - Without `cmake`, CUE4Parse reports that its optional native backend was not
   built and continues with the managed implementation. Record that limitation
   rather than treating a managed-only inspection as native-backend coverage.
-- Start every version-bound investigation with a fresh fingerprint. Do not use
-  an old artifact merely because its path or asset name still looks correct.
+- Check the Steam build ID when reusing saved game-derived inputs. A producer
+  that reads it during its run needs no separate preflight call. Do not use an
+  old artifact merely because its path or asset name still looks correct.
 - Installed override containers can shadow base-game assets during extraction.
   `Extract-VoyagePackage.ps1` defaults to `-Source Game`; `-Source Mod` needs
   one exact `-ModContainer`. It never falls back to a mixed view silently.
@@ -535,7 +538,7 @@ rather than duplicating this contract or passing an unrelated build manifest.
 `-ValidateOnly` verifies the clean source commit, exact manifest-owned
 `.pak/.ucas/.utoc` triplet and ZIP, matching triplet contents inside the archive,
 and current Steam
-build/executable fingerprint, then returns the planned destinations without
+build ID, then returns the planned destinations without
 creating evidence or touching the Paks directory. Remove `-ValidateOnly` only
 for an explicitly authorized installation while the game is closed.
 
@@ -627,15 +630,15 @@ diagnostic TMP tree; otherwise it is removed after the run.
 
 ## Typical workflow
 
-### 1. Fingerprint the game
+### 1. Check the game build when reusing saved inputs
 
 ```powershell
 .\tools\Get-VoyageBuildFingerprint.ps1 `
-  -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage' `
-  -OutputPath '.\artifacts\fingerprints\current.json'
+  -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage'
 ```
 
-Compare the Steam build ID and executable SHA-256 with the owning mod's
+Skip this separate call when the selected producer checks the build during its
+run. Otherwise compare the Steam build ID with the owning mod's
 `GAME_DERIVED_SOURCES.md`. A mismatch is a hard stop for old extracted assets,
 reconstructed native contracts, relocation assumptions, and cooked packages.
 
@@ -872,7 +875,7 @@ a structural report:
   -Filter 'Vehicles/BP_Forklift_Possesable' `
   -GameRoot 'D:\SteamLibrary\steamapps\common\Voyage' `
   -RetocEngineVersion UE5_8 `
-  -OutputRoot '.\artifacts\extracted\forklift-refresh'
+  -OutputRoot '.\Tmp\extracted\forklift-refresh'
 ```
 
 `-RetocEngineVersion` records and passes the exact engine profile supported by
@@ -942,7 +945,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -LegacyRetoc '<preserved 234f4e5 retoc.exe>'
 ```
 
-This development test pins the two control executable hashes and the reviewed
+This development test pins the two control tool binaries and the reviewed
 Steam-25056839 Dismantle fixture. It rejects other installed mods owning that
 asset before fresh legacy-control extraction. It checks candidate writer byte
 identity at `UE5_8`, and byte identity with upstream at explicit `UE5_7`, then
@@ -1314,8 +1317,8 @@ missing bundled resource.
 For a novel native investigation requiring decoded instructions rather than
 the inspector's byte correlations, `Inspect-VoyageNativeMemberAccess.py`
 accepts `<exe> <new-output.json> --offset <hex>` (repeat `--offset`). It needs
-Python, `pefile`, and `capstone`; it reads the PE without process access and
-records the executable SHA-256. Outputs must remain below ignored artifacts.
+Python, `pefile`, and `capstone`; it reads the PE without process access.
+Outputs must remain below ignored `Tmp/`.
 Candidate functions come from exception ranges containing the offset bytes;
 only decoded matching memory operands are retained. An offset match does not
 establish class ownership, and the output is not a whole-program call graph.
