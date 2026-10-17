@@ -1,4 +1,4 @@
-# Voyage item fabrication and pickup
+# Voyage item fabrication and pickup (mixed static and runtime evidence)
 
 ## Evidence boundary
 
@@ -24,7 +24,7 @@ A working recipe requires more than a visible entry in the fabricator:
   registration is not itself a recipe unlock.
 - Package serialization must match the consumer's expectations. A registered
   and displayed item can still fail fabrication/pickup. The tested correction
-  is described in the shared [serialization contract](voyage-cooked-asset-toolchain.md#package-serialization-is-a-separate-compatibility-contract).
+  is described in the shared [serialization contract](voyage-cooked-asset-toolchain-knowledge.md#package-serialization-is-a-separate-compatibility-contract).
 - Item recipe and drop configuration determine the fabricated output. Validate
   the spawned box's contents and loot interaction, not just the completion
   sound or a visible physical mesh.
@@ -81,7 +81,7 @@ these actual gameplay consumers.
 
 For the tested Railgun setup, the complete owned UAssetAPI/UAssetGUI JSON is
 the source of truth for the ammo item's object graph and values. The reviewed
-[UAssetAPI `21c982f` writer](voyage-cooked-asset-toolchain.md#known-boundaries)
+[UAssetAPI `21c982f` writer](voyage-cooked-asset-toolchain-knowledge.md#known-boundaries)
 writes it directly to loose `.uasset/.uexp` with reviewed mappings and an
 explicit `UE5_8` serialization hint; no stock donor or post-write patcher is
 used. The writer does not add hidden balance overrides. Stored object and
@@ -196,7 +196,7 @@ remain outside confirmed runtime coverage. Function-local scratch state is a
 defence against synchronous callbacks, not proof that all delegates broadcast
 synchronously on every native path.
 
-See [action/hint ownership](vehicle-and-hud-modding-patterns.md#action-execution-and-action-presentation-are-separate-contracts).
+See [action/hint ownership](vehicle-and-hud-modding-patterns-knowledge.md#action-execution-and-action-presentation-are-separate-contracts).
 Optional implementation examples (Railgun):
 [transfer and lifecycle](../mods/Railgun/Source/RailgunRuntimeGenerator/RailgunReload.cpp)
 and [native inventory mirror](../mods/Railgun/Source/Voyage/VoyageBaseInventoryComponent.h).

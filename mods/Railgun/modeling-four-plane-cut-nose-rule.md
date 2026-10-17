@@ -1,4 +1,4 @@
-# Four-Plane Cut Nose Modeling Rule
+# Four-Plane Cut Nose: Railgun modeling rule
 
 ## Purpose
 
@@ -9,10 +9,6 @@ The required shape is **not** a pyramid and **not** a smooth-shaded mathematical
 The approved construction method is called:
 
 **Four-Plane Cut Nose**
-
-Russian shorthand:
-
-**носик четырьмя секущими плоскостями**
 
 ---
 
@@ -109,7 +105,8 @@ Do not increase topology merely to hide the four-plane construction.
 
 ## Surface Normals
 
-All normal rules for the project still apply.
+The shared [surface-normals knowledge](../../docs/modeling-surface-normals-knowledge.md)
+provides a geometric model for checking this shape.
 
 > Normals point toward where an observer could physically exist.
 

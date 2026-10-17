@@ -1,4 +1,4 @@
-# Voyage scanning and recipe unlocks
+# Voyage scanning and recipe unlocks (static findings; runtime untested)
 
 ## Evidence and version boundary
 

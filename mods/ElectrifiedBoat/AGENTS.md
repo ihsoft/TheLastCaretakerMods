@@ -9,12 +9,12 @@ game identities; [README.md](README.md) owns the build and installation steps.
   Install the three container files directly in `Voyage/Content/Paks/LogicMods`
   for DML discovery. Release ZIPs contain these files under `LogicMods/` and
   are extracted into Paks. This additive mod does not require an `_P` suffix; see the
-  [DML contract](../../docs/voyage-cooked-asset-toolchain.md#dml-actor-identity-and-physical-installation).
+  [DML contract](../../docs/voyage-cooked-asset-toolchain-knowledge.md#dml-actor-identity-and-physical-installation).
 - `OnActorAttached` handles construction **and save restoration**. Keep one
   synchronous handler, with no separate restore scan, Tick, or retry timer.
   A connected cable does not make a restored socket ineligible. The separate
   `OnActorRestored` signal is not needed here; see
-  [lifecycle contracts](../../docs/vehicle-and-hud-modding-patterns.md#actor-attachment-and-save-restoration).
+  [lifecycle contracts](../../docs/vehicle-and-hud-modding-patterns-knowledge.md#actor-attachment-and-save-restoration).
 - Match the exact stock Electric Wall Socket class, not subclasses. Resolve
   its welded-root Boat once and use the first suitable stock electric port
   from that Boat's `OwnedActors`. Resolve the port's parent through stock
@@ -24,13 +24,13 @@ game identities; [README.md](README.md) owns the build and installation steps.
 - `OwnedActors` is a **weak** actor array. Keep the by-reference Blueprint
   helper and weak/null/weak canary; a strong-array mirror or ordinary
   `Array_Get` is not an equivalent replacement. See
-  [weak-array access](../../docs/voyage-cooked-asset-toolchain.md#reflected-weak-object-arrays).
+  [weak-array access](../../docs/voyage-cooked-asset-toolchain-knowledge.md#reflected-weak-object-arrays).
 - Boat power sharing uses `AddExternalSocket`, not secondary-group membership.
   Preserve the existing view and cable references, copy the complete live
   `Port` and five stock registration flags, and initialize the ID from the wall
   actor's own name. Do not copy the reference ID or add a collision scan.
   The exact flags and native behavior are in
-  [external registration](../../docs/boat-resource-socket-architecture.md#external-socket-registration).
+  [external registration](../../docs/boat-resource-socket-architecture-knowledge.md#external-socket-registration).
 - `PairedModule` is saved by the game: clear both ends of an old pair and their
   `WallSocket` groups, but never put a Boat battery or mod object into that
   property. Stock `UnpairModule` alone does not perform symmetric cleanup.

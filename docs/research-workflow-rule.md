@@ -4,14 +4,14 @@ Research should explain the producer, consumer, owner, lifecycle, identity,
 and data contract behind game behavior. A patch that happens to work is not by
 itself a complete explanation. This document covers research decisions and
 evidence; generated output follows the shared
-[artifact lifecycle](artifact-lifecycle.md), and tool commands live in the
+[artifact lifecycle](artifact-lifecycle-rule.md), and tool commands live in the
 [tool index](../tools/README.md).
 
 ## Start with the question and its owner
 
 1. State the behavior or contract that is unknown and identify the mod that
    owns the question. Read its current rules and relevant architecture or
-   research notes. Use shared patterns and [research pitfalls](research-pitfalls.md)
+   research notes. Use shared patterns and [research pitfalls](research-pitfalls-knowledge.md)
    only where they address that question; do not read every large document by
    default.
 2. Decide which evidence is game-build-specific. For saved game-derived inputs,
@@ -86,7 +86,7 @@ narrower step cannot answer the question or has already failed to do so.
   claim needs the corresponding real-game test.
 - Put stable mod-specific findings in its architecture or research notes and
   reusable cross-mod findings in shared documentation. Record a failed or
-  misleading approach in [research pitfalls](research-pitfalls.md) when it can
+  misleading approach in [research pitfalls](research-pitfalls-knowledge.md) when it can
   prevent repeated mistakes. One-off logs and measurements do not belong in
   shared guidance.
 - Commit a coherent positive research checkpoint when it establishes a useful
@@ -97,4 +97,4 @@ narrower step cannot answer the question or has already failed to do so.
   Combine minor observations at a natural checkpoint rather than committing
   each one. Commit eligible source, methods, and documentation through the
   repository Git workflow; generated output follows the
-  [artifact lifecycle](artifact-lifecycle.md).
+  [artifact lifecycle](artifact-lifecycle-rule.md).

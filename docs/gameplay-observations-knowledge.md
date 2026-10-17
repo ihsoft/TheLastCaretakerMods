@@ -1,4 +1,4 @@
-# The Last Caretaker: gameplay observations
+# The Last Caretaker: gameplay observations (observed values)
 
 This document contains compact, reproducible gameplay values that are useful
 for mod balancing. It is not an experiment log.

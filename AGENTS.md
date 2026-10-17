@@ -6,6 +6,17 @@ those details here.
 
 ## Rule and knowledge ownership
 
+- Substantive shared documents under `docs/` end in `-rule.md` or
+  `-knowledge.md`. A rule constrains repository work: follow it, or report a
+  conflict or blocker to the user and obtain an explicit decision before
+  deviating. Knowledge records useful observations or reasoned inferences;
+  state uncertainty in the document heading and at the affected claim.
+  Recheck or discard knowledge when new evidence conflicts with it. A report
+  that cannot be independently reproduced or investigated is not established
+  knowledge. Knowledge saves investigation effort but does not prevent a new
+  investigation. `README.md`,
+  source-provenance files, and other navigational or data files keep their own
+  established names outside this shared-document naming pattern.
 - Shared `docs/` content must have a concrete or reasonably expected use across
   mods. Keep mod-only contracts and open questions under the owning `mods/<mod>/`.
   Write reusable conclusions without tying them to one mod; link to a mod as an
@@ -23,7 +34,7 @@ those details here.
   boundaries. The checked-in state is the accepted result; do not preserve who
   confirmed it, trial chronology, test dates, or per-run proof in normal mod
   documentation. Keep exact selected release packages with artifacts.
-- The repository-wide [release and installation workflow](docs/release-and-installation.md)
+- The repository-wide [release and installation workflow](docs/release-and-installation-rule.md)
   owns published-version identity, candidate retention, installation evidence,
   and installed-file layout for every mod. Mod-local rules may add necessary
   payload or migration contracts, but may not redefine those shared identities.
@@ -33,7 +44,7 @@ those details here.
   under `mods/DonkLiftKeyboardControlUE4SS`; it is not a dependency of the
   autonomous mod.
 - Shared Voyage vehicle/HUD patterns belong in
-  `docs/vehicle-and-hud-modding-patterns.md`. Evidence and object-specific
+  `docs/vehicle-and-hud-modding-patterns-knowledge.md`. Evidence and object-specific
   findings remain in the architecture and research documents.
 - Current source, the closest rules, durable documentation, and the latest
   game-validated Git checkpoint are sources of truth. Chat history and local
@@ -47,7 +58,7 @@ those details here.
 
 ## Subagent coordination
 
-- Before delegating, read [the subagent workflow](docs/subagent-workflow.md).
+- Before delegating, read [the subagent workflow](docs/subagent-workflow-rule.md).
   Use a real child agent for delegated work. Reuse only this parent's own
   suitable coder, with verified ownership; never borrow another parent/chat's
   coder merely because it shares the repository or role. Unknown ownership is
@@ -85,7 +96,7 @@ those details here.
   pitfalls. For a large investigation, keep active hypotheses, package hashes,
   and pending test results in a local ignored backlog under the owning mod.
   A one-cycle question does not require a backlog. Follow the
-  [research workflow](docs/research-workflow.md#working-backlogs-for-large-tasks)
+  [research workflow](docs/research-workflow-rule.md#working-backlogs-for-large-tasks)
   for its lifecycle and retirement.
 - After context compaction, recover from repository state rather than chat, but
   do not automatically read every large document in full. If an active backlog
@@ -119,7 +130,7 @@ those details here.
   explicitly reviewed `.usmap` registry under `mappings/Voyage/`. User-authored
   mod assets, including `mods/Railgun/Assets/Model/Railgun.glb`, are ordinary
   source inputs; this does not authorize extracted game meshes or materials.
-- Apply the shared [generated-output lifecycle](docs/artifact-lifecycle.md):
+- Apply the shared [generated-output lifecycle](docs/artifact-lifecycle-rule.md):
   `Tmp/` holds one-cycle output by default, while ignored `artifacts/` is for
   generated output with a concrete use beyond the current research, feature,
   or release cycle. Preserve owner, consumer, revalidation, rollback, and
@@ -238,10 +249,12 @@ those details here.
   an asset, choose or override a store root, or manually copy, move, merge,
   promote, rewrite, or delete entries. If the tool fails or returns an unexpected
   result, stop normal research and diagnose the tool before touching its store.
-- Durable cooked-asset toolchain contracts, tool boundaries, and the
-  validation ladder live in `docs/voyage-cooked-asset-toolchain.md`.
+- Durable cooked-asset contracts and boundaries live in
+  [toolchain knowledge](docs/voyage-cooked-asset-toolchain-knowledge.md); the
+  workflow and validation ladder live in
+  [toolchain rules](docs/voyage-cooked-asset-toolchain-rule.md).
 - Durable findings about the Boat's Diesel socket hover card live in
-  `docs/boat-resource-socket-architecture.md`; active feature work belongs with
+  `docs/boat-resource-socket-architecture-knowledge.md`; active feature work belongs with
   the owning mod, using an ignored local backlog only when the task is large
   enough to need one.
 - Before reusing a saved game-derived input, compare the installed game's Steam
@@ -357,7 +370,7 @@ those details here.
 - Install all new DML mods' container files together directly in
   `Voyage/Content/Paks/LogicMods` so DML can discover them. A virtual actor path
   or a previously registered mod working elsewhere is not proof of fresh
-  discovery. See the [DML installation contract](docs/voyage-cooked-asset-toolchain.md#dml-actor-identity-and-physical-installation).
+  discovery. See the [DML installation contract](docs/voyage-cooked-asset-toolchain-knowledge.md#dml-actor-identity-and-physical-installation).
 - Never replace installed mod or game files while the game is running. The
   user may play while repository-only work continues; do not interrupt or
   alter his current game session.

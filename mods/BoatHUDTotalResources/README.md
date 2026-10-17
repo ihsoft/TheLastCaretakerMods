@@ -24,7 +24,7 @@ color, and text-transform policy before it is inserted.
 
 This composition avoids adding Tick state to the unversioned inherited Voyage
 HUD child. Shared cooked-asset contracts are documented separately in
-[`../../docs/voyage-cooked-asset-toolchain.md`](../../docs/voyage-cooked-asset-toolchain.md).
+[`../../docs/voyage-cooked-asset-toolchain-knowledge.md`](../../docs/voyage-cooked-asset-toolchain-knowledge.md).
 
 ## Compatibility
 

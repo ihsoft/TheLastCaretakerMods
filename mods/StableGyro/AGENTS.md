@@ -17,17 +17,17 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   owns the reusable PostPhysics correction model, axis-local velocity writes,
   previous-command growth rejection, control-intent projection, state reset,
   and actuator-speed gating used by this mod.
-- [Gyro research pitfalls](../../docs/research-pitfalls.md#управление-gyro)
+- [Gyro research pitfalls](../../docs/research-pitfalls-knowledge.md#управление-gyro)
   owns rejected Gyro architectures and deceptive no-op causes, including stock
   Blueprint relocation, child Tick replacement, component runtime identity,
   pure-node reevaluation, Shipping diagnostics, and PrePhysics correction.
-- [Standard hint pitfalls](../../docs/research-pitfalls.md#стандартные-подсказки)
+- [Standard hint pitfalls](../../docs/research-pitfalls-knowledge.md#стандартные-подсказки)
   and [standard action UI patterns][action-ui-pattern]
   own the provided-action/HUD distinction and exact UFunction-owner rules
   behind the X hint.
 
-[postphysics-pattern]: ../../docs/vehicle-and-hud-modding-patterns.md#post-physics-kinematic-correction
-[action-ui-pattern]: ../../docs/vehicle-and-hud-modding-patterns.md#discovering-voyages-standard-action-ui
+[postphysics-pattern]: ../../docs/vehicle-and-hud-modding-patterns-knowledge.md#post-physics-kinematic-correction
+[action-ui-pattern]: ../../docs/vehicle-and-hud-modding-patterns-knowledge.md#discovering-voyages-standard-action-ui
 
 - The mod owns control and flight-stability improvements for the stock Gyro.
   It includes W/S integration of native TiltForwardInput, X reset and HUD

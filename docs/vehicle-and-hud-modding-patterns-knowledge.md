@@ -1,4 +1,4 @@
-# Voyage vehicle and standard-HUD modding patterns
+# Voyage vehicle and standard-HUD patterns (observed; transfer unproven)
 
 This document describes reusable patterns for Voyage vehicles and possessed
 stations. Concrete classes, fields, actions and widget lifecycles can differ
@@ -51,7 +51,7 @@ substitute for completed actor attachment or proof of its final vehicle owner.
 The runtime contract above covers Electric Wall Sockets on Boats, not every
 actor type or arbitrary ordering of streamed levels. Revalidate the reflected
 signatures and lifecycle when the game fingerprint or consumer changes.
-See [external socket ownership](boat-resource-socket-architecture.md#external-socket-registration).
+See [external socket ownership](boat-resource-socket-architecture-knowledge.md#external-socket-registration).
 
 ### Feedback before the HUD is available
 
@@ -220,7 +220,7 @@ the currently possessed pawn is not the character's inventory owner. Refresh
 inventory-dependent availability initially and from both inventories'
 `OnInventoryChanged`, unbinding on exit/EndPlay and before rebinding.
 The provider reads availability; it does not transfer items or discover objects.
-See [inventory transfer and notification contracts](voyage-item-fabrication-and-pickup.md#manual-transfer-between-character-and-module-inventories).
+See [inventory transfer and notification contracts](voyage-item-fabrication-and-pickup-knowledge.md#manual-transfer-between-character-and-module-inventories).
 
 ### Generated property reads need an explicit object context
 

@@ -1,4 +1,4 @@
-# Runtime configuration patterns
+# Runtime configuration patterns (inferred reuse patterns)
 
 These patterns apply to runtime settings across mods. They do not establish
 that a particular game class exposes the required events or native APIs;

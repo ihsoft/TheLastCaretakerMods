@@ -3,7 +3,7 @@
 Use this method only when the user explicitly requests process diagnostics.
 It is not a default reporting requirement. Keep measurement cheaper than the
 decision it informs; reuse available counters rather than building telemetry.
-Ordinary delegation decisions follow [the subagent workflow](subagent-workflow.md).
+Ordinary delegation decisions follow [the subagent workflow](subagent-workflow-rule.md).
 
 ## Scope and attribution
 

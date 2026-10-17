@@ -1,6 +1,6 @@
 # Voyage research tools
 
-The [cooked-asset toolchain](../docs/voyage-cooked-asset-toolchain.md#known-boundaries)
+The [cooked-asset toolchain](../docs/voyage-cooked-asset-toolchain-knowledge.md#known-boundaries)
 records the JSON save and engine-selection contract. Publisher manifests own
 exact binary provenance; this index owns the public
 Test-UAssetGuiJsonRoundtrip / Invoke-VoyageBoundedTool interfaces.
@@ -47,7 +47,7 @@ crash/dialog, a hang, an unexpected output, or a case the documented interface
 does not cover. Before changing code, inspect the tool's own diagnostics and
 verify its fingerprinted inputs, paths, mapping gate, and dependency commit.
 The accepted compatibility checkpoints and validation boundaries are recorded
-in [`../docs/voyage-cooked-asset-toolchain.md`](../docs/voyage-cooked-asset-toolchain.md).
+in [`../docs/voyage-cooked-asset-toolchain-knowledge.md`](../docs/voyage-cooked-asset-toolchain-knowledge.md).
 
 ## Coding-agent report contract
 
@@ -287,7 +287,7 @@ identification; callers do not need a separate fingerprint probe.
 | ContainerLidLabel | [Build and validation](../mods/ContainerLidLabel/README.md) | `Build-ContainerLidLabel.ps1` fingerprints the game, builds and cooks a large-container child, relocates its fresh stock parent, verifies exactly two runtime packages, and prepares an `_P` container, ZIP and schema-2 release manifest below `Tmp/ContainerLidLabel`. It does not install; placement and runtime behavior remain a separate game-validation gate |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
-| ElectrifiedBoat | [Build and validation](../mods/ElectrifiedBoat/README.md#build-and-validation), [installation](../mods/ElectrifiedBoat/README.md#distribution), [rules](../mods/ElectrifiedBoat/AGENTS.md) | `Build-ElectrifiedBoat.ps1` fingerprints the game, generates and cooks one additive `/Game/Mods/ElectrifiedBoat/ModActor`, packages the container, and invokes `Test-ElectrifiedBoatCandidate.ps1`. The distribution contains three unsuffixed IoStore files under `LogicMods/` without `.autoload`; extract its contents into `Voyage/Content/Paks` for DML discovery; keep the ZIP outside the game. The producer does not install or change loader configuration. See the [DML identity contract](../docs/voyage-cooked-asset-toolchain.md#dml-actor-identity-and-physical-installation) |
+| ElectrifiedBoat | [Build and validation](../mods/ElectrifiedBoat/README.md#build-and-validation), [installation](../mods/ElectrifiedBoat/README.md#distribution), [rules](../mods/ElectrifiedBoat/AGENTS.md) | `Build-ElectrifiedBoat.ps1` fingerprints the game, generates and cooks one additive `/Game/Mods/ElectrifiedBoat/ModActor`, packages the container, and invokes `Test-ElectrifiedBoatCandidate.ps1`. The distribution contains three unsuffixed IoStore files under `LogicMods/` without `.autoload`; extract its contents into `Voyage/Content/Paks` for DML discovery; keep the ZIP outside the game. The producer does not install or change loader configuration. See the [DML identity contract](../docs/voyage-cooked-asset-toolchain-knowledge.md#dml-actor-identity-and-physical-installation) |
 | Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun` container, calls the common native registry producer for its three owned JSON readbacks, and prepares a schema-3 ZIP/manifest below `Tmp/Railgun`. Optional `-Install` uses the common guarded installer; `-ReleaseCandidate` retains the versioned ZIP under `artifacts/installations/Railgun-V<N>`. Gameplay validation remains a separate gate |
 | PalletContainerSnap | [DML installer](../mods/PalletContainerSnap/Install-PalletContainerSnap.ps1) | A prepared release manifest drives the shared installer with `-LogicMods`; `-ReleaseCandidate` retains the selected ZIP outside the game. The producer is paused |
 

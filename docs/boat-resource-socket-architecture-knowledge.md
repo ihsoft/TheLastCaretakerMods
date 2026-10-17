@@ -1,4 +1,4 @@
-# Boat resource socket hover cards
+# Boat resource socket hover cards (observed asset contracts)
 
 This document describes the Boat side connectors' resource producer and HUD
 consumer. Game-derived details are bound to their stated Steam build.
@@ -123,12 +123,12 @@ provide symmetric source-and-peer cleanup on its valid-pair branch.
 exclude custom persistence. Runtime registration does not by itself establish
 safe removal of a mod from a saved game.
 
-See [attachment and restoration events](vehicle-and-hud-modding-patterns.md#actor-attachment-and-save-restoration)
-and [weak-array Blueprint access](voyage-cooked-asset-toolchain.md#reflected-weak-object-arrays).
+See [attachment and restoration events](vehicle-and-hud-modding-patterns-knowledge.md#actor-attachment-and-save-restoration)
+and [weak-array Blueprint access](voyage-cooked-asset-toolchain-knowledge.md#reflected-weak-object-arrays).
 
 ## Integration boundary
 
 Network-wide Diesel and Electricity belong in the possessed-Boat HUD, while
 socket scan text remains local to its module. Preserve the stock Actor, SCS
 template, component class and global interaction-widget consumer. The
-[research pitfalls](research-pitfalls.md) document unsafe interception paths.
+[research pitfalls](research-pitfalls-knowledge.md) document unsafe interception paths.

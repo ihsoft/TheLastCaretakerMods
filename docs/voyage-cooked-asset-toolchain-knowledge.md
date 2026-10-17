@@ -1,20 +1,13 @@
-# Voyage cooked-asset toolchain
+# Voyage cooked-asset toolchain knowledge (observed, scoped contracts)
 
-This document records the accepted contracts and limits of the cooked-asset
-workflow. Commands and parameters remain owned by `tools/README.md`.
+This document records observed game, engine, and toolchain behavior with its
+version and validation boundaries. Treat unsupported extensions as hypotheses.
+Repository workflow rules are in [toolchain rules](voyage-cooked-asset-toolchain-rule.md).
 
-## Operating rule
-
-Use the repository scripts as black boxes first. Pick the operation from the
-tool-routing table, run the documented interface, and consume its diagnostics,
-manifest, summary, and output. Do not spend an ordinary task re-reading the
-implementation or reconstructing the dependency chain.
-
-Investigate internals only when a tool exits non-zero, crashes or opens a crash
-dialog, hangs, rejects valid-looking inputs, returns an unexpected result, or
-lacks a documented operation required by the task. Diagnose from the outside
-in: inputs and fingerprint, paths and exact dependency commits, mapping gate,
-tool log/manifest, minimal reproducer, then source.
+For Steam build `25056839`, game UE `5.8.1`, the reviewed mapping is
+`mappings/Voyage/steam-25056839-ue5.8.1/Voyage-25056839.usmap`. Its sibling
+manifest records generator identity, file hash, validation evidence, and
+invalidation condition.
 
 ## Reflected weak-object arrays
 
@@ -39,20 +32,18 @@ they must not require shipping a replacement Voyage module.
 
 ## DML actor identity and physical installation
 
-DML v0.6 discovers new mods in `Voyage/Content/Paks/LogicMods`. Install each
-mod's `.pak`, `.ucas`, and `.utoc` together directly in that directory. Its
+DML v0.6 discovers new mods in `Voyage/Content/Paks/LogicMods`. Its
 `WBP_DML.FindLogicMods` helper accepts both `<ModName>.pak` and
-`<ModName>_P.pak`. Release instructions must target this directory; a ZIP with
-files at its root must be extracted into `LogicMods`, not directly into Paks.
+`<ModName>_P.pak`. The installation requirement is in
+[toolchain rules](voyage-cooked-asset-toolchain-rule.md#dml-installation).
 
 The actor's virtual class identity remains
 `/Game/Mods/<ModName>/ModActor.ModActor_C`; the physical directory does not
 rewrite it. Discovery and loading a previously registered name are different
 contracts. Existing saved registration can mask a wrong installation layout.
-Do not use a successful load of an already known mod, or the existence of
-`DML add <ModName>`, as proof that a fresh mod is discoverable outside
-`LogicMods`. Validate first-time discovery without relying on an existing
-registration; manual registration is not a substitute for the required layout.
+A successful load of an already known mod, or the existence of
+`DML add <ModName>`, therefore does not prove that a fresh mod is discoverable
+outside `LogicMods`.
 
 The `_P` suffix is not a universal DML requirement. Apply the repository's
 stock-package override suffix rule when a container actually overrides stock
@@ -62,74 +53,6 @@ This contract is bound to the DML v0.6 payload whose `dml_P.utoc` SHA-256 is
 `8DDE713A29CA21227E91757DFE64A9928135C3AD1C549E207EAED8BF412B7A2F`.
 Its `CM_DMG` implements the `DML add` command and virtual class construction;
 the widget's physical discovery helper is a separate path.
-
-## Tool boundary
-
-The public scripts in [`tools/README.md`](../tools/README.md) select the
-published retoc, jmap, UAssetAPI/UAssetGUI, CUE4Parse and executable-inspection
-tools needed for each operation. Run the selected public interface first and
-evaluate its result. Publisher manifests retain binary provenance for diagnosis;
-normal callers do not compare tool commits, sizes or hashes in advance.
-
-For Steam build `25056839`, game UE `5.8.1`,
-the reviewed mapping is
-`mappings/Voyage/steam-25056839-ue5.8.1/Voyage-25056839.usmap`.
-Its sibling manifest owns the generator identity, file hash, validation
-evidence, and invalidation condition.
-
-If a tool fails or produces unexpected output, inspect its diagnostics and
-publication identity before changing the asset contract. The reviewed mapping
-still has its own file-integrity and schema gates.
-
-Publisher manifests record exact binary provenance. The runtime-only JSON
-version handling and validation boundaries are described below under
-[known boundaries](#known-boundaries); command interfaces remain in the
-[tool index](../tools/README.md).
-
-## Operations
-
-Use the wrappers listed in `tools/README.md`:
-
-- fingerprint the installation with `Get-VoyageBuildFingerprint.ps1`;
-- resolve the existing reviewed mapping with `Get-VoyageMappings.ps1`; create a
-  new candidate with `New-VoyageMappings.ps1` only after a confirmed unmatched
-  game fingerprint, then validate it with `Test-VoyageMappings.ps1`;
-- cache an asset as versioned JSON with `Get-VoyageAssetJson.ps1`;
-- answer ordinary Blueprint structure questions with
-  `Get-VoyageAssetSummary.ps1`, selecting only the needed focus and opening the
-  full returned summary only when the compact records are insufficient;
-- extract an exact loose package with `Extract-VoyagePackage.ps1`;
-- inspect packages and reflection with `Inspect-VoyageAsset.ps1`;
-- publish and stress the exact GUI with `Publish-UAssetGuiBinary.ps1` and
-  `.tools/bin/UAssetGUI.exe stress-open`;
-- publish retoc, jmap, UAssetAPI, and CUE4Parse through their dedicated
-  `Publish-*` wrappers, then consume only `.tools/bin/` on the normal path;
-- publish the tracked Inspector through `Publish-VoyageAssetInspectorBinary.ps1`;
-  both inspection wrappers resolve `.tools/bin/VoyageAssetInspector.exe` with
-  `Get-VoyageAssetInspectorBinary.ps1`. Runtime paths check provenance and never
-  build or restore. The framework-dependent EXE requires .NET 10 and external
-  reviewed mappings; source/dependency changes invalidate it, not a new query;
-- run native name, address, and member-offset correlation through
-  `Invoke-VoyageExecutableInspector.ps1`; it resolves the validated EXE and
-  returns compact fingerprinted evidence while retaining the detailed report.
-  Publish through `Publish-VoyageExecutableInspectorBinary.ps1` only after an
-  intentional committed source change. Its output does not prove reflected
-  ownership, call relations, or lifecycle;
-- build or prepare fork source only while deliberately changing a dependency
-  checkpoint or diagnosing an unexpected publisher/tool result;
-- create the common schema-2 manifest for an ordinary triplet and ZIP, or
-  schema 3 when the release owns one exact content-plugin descriptor, with
-  `New-VoyageReleaseManifest.ps1`; give it the exact source scope and let its
-  installer validation gate publish the immutable manifest;
-- validate or install an already-built standalone IoStore release through
-  `Install-VoyageRelease.ps1`, retaining a selected release ZIP outside the
-  game and using temporary transaction data during mutation; reinstall the
-  previous ready package if a game test fails;
-- install and remove unchanged runtime canaries only through the hash- and
-  fingerprint-gated probe scripts.
-
-The script is the reusable method; game-derived JSON, packages, reports, raw
-mapping candidates, and test containers stay under ignored `artifacts/`.
 
 ## Additive content-plugin registries
 
@@ -198,26 +121,6 @@ legacy `-aes` interprets its value differently. Keep keys, local crypto JSON,
 extracted files and raw reports below ignored `artifacts/`; none may enter Git
 or a distributed mod package. Railgun no longer consumes this path.
 
-## Validation ladder
-
-Passing a lower level never implies a higher one:
-
-1. relevant Steam build and asset provenance match;
-2. the mapping passes header, payload, required-schema, hash, and Steam build
-   gates;
-3. the asset opens with no unexpected `RawExport` fallback;
-4. unchanged save is binary-equal and reopens;
-5. independent CUE4Parse inspection agrees with the intended structure;
-6. retoc converts, verifies, and reports the exact semantic inventory;
-7. an independent rebuild has equivalent reviewed package structure and
-   Blueprint behavior, when byte equality is not expected;
-8. a separately named unchanged or deliberately changed canary loads in the
-   game;
-9. the requested runtime behavior is tested in the real game.
-
-The writer supports the reviewed unchanged-asset and changed-save layouts; it
-does not guarantee arbitrary structural edits to every asset.
-
 ## Package serialization is a separate compatibility contract
 
 Matching export classes and decoded property values does not establish runtime
@@ -233,7 +136,7 @@ reviewed unversioned property stream, object versions and custom-version
 container. The current contract and validation scope live in
 [Railgun architecture](../mods/Railgun/ARCHITECTURE.md); fabrication and pickup
 consumer boundaries live in
-[item fabrication and pickup](voyage-item-fabrication-and-pickup.md).
+[item fabrication and pickup](voyage-item-fabrication-and-pickup-knowledge.md).
 
 This does **not** prove that all tagged Voyage packages fail or authorize bulk
 conversion of other assets. Treat serialization as an asset-specific contract

@@ -6,7 +6,7 @@ Git source and documentation follow their owning rules.
 
 An optional backlog for a large task is a local working note, not generated
 output or an artifact. Keep it outside `Tmp/`, ignore it in Git, and retire it
-as described in the [research workflow](research-workflow.md#working-backlogs-for-large-tasks).
+as described in the [research workflow](research-workflow-rule.md#working-backlogs-for-large-tasks).
 
 ## Temporary output and retained artifacts
 
@@ -65,7 +65,7 @@ Selected release candidates and published release packages must remain usable
 without `Tmp/`. Working builds and transient installation
 recovery state remain in `Tmp/`. Keep temporary state only through the active
 install operation and any coupled settings change. The
-[release workflow](release-and-installation.md) governs
+[release workflow](release-and-installation-rule.md) governs
 this distinction for all mods. Promote reusable findings
 to documentation and recurring methods to their owning tools; retained raw
 output does not substitute for either.

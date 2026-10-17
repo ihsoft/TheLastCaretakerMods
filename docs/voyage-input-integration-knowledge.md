@@ -1,9 +1,9 @@
-# Voyage input integration
+# Voyage input integration (observed stock contracts)
 
 Use the game's action objects and input processing when extending controls.
 Keep action identity, device mappings, input lifetime, camera processing and
 action presentation as separate responsibilities. This complements
-[vehicle and HUD patterns](vehicle-and-hud-modding-patterns.md).
+[vehicle and HUD patterns](vehicle-and-hud-modding-patterns-knowledge.md).
 
 ## Reuse actions, not default buttons
 

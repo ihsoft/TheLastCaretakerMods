@@ -7,7 +7,7 @@ Railgun uses these contracts for stock actions, mapping-context lifecycle and
 ADS processing. Controller hardware behavior remains unverified. On a changed
 Steam build, try the public candidate producer first; investigate these native
 contracts if the build or game test fails. Reusable input integration rules
-live in [Voyage input integration](../../docs/voyage-input-integration.md).
+live in [Voyage input integration](../../docs/voyage-input-integration-knowledge.md).
 
 Each shell clones the live character and vehicle context assets and their
 device mappings. The character allowlist retains Primary Action, ADS, Reload
@@ -141,7 +141,7 @@ This coordinate conversion does not replace the game's inversion setting.
   resolve its unchanged stock implementation.
   Reusable action/label contracts, evidence levels and the limits of attributing
   the layout fix to a single change live in
-  [the shared HUD patterns](../../docs/vehicle-and-hud-modding-patterns.md#evidence-levels-for-actions-and-hints).
+  [the shared HUD patterns](../../docs/vehicle-and-hud-modding-patterns-knowledge.md#evidence-levels-for-actions-and-hints).
 - Station entry and exit follow the exact inherited Pawn possession events.
   Each transition schedules one next-tick continuation so Voyage's native
   possession and camera work completes first. Repeated events at the same
@@ -421,13 +421,13 @@ imports and complete export graph against the JSON used for that build before
 packaging. The ammo and gun items retain their unversioned formats; the skill
 retains its tagged format. All three object graphs are preserved by their
 editable JSON rather than hard-coded count gates. See the shared
-[serialization contract](../../docs/voyage-cooked-asset-toolchain.md#package-serialization-is-a-separate-compatibility-contract).
+[serialization contract](../../docs/voyage-cooked-asset-toolchain-knowledge.md#package-serialization-is-a-separate-compatibility-contract).
 
 General consumer findings and limitations, including output grouping and
 native caliber defaults, live in
-[item fabrication and pickup](../../docs/voyage-item-fabrication-and-pickup.md).
+[item fabrication and pickup](../../docs/voyage-item-fabrication-and-pickup-knowledge.md).
 The independent scan-to-vault unlock mechanism is documented in
-[scanning and recipe unlocks](../../docs/voyage-scanning-and-recipe-unlocks.md).
+[scanning and recipe unlocks](../../docs/voyage-scanning-and-recipe-unlocks-knowledge.md).
 
 ## Magazine inventory
 
@@ -491,7 +491,7 @@ opens the stock container overlay. The exact inherited
 `ModuleComponent.GetInternalInventory()`. Socket and operator interactions
 remain separate. Temporary inventory diagnostic widgets and state are absent.
 General evidence and restrictions live in the shared
-[filtered inventory contract](../../docs/voyage-item-fabrication-and-pickup.md#filtered-module-inventories-refinery-reference).
+[filtered inventory contract](../../docs/voyage-item-fabrication-and-pickup-knowledge.md#filtered-module-inventories-refinery-reference).
 
 The fire path treats the owned native inventory as authority; neither the
 six-slot model state nor the HUD count cache can authorize a shot. It resolves

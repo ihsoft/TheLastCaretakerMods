@@ -10,7 +10,7 @@ contract and workflow detail.
   game-validated Git checkpoint as the implementation of record.
 - `README.md` documents generation and packaging. `README.txt` is the
   user-facing mod README.
-- Durable negative findings live in `../../docs/research-pitfalls.md`. Do not
+- Durable negative findings live in `../../docs/research-pitfalls-knowledge.md`. Do not
   restore an older control or HUD design when it disagrees with the current
   source without a new isolated experiment.
 - `../DonkLiftKeyboardControlUE4SS` is a preserved historical alternative, not

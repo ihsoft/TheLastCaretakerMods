@@ -107,6 +107,8 @@ All mod-owned inputs live below this directory:
 
 - `Assets\Model\Railgun.glb` is the current user-authored model. Replace this
   file to revise geometry or materials without changing the build contract.
+  Its pointed projectile nose follows the
+  [mod-owned modeling rule](modeling-four-plane-cut-nose-rule.md).
 - `Assets\Model\model-source.json` maps stable node roles and explicit
   interaction/collision boxes. It contains no revision metadata or stored hash.
   Its `nodes.chargeIndicatorMesh` role identifies the model-authored render

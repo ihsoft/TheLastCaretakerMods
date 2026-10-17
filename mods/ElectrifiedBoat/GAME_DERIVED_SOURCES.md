@@ -64,7 +64,7 @@ and external-transfer behavior was inspected on an earlier build and has not
 been re-derived for this one. Save restoration and cleanup/removal remain
 outside the established compatibility scope. Shared contracts are documented in:
 
-- [Actor attachment and save restoration](../../docs/vehicle-and-hud-modding-patterns.md#actor-attachment-and-save-restoration)
-- [External socket registration](../../docs/boat-resource-socket-architecture.md#external-socket-registration)
-- [Reflected weak-object arrays](../../docs/voyage-cooked-asset-toolchain.md#reflected-weak-object-arrays)
-- [DML actor identity and physical installation](../../docs/voyage-cooked-asset-toolchain.md#dml-actor-identity-and-physical-installation)
+- [Actor attachment and save restoration](../../docs/vehicle-and-hud-modding-patterns-knowledge.md#actor-attachment-and-save-restoration)
+- [External socket registration](../../docs/boat-resource-socket-architecture-knowledge.md#external-socket-registration)
+- [Reflected weak-object arrays](../../docs/voyage-cooked-asset-toolchain-knowledge.md#reflected-weak-object-arrays)
+- [DML actor identity and physical installation](../../docs/voyage-cooked-asset-toolchain-knowledge.md#dml-actor-identity-and-physical-installation)

@@ -6,7 +6,7 @@ when a local owning backlog exists, its restart section. It supplements, not
 replaces, runtime tool permissions, installation safeguards and Git coordination.
 
 When the user explicitly requests resource or delegation diagnostics, use
-[agent work measurement](agent-work-measurement.md). Do not collect per-task
+[agent work measurement](agent-work-measurement-rule.md). Do not collect per-task
 metrics routinely or put individual measurement results in shared documentation.
 
 ## Roles and startup

@@ -14,7 +14,7 @@ After cloning the repository, open its root in your coding agent and start with
 a natural-language request such as:
 
 > My game is installed at `<game path>`. Read `AGENTS.md` and
-> `docs/research-workflow.md`. I want to improve `<game feature>`. First inspect
+> `docs/research-workflow-rule.md`. I want to improve `<game feature>`. First inspect
 > the existing knowledge and current game resources, then propose the cheapest
 > useful experiment. Do not change my installed game yet.
 
@@ -42,8 +42,8 @@ inputs with the checked-in tools under ignored `Tmp/`, retaining generated
 output under `artifacts/` only when it has a use beyond the current work cycle.
 Research may commit a useful, evidence-bound intermediate conclusion while the
 investigation remains open. A gameplay compatibility claim still requires a
-proportional test in the real game. See the [research workflow](docs/research-workflow.md)
-and [generated-output lifecycle](docs/artifact-lifecycle.md).
+proportional test in the real game. See the [research workflow](docs/research-workflow-rule.md)
+and [generated-output lifecycle](docs/artifact-lifecycle-rule.md).
 
 ## About this repository
 
@@ -58,8 +58,8 @@ runtime allowlist; game-derived build inputs require review after an update.
   [`mods/Railgun`](mods/Railgun/README.md).
 - [`tools/`](tools/README.md) — catalog and usage guide for reproducible
   extraction, inspection, and patching utilities.
-- `docs/` — reusable cross-mod architecture, methods and research pitfalls;
-  mod-specific knowledge belongs under its owning `mods/` directory.
+- `docs/` — reusable cross-mod `-knowledge.md` findings and `-rule.md`
+  constraints; active research and mod-specific knowledge belong with the mod.
 - `Tmp/` — ignored output for the current investigation, feature, or release
   cycle.
 - [`artifacts/`](artifacts/README.md) — ignored generated output retained for a
@@ -70,14 +70,14 @@ runtime allowlist; game-derived build inputs require review after an update.
 
 ## Shared game research
 
-- [Game input integration](docs/voyage-input-integration.md) — stock action
+- [Game input integration](docs/voyage-input-integration-knowledge.md) — stock action
   identity, remapping, context ownership, camera settings and action hints.
-- [Runtime configuration](docs/runtime-configuration-patterns.md) — setting
+- [Runtime configuration](docs/runtime-configuration-patterns-knowledge.md) — setting
   ownership, shared cache lifetime, native setters and validation boundaries.
-- [Item fabrication and pickup](docs/voyage-item-fabrication-and-pickup.md) —
+- [Item fabrication and pickup](docs/voyage-item-fabrication-and-pickup-knowledge.md) —
   separate registration, serialization and drop contracts; tested ammo
   dependencies, output grouping and numeric caliber defaults.
-- [Scanning and recipe unlocks](docs/voyage-scanning-and-recipe-unlocks.md) —
+- [Scanning and recipe unlocks](docs/voyage-scanning-and-recipe-unlocks-knowledge.md) —
   the stock Replica Scanner completion path, item flags and vault grants;
   fingerprint-bound static findings and runtime validation limits.
 
