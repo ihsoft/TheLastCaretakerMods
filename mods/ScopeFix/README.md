@@ -27,8 +27,8 @@ Use all three files from the same archive. Avoid combining overrides of the
 same electric-rifle or RedDot data assets.
 
 To remove a manual installation, close the game and remove those three files.
-Repository-managed installation and rollback use `Install-VoyageRelease.ps1`
-and `Restore-VoyageReleaseInstallation.ps1` with their respective manifests.
+Repository-managed installation uses `Install-VoyageRelease.ps1` with its
+release manifest. Reinstall the previous ready package for rollback.
 
 ## Build
 

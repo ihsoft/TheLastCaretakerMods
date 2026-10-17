@@ -34,16 +34,15 @@ layout is exactly:
 - `Content\Paks\Railgun.ini`
 
 There are no root files or README in the ZIP. It may be extracted manually
-from inside `Voyage\Voyage`. On a successful `-Install`, the exact
-artifact-versioned ZIP is copied to the game's Paks directory and becomes the
-single retained release copy. The loose payload, release manifest,
-`build-provenance.json`, `validation-summary.json`, cook output and logs remain
-temporary and the producer removes the complete run only after installation,
-settings merge, installed-hash readback and restore-plan validation succeed.
-The returned `archivePath` then identifies the retained Paks ZIP;
-build-specific temporary report paths are returned as null. Without `-Install`,
-the returned candidate paths remain valid below `Tmp\Railgun` until explicitly
-discarded.
+from inside `Voyage\Voyage`. `-Install` places only game-consumed files in
+the game and keeps the working ZIP and recovery evidence in `Tmp/`. Add
+`-ArtifactVersion V<N>-<identity> -ReleaseCandidate` for a selected candidate
+for the next Nexus version; after installation the exact ZIP and release manifest
+live under `artifacts/installations/Railgun-V<N>`. Installation recovery data
+stays in `Tmp/` while needed.
+The producer then removes its owned temporary build and installation-operation
+data after settings merge, installed-hash readback and restore-plan validation
+succeed. `archivePath` identifies the retained candidate ZIP when selected.
 
 `Build-Railgun.ps1` is the only supported build producer. It generates model,
 construction, input, operator, HUD, projectile and audio assets, cooks them in
@@ -75,11 +74,9 @@ editor-only adapter validates its package count and Core SHA-1 before passing
 the complete list directly to Unreal's stock cook commandlet. This keeps the
 launcher command line bounded as model dependencies grow while preserving the
 single-pass `CookSinglePackageNoRefs` contract. A successful installation
-removes the TMP workspace only after the common installer and restore validator
-accept it. Installation evidence deliberately records historical source and
-release-manifest paths; after TMP cleanup those paths are provenance text, not
-a supported reinstall entry point. Operational restore uses the durable
-install manifest and `previous-files` evidence.
+removes its temporary build and recovery state after the common installer,
+settings merge, and restore validator accept it. If a game test fails, reinstall
+the previous ready package.
 
 ## Controls
 
@@ -144,9 +141,9 @@ A build does not depend on preserved scratch output from an earlier Railgun
 run. Published toolchain binaries and reviewed reusable caches selected through
 their documented interfaces are separate dependencies. The producer writes
 disposable logs, loose cook output and readbacks below repository `Tmp/`,
-removes its owned successful-install scratch, and retains one validated,
-self-contained artifact-versioned ZIP in the game's Paks directory. Common
-installation backup/restore evidence remains below `artifacts/installations`.
+removes its owned successful candidate-install scratch, and retains one
+validated, self-contained ZIP under `artifacts/installations/Railgun-V<N>`.
+Temporary installation output and recovery evidence stay in `Tmp/`.
 Do not delete an existing artifact until its release, cache, research or
 rollback value and dependencies are understood. Unreal's
 generated `Binaries`, `Content`, `Intermediate`, and `Saved` directories are

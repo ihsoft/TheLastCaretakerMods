@@ -604,10 +604,9 @@ readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field.
 
 - Steam build: `25956314`; parser profile: `UE5_8`; authoring editor: `5.8.2`.
-- Versioned release ZIPs live in `Voyage/Content/Paks/`. Ignored installation
-  manifests under `artifacts/installations/Railgun/` identify exact installed
-  hashes and rollback material; neither is a source dependency for rebuilding.
-  Temporary release-manifest paths can disappear after build cleanup.
+- Selected candidate ZIPs live under `artifacts/installations/Railgun-V<N>/`.
+  Temporary builds and their transient installation state stay in `Tmp/`;
+  neither is a source dependency for rebuilding.
 
 ## Compatibility limits and deferred work
 

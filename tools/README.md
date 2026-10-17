@@ -202,9 +202,9 @@ container and evidence, without installation.
 | Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/bin/UAssetGUI.exe stress-open` | Incremental per-asset JSONL plus parse/binary-equality summary |
 | Build, cook and package an existing mod release | [Release producers](#release-producers) | Route to the owning mod's documented orchestrator; no generic rebuild recipe |
 | Create the common manifest for an already-built triplet and ZIP | `New-VoyageReleaseManifest.ps1` | Immutable schema-2 manifest, or schema 3 with one exact content-plugin descriptor, published only after installer validation |
-| Validate or install an already-built standalone IoStore release | `Install-VoyageRelease.ps1` | Manifest-gated install plan or recoverable installation evidence |
+| Validate or install an already-built standalone IoStore release | `Install-VoyageRelease.ps1` | Manifest-gated install plan and temporary recovery evidence |
 | Verify one IoStore container and its expected package set | `Test-VoyageContainer.ps1` | Bounded integrity check with a transient package inventory, exact-set differences and file hashes |
-| Restore/remove a common release installation | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded predecessor restoration and recovery evidence |
+| Restore an interrupted or legacy installation transaction | `Restore-VoyageReleaseInstallation.ps1` | Hash-guarded restoration from an existing transaction record |
 | Regression-test Git mutation coordination | [`Test-RepositoryGitCoordination.ps1`](repository-git-coordination.md#regression-test) | PowerShell 5.1 semaphore and isolated fixture-repository checks |
 | Locate native names, references, or correlated member offsets | `Invoke-VoyageExecutableInspector.ps1` | Compact fingerprinted result plus a temporary read-only executable report |
 | Reuse semantic C++ names while generating Blueprint graphs | `UnrealEditorGeneratorCommon` | Header-only build-time helpers; not a command-line tool |
@@ -266,7 +266,8 @@ before searching for scripts or assembling Unreal/retoc commands manually:
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
 | ElectrifiedBoat | [Build and validation](../mods/ElectrifiedBoat/README.md#build-and-validation), [installation](../mods/ElectrifiedBoat/README.md#distribution), [rules](../mods/ElectrifiedBoat/AGENTS.md) | `Build-ElectrifiedBoat.ps1` fingerprints the game, generates and cooks one additive `/Game/Mods/ElectrifiedBoat/ModActor`, packages the container, and invokes `Test-ElectrifiedBoatCandidate.ps1`. The distribution contains three unsuffixed IoStore files at ZIP root without `.autoload`; extract them directly into `Voyage/Content/Paks/LogicMods` for DML discovery. The producer does not install or change loader configuration. See the [DML identity contract](../docs/voyage-cooked-asset-toolchain.md#dml-actor-identity-and-physical-installation) |
-| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun` container, calls the common native registry producer for its three owned JSON readbacks, and prepares a schema-3 ZIP/manifest below `Tmp/Railgun`. Optional `-Install` uses the common guarded installer, retains the versioned ZIP in Paks and removes the temporary candidate after verification. Gameplay validation remains a separate gate |
+| Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun` container, calls the common native registry producer for its three owned JSON readbacks, and prepares a schema-3 ZIP/manifest below `Tmp/Railgun`. Optional `-Install` uses the common guarded installer; `-ReleaseCandidate` retains the versioned ZIP under `artifacts/installations/Railgun-V<N>`. Gameplay validation remains a separate gate |
+| PalletContainerSnap | [DML installer](../mods/PalletContainerSnap/Install-PalletContainerSnap.ps1) | A prepared release manifest drives the shared installer with `-LogicMods`; `-ReleaseCandidate` retains the selected ZIP outside the game. The producer is paused |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a
@@ -375,7 +376,7 @@ when those details are actually needed. This tool already returns JSON; unlike
 
 `-HashModFiles` adds SHA-256 for additional top-level files. An optional completed
 common installation manifest (schema 1, returned by `Install-VoyageRelease.ps1`)
-always hashes its exact installed targets, including the provenance ZIP and a
+always hashes its exact installed targets, excluding the retained ZIP, and a
 schema-3 content-plugin descriptor outside `Paks`. It
 reports `match`, `different`, `missing`, `unsupported-path`, or
 `changed-during-read` per file, and separates `filesMatch` from
@@ -491,11 +492,11 @@ installer implementation:
 
 ```powershell
 .\tools\New-VoyageReleaseManifest.ps1 `
-  -ReleaseRoot '.\artifacts\releases\Example-v1' `
+  -ReleaseRoot '.\Tmp\Example\V1-candidate' `
   -Mod 'Example' `
-  -Version 'v1' `
-  -Container '.\artifacts\releases\Example-v1\package\Example_P.utoc' `
-  -Archive '.\artifacts\releases\Example-v1\Example-v1.zip' `
+  -Version 'V1-candidate' `
+  -Container '.\Tmp\Example\V1-candidate\package\Example_P.utoc' `
+  -Archive '.\Tmp\Example\V1-candidate\Example-V1-candidate.zip' `
   -SourcePath '.\mods\Example'
 ```
 
@@ -506,7 +507,7 @@ then calls `Install-VoyageRelease.ps1 -ValidateOnly`. It publishes
 fingerprint, source commit, and dirty-source contract. Existing manifests are
 immutable. A dirty test candidate needs explicit `-AllowDirtySource`; a normal
 release should be committed first. `-InstalledArchiveName` can override the
-default installed provenance ZIP name, and `-AsJson` returns a compact result.
+retained candidate ZIP name, and `-AsJson` returns a compact result.
 When a release also owns one content-only plugin descriptor, pass its exact
 release-root-local `.uplugin` with `-ContentPluginDescriptor`. The producer then
 writes schema 3 with one typed `contentPlugin` record. Only the exact
@@ -526,7 +527,7 @@ release. It never builds, cooks, repackages, or edits the source release:
 
 ```powershell
 .\tools\Install-VoyageRelease.ps1 `
-  -ReleaseManifest '.\artifacts\releases\Example-v1\release-manifest.json' `
+  -ReleaseManifest '.\Tmp\Example\V1-candidate\release-manifest.json' `
   -ValidateOnly
 ```
 
@@ -543,30 +544,35 @@ build ID, then returns the planned destinations without
 creating evidence or touching the Paks directory. Remove `-ValidateOnly` only
 for an explicitly authorized installation while the game is closed.
 
-`-RetainArchiveOnRestore` is a narrow opt-in for producers that use the
-artifact-versioned installed ZIP as their canonical retained release. The
-installer records the choice only on the ZIP archive record in the completed
-install manifest. A later explicit restore still requires that ZIP to exist
-with its installed hash, but reports action `keep` and neither removes it nor
-replaces it with an older same-named file. Without the switch, legacy restore
-behavior is unchanged. A failed installation always rolls back an unpublished
-ZIP normally; retention does not weaken installation transactions.
 
-During installation the wrapper stages and hashes every source in the Paks
-directory, backs up all existing targets before replacing any of them, checks
-the process again immediately before replacement, reads every installed hash
-back, and writes `install-transaction.json` plus `install-manifest.json` below
-ignored `artifacts/installations/`. A handled failure restores all previous
-files and removes newly installed targets; the transaction records whether the
-rollback succeeded. A dirty-source manifest is rejected unless the caller
+The ordinary installer writes its temporary installation transaction under
+`Tmp/installations/`. Pass `-ReleaseCandidate` only for a selected candidate:
+the selected directory uses the next `V<N>` derived from the mod's
+`version.txt`; `0` selects the first numbered release, `V1`, even if the mod
+was published earlier without a numbered release. The installer refuses an existing
+`artifacts/installations/<Mod>-V<N>` directory, then keeps the exact ZIP and
+manifest there. `-RetainArchiveOnRestore` is rejected because ZIPs no longer
+belong in the game directory.
+
+During installation the wrapper stages and hashes every game-consumed source in the Paks
+directory, keeps temporary copies of existing targets during mutation, checks
+the process again immediately before replacement, and reads every installed hash
+back. Its `install-transaction.json` and `install-manifest.json` remain under
+`Tmp/`, including for selected release candidates, only while installation is
+in progress. The installer removes them after success. Use
+`-KeepRecoveryEvidence` only when a coupled operation such as Railgun's settings
+edit still needs the exact recovery copy; that caller removes it after its own
+success. A handled failure restores the
+pre-mutation files and removes newly installed targets. A dirty-source manifest is rejected unless the caller
 explicitly supplies `-AllowDirtySource`.
 For schema 3 the descriptor participates in the same transaction outside the
 Paks directory. Every existing parent is checked against traversal and reparse
 points; restore removes only that owned file and installation-created
 directories that are still empty.
 
-Restore the exact predecessor through the paired tool rather than copying the
-backup manually:
+The ordinary rollback after testing is to reinstall the previous ready package.
+The paired restore tool exists for an unfinished coupled installation or older
+transactions whose exact temporary backups are still available:
 
 ```powershell
 .\tools\Restore-VoyageReleaseInstallation.ps1 `
@@ -597,13 +603,9 @@ recovery. Do not delete them or blindly retry. Abruptly interrupted transactions
 likewise require diagnosis; the restore command accepts a completed installation
 manifest, not an unfinished transaction.
 
-For standalone IoStore mods whose tested installation contract allows a ZIP in
-the Paks directory, retaining the exact release ZIP beside the installed
-container is accepted provenance: Voyage ignores the archive while it remains
-available to identify and recover the installed release. The ZIP name and
-installation manifest must carry the artifact version, not merely the mod
-version. This is a provenance copy of a validated release artifact, not a ZIP
-that should be regenerated during installation.
+New installations never place a ZIP in Paks. Existing installations that own
+one remain restorable by their original manifest; do not delete their ZIP
+outside that restore path without reviewing its recovery dependencies.
 
 Run the Windows PowerShell regression harness after changing this contract:
 
@@ -612,17 +614,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File .\tools\Test-Install-VoyageRelease.ps1 `
   -WithAutoLoadSidecar -WithContentPluginDescriptor
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\tools\Test-Install-VoyageRelease.ps1 `
-  -WithAutoLoadSidecar -WithContentPluginDescriptor `
-  -RetainArchiveOnRestore
 ```
 
 It uses a unique synthetic Steam/Voyage tree under ignored
 `Tmp/tests/install-voyage-release/`
 and covers validate-only, successful installation, previous-file backup,
 installed hash readback, successful predecessor restoration, removal of new
-files or explicit archive retention, injected mid-install and mid-restore
+files, injected mid-install and mid-restore
 failures, and complete rollback in both directions. It also rejects a
 mismatched fingerprint, ZIP/payload mismatch,
 directory target, changed installed file, and damaged backup, and verifies that

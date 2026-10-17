@@ -15,9 +15,11 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   separate dependencies. Apply the repository lifecycle policy: the public
   producer writes its candidate, loose payload, reports and logs below
   repository `Tmp/Railgun/`. A preparation-only run leaves that temporary
-  candidate for inspection. A successful installation preserves exactly the
-  artifact-versioned release ZIP in Voyage's Paks directory plus common
-  installation/restore evidence, then removes its complete owned TMP run.
+  candidate for inspection. A temporary installation keeps its recovery data
+  in `Tmp/`. `-ReleaseCandidate` preserves the exact ZIP and release manifest
+  under `artifacts/installations/Railgun-V<N>`
+  and removes the complete owned TMP run after verification. No ZIP goes into
+  Voyage's Paks directory.
 - `Assets/Railgun.ini` is the canonical packaged INI and sole source of setting
   defaults, comments, order and formatting. `Settings/Railgun.settings.json`
   owns only runtime bindings, types and numeric ranges. Add each option to both,
@@ -65,7 +67,7 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
 - Keep documentation factual and compact. Do not maintain an experiment
   chronology, candidate backlog, or records that the user tested a build.
   Describe current behavior, durable findings and compatibility limits;
-  build identities and installation evidence belong to release artifacts.
+  selected release package identities belong to release artifacts.
   Keep transient logs and discarded
   experiment output in repository `Tmp/`; promote durable conclusions to
   documentation and retain research artifacts only when they are needed for

@@ -1,6 +1,6 @@
 # MooringCable60m
 
-**Version 1.0.0.** Only mooring cables change: manual deployment up to 60 m,
+Only mooring cables change: manual deployment up to 60 m,
 with the original 20 m automatic payout parameter for connected cables.
 The supported game build and asset contracts live in
 [ARCHITECTURE.md](ARCHITECTURE.md). Revalidate them for a later game build.
@@ -56,8 +56,8 @@ installs. A successful build establishes a structurally validated candidate,
 not gameplay behavior. The producer performs the routine stock-asset checks;
 manual asset analysis is reserved for a failed gate or runtime discrepancy.
 
-Install/restore through tools/Install-VoyageRelease.ps1 and
-Restore-VoyageReleaseInstallation.ps1, using exact manifests and a closed game.
+Install through tools/Install-VoyageRelease.ps1 using the exact release
+manifest and a closed game. Reinstall the previous ready package after a failed
+game test.
 The generated `release-manifest.json` records source revision, payload hashes
-and game fingerprint. Use the install manifest returned by the common installer
-for rollback.
+and game fingerprint.

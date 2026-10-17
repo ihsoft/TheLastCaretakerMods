@@ -41,7 +41,8 @@ if ($modVersion -notmatch '^v[1-9][0-9]*$') {
     throw "StableGyro version metadata is invalid: $versionMetadataPath"
 }
 if ([string]::IsNullOrWhiteSpace($Version)) {
-    $Version = $modVersion
+    $publishedVersion = [int](Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw)
+    $Version = 'v' + ($publishedVersion + 1) + '-candidate'
 }
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
@@ -460,21 +461,6 @@ if ($Install) {
         if ($sourceHash -cne $targetHash) {
             throw "Installed file hash mismatch: $name"
         }
-    }
-    $archiveTarget = Join-Path $paks $installedArchiveName
-    if (Test-Path -LiteralPath $archiveTarget -PathType Leaf) {
-        Copy-Item -LiteralPath $archiveTarget -Destination (Join-Path $backup $installedArchiveName)
-    }
-    Copy-Item -LiteralPath $archivePath -Destination $archiveTarget -Force
-    $archiveSourceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath).Hash
-    $archiveTargetHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archiveTarget).Hash
-    if ($archiveSourceHash -cne $archiveTargetHash) {
-        throw "Installed archive hash mismatch: $installedArchiveName"
-    }
-    $installedArchive = [ordered]@{
-        name = $installedArchiveName
-        size = (Get-Item -LiteralPath $archiveTarget).Length
-        sha256 = $archiveTargetHash
     }
     $settingsTemplate = $generatedSettingsIni
     $settingsPath = Join-Path $paks 'StableGyro.ini'

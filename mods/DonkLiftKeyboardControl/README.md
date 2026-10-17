@@ -18,8 +18,9 @@ Revalidate game-specific mirrors after the Steam build ID changes.
 
 ## Versioning and compatibility
 
-`VERSION.json` is the source of truth for the player-facing mod version and
-supported game versions. `v1` and `v2` identify releases of this mod; they are not
+`version.txt` records the latest numbered Nexus release; `0` means there has
+been no numbered `V1` release, regardless of earlier Nexus publication. `VERSION.json`
+records compatibility metadata for the current build. `v1` and `v2` identify releases of this mod; they are not
 aliases for game versions. The current release is `v2` for The Last Caretaker
 `5.5`, Steam build `25056839`, running game UE `5.8.1`.
 
@@ -74,21 +75,21 @@ stages manually:
 .\Build-DonkLiftRelease.ps1
 ```
 
-The default artifact label is the current mod version from `VERSION.json`.
-`-Version v2-test` may be used for a development artifact without changing the
-underlying mod version recorded separately in the release manifest.
+The default candidate label is the next version after `version.txt`, including
+`v1-candidate` when the file contains `0`.
+`-Version v3-test` may distinguish a development build without changing the
+published version.
 
 It validates the game/engine fingerprint and clean Git source, builds the
 editor modules incrementally, regenerates assets, cooks, extracts the original
 forklift, builds and verifies the IoStore container, and creates a player-facing
-ZIP plus `release-manifest.json` below ignored `artifacts/releases/`.
+ZIP plus `release-manifest.json` below ignored `Tmp/DonkLiftKeyboardControl/`.
 
 Useful explicit options:
 
 - `-Install` backs up and installs the resulting three-file container after
   confirming that Voyage is closed, then reads every installed hash back. It
-  also keeps the exact release archive in the Paks directory as
-  `DonkLiftKeyboardControl_<artifact-version>.zip` and verifies its hash;
+  installs only the game-consumed container files; the ZIP stays outside the game;
 - `-OriginalsRoot <path>` reuses an explicitly selected clean extraction only
   when its manifest proves the current Steam build ID, canonical filter, and no
   additional containers;

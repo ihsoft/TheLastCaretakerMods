@@ -37,9 +37,12 @@ consumer; individual run directories inherit that contract. Consult the owner
 before changing or removing existing retained content, and do not delete
 content whose value or dependencies are unknown.
 
-Retained releases, backups, and restore evidence must remain usable without
-`Tmp/`. Clearing `Tmp/` may interrupt an active run, but must not damage durable
-state or make a clean rerun require manual recovery. Promote reusable findings
+Selected release candidates and published release packages must remain usable
+without `Tmp/`. Working builds and transient installation
+recovery state remain in `Tmp/`. Keep temporary state only through the active
+install operation and any coupled settings change. The
+[release workflow](release-and-installation.md) governs
+this distinction for all mods. Promote reusable findings
 to documentation and recurring methods to their owning tools; retained raw
 output does not substitute for either.
 

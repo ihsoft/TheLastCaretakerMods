@@ -122,9 +122,9 @@ Use the wrappers listed in `tools/README.md`:
   `New-VoyageReleaseManifest.ps1`; give it the exact source scope and let its
   installer validation gate publish the immutable manifest;
 - validate or install an already-built standalone IoStore release through
-  `Install-VoyageRelease.ps1`, preserving its exact archive and installation
-  transaction evidence; restore its predecessor through
-  `Restore-VoyageReleaseInstallation.ps1` rather than copying backups manually;
+  `Install-VoyageRelease.ps1`, retaining a selected release ZIP outside the
+  game and using temporary transaction data during mutation; reinstall the
+  previous ready package if a game test fails;
 - install and remove unchanged runtime canaries only through the hash- and
   fingerprint-gated probe scripts.
 

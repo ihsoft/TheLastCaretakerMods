@@ -144,7 +144,9 @@ $paksDirectory = (Resolve-Path -LiteralPath $paksValue).Path
 $gameRootValue = [string](Get-OptionalPropertyValue -Object $manifest -Name 'gameRoot')
 $gameRoot = (Resolve-Path -LiteralPath $gameRootValue).Path
 $expectedPaksDirectory = [IO.Path]::GetFullPath((Join-Path $gameRoot 'Voyage\Content\Paks'))
-if (-not $paksDirectory.Equals($expectedPaksDirectory, [StringComparison]::OrdinalIgnoreCase) -or
+$expectedLogicModsDirectory = Join-Path $expectedPaksDirectory 'LogicMods'
+if (-not ($paksDirectory.Equals($expectedPaksDirectory, [StringComparison]::OrdinalIgnoreCase) -or
+    $paksDirectory.Equals($expectedLogicModsDirectory, [StringComparison]::OrdinalIgnoreCase)) -or
     -not (Test-Path -LiteralPath (Join-Path $gameRoot `
         'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe') -PathType Leaf)) {
     throw "Installation manifest does not identify its Voyage Paks directory: $paksDirectory"
@@ -297,11 +299,11 @@ $bases = @($containerItems | ForEach-Object {
 $extensions = @($containerItems | ForEach-Object {
     [IO.Path]::GetExtension($_.name).ToLowerInvariant()
 } | Sort-Object -Unique)
-if ($restoreItems.Count -ne (4 + $sidecarItems.Count + $descriptorItems.Count) -or
+if ($restoreItems.Count -ne (3 + $archiveItems.Count + $sidecarItems.Count + $descriptorItems.Count) -or
     $sidecarItems.Count -gt 1 -or $descriptorItems.Count -gt 1 -or $containerItems.Count -ne 3 -or
-    $archiveItems.Count -ne 1 -or $bases.Count -ne 1 -or $extensions.Count -ne 3 -or
+    $archiveItems.Count -gt 1 -or $bases.Count -ne 1 -or $extensions.Count -ne 3 -or
     $bases[0] -match '^(?i:global$|pakchunk)') {
-    throw 'Restoration requires one standalone mod triplet and its release ZIP; stock containers are forbidden.'
+    throw 'Restoration requires one standalone mod triplet; legacy installations may also own one ZIP.'
 }
 if ($sidecarItems.Count -eq 1 -and $sidecarItems[0].name -cne ($bases[0] + '.autoload')) {
     throw 'Restoration autoload sidecar does not match the exact container basename.'

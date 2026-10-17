@@ -40,12 +40,14 @@ if ($modVersion -notmatch '^v[1-9][0-9]*$' -or [string]::IsNullOrWhiteSpace($tes
     throw "DonkLift version metadata is invalid: $versionMetadataPath"
 }
 if ([string]::IsNullOrWhiteSpace($Version)) {
-    $Version = $modVersion
+    $publishedVersion = [int](Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw)
+    $Version = 'v' + ($publishedVersion + 1) + '-candidate'
 }
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
 }
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'artifacts'))
+$tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp'))
 $project = Join-Path $modRoot 'Voyage.uproject'
 $provenancePath = Join-Path $modRoot 'GAME_DERIVED_SOURCES.md'
 $buildBatch = Join-Path $EngineRoot 'Engine\Build\BatchFiles\Build.bat'
@@ -71,13 +73,13 @@ function Resolve-RequiredPath {
     return (Resolve-Path -LiteralPath $Path).Path
 }
 
-function Assert-UnderArtifacts {
+function Assert-UnderTmp {
     param([Parameter(Mandatory = $true)] [string]$Path, [Parameter(Mandatory = $true)] [string]$Label)
 
     $fullPath = [IO.Path]::GetFullPath($Path)
-    $prefix = $artifactsRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    $prefix = $tmpRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
     if (-not $fullPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "$Label must stay below the ignored artifacts directory: $fullPath"
+        throw "$Label must stay below the ignored Tmp directory: $fullPath"
     }
     return $fullPath
 }
@@ -199,9 +201,9 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
-    $OutputRoot = Join-Path $artifactsRoot "releases\DonkLiftKeyboardControl-$Version"
+    $OutputRoot = Join-Path $tmpRoot ("DonkLiftKeyboardControl\$Version-" + [Guid]::NewGuid().ToString('N'))
 }
-$releaseRoot = Assert-UnderArtifacts -Path $OutputRoot -Label 'OutputRoot'
+$releaseRoot = Assert-UnderTmp -Path $OutputRoot -Label 'OutputRoot'
 if (Test-Path -LiteralPath $releaseRoot) {
     throw "OutputRoot already exists: $releaseRoot"
 }
@@ -342,21 +344,6 @@ if ($Install) {
         if ($sourceHash -cne $targetHash) {
             throw "Installed file hash mismatch: $name"
         }
-    }
-    $archiveTarget = Join-Path $paks $installedArchiveName
-    if (Test-Path -LiteralPath $archiveTarget -PathType Leaf) {
-        Copy-Item -LiteralPath $archiveTarget -Destination (Join-Path $backup $installedArchiveName)
-    }
-    Copy-Item -LiteralPath $archivePath -Destination $archiveTarget -Force
-    $archiveSourceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath).Hash
-    $archiveTargetHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archiveTarget).Hash
-    if ($archiveSourceHash -cne $archiveTargetHash) {
-        throw "Installed archive hash mismatch: $installedArchiveName"
-    }
-    $installedArchive = [ordered]@{
-        name = $installedArchiveName
-        size = (Get-Item -LiteralPath $archiveTarget).Length
-        sha256 = $archiveTargetHash
     }
     $installed = $true
 }

@@ -22,7 +22,11 @@ those details here.
 - Describe finished mods by their current behavior and necessary compatibility
   boundaries. The checked-in state is the accepted result; do not preserve who
   confirmed it, trial chronology, test dates, or per-run proof in normal mod
-  documentation. Keep exact release and installation evidence with artifacts.
+  documentation. Keep exact selected release packages with artifacts.
+- The repository-wide [release and installation workflow](docs/release-and-installation.md)
+  owns published-version identity, candidate retention, installation evidence,
+  and installed-file layout for every mod. Mod-local rules may add necessary
+  payload or migration contracts, but may not redefine those shared identities.
 - Autonomous DonkLift rules live in
   `mods/DonkLiftKeyboardControl/AGENTS.md`.
 - The preserved UE4SS/Lua DonkLift implementation is a separate alternative
@@ -258,12 +262,11 @@ those details here.
   runtime behavior is checked in the real game. Compile, cook, container verify,
   semantic comparison, clean load, and save load remain lower gates.
 - An installer that replaces a Voyage mod container must check the game process
-  immediately before mutation, preserve an exact recoverable backup, install
-  from a validated release manifest, read back every installed hash, and record
-  installation time and source-artifact identity. When a release ZIP is kept
-  beside standalone IoStore containers as installed provenance, its filename
-  and manifest identity must use the artifact version, so distinct candidates
-  such as `v2` and `v2-test` cannot masquerade as the same source.
+  immediately before mutation, preserve an exact temporary recovery copy during
+  mutation, install from a validated release manifest, and read back every
+  installed hash. Keep transaction records and recovery copies in `Tmp/` only
+  while they are needed for that operation. Keep ZIP archives outside the game;
+  install only files the game consumes. This also applies to temporary builds.
 - Any generated or reconstructed game-derived file that must remain in Git as
   a source input needs a provenance header naming its Steam build ID when the
   contract is game-specific, engine version, reconstruction method/tools, and

@@ -14,8 +14,11 @@ $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $tools = Join-Path $repo 'tools'
 $expectedBuild = '25956314'
 $tmpOwnerRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/MooringCable60m'))
-$version = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version.txt') -Raw).Trim()
-if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid owning mod version.' }
+$publishedVersionText = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version.txt') -Raw).Trim()
+if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+    throw 'version.txt must contain the integer published Nexus version.'
+}
+$version = 'V' + ([int]$publishedVersionText + 1) + '-candidate'
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $identity = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' +
         [Guid]::NewGuid().ToString('N').Substring(0, 8)

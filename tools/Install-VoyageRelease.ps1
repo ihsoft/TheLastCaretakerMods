@@ -9,6 +9,9 @@ param(
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
     [string]$EvidenceRoot,
+    [switch]$ReleaseCandidate,
+    [switch]$LogicMods,
+    [switch]$KeepRecoveryEvidence,
 
     [switch]$AllowDirtySource,
 
@@ -18,13 +21,16 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if ($RetainArchiveOnRestore) {
+    throw 'RetainArchiveOnRestore is obsolete: ZIP archives are no longer installed in Paks.'
+}
 Set-StrictMode -Version Latest
 
 $sha256Pattern = '^[0-9A-F]{64}$'
 $containerExtensions = @('.pak', '.ucas', '.utoc')
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 if ([string]::IsNullOrWhiteSpace($EvidenceRoot)) {
-    $EvidenceRoot = Join-Path $repositoryRoot 'artifacts\installations'
+    $EvidenceRoot = Join-Path $repositoryRoot 'Tmp\installations'
 }
 
 function Get-OptionalPropertyValue {
@@ -428,6 +434,15 @@ if ($actualBuildId -cne $expectedBuildId) {
 $resolvedGameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
 $paksDirectory = (Resolve-Path -LiteralPath (
     Join-Path $resolvedGameRoot 'Voyage\Content\Paks')).Path
+if ($LogicMods) {
+    $paksDirectory = (Resolve-Path -LiteralPath (
+        Join-Path $paksDirectory 'LogicMods')).Path
+    $logicDirectory = Get-Item -LiteralPath $paksDirectory -Force
+    if (-not $logicDirectory.PSIsContainer -or
+        ($logicDirectory.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw "LogicMods must be a plain directory: $paksDirectory"
+    }
+}
 $contentPluginDestination = if ($null -eq $contentPluginPlan) {
     $null
 }
@@ -437,13 +452,35 @@ else {
 }
 $safeMod = $mod -replace '[^0-9A-Za-z._-]', '_'
 $safeVersion = $artifactVersion -replace '[^0-9A-Za-z._-]', '_'
-$timestamp = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
 $token = [Guid]::NewGuid().ToString('N')
 $evidenceParent = [IO.Path]::GetFullPath($EvidenceRoot)
-$evidence = Join-Path $evidenceParent (
-    "$safeMod\$timestamp-$safeVersion-$($token.Substring(0, 8))")
+$evidence = Join-Path $evidenceParent "$safeMod\$safeVersion-$($token.Substring(0, 8))"
+$releaseDirectory = $null
+if ($ReleaseCandidate) {
+    $publishedVersionPath = Join-Path (Join-Path $repositoryRoot "mods\$mod") 'version.txt'
+    if (-not (Test-Path -LiteralPath $publishedVersionPath -PathType Leaf)) {
+        throw "Published-version file is missing: $publishedVersionPath"
+    }
+    $publishedVersionText = (Get-Content -LiteralPath $publishedVersionPath -Raw).Trim()
+    if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+        throw "Invalid published Nexus version: $publishedVersionPath"
+    }
+    $nextVersion = [int]$publishedVersionText + 1
+    $releaseDirectory = Join-Path (Join-Path $repositoryRoot 'artifacts\installations') "$safeMod-V$nextVersion"
+    if (Test-Path -LiteralPath $releaseDirectory) {
+        throw "Release version directory already exists: $releaseDirectory"
+    }
+}
 if (Test-Path -LiteralPath $evidence) {
     throw "Installation evidence path already exists: $evidence"
+}
+if (-not $KeepRecoveryEvidence) {
+    $temporaryRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'Tmp'))
+    $temporaryBoundary = $temporaryRoot.TrimEnd('\') + '\'
+    if (-not ([IO.Path]::GetFullPath($evidence)).StartsWith(
+            $temporaryBoundary,[StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Installation operation data must be under repository Tmp.'
+    }
 }
 $backupDirectory = Join-Path $evidence 'previous-files'
 $transactionPath = Join-Path $evidence 'install-transaction.json'
@@ -465,21 +502,6 @@ $installItems = @(
             installedSha256 = $null
             createdDirectories = @()
         }
-    }
-    [pscustomobject][ordered]@{
-        kind = 'archive'
-        name = $installedArchiveName
-        sourcePath = $resolvedArchive.path
-        size = $resolvedArchive.size
-        sourceSha256 = $resolvedArchive.sha256
-        destinationPath = Join-Path $paksDirectory $installedArchiveName
-        stagingPath = Join-Path $paksDirectory ('.' + $installedArchiveName + ".installing-$token")
-        hadExisting = $false
-        previousSha256 = $null
-        backupPath = $null
-        installedSha256 = $null
-        createdDirectories = @()
-        retainOnRestore = [bool]$RetainArchiveOnRestore
     }
     if ($null -ne $contentPluginPlan) {
         [pscustomobject][ordered]@{
@@ -521,7 +543,7 @@ if ($ValidateOnly) {
         gameRoot = $resolvedGameRoot
         steamBuildId = $actualBuildId
         paksDirectory = $paksDirectory
-        installedArchiveName = $installedArchiveName
+        retainedArchivePath = $(if ($ReleaseCandidate) { Join-Path $releaseDirectory $installedArchiveName } else { $null })
         files = @($installItems | Select-Object kind, name, size, sourceSha256,
             retainOnRestore)
     }
@@ -529,6 +551,21 @@ if ($ValidateOnly) {
 }
 
 [IO.Directory]::CreateDirectory($evidence) | Out-Null
+if ($ReleaseCandidate) {
+    [IO.Directory]::CreateDirectory($releaseDirectory) | Out-Null
+    $retainedArchivePath = Join-Path $releaseDirectory $installedArchiveName
+    $retainedManifestPath = Join-Path $releaseDirectory 'release-manifest.json'
+    Copy-Item -LiteralPath $resolvedArchive.path -Destination $retainedArchivePath
+    if ((Get-FileHash -LiteralPath $retainedArchivePath -Algorithm SHA256).Hash -cne
+        $resolvedArchive.sha256) {
+        throw "Retained candidate ZIP hash mismatch: $retainedArchivePath"
+    }
+    Copy-Item -LiteralPath $manifestPath -Destination $retainedManifestPath
+    if ((Get-FileHash -LiteralPath $retainedManifestPath -Algorithm SHA256).Hash -cne
+        $releaseManifestSha256) {
+        throw "Retained candidate manifest hash mismatch: $retainedManifestPath"
+    }
+}
 
 $transaction = [ordered]@{
     schemaVersion = 1
@@ -640,10 +677,11 @@ try {
         steamBuildId = $actualBuildId
         paksDirectory = $paksDirectory
         installedAtUtc = $installedAtUtc
-        installedArchive = [ordered]@{
-            name = $installedArchiveName
+        retainedManifestPath = $(if ($ReleaseCandidate) { $retainedManifestPath } else { $null })
+        retainedArchive = $(if ($ReleaseCandidate) { [ordered]@{
+            path = $retainedArchivePath
             sha256 = $resolvedArchive.sha256
-        }
+        } } else { $null })
         files = $installItems
     }
     Write-JsonFile -Path $installManifestPath -Value $installationManifest
@@ -730,13 +768,22 @@ finally {
     }
 }
 
+if (-not $KeepRecoveryEvidence) {
+    $ownedEvidence = [IO.Path]::GetFullPath($evidence)
+    if (-not $ownedEvidence.StartsWith($temporaryBoundary,
+            [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Successful installation recovery data is outside Tmp; use -KeepRecoveryEvidence for a coupled legacy operation.'
+    }
+    [IO.Directory]::Delete($ownedEvidence, $true)
+    $installManifestPath = $null
+}
 Write-Host "Voyage release installed with matching hashes: $mod $artifactVersion"
-Write-Host "Installation evidence: $installManifestPath"
+if ($KeepRecoveryEvidence) { Write-Host "Temporary recovery evidence: $installManifestPath" }
 [pscustomobject][ordered]@{
     mod = $mod
     artifactVersion = $artifactVersion
     installManifestPath = $installManifestPath
     paksDirectory = $paksDirectory
-    installedArchivePath = Join-Path $paksDirectory $installedArchiveName
+    retainedArchivePath = $(if ($ReleaseCandidate) { $retainedArchivePath } else { $null })
     fileCount = $installItems.Count
 }

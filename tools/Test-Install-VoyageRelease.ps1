@@ -2,8 +2,7 @@
 param(
     [switch]$KeepArtifacts,
     [switch]$WithAutoLoadSidecar,
-    [switch]$WithContentPluginDescriptor,
-    [switch]$RetainArchiveOnRestore
+    [switch]$WithContentPluginDescriptor
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,7 +24,7 @@ $modName = 'SyntheticVoyageMod'
 $containerName = 'SyntheticVoyageMod_P'
 $fixtureExtensions = @('.pak', '.ucas', '.utoc')
 if ($WithAutoLoadSidecar) { $fixtureExtensions += '.autoload' }
-$expectedInstalledCount = $fixtureExtensions.Count + 1 +
+$expectedInstalledCount = $fixtureExtensions.Count +
     $(if ($WithContentPluginDescriptor) { 1 } else { 0 })
 $pluginName = 'SyntheticCatalogue'
 $pluginInstallPath = Join-Path $gameRoot "Voyage\Mods\$pluginName\$pluginName.uplugin"
@@ -203,8 +202,7 @@ try {
         -ContentMarker 'first'
     $validationEvidence = Join-Path $testRoot 'validation-must-not-exist'
     $validationResult = & $installer -ReleaseManifest $firstRelease.manifestPath `
-        -GameRoot $gameRoot -EvidenceRoot $validationEvidence `
-        -RetainArchiveOnRestore:$RetainArchiveOnRestore -ValidateOnly
+        -GameRoot $gameRoot -EvidenceRoot $validationEvidence -ValidateOnly
     if (-not [bool]$validationResult.validated -or
         @($validationResult.files).Count -ne $expectedInstalledCount -or
         (Test-Path -LiteralPath $validationEvidence)) {
@@ -272,8 +270,7 @@ try {
         [IO.File]::WriteAllBytes($directoryTargetPath, $directoryTargetOriginal)
     }
     $installResult = & $installer -ReleaseManifest $firstRelease.manifestPath `
-        -GameRoot $gameRoot -EvidenceRoot $evidenceParent `
-        -RetainArchiveOnRestore:$RetainArchiveOnRestore
+        -GameRoot $gameRoot -EvidenceRoot $evidenceParent -KeepRecoveryEvidence
 
     foreach ($record in $firstRelease.records) {
         Assert-Hash -Path (Join-Path $paksDirectory $record.name) `
@@ -284,9 +281,9 @@ try {
             -Expected $firstRelease.contentPlugin.artifact.sha256 `
             -Label 'Installed content plugin descriptor'
     }
-    $firstArchiveName = $modName + '_test-v1.zip'
-    Assert-Hash -Path (Join-Path $paksDirectory $firstArchiveName) `
-        -Expected $firstRelease.archive.sha256 -Label 'Installed release archive'
+    if (@(Get-ChildItem -LiteralPath $paksDirectory -File -Filter '*.zip').Count -ne 0) {
+        throw 'Installation placed a ZIP in Paks.'
+    }
 
     $installManifest = Get-Content -LiteralPath $installResult.installManifestPath `
         -Raw | ConvertFrom-Json
@@ -294,58 +291,7 @@ try {
         @($installManifest.files).Count -ne $expectedInstalledCount) {
         throw 'Successful installation evidence is incomplete.'
     }
-    $archiveEvidence = @($installManifest.files | Where-Object {
-        [string]$_.kind -ceq 'archive'
-    })
-    if ($archiveEvidence.Count -ne 1 -or
-        [bool]$archiveEvidence[0].retainOnRestore -ne
-            [bool]$RetainArchiveOnRestore) {
-        throw 'Release archive restore-retention evidence is incorrect.'
-    }
     $installEvidenceDirectory = Split-Path -Parent $installResult.installManifestPath
-    $legacyRestoreManifestPath = Join-Path $installEvidenceDirectory `
-        'legacy-restore-manifest.json'
-    $legacyRestoreManifest = Get-Content -LiteralPath `
-        $installResult.installManifestPath -Raw | ConvertFrom-Json
-    $legacyArchiveEvidence = @($legacyRestoreManifest.files | Where-Object {
-        [string]$_.kind -ceq 'archive'
-    })
-    $legacyArchiveEvidence[0].PSObject.Properties.Remove('retainOnRestore')
-    Write-Utf8Json -Path $legacyRestoreManifestPath -Value $legacyRestoreManifest
-    $legacyRestoreValidation = & $restorer `
-        -InstallManifest $legacyRestoreManifestPath -ValidateOnly
-    if (-not [bool]$legacyRestoreValidation.validated -or
-        [int]$legacyRestoreValidation.retainedCount -ne 0) {
-        throw 'A legacy install manifest without archive retention was not accepted.'
-    }
-
-    $invalidRetentionTypePath = Join-Path $installEvidenceDirectory `
-        'invalid-retention-type-manifest.json'
-    $invalidRetentionTypeManifest = Get-Content -LiteralPath `
-        $installResult.installManifestPath -Raw | ConvertFrom-Json
-    $invalidTypeArchive = @($invalidRetentionTypeManifest.files | Where-Object {
-        [string]$_.kind -ceq 'archive'
-    })
-    $invalidTypeArchive[0].retainOnRestore = 'true'
-    Write-Utf8Json -Path $invalidRetentionTypePath -Value $invalidRetentionTypeManifest
-    Assert-Rejected -Pattern 'retainOnRestore must be boolean' -Action {
-        & $restorer -InstallManifest $invalidRetentionTypePath -ValidateOnly
-    }
-
-    $invalidRetentionKindPath = Join-Path $installEvidenceDirectory `
-        'invalid-retention-kind-manifest.json'
-    $invalidRetentionKindManifest = Get-Content -LiteralPath `
-        $installResult.installManifestPath -Raw | ConvertFrom-Json
-    $invalidKindPak = @($invalidRetentionKindManifest.files | Where-Object {
-        [IO.Path]::GetExtension([string]$_.name).ToLowerInvariant() -ceq '.pak'
-    })
-    $invalidKindPak[0].kind = 'archive'
-    $invalidKindPak[0] | Add-Member -NotePropertyName retainOnRestore `
-        -NotePropertyValue $true -Force
-    Write-Utf8Json -Path $invalidRetentionKindPath -Value $invalidRetentionKindManifest
-    Assert-Rejected -Pattern 'Only a release archive may be retained' -Action {
-        & $restorer -InstallManifest $invalidRetentionKindPath -ValidateOnly
-    }
     $pakEvidence = @($installManifest.files | Where-Object {
         [string]$_.name -ceq ($containerName + '.pak')
     })
@@ -413,8 +359,7 @@ try {
     $failureObserved = $false
     try {
         & $installer -ReleaseManifest $secondRelease.manifestPath `
-            -GameRoot $gameRoot -EvidenceRoot $secondEvidenceParent `
-            -RetainArchiveOnRestore:$RetainArchiveOnRestore
+            -GameRoot $gameRoot -EvidenceRoot $secondEvidenceParent
     }
     catch {
         if ($_.Exception.Message -notmatch 'Synthetic mid-install failure' -or
@@ -435,10 +380,6 @@ try {
     foreach ($name in $installedBeforeFailure.Keys) {
         Assert-Hash -Path (Join-Path $paksDirectory $name) `
             -Expected $installedBeforeFailure[$name] -Label "Rolled-back $name"
-    }
-    if (Test-Path -LiteralPath (
-        Join-Path $paksDirectory ($modName + '_test-v2.zip')) -PathType Leaf) {
-        throw 'Failed installation left its release archive installed.'
     }
     $failureTransactionPath = @(
         Get-ChildItem -LiteralPath $secondEvidenceParent -Recurse -File `
@@ -494,24 +435,14 @@ try {
     if (-not [bool]$restoreValidation.validated -or
         [int]$restoreValidation.restoreCount -ne $fixtureExtensions.Count -or
         [int]$restoreValidation.removeCount -ne
-            ($(if ($RetainArchiveOnRestore) { 0 } else { 1 }) +
-                $(if ($WithContentPluginDescriptor) { 1 } else { 0 })) -or
-        [int]$restoreValidation.retainedCount -ne
-            $(if ($RetainArchiveOnRestore) { 1 } else { 0 })) {
+            $(if ($WithContentPluginDescriptor) { 1 } else { 0 }) -or
+        [int]$restoreValidation.retainedCount -ne 0) {
         throw 'Restore ValidateOnly returned an unexpected plan.'
     }
     $restoreResult = & $restorer -InstallManifest $installResult.installManifestPath
     foreach ($name in $previousHashes.Keys) {
         Assert-Hash -Path (Join-Path $paksDirectory $name) `
             -Expected $previousHashes[$name] -Label "Restored $name"
-    }
-    $installedArchivePath = Join-Path $paksDirectory $firstArchiveName
-    if ($RetainArchiveOnRestore) {
-        Assert-Hash -Path $installedArchivePath -Expected $firstRelease.archive.sha256 `
-            -Label 'Retained release archive'
-    }
-    elseif (Test-Path -LiteralPath $installedArchivePath) {
-        throw 'Successful restore left a non-retained release archive behind.'
     }
     if ($WithContentPluginDescriptor -and
         (Test-Path -LiteralPath $pluginInstallPath)) {
@@ -520,14 +451,12 @@ try {
 
     $reinstallEvidence = Join-Path $testRoot 'reinstall-evidence'
     $reinstallResult = & $installer -ReleaseManifest $firstRelease.manifestPath `
-        -GameRoot $gameRoot -EvidenceRoot $reinstallEvidence `
-        -RetainArchiveOnRestore:$RetainArchiveOnRestore
+        -GameRoot $gameRoot -EvidenceRoot $reinstallEvidence -KeepRecoveryEvidence
     $installedBeforeRestoreFailure = @{}
     foreach ($name in @(
         ($containerName + '.pak'),
         ($containerName + '.ucas'),
-        ($containerName + '.utoc'),
-        $firstArchiveName
+        ($containerName + '.utoc')
     )) {
         $installedBeforeRestoreFailure[$name] = (
             Get-FileHash -Algorithm SHA256 -LiteralPath (
@@ -647,20 +576,28 @@ try {
             -Label "Preserved recovery copy $($record.name)"
     }
 
+    $transientEvidence = Join-Path $testRoot 'transient-installation'
+    $transientInstall = & $installer -ReleaseManifest $firstRelease.manifestPath `
+        -GameRoot $gameRoot -EvidenceRoot $transientEvidence
+    if ($null -ne $transientInstall.installManifestPath -or
+        @(Get-ChildItem -LiteralPath $transientEvidence -Recurse -File `
+            -ErrorAction SilentlyContinue | Where-Object {
+                $_.Name -in @('install-manifest.json','install-transaction.json')
+            }).Count -ne 0) {
+        throw 'Successful ordinary installation retained historical recovery records.'
+    }
+
     Write-Host 'Voyage release install/restore synthetic regression: PASS'
     [pscustomobject][ordered]@{
         passed = $true
         autoLoadSidecar = [bool]$WithAutoLoadSidecar
         contentPluginDescriptor = [bool]$WithContentPluginDescriptor
-        retainArchiveOnRestore = [bool]$RetainArchiveOnRestore
         checks = @('validate-only', 'fingerprint-rejection', 'archive-payload-rejection',
             'content-plugin-path-rejection',
             'directory-target-rejection', 'install-readback', 'predecessor-backup',
-            'legacy-retention-default', 'retention-type-rejection',
-            'retention-kind-rejection',
             'install-rollback', 'changed-file-rejection', 'damaged-backup-rejection',
-            'restore-remove-or-retain', 'restore-rollback',
-            'failed-recovery-copy-retention')
+            'restore', 'restore-rollback',
+            'failed-recovery-copy-retention', 'successful-operation-cleanup')
         artifactsRetained = [bool]$KeepArtifacts
         artifacts = if ($KeepArtifacts) { $testRoot } else { $null }
     }

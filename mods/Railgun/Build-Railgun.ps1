@@ -1,5 +1,6 @@
 [CmdletBinding()]
 param([string]$OutputRoot = '', [switch]$SkipBuild, [switch]$Install,
+    [switch]$ReleaseCandidate,
     [string]$ArtifactVersion = '',
     [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
 $ErrorActionPreference = 'Stop'
@@ -1142,7 +1143,7 @@ $manifestPath = Join-Path $releaseStaging 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Manifest producer did not publish the candidate.' }
 $publicationValidation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
     -ReleaseManifest $manifestPath -ValidateOnly -AllowDirtySource `
-    -RetainArchiveOnRestore
+    -ReleaseCandidate:$ReleaseCandidate
 if (-not [bool]$publicationValidation.validated) {
     throw 'Prepared Railgun release did not pass installation validation.'
 }
@@ -1152,7 +1153,8 @@ $restoreValidation = $null
 $scratchCleaned = $false
 if ($Install) {
     $installation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
-        -ReleaseManifest $manifestPath -AllowDirtySource -RetainArchiveOnRestore
+        -ReleaseManifest $manifestPath -AllowDirtySource `
+        -ReleaseCandidate:$ReleaseCandidate -KeepRecoveryEvidence
     $settingsPath = Join-Path $installation.paksDirectory 'Railgun.ini'
     $settingsTemplatePath = Join-Path $payload 'Railgun.ini'
     $settingsEvidenceDirectory = Split-Path -Parent `
@@ -1287,27 +1289,48 @@ if ($Install) {
     $restoreValidation = & (Join-Path $repo `
         'tools/Restore-VoyageReleaseInstallation.ps1') `
         -InstallManifest $installation.installManifestPath -ValidateOnly
-    if (-not [bool]$restoreValidation.validated -or
-        [int]$restoreValidation.retainedCount -ne 1) {
-        throw 'Installed Railgun release did not retain its canonical archive in the restore plan.'
+    if (-not [bool]$restoreValidation.validated) {
+        throw 'Installed Railgun release did not pass restore validation.'
     }
-    $installedArchivePath = [IO.Path]::GetFullPath($installation.installedArchivePath)
-    if ((Get-FileHash -LiteralPath $installedArchivePath -Algorithm SHA256).Hash -cne
-        (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash) {
-        throw 'Installed Railgun archive hash does not match the prepared release.'
+    if ($ReleaseCandidate) {
+        $retainedArchivePath = [IO.Path]::GetFullPath($installation.retainedArchivePath)
+        if ((Get-FileHash -LiteralPath $retainedArchivePath -Algorithm SHA256).Hash -cne
+            (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash) {
+            throw 'Retained Railgun candidate ZIP hash does not match the prepared release.'
+        }
     }
     if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase) -or
         [IO.Path]::GetFullPath($output) -ceq $tmpOwnerRoot) {
         throw 'Refusing to remove an unowned Railgun scratch path.'
     }
-    [IO.Directory]::Delete($output, $true)
-    if (Test-Path -LiteralPath $output) {
-        throw 'Railgun scratch cleanup did not complete.'
+    if ($ReleaseCandidate) {
+        [IO.Directory]::Delete($output, $true)
+        if (Test-Path -LiteralPath $output) {
+            throw 'Railgun scratch cleanup did not complete.'
+        }
+        $scratchCleaned = $true
+        $manifestPath = Join-Path (Split-Path -Parent $retainedArchivePath) `
+            'release-manifest.json'
+        $archivePath = $retainedArchivePath
+        $validationSummaryPath = $null
     }
-    $scratchCleaned = $true
-    $manifestPath = $null
-    $archivePath = $installedArchivePath
-    $validationSummaryPath = $null
+    $temporaryInstallRoot = [IO.Path]::GetFullPath(
+        (Join-Path $repo 'Tmp/installations'))
+    $installationOperationRoot = [IO.Path]::GetFullPath(
+        (Split-Path -Parent $installation.installManifestPath))
+    $temporaryInstallBoundary = $temporaryInstallRoot.TrimEnd('\') + '\'
+    if (-not $installationOperationRoot.StartsWith($temporaryInstallBoundary,
+            [StringComparison]::OrdinalIgnoreCase) -or
+        $installationOperationRoot -ceq $temporaryInstallRoot) {
+        throw 'Refusing to remove installation state outside Tmp/installations.'
+    }
+    [IO.Directory]::Delete($installationOperationRoot, $true)
+    $installation.installManifestPath = $null
+    $settingsInstallation = [pscustomobject]@{
+        status = 'installed'
+        path = $settingsPath
+        sha256 = $settingsHash
+    }
     Write-Host 'Railgun installed successfully; container hashes verified and settings are present.'
 }
 [pscustomobject]@{
