@@ -1,11 +1,14 @@
 param(
-    [string]$OutputRoot = 'Tmp/scopefix/build'
+    [string]$OutputRoot = 'Tmp/scopefix/build',
+    [switch]$IgnorePinnedGameVersion
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location $repo
 $fingerprint = (& tools/Get-VoyageBuildFingerprint.ps1 | ConvertFrom-Json)
-if ($fingerprint.steam.buildId -ne '25880952') { throw 'Revalidate ScopeFix for this Steam build first.' }
+$gameBuild = & tools/Assert-VoyageModGameBuild.ps1 `
+    -ModRoot $PSScriptRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
+    -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 if (Test-Path $OutputRoot) { throw 'OutputRoot must be new.' }
 $root = [IO.Path]::GetFullPath((Join-Path $repo $OutputRoot))
 $loose = Join-Path $root 'loose'
@@ -43,5 +46,5 @@ foreach ($spec in @(
 $container = Join-Path $root 'ScopeFix_P.utoc'
 & tools/Invoke-VoyageBoundedTool.ps1 -Executable .tools/bin/retoc.exe -Arguments @('to-zen', $loose, $container, '--version', 'UE5_8') | Out-Null
 & tools/Invoke-VoyageBoundedTool.ps1 -Executable .tools/bin/retoc.exe -Arguments @('verify', $container) | Out-Null
-@{ status = 'container-verified-runtime-pending'; fingerprint = $fingerprint; changes = $changes } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $root 'build-evidence.json') -Encoding UTF8
+@{ status = 'container-verified-runtime-pending'; fingerprint = $fingerprint; gameBuild = $gameBuild; changes = $changes } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $root 'build-evidence.json') -Encoding UTF8
 [pscustomobject]@{ container = $container; evidence = Join-Path $root 'build-evidence.json'; status = 'runtime-pending' }

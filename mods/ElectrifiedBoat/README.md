@@ -29,8 +29,8 @@ the mod; loading a save without it is not a guaranteed compatibility feature.
 Building requires Windows, Unreal Engine **5.8.2** with its C++ build tools,
 the installed game, and the repository's prepared
 [build tools](../../tools/README.md). The build checks the supported game
-version; its exact fingerprint is in
-[GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md).
+version. The last pinned Steam build is in `game-build.json`; the source
+identities are in [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md).
 
 Run this from the repository root:
 
@@ -48,6 +48,8 @@ The script builds the mod and checks the resulting package. Output goes to
 `Tmp/ElectrifiedBoat/build-<timestamp>/package/`. Install only the three
 `ElectrifiedBoat.pak/.ucas/.utoc` files directly into `Voyage/Content/Paks/LogicMods`;
 the other files are build metadata. The script does not install the mod or
-produce a release ZIP.
+produce a release ZIP. If the installed Steam build differs from the pin,
+retry with `-IgnorePinnedGameVersion`. A successful candidate still needs a
+game test before the pin is updated.
 
 For development contracts, see [AGENTS.md](AGENTS.md).

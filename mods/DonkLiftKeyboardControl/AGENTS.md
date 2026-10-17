@@ -23,19 +23,16 @@ contract and workflow detail.
 - Treat a tested game version as evidence, not a runtime allowlist. A changed
   game version triggers review but does not alone prove incompatibility or
   require a mod-version bump. Record actual compatible and incompatible results.
-- Keep the exact fingerprint gate below for build provenance: reconstructed
-  mirrors, extracted originals, and cooked packages cannot be rebuilt from an
-  unreviewed fingerprint even when an older installed package might still run.
+- The public builder may retry a changed Steam build with
+  `-IgnorePinnedGameVersion`. Preserve actual-build provenance and fresh
+  extraction checks; a successful build still needs a game test.
 - A new compatibility claim requires proportional real-game validation. Bump
   the mod version only for a mod release boundary chosen by the user, not merely
   because Steam published a new game build.
-- `GAME_DERIVED_SOURCES.md` is a hard build gate. Before generation, cook, or
-  packaging, run `../../tools/Get-VoyageBuildFingerprint.ps1` and compare the
-  Steam build ID.
-- A fingerprint mismatch invalidates all hand-reconstructed Voyage headers,
-  embedded generator contracts, action/mapping assumptions, package paths,
-  relocation assertions, original Blueprint snapshots, mappings, and
-  `scriptobjects.bin` until each is freshly extracted or revalidated.
+- The builder checks the installed build during its run. Do not manually
+  inspect every reconstructed contract before a candidate attempt. Current
+  stock inputs must still be freshly extracted, and a failed build or game
+  test triggers focused revalidation of the affected contract.
 - Every version-bound source file retained in Git must carry its own provenance
   header. Keep the complete inventory and current fingerprint synchronized in
   `GAME_DERIVED_SOURCES.md`.

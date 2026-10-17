@@ -129,6 +129,10 @@ narrowly cooks five generated packages, freshly extracts
 and surgically patches the stock Gyro item data asset, packages and verifies
 the six-asset container, and creates a ZIP under a fresh ignored
 `Tmp/StableGyro` output by default.
+If only the pinned Steam build differs, retry with
+`-IgnorePinnedGameVersion`. The build still requires fresh stock inputs and a
+matching reviewed mapping; test a successful candidate in game before updating
+`game-build.json`.
 
 Build-StableGyro.ps1 is the only public producer; the other
 PowerShell files in this directory are internal stages used by it. Use

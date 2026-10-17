@@ -18,7 +18,9 @@ param(
 
     [switch]$Install,
 
-    [switch]$AllowDirtySource
+    [switch]$AllowDirtySource,
+
+    [switch]$IgnorePinnedGameVersion
 )
 
 $ErrorActionPreference = 'Stop'
@@ -219,15 +221,10 @@ $phase = [Diagnostics.Stopwatch]::StartNew()
 $fingerprintPath = Join-Path $releaseRoot 'game-fingerprint.json'
 & $fingerprinter -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
 $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
-$provenance = Get-Content -LiteralPath $provenancePath -Raw
-$buildMatch = [regex]::Match($provenance, '(?m)^- Steam build: `(?<value>\d+)`\r?$')
-if (-not $buildMatch.Success) {
-    throw "Unable to read the expected game fingerprint from $provenancePath"
-}
-$expectedBuild = $buildMatch.Groups['value'].Value
-if ([string]$fingerprint.steam.buildId -cne $expectedBuild) {
-    throw "Installed Voyage fingerprint does not match the validated DonkLift source. See $fingerprintPath"
-}
+$gameBuild = & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') `
+    -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
+    -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
+$expectedBuild = [string]$fingerprint.steam.buildId
 $phase.Stop()
 $timings.Fingerprint = $phase.Elapsed.TotalSeconds
 
@@ -304,6 +301,7 @@ $packageArguments = @{
     ScriptObjects = [string]$originalInputs.ScriptObjects
     Retoc = [string]$Retoc
     OutputRoot = [string]$containerRoot
+    ActualSteamBuildId = $expectedBuild
 }
 & $packageScript @packageArguments
 $phase.Stop()
@@ -379,6 +377,7 @@ $manifest = [ordered]@{
     gameFingerprint = [ordered]@{
         steamBuildId = [string]$fingerprint.steam.buildId
     }
+    ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
     originalsManifest = $originalInputs.Manifest
     installed = $installed
     installedArchive = $installedArchive

@@ -9,7 +9,6 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$expectedSteamBuildId = '25880952'
 $expectedEditorVersion = '5.8.2'
 $containerName = 'ElectrifiedBoat'
 $entryClass = '/Game/Mods/ElectrifiedBoat/ModActor.ModActor_C'
@@ -81,12 +80,8 @@ $fingerprintPath = Join-Path $validationRoot 'game-fingerprint.json'
 & (Join-Path $repoRoot 'tools/Get-VoyageBuildFingerprint.ps1') `
     -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
 $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
-if ([string]$fingerprint.steam.buildId -cne $expectedSteamBuildId) {
-    throw 'Installed game fingerprint does not match the candidate contract.'
-}
-
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-if ([string]$manifest.steamBuildId -cne $expectedSteamBuildId -or
+if ([string]$manifest.steamBuildId -cne [string]$fingerprint.steam.buildId -or
     [string]$manifest.entryClass -cne $entryClass -or
     [string]$manifest.containerName -cne $containerName -or
     [string]$manifest.architecture -cne 'additive-owned-package-only' -or
@@ -491,7 +486,7 @@ $result = [ordered]@{
     packageRoot = $package
     containerReportPath = $containerResult.reportPath
     assetJsonPath = [string]$assetResult.jsonPath
-    steamBuildId = $expectedSteamBuildId
+    steamBuildId = [string]$fingerprint.steam.buildId
     packageCount = 1
     gameplayValidated = $false
     saveReloadValidated = $false

@@ -14,12 +14,12 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$OutputRoot,
 
-    [string]$ContainerName = 'BoatHUDTotalResources_P'
+    [string]$ContainerName = 'BoatHUDTotalResources_P',
+    [switch]$IgnorePinnedGameVersion
 )
 
 $ErrorActionPreference = 'Stop'
 
-$expectedSteamBuildId = '25056839'
 $expectedGameEngineVersion = '5.8.1'
 $expectedEditorEngineVersion = '5.8.2'
 $retocCompatibilityVersion = 'UE5_7'
@@ -63,9 +63,9 @@ $fingerprintPath = Join-Path $output 'game-fingerprint.json'
 $fingerprintTool = Join-Path $projectRoot '..\..\tools\Get-VoyageBuildFingerprint.ps1'
 & $fingerprintTool -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
 $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
-if ([string]$fingerprint.steam.buildId -cne $expectedSteamBuildId) {
-    throw 'Installed game fingerprint does not match the BoatHUDTotalResources contracts.'
-}
+$gameBuild = & (Join-Path $projectRoot '..\..\tools\Assert-VoyageModGameBuild.ps1') `
+    -ModRoot $projectRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
+    -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 
 $manifests = @(Get-ChildItem -LiteralPath $originals -File -Recurse -Filter 'extraction-manifest.json')
 if ($manifests.Count -ne 1) {
@@ -76,7 +76,7 @@ if ([string]$extractionManifest.filter -cne $expectedFilter -or
     $extractionManifest.allowAdditionalContainers -ne $false -or
     [string]$extractionManifest.retocEngineVersion -cne $retocCompatibilityVersion -or
     [string]$extractionManifest.retocSha256 -cne $retocSha256 -or
-    [string]$extractionManifest.steamBuildId -cne $expectedSteamBuildId) {
+    [string]$extractionManifest.steamBuildId -cne [string]$fingerprint.steam.buildId) {
     throw 'Original Boat HUD extraction does not satisfy the clean current-build gate.'
 }
 
@@ -441,7 +441,8 @@ $buildManifest = [ordered]@{
     retocSha256 = $retocSha256
     legacyImportPackageNameLayout = 'SerializedForFilteredCookedPackages'
     cookStorage = $cookStorage
-    steamBuildId = $expectedSteamBuildId
+    steamBuildId = [string]$fingerprint.steam.buildId
+    ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
     originalExtractionManifest = $manifests[0].FullName
     originalAssetSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $originalUassets[0].FullName).Hash
     containerFiles = $containerHashes

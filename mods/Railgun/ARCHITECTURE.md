@@ -4,8 +4,9 @@
 
 The following native contracts are bound to Steam build `25956314`.
 Railgun uses these contracts for stock actions, mapping-context lifecycle and
-ADS processing. Controller hardware behavior remains unverified. Revalidate
-native contracts when the Steam build ID changes. Reusable input integration rules
+ADS processing. Controller hardware behavior remains unverified. On a changed
+Steam build, try the public candidate producer first; investigate these native
+contracts if the build or game test fails. Reusable input integration rules
 live in [Voyage input integration](../../docs/voyage-input-integration.md).
 
 Each shell clones the live character and vehicle context assets and their

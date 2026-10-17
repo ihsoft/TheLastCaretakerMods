@@ -67,7 +67,7 @@ if ([string]$buildManifest.kind -cne 'BoatHUDTotalResources mod' -or
         'SerializedForFilteredCookedPackages' -or
     [string]$buildManifest.retocSha256 -notmatch '^[0-9A-F]{64}$' -or
     [string]$buildManifest.cookStorage -cne 'LooseCookedPackageWriter' -or
-    [string]$buildManifest.steamBuildId -cne '25056839') {
+    [string]$buildManifest.steamBuildId -cnotmatch '^[0-9]+$') {
     throw 'Only the statically checked BoatHUDTotalResources build is allowed.'
 }
 $root = (Resolve-Path -LiteralPath $GameRoot).Path

@@ -242,15 +242,29 @@ those details here.
   build ID with its provenance. A producer that identifies
   the game and re-extracts current stock inputs during the run satisfies this
   gate; do not add a separate manual fingerprint call before that producer.
-- A changed Steam build ID invalidates extracted snapshots and reconstructed
-  game-specific contracts. A mod producer may attempt a candidate build on the
-  new build when it re-extracts affected stock inputs and checks its required
-  asset contracts during that run. A successful build is structural evidence;
-  require the real-game test before a new gameplay compatibility claim. General
-  engine behavior is governed by its engine/serialization contract and structural
-  checks; it does not acquire a game-build gate solely because it was observed
-  on one build. Diagnose a failed build or game test with focused inspection of
-  the affected contract.
+- For a requested candidate, run the owning public producer first (or the
+  documented build path where no public producer exists). Do not
+  manually audit every game contract, tool version, or mapping before that run.
+  Each game-bound mod keeps its pinned Steam build ID in `mods/<Mod>/game-build.json`;
+  `version.txt` remains the published Nexus version. Every public producer that
+  uses this pin accepts `-IgnorePinnedGameVersion`. On a pin mismatch, retry with
+  that flag. It bypasses only comparison with the previous accepted build: the
+  producer must record the installed game's actual build ID, use current stock
+  inputs, and retain structural, provenance, and package checks. Do not relabel
+  an old extracted input as current. No game-build pin is needed for a contract
+  governed only by the engine or serialization format.
+- If that retry cannot resolve reviewed mappings for the installed game, use
+  `Get-VoyageMappings.ps1` to confirm the gap, then ask the user whether to
+  update mappings or delegate that work; obtain the user's model choice before
+  spawning a mapping agent. Retry the producer after the mapping is ready.
+  Investigate source and game contracts only when the normal build path still
+  fails or the game test reveals a problem. A successful build provides a
+  structurally checked candidate; offer a real-game test next. A successful
+  game test accepts the tested behavior on that build. Then update the mod's
+  pinned ID without changing the tested package bytes. Keep the actual build
+  ID, mapping identity, and the exact tested package in release evidence.
+  General engine behavior follows its engine/serialization checks rather than
+  acquiring a game-build gate solely because it was observed on one build.
 - Keep mod version, artifact version, user-facing game version, Steam build ID,
   and Unreal Engine version as separate identities. A game
   update neither proves incompatibility nor requires a mod-version bump; it

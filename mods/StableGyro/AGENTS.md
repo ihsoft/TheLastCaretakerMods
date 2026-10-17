@@ -7,8 +7,8 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 - [README.md](README.md) describes the shipped controls, runtime behavior,
   user-facing settings, units, accepted ranges, and public build/install entry
   point.
-- [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md) owns the game fingerprint
-  gate, stock Gyro package/class/input/physics contracts, direct
+- [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md) owns the source provenance,
+  stock Gyro package/class/input/physics contracts, direct
   `PropellerVelocity` reference values, and tracked reconstructed inputs.
 - [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md) owns the version-bound native hover
   calibration formula, assistance-ownership order, recovery limits and exact
@@ -102,8 +102,10 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   `StableGyro.ini`, remove explicitly retired keys, append missing canonical
   keys, and hash-check the resulting settings file. Create it from canonical
   defaults only when it does not exist.
-- Treat GAME_DERIVED_SOURCES.md as a hard fingerprint gate. Extract and patch
-  a fresh current `DA_Item_Module_GyroCopter`; never commit extracted or cooked
+- Treat GAME_DERIVED_SOURCES.md as source provenance, not a mandatory manual
+  audit before a candidate build. On a pin mismatch retry the public producer
+  with `-IgnorePinnedGameVersion`. Extract and patch a fresh current
+  `DA_Item_Module_GyroCopter`; never commit extracted or cooked
   data. Keep the stock Gyro Blueprint at its original package identity. The mod
   subclass is selected only through the item data asset's `DroppedActor` path.
 - Preserve every stock Gyro keyboard mapping when replacing

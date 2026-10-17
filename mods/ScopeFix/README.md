@@ -42,7 +42,10 @@ The output directory must be new. The builder reads the installed game's
 stock assets through the repository tools, checks their fingerprint and
 camera-offset values, changes only two values, and produces a verified
 container triplet plus `build-evidence.json`. It requires the published
-repository tools and reviewed mappings. It does not install the mod.
+repository tools and reviewed mappings. It does not install the mod. On a
+changed Steam build, retry with `-IgnorePinnedGameVersion`. The old stock values
+and package structure remain checked; investigate a failing check, and test a
+successful candidate in game before updating `game-build.json`.
 
 For release packaging, archive the exact triplet and call
 `tools/New-VoyageReleaseManifest.ps1` with `-SourcePath mods/ScopeFix`.

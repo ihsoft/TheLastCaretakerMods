@@ -28,7 +28,8 @@ HUD child. Shared cooked-asset contracts are documented separately in
 
 ## Compatibility
 
-The two-resource HUD supports Steam build `25056839`, game UE `5.8.1`.
+The last pinned Steam build is in `game-build.json`; its source contracts were
+recorded for game UE `5.8.1`.
 It displays the Boat's grid-wide Diesel and Electricity totals without adding
 Petrol or disturbing the neighboring HUD elements. The builder uses the
 available UE 5.8.2 editor and a fresh stock HUD package for the target build.
@@ -37,40 +38,41 @@ Its game-derived contracts are recorded in
 
 ## Build
 
-Publish the reviewed canonical UE 5.8 retoc compatibility binary once from the
-repository root:
-
-```powershell
-.\tools\Publish-RetocBinary.ps1
-```
-
-Then prepare a clean current-build original while Voyage is closed:
+Prepare a clean current-build original while Voyage is closed, using a
+fresh directory under `Tmp/`:
 
 ```powershell
 .\Prepare-BoatHUDTotalResourcesOriginal.ps1 `
-  -OutputRoot '..\..\artifacts\extracted\boat-hud-total-resources-original'
+  -OutputRoot '..\..\Tmp\BoatHUDTotalResources\original-<run>'
 ```
+
+If that step reports a missing canonical retoc binary, run
+`.\tools\Publish-RetocBinary.ps1` from the repository root and retry with a
+new output directory.
 
 Build the container:
 
 ```powershell
 .\Build-BoatHUDTotalResources.ps1 `
-  -OriginalsRoot '..\..\artifacts\extracted\boat-hud-total-resources-original' `
-  -OutputRoot '..\..\artifacts\builds\boat-hud-total-resources'
+  -OriginalsRoot '..\..\Tmp\BoatHUDTotalResources\original-<run>' `
+  -OutputRoot '..\..\Tmp\BoatHUDTotalResources\build-<run>'
 ```
 
 The build gates the game fingerprint, clean extraction provenance, cooked
 graphs and CDOs, exact four-asset inventory, and final container hashes.
+If only the pinned ID differs, retry the build with
+`-IgnorePinnedGameVersion`. The original extraction must still match the
+installed game. Test a successful candidate in game before updating the pin.
 
 ## Install and remove
 
 Install only while Voyage is closed, preserving exact removal evidence:
 
 ```powershell
-$evidenceRoot = Join-Path '..\..\artifacts\installations\BoatHUDTotalResources' `
+$evidenceRoot = Join-Path '..\..\Tmp\BoatHUDTotalResources\installations' `
   ([Guid]::NewGuid().ToString('N'))
 .\Install-BoatHUDTotalResources.ps1 `
-  -PackageRoot '..\..\artifacts\builds\boat-hud-total-resources\package' `
+  -PackageRoot '..\..\Tmp\BoatHUDTotalResources\build-<run>\package' `
   -EvidenceRoot $evidenceRoot
 ```
 

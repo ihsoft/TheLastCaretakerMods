@@ -174,6 +174,7 @@ container and evidence, without installation.
 | --- | --- | --- |
 | Run a potentially failing native diagnostic with resource limits | `Invoke-VoyageBoundedTool.ps1` | Time/memory-bounded process tree, separate TMP logs, exit and peak-memory report |
 | Identify the installed game build | `Get-VoyageBuildFingerprint.ps1` | Steam build ID and game root |
+| Compare a mod's pinned game build during a candidate run | `Assert-VoyageModGameBuild.ps1` | Actual and pinned Steam IDs; optional `-IgnorePinnedGameVersion` bypasses only their comparison |
 | Inspect installed containers and running game processes without mutation | `Get-VoyageInstallationStatus.ps1` | JSON inventory, process snapshot, optional installed-manifest hash comparison |
 | Get one cooked asset as JSON or list every package | `Get-VoyageAssetJson.ps1` | Validated JSON or package-list path; game storage and reuse are automatic |
 | Summarize one Blueprint without reading its full JSON | `Get-VoyageAssetSummary.ps1` | Compact focused structure plus a complete summary path |
@@ -260,12 +261,33 @@ only when its compiled inputs or selected UE 5.8 identity change.
 Build/cook/package contracts remain with their owning mods. Use these routes
 before searching for scripts or assembling Unreal/retoc commands manually:
 
+For a requested candidate, call the public producer first where one exists;
+otherwise use the documented manual build path. A producer with a
+game-build pin uses `Assert-VoyageModGameBuild.ps1` with its root
+`game-build.json` and the installed
+Steam build ID. A mismatch names the retry flag `-IgnorePinnedGameVersion`;
+use the same flag on the owning public producer. It skips only the old pinned
+ID comparison. The run still records the installed ID and must validate its
+current inputs and package. After a successful build, request a game test.
+After that test succeeds, update the pinned ID; preserve the exact tested ZIP.
+If current mappings are missing, resolve that prerequisite and retry before
+opening game-source contracts for investigation.
+
+The shared gate's supported call is
+`Assert-VoyageModGameBuild.ps1 -ModRoot <mod-root>
+-ActualSteamBuildId <installed-id> [-IgnorePinnedGameVersion]`. It requires
+`game-build.json` with schema 1 and one decimal `pinnedSteamBuildId`, then
+returns `pinnedSteamBuildId`, `actualSteamBuildId`, and
+`ignoredPinnedGameVersion`. Producers call it after their normal game
+identification; callers do not need a separate fingerprint probe.
+
 | Producer | Public workflow and owning rules | Output / boundary |
 | --- | --- | --- |
 | MooringCable60m | [Release workflow](../mods/MooringCable60m/README.md) | `Build-MooringCable60m.ps1` builds, cooks, packages and validates the three-package stock override outside the sandbox, then creates a schema-2 release manifest under `Tmp/MooringCable60m/<run>/release/`; its early gate checks Steam build ID only, and `-IgnorePinnedGameVersion` permits a fresh-stock candidate build for a new build ID while exact reviewed mappings and a game test remain required; it does not install |
+| ContainerLidLabel | [Build and validation](../mods/ContainerLidLabel/README.md) | `Build-ContainerLidLabel.ps1` fingerprints the game, builds and cooks a large-container child, relocates its fresh stock parent, verifies exactly two runtime packages, and prepares an `_P` container, ZIP and schema-2 release manifest below `Tmp/ContainerLidLabel`. It does not install; placement and runtime behavior remain a separate game-validation gate |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
 | BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
-| ElectrifiedBoat | [Build and validation](../mods/ElectrifiedBoat/README.md#build-and-validation), [installation](../mods/ElectrifiedBoat/README.md#distribution), [rules](../mods/ElectrifiedBoat/AGENTS.md) | `Build-ElectrifiedBoat.ps1` fingerprints the game, generates and cooks one additive `/Game/Mods/ElectrifiedBoat/ModActor`, packages the container, and invokes `Test-ElectrifiedBoatCandidate.ps1`. The distribution contains three unsuffixed IoStore files at ZIP root without `.autoload`; extract them directly into `Voyage/Content/Paks/LogicMods` for DML discovery. The producer does not install or change loader configuration. See the [DML identity contract](../docs/voyage-cooked-asset-toolchain.md#dml-actor-identity-and-physical-installation) |
+| ElectrifiedBoat | [Build and validation](../mods/ElectrifiedBoat/README.md#build-and-validation), [installation](../mods/ElectrifiedBoat/README.md#distribution), [rules](../mods/ElectrifiedBoat/AGENTS.md) | `Build-ElectrifiedBoat.ps1` fingerprints the game, generates and cooks one additive `/Game/Mods/ElectrifiedBoat/ModActor`, packages the container, and invokes `Test-ElectrifiedBoatCandidate.ps1`. The distribution contains three unsuffixed IoStore files under `LogicMods/` without `.autoload`; extract its contents into `Voyage/Content/Paks` for DML discovery; keep the ZIP outside the game. The producer does not install or change loader configuration. See the [DML identity contract](../docs/voyage-cooked-asset-toolchain.md#dml-actor-identity-and-physical-installation) |
 | Railgun | [One-command build](../mods/Railgun/README.md#build), [rules](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun` container, calls the common native registry producer for its three owned JSON readbacks, and prepares a schema-3 ZIP/manifest below `Tmp/Railgun`. Optional `-Install` uses the common guarded installer; `-ReleaseCandidate` retains the versioned ZIP under `artifacts/installations/Railgun-V<N>`. Gameplay validation remains a separate gate |
 | PalletContainerSnap | [DML installer](../mods/PalletContainerSnap/Install-PalletContainerSnap.ps1) | A prepared release manifest drives the shared installer with `-LogicMods`; `-ReleaseCandidate` retains the selected ZIP outside the game. The producer is paused |
 
@@ -505,8 +527,12 @@ and its Git state, hashes the triplet, optional matching `.autoload`, and ZIP,
 then calls `Install-VoyageRelease.ps1 -ValidateOnly`. It publishes
 `release-manifest.json` only after the installer accepts the archive/payload,
 fingerprint, source commit, and dirty-source contract. Existing manifests are
-immutable. A dirty test candidate needs explicit `-AllowDirtySource`; a normal
-release should be committed first. `-InstalledArchiveName` can override the
+immutable. Once the manifest exists, the release candidate needs only its ZIP
+and manifest: remove redundant loose `package/` output from the candidate
+directory after validation. Build intermediates may remain elsewhere in `Tmp/`
+while they are useful for active work. A dirty test candidate needs explicit
+`-AllowDirtySource`; a normal release should be committed first.
+`-InstalledArchiveName` can override the
 retained candidate ZIP name, and `-AsJson` returns a compact result.
 When a release also owns one content-only plugin descriptor, pass its exact
 release-root-local `.uplugin` with `-ContentPluginDescriptor`. The producer then
@@ -537,13 +563,12 @@ additional-file mechanism. New release producers
 should call `New-VoyageReleaseManifest.ps1` after their build and ZIP steps
 rather than duplicating this contract or passing an unrelated build manifest.
 
-`-ValidateOnly` verifies the clean source commit, exact manifest-owned
-`.pak/.ucas/.utoc` triplet and ZIP, matching triplet contents inside the archive,
-and current Steam
-build ID, then returns the planned destinations without
+`-ValidateOnly` verifies the source commit, exact manifest-owned
+`.pak/.ucas/.utoc` triplet inside the ZIP, matching any loose payload files
+that are still present, and current Steam build ID. It returns the planned
+destinations without
 creating evidence or touching the Paks directory. Remove `-ValidateOnly` only
 for an explicitly authorized installation while the game is closed.
-
 
 The ordinary installer writes its temporary installation transaction under
 `Tmp/installations/`. Pass `-ReleaseCandidate` only for a selected candidate:
@@ -554,8 +579,9 @@ was published earlier without a numbered release. The installer refuses an exist
 manifest there. `-RetainArchiveOnRestore` is rejected because ZIPs no longer
 belong in the game directory.
 
-During installation the wrapper stages and hashes every game-consumed source in the Paks
-directory, keeps temporary copies of existing targets during mutation, checks
+During installation the wrapper stages and hashes every game-consumed file from
+the ZIP or matching loose build intermediates in the Paks directory, keeps
+temporary copies of existing targets during mutation, checks
 the process again immediately before replacement, and reads every installed hash
 back. Its `install-transaction.json` and `install-manifest.json` remain under
 `Tmp/`, including for selected release candidates, only while installation is

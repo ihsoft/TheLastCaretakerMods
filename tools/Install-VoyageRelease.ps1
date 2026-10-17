@@ -97,8 +97,22 @@ function Get-ContentPluginPlan {
         throw 'contentPlugin has no matching descriptor artifact.'
     }
     $artifact = Resolve-ManifestArtifact -ReleaseRoot $ReleaseRoot `
-        -Record $artifactRecord -Label 'Content plugin descriptor'
-    $descriptor = Get-Content -LiteralPath $artifact.path -Raw | ConvertFrom-Json
+        -Record $artifactRecord -Label 'Content plugin descriptor' -ArchiveContained
+    if ($null -ne $artifact.path) {
+        Assert-ContentPluginDescriptor -Json (Get-Content -LiteralPath $artifact.path -Raw)
+    }
+    [pscustomobject][ordered]@{
+        pluginName = $pluginName
+        archivePath = $expectedArchivePath
+        installRelativePath = $expectedInstallPath
+        artifact = $artifact
+    }
+}
+
+function Assert-ContentPluginDescriptor {
+    param([Parameter(Mandatory = $true)][string]$Json)
+
+    $descriptor = $Json | ConvertFrom-Json
     if ($descriptor.CanContainContent -isnot [bool] -or
         -not [bool]$descriptor.CanContainContent -or
         $descriptor.EnabledByDefault -isnot [bool] -or
@@ -107,12 +121,6 @@ function Get-ContentPluginPlan {
         [bool]$descriptor.ExplicitlyLoaded -or
         $null -eq $descriptor.Modules -or @($descriptor.Modules).Count -ne 0) {
         throw 'Content plugin descriptor has unsafe loading/content flags.'
-    }
-    [pscustomobject][ordered]@{
-        pluginName = $pluginName
-        archivePath = $expectedArchivePath
-        installRelativePath = $expectedInstallPath
-        artifact = $artifact
     }
 }
 
@@ -173,7 +181,9 @@ function Resolve-ManifestArtifact {
         [object]$Record,
 
         [Parameter(Mandatory = $true)]
-        [string]$Label
+        [string]$Label,
+
+        [switch]$ArchiveContained
     )
 
     $name = [string](Get-OptionalPropertyValue -Object $Record -Name 'name')
@@ -223,15 +233,16 @@ function Resolve-ManifestArtifact {
             }
         }
     )
-    if ($valid.Count -lt 1) {
+    if ($valid.Count -lt 1 -and -not ($ArchiveContained -and $candidates.Count -eq 0)) {
         throw "$Label could not be resolved with its declared size and hash below $ReleaseRoot"
     }
 
     [pscustomobject][ordered]@{
         name = $name
-        path = $valid[0].FullName
+        path = $(if ($valid.Count -gt 0) { $valid[0].FullName } else { $null })
         size = $expectedSize
         sha256 = $expectedHash
+        archiveEntryName = $null
     }
 }
 
@@ -338,14 +349,14 @@ if ($null -eq $archiveRecord) {
     throw 'Release manifest has no exact release archive record.'
 }
 
+$resolvedArchive = Resolve-ManifestArtifact -ReleaseRoot $releaseRoot `
+    -Record $archiveRecord -Label 'Release archive'
 $resolvedArtifacts = @(
     foreach ($record in @($containerRecords) + @($sidecarRecords)) {
         Resolve-ManifestArtifact -ReleaseRoot $releaseRoot -Record $record `
-            -Label "Container artifact $([string]$record.name)"
+            -Label "Container artifact $([string]$record.name)" -ArchiveContained
     }
 )
-$resolvedArchive = Resolve-ManifestArtifact -ReleaseRoot $releaseRoot `
-    -Record $archiveRecord -Label 'Release archive'
 $contentPluginPlan = if ($null -eq $contentPluginRecord) {
     $null
 }
@@ -381,6 +392,7 @@ try {
         if ($entryHash -cne $artifact.sha256) {
             throw "Release ZIP content disagrees with payload hash: $($artifact.name)"
         }
+        $artifact.archiveEntryName = $entries[0].FullName
     }
     if ($null -ne $contentPluginPlan) {
         $descriptorEntries = @($archiveReader.Entries | Where-Object {
@@ -402,6 +414,17 @@ try {
         }
         if ($descriptorHash -cne $contentPluginPlan.artifact.sha256) {
             throw 'Release ZIP content plugin descriptor hash mismatch.'
+        }
+        $contentPluginPlan.artifact.archiveEntryName = $descriptorEntries[0].FullName
+        if ($null -eq $contentPluginPlan.artifact.path) {
+            $descriptorStream = $descriptorEntries[0].Open()
+            $reader = [IO.StreamReader]::new($descriptorStream, [Text.Encoding]::UTF8)
+            try {
+                Assert-ContentPluginDescriptor -Json $reader.ReadToEnd()
+            }
+            finally {
+                $reader.Dispose()
+            }
         }
     }
 }
@@ -492,6 +515,7 @@ $installItems = @(
             kind = if ([IO.Path]::GetExtension($artifact.name) -ceq '.autoload') { 'autoload' } else { 'container' }
             name = $artifact.name
             sourcePath = $artifact.path
+            archiveEntryName = $artifact.archiveEntryName
             size = $artifact.size
             sourceSha256 = $artifact.sha256
             destinationPath = Join-Path $paksDirectory $artifact.name
@@ -508,6 +532,7 @@ $installItems = @(
             kind = 'content-plugin-descriptor'
             name = $contentPluginPlan.artifact.name
             sourcePath = $contentPluginPlan.artifact.path
+            archiveEntryName = $contentPluginPlan.artifact.archiveEntryName
             size = $contentPluginPlan.artifact.size
             sourceSha256 = $contentPluginPlan.artifact.sha256
             installRelativePath = $contentPluginPlan.installRelativePath
@@ -613,7 +638,26 @@ try {
     }
 
     foreach ($item in $installItems) {
-        Copy-Item -LiteralPath $item.sourcePath -Destination $item.stagingPath
+        if ($null -ne $item.sourcePath) {
+            Copy-Item -LiteralPath $item.sourcePath -Destination $item.stagingPath
+        }
+        else {
+            $sourceArchive = [IO.Compression.ZipFile]::OpenRead($resolvedArchive.path)
+            try {
+                $sourceEntry = $sourceArchive.GetEntry($item.archiveEntryName)
+                if ($null -eq $sourceEntry -or $sourceEntry.Length -ne $item.size) {
+                    throw "Release ZIP entry changed before staging: $($item.name)"
+                }
+                $entryStream = $sourceEntry.Open()
+                $stagedStream = [IO.File]::Create($item.stagingPath)
+                try { $entryStream.CopyTo($stagedStream) }
+                finally {
+                    $stagedStream.Dispose()
+                    $entryStream.Dispose()
+                }
+            }
+            finally { $sourceArchive.Dispose() }
+        }
         $stagedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $item.stagingPath).Hash
         if ($stagedHash -cne $item.sourceSha256) {
             throw "Staged file hash mismatch: $($item.name)"

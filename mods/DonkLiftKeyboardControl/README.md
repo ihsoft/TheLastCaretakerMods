@@ -14,7 +14,8 @@ The project scaffold (`Voyage.uproject`, `Config`, targets, and module setup)
 is maintained for the installed Unreal Engine 5.8.2 editor. The
 game-API mirror headers are reconstructed inputs, not copied engine headers;
 each carries the Steam build and reconstruction method in its file header.
-Revalidate game-specific mirrors after the Steam build ID changes.
+Investigate game-specific mirrors if a candidate build or game test fails after
+a Steam build ID change.
 
 ## Versioning and compatibility
 
@@ -26,9 +27,10 @@ aliases for game versions. The current release is `v2` for The Last Caretaker
 
 A supported game version is not an allowlist or a hard runtime check. A
 future game update may remain compatible and does not automatically require a
-new mod version. The Steam build and UE serialization version remain
-hard build-time provenance gates for reconstructed headers, extracted assets,
-and cooked-package production. `v1` is known to be incompatible with game
+new mod version. The builder compares the installed Steam build with
+`game-build.json`; `-IgnorePinnedGameVersion` permits a structurally checked
+candidate on a newer build. Fresh extractions still must match the installed
+game. `v1` is known to be incompatible with game
 `5.5`, primarily because it was cooked and mirrored for the earlier UE `5.7.4`
 generation.
 
@@ -43,10 +45,8 @@ The code is split by role:
 - `Source/DonkLiftGenerator` is our hand-written editor-tools module containing
   the two Unreal commandlets.
 
-See `GAME_DERIVED_SOURCES.md` before generation after any game update. A
-changed Steam build ID is a hard stop until the listed headers,
-generator contracts, original assets, and packaging inputs have been
-re-extracted or revalidated.
+If a candidate fails, use `GAME_DERIVED_SOURCES.md` to investigate the
+affected source contract. The normal path begins with the public builder.
 
 ## Runtime architecture
 
@@ -79,6 +79,8 @@ The default candidate label is the next version after `version.txt`, including
 `v1-candidate` when the file contains `0`.
 `-Version v3-test` may distinguish a development build without changing the
 published version.
+If the default run stops only at the pinned ID, retry with
+`-IgnorePinnedGameVersion` and test a successful candidate in game.
 
 It validates the game/engine fingerprint and clean Git source, builds the
 editor modules incrementally, regenerates assets, cooks, extracts the original

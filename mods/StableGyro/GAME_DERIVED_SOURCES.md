@@ -6,8 +6,10 @@
 - Unreal parser target: 5.8
 
 The producer checks the Steam build ID while extracting current stock inputs.
-A different build ID requires revalidation of the asset contracts below;
-historical findings retain only their explicitly named build.
+A different build ID permits a candidate attempt with
+`-IgnorePinnedGameVersion`; a successful build needs a game test. Investigate
+the affected asset contract if either gate fails. Historical findings retain
+only their explicitly named build.
 
 ## Game contracts
 

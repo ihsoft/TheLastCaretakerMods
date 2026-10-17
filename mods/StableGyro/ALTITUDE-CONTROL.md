@@ -3,8 +3,9 @@
 ## Version-bound native contracts
 
 The native contracts in this document are bound to Steam build `25956314`.
-Names, owners, offsets, property types and flags reflect that build. Revalidate
-them after a Steam build ID change. The public
+Names, owners, offsets, property types and flags reflect that build. On a new
+Steam build, attempt the public candidate path first; investigate these native
+details when a build or game test reveals a discrepancy. The public
 producer separately re-extracts and checks the stock cooked assets consumed by
 each candidate build.
 

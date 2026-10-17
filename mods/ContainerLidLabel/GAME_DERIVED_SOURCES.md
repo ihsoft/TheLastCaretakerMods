@@ -18,9 +18,11 @@ the 69-byte package path to an equal-length path, preserves file length and
 requires the `.uexp` payload to remain byte-identical. Extracted, relocated and
 cooked files are generated output, not tracked source.
 
-Revalidate mirrors, function/property owners, relocation assumptions and layouts
-after a Steam build ID change. Static compilation, container verification and
-cooked readback do not substitute for runtime validation.
+On a new Steam build, try the public producer with
+`-IgnorePinnedGameVersion`; investigate mirrors, function/property owners,
+relocation assumptions and layouts if the build or game test fails. Static
+compilation, container verification and cooked readback do not substitute for
+runtime validation.
 
 The release provides the documented presentation and configurable capacity,
 including nondefault values. Its default remains 200 kg. Retained installation

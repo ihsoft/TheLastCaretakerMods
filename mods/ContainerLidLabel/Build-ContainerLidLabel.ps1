@@ -9,11 +9,11 @@ param(
     [string]$EngineRoot = 'K:\Epic Games\UE_5.8',
     [string]$OutputRoot,
     [switch]$AllowDirtySource,
-    [switch]$FinalizeExisting
+    [switch]$FinalizeExisting,
+    [switch]$IgnorePinnedGameVersion
 )
 
 $ErrorActionPreference = 'Stop'
-$expectedBuild = '25929985'
 $retocVersion = 'UE5_8'
 $containerName = 'ContainerLidLabel_P'
 $sourcePackage = '/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Large'
@@ -149,7 +149,7 @@ if ($FinalizeExisting) {
     if ([int]$releaseRecord.schemaVersion -ne 2 -or
         [string]$releaseRecord.mod -cne 'ContainerLidLabel' -or
         [string]$releaseRecord.version -cne $Version -or
-        [string]$releaseRecord.gameFingerprint.steamBuildId -cne $expectedBuild) {
+        [string]$releaseRecord.gameFingerprint.steamBuildId -cnotmatch '^[0-9]+$') {
         throw "FinalizeExisting rejected release identity: $releaseManifestPath"
     }
     foreach ($record in @($releaseRecord.payload) + @($releaseRecord.archive)) {
@@ -187,7 +187,7 @@ if ($FinalizeExisting) {
         $releaseManifestPath)
     $buildManifest = [ordered]@{
         schemaVersion = 1; status = 'succeeded'; mod = 'ContainerLidLabel'; version = $Version
-        createdUtc = [DateTime]::UtcNow.ToString('o'); steamBuildId = $expectedBuild
+        createdUtc = [DateTime]::UtcNow.ToString('o'); steamBuildId = [string]$releaseRecord.gameFingerprint.steamBuildId
         engine = '5.8.2'; retocEngineVersion = $retocVersion
         runtimePackages = [IO.File]::ReadAllLines($expectedList)
         config = [ordered]@{ path = $releaseConfig; defaultMaxWeightKg = $defaultMaxWeightKg; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash }
@@ -209,9 +209,9 @@ Write-Host '1/8 Validating game fingerprint'
 $fingerprintPath = Join-Path $releaseRoot 'game-fingerprint.json'
 & $fingerprinter -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
 $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
-if ([string]$fingerprint.steam.buildId -cne $expectedBuild) {
-    throw "Installed game does not match the ContainerLidLabel source contract. See $fingerprintPath"
-}
+$gameBuild = & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') `
+    -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
+    -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 
 Write-Host '2/8 Building editor generator'
 Invoke-LoggedProcess -FilePath $buildBatch -Name 'editor-build' -Arguments @(
@@ -343,7 +343,8 @@ $buildManifest = [ordered]@{
     mod = 'ContainerLidLabel'
     version = $Version
     createdUtc = [DateTime]::UtcNow.ToString('o')
-    steamBuildId = $expectedBuild
+    steamBuildId = [string]$fingerprint.steam.buildId
+    ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
     engine = '5.8.2'
     retocEngineVersion = $retocVersion
     runtimePackages = [IO.File]::ReadAllLines($expectedList)

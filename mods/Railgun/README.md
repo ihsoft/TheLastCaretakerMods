@@ -284,8 +284,11 @@ collision profile or object type.
 
 ## Compatibility and validation
 
-The mod build is gated to Steam build `25956314`, parser profile `UE5_8`
-and authoring editor `5.8.2`. In the current game,
+The last pinned Steam build is in `game-build.json`. For a changed game build,
+retry the public producer with `-IgnorePinnedGameVersion`; the selected mapping
+must still match the installed game and the candidate must pass its structural
+checks and a game test. The parser profile is `UE5_8` and the authoring editor
+is `5.8.2`. In the current game,
 validated behavior covers the keyboard/mouse stock-input path, corrected look
 direction, action hints and ADS/scope operation. Gamepad input, exhaustive
 custom remappings, every target, submerged collision order, multiplayer and

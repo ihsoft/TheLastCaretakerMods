@@ -12,7 +12,6 @@ Set-StrictMode -Version Latest
 
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $tools = Join-Path $repo 'tools'
-$expectedBuild = '25956314'
 $tmpOwnerRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/MooringCable60m'))
 $publishedVersionText = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version.txt') -Raw).Trim()
 if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
@@ -45,10 +44,9 @@ if (-not (Test-Path -LiteralPath $steamManifest -PathType Leaf)) {
 $buildMatch = [regex]::Match([IO.File]::ReadAllText($steamManifest), '"buildid"\s+"(?<id>\d+)"')
 if (-not $buildMatch.Success) { throw "Steam build ID not found: $steamManifest" }
 $steamBuildId = $buildMatch.Groups['id'].Value
-$pinnedGameVersionMatches = $steamBuildId -eq $expectedBuild
-if (-not $pinnedGameVersionMatches -and -not $IgnorePinnedGameVersion) {
-    throw 'Steam build ID differs from the pinned build. Retry with -IgnorePinnedGameVersion to build from current stock assets and validate the candidate in game.'
-}
+$gameBuild = & (Join-Path $tools 'Assert-VoyageModGameBuild.ps1') `
+    -ModRoot $PSScriptRoot -ActualSteamBuildId $steamBuildId `
+    -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 $mapping = & (Join-Path $tools 'Get-VoyageMappings.ps1') -GameRoot $GameRoot
 [IO.Directory]::CreateDirectory($output)|Out-Null
 $project=Join-Path $PSScriptRoot 'Voyage.uproject'
@@ -197,7 +195,7 @@ $report = [ordered]@{
     childSummaryPath = $childSummary.summaryPath; childJsonPath = $childJson.jsonPath
     steamBuildId = $mapping.steamBuildId
     pinnedGameVersionMatches = $pinnedGameVersionMatches
-    ignorePinnedGameVersion = [bool]$IgnorePinnedGameVersion
+    ignorePinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
     extractionManifest = $extract.manifestPath; roundtripReport = $roundtrip.reportPath
     cableExtractionManifest = $cableExtract.manifestPath; cableRoundtripReport = $cableRoundtrip.reportPath
     cableIndependentJsonPath = $cableCandidateResult.jsonPath

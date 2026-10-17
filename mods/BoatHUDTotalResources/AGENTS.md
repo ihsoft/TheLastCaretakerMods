@@ -3,10 +3,10 @@
 These rules apply to the loader-free BoatHUDTotalResources mod in this directory.
 Repository rules in `../../AGENTS.md` also apply.
 
-- The two-resource HUD supports Steam build `25056839`. Rebuild or
-  test installation is allowed only from a fresh current original, the
-  installed UE 5.8.2 editor, the reviewed canonical retoc build, and the exact
-  static gates. Recheck game-derived contracts after a Steam build ID change.
+- The last pinned Steam build is recorded in `game-build.json`. The public
+  builder may retry a changed build with `-IgnorePinnedGameVersion`; it still
+  requires a fresh current original, the supported editor and retoc profile,
+  and its structural checks. Offer a game test after a successful candidate.
 - Do not add Tick to the inherited Boat HUD child: incomplete ancestor mirrors
   can break Shipping deserialization. A one-shot text write also cannot replace
   the stock updater. Keep repeating aggregation in the separate widget with a

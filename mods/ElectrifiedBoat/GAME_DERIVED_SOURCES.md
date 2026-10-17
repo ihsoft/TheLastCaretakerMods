@@ -8,8 +8,9 @@ remain in ignored storage and are not source inputs.
 
 - Steam build ID: `25880952`
 - Unreal family: `5.8`; generating editor: `5.8.2`
-- revalidate all reflected identities, bytecode assumptions, and cooked imports
-  after a Steam build ID change
+- on a changed Steam build, try a candidate with
+  `-IgnorePinnedGameVersion`; investigate the affected identity or import only
+  if the build or game test fails
 
 ## Stock identities and lifecycle
 

@@ -16,12 +16,13 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$OutputRoot,
 
-    [string]$ContainerName = 'StableGyro_P'
+    [string]$ContainerName = 'StableGyro_P',
+
+    [Parameter(Mandatory = $true)][string]$ActualSteamBuildId
 )
 
 $ErrorActionPreference = 'Stop'
 
-$expectedSteamBuildId = '25982825'
 $retocCompatibilityVersion = 'UE5_8'
 $expectedItemFilter = 'Data/Assets/Modules/DA_Item_Module_GyroCopter'
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
@@ -90,8 +91,8 @@ function Get-ExtractionEvidence {
         [string]$manifest.retocSha256 -cne $retocSha256) {
         throw "$Label extraction does not match the selected retoc compatibility contract."
     }
-    if ([string]$manifest.steamBuildId -cne $expectedSteamBuildId) {
-        throw "$Label extraction fingerprint does not match this builder's validated game version."
+    if ([string]$manifest.steamBuildId -cne $ActualSteamBuildId) {
+        throw "$Label extraction fingerprint does not match the installed game."
     }
 
     return [pscustomobject]@{

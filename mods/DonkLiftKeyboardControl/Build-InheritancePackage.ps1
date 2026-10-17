@@ -16,12 +16,13 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$OutputRoot,
 
-    [string]$ContainerName = 'DonkLiftKeyboardControl_P'
+    [string]$ContainerName = 'DonkLiftKeyboardControl_P',
+
+    [Parameter(Mandatory = $true)][string]$ActualSteamBuildId
 )
 
 $ErrorActionPreference = 'Stop'
 
-$expectedSteamBuildId = '25056839'
 $retocCompatibilityVersion = 'UE5_7'
 $expectedForkliftFilter = 'Vehicles/BP_Forklift_Possesable'
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
@@ -87,8 +88,8 @@ function Get-ExtractionEvidence {
         [string]$manifest.retocSha256 -cne $retocSha256) {
         throw "$Label extraction does not match the selected retoc compatibility contract."
     }
-    if ([string]$manifest.steamBuildId -cne $expectedSteamBuildId) {
-        throw "$Label extraction fingerprint does not match this builder's validated game version."
+    if ([string]$manifest.steamBuildId -cne $ActualSteamBuildId) {
+        throw "$Label extraction fingerprint does not match the installed game."
     }
 
     return [pscustomobject]@{

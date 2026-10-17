@@ -12,9 +12,10 @@ released IoStore container.
 
 Every game-derived header begins with `HAND-RECONSTRUCTED GAME API MIRROR` and
 records the validated Steam build, engine version, and reconstruction method.
-When the current Steam build ID differs, stop before
-building: recreate or revalidate every mirror against the new game version,
-then update its provenance header.
+When the current Steam build ID differs, the public producer may attempt a
+candidate with `-IgnorePinnedGameVersion`. Revisit these mirrors if compilation,
+package checks, or the game test exposes an incompatible contract; update their
+provenance only after the relevant contract is revalidated.
 
 `Voyage.h`, `Voyage.cpp`, and `Voyage.Build.cs` are our hand-written editor
 scaffold around those mirrors. They are not extracted from the game, although

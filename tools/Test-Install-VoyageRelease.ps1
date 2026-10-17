@@ -587,6 +587,35 @@ try {
         throw 'Successful ordinary installation retained historical recovery records.'
     }
 
+    $archiveOnlyRelease = New-SyntheticRelease -Version 'archive-only' `
+        -ContentMarker 'archive-only'
+    $archiveOnlyPackage = (Resolve-Path -LiteralPath (
+        Join-Path $archiveOnlyRelease.root 'container\package')).Path
+    $archiveOnlyRoot = (Resolve-Path -LiteralPath $archiveOnlyRelease.root).Path
+    if (-not $archiveOnlyPackage.StartsWith(
+        $archiveOnlyRoot.TrimEnd('\') + '\',
+        [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Synthetic package cleanup escaped its release root.'
+    }
+    Remove-Item -LiteralPath $archiveOnlyPackage -Recurse -Force
+    $archiveOnlyValidation = & $installer `
+        -ReleaseManifest $archiveOnlyRelease.manifestPath `
+        -GameRoot $gameRoot -ValidateOnly
+    if (-not [bool]$archiveOnlyValidation.validated) {
+        throw 'Archive-only release did not validate.'
+    }
+    $null = & $installer -ReleaseManifest $archiveOnlyRelease.manifestPath `
+        -GameRoot $gameRoot -EvidenceRoot (Join-Path $testRoot 'archive-only-evidence')
+    foreach ($record in $archiveOnlyRelease.records) {
+        Assert-Hash -Path (Join-Path $paksDirectory $record.name) `
+            -Expected $record.sha256 -Label "Archive-only installed $($record.name)"
+    }
+    if ($WithContentPluginDescriptor) {
+        Assert-Hash -Path $pluginInstallPath `
+            -Expected $archiveOnlyRelease.contentPlugin.artifact.sha256 `
+            -Label 'Archive-only installed content plugin descriptor'
+    }
+
     Write-Host 'Voyage release install/restore synthetic regression: PASS'
     [pscustomobject][ordered]@{
         passed = $true
@@ -597,7 +626,8 @@ try {
             'directory-target-rejection', 'install-readback', 'predecessor-backup',
             'install-rollback', 'changed-file-rejection', 'damaged-backup-rejection',
             'restore', 'restore-rollback',
-            'failed-recovery-copy-retention', 'successful-operation-cleanup')
+            'failed-recovery-copy-retention', 'successful-operation-cleanup',
+            'archive-only-validation-and-installation')
         artifactsRetained = [bool]$KeepArtifacts
         artifacts = if ($KeepArtifacts) { $testRoot } else { $null }
     }

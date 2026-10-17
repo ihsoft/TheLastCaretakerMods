@@ -8,8 +8,9 @@ or external runtime preprocessor.
 
 ## Compatibility scope
 
-The source contract is bound to Steam build `25056839` and game UE `5.8.1`.
-Revalidate reflected game identities after a fingerprint change. Generated
+The last pinned Steam build is in `game-build.json`; its source contract was
+recorded for game UE `5.8.1`. Revalidate reflected game identities if a build
+or game test exposes a mismatch. Generated
 Content, cooked packages, extracted game data, logs and release evidence remain
 ignored.
 
@@ -106,8 +107,9 @@ another requested iteration, the version-bound manual path is:
 6. install only through the common closed-game, backup and hash-readback gates.
 
 Unreal build, generation and cook must run outside the restricted sandbox.
-Source/native modules and editor stand-ins are never shipped. Keep every
-generated tree and release artifact under ignored `artifacts/` paths.
+Source/native modules and editor stand-ins are never shipped. Keep working
+builds under ignored `Tmp/`; select only a release candidate for
+`artifacts/installations/<Mod>-V<N>/`.
 
 ## Known limits
 

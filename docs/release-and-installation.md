@@ -19,6 +19,21 @@ they must never imply that publication has occurred. A candidate promoted to
 a release keeps one exact ZIP identity. Publishing a different ZIP under the
 same version is a conflict to resolve explicitly, not a routine overwrite.
 
+## Game update and candidate builds
+
+Run the mod's public builder before manually inspecting game contracts. If its
+only blocker is the pinned Steam build ID in `game-build.json`, rerun with
+`-IgnorePinnedGameVersion`. The flag never changes the actual build ID in the
+candidate's evidence or waives fresh-input and package checks. Missing current
+mappings are a separate prerequisite; resolve them and retry. Analyze the
+specific failing contract only when these inexpensive paths fail.
+
+Offer an in-game test for a successful candidate. A passing build alone does
+not establish gameplay compatibility. After the game test passes, update the
+pin for future default builds and retain the exact tested ZIP when selecting
+a release candidate. Changing the pin is metadata work; it must not silently
+replace the tested package. A temporary accepted build remains under `Tmp/`.
+
 ## Output lifetime
 
 Builds and installations used for experiments or feature development belong
@@ -37,7 +52,11 @@ ignored `artifacts/`. Put a selected candidate's exact ZIP and release manifest 
 `artifacts/installations/Railgun-V5/`. The directory identifies the proposed
 release version, not a timestamp or installation run. Refuse to reuse an
 existing version directory for a different ZIP. Keep the selected ZIP there
-through publication and for later identification or recovery. Historical
+through publication and for later identification or recovery. The ZIP is the
+retained payload; loose `package/` copies are build intermediates and do not
+belong beside a complete candidate archive. The installer validates the
+manifest records against the ZIP and reads the container files from it when
+the loose build intermediates have been removed. Historical
 timestamped directories may be read for existing restore dependencies; migrate
 or remove them only after their ownership and recovery value are established.
 

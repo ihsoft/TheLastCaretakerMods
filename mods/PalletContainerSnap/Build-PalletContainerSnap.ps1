@@ -3,7 +3,8 @@ param(
     [string]$OutputRoot,
     [ValidateSet('OwnedCanary','RuntimeInjection','StockLargeRoute','StockLargePriority')][string]$Scope = 'OwnedCanary',
     [string]$ArtifactVersion,
-    [ValidateSet('AutoLoader','Dml')][string]$ActivationMode = 'Dml'
+    [ValidateSet('AutoLoader','Dml')][string]$ActivationMode = 'Dml',
+    [switch]$IgnorePinnedGameVersion
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,7 +15,8 @@ if ($Scope -ceq 'StockLargePriority') {
         $ArtifactVersion = '0.8-canary-stock-large-priority'
     }
     & (Join-Path $PSScriptRoot 'Registry/Build-PalletContainerSnapStockLargePriority.ps1') `
-        -OutputRoot $OutputRoot -ArtifactVersion $ArtifactVersion
+        -OutputRoot $OutputRoot -ArtifactVersion $ArtifactVersion `
+        -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
     return
 }
 
@@ -560,15 +562,14 @@ if ([int]$descriptorContract.Version -ne $(if ($runtimeInjection) { 14 } else { 
     throw 'Content plugin descriptor does not match the release identity contract.'
 }
 $fingerprint = & (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') | ConvertFrom-Json
-if ([string]$fingerprint.steam.buildId -cne [string]$contract.game.steamBuildId) {
-    throw 'Installed Voyage fingerprint does not match the source contract.'
-}
+$gameBuild = & (Join-Path $repo 'tools/Assert-VoyageModGameBuild.ps1') `
+    -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
+    -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 $mapping = & (Join-Path $repo 'tools/Get-VoyageMappings.ps1')
-if ([string]$mapping.steamBuildId -cne [string]$contract.game.steamBuildId -or
+if ([string]$mapping.steamBuildId -cne [string]$fingerprint.steam.buildId -or
     [string]$mapping.engineVersion -cne [string]$contract.parser.engineVersion -or
-    [string]$mapping.uassetApiEngineVersion -cne [string]$contract.parser.uassetApiEngineVersion -or
-    [string]$mapping.sha256 -cne [string]$contract.parser.mappingSha256) {
-    throw 'Reviewed mapping does not match the parser source contract.'
+    [string]$mapping.uassetApiEngineVersion -cne [string]$contract.parser.uassetApiEngineVersion) {
+    throw 'Reviewed mapping does not match the installed game or parser profile.'
 }
 $engineVersion = Get-Content -LiteralPath $engineVersionPath -Raw | ConvertFrom-Json
 $actualProducerEngine = "$($engineVersion.MajorVersion).$($engineVersion.MinorVersion).$($engineVersion.PatchVersion)"
@@ -1814,6 +1815,7 @@ $provenance = [ordered]@{
     runtime = 'not-run'
     artifactVersion = $supportedArtifactVersion
     steamBuildId = [string]$fingerprint.steam.buildId
+    ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
     reviewedMappingEngineVersion = [string]$contract.game.reviewedMappingEngineVersion
     producerEngineVersion = $actualProducerEngine
     parserEngineVersion = [string]$contract.parser.engineVersion

@@ -1,24 +1,24 @@
 # Game-derived source and build inputs
 
-This file is the update gate for anything whose correctness depends on a
-specific The Last Caretaker build, whether it was extracted automatically or
-reconstructed by hand.
+This file records source contracts whose correctness depends on a specific
+The Last Caretaker build, whether extracted automatically or reconstructed by
+hand. The current candidate pin is in `game-build.json`.
 
 ## Build-bound game identity
 
 This Steam build ID binds the sources and build inputs used to produce the current
 package. It is not a runtime compatibility allowlist: a different game build
-requires review before rebuilding or claiming support, but may still run an
-existing package correctly. Player-facing mod and tested-game versions live in
+requires a new candidate build and game test before a compatibility claim, but
+may still run an existing package correctly. Player-facing mod and tested-game versions live in
 `VERSION.json`.
 
 - Steam build: `25056839`
 - Unreal Engine: `5.8.1`
 
-Run `tools/Get-VoyageBuildFingerprint.ps1` before generation or packaging. If
-the current Steam build ID differs, do not reuse this checklist as proof of
-compatibility: re-extract the build inputs and revalidate every source contract
-below against the new version.
+Run the public producer first. On a pinned-ID mismatch, retry with
+`-IgnorePinnedGameVersion`. It re-extracts current inputs and checks them during
+the build. Use this source inventory for focused diagnosis if a build or game
+test fails; historical conclusions here do not by themselves prove the new build.
 
 ## Game asset contracts
 

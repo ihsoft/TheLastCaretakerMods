@@ -28,7 +28,8 @@ graph output in `graph/` and the validated release in `release/`. Its result
 returns `releaseRoot` and `releaseManifest`; use the latter for installation.
 Optional `-OutputRoot` selects a fresh run directory below `Tmp/MooringCable60m`.
 `-GameRoot` and `-EngineRoot` select the installed game and UE 5.8 respectively.
-On a new game build, the default invocation stops at its pinned-version gate.
+The last pinned Steam build is in `game-build.json`. On a new game build, the
+default invocation stops at its pinned-version gate.
 Retry with `-IgnorePinnedGameVersion`:
 
 ```powershell

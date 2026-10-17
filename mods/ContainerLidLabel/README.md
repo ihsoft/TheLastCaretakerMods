@@ -51,8 +51,10 @@ It never installs. For manifest-only refresh of an existing validated release,
 use `-FinalizeExisting` with its exact `-OutputRoot` and matching `-Version`;
 this does not rebuild or modify the payload.
 
-The current release supports Steam build `25929985`. Source and build inputs
-belong to [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md);
+The last pinned Steam build is in `game-build.json`. Retry a changed build with
+`-IgnorePinnedGameVersion`; the builder still checks fresh stock inputs and the
+package. Test a successful candidate in game before changing the pin. Source
+and build inputs belong to [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md);
 [Architecture](ARCHITECTURE.md) describes package/component ownership,
 lifecycle calls and cache behavior. Another mod overriding the same stock Large
 Blueprint can conflict with this one.

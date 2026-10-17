@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param([string]$OutputRoot = '', [switch]$SkipBuild, [switch]$Install,
     [switch]$ReleaseCandidate,
+    [switch]$IgnorePinnedGameVersion,
     [string]$ArtifactVersion = '',
     [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
 $ErrorActionPreference = 'Stop'
@@ -227,7 +228,9 @@ function Get-RailgunSourceHashes {
 }
 $sourceHashes = @(Get-RailgunSourceHashes)
 $fingerprint = (& (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -OutputPath (Join-Path $output 'fingerprint.json')) | ConvertFrom-Json
-if ([string]$fingerprint.steam.buildId -cne '25956314') { throw 'Railgun Steam build mismatch.' }
+$gameBuild = & (Join-Path $repo 'tools/Assert-VoyageModGameBuild.ps1') `
+    -ModRoot $PSScriptRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
+    -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 if ($Install) {
     $legacyAutoload = [IO.Path]::GetFullPath((Join-Path $fingerprint.gameRoot `
         'Voyage/Content/Paks/Railgun.autoload'))
@@ -237,11 +240,9 @@ if ($Install) {
     }
 }
 $mapping = & (Join-Path $repo 'tools/Get-VoyageMappings.ps1')
-if ([string]$serializationContract.steamBuildId -cne
-        [string]$fingerprint.steam.buildId -or
-    $serializationContract.engineVersion -cne $mapping.engineVersion -or
-    $serializationContract.mappingSha256 -cne $mapping.sha256) {
-    throw 'Railgun data-asset contract does not match the selected game and mapping.'
+if ([string]$mapping.steamBuildId -cne [string]$fingerprint.steam.buildId -or
+    $serializationContract.engineVersion -cne $mapping.engineVersion) {
+    throw 'Railgun selected mapping does not match the installed game or parser profile.'
 }
 $engineVersion = Get-Content -LiteralPath (Join-Path $engine 'Build/Build.version') -Raw | ConvertFrom-Json
 if ($engineVersion.MajorVersion -ne 5 -or $engineVersion.MinorVersion -ne 8 -or $engineVersion.PatchVersion -ne 2) { throw 'Railgun requires reviewed editor 5.8.2.' }
@@ -1106,7 +1107,7 @@ $provenance = [ordered]@{
     schemaVersion=1;mod='Railgun';version=$version;createdAtUtc=[DateTime]::UtcNow.ToString('o');
     sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;
     gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';
-    gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId};
+    gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId};ignoredPinnedGameVersion=[bool]$gameBuild.ignoredPinnedGameVersion;
     validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, plugin-local three-record primary-asset registry, GLB module actor with lifecycle-owned station initialization, operator, inputs, HUD and shot audio';
     mappingSha256=$mapping.sha256;validationSummary='validation-summary.json';
     packagingStatus=$pack.status;containerVerificationStatus=$verify.status;semanticStatus=$semantic.status;
