@@ -103,6 +103,7 @@ This coordinate conversion does not replace the game's inversion setting.
 - `RailgunModelGenerator` imports the gun and ammunition visuals once, builds
   the shell and owned composite pickup from that shared scene, and keeps common
   editor-only helpers in its private support translation unit.
+- `Assets/Railgun_Shot_Blast.wav` is the authored shot sound.
 - Generator translation units include their own header first and build with
   unity disabled. Voyage mirror headers retain only trivial reflected native
   stubs inline; the nontrivial vehicle mirror constructor is out of line.
@@ -112,7 +113,7 @@ This coordinate conversion does not replace the game's inversion setting.
 - The weapon uses the game's module/fabricator path. Its actor, UI and runtime
   packages remain under `/Game/Mods/Railgun/...`; primary Item and Skill data
   assets use mod-unique names inside the current game's confirmed AssetManager
-  scan roots. The release must not override stock Cyclone packages.
+  scan roots.
 - The built shell is a `VoyageModuleActor` with tagged model components,
   placement collision, dynamic collision and one electric socket. On the
   current fingerprint the socket explicitly serializes `bAutoInitialize=false`
@@ -151,6 +152,11 @@ This coordinate conversion does not replace the game's inversion setting.
   the bound HUD after that reset, and acquires the dedicated camera. Actual
   exit restores the previous view only when the station still owns the current
   view target.
+- Installation preserves existing user settings. The packaged
+  `Assets/Railgun.ini` owns current defaults;
+  `Settings/Railgun.settings.json` owns bindings and ranges. At runtime a
+  missing key uses its template default, and the next installation adds it to
+  the installed INI.
 - The GLB is imported by Unreal Interchange. Full hierarchy matrices determine
   ownership and transforms; node names identify roles but do not imply parentage.
 - Yaw, pitch, muzzle, sight, entry, power-socket and charge-indicator roles are
@@ -171,6 +177,9 @@ This coordinate conversion does not replace the game's inversion setting.
   configured charge is full, resets charge after a shot, and applies a validated
   direct attack to the hit target. Projectile travel is represented visually;
   hit resolution is authoritative.
+- The projectile initializes its collision component at runtime as
+  `WorldDynamic` with every channel blocked. Cooked serialization may omit an
+  editor default that native runtime construction supplies differently.
 - Railgun settings and HUD use the game's displayed `KWh` scale. Voyage maps
   one displayed `KWh` to 1000 native electricity amount units; module demand
   remains expressed in W. `IdleConsumptionKW` is converted to W and requested
@@ -315,7 +324,7 @@ This coordinate conversion does not replace the game's inversion setting.
 
 - The actor is `/Game/Mods/Railgun/Module/BP_Module_Railgun`. The shell owns an
   idempotent `InitializeRailgunStation` function and a transient direct station
-  reference; no global actor discovery or autoload coordinator is packaged.
+  reference.
   `ReceiveBeginPlay` and the exact inherited persistent post-load event each
   schedule one next-tick initialization attempt. Initialization requires a
   valid model root tagged `Railgun.Model.Root` and the owned entry component,
@@ -327,8 +336,8 @@ This coordinate conversion does not replace the game's inversion setting.
   anchor; no additional mount collider is needed. Physical collision remains
   on the configured `fabricatorCollision` mesh, and the dynamic-collision
   component retains auto-weld. An enclosing mount collider interferes with
-  the attached power cable. Shell-owned initialization requires no
-  VoyageAutoLoader. There is no polling, retry or global discovery fallback.
+  the attached power cable. Initialization uses no polling, retry or global
+  discovery fallback.
   Because native fabrication helpers could still create a transient shell,
   preview open/cancel behavior remains an explicit runtime-test boundary along
   with a fresh build and save/load. Its
@@ -599,7 +608,9 @@ alone does not establish which world points are represented.
 
 ## Build and compatibility identity
 
-The explicit cook inventory passes through the bounded manifest adapter.
+The explicit cook inventory passes through the bounded manifest adapter, which
+checks package count and Core SHA-1 before the stock cook commandlet consumes
+the list in one pass.
 The three-record plugin-local registry is derived solely from owned package
 readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field.

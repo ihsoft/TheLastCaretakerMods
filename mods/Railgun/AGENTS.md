@@ -8,7 +8,6 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
 - **Required before any change, build, or installation:** [Mod rules](MOD-RULES.md)
   contain binding limits on the owned model, settings, producer, payload, and
   runtime validation. Follow them even when a source change looks small.
-- [Build and usage](README.md): public build, installation, and inputs.
 - [Shared INI recipe](../../docs/runtime-configuration-patterns-knowledge.md):
   canonical defaults, entry reload, and preservation of player settings.
 - [Projectile modeling rule](modeling-four-plane-cut-nose-rule.md): the shape

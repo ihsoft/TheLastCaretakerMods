@@ -6,6 +6,10 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   shell, station or model projects.
 - `Build-Railgun.ps1` is the only public producer. Requested builds use
   `-Install` by default unless the user explicitly asks for preparation only.
+- `-OutputRoot` selects a fresh directory below `Tmp/Railgun/`;
+  `-ArtifactVersion` gives the candidate a distinct safe identity. On a changed
+  Steam build, retry with `-IgnorePinnedGameVersion` and test the resulting
+  candidate in game before updating `game-build.json`.
 - Never stop the game. Installation must retain the common closed-game,
   manifest, backup and installed-hash gates.
 - All mod-authored build inputs, including the GLB, sound and settings schema,
@@ -53,12 +57,11 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   `/Game/Mods/Railgun/...` identities. Primary assets must additionally live
   below the current game's confirmed AssetManager scan roots: the gun item
   below `/Game/Data/Assets` and the research skill below
-  `/Game/Data/Assets/Skill`. Keep their names mod-unique and never ship a stock
-  Cyclone package override.
+  `/Game/Data/Assets/Skill`. Keep their names mod-unique and do not override
+  stock primary-asset packages.
 - The released container is exactly the `Railgun` triplet plus optional user
-  settings. The gun shell owns event-driven, idempotent station initialization;
-  do not restore a global coordinator, autoload sidecar, or periodic actor
-  discovery. Its PAK contains only the three-record primary-asset
+  settings. The gun shell owns event-driven, idempotent station initialization.
+  Its PAK contains only the three-record primary-asset
   registry at `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`; the release ZIP
   also owns the matching loose content-only descriptor. Never ship or replace
   `Voyage/AssetRegistry.bin`. Build registry records from the owned data-asset
