@@ -18,8 +18,7 @@ adjustment also applies when fitted to other compatible weapons, although
 those combinations were not separately reported as tested.
 
 See [Aiming configuration](docs/aiming-configuration.md) for the reasoning and
-exact values. Check the [compatibility backlog](docs/compatibility-backlog.md)
-for the current game fingerprint and validation status.
+exact values and the validation boundaries for later Steam builds.
 
 ## Installation
 

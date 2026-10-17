@@ -13,8 +13,6 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 - [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md) owns the version-bound native hover
   calibration formula, assistance-ownership order, recovery limits and exact
   gameplay-validation boundary.
-- [StableGyro backlog](../../docs/stablegyro-backlog.md) owns the active restart
-  state, candidate evidence, pending gates, and next validation action.
 - [Vehicle and HUD modding patterns][postphysics-pattern]
   owns the reusable PostPhysics correction model, axis-local velocity writes,
   previous-command growth rejection, control-intent projection, state reset,

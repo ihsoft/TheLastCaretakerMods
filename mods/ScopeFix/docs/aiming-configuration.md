@@ -50,11 +50,27 @@ re-extraction preserved both export payload hashes. On that build, the user
 accepted the long-range/close-range tradeoff in the real game. Separate
 attachment configurations and other weapons were not reported as tested.
 
-Revalidate packages, property contracts and game behavior on any changed
-fingerprint before building for that game version. Generated assets stay in
-ignored temporary output; the repository keeps the method.
+Revalidate the affected stock packages, property contracts and game behavior
+before claiming compatibility with another Steam build. Generated assets stay
+in ignored temporary output; the repository keeps the method.
 
 The tested installation also passed the closed-game check and hash readback for
-its container triplet and archive. Current compatibility work and superseded
-candidate identities belong in the
-[compatibility backlog](compatibility-backlog.md).
+its container triplet and archive.
+
+## Later-build evidence
+
+The `v1-steam-25880952-test` candidate was built from fresh stock assets for
+Steam build `25880952`. Static checks confirmed the exact two-package set,
+both modified vectors after semantic reopen, and byte changes confined to the
+two intended X values. These checks establish package structure, not aiming
+behavior in the game. The builder remains gated to that Steam build.
+
+The user subsequently installed the correct archive on Steam build `25902891`
+and reported that the game works. This establishes successful startup with
+that archive on that build; aiming behavior was not separately confirmed, and
+the candidate was not rebuilt from `25902891` stock assets. Earlier startup
+crashes involved rifle asset deserialization, but the supplying archive was
+not identified. They cannot be attributed to this candidate.
+
+A future build for another Steam build needs reviewed mappings and fresh stock
+assets for that build, followed by the relevant structural and gameplay checks.
