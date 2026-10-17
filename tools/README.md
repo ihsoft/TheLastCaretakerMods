@@ -1,8 +1,9 @@
 # Voyage research tools
 
-Current [JSON save and engine-selection checkpoint](../docs/voyage-json-save-checkpoint.md)
-records canonical publishers, manifests, API/GUI version semantics and the
-public Test-UAssetGuiJsonRoundtrip / Invoke-VoyageBoundedTool interfaces.
+The [cooked-asset toolchain](../docs/voyage-cooked-asset-toolchain.md#known-boundaries)
+records the JSON save and engine-selection contract. Publisher manifests own
+exact binary provenance; this index owns the public
+Test-UAssetGuiJsonRoundtrip / Invoke-VoyageBoundedTool interfaces.
 Normal Voyage extraction uses UE5_8; UE5_7 is an explicit legacy profile.
 
 This directory contains reproducible methods for inspecting **The Last
@@ -101,8 +102,8 @@ tool-development tests prove the tool's behavior, not adoption by feature
 agents: keep their coverage separate from real-task reports. Attach the task
 identity and iteration boundary so the same activity is not counted twice.
 Public entry points include documented canonical CLI commands, not only
-PowerShell wrappers. Keep real-task samples and their limits in
-`../docs/voyage-toolchain-coverage.md`; do not equate tool existence with adoption.
+PowerShell wrappers. Keep bounded real-task samples and their limits in the
+owning agent reports; do not equate tool existence with adoption.
 
 ## Choose a tool
 
@@ -906,7 +907,7 @@ Source modes:
   in that priority order. The selected mod wins even without `_P` in its name.
   Unrelated mods never participate. Output is diagnostic and never cached.
 
-Canonical retoc `49b7721` provides `--include-container` and the repaired import reader. Published source-isolation and four-case import regressions passed; see the accepted JSON save checkpoint. Use the bounded runner for regression diagnostics. `-AllowAdditionalContainers` remains a
+Canonical retoc `49b7721` provides `--include-container` and the repaired import reader. Published source-isolation and four-case import regressions passed. Use the bounded runner for regression diagnostics. `-AllowAdditionalContainers` remains a
 deprecated, explicit combined-view diagnostic control (manifest source
 `InstalledLegacy`); never treat its output as stock-only evidence. It cannot
 be combined with an explicit `-Source`.
@@ -1382,6 +1383,9 @@ When adding, renaming, or materially changing a reusable tool:
 
 The pinned API preparation and retoc build scripts accept either the recorded
 pre-tag git description or the corresponding RC3 tag for the same required
-commit. Commit and critical-source-hash gates remain unchanged. Published
-GitHub assets and verification are recorded in
-[the RC3 checkpoint](../docs/voyage-json-save-checkpoint.md#github-rc3-publication).
+commit. Commit and critical-source-hash gates remain unchanged. The coordinated
+public prereleases are
+[UAssetGUI v1.1.1-rc3](https://github.com/ihsoft/UAssetGUI/releases/tag/v1.1.1-rc3),
+[UAssetAPI v1.1.0-rc3](https://github.com/ihsoft/UAssetAPI/releases/tag/v1.1.0-rc3),
+and [retoc v0.1.5-rc3](https://github.com/ihsoft/retoc/releases/tag/v0.1.5-rc3).
+Use the publisher manifests for exact local binary provenance.

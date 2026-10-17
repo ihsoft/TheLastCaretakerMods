@@ -81,7 +81,7 @@ these actual gameplay consumers.
 
 For the tested Railgun setup, the complete owned UAssetAPI/UAssetGUI JSON is
 the source of truth for the ammo item's object graph and values. The reviewed
-[UAssetAPI `21c982f` writer](voyage-json-save-checkpoint.md#serialization-contract)
+[UAssetAPI `21c982f` writer](voyage-cooked-asset-toolchain.md#known-boundaries)
 writes it directly to loose `.uasset/.uexp` with reviewed mappings and an
 explicit `UE5_8` serialization hint; no stock donor or post-write patcher is
 used. The writer does not add hidden balance overrides. Stored object and

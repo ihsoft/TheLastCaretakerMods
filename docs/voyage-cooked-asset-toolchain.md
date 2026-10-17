@@ -81,8 +81,10 @@ If a tool fails or produces unexpected output, inspect its diagnostics and
 publication identity before changing the asset contract. The reviewed mapping
 still has its own file-integrity and schema gates.
 
-Promotion, runtime-only JSON version handling, validation and exact manifests
-are recorded in [the JSON save checkpoint](voyage-json-save-checkpoint.md).
+Publisher manifests record exact binary provenance. The runtime-only JSON
+version handling and validation boundaries are described below under
+[known boundaries](#known-boundaries); command interfaces remain in the
+[tool index](../tools/README.md).
 
 ## Operations
 
