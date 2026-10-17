@@ -10,6 +10,10 @@
 !/artifacts/AGENTS.md
 /Tmp/
 
+# Local working backlogs outlive a work cycle but do not enter Git.
+**/BACKLOG.md
+**/*-backlog.md
+
 # Runtime logs and temporary files
 *.log
 *.tmp

@@ -1,128 +1,100 @@
-# Исследовательский процесс
+# Research workflow
 
-Цель исследований — построить воспроизводимую модель игры, а не накопить
-снимки ресурсов одной версии. Этот документ описывает, что хранится в Git и
-как превращать локальное извлечение в долговечное знание.
+Research should explain the producer, consumer, owner, lifecycle, identity,
+and data contract behind game behavior. A patch that happens to work is not by
+itself a complete explanation. This document covers research decisions and
+evidence; generated output follows the shared
+[artifact lifecycle](artifact-lifecycle.md), and tool commands live in the
+[tool index](../tools/README.md).
 
-## Три уровня информации
+## Start with the question and its owner
 
-1. **Артефакт сборки игры** — `.uasset`, `.uexp`, `.usmap`, JSON, псевдокод,
-   дизассемблированный фрагмент, cooked-пакет или список контейнера. Он живёт
-   только под `artifacts/`, всегда привязан к fingerprint игры и не коммитится.
-2. **Воспроизводимый метод** — скрипт, инспектор, фильтр, команда извлечения или
-   проверка. Он живёт под `tools/` и коммитится.
-3. **Знание** — проверенный контракт, цепочка владельцев/вызовов, отрицательный
-   результат или ограничение. Оно записывается в `docs/` без копирования
-   больших игровых данных.
+1. State the behavior or contract that is unknown and identify the mod that
+   owns the question. Read its current rules and relevant architecture or
+   research notes. Use shared patterns and [research pitfalls](research-pitfalls.md)
+   only where they address that question; do not read every large document by
+   default.
+2. Decide which evidence is game-build-specific. For saved game-derived inputs,
+   compare their provenance with the installed Steam build ID. A producer that
+   checks the build and re-extracts affected stock inputs during its run covers
+   this step. General engine behavior instead follows its engine,
+   serialization, and structural evidence.
+3. Use a reviewed mapping through `Get-VoyageMappings.ps1` when reflection data
+   is needed. Generate a new mapping only after the resolver reports that no
+   reviewed entry matches a genuinely new Steam build ID; follow the exceptional
+   procedure in the tool index.
+4. Before an experiment, state the hypothesis, the one contract or variable to
+   change, the distinguishable outcomes, and the decision supported by each
+   outcome. If observation can answer the question, an in-game experiment is
+   unnecessary.
 
-Если локальный артефакт оказался полезен, работа не закончена, пока из него не
-извлечены метод воспроизведения и короткий человеческий вывод.
+Keep mod-specific evidence and open questions with the owning mod. Promote a
+conclusion to shared `docs/` only when another mod can reasonably use it;
+describe the reusable contract without turning one mod's trial history into a
+general rule. Game-derived source inputs retained in Git follow the provenance
+requirements in [the repository rules](../AGENTS.md#game-derived-data-and-version-gates).
 
-Файл, восстановленный или сгенерированный на основе игры и всё же необходимый
-как source input (например, минимальное editor-only зеркало native-типа),
-должен начинаться с provenance-комментария: Steam build/fingerprint, версия
-движка, способ и инструменты реконструкции, а также требование повторной
-проверки после обновления. Это исключение не разрешает коммитить cooked assets.
-Для автономного DonkLift-мода полный список таких зависимостей поддерживается в
-`mods/DonkLiftKeyboardControl/GAME_DERIVED_SOURCES.md`.
+## Working backlogs for large tasks
 
-## Начало исследования новой версии
+Use a backlog when a task is large enough that its current state
+could be lost between work sessions or context resets. It is an optional local
+working note, not a required file for every question. Keep it with the owning
+mod, outside `Tmp/` so routine cleanup cannot remove it, and ignore it in Git.
+It is neither a retained generated artifact nor a document to commit.
 
-1. Получить Steam `buildid` текущей установки и сведения о контейнерах:
+Keep a short restart section with the current checkpoint, established evidence,
+open hypotheses, pending gates, next action, and links to the owning sources.
+Update it as the investigation changes; keep raw logs and full readbacks in
+their appropriate ignored storage instead of copying them into the backlog.
+Research commits must explain their own evidence and validation boundary
+without relying on this uncommitted note.
 
-   ```powershell
-   .\tools\Get-VoyageBuildFingerprint.ps1 `
-     -OutputPath .\Tmp\fingerprints\current.json
-   ```
+When the task or investigation ends, review the backlog. Move durable conclusions to
+the mod's architecture or research documentation, general findings to shared
+docs, reusable failed approaches to research pitfalls, and recurring methods
+to their owning tools. Then delete the backlog. Do not keep the chronology as
+permanent project documentation.
 
-2. Сверить Steam `buildid` с последней документированной
-   сборкой и с `mods/DonkLiftKeyboardControl/GAME_DERIVED_SOURCES.md`. Windows
-   product version (`UE5-CL-0`) не считать версией игры. При смене build ID
-   повторно извлечь игровые ассеты и проверить зависящие от них mirror headers,
-   generator contracts и relocation assumptions. Общие контракты движка
-   проверять по версии сериализации и структуре результата, без автоматической
-   привязки к каждому Steam build.
-3. Перечитать активный backlog, релевантный раздел
-   `game-architecture-observations.md` и `research-pitfalls.md`.
-4. Сформулировать гипотезу, один изменяемый контракт и различимые ожидаемые
-   исходы теста.
+## Choose the next investigation step
 
-## Инструменты сначала используются как black box
+Choose the smallest observation or experiment that can distinguish the live
+hypotheses. Start with the relevant public tool from the
+[tool index](../tools/README.md), using the narrowest query and its compact
+result. For Blueprint structure, a focused summary is usually cheaper than a
+full export; for a specific package, narrow extraction is usually cheaper than
+a broad inventory or binary scan. These are examples, not a fixed ladder:
+choose by the question and by what the existing evidence already establishes.
 
-`tools/README.md` — это маршрутизатор и публичный интерфейс набора инструментов.
-Для штатной операции нужно выбрать готовый скрипт по цели, запустить
-документированную команду и проверить exit code, manifest, summary и выходные
-файлы. Повторно исследовать реализацию скрипта, его внутренние шаги и уже
-зафиксированные зависимости на успешном пути не нужно.
+Before asking the user to launch or test the game, weigh the information gained
+against the time needed to start, observe, and close it. State what each
+observable result would change about the next decision. Keep a known-good
+baseline for a risky test and change one architectural variable at a time.
+After one or two results that do not distinguish the hypotheses, return to
+research or improve the observation instead of requesting another similar
+gameplay test.
 
-Переходить к исходникам инструмента или стороннего форка следует только если
-скрипт упал, завис, отклонил корректные на вид входы, дал неожиданный результат
-или его документированный контракт не покрывает задачу. Сначала проверяются
-диагностика, fingerprint, пути, mapping gate и зафиксированные commits; лишь
-затем — код. Текущий проверенный toolchain и границы его гарантий описаны в
-`docs/voyage-cooked-asset-toolchain.md`.
+Before a visibly heavy investigation, such as broad extraction, full indexing,
+long decompilation, or wide binary scanning, explain its expected cost and
+offer a lighter discriminating step if one exists. Escalate only when the
+narrower step cannot answer the question or has already failed to do so.
 
-## Извлечение ресурсов
+## Record results and make research checkpoints
 
-Извлечь текущий cooked-пакет по фильтру через `retoc`:
-
-```powershell
-.\tools\Extract-VoyagePackage.ps1 `
-  -Filter BP_Forklift_Possesable
-```
-
-Результат автоматически помещается в каталог с версией и коротким хэшем exe и
-содержит manifest. Manifest фиксирует фильтр, fingerprint, разрешение
-дополнительных контейнеров и их список; нулевой результат считается ошибкой.
-Путь `retoc` можно передать параметром `-Retoc`.
-По умолчанию инструмент отказывается работать, если в `Paks` найдены
-дополнительные (не `global`/`pakchunk`) IoStore-контейнеры: установленный мод
-может молча подменить одноимённый игровой asset в результате извлечения.
-Отключать эту защиту через `-AllowAdditionalContainers` можно только когда
-нужно исследовать именно объединённое представление с модами.
-
-Проанализировать assets непосредственно из IoStore через CUE4Parse:
-
-```powershell
-.\tools\Inspect-VoyageAsset.ps1 `
-  -Query BP_Forklift_Possesable `
-  -MappingsPath .\artifacts\mappings\current\Mappings.usmap
-```
-
-Чистый upstream checkout CUE4Parse commit
-`ec6595e46448a817ac21ea9bde01caa48f80a420` должен находиться в
-`.tools/CUE4Parse`; он намеренно игнорируется Git. Для инвентаризации без
-выгрузки содержимого используется префикс `list:`, для reflection-типов —
-`mappings:`.
-
-Свежий `.usmap` создаётся через `tools/New-VoyageMappings.ps1` при уже
-запущенной игре. Скрипт ожидает стабильный процесс, при необходимости находит
-`GUObjectArray`, запускает зафиксированный jmap и проверяет результат через
-`tools/Test-VoyageMappings.ps1`. Сырые кандидаты остаются в `artifacts/`.
-Только отдельно просмотренный и полностью валидированный mapping можно
-перенести в неизменяемый каталог `mappings/Voyage/` вместе с manifest для
-точного Steam build ID и версии движка.
-
-## Выбор стоимости исследования
-
-Предпочтительный порядок — от дешёвого к дорогому:
-
-1. reflection/mapping и поиск имён;
-2. узкое извлечение одного asset;
-3. небольшой Blueprint call-marker с явным визуальным эффектом или
-   контролируемым выходом;
-4. узкий диапазон дизассемблирования вокруг подтверждённой native-таблицы;
-5. полная индексация, тяжёлый decompile или широкое сканирование бинарника.
-
-Перед пунктом 5 нужно предупредить пользователя, оценить время и предложить
-лёгкий эксперимент, который может ответить на тот же вопрос.
-
-## Завершение каждой итерации
-
-- Сразу записать в backlog: гипотезу, изменённый путь, package hashes,
-  ожидаемые исходы и фактический результат игры.
-- Положительный устойчивый вывод перенести в архитектурную документацию.
-- Отрицательный или обманчивый результат перенести в журнал граблей.
-- Вернуть известный рабочий пакет после диагностического падения/no-op.
-- Коммитить только инструменты, исходники мода и документацию; содержимое
-  `artifacts/` остаётся локальным.
+- Record a useful conclusion with its evidence, exact applicability, and
+  validation level. State what remains unknown. Structural inspection, build,
+  cook, and clean load are not proof of gameplay behavior; a compatibility
+  claim needs the corresponding real-game test.
+- Put stable mod-specific findings in its architecture or research notes and
+  reusable cross-mod findings in shared documentation. Record a failed or
+  misleading approach in [research pitfalls](research-pitfalls.md) when it can
+  prevent repeated mistakes. One-off logs and measurements do not belong in
+  shared guidance.
+- Commit a coherent positive research checkpoint when it establishes a useful
+  intermediate fact, method, or validated candidate, even if the investigation
+  and feature remain open. Name its evidence and validation boundary; do not
+  present it as a finished mod or release. This differs from implementation
+  work, where a commit normally completes a logical piece of behavior.
+  Combine minor observations at a natural checkpoint rather than committing
+  each one. Commit eligible source, methods, and documentation through the
+  repository Git workflow; generated output follows the
+  [artifact lifecycle](artifact-lifecycle.md).

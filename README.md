@@ -37,11 +37,13 @@ used by the scripts. Also say explicitly when you want **research only**, when
 the game is running, and when you are ready for files to be installed.
 
 A clean clone intentionally contains no extracted game assets, generated
-Blueprints, cooked files, or ready-made packages. The agent recreates those
-version-bound inputs under ignored `artifacts/` directories using the checked-in
-tools. The normal workflow is: understand the current evidence, fingerprint
-the game, run a narrow experiment, build a candidate, validate it in the real
-game, and only then commit the durable source and knowledge.
+Blueprints, cooked files, or ready-made packages. The agent recreates needed
+inputs with the checked-in tools under ignored `Tmp/`, retaining generated
+output under `artifacts/` only when it has a use beyond the current work cycle.
+Research may commit a useful, evidence-bound intermediate conclusion while the
+investigation remains open. A gameplay compatibility claim still requires a
+proportional test in the real game. See the [research workflow](docs/research-workflow.md)
+and [generated-output lifecycle](docs/artifact-lifecycle.md).
 
 ## About this repository
 
@@ -59,9 +61,11 @@ inputs are still fingerprint-gated and must be reviewed after an update.
   extraction, inspection, and patching utilities.
 - `docs/` — reusable cross-mod architecture, methods and research pitfalls;
   mod-specific knowledge belongs under its owning `mods/` directory.
-- `artifacts/` — ignored local scratch space for extracted assets, mappings,
-  generated Blueprints, cooked files, packages, and backups; it is never part
-  of the repository.
+- `Tmp/` — ignored output for the current investigation, feature, or release
+  cycle.
+- [`artifacts/`](artifacts/README.md) — ignored generated output retained for a
+  concrete use beyond the current cycle, including selected caches and rollback
+  evidence; its contents are not committed.
 - `dist/` — optional generated release output; it may not exist in a clean
   checkout.
 

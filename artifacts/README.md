@@ -1,9 +1,11 @@
 # Local retained artifacts
 
 Generated data below this directory stays ignored; only this registry and the
-local `AGENTS.md` are tracked. Disposable logs, build output, one-off checks and
-ordinary readbacks belong in repository `Tmp/`. Game-derived data remains bound
-to its recorded game fingerprint.
+local `AGENTS.md` are tracked. The shared
+[generated-output lifecycle](../docs/artifact-lifecycle.md) determines when a
+result is worth keeping beyond its current work cycle. Disposable logs, build
+output, one-off checks and ordinary readbacks belong in repository `Tmp/`.
+Retained game-derived inputs keep their relevant Steam build and asset provenance.
 
 | Family | Owner and creator | Consumer and retention value | Owning contract |
 | --- | --- | --- | --- |

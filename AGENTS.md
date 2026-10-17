@@ -15,7 +15,8 @@ those details here.
 - Repository-level README files and the shared tool index contain only verified,
   established capabilities, current interfaces and safety/compatibility limits.
   Keep candidate IDs, experimental hypotheses, trial instructions and progress
-  history in the owning backlog or ignored artifacts, not in shared guidance.
+  history in an optional ignored owning backlog for a large investigation;
+  keep raw evidence in ignored storage, not in shared guidance.
   Promote validated conclusions as general contracts without candidate labels;
   retain version/fingerprint restrictions when they determine applicability.
 - Autonomous DonkLift rules live in
@@ -72,17 +73,19 @@ those details here.
   lifecycle, identity, and data contract—not merely for one patch that appears
   to work.
 - Promote useful findings immediately: stable conclusions go to architecture
-  or shared-pattern docs; failed/deceptive approaches go to research pitfalls;
-  active hypotheses, package hashes, and pending test results go to the owning
-  backlog.
+  or shared-pattern docs; reusable failed/deceptive approaches go to research
+  pitfalls. For a large investigation, keep active hypotheses, package hashes,
+  and pending test results in a local ignored backlog under the owning mod.
+  A one-cycle question does not require a backlog. Follow the
+  [research workflow](docs/research-workflow.md#working-backlogs-for-large-tasks)
+  for its lifecycle and retirement.
 - After context compaction, recover from repository state rather than chat, but
-  do not automatically read every large document in full. First read the active
-  backlog's restart/current-state/next-action sections, then use `rg` and bounded
-  ranges for the relevant architecture or pitfall evidence. Read a complete
-  large backlog only when those sections and targeted references are
-  insufficient. Active backlogs must keep a compact restart section containing
-  the current checkpoint, pending gates, next action, and owning references so
-  this staged recovery does not discard compaction-critical context.
+  do not automatically read every large document in full. If an active backlog
+  exists, first read its compact restart/current-state/next-action sections;
+  then use `rg` and bounded ranges for relevant architecture or pitfall evidence.
+  Read a complete large backlog only when those sections and targeted references
+  are insufficient. An active backlog must name the current checkpoint, pending
+  gates, next action, and owning references.
 - Before a visibly heavy investigation (large binary analysis, broad asset
   extraction/cook, long brute-force scan, or uncertain reverse engineering),
   tell the user why it is costly and offer a lighter discriminating experiment.
@@ -108,31 +111,12 @@ those details here.
   explicitly reviewed `.usmap` registry under `mappings/Voyage/`. User-authored
   mod assets, including `mods/Railgun/Assets/Model/Railgun.glb`, are ordinary
   source inputs; this does not authorize extracted game meshes or materials.
-- Choose ignored storage by value and lifecycle, not file extension or how the
-  file was generated. Disposable logs, intermediate scripts/files, one-off
-  checks, full readbacks, disassembly output and test fixtures belong in the
-  repository-local ignored `/Tmp/` tree by default. Reserve `artifacts/` for
-  caches that materially avoid repeated work
-  (including `CachedBlueprints`), retained releases with the minimum provenance
-  and validation needed to trust them, installation backups and restore
-  evidence, and explicitly selected research needed by ongoing work. A durable
-  exception needs a clear use, owner and removal condition, but not necessarily
-  a separate manifest for every file. A user request to generate, export, show
-  or hand off a file does not by itself prove durable retention value. When no
-  concrete continuing consumer, avoided repeat cost, rollback need or selected
-  research use is established, write the complete run below `/Tmp/`; if durable
-  retention may matter but is unclear, ask the user before writing to
-  `artifacts/`. Never create or broaden an artifact-family registration merely
-  to justify output that was already placed there. Preserve an exceptional
-  diagnostic log
-  only when an unresolved failure gives it continuing value; a failed run alone
-  is not sufficient. Promote conclusions to docs and reusable methods to tools.
-  Before creating or changing retained output, consult the family registry in
-  `artifacts/README.md` and the local rules in `artifacts/AGENTS.md`.
-  Retained releases and rollback evidence must remain usable without `/Tmp/`.
-  Clearing `/Tmp/` may interrupt an active run, but must not damage durable
-  state or make the next clean run require manual recovery. Do not delete
-  existing `artifacts/` content until its value and dependencies are understood.
+- Apply the shared [generated-output lifecycle](docs/artifact-lifecycle.md):
+  `Tmp/` holds one-cycle output by default, while ignored `artifacts/` is for
+  generated output with a concrete use beyond the current research, feature,
+  or release cycle. Preserve owner, consumer, revalidation, rollback, and
+  cleanup boundaries there. Consult `artifacts/README.md` and
+  `artifacts/AGENTS.md` before creating or changing retained content.
 - Every tracked `.usmap` must live in its own Steam-build/engine-version
   directory and have a sibling manifest containing the Steam build ID,
   exact engine/parser version, generator commit, file hash, validation evidence,
@@ -243,8 +227,9 @@ those details here.
 - Durable cooked-asset toolchain contracts, tool boundaries, and the
   validation ladder live in `docs/voyage-cooked-asset-toolchain.md`.
 - Durable findings about the Boat's Diesel socket hover card live in
-  `docs/boat-resource-socket-architecture.md`; active feature work alone belongs
-  in `docs/boat-hud-total-resources-backlog.md`.
+  `docs/boat-resource-socket-architecture.md`; active feature work belongs with
+  the owning mod, using an ignored local backlog only when the task is large
+  enough to need one.
 - Before reusing a saved game-derived input, compare the installed game's Steam
   build ID with its provenance. A producer that identifies
   the game and re-extracts current stock inputs during the run satisfies this

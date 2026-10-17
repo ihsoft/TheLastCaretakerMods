@@ -1,9 +1,9 @@
 # Subagent workflow
 
 This is the repository's delegation contract. Read it before starting or
-resuming delegated work, together with the root and closest `AGENTS.md` and
-the owning backlog's restart section. It supplements, not replaces, runtime
-tool permissions, installation safeguards and Git coordination.
+resuming delegated work, together with the root and closest `AGENTS.md` and,
+when a local owning backlog exists, its restart section. It supplements, not
+replaces, runtime tool permissions, installation safeguards and Git coordination.
 
 When the user explicitly requests resource or delegation diagnostics, use
 [agent work measurement](agent-work-measurement.md). Do not collect per-task
