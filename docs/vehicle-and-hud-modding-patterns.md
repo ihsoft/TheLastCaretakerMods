@@ -21,7 +21,7 @@ consumer of each layer separately.
 
 ## Actor attachment and save restoration
 
-On Steam build `25191271`,
+For Steam build `25191271`,
 `VoyagePersistentSubsystem` exposes two Blueprint-assignable lifecycle events:
 
 - `OnActorAttached(AActor* Child, USceneComponent* ParentComponent)` is
@@ -378,27 +378,23 @@ layout rules, and other native HUD state.
 ### Replacing one native-updated leaf
 
 When native code continuously rewrites one inherited widget property, a
-one-shot child-Blueprint text change is not a replacement mechanism. On Steam
-build `23962331`, a bound `UUserWidget::PreConstruct` override on the stock Boat
-HUD successfully changed the inherited fuel text's render opacity, but native
-logic restored its litre string afterward. This discriminates live field access
-from update ownership: the override and field were correct, the write timing was
-not.
+one-shot child-Blueprint text change is not a replacement mechanism. The stock
+Boat HUD restores its fuel text after `PreConstruct`; an override can access
+the live field without owning the later text update.
 
 For a narrow value replacement, keep the stock HUD as lifecycle owner, collapse
 only the native-updated leaf, and add a separate `UUserWidget` to the leaf's
 existing parent panel. Repeating mod logic can then live on a widget derived
 directly from engine `UUserWidget`, avoiding an inherited Voyage HUD Tick CDO
-delta. The Boat HUD `TOTAL SLOT` probe validated this exact insertion while
-preserving the stock fuel icon, position, and all neighboring values. Validate
-insertion and teardown with a static marker before adding the resource query.
+delta. The Boat HUD uses this insertion while preserving the stock fuel icon,
+position and neighboring values. Validate insertion and teardown with a static
+marker before adding the resource query.
 
-The following aggregate Boat candidate also validated the data path on Steam
-build `23962331`: its separate leaf obtained the possessed Boat's module,
-enumerated `VoyageModuleComponent` instances in the same grid through
-`VoyageModuleSubsystem`, summed only
-`GetResourceAmount(EModuleResourceType::Diesel)`, and displayed the confirmed
-total in the stock lower-right slot. Keep the resource enum identity explicit;
+The Boat HUD's separate leaf obtains the possessed Boat's module, enumerates
+`VoyageModuleComponent` instances in the same grid through
+`VoyageModuleSubsystem`, sums only
+`GetResourceAmount(EModuleResourceType::Diesel)`, and displays the total in the
+stock lower-right slot. Keep the resource enum identity explicit;
 the inherited field name `PetrolTB` does not identify the resource being shown.
 
 ## Language and lifecycle

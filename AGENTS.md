@@ -19,6 +19,10 @@ those details here.
   keep raw evidence in ignored storage, not in shared guidance.
   Promote validated conclusions as general contracts without candidate labels;
   retain version/fingerprint restrictions when they determine applicability.
+- Describe finished mods by their current behavior and necessary compatibility
+  boundaries. The checked-in state is the accepted result; do not preserve who
+  confirmed it, trial chronology, test dates, or per-run proof in normal mod
+  documentation. Keep exact release and installation evidence with artifacts.
 - Autonomous DonkLift rules live in
   `mods/DonkLiftKeyboardControl/AGENTS.md`.
 - The preserved UE4SS/Lua DonkLift implementation is a separate alternative
@@ -250,8 +254,8 @@ those details here.
   compatibility claim. Record whether a display/marketing version came from a
   machine-readable source or from the user, and never infer it from an
   executable version such as `UE5-CL-0`.
-- Compatibility metadata may say `game-validated` only after the user tests the
-  requested runtime behavior in the real game. Compile, cook, container verify,
+- Compatibility metadata may say `game-validated` only after the requested
+  runtime behavior is checked in the real game. Compile, cook, container verify,
   semantic comparison, clean load, and save load remain lower gates.
 - An installer that replaces a Voyage mod container must check the game process
   immediately before mutation, preserve an exact recoverable backup, install

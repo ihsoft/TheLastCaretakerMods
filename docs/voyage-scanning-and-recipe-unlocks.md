@@ -3,8 +3,8 @@
 ## Evidence and version boundary
 
 This is shared game-mechanism research, independent of any particular mod.
-The findings below come from stock Blueprint bytecode, reflected property
-metadata and targeted native executable inspection on 2026-09-26:
+The contracts below are bound to stock Blueprint bytecode, reflected property
+metadata and native behavior for:
 
 - Steam build: `25191271`.
 - Executable: `VoyageSteam-Win64-Shipping.exe`.

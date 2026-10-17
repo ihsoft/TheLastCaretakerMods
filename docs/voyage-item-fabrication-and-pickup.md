@@ -90,11 +90,11 @@ than a runtime dependency on another item.
 
 The producer reopens the package and compares serialization metadata, imports,
 name map and the complete export graph against the current JSON, rather than
-enforcing historical property or import counts. This direct-JSON route is
-game-validated for the tested setup recorded in the owning
-[Railgun architecture](../mods/Railgun/ARCHITECTURE.md#current-game-validated-checkpoint),
-not for arbitrary future edits; packaging, reference resolution and affected
-gameplay consumers retain their own gates.
+enforcing historical property or import counts. This direct-JSON route belongs
+to the setup recorded in the owning
+[Railgun architecture](../mods/Railgun/ARCHITECTURE.md#authored-ammunition-contract).
+Arbitrary future edits still require packaging, reference resolution and
+affected gameplay-consumer checks.
 
 For this filtered UE5.8 import layout, encode an unset import `PackageName` as
 the explicit FName `"None"`, not JSON `null`. In the reviewed writer, a null
@@ -129,12 +129,11 @@ parameters. The delegate property owner is
 The exact inherited `/Script/Voyage.PersistentInterface:OnPersistentActorPostLoad`
 event (integer `Version` parameter) defers a visualization update with
 `DelayUntilNextTick`; that post-load branch does not itself rebind the delegate.
-Railgun subsequently validated this event-driven pattern in the game for
-stack additions/removals, deposit-all, independent gun instances, and empty
-or partial inventories across save/load. The owning
-[checkpoint](../mods/Railgun/ARCHITECTURE.md#current-game-validated-checkpoint)
-records the release and installation evidence. These tested paths do not
-establish every native broadcast site or other modules' lifecycle contracts.
+Railgun uses this event-driven pattern for stack additions/removals,
+deposit-all, independent gun instances, and empty or partial inventories
+across save/load. The owning [magazine contract](../mods/Railgun/ARCHITECTURE.md#magazine-inventory)
+describes that behavior. It does not establish every native broadcast site or
+other modules' lifecycle contracts.
 
 ### Manual transfer between character and module inventories
 
@@ -258,15 +257,13 @@ module. `DepositAllCategoryFilter` must not be assumed to be an exact-item
 acceptance rule; the inspected stock object uses both category settings and
 the validator interface.
 
-A subsequent Railgun runtime probe established an important argument boundary:
-the actor's `ValidateItem` was called with the player's `WeightInventory` and
-the exact accepted ammo object. An added `Inventory == module-owned inventory`
-condition returned false and rejected that call even though item identity
-matched. Do not assume this argument is always the destination container.
-For an actor-specific item whitelist, compare the item identity without that
-destination-pointer assumption, as the stock refinery predicate also ignores
-the inventory argument. This observation does not establish every native call
-site or prove that changing the predicate alone fixes all transfer failures.
+`ValidateItem` can receive the player's source `WeightInventory` with the
+accepted item, so the inventory argument is not necessarily the destination.
+Do not require `Inventory == module-owned inventory` for item acceptance. For
+an actor-specific whitelist, compare item identity without that destination
+assumption, as the stock refinery predicate also ignores the inventory
+argument. This does not establish every native call site or make the predicate
+the only possible cause of a transfer failure.
 
 Diagnostic state must also be owned explicitly: creating a new overlay on every
 validator call covers earlier observations with fresh default text. An apparent
@@ -287,36 +284,26 @@ that part. The inventory is a component of the persistent module actor, not
 of an operator pawn. In its setup path, when over-limit storage is disabled,
 the actor calls `SetMaxWeightLimit` with the component's `MaxWeightLimit`.
 
-Runtime Railgun evidence subsequently distinguished object identity from
-effective capacity: the returned and authored inventories were the same live
-`VoyageInventoryWeightLimitedComponent`, its direct `MaxWeightLimit` read was
-`23.400002`, but the UI showed `100 kg` and accepted more than six 3.9-unit
-items. Item-only validation had restored successful transfer. Therefore neither
-the wrong-inventory hypothesis nor float display noise explains that entire
-capacity discrepancy.
+Inventory object identity and effective capacity are separate contracts. A
+serialized `MaxWeightLimit` value does not by itself recompute the effective
+weight budget used by UI and admission checks.
 
 Bounded native inspection on the same fingerprint confirms that
 `SetMaxWeightLimit` stores the base field and then runs a separate recomputation:
 it initializes another internal value from that field and adds entries from a
 modifier collection. Direct serialized property assignment does not execute
 that setter path. The stock setup call is consequently meaningful and must not
-be dropped as an apparent redundant assignment. User gameplay confirmation of
-Railgun `build-20260927-093742` established that calling the native setter from
-the module actor's `ReceiveBeginPlay` fixes the prior 100-kg/effective-capacity
-problem. This implementation reuses the existing event path and neither clears
+be dropped as an apparent redundant assignment. Railgun calls the native
+setter from the module actor's `ReceiveBeginPlay` to apply its 23.4 kg effective
+capacity. This implementation reuses the existing event path and neither clears
 nor recreates the inventory. It does not implement a separate post-load hook.
 The UI/admission consumers of the derived value have not been independently
 traced here. Do not write native offsets or destroy excess inventory contents
 when applying a lower limit.
 
-The diagnostic-free implementation was subsequently game-validated, including
-inventory persistence through save/load. Its release evidence is
-`artifacts/railgun/build-20260927-234904/release-manifest.json`; installation
-evidence is
-`artifacts/installations/Railgun/20260927-235200-build-20260927-234904-9680093e/install-manifest.json`.
-The coder relayed user confirmation of magazine behavior, the capacity limit,
-diagnostic removal and persistence. This does not enumerate every possible
-batch/single-transfer boundary or validate other modules by analogy.
+The inventory and magazine behavior persist through save/load. This does not
+establish every batch/single-transfer boundary or other modules' behavior by
+analogy.
 
 The stock assembly and bounded Railgun runtime results do not validate every
 replacement or deposit route. A mod must still verify native inventory

@@ -5,9 +5,8 @@ for mod balancing. It is not an experiment log.
 
 ## Provenance
 
-The values below were re-read from Steam build `25191271`.
-They are version-bound and require revalidation after the executable
-fingerprint changes.
+The values below are bound to Steam build `25191271`. Revalidate them when the
+relevant game contracts change.
 
 ## Electricity units
 
@@ -19,8 +18,8 @@ fingerprint changes.
   physical kWh is `3600` kJ.
 - Railgun therefore correctly treats `FullChargeEnergyKJ=500` as `500` native
   electricity units and requests `500 * 1000 / FullChargeTimeSeconds` watts.
-  The user validated that `500` kJ with a `5.5` second setting takes about
-  `5.5` seconds in the game.
+  With `FullChargeTimeSeconds=5.5`, a `500` kJ charge takes about `5.5`
+  seconds in the game.
 
 ## Electric Rifle
 

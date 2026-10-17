@@ -47,10 +47,9 @@ and [generated-output lifecycle](docs/artifact-lifecycle.md).
 
 ## About this repository
 
-DonkLift `v2` is game-validated on The Last Caretaker `5.5`, Steam build
-`25056839`, and game Unreal Engine `5.8.1`. Tested game versions are
-compatibility evidence rather than a hard runtime allowlist; game-derived build
-inputs are still fingerprint-gated and must be reviewed after an update.
+DonkLift `v2` supports The Last Caretaker `5.5`, Steam build `25056839`,
+with game Unreal Engine `5.8.1`. This compatibility record is not a hard
+runtime allowlist; game-derived build inputs require review after an update.
 
 ## Layout
 

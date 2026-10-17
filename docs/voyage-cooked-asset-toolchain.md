@@ -148,26 +148,19 @@ Voyage primary assets must still satisfy the independently configured Item and
 Skill scan roots and native class/primary-ID contracts; enabling a content
 plugin alone does not prove Asset Manager registration or recipe availability.
 
-Inspection on Steam build `25191271`,
-first confirmed this layout in an external mod: a loose content-only descriptor,
-one plugin-local registry in its PAK, and Item/Skill packages under the stock
-`/Game/Data/Assets` roots in IoStore. Structural inspection confirmed a native
-VoyageSkill referencing a native VoyageItem with crafting properties and an
-owned actor. That external package remains structural evidence rather than a
-general gameplay or initialization-order guarantee.
+On Steam build `25191271`, the supported layout uses a loose content-only
+descriptor, a plugin-local registry in its PAK, and Item/Skill packages under
+the stock `/Game/Data/Assets` roots in IoStore. Package structure alone does
+not guarantee gameplay registration or initialization order.
 
 Railgun's normal source producer derives an exact three-record plugin registry
 from its owned package readbacks through the shared Voyage registry profile and
 class-agnostic native writer, packages it at
 `Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`, and releases a loose
-content-only descriptor through the schema-3 manifest contract. The installed
-`build-20261003-030058` artifact was confirmed by the user with the general
-result that everything works. Its three-record registry is byte-identical to
-the earlier confirmed combination where `VoyageAssetPool_P` supplied a global
-registry override. This validates those exact results; it does not prove
-arbitrary registry overrides, duplicate IDs or additional individually
-unspecified gameplay scenarios. Build artifacts remain evidence, not source
-inputs. Plugin descriptors extend the installed footprint
+content-only descriptor through the schema-3 manifest contract. This
+three-record plugin registry supports Railgun without a global registry
+override; it does not establish behavior for arbitrary registry overrides or
+duplicate IDs. Plugin descriptors extend the installed footprint
 beyond `Content/Paks`, so schema-3 installation and restoration retain the
 common backup, hash, path, reparse-point and closed-game gates.
 
@@ -222,9 +215,8 @@ Passing a lower level never implies a higher one:
    game;
 9. the requested runtime behavior is tested in the real game.
 
-The accepted writer passed broad unchanged-asset regression and a changed-save
-canary. That evidence validates the tested layouts and workflow, not arbitrary
-structural edits to every asset.
+The writer supports the reviewed unchanged-asset and changed-save layouts; it
+does not guarantee arbitrary structural edits to every asset.
 
 ## Package serialization is a separate compatibility contract
 
