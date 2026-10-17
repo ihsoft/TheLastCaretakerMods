@@ -125,6 +125,12 @@ those details here.
   or release cycle. Preserve owner, consumer, revalidation, rollback, and
   cleanup boundaries there. Consult `artifacts/README.md` and
   `artifacts/AGENTS.md` before creating or changing retained content.
+- Every mod writes temporary output below `Tmp/<Mod>/`, using its exact mod
+  directory name. Give runs meaningful names: identify active research and its
+  subject, while ordinary test builds remain disposable. A producer removes
+  run-only scratch after success; after failure, keep the logs and evidence
+  needed for diagnosis or recovery and report their location. The detailed
+  naming and cleanup contract is in the shared lifecycle document.
 - Every tracked `.usmap` must live in its own Steam-build/engine-version
   directory and have a sibling manifest containing the Steam build ID,
   exact engine/parser version, generator commit, file hash, validation evidence,

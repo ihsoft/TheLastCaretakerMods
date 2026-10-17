@@ -11,6 +11,7 @@ Set-StrictMode -Version Latest
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $testParent = Join-Path $repositoryRoot 'Tmp\tests\install-voyage-release'
 $testRoot = Join-Path $testParent ([Guid]::NewGuid().ToString('N'))
+$testPassed = $false
 $installer = Join-Path $PSScriptRoot 'Install-VoyageRelease.ps1'
 $steamApps = Join-Path $testRoot 'steamapps'
 $gameRoot = Join-Path $steamApps 'common\Voyage'
@@ -616,7 +617,22 @@ try {
             -Label 'Archive-only installed content plugin descriptor'
     }
 
+    $defaultEvidenceParent = [IO.Path]::GetFullPath(
+        (Join-Path $repositoryRoot "Tmp\$modName\installations"))
+    $defaultInstall = & $installer `
+        -ReleaseManifest $archiveOnlyRelease.manifestPath `
+        -GameRoot $gameRoot -KeepRecoveryEvidence
+    $defaultOperationRoot = [IO.Path]::GetFullPath(
+        (Split-Path -Parent $defaultInstall.installManifestPath))
+    if (-not $defaultOperationRoot.StartsWith(
+        $defaultEvidenceParent.TrimEnd('\') + '\',
+        [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Default installation evidence is outside the mod-owned Tmp directory.'
+    }
+    Remove-Item -LiteralPath $defaultOperationRoot -Recurse -Force
+
     Write-Host 'Voyage release install/restore synthetic regression: PASS'
+    $testPassed = $true
     [pscustomobject][ordered]@{
         passed = $true
         autoLoadSidecar = [bool]$WithAutoLoadSidecar
@@ -627,13 +643,16 @@ try {
             'install-rollback', 'changed-file-rejection', 'damaged-backup-rejection',
             'restore', 'restore-rollback',
             'failed-recovery-copy-retention', 'successful-operation-cleanup',
-            'archive-only-validation-and-installation')
+            'archive-only-validation-and-installation', 'mod-owned-default-evidence')
         artifactsRetained = [bool]$KeepArtifacts
         artifacts = if ($KeepArtifacts) { $testRoot } else { $null }
     }
 }
 finally {
-    if (-not $KeepArtifacts -and (Test-Path -LiteralPath $testRoot)) {
+    if (-not $testPassed -and (Test-Path -LiteralPath $testRoot)) {
+        Write-Warning "Failed installation test evidence retained: $testRoot"
+    }
+    if ($testPassed -and -not $KeepArtifacts -and (Test-Path -LiteralPath $testRoot)) {
         $resolvedTestRoot = (Resolve-Path -LiteralPath $testRoot).Path
         $resolvedTestParent = (Resolve-Path -LiteralPath $testParent).Path
         $requiredPrefix = $resolvedTestParent.TrimEnd('\') + '\'

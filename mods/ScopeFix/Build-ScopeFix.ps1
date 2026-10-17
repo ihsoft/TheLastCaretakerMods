@@ -1,18 +1,31 @@
 param(
-    [string]$OutputRoot = 'Tmp/scopefix/build',
+    [string]$OutputRoot,
     [switch]$IgnorePinnedGameVersion
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location $repo
+$ownerTmp = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/ScopeFix'))
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Join-Path $ownerTmp ('build-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+}
+$root = if ([IO.Path]::IsPathRooted($OutputRoot)) {
+    [IO.Path]::GetFullPath($OutputRoot)
+} else {
+    [IO.Path]::GetFullPath((Join-Path $repo $OutputRoot))
+}
+if (-not $root.StartsWith($ownerTmp.TrimEnd('\') + '\',
+        [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'OutputRoot must be a fresh directory below Tmp/ScopeFix.'
+}
+if (Test-Path -LiteralPath $root) { throw 'OutputRoot must be new.' }
 $fingerprint = (& tools/Get-VoyageBuildFingerprint.ps1 | ConvertFrom-Json)
 $gameBuild = & tools/Assert-VoyageModGameBuild.ps1 `
     -ModRoot $PSScriptRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
     -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
-if (Test-Path $OutputRoot) { throw 'OutputRoot must be new.' }
-$root = [IO.Path]::GetFullPath((Join-Path $repo $OutputRoot))
 $loose = Join-Path $root 'loose'
 $changes = @()
+$extractRoots = @()
 foreach ($spec in @(
     @{ Path = 'Data/Assets/Weapon/DA_Weapon_ElectricRifle'; Before = -2.0; After = -2.74; Z = 13.5 },
     @{ Path = 'Data/Assets/Attachments/DA_Weapon_Attachment_Sight_RedDot'; Before = 1.0; After = 1.13; Z = 0.275 }
@@ -24,6 +37,7 @@ foreach ($spec in @(
     $vector = $owner[0].Properties.ADSCameraOffset
     if ($vector.X -ne $spec.Before -or $vector.Y -ne 0 -or $vector.Z -ne $spec.Z) { throw 'Stock ADS vector changed.' }
     $extracted = & tools/Extract-VoyagePackage.ps1 -Filter $spec.Path -RetocEngineVersion UE5_8 -OutputRoot (Join-Path $root ($owner[0].Name))
+    $extractRoots += [IO.Path]::GetFullPath($extracted.outputPath)
     $relative = 'Voyage/Content/' + $spec.Path
     $source = Join-Path $extracted.outputPath ($relative + '.uexp')
     $bytes = [IO.File]::ReadAllBytes($source)
@@ -47,4 +61,11 @@ $container = Join-Path $root 'ScopeFix_P.utoc'
 & tools/Invoke-VoyageBoundedTool.ps1 -Executable .tools/bin/retoc.exe -Arguments @('to-zen', $loose, $container, '--version', 'UE5_8') | Out-Null
 & tools/Invoke-VoyageBoundedTool.ps1 -Executable .tools/bin/retoc.exe -Arguments @('verify', $container) | Out-Null
 @{ status = 'container-verified-runtime-pending'; fingerprint = $fingerprint; gameBuild = $gameBuild; changes = $changes } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $root 'build-evidence.json') -Encoding UTF8
+foreach ($scratch in @($extractRoots) + @($loose)) {
+    if (-not $scratch.StartsWith($root.TrimEnd('\') + '\',
+            [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to clean scratch outside ScopeFix run: $scratch"
+    }
+    Remove-Item -LiteralPath $scratch -Recurse -Force
+}
 [pscustomobject]@{ container = $container; evidence = Join-Path $root 'build-evidence.json'; status = 'runtime-pending' }

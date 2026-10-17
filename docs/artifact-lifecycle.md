@@ -16,6 +16,30 @@ Logs, intermediate files, one-off checks, full readbacks, disassembly, test
 fixtures, and unsuccessful candidates belong there. A request to generate,
 export, display, or hand off a file does not by itself make it worth retaining.
 
+Each mod owns `Tmp/<Mod>/`, matching its directory name under `mods/`. Mod
+builders, tests, and installations put their own output below that owner
+directory. Shared repository tools use a clearly named tool or test directory
+for their own output, including when a mod calls them; a mod that selects a
+shared tool's output path places it below `Tmp/<Mod>/`.
+Do not create new mod output directly under `Tmp/` or in a generic shared
+`Tmp/installations/` directory. Existing paths may still be read for an active
+investigation or recovery; this rule does not authorize moving or deleting them.
+
+Name an owned run for its purpose. `research-<subject>` signals an active
+investigation whose temporary files should remain until that investigation is
+resolved. A name such as `build-<identity>` or `test-<subject>` identifies a
+reproducible candidate that can normally be discarded after its result is
+understood. Timestamps or random IDs can distinguish runs, but do not replace
+the purpose in the name. Do not infer durability from a temporary directory's
+age alone.
+
+Scripts remove scratch that has no use after a successful run, including
+private extraction, staging, and transaction files. Keep the result and any
+evidence the caller needs for the next decision. After a failed or interrupted
+run, preserve logs and the smallest useful diagnostic or recovery state, return
+its path, and clean it only after the failure has been resolved. Do not delete
+an active `research-*` directory as routine temporary cleanup.
+
 An **artifact** is generated output with a concrete reason to remain usable
 beyond the current cycle. Put it under ignored `artifacts/` only when an
 identified consumer needs it later, it materially avoids repeated work, it

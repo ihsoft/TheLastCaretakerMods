@@ -37,7 +37,8 @@ replace the tested package. A temporary accepted build remains under `Tmp/`.
 ## Output lifetime
 
 Builds and installations used for experiments or feature development belong
-under ignored `Tmp/`. Keep the location of the next usable build in the active
+under ignored `Tmp/<Mod>/`, with names such as `build-<identity>` or
+`research-<subject>`. Keep the location of the next usable build in the active
 task context or a large task's ignored backlog. A sequence of temporary
 installations does not need a durable record of each replaced build, its hashes,
 or its version. The installer may use hashes and backups while an installation
@@ -74,8 +75,8 @@ ignored backlog when the task is large. There is no release history of
 `replaces` relationships, installed predecessor hashes, or backup chains.
 
 An installer may create a transaction record and copy existing files under
-`Tmp/` while an installation or coupled settings edit is in progress. These
-are short-lived recovery data for an interrupted operation, not a package to
+`Tmp/<Mod>/installations/` while an installation or coupled settings edit is in
+progress. These are short-lived recovery data for an interrupted operation, not a package to
 choose for rollback after testing. Never put them in the versioned release
 directory. Railgun's settings backup has the same limited purpose: preserve
 the user's INI through the settings mutation, then discard the operation

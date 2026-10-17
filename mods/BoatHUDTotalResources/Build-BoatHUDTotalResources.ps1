@@ -54,6 +54,13 @@ $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
 $retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $retocPath).Hash
 $originals = (Resolve-Path -LiteralPath $OriginalsRoot).Path
 $output = [IO.Path]::GetFullPath($OutputRoot)
+$repoRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot '..\..'))
+$tmpPrefix = (Join-Path $repoRoot 'Tmp').TrimEnd('\') + '\'
+$ownerPrefix = (Join-Path $repoRoot 'Tmp\BoatHUDTotalResources').TrimEnd('\') + '\'
+if ($output.StartsWith($tmpPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+    -not $output.StartsWith($ownerPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'OutputRoot below Tmp must belong to Tmp/BoatHUDTotalResources.'
+}
 if (Test-Path -LiteralPath $output) {
     throw "OutputRoot already exists: $output"
 }

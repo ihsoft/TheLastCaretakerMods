@@ -51,6 +51,7 @@ if ([string]::IsNullOrWhiteSpace($Retoc)) {
 }
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'artifacts'))
 $tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp'))
+$tmpOwnerRoot = Join-Path $tmpRoot 'StableGyro'
 $project = Join-Path $modRoot 'Voyage.uproject'
 $provenancePath = Join-Path $modRoot 'GAME_DERIVED_SOURCES.md'
 $buildBatch = Join-Path $EngineRoot 'Engine\Build\BatchFiles\Build.bat'
@@ -300,9 +301,13 @@ if ($LASTEXITCODE -ne 0) {
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $buildIdentity = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
-    $OutputRoot = Join-Path $tmpRoot "StableGyro\build-$buildIdentity"
+    $OutputRoot = Join-Path $tmpOwnerRoot "build-$buildIdentity"
 }
 $releaseRoot = Assert-UnderIgnoredBuildStorage -Path $OutputRoot -Label 'OutputRoot'
+if (-not $releaseRoot.StartsWith($tmpOwnerRoot.TrimEnd('\') + '\',
+        [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'OutputRoot must be below Tmp/StableGyro.'
+}
 if (Test-Path -LiteralPath $releaseRoot) {
     throw "OutputRoot already exists: $releaseRoot"
 }

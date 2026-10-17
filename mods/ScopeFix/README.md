@@ -35,11 +35,12 @@ release manifest. Reinstall the previous ready package for rollback.
 From the repository root, with Windows PowerShell 5.1 or later:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/ScopeFix/Build-ScopeFix.ps1 -OutputRoot Tmp/scopefix-build-new
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/ScopeFix/Build-ScopeFix.ps1
 ```
 
-The output directory must be new. The builder reads the installed game's
-stock assets through the repository tools, checks their fingerprint and
+The builder creates a new `Tmp/ScopeFix/build-*` directory; an explicit
+`-OutputRoot` must be a fresh directory below `Tmp/ScopeFix`. It reads the
+installed game's stock assets through the repository tools, checks their fingerprint and
 camera-offset values, changes only two values, and produces a verified
 container triplet plus `build-evidence.json`. It requires the published
 repository tools and reviewed mappings. It does not install the mod. On a
@@ -51,4 +52,6 @@ For release packaging, archive the exact triplet and call
 `tools/New-VoyageReleaseManifest.ps1` with `-SourcePath mods/ScopeFix`.
 Follow the parameter contract in the [tool index](../../tools/README.md).
 Each new artifact still needs appropriate validation; a successful container
-check alone does not establish runtime compatibility.
+check alone does not establish runtime compatibility. After a successful build,
+the builder removes loose extraction scratch while retaining the verified
+container and build evidence. Failed runs retain their files for diagnosis.

@@ -1316,14 +1316,14 @@ if ($Install) {
         $validationSummaryPath = $null
     }
     $temporaryInstallRoot = [IO.Path]::GetFullPath(
-        (Join-Path $repo 'Tmp/installations'))
+        (Join-Path $repo 'Tmp/Railgun/installations'))
     $installationOperationRoot = [IO.Path]::GetFullPath(
         (Split-Path -Parent $installation.installManifestPath))
     $temporaryInstallBoundary = $temporaryInstallRoot.TrimEnd('\') + '\'
     if (-not $installationOperationRoot.StartsWith($temporaryInstallBoundary,
             [StringComparison]::OrdinalIgnoreCase) -or
         $installationOperationRoot -ceq $temporaryInstallRoot) {
-        throw 'Refusing to remove installation state outside Tmp/installations.'
+        throw 'Refusing to remove installation state outside Tmp/Railgun/installations.'
     }
     [IO.Directory]::Delete($installationOperationRoot, $true)
     $installation.installManifestPath = $null

@@ -9,6 +9,7 @@ Set-StrictMode -Version Latest
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $testParent = Join-Path $repositoryRoot 'Tmp\tests\new-voyage-release-manifest'
 $testRoot = Join-Path $testParent ([Guid]::NewGuid().ToString('N'))
+$testPassed = $false
 $producer = Join-Path $PSScriptRoot 'New-VoyageReleaseManifest.ps1'
 $steamApps = Join-Path $testRoot 'steamapps'
 $gameRoot = Join-Path $steamApps 'common\Voyage'
@@ -97,7 +98,7 @@ try {
     $result = & $producer -ReleaseRoot $releaseRoot `
         -Mod 'SyntheticManifestMod' -Version 'test-v1' `
         -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
-        -Archive $archivePath -SourcePath (Join-Path $repositoryRoot 'AGENTS.md') `
+        -Archive $archivePath -SourcePath (Join-Path $repositoryRoot 'README.md') `
         -GameRoot $gameRoot -ModVersion '1.2.3' `
         -InstalledArchiveName 'SyntheticManifestMod-test-v1.zip'
     Add-Check -Name 'manifest-created-and-validated' `
@@ -123,7 +124,7 @@ try {
             [string]$manifest.installedArchive.name)
     Add-Check -Name 'source-scope-recorded' `
         -Passed (@($manifest.sourcePaths).Count -eq 1 -and
-            [string]$manifest.sourcePaths[0].path -ceq 'AGENTS.md') `
+            [string]$manifest.sourcePaths[0].path -ceq 'README.md') `
         -Evidence ($manifest.sourcePaths | ConvertTo-Json -Compress)
 
     $pluginReleaseRoot = Join-Path $testRoot 'plugin-release'
@@ -146,7 +147,7 @@ try {
     $pluginResult = & $producer -ReleaseRoot $pluginReleaseRoot `
         -Mod 'SyntheticPluginMod' -Version 'test-v1' `
         -Container (Join-Path $pluginPackageRoot ($containerBase + '.utoc')) `
-        -Archive $pluginArchive -SourcePath (Join-Path $repositoryRoot 'AGENTS.md') `
+        -Archive $pluginArchive -SourcePath (Join-Path $repositoryRoot 'README.md') `
         -GameRoot $gameRoot -ContentPluginDescriptor $pluginDescriptor
     $pluginManifest = Get-Content -LiteralPath $pluginResult.manifestPath -Raw |
         ConvertFrom-Json
@@ -170,7 +171,7 @@ try {
         & $producer -ReleaseRoot $pluginReleaseRoot `
             -Mod 'SyntheticPluginMod' -Version 'invalid-plugin' `
             -Container (Join-Path $pluginPackageRoot ($containerBase + '.utoc')) `
-            -Archive $pluginArchive -SourcePath (Join-Path $repositoryRoot 'AGENTS.md') `
+            -Archive $pluginArchive -SourcePath (Join-Path $repositoryRoot 'README.md') `
             -GameRoot $gameRoot -ContentPluginDescriptor $invalidDescriptor `
             -OutputPath (Join-Path $pluginReleaseRoot 'invalid-plugin.json')
     }
@@ -203,7 +204,7 @@ try {
     $jsonText = & $producer -ReleaseRoot $releaseRoot `
         -Mod 'SyntheticManifestMod' -Version 'json-test' `
         -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
-        -Archive $archivePath -SourcePath (Join-Path $repositoryRoot 'AGENTS.md') `
+        -Archive $archivePath -SourcePath (Join-Path $repositoryRoot 'README.md') `
         -GameRoot $gameRoot -OutputPath $jsonManifestPath -AsJson
     $jsonResult = $jsonText | ConvertFrom-Json
     Add-Check -Name 'compact-json-result' `
@@ -215,7 +216,7 @@ try {
         & $producer -ReleaseRoot $releaseRoot `
             -Mod 'SyntheticManifestMod' -Version 'test-v1' `
             -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
-            -Archive $archivePath -SourcePath (Join-Path $repositoryRoot 'AGENTS.md') `
+            -Archive $archivePath -SourcePath (Join-Path $repositoryRoot 'README.md') `
             -GameRoot $gameRoot
     }
 
@@ -236,7 +237,7 @@ try {
         & $producer -ReleaseRoot $badReleaseRoot `
             -Mod 'BadArchiveMod' -Version 'test-v1' `
             -Container $badPayload[2] -Archive $badArchive `
-            -SourcePath (Join-Path $repositoryRoot 'AGENTS.md') -GameRoot $gameRoot
+            -SourcePath (Join-Path $repositoryRoot 'README.md') -GameRoot $gameRoot
     }
     Add-Check -Name 'failed-validation-left-no-manifest' `
         -Passed (-not (Test-Path -LiteralPath (
@@ -251,7 +252,7 @@ try {
         & $producer -ReleaseRoot $releaseRoot `
             -Mod 'SyntheticManifestMod' -Version 'outside-test' `
             -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
-            -Archive $outsideArchive -SourcePath (Join-Path $repositoryRoot 'AGENTS.md') `
+            -Archive $outsideArchive -SourcePath (Join-Path $repositoryRoot 'README.md') `
             -GameRoot $gameRoot -OutputPath $outsideOutput
     }
 
@@ -267,13 +268,17 @@ try {
         $summaryPath,
         (($summary | ConvertTo-Json -Depth 8) + [Environment]::NewLine),
         [Text.UTF8Encoding]::new($false))
+    $testPassed = $true
     $summary
 }
 finally {
     if (Test-Path -LiteralPath $dirtySourcePath -PathType Leaf) {
         Remove-Item -LiteralPath $dirtySourcePath -Force
     }
-    if (-not $KeepArtifacts -and (Test-Path -LiteralPath $testRoot)) {
+    if (-not $testPassed -and (Test-Path -LiteralPath $testRoot)) {
+        Write-Warning "Failed release-manifest test evidence retained: $testRoot"
+    }
+    if ($testPassed -and -not $KeepArtifacts -and (Test-Path -LiteralPath $testRoot)) {
         Remove-Item -LiteralPath $testRoot -Recurse -Force
     }
 }

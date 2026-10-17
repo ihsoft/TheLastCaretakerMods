@@ -28,6 +28,12 @@ if ($running.Count -gt 0) {
 $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $paks = Join-Path $root 'Voyage\Content\Paks'
 $output = [IO.Path]::GetFullPath($OutputRoot)
+$tmpPrefix = (Join-Path $repoRoot 'Tmp').TrimEnd('\') + '\'
+$ownerPrefix = (Join-Path $repoRoot 'Tmp\DonkLiftKeyboardControl').TrimEnd('\') + '\'
+if ($output.StartsWith($tmpPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+    -not $output.StartsWith($ownerPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'OutputRoot below Tmp must belong to Tmp/DonkLiftKeyboardControl.'
+}
 if (Test-Path -LiteralPath $output) {
     throw "OutputRoot already exists: $output"
 }

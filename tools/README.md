@@ -571,7 +571,7 @@ creating evidence or touching the Paks directory. Remove `-ValidateOnly` only
 for an explicitly authorized installation while the game is closed.
 
 The ordinary installer writes its temporary installation transaction under
-`Tmp/installations/`. Pass `-ReleaseCandidate` only for a selected candidate:
+`Tmp/<Mod>/installations/`. Pass `-ReleaseCandidate` only for a selected candidate:
 the selected directory uses the next `V<N>` derived from the mod's
 `version.txt`; `0` selects the first numbered release, `V1`, even if the mod
 was published earlier without a numbered release. The installer refuses an existing

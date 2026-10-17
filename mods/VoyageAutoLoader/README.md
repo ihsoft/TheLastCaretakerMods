@@ -108,7 +108,7 @@ another requested iteration, the version-bound manual path is:
 
 Unreal build, generation and cook must run outside the restricted sandbox.
 Source/native modules and editor stand-ins are never shipped. Keep working
-builds under ignored `Tmp/`; select only a release candidate for
+builds under ignored `Tmp/VoyageAutoLoader/`; select only a release candidate for
 `artifacts/installations/<Mod>-V<N>/`.
 
 ## Known limits

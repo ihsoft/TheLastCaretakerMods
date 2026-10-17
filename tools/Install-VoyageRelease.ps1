@@ -29,9 +29,6 @@ Set-StrictMode -Version Latest
 $sha256Pattern = '^[0-9A-F]{64}$'
 $containerExtensions = @('.pak', '.ucas', '.utoc')
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-if ([string]::IsNullOrWhiteSpace($EvidenceRoot)) {
-    $EvidenceRoot = Join-Path $repositoryRoot 'Tmp\installations'
-}
 
 function Get-OptionalPropertyValue {
     param(
@@ -476,8 +473,23 @@ else {
 $safeMod = $mod -replace '[^0-9A-Za-z._-]', '_'
 $safeVersion = $artifactVersion -replace '[^0-9A-Za-z._-]', '_'
 $token = [Guid]::NewGuid().ToString('N')
+$defaultEvidenceRoot = [string]::IsNullOrWhiteSpace($EvidenceRoot)
+if ($defaultEvidenceRoot) {
+    $EvidenceRoot = Join-Path $repositoryRoot "Tmp\$safeMod\installations"
+}
 $evidenceParent = [IO.Path]::GetFullPath($EvidenceRoot)
-$evidence = Join-Path $evidenceParent "$safeMod\$safeVersion-$($token.Substring(0, 8))"
+$sharedInstallRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'Tmp\installations'))
+if ([StringComparer]::OrdinalIgnoreCase.Equals($evidenceParent, $sharedInstallRoot) -or
+    $evidenceParent.StartsWith($sharedInstallRoot.TrimEnd('\') + '\',
+        [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'New installation evidence must be below Tmp/<Mod>/installations.'
+}
+$evidence = if ($defaultEvidenceRoot) {
+    Join-Path $evidenceParent "$safeVersion-$($token.Substring(0, 8))"
+}
+else {
+    Join-Path $evidenceParent "$safeMod\$safeVersion-$($token.Substring(0, 8))"
+}
 $releaseDirectory = $null
 if ($ReleaseCandidate) {
     $publishedVersionPath = Join-Path (Join-Path $repositoryRoot "mods\$mod") 'version.txt'

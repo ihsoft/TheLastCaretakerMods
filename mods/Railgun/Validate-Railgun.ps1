@@ -4,8 +4,8 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $output = [IO.Path]::GetFullPath($OutputRoot)
-$boundary = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp')) + [IO.Path]::DirectorySeparatorChar
-if (-not $output.StartsWith($boundary, [StringComparison]::OrdinalIgnoreCase)) { throw 'Semantic scratch output must be below repository Tmp.' }
+$boundary = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp\Railgun')) + [IO.Path]::DirectorySeparatorChar
+if (-not $output.StartsWith($boundary, [StringComparison]::OrdinalIgnoreCase)) { throw 'Semantic scratch output must be below Tmp/Railgun.' }
 if (Test-Path -LiteralPath $output) { throw 'Semantic output exists; use a fresh candidate.' }
 $null = New-Item -ItemType Directory -Path $output
 $evidence = @()

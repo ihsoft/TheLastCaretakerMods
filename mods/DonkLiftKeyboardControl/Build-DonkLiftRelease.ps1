@@ -50,6 +50,7 @@ if ([string]::IsNullOrWhiteSpace($Retoc)) {
 }
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'artifacts'))
 $tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp'))
+$tmpOwnerRoot = Join-Path $tmpRoot 'DonkLiftKeyboardControl'
 $project = Join-Path $modRoot 'Voyage.uproject'
 $provenancePath = Join-Path $modRoot 'GAME_DERIVED_SOURCES.md'
 $buildBatch = Join-Path $EngineRoot 'Engine\Build\BatchFiles\Build.bat'
@@ -79,9 +80,9 @@ function Assert-UnderTmp {
     param([Parameter(Mandatory = $true)] [string]$Path, [Parameter(Mandatory = $true)] [string]$Label)
 
     $fullPath = [IO.Path]::GetFullPath($Path)
-    $prefix = $tmpRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    $prefix = $tmpOwnerRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
     if (-not $fullPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "$Label must stay below the ignored Tmp directory: $fullPath"
+        throw "$Label must stay below Tmp/DonkLiftKeyboardControl: $fullPath"
     }
     return $fullPath
 }
@@ -203,7 +204,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
-    $OutputRoot = Join-Path $tmpRoot ("DonkLiftKeyboardControl\$Version-" + [Guid]::NewGuid().ToString('N'))
+    $OutputRoot = Join-Path $tmpOwnerRoot ("build-$Version-" + [Guid]::NewGuid().ToString('N'))
 }
 $releaseRoot = Assert-UnderTmp -Path $OutputRoot -Label 'OutputRoot'
 if (Test-Path -LiteralPath $releaseRoot) {

@@ -16,7 +16,7 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   producer writes its candidate, loose payload, reports and logs below
   repository `Tmp/Railgun/`. A preparation-only run leaves that temporary
   candidate for inspection. A temporary installation keeps its recovery data
-  in `Tmp/`. `-ReleaseCandidate` preserves the exact ZIP and release manifest
+  in `Tmp/Railgun/installations/`. `-ReleaseCandidate` preserves the exact ZIP and release manifest
   under `artifacts/installations/Railgun-V<N>`
   and removes the complete owned TMP run after verification. No ZIP goes into
   Voyage's Paks directory.

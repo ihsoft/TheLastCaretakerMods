@@ -91,6 +91,13 @@ if ($actualSteamBuildId -cne [string]$buildManifest.steamBuildId) {
 
 $paks = (Resolve-Path -LiteralPath (Join-Path $root 'Voyage\Content\Paks')).Path
 $evidence = [IO.Path]::GetFullPath($EvidenceRoot)
+$repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+$tmpPrefix = (Join-Path $repoRoot 'Tmp').TrimEnd('\') + '\'
+$ownerPrefix = (Join-Path $repoRoot 'Tmp\BoatHUDTotalResources').TrimEnd('\') + '\'
+if ($evidence.StartsWith($tmpPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+    -not $evidence.StartsWith($ownerPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'EvidenceRoot below Tmp must belong to Tmp/BoatHUDTotalResources.'
+}
 if (Test-Path -LiteralPath $evidence) {
     throw "EvidenceRoot already exists: $evidence"
 }

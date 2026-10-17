@@ -20,6 +20,12 @@ if ([string]::IsNullOrWhiteSpace($Retoc)) {
 
 $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $output = [IO.Path]::GetFullPath($OutputRoot)
+$tmpPrefix = (Join-Path $repoRoot 'Tmp').TrimEnd('\') + '\'
+$ownerPrefix = (Join-Path $repoRoot 'Tmp\StableGyro').TrimEnd('\') + '\'
+if ($output.StartsWith($tmpPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+    -not $output.StartsWith($ownerPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'OutputRoot below Tmp must belong to Tmp/StableGyro.'
+}
 if (Test-Path -LiteralPath $output) {
     throw "OutputRoot already exists: $output"
 }
