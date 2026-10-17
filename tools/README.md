@@ -510,7 +510,7 @@ under ignored `Tmp/tests/installation-status-*/`.
   [`RetocUe58Compatibility/README.md`](RetocUe58Compatibility/README.md).
 - The reviewed mapping for Steam build `25056839` / game UE `5.8.1` is tracked
   at `mappings/Voyage/steam-25056839-ue5.8.1/`. Generate candidates under
-  ignored `artifacts/mappings/`; promote only a fully validated mapping as a
+  ignored `Tmp/mappings/`; promote only a fully validated mapping as a
   new immutable versioned registry entry.
 - Do not inspect the registry or run jmap during normal work. Call
   `Get-VoyageMappings.ps1`; regenerate only when it reports that the installed

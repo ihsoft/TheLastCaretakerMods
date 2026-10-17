@@ -16,11 +16,13 @@ Requirements:
 Run from the repository root:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods\Railgun\Build-Railgun.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods\Railgun\Build-Railgun.ps1 -Install
 ```
 
-Add `-Install` to install the verified result when the game is closed. The
-default preparation-only output is a unique temporary directory below
+For a requested Railgun build, the mod rules call for installation unless the
+user explicitly asks for preparation only. Omit `-Install` for a preparation-only
+run. Installation requires the game to be closed. The preparation-only output is
+a unique temporary directory below
 `Tmp\Railgun\`. `-OutputRoot` may select an exact fresh directory only below
 that same owner root. `-ArtifactVersion` assigns a distinct safe release and
 archive identity; otherwise the producer uses a UTC build timestamp. The

@@ -38,9 +38,11 @@ be described simply as world-space height.
 
 ## Build and compatibility boundary
 
-The builder is gated to Steam build `25880952`. It extracts both stock assets,
-checks their camera vectors, changes only the two intended X values and
-verifies the resulting package structure. A release built for that version
+The last pinned Steam build is `25880952`. By default the builder compares the
+installed build with that pin; on a mismatch, retry with
+`-IgnorePinnedGameVersion`. It still extracts fresh stock assets, checks their
+camera vectors, changes only the two intended X values and verifies the
+resulting package structure. A release built for the pinned version
 also starts on Steam build `25902891`; aiming behavior on that later build has
 no separate compatibility claim.
 

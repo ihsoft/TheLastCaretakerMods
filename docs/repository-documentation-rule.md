@@ -25,6 +25,13 @@
   keep raw evidence in ignored storage, not in shared guidance.
   Promote validated conclusions as general contracts without candidate labels;
   retain version/fingerprint restrictions when they determine applicability.
+- Before committing documentation, make every link to a repository-local file
+  resolve in the committed repository. Committed guidance must not depend on
+  ignored or otherwise local-only files, including working backlogs and output
+  under `Tmp/` or `artifacts/`. Plain paths that specify where a tool writes
+  output are not links to existing resources. During an uncommitted
+  investigation, local working files may link to each other; resolve such links
+  before committing the documents that contain them.
 - Each mod has one `README.md` for its high-level purpose, user-facing behavior,
   and public build/installation entry points. Begin with a brief description a
   player can understand; add detailed usage below when needed. Do not maintain
