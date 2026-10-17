@@ -58,6 +58,8 @@ $sourcePaths = @(
     'tools/Get-VoyageBuildFingerprint.ps1',
     'tools/Get-VoyageMappings.ps1',
     'tools/Install-VoyageRelease.ps1',
+    'tools/Merge-VoyageModIni.ps1',
+    'tools/New-VoyageModSettings.ps1',
     'tools/Invoke-VoyageBoundedTool.ps1',
     'tools/New-VoyageAssetRegistry.ps1',
     'tools/New-VoyageReleaseManifest.ps1',
@@ -254,137 +256,77 @@ function Invoke-NativeStage([string]$Name, [string]$Executable, [string[]]$Nativ
     if ($LASTEXITCODE -ne 0) { throw "$Name failed ($LASTEXITCODE); log: $log" }
     Write-Host "$Name passed; log: $log"
 }
-function Remove-DeprecatedRailgunSettings([string]$SettingsPath) {
-    $bytes = [IO.File]::ReadAllBytes($SettingsPath)
-    $preambleLength = 0
-    $encoding = New-Object Text.UTF8Encoding($false, $true)
-    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and
-        $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
-        $encoding = New-Object Text.UTF8Encoding($true, $true)
-        $preambleLength = 3
-    } elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and
-        $bytes[1] -eq 0xFE) {
-        $encoding = New-Object Text.UnicodeEncoding($false, $true, $true)
-        $preambleLength = 2
-    } elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFE -and
-        $bytes[1] -eq 0xFF) {
-        $encoding = New-Object Text.UnicodeEncoding($true, $true, $true)
-        $preambleLength = 2
-    }
-    $text = $encoding.GetString($bytes, $preambleLength,
-        $bytes.Length - $preambleLength)
-    $removedKeys = @(@('OfflineDischargeKW','OpticsMousePercent') |
-        Where-Object { $text -match ('(?im)^[\t ]*' +
-            [regex]::Escape($_) + '[\t ]*=') })
-    $deprecatedPattern = '(?im)^[\t ]*(?:OfflineDischargeKW|OpticsMousePercent)[\t ]*=.*(?:\r\n|\n|\r|$)'
-    $removedCount = [regex]::Matches($text, $deprecatedPattern).Count
-    if ($removedCount -eq 0) {
-        return [pscustomobject]@{removedCount=0;removedKeys=@();sha256=(Get-FileHash `
-            -LiteralPath $SettingsPath -Algorithm SHA256).Hash}
-    }
-    $updated = [regex]::Replace($text, $deprecatedPattern, '')
-    if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
-            -ErrorAction SilentlyContinue).Count -gt 0) {
-        throw 'Game started; deprecated settings removal refused.'
-    }
-    $body = $encoding.GetBytes($updated)
-    $preamble = $encoding.GetPreamble()
-    $updatedBytes = New-Object byte[] ($preamble.Length + $body.Length)
-    [Array]::Copy($preamble, 0, $updatedBytes, 0, $preamble.Length)
-    [Array]::Copy($body, 0, $updatedBytes, $preamble.Length, $body.Length)
-    $temporaryPath = $SettingsPath + '.railgun-' +
-        [guid]::NewGuid().ToString('N') + '.tmp'
-    $replacementBackupPath = $SettingsPath + '.railgun-' +
-        [guid]::NewGuid().ToString('N') + '.bak'
+function Update-RailgunSettings([string]$TemplatePath, [string]$SettingsPath) {
+    $tool = Join-Path $repo 'tools/Merge-VoyageModIni.ps1'
+    $stage = $SettingsPath + '.railgun-' + [guid]::NewGuid().ToString('N') + '.tmp'
+    $merged = $SettingsPath + '.railgun-' + [guid]::NewGuid().ToString('N') + '.tmp'
+    $backup = $SettingsPath + '.railgun-' + [guid]::NewGuid().ToString('N') + '.bak'
+    $source = $SettingsPath
+    $migratedEnergy = $false
     try {
-        [IO.File]::WriteAllBytes($temporaryPath, $updatedBytes)
-        $expectedHash = (Get-FileHash -LiteralPath $temporaryPath `
-            -Algorithm SHA256).Hash
-        [IO.File]::Replace($temporaryPath, $SettingsPath,
-            $replacementBackupPath, $true)
-        $actualHash = (Get-FileHash -LiteralPath $SettingsPath `
-            -Algorithm SHA256).Hash
-        if ($actualHash -cne $expectedHash) {
-            throw 'Deprecated settings removal readback hash mismatch.'
+        $lines = [IO.File]::ReadAllLines($SettingsPath)
+        $hasNewEnergy = @($lines | Where-Object { $_ -match '^\s*FullChargeEnergyKWh\s*=' }).Count -gt 0
+        $defaultLine = @([IO.File]::ReadAllLines($TemplatePath) |
+            Where-Object { $_ -match '^\s*FullChargeEnergyKWh\s*=' })
+        $defaultEnergy = 0.0
+        if ($defaultLine.Count -ne 1 -or
+            -not [double]::TryParse(($defaultLine[0] -split '=', 2)[1].Trim(),
+                [Globalization.NumberStyles]::Float,
+                [Globalization.CultureInfo]::InvariantCulture, [ref]$defaultEnergy)) {
+            throw 'Generated settings template has no valid FullChargeEnergyKWh default.'
+        }
+        $rewritten = New-Object 'System.Collections.Generic.List[string]'
+        foreach ($line in $lines) {
+            if ($line -match '^\s*FullChargeEnergyKJ\s*=\s*(.*?)\s*$') {
+                $migratedEnergy = $true
+                if (-not $hasNewEnergy) {
+                    $legacy = 0.0
+                    if (-not [double]::TryParse($matches[1].Trim(),
+                        [Globalization.NumberStyles]::Float,
+                        [Globalization.CultureInfo]::InvariantCulture, [ref]$legacy)) {
+                        $legacy = 500.0
+                    }
+                    $converted = if ([Math]::Abs($legacy - 500.0) -lt 0.000001) {
+                        $defaultEnergy
+                    } else { $legacy / 1000.0 }
+                    $value = $converted.ToString('0.###############',
+                        [Globalization.CultureInfo]::InvariantCulture)
+                    $rewritten.Add('FullChargeEnergyKWh=' + $value)
+                    $hasNewEnergy = $true
+                }
+                continue
+            }
+            $rewritten.Add($line)
+        }
+        if ($migratedEnergy) {
+            [IO.File]::WriteAllLines($stage, $rewritten,
+                (New-Object System.Text.UTF8Encoding($false)))
+            $source = $stage
+        }
+        $result = & $tool -TemplatePath $TemplatePath -CurrentPath $source `
+            -OutputPath $merged -RetiredKeys @('OfflineDischargeKW','OpticsMousePercent') `
+            -DefaultsComment '# Defaults added by a newer Railgun build.'
+        if ($result.Changed -or $migratedEnergy) {
+            if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
+                    -ErrorAction SilentlyContinue).Count -gt 0) {
+                throw 'Game started; Railgun settings update refused.'
+            }
+            [IO.File]::Replace($merged, $SettingsPath, $backup, $true)
+            if ((Get-FileHash -LiteralPath $SettingsPath -Algorithm SHA256).Hash -cne
+                $result.Sha256) { throw 'Railgun settings readback hash mismatch.' }
+        }
+        $added = @($result.AddedKeys)
+        if ($migratedEnergy -and $added -cnotcontains 'FullChargeEnergyKWh') {
+            $added = @('FullChargeEnergyKWh') + $added
+        }
+        return [pscustomobject]@{
+            AddedKeys=$added; RemovedKeys=@($result.RemovedKeys)
         }
     } finally {
-        if (Test-Path -LiteralPath $temporaryPath) {
-            Remove-Item -LiteralPath $temporaryPath -Force
-        }
-        if (Test-Path -LiteralPath $replacementBackupPath) {
-            Remove-Item -LiteralPath $replacementBackupPath -Force
+        foreach ($path in @($stage,$merged,$backup)) {
+            if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
         }
     }
-    return [pscustomobject]@{removedCount=$removedCount;removedKeys=$removedKeys;sha256=$actualHash}
-}
-function Add-MissingRailgunSettings([string]$TemplatePath, [string]$SettingsPath) {
-    $templateLines = @([IO.File]::ReadAllLines($TemplatePath))
-    $lines = @([IO.File]::ReadAllLines($SettingsPath))
-    $newEnergyKey = 'FullChargeEnergyKWh'
-    $newEnergyPattern = '^\s*' + [regex]::Escape($newEnergyKey) + '\s*='
-    $legacyEnergyPattern = '^\s*FullChargeEnergyKJ\s*=\s*(.*?)\s*$'
-    $defaultEnergyValue = 0.0
-    $defaultEnergyText = @($templateLines | Where-Object { $_ -match $newEnergyPattern })
-    if ($defaultEnergyText.Count -ne 1 -or
-        -not [double]::TryParse(($defaultEnergyText[0] -split '=', 2)[1].Trim(), [Globalization.NumberStyles]::Float,
-            [Globalization.CultureInfo]::InvariantCulture, [ref]$defaultEnergyValue)) {
-        throw 'Generated settings template has no valid FullChargeEnergyKWh default.'
-    }
-    $hasNewEnergy = @($lines | Where-Object { $_ -match $newEnergyPattern }).Count -gt 0
-    $rewritten = New-Object 'System.Collections.Generic.List[string]'
-    $migratedEnergy = $false
-    foreach ($line in $lines) {
-        if ($line -match $legacyEnergyPattern) {
-            $migratedEnergy = $true
-            if (-not $hasNewEnergy) {
-                $legacyValue = 0.0
-                if (-not [double]::TryParse($matches[1].Trim(), [Globalization.NumberStyles]::Float,
-                    [Globalization.CultureInfo]::InvariantCulture, [ref]$legacyValue)) {
-                    $legacyValue = 500.0
-                }
-                # Do not preserve the superseded 500-unit default over the new
-                # Railgun balance. Non-default legacy values remain user tuning
-                # and are converted to the game's displayed kWh scale.
-                $gameValueNumber = if ([Math]::Abs($legacyValue - 500.0) -lt 0.000001) { $defaultEnergyValue } else { $legacyValue / 1000.0 }
-                $gameValue = $gameValueNumber.ToString('0.###############', [Globalization.CultureInfo]::InvariantCulture)
-                $rewritten.Add($newEnergyKey + '=' + $gameValue)
-                $hasNewEnergy = $true
-            }
-            continue
-        }
-        $rewritten.Add($line)
-    }
-    if ($migratedEnergy) {
-        if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' -ErrorAction SilentlyContinue).Count -gt 0) {
-            throw 'Game started; settings migration refused.'
-        }
-        [IO.File]::WriteAllLines($SettingsPath, $rewritten, (New-Object System.Text.UTF8Encoding($false)))
-        $lines = @([IO.File]::ReadAllLines($SettingsPath))
-    }
-    $existingKeys = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
-    foreach ($line in $lines) {
-        if ($line -match '^\s*([^#;][^=]*?)\s*=') { $null = $existingKeys.Add($matches[1].Trim()) }
-    }
-    $missing = New-Object 'System.Collections.Generic.List[string]'
-    foreach ($line in $templateLines) {
-        if ($line -match '^\s*([^#;][^=]*?)\s*=' -and -not $existingKeys.Contains($matches[1].Trim())) {
-            $missing.Add($line)
-        }
-    }
-    if ($missing.Count -eq 0) {
-        if ($migratedEnergy) { return @($newEnergyKey) }
-        return @()
-    }
-    if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' -ErrorAction SilentlyContinue).Count -gt 0) {
-        throw 'Game started; settings update refused.'
-    }
-    $current = [IO.File]::ReadAllText($SettingsPath)
-    $prefix = if ($current.EndsWith("`n")) { '' } else { "`r`n" }
-    $addition = $prefix + "`r`n# Defaults added by a newer Railgun build.`r`n" + (($missing -join "`r`n") + "`r`n")
-    [IO.File]::AppendAllText($SettingsPath, $addition, (New-Object System.Text.UTF8Encoding($false)))
-    $reported = @($missing | ForEach-Object { ($_ -split '=', 2)[0].Trim() })
-    if ($migratedEnergy) { $reported = @($newEnergyKey) + $reported }
-    return $reported
 }
 if (-not $SkipBuild) {
     Invoke-NativeStage 'build' (Join-Path $engine 'Build/BatchFiles/Build.bat') @('VoyageEditor','Win64','Development',('-Project=' + $project),'-WaitMutex','-NoHotReloadFromIDE',('-Log=' + (Join-Path $output 'ubt.log')))
@@ -1208,12 +1150,10 @@ if ($Install) {
                 throw 'Created Railgun settings readback hash mismatch.'
             }
         } else {
-            $removal = Remove-DeprecatedRailgunSettings $settingsPath
-            if ([int]$removal.removedCount -gt 0) {
-                $removedKeys = @($removal.removedKeys)
-            }
-            $addedKeys = @(Add-MissingRailgunSettings $settingsTemplatePath `
-                $settingsPath)
+            $settingsUpdate = Update-RailgunSettings $settingsTemplatePath `
+                $settingsPath
+            $removedKeys = @($settingsUpdate.RemovedKeys)
+            $addedKeys = @($settingsUpdate.AddedKeys)
         }
         if (@([IO.File]::ReadAllLines($settingsPath) | Where-Object {
                 $_ -match '^\s*(?:OfflineDischargeKW|OpticsMousePercent)\s*='

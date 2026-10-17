@@ -8,8 +8,9 @@ When no mod exists yet, start with the new-mod workflow below.
 
 Shared `docs/` contains repository-wide rules and reusable knowledge. A
 `-rule.md` file constrains work; follow it or raise a conflict with the user.
-A `-knowledge.md` file helps explain the game or engine and may be rechecked
-when evidence disagrees. Choose the relevant links below by the task at hand;
+A `-knowledge.md` file records useful findings about the game, engine, or
+established repository methods. Recheck it when evidence disagrees. Choose
+the relevant links below by the task at hand;
 do not load every document just because it is indexed here.
 
 ## Repository and process rules
@@ -51,8 +52,9 @@ do not load every document just because it is indexed here.
   orientation, shading exceptions, and useful checks.
 - [Research pitfalls](docs/research-pitfalls-knowledge.md): observed failures
   and misleading approaches worth avoiding or rechecking.
-- [Runtime configuration](docs/runtime-configuration-patterns-knowledge.md):
-  setting ownership, caching, validation, and reload patterns.
+- [Runtime INI configuration](docs/runtime-configuration-patterns-knowledge.md):
+  a repeatable settings recipe, session-once versus entry reload, and
+  installation of user-edited files.
 - [Vehicle and HUD patterns](docs/vehicle-and-hud-modding-patterns-knowledge.md):
   shared actor lifecycle, provided actions, and widget behavior.
 - [Cooked-asset toolchain knowledge](docs/voyage-cooked-asset-toolchain-knowledge.md):

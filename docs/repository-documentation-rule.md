@@ -3,7 +3,8 @@
 - Substantive shared documents under `docs/` end in `-rule.md` or
   `-knowledge.md`. A rule constrains repository work: follow it, or report a
   conflict or blocker to the user and obtain an explicit decision before
-  deviating. Knowledge records useful observations or reasoned inferences;
+  deviating. Knowledge records useful observations or reasoned inferences about
+  the game, engine, or established repository methods;
   state uncertainty in the document heading and at the affected claim.
   Recheck or discard knowledge when new evidence conflicts with it. A report
   that cannot be independently reproduced or investigated is not established

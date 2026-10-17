@@ -110,7 +110,6 @@ function Assert-GameClosed {
 function Update-StableGyroSettings {
     param([string]$TemplatePath, [string]$SettingsPath)
 
-    $addedDefaultsComment = '# Defaults added by a newer StableGyro build.'
     $retiredKeys = @(
         'AltitudeStabilizationDelaySeconds',
         'CompensateTiltLift',
@@ -125,72 +124,44 @@ function Update-StableGyroSettings {
         '# Percent of the stock rotor''s physical maximum speed (0 disables the gate).',
         '# Percent of the stock rotor''s normal 100% operating speed (0 disables the gate).'
     )
-    $retiredKeySet = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
-    $retiredCommentSet = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
-    foreach ($key in $retiredKeys) { $null = $retiredKeySet.Add($key) }
-    foreach ($comment in $retiredComments) { $null = $retiredCommentSet.Add($comment) }
-
-    $originalLines = [IO.File]::ReadAllLines($SettingsPath)
-    $removedKeys = New-Object 'System.Collections.Generic.List[string]'
-    $keptLines = New-Object 'System.Collections.Generic.List[string]'
-    $addedDefaultsCommentSeen = $false
-    $settingsFileChanged = $false
-    foreach ($line in $originalLines) {
-        if ($retiredCommentSet.Contains($line.Trim())) {
-            $settingsFileChanged = $true
-            continue
+    $temporary = $SettingsPath + '.stablegyro-' + [guid]::NewGuid().ToString('N') + '.tmp'
+    $backup = $SettingsPath + '.stablegyro-' + [guid]::NewGuid().ToString('N') + '.bak'
+    $keepBackup = $false
+    try {
+        $result = & (Join-Path $repoRoot 'tools/Merge-VoyageModIni.ps1') `
+            -TemplatePath $TemplatePath -CurrentPath $SettingsPath `
+            -OutputPath $temporary -RetiredKeys $retiredKeys `
+            -RetiredComments $retiredComments `
+            -DefaultsComment '# Defaults added by a newer StableGyro build.'
+        if ($result.Changed) {
+            Assert-GameClosed
+            [IO.File]::Replace($temporary, $SettingsPath, $backup, $true)
+            if ((Get-FileHash -LiteralPath $SettingsPath -Algorithm SHA256).Hash -cne
+                $result.Sha256) { throw 'StableGyro settings readback hash mismatch.' }
         }
-        if ($line.Trim() -ceq $addedDefaultsComment) {
-            if ($addedDefaultsCommentSeen) {
-                $settingsFileChanged = $true
-                continue
+        return [pscustomobject]@{
+            AddedKeys=@($result.AddedKeys); RemovedKeys=@($result.RemovedKeys)
+        }
+    } catch {
+        $failure = $_.Exception.Message
+        if (Test-Path -LiteralPath $backup) {
+            $keepBackup = $true
+            Assert-GameClosed
+            Copy-Item -LiteralPath $backup -Destination $SettingsPath -Force
+            if ((Get-FileHash -LiteralPath $SettingsPath -Algorithm SHA256).Hash -cne
+                (Get-FileHash -LiteralPath $backup -Algorithm SHA256).Hash) {
+                throw "StableGyro settings recovery hash mismatch; backup retained: $backup"
             }
-            $addedDefaultsCommentSeen = $true
+            $keepBackup = $false
         }
-        if ($line -match '^\s*([^#;][^=]*?)\s*=' -and
-            $retiredKeySet.Contains($matches[1].Trim())) {
-            if (-not $removedKeys.Contains($matches[1].Trim())) {
-                $removedKeys.Add($matches[1].Trim())
-            }
-            $settingsFileChanged = $true
-            continue
+        throw "StableGyro settings update failed: $failure"
+    } finally {
+        if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+        if (-not $keepBackup -and (Test-Path -LiteralPath $backup)) {
+            Remove-Item -LiteralPath $backup -Force
         }
-        $keptLines.Add($line)
-    }
-    if ($settingsFileChanged) {
-        $text = $keptLines -join [Environment]::NewLine
-        if ($originalLines.Count -gt 0) { $text += [Environment]::NewLine }
-        [IO.File]::WriteAllText(
-            $SettingsPath, $text, (New-Object System.Text.UTF8Encoding($false)))
-    }
-
-    $existingKeys = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
-    foreach ($line in [IO.File]::ReadAllLines($SettingsPath)) {
-        if ($line -match '^\s*([^#;][^=]*?)\s*=') {
-            $null = $existingKeys.Add($matches[1].Trim())
-        }
-    }
-    $missing = @(
-        [IO.File]::ReadAllLines($TemplatePath) | Where-Object {
-            $_ -match '^\s*([^#;][^=]*?)\s*=' -and
-            -not $existingKeys.Contains($matches[1].Trim())
-        }
-    )
-    if ($missing.Count -gt 0) {
-        $newline = [Environment]::NewLine
-        $current = [IO.File]::ReadAllText($SettingsPath)
-        $prefix = if ($current.EndsWith($newline)) { '' } else { $newline }
-        $heading = if ($addedDefaultsCommentSeen) { '' } else { $addedDefaultsComment + $newline }
-        $addition = $prefix + $newline + $heading + (($missing -join $newline) + $newline)
-        [IO.File]::AppendAllText(
-            $SettingsPath, $addition, (New-Object System.Text.UTF8Encoding($false)))
-    }
-    return [pscustomobject]@{
-        AddedKeys = @($missing | ForEach-Object { ($_ -split '=', 2)[0].Trim() })
-        RemovedKeys = @($removedKeys)
     }
 }
-
 function Invoke-UnrealGenerator {
     param(
         [Parameter(Mandatory = $true)] [string]$Commandlet,
@@ -290,6 +261,8 @@ if ($actualEngineVersion -cne $expectedEditorEngineVersion) {
 
 $sourceStatus = @(& git -C $repoRoot status --porcelain -- `
     'mods/StableGyro' `
+    'tools/New-VoyageModSettings.ps1' `
+    'tools/Merge-VoyageModIni.ps1' `
     ':(exclude)mods/StableGyro/Slideshow')
 if ($LASTEXITCODE -ne 0) {
     throw 'Unable to inspect StableGyro source status.'
@@ -466,7 +439,22 @@ if ($Install) {
     $settingsTemplate = $generatedSettingsIni
     $settingsPath = Join-Path $paks 'StableGyro.ini'
     if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
-        Copy-Item -LiteralPath $settingsTemplate -Destination $settingsPath
+        $temporarySettings = $settingsPath + '.stablegyro-' +
+            [guid]::NewGuid().ToString('N') + '.tmp'
+        try {
+            $settingsCreate = & (Join-Path $repoRoot 'tools/Merge-VoyageModIni.ps1') `
+                -TemplatePath $settingsTemplate -OutputPath $temporarySettings
+            Assert-GameClosed
+            [IO.File]::Move($temporarySettings, $settingsPath)
+            if ((Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash -cne
+                $settingsCreate.Sha256) {
+                throw 'Created StableGyro settings readback hash mismatch.'
+            }
+        } finally {
+            if (Test-Path -LiteralPath $temporarySettings) {
+                Remove-Item -LiteralPath $temporarySettings -Force
+            }
+        }
         $addedKeys = @()
         $removedKeys = @()
         $settingsCreated = $true
