@@ -30,8 +30,9 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   only runtime safety fallback outside that file is disabled recoil: when the
   INI or either recoil key is missing or invalid, camera and ship recoil use
   zero. Explicit valid INI values still override that fallback.
-- The user owns model geometry. Ada may move or wire model files and update the
-  role manifest, but does not alter GLB geometry unless explicitly requested.
+- The user owns model geometry. The agent may move or wire model files and
+  update the role manifest, but must not alter GLB geometry unless explicitly
+  requested.
 - Replacement gun geometry and the model-selected composite cassette are gated
   by behavior-critical roles, stable owned identities, usable render geometry
   and collision, and the dependencies actually produced from the main GLB. Do
