@@ -1,423 +1,75 @@
-# Repository rules
+# Repository index
 
-These rules apply to the entire `TheLastCaretakerMods` repository. A closer
-`AGENTS.md` owns the exact contracts and workflow of its mod; do not duplicate
-those details here.
+Start here for repository work. This file is a map, not a replacement for the
+linked documents. For a mod task, open its `mods/<Mod>/AGENTS.md` first: it
+identifies the architecture to read before working on that mod, any binding
+mod rules, and the README for behavior and public build/installation steps.
 
-## Rule and knowledge ownership
+Shared `docs/` contains repository-wide rules and reusable knowledge. A
+`-rule.md` file constrains work; follow it or raise a conflict with the user.
+A `-knowledge.md` file helps explain the game or engine and may be rechecked
+when evidence disagrees. Choose the relevant links below by the task at hand;
+do not load every document just because it is indexed here.
 
-- Substantive shared documents under `docs/` end in `-rule.md` or
-  `-knowledge.md`. A rule constrains repository work: follow it, or report a
-  conflict or blocker to the user and obtain an explicit decision before
-  deviating. Knowledge records useful observations or reasoned inferences;
-  state uncertainty in the document heading and at the affected claim.
-  Recheck or discard knowledge when new evidence conflicts with it. A report
-  that cannot be independently reproduced or investigated is not established
-  knowledge. Knowledge saves investigation effort but does not prevent a new
-  investigation. `README.md`,
-  source-provenance files, and other navigational or data files keep their own
-  established names outside this shared-document naming pattern.
-- Shared `docs/` content must have a concrete or reasonably expected use across
-  mods. Keep mod-only contracts and open questions under the owning `mods/<mod>/`.
-  Write reusable conclusions without tying them to one mod; link to a mod as an
-  example when useful. Do not keep task histories or per-run measurements in the
-  shared reading path. Explicitly requested diagnostics use the opt-in method
-  linked from the subagent workflow.
-- Repository-level README files and the shared tool index contain only verified,
-  established capabilities, current interfaces and safety/compatibility limits.
-  Keep candidate IDs, experimental hypotheses, trial instructions and progress
-  history in an optional ignored owning backlog for a large investigation;
-  keep raw evidence in ignored storage, not in shared guidance.
-  Promote validated conclusions as general contracts without candidate labels;
-  retain version/fingerprint restrictions when they determine applicability.
-- Describe finished mods by their current behavior and necessary compatibility
-  boundaries. The checked-in state is the accepted result; do not preserve who
-  confirmed it, trial chronology, test dates, or per-run proof in normal mod
-  documentation. Keep exact selected release packages with artifacts.
-- The repository-wide [release and installation workflow](docs/release-and-installation-rule.md)
-  owns published-version identity, candidate retention, installation evidence,
-  and installed-file layout for every mod. Mod-local rules may add necessary
-  payload or migration contracts, but may not redefine those shared identities.
-- Autonomous DonkLift rules live in
-  `mods/DonkLiftKeyboardControl/AGENTS.md`.
-- The preserved UE4SS/Lua DonkLift implementation is a separate alternative
-  under `mods/DonkLiftKeyboardControlUE4SS`; it is not a dependency of the
-  autonomous mod.
-- Shared Voyage vehicle/HUD patterns belong in
-  `docs/vehicle-and-hud-modding-patterns-knowledge.md`. Evidence and object-specific
-  findings remain in the architecture and research documents.
-- Current source, the closest rules, durable documentation, and the latest
-  game-validated Git checkpoint are sources of truth. Chat history and local
-  extracted artifacts are not.
-- Keep rules minimal and owned: remove obsolete or counterproductive rules,
-  merge duplicates, and put command syntax and implementation conventions in
-  the owning tool documentation rather than repeating them here. Replace a
-  rule only after preserving its still-valid safety/data contract. Record the
-  reason and verification with the change; do not retain a chronological
-  history of superseded rules in the normal agent reading path.
+## Repository and process rules
 
-## Subagent coordination
+- [Documentation ownership](docs/repository-documentation-rule.md): what belongs
+  in shared docs, mod docs, an ignored backlog, or generated storage.
+- [Research workflow](docs/research-workflow-rule.md): investigate, record
+  evidence, maintain a large-task backlog, and commit intermediate findings.
+- [Generated-output lifecycle](docs/artifact-lifecycle-rule.md): choose `Tmp/`
+  or retained `artifacts/`, including cleanup after a failed run.
+- [Release and installation](docs/release-and-installation-rule.md): published
+  versions, candidates, packages, installation, and rollback.
+- [Game-derived data](docs/game-derived-data-rule.md): mappings, provenance,
+  Steam build gates, public tools, and build compatibility.
+- [Cooked-asset toolchain rules](docs/voyage-cooked-asset-toolchain-rule.md):
+  tool use, DML installation, and validation levels.
+- [Game experiments](docs/game-experiment-rule.md): live-game safety and
+  evidence needed before accepting behavior.
+- [Error handling](docs/error-handling-rule.md): defined outcomes and recovery
+  from failures in mods and tools.
+- [Repository hygiene](docs/repository-hygiene-rule.md): Git coordination,
+  source conventions, and cleanup boundaries.
+- [Subagent workflow](docs/subagent-workflow-rule.md): when and how to delegate,
+  report, review, and hand off installation.
+- [Agent work measurement](docs/agent-work-measurement-rule.md): optional
+  diagnostics when the user asks for resource accounting.
+- [Vehicle and HUD rules](docs/vehicle-and-hud-rule.md): shared implementation
+  boundaries for lifecycle, input, and presentation.
 
-- Before delegating, read [the subagent workflow](docs/subagent-workflow-rule.md).
-  Use a real child agent for delegated work. Reuse only this parent's own
-  suitable coder, with verified ownership; never borrow another parent/chat's
-  coder merely because it shares the repository or role. Unknown ownership is
-  not permission to assign work. Verify two-way messaging before task mutations.
-  Do not create a separate user-owned chat as a substitute without the user's
-  explicit request.
-- The parent owns research, architecture, task scope, review and user-facing
-  conclusions; the designated coder owns implementation, build, validation and
-  authorized installation for delegated implementation work. The parent performs
-  known trivial operations directly when they need no material context growth;
-  include discovery cost when deciding whether delegation pays off. Use the
-  established cases and scope criteria in the subagent workflow. Preserve
-  explicit user restrictions on either role and all operation-specific gates.
-  Send unknown game contracts back to the parent rather than inventing them.
-- Every assignment must name its parent return address, task ID, owned paths,
-  model/effort, evidence, acceptance criteria and allowed stages. A coder's
-  completion, failure or review-gate report must be sent to that parent without
-  a user reminder; a final answer only inside the child is not sufficient.
-  The parent must receive and review the report and continue authorized work,
-  not leave coordination or retrieval of missing reports to the user.
-- Every coding report includes scope/diff, validation and exact artifact or
-  installation identity, commit state, limitations, and a compact tool-use
-  report: intended operations, documented entry points invoked, successes and
-  evidence, failures/unexpected results, fallback/source inspection and its
-  trigger, and uncovered reusable operations. The parent explicitly requests
-  this report and triages reusable findings under the existing backlog rules.
+## Reusable knowledge
 
-## Research and knowledge protocol
+- [Boat resource sockets](docs/boat-resource-socket-architecture-knowledge.md):
+  power and Diesel connectors, registration, and hover-card data flow.
+- [Gameplay observations](docs/gameplay-observations-knowledge.md): measured
+  resource units and balancing values.
+- [Surface normals](docs/modeling-surface-normals-knowledge.md): geometric
+  orientation, shading exceptions, and useful checks.
+- [Research pitfalls](docs/research-pitfalls-knowledge.md): observed failures
+  and misleading approaches worth avoiding or rechecking.
+- [Runtime configuration](docs/runtime-configuration-patterns-knowledge.md):
+  setting ownership, caching, validation, and reload patterns.
+- [Vehicle and HUD patterns](docs/vehicle-and-hud-modding-patterns-knowledge.md):
+  shared actor lifecycle, provided actions, and widget behavior.
+- [Cooked-asset toolchain knowledge](docs/voyage-cooked-asset-toolchain-knowledge.md):
+  serialization, registries, DML discovery, and known format boundaries.
+- [Input integration](docs/voyage-input-integration-knowledge.md): stock action
+  identity, mappings, device settings, and hint ownership.
+- [Item fabrication and pickup](docs/voyage-item-fabrication-and-pickup-knowledge.md):
+  item serialization, inventories, crafting, and transfer behavior.
+- [Scanning and recipe unlocks](docs/voyage-scanning-and-recipe-unlocks-knowledge.md):
+  scanner completion, item flags, and vault grants.
 
-- Optimize research for understanding the producer, consumer, owner,
-  lifecycle, identity, and data contract—not merely for one patch that appears
-  to work.
-- Promote useful findings immediately: stable conclusions go to architecture
-  or shared-pattern docs; reusable failed/deceptive approaches go to research
-  pitfalls. For a large investigation, keep active hypotheses, package hashes,
-  and pending test results in a local ignored backlog under the owning mod.
-  A one-cycle question does not require a backlog. Follow the
-  [research workflow](docs/research-workflow-rule.md#working-backlogs-for-large-tasks)
-  for its lifecycle and retirement.
-- After context compaction, recover from repository state rather than chat, but
-  do not automatically read every large document in full. If an active backlog
-  exists, first read its compact restart/current-state/next-action sections;
-  then use `rg` and bounded ranges for relevant architecture or pitfall evidence.
-  Read a complete large backlog only when those sections and targeted references
-  are insufficient. An active backlog must name the current checkpoint, pending
-  gates, next action, and owning references.
-- Before a visibly heavy investigation (large binary analysis, broad asset
-  extraction/cook, long brute-force scan, or uncertain reverse engineering),
-  tell the user why it is costly and offer a lighter discriminating experiment.
-- Experiments must justify their information value against the user's time to
-  launch, check and close the game. Before requesting a test, state the hypothesis,
-  distinguishable outcomes and the next decision each outcome supports. Many
-  tests without useful evidence are expensive, not progress. After one or two
-  no-op results, or earlier when confidence in the discriminator is low, return
-  to research or strengthen observation before requesting another gameplay test;
-  do not keep changing fields blindly.
-- A controlled crash or visibly wrong result is acceptable when it proves the
-  intended path is live, the game process is disposable, and a recoverable
-  baseline exists.
+## Entry points outside shared docs
 
-## Game-derived data and version gates
-
-- Do not commit anything reproducible from the installed game: extracted
-  assets, `.jmap`, JSON, pseudocode, raw reports, disassembly dumps, cooked
-  packages, container inventories, or installed-file backups. Keep generated
-  output in ignored local storage selected by the lifecycle policy below; the
-  fact that a file is reproducible does not determine whether it is temporary
-  or worth retaining. Exceptions to the commit rule are the
-  explicitly reviewed `.usmap` registry under `mappings/Voyage/`. User-authored
-  mod assets, including `mods/Railgun/Assets/Model/Railgun.glb`, are ordinary
-  source inputs; this does not authorize extracted game meshes or materials.
-- Apply the shared [generated-output lifecycle](docs/artifact-lifecycle-rule.md):
-  `Tmp/` holds one-cycle output by default, while ignored `artifacts/` is for
-  generated output with a concrete use beyond the current research, feature,
-  or release cycle. Preserve owner, consumer, revalidation, rollback, and
-  cleanup boundaries there. Consult `artifacts/README.md` and
-  `artifacts/AGENTS.md` before creating or changing retained content.
-- Every mod writes temporary output below `Tmp/<Mod>/`, using its exact mod
-  directory name. Give runs meaningful names: identify active research and its
-  subject, while ordinary test builds remain disposable. A producer removes
-  run-only scratch after success; after failure, keep the logs and evidence
-  needed for diagnosis or recovery and report their location. The detailed
-  naming and cleanup contract is in the shared lifecycle document.
-- Every tracked `.usmap` must live in its own Steam-build/engine-version
-  directory and have a sibling manifest containing the Steam build ID,
-  exact engine/parser version, generator commit, file hash, validation evidence,
-  and revalidation condition. Never overwrite an older mapping for a new game
-  build. Keep a selected candidate and the evidence required to review it as a
-  durable artifact; raw dumper output and logs are temporary unless retained
-  explicitly for an unresolved investigation.
-- Never generate mappings merely because a task needs them. Call
-  `tools/Get-VoyageMappings.ps1`; it fingerprints the installed game, selects
-  the matching reviewed entry from `mappings/Voyage/`, validates it, and returns
-  the path. Run `New-VoyageMappings.ps1` only after that resolver reports that
-  no reviewed mapping matches a genuinely new Steam build ID, and ask the user to
-  start the game before generation.
-- Except for the reviewed mapping registry, commit the method, not the snapshot.
-  Reusable fingerprinting, extraction, inspection, patching, and disassembly
-  logic belongs under `tools/`, with exact usage documented.
-- Treat `tools/README.md` as the tool-routing index. Read it before surveying
-  tool implementations, and update it whenever a reusable tool is added,
-  renamed, or its interface, prerequisites, outputs, or safety contract change.
-- Treat the documented scripts as black boxes on their supported path. Select
-  the tool by intent in `tools/README.md`, run its documented interface, and
-  evaluate its exit code, manifest, summary, and output before reading source
-  or tracing third-party internals. Do not demand a separate tool version,
-  commit, or binary hash check before a normal call unless the documented
-  interface requires it for an actual format or safety contract. Inspect
-  implementation only when the tool
-  fails, hangs, rejects valid-looking inputs, produces an unexpected result,
-  or the documented contract is insufficient for the task.
-- Toolchain coverage must reach at least 80% of recurring mechanical operations
-  specifically in game-asset work and release preparation. Measure game
-  fingerprinting, mapping resolution/generation, asset retrieval/inspection/
-  modification/validation, and release build, cook, packaging, verification,
-  installation and restoration. Source-only modeling, image/video production
-  and unrelated development are outside this metric. Do not inflate or dilute the
-  metric with reasoning, source editing, documentation, or genuinely novel
-  diagnosis after a black-box failure. Report uncovered operations and their
-  impact in the task's tool-use report instead of normalizing ad-hoc commands.
-- The pipeline's primary outcome is low agent effort and low context/token use
-  for ordinary predictable work, while preserving correctness, provenance and
-  safety gates. A black-box wrapper is only one means to that outcome: it is not
-  successful if callers still have to study its implementation, reconstruct its
-  dependency chain, sift through large raw output, or repeat predictable steps.
-  Prefer one intent-level entry point with a compact structured result and paths
-  to detailed ignored evidence. Keep verbose logs and full JSON out of normal
-  conversation/context unless a reported failure requires them.
-- A reported gap is evidence, not automatic authorization or a requirement to
-  build another tool. Prioritize defects and recurring friction in actual
-  user-requested workflows. The 80% target is not a mandate for 100% feature
-  coverage: defer lower-priority gaps rather than inventing new work to improve
-  the score. New workflow families require a
-  clear user need; an old one-off report alone is insufficient.
-- Do not interrupt active work, change a tool or rule, or create a standalone
-  commit for every low-impact observation. Keep a single occurrence in the
-  owning agent report and review such observations in a batch
-  at the next natural checkpoint. Act sooner only when the current workflow is
-  blocked, correctness/safety/provenance is at risk, or the same friction recurs
-  in multiple independent real-task iterations. Repetition is the normal trigger
-  for small usability improvements; one minor occurrence is not.
-- Pipeline work must have a substantial, measurable expected return. Before
-  changing a tool or rule, name the observed recurring cost and the intended
-  before/after delta in public calls, retries, implementation files opened,
-  output volume, failure rate, or coverage of a real workflow. Include the
-  expected implementation, debugging, maintenance, and caller-context/token
-  cost: the cumulative savings over the realistically expected uses must exceed
-  that cost by a clear margin. Re-evaluate this break-even estimate when a test
-  or repair expands unexpectedly, and stop or defer the work when it no longer
-  pays back. Afterward record the measured result. Defer marginal score polishing
-  or speculative convenience work when it offers only a small improvement
-  without a repeated failure, material risk reduction, or clear user need;
-  work performed merely to keep improving the pipeline is itself a failure mode.
-- Triage cross-agent questions and pause/release requests before continuing a
-  long local pipeline investigation. Give the owning feature agent the smallest
-  decision, evidence, or explicit resume signal needed to keep independent work
-  moving, then continue pipeline work in parallel. Do not make another agent
-  wait merely because the pipeline owner is documenting or developing an
-  unrelated tool; use the Git semaphore only for the short shared mutation.
-- Public build, release, extraction, and packaging scripts must support Windows
-  PowerShell 5.1 unless their documented interface explicitly says otherwise.
-  Parse and smoke-test the public `-File` entry point with `powershell.exe`;
-  follow the implementation conventions in `tools/README.md`.
-- Never launch an Unreal Engine build producer, `Build.bat`, UnrealBuildTool, or
-  an `UnrealEditor-Cmd.exe` build/generate/cook step in the restricted sandbox,
-  not even as a first probe. Request outside-sandbox execution for the initial
-  invocation of the owning producer. UBT must write and rotate
-  `%LOCALAPPDATA%\UnrealBuildTool\Trace*.uba`; sandbox denial causes a
-  `dotnet.exe` dialog and exit `-532462766` / `0xE0434352` before the project is
-  read. Treat that signature as a launch-permission failure, not a project,
-  Blueprint, engine, SDK, or .NET defect; inspect the captured output and retry
-  once outside the sandbox with a fresh output identity.
-- A tracked wrapper's normal path must not restore/build a .NET project through
-  `dotnet run`. Consume a manifest-validated published binary from
-  `.tools/bin/`; reserve source-project execution for explicit tool development.
-- Normal Blueprint structure, function, call, member-reference, soft-object,
-  and SCS-component questions call `Get-VoyageAssetSummary.ps1` with the asset
-  identity and the narrowest applicable `-Focus`; use its compact result and
-  returned `summaryPath` instead of searching the full export JSON. Call
-  `Get-VoyageAssetJson.ps1` when the complete serialized export is actually
-  required and consume only its returned `jsonPath`. Their default `Game` source mounts
-  and caches only stock game containers; use explicit `Mod` source with one
-  exact mod container only for exceptional debugging, and never cache or
-  promote that output. Request the complete inventory through `-ListPackages`
-  and consume only its returned `packageListPath`; do not discover `_catalog`
-  manually. The central game store, its layout, indexing, provenance sidecars,
-  reuse, and invalidation are private to the tool: do not inspect them to locate
-  an asset, choose or override a store root, or manually copy, move, merge,
-  promote, rewrite, or delete entries. If the tool fails or returns an unexpected
-  result, stop normal research and diagnose the tool before touching its store.
-- Durable cooked-asset contracts and boundaries live in
-  [toolchain knowledge](docs/voyage-cooked-asset-toolchain-knowledge.md); the
-  workflow and validation ladder live in
-  [toolchain rules](docs/voyage-cooked-asset-toolchain-rule.md).
-- Durable findings about the Boat's Diesel socket hover card live in
-  `docs/boat-resource-socket-architecture-knowledge.md`; active feature work belongs with
-  the owning mod, using an ignored local backlog only when the task is large
-  enough to need one.
-- Before reusing a saved game-derived input, compare the installed game's Steam
-  build ID with its provenance. A producer that identifies
-  the game and re-extracts current stock inputs during the run satisfies this
-  gate; do not add a separate manual fingerprint call before that producer.
-- For a requested candidate, run the owning public producer first (or the
-  documented build path where no public producer exists). Do not
-  manually audit every game contract, tool version, or mapping before that run.
-  Each game-bound mod keeps its pinned Steam build ID in `mods/<Mod>/game-build.json`;
-  `version.txt` remains the published Nexus version. Every public producer that
-  uses this pin accepts `-IgnorePinnedGameVersion`. On a pin mismatch, retry with
-  that flag. It bypasses only comparison with the previous accepted build: the
-  producer must record the installed game's actual build ID, use current stock
-  inputs, and retain structural, provenance, and package checks. Do not relabel
-  an old extracted input as current. No game-build pin is needed for a contract
-  governed only by the engine or serialization format.
-- If that retry cannot resolve reviewed mappings for the installed game, use
-  `Get-VoyageMappings.ps1` to confirm the gap, then ask the user whether to
-  update mappings or delegate that work; obtain the user's model choice before
-  spawning a mapping agent. Retry the producer after the mapping is ready.
-  Investigate source and game contracts only when the normal build path still
-  fails or the game test reveals a problem. A successful build provides a
-  structurally checked candidate; offer a real-game test next. A successful
-  game test accepts the tested behavior on that build. Then update the mod's
-  pinned ID without changing the tested package bytes. Keep the actual build
-  ID, mapping identity, and the exact tested package in release evidence.
-  General engine behavior follows its engine/serialization checks rather than
-  acquiring a game-build gate solely because it was observed on one build.
-- Keep mod version, artifact version, user-facing game version, Steam build ID,
-  and Unreal Engine version as separate identities. A game
-  update neither proves incompatibility nor requires a mod-version bump; it
-  invalidates version-bound build inputs and requires new evidence before a new
-  compatibility claim. Record whether a display/marketing version came from a
-  machine-readable source or from the user, and never infer it from an
-  executable version such as `UE5-CL-0`.
-- Compatibility metadata may say `game-validated` only after the requested
-  runtime behavior is checked in the real game. Compile, cook, container verify,
-  semantic comparison, clean load, and save load remain lower gates.
-- An installer that replaces a Voyage mod container must check the game process
-  immediately before mutation, preserve an exact temporary recovery copy during
-  mutation, install from a validated release manifest, and read back every
-  installed hash. Keep transaction records and recovery copies in `Tmp/` only
-  while they are needed for that operation. Keep ZIP archives outside the game;
-  install only files the game consumes. This also applies to temporary builds.
-- Any generated or reconstructed game-derived file that must remain in Git as
-  a source input needs a provenance header naming its Steam build ID when the
-  contract is game-specific, engine version, reconstruction method/tools, and
-  revalidation condition. If the
-  format cannot contain comments, record the same metadata in its owning
-  README or registry.
-
-## Shared Voyage vehicle and HUD principles
-
-- Prefer lifecycle events and direct owned references over periodic object
-  discovery. Repeated scans or rediscovery are a last-resort runtime design:
-  explain why no event or ownership path is sufficient and notify the user
-  before implementing one. This restriction does not apply to ordinary
-  simulation ticks, line traces, or other gameplay updates that are not
-  searching for ownership or lifecycle state.
-- Treat input mapping, vehicle state, physical movement, provided actions, and
-  HUD rendering as separate layers until evidence proves a direct connection.
-- Enhanced Input mappings or action events alone do not imply that Voyage's
-  standard hint UI will display an action. Locate the live action provider,
-  registration path, filter, and rendered widget identity.
-- Blueprint overrides bind to the exact declaring UFunction owner. A same-name
-  function compiled against the wrong stand-in class is a different function,
-  even when the graph compiles successfully.
-- Editor-only mirrors must reproduce exact `/Script` module/class/function,
-  property, struct, and enum identities needed by cooked assets. Convenient
-  invented members are unsafe.
-- A relocated original Blueprint is a snapshot of one game version. Never keep
-  it in Git or assume a previously built replacement inherits later game
-  changes automatically.
-- Identify UI elements by stable UObject/action identity where possible, not
-  child index, rendered key text, or localized label.
-- Treat the shared-pattern document as a starting model for another vehicle,
-  not proof that every Voyage vehicle uses the same fields or lifecycle.
-
-## Error handling and defined outcomes
-
-- Every in-scope input or requested action must have a defined outcome. Never
-  silently return from an error check and leave promised behavior missing or
-  the mod in an indeterminate, partially applied state. A final mod must work
-  or fail unmistakably; a warning that accompanies broken behavior is not a
-  substitute for a working implementation.
-- Error reporting is a development/investigation aid, not a production feature
-  in its own right. Do not add permanent error panels, notification frameworks,
-  polling or diagnostic packages, or block an otherwise scoped change on
-  developing them. Introduce targeted diagnostics when investigating a concrete
-  problem, then remove them from the final mod. Build/install tools and agent
-  handoffs must still report their failures and actual outcomes.
-- Prefer proven stock contracts over speculative defensive checks. Validate
-  before mutation where needed and preserve or restore a coherent state on
-  failure. A silent fallback to stock behavior is not success when the requested
-  mod behavior was not performed. Do not remove necessary safety checks or
-  introduce unbounded retries merely to avoid dealing with a failure.
-- In a critical unrecoverable failure, an explicit fatal error that terminates
-  the game is permitted as a last resort: crashing is very undesirable, but
-  preferable to silently leaving the mod nonfunctional or continuing in a
-  corrupt/indeterminate state. Preserve actionable failure context and avoid
-  corrupting persistent data. Do not use a crash for ordinary out-of-scope input
-  or when safe recovery is available; do not invent crashes merely to satisfy
-  this rule.
-  This policy is not authorization to deliberately crash a live user session;
-  controlled crash experiments still follow the research and test safeguards.
-- Deliberately ignored out-of-scope events and verified idempotent no-ops are
-  normal outcomes, not errors. Keep them distinct from a failed operation on
-  an object the mod is responsible for; document that boundary explicitly.
-
-## Experiment and validation workflow
-
-- Install all new DML mods' container files together directly in
-  `Voyage/Content/Paks/LogicMods` so DML can discover them. A virtual actor path
-  or a previously registered mod working elsewhere is not proof of fresh
-  discovery. See the [DML installation contract](docs/voyage-cooked-asset-toolchain-knowledge.md#dml-actor-identity-and-physical-installation).
-- Never replace installed mod or game files while the game is running. The
-  user may play while repository-only work continues; do not interrupt or
-  alter his current game session.
-- Do not ask the user in advance whether the game is closed. Once installation
-  is authorized and the candidate has passed its required review/validation,
-  the installing agent checks the actual game process immediately before
-  mutation. If absent, install without another user question. If running, leave
-  installed files untouched, report the blocker and wait for the user; never
-  close the game yourself. Unknown process state is not proof that it is closed.
-  On resumption, check again. This rule does not grant installation authority
-  to research-only work or waive the manifest, backup and readback gates.
-- Before a risky test, preserve an exact known-good package, change one
-  architectural variable, state the expected outcomes, and record the actual
-  game result immediately.
-- A successful compile, cook, container verification, clean log, or load is
-  not gameplay/UI validation. Require a real-game test proportional to the
-  changed behavior.
-- If an experiment removes control, causes autonomous behavior, corrupts UI,
-  or crashes, restore the last checkpoint instead of layering speculative
-  fixes on the unknown state.
-
-## Repository hygiene
-
-- Serialize every Git-state mutation through the repository `git-transaction`
-  semaphore documented in `tools/repository-git-coordination.md`. Normal scoped
-  commits must use `tools/commit-repository-changes.ps1`, which owns exact-path
-  staging, commit, and post-commit verification inside one lock. Do not run
-  direct `git add`, `git commit`, or another index/HEAD/ref mutation, and never
-  split staging and commit across lock acquisitions. Read-only Git commands and
-  edits/builds on explicitly disjoint paths may remain concurrent. If the lock
-  is busy, wait or report its recorded owner; never delete an active lock.
-- Preserve unrelated worktree changes and stage only the exact files belonging
-  to the validated change.
-- In C++ generator code, replace every repeated `TEXT("...")` literal with a
-  named constant. Also name a single-use literal when it represents a logical
-  contract, tuning value, asset identity, or naturally belongs to an existing
-  constant group. Keep engine-level names reusable by multiple mods in a
-  shared header under `tools/`; keep game- and mod-specific values with their
-  owning mod. Keep diagnostic and assertion format strings inline even when
-  the same wording appears in multiple files; they are messages, not shared
-  identities or contracts.
-- Do not expose opaque reflected pin names such as `A`, `B`, or `bPickA` at
-  generator call sites. Shared helpers may store those raw names internally,
-  but consuming code must use the node's semantic role, such as binary left
-  and right operands or select condition/true/false values.
-- Keep toolchain-specific ignore rules in the owning mod. The repository root
-  should contain only genuinely repository-wide ignore patterns.
-- Temporary probe mods/containers are allowed while isolating risk, but remove
-  them from user-facing mod folders and the installed game after the result is
-  understood. Keep reusable standalone inspectors under `tools/`.
+- [Repository README](README.md): human overview, repository layout, and
+  starting points for new work.
+- [Tool index](tools/README.md): choose a public script by intent and read its
+  supported interface before inspecting implementations.
+- [Git coordination](tools/repository-git-coordination.md): required semaphore
+  and exact-path commit wrapper for Git mutations.
+- [Artifact storage](artifacts/README.md): retained ignored output and its
+  ownership; read its local `AGENTS.md` before changing retained contents.
+- [Mapping registry](mappings/README.md): reviewed `.usmap` entries and their
+  versioned manifests.

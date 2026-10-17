@@ -1,8 +1,25 @@
 # DonkLiftKeyboardControl Unreal project
 
+DonkLiftKeyboardControl makes forklift throttle and steering gradual on a
+keyboard, with quick reset controls.
+
 This editor-only Unreal Engine 5.8 project generates the assets for the
 self-contained `DonkLiftKeyboardControl` IoStore mod. The shipped mod does not
 require UE4SS, DML, or any other loader.
+
+## Controls and limitations
+
+W/S gradually move throttle forward or reverse, and A/D gradually steer.
+Releasing these keys holds the current input. X resets throttle to neutral; C
+centers steering. The forklift HUD shows X / Brake and C / Center hints in
+English or Russian according to the game language, with English fallback for
+other languages.
+
+The package has no external settings file. Its defaults are throttle travel of
+one third of the full range per second, steering maximum speed of 1.20 per
+second, acceleration of 2.50 per second squared, and reversal braking of 5.00
+per second squared. On exit, the steering input clears, although already turned
+wheels may remain visually turned until the forklift is entered again.
 
 The project mirrors only the native Voyage types needed to compile the
 Blueprints. Those C++ stand-ins are editor inputs and must never be included in
@@ -99,7 +116,7 @@ Useful explicit options:
   source and records that fact in the manifest. Omit it for a real release.
 
 The script never uploads or publishes anything. The ZIP contains the three
-container files and the player-facing `README.txt`; detailed logs, fingerprint,
+container files and `README.md`; detailed logs, fingerprint,
 inventory, backup, and hashes stay beside it as local evidence.
 
 The remaining commands describe the internal stages and are useful for

@@ -7,6 +7,12 @@ evidence; generated output follows the shared
 [artifact lifecycle](artifact-lifecycle-rule.md), and tool commands live in the
 [tool index](../tools/README.md).
 
+After context compaction, recover from repository state rather than relying on
+chat history. For a large active investigation, first read the backlog's
+restart, current-state, and next-action sections. Use targeted searches and
+bounded ranges of architecture or pitfall evidence; read a complete large
+backlog only when those pointers are insufficient.
+
 ## Start with the question and its owner
 
 1. State the behavior or contract that is unknown and identify the mod that
@@ -32,7 +38,7 @@ Keep mod-specific evidence and open questions with the owning mod. Promote a
 conclusion to shared `docs/` only when another mod can reasonably use it;
 describe the reusable contract without turning one mod's trial history into a
 general rule. Game-derived source inputs retained in Git follow the provenance
-requirements in [the repository rules](../AGENTS.md#game-derived-data-and-version-gates).
+requirements in [the game-derived data rules](game-derived-data-rule.md).
 
 ## Working backlogs for large tasks
 
@@ -72,6 +78,10 @@ baseline for a risky test and change one architectural variable at a time.
 After one or two results that do not distinguish the hypotheses, return to
 research or improve the observation instead of requesting another similar
 gameplay test.
+
+A controlled crash or visibly wrong result can be a useful discriminator when
+the game process is disposable and a recoverable baseline exists. Keep its
+observation and recovery boundary explicit.
 
 Before a visibly heavy investigation, such as broad extraction, full indexing,
 long decompilation, or wide binary scanning, explain its expected cost and

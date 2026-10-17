@@ -433,7 +433,7 @@ New-Item -ItemType Directory -Path $payloadRoot -Force | Out-Null
 foreach ($name in $payloadNames) {
     Copy-Item -LiteralPath (Join-Path $containerFiles $name) -Destination (Join-Path $payloadRoot $name)
 }
-Copy-Item -LiteralPath (Join-Path $modRoot 'README.txt') -Destination (Join-Path $payloadRoot 'README.txt')
+Copy-Item -LiteralPath (Join-Path $modRoot 'README.md') -Destination (Join-Path $payloadRoot 'README.md')
 Copy-Item -LiteralPath $generatedSettingsIni -Destination (Join-Path $payloadRoot 'StableGyro.ini')
 $archivePath = Join-Path $releaseRoot "StableGyro-$Version.zip"
 $installedArchiveName = "StableGyro_$Version.zip"

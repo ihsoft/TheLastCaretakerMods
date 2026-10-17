@@ -25,12 +25,12 @@ To learn how something works without starting an implementation:
 > facts from hypotheses, and point me to the supporting files and tools. Do not
 > modify anything.
 
-To continue an existing mod safely:
+To continue an existing mod:
 
-> Read the root rules plus the `AGENTS.md` and `README.md` inside
-> `mods/<mod-name>`. Check my installed game fingerprint against the documented
-> version, then tell me what can be rebuilt or tested. Do not reuse stale
-> extracted assets.
+> Read the root index and the mod's `AGENTS.md`. Follow its architecture and
+> rule links, then use its `README.md` for behavior and public build steps. For
+> a requested candidate, run the documented producer first and report the next
+> validation step. Do not reuse stale extracted assets.
 
 Tell the agent where your game is installed if it is not at the path currently
 used by the scripts. Also say explicitly when you want **research only**, when

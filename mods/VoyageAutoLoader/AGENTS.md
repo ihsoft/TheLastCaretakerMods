@@ -1,19 +1,14 @@
-# Voyage Auto Loader
+# VoyageAutoLoader index
 
-- Empty sidecars default to gameplay-only activation. entryClass and activateIn
-  are independently optional key:value fields; their absence preserves each
-  default independently. Do not reintroduce JSON or a required version field.
-  Never treat every non-playing/transitional world as the main menu.
-- Entry mods own their Pawn/control readiness checks; the loader must not
-  require a Pawn. Menu/phase changes still require their runtime test.
-- Physical container stem and virtual entry class are separate identities.
-- No DML payload redistribution, native runtime DLL, UE4SS, external runtime
-  preprocessing, or changes to the user's DML enable-list/save.
-- Our bootstrap container has priority; DML is optional and never a parent dependency.
-  Preserve DML menu availability; gameplay autoload does not wait for DML.
-  Use existing-actor guards, not a claimed strict activation order. Validate
-  repeated travel separately: DML can recreate itself independently. Do not
-  claim arbitrary async mod initialization has completed when spawning returns.
-- The current source owns the loader lifecycle and descriptor contract.
-  Never launch Voyage without permission or install while it is running.
-- Generated Content, build/cook output and package evidence remain ignored.
+Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
+
+- **Read first for every mod task:** [Architecture](ARCHITECTURE.md) maps
+  sidecar discovery, menu/gameplay phases, and entry-actor lifecycle.
+- **Required before changes, builds, or installation:** [Mod rules](MOD-RULES.md)
+  bind sidecar defaults, DML coexistence, and loader boundaries.
+- [Build and descriptor contract](README.md): public producer, accepted
+  fields, and runtime limits.
+- [DML proposal](DML-PROPOSAL.md): external proposal context only; it is not
+  an implementation or release contract.
+- [Cooked-asset knowledge](../../docs/voyage-cooked-asset-toolchain-knowledge.md):
+  DML discovery and package identity when comparing loaders.

@@ -110,7 +110,11 @@ not sufficient authorization.
   report to the named parent through the verified route. Include task/result,
   scope/diff, checks and evidence, exact artifact/manifest paths and hashes,
   installed state when relevant, commit state, limitations and next decision.
-  Coding reports also include the root `AGENTS.md` tool-use report.
+  Coding reports also include a compact tool-use report: intended operations,
+  documented entry points invoked, successes and evidence, failures or
+  unexpected results, fallback/source inspection and its trigger, and
+  uncovered reusable operations. The parent requests this report and triages
+  reusable findings under the owning backlog rules.
 - After the report, send `REPORT_READY task=<id> result=<status>` and then give
   the child's final answer. The marker is a notification, not a replacement for
   the report. A final answer in the child alone does not satisfy delivery.

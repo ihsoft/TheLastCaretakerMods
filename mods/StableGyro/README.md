@@ -1,5 +1,8 @@
 # StableGyro
 
+StableGyro adds gradual pitch controls and steadier altitude and horizontal
+flight to the Gyro.
+
 Loader-free IoStore mod for the stock Gyro. It leaves the complete current
 Gyro Blueprint at its original package identity, adds a small generated child,
 and redirects newly built Gyros through the stock item data asset's
