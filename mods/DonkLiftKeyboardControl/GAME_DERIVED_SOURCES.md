@@ -9,8 +9,8 @@ hand. The current candidate pin is in `game-build.json`.
 This Steam build ID binds the sources and build inputs used to produce the current
 package. It is not a runtime compatibility allowlist: a different game build
 requires a new candidate build and game test before a compatibility claim, but
-may still run an existing package correctly. Player-facing mod and tested-game versions live in
-`VERSION.json`.
+may still run an existing package correctly. The published Nexus version lives
+in `version.txt`; historical compatibility evidence lives in `VERSION.json`.
 
 - Steam build: `25056839`
 - Unreal Engine: `5.8.1`

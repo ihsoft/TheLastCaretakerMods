@@ -12,11 +12,8 @@ W/S gradually move throttle forward or reverse, and A/D gradually steer.
 Releasing these keys holds the current input. X resets throttle to neutral; C
 centers steering. The HUD shows the reset hints in English or Russian according
 to game language, with English fallback. There is no external settings file.
-Current defaults are throttle travel of one third of the full range per
-second, steering maximum speed of 1.20 per second, acceleration of 2.50 per
-second squared, and reversal braking of 5.00 per second squared. On exit the
-steering input clears; already turned wheels may remain visually turned until
-the forklift is entered again.
+On exit the steering input clears; already turned wheels may remain visually
+turned until the forklift is entered again.
 
 The single `DonkLiftKeyboardControl_P` container replaces the stock forklift
 package. The complete original is relocated to
@@ -25,6 +22,26 @@ address installs `ModActor_C` and adds localized X/C actions to the native
 provided-action list. Each helper acts only on its owning forklift while it
 is controlled. Loss of control clears native inputs and internal integration
 state.
+
+## Control and standard HUD
+
+The stock game writes digital `-1`, `0`, and `1` to `ThrottleInput` and
+`SteeringInput`. The helper integrates gradual values using `DeltaSeconds` and
+writes the same fields, which drive both physics and the native percentage
+display. Active values stop at `±0.9999`, displayed as `100%`, so they stay
+distinct from the game's exact digital commands. X writes neutral throttle;
+C writes neutral steering and clears steering velocity. When the forklift is
+not player-controlled, the helper clears its integrated values and velocity
+and writes zero to the native fields.
+
+The child overrides `VoyageVehiclePawn.GetProvidedActionsBP`, the function's
+declaring owner, to supply enabled `Central` actions for X/C. `Central` is the
+lower E/H row; `Context` is the center fork row. The visible lower row is
+`BP_DynamicPlayerInputHorizontalWidget_Bottom.ContextInputActionsRoot`, not
+`BP_VoyageIngameForklift_C.KeybindRoot`. Native action collection uses a `TSet`,
+so action order can vary, including after pause. Labels use
+`VoyageGameUserSettings.CustomSettings.LanguageType` (`English=1`,
+`Russian=11`), with English fallback.
 
 ## Editor-only source layout
 
@@ -43,5 +60,5 @@ types have version-bound provenance in their headers and in
 C++ source, generated headers, nor editor dependencies enter the released
 container; only generated cooked assets do.
 
-The control, HUD, package, and validation contracts are in [mod rules](MOD-RULES.md).
+The [mod rules](MOD-RULES.md) contain the few required local boundaries.
 Version-bound game identities are in [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md).
