@@ -2,7 +2,7 @@
 
 Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
 
-- **Read first for every mod task:** [Architecture](ARCHITECTURE.md) maps
+- [Architecture](ARCHITECTURE.md):
   sidecar discovery, menu/gameplay phases, and entry-actor lifecycle.
 - **Required before changes, builds, or installation:** [Mod rules](MOD-RULES.md)
   bind sidecar defaults, DML coexistence, and loader boundaries.

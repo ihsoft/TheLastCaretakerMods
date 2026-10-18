@@ -2,7 +2,7 @@
 
 Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
 
-- **Read first for every mod task:** [Architecture](ARCHITECTURE.md) maps the
+- [Architecture](ARCHITECTURE.md):
   relocated forklift, owned input helper, native behavior, and HUD actions.
 - **Required before changing this mod:** [Mod rules](MOD-RULES.md) protect stock
   package replacement, owned input, and the native HUD path.

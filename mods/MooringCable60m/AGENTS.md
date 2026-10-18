@@ -2,7 +2,7 @@
 
 Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
 
-- **Read first for every mod task:** [Architecture](ARCHITECTURE.md) explains
+- [Architecture](ARCHITECTURE.md):
   stock cable length ownership, package override, and version-bound behavior.
 - [Candidate producer](Build-MooringCable60m.ps1): prepares the stock override;
   shared release and installation rules apply.

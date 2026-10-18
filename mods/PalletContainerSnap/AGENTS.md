@@ -3,7 +3,7 @@
 Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
 This investigation is paused; preserve its current work.
 
-- **Read first for every mod task:** [Architecture](ARCHITECTURE.md) maps
+- [Architecture](ARCHITECTURE.md):
   four-slot placement, generator ownership, candidate routes, and validation limits.
 - **Required before changes, builds, or installation:** [Stable mod rules](MOD-RULES.md)
   bind the public producer, authored slot data, and generator boundaries.

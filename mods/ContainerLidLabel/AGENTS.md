@@ -2,7 +2,7 @@
 
 Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
 
-- **Read first for every mod task:** [Architecture](ARCHITECTURE.md) explains
+- [Architecture](ARCHITECTURE.md):
   the relocated stock container, lid label, icons, and configuration path.
 - [Game-derived sources](GAME_DERIVED_SOURCES.md): stock identities and build
   applicability.

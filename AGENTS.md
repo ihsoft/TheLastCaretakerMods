@@ -1,9 +1,10 @@
 # Repository index
 
 Start here for repository work. This file is a map, not a replacement for the
-linked documents. For a mod task, open its `mods/<Mod>/AGENTS.md` first: it
-identifies the architecture to read before working on that mod, any binding
-mod rules, and the document owning build and installation details.
+linked documents. For a mod task, open its `mods/<Mod>/AGENTS.md` first. Follow
+its binding rules, then choose documents for the actual task. Read architecture
+when behavior, implementation, or game contracts matter; a routine build or
+publication can start with the release rules and public producer.
 When no mod exists yet, start with the new-mod workflow below.
 
 Shared `docs/` contains repository-wide rules and reusable knowledge. A

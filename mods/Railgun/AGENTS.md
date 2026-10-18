@@ -2,9 +2,9 @@
 
 Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
 
-- **Read first for every Railgun task:** [Architecture](ARCHITECTURE.md) maps
+- [Architecture](ARCHITECTURE.md):
   the current station, weapon, HUD, item, skill, registry, and their data flow.
-  It is the starting point before reading source or deciding what to change.
+  Read before changing behavior or deciding what to change in the source.
 - **Required before any change, build, or installation:** [Mod rules](MOD-RULES.md)
   contain binding limits on the owned model, settings, producer, payload, and
   runtime validation. Follow them even when a source change looks small.
