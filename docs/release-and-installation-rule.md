@@ -39,10 +39,14 @@ must deliver every game-consumed payload file to the mod's required destination
 using the [Vortex layouts](vortex-release-archive-knowledge.md). Do not wrap
 the payload in a release/version folder. Use the shared archive producer for a
 standard IoStore triplet, including INI, content-plugin, and LogicMods cases;
-verify the entry list, file hashes, and any override JSON before selecting the
-candidate. Archive validation is structural. Claim Vortex compatibility only
-after Vortex install, enable, deploy, and destination readback; claim gameplay
-compatibility only after the real-game test.
+verify the entry list, file hashes, and any override JSON or FOMOD metadata
+before selecting the candidate. These are integral ZIP contents, not
+post-release additions. Archive validation is structural. Claim Vortex
+compatibility only after installing, enabling, and deploying that exact ZIP
+in Vortex, then checking both required destinations and the absence of
+unexpected deployed files; claim gameplay compatibility only after the
+real-game test. A published ZIP remains immutable; packaging changes reach
+users through a new release.
 
 ## Game update and candidate builds
 

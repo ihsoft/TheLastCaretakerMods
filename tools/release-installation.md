@@ -32,7 +32,9 @@ Add `-AdditionalFile` for an INI or another payload file. Use
 `-ContentPluginDescriptor` for a content plugin, or `-LogicMods` for a DML
 actor. The producer chooses and verifies the matching ZIP layout; consult
 [Vortex layouts](../docs/vortex-release-archive-knowledge.md) only to choose
-the intended destination. The archive path must be new. No ZIP goes in Paks.
+the intended destination. For a game-root override, it includes the FOMOD
+metadata inside the ZIP automatically. The archive path must be new. No ZIP
+goes in Paks.
 
 Create the release manifest for an already-built triplet and ZIP:
 

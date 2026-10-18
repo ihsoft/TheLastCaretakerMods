@@ -37,7 +37,28 @@ try {
         $zip = [IO.Compression.ZipFile]::OpenRead($archive)
         try {
             $entries = @($zip.Entries | ForEach-Object { $_.FullName })
-            if (Compare-Object $case.entries $entries) { throw "ZIP entries mismatch: $($case.name)" }
+            $expectedEntries = @($case.entries)
+            if ($expectedLayout -ceq 'root') {
+                $expectedEntries += @('fomod/', 'fomod/ModuleConfig.xml', 'fomod/info.xml')
+            }
+            if (Compare-Object $expectedEntries $entries) { throw "ZIP entries mismatch: $($case.name)" }
+            if ($expectedLayout -ceq 'root') {
+                $moduleEntry = $zip.GetEntry('fomod/ModuleConfig.xml')
+                $infoEntry = $zip.GetEntry('fomod/info.xml')
+                $moduleReader = New-Object IO.StreamReader($moduleEntry.Open())
+                try { [xml]$moduleConfig = $moduleReader.ReadToEnd() } finally { $moduleReader.Dispose() }
+                $infoReader = New-Object IO.StreamReader($infoEntry.Open())
+                try { [xml]$info = $infoReader.ReadToEnd() } finally { $infoReader.Dispose() }
+                $folder = $moduleConfig.SelectSingleNode('/config/requiredInstallFiles/folder')
+                $moduleName = $moduleConfig.SelectSingleNode('/config/moduleName')
+                $infoName = $info.SelectSingleNode('/fomod/Name')
+                if ($null -eq $moduleName -or $moduleName.InnerText -cne 'Example' -or
+                    $null -eq $infoName -or $infoName.InnerText -cne 'Example' -or
+                    $null -eq $folder -or $folder.source -cne 'Voyage' -or
+                    $folder.destination -cne 'Voyage' -or $folder.priority -cne '0') {
+                    throw "FOMOD metadata mismatch: $($case.name)"
+                }
+            }
         } finally { $zip.Dispose() }
     }
     [pscustomobject]@{ status = 'passed'; layouts = $cases.Count }

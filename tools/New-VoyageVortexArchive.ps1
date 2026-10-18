@@ -91,6 +91,31 @@ if ($layout -eq 'root' -or $layout -eq 'pakalt') {
         value = $(if ($layout -eq 'root') { 'thelastcaretaker-root' } else { 'thelastcaretaker-pakalt' })
     })
 }
+$fomodName = if ($layout -eq 'root') { $stem -creplace '_P$', '' } else { $null }
+$fomodEntries = @()
+if ($layout -eq 'root') {
+    $fomodEntries = @('fomod/', 'fomod/ModuleConfig.xml', 'fomod/info.xml')
+}
+$fomodModuleConfig = $null
+$fomodInfo = $null
+if ($layout -eq 'root') {
+    $escapedName = [Security.SecurityElement]::Escape($fomodName)
+    $fomodModuleConfig = @"
+<?xml version="1.0" encoding="utf-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://qconsulting.ca/fo3/ModConfig5.0.xsd">
+  <moduleName>$escapedName</moduleName>
+  <requiredInstallFiles>
+    <folder source="Voyage" destination="Voyage" priority="0" />
+  </requiredInstallFiles>
+</config>
+"@
+    $fomodInfo = @"
+<?xml version="1.0" encoding="utf-8"?>
+<fomod>
+  <Name>$escapedName</Name>
+</fomod>
+"@
+}
 $stream = [IO.File]::Open($archivePath, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
 try {
     $zip = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create, $false)
@@ -108,6 +133,16 @@ try {
             $writer = New-Object IO.StreamWriter($overrideEntry.Open(), (New-Object Text.UTF8Encoding($false)))
             try { $writer.Write($json) } finally { $writer.Dispose() }
         }
+        if ($layout -eq 'root') {
+            $null = $zip.CreateEntry('fomod/')
+            foreach ($metadata in @(
+                @{ path = 'fomod/ModuleConfig.xml'; value = $fomodModuleConfig },
+                @{ path = 'fomod/info.xml'; value = $fomodInfo })) {
+                $metadataEntry = $zip.CreateEntry($metadata.path)
+                $writer = New-Object IO.StreamWriter($metadataEntry.Open(), (New-Object Text.UTF8Encoding($false)))
+                try { $writer.Write($metadata.value) } finally { $writer.Dispose() }
+            }
+        }
     } finally { $zip.Dispose() }
 } finally { $stream.Dispose() }
 
@@ -116,6 +151,7 @@ try {
     $expected = @($entries)
     if ($layout -eq 'logicmods') { $expected += 'LogicMods/' }
     if ($null -ne $override) { $expected += 'vortex_override_instructions.json' }
+    $expected += $fomodEntries
     $actual = @($readback.Entries | ForEach-Object { $_.FullName })
     if (Compare-Object $expected $actual) { throw 'Archive entry list does not match the selected layout.' }
     foreach ($file in $files) {
@@ -141,6 +177,17 @@ try {
                 $instructions[$i].destination -cne $files[$i].entry) {
                 throw 'Override copy mapping mismatch.'
             }
+        }
+    }
+    if ($layout -eq 'root') {
+        foreach ($metadata in @(
+            @{ path = 'fomod/ModuleConfig.xml'; expected = $fomodModuleConfig },
+            @{ path = 'fomod/info.xml'; expected = $fomodInfo })) {
+            $entry = @($readback.Entries | Where-Object { $_.FullName -ceq $metadata.path })[0]
+            $reader = New-Object IO.StreamReader($entry.Open())
+            try { $content = $reader.ReadToEnd() } finally { $reader.Dispose() }
+            if ($content -cne $metadata.expected) { throw "FOMOD readback mismatch: $($metadata.path)" }
+            $null = [xml]$content
         }
     }
 } catch {
