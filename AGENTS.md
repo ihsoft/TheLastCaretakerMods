@@ -60,7 +60,9 @@ do not load every document just because it is indexed here.
   installation of user-edited files.
 - [Vortex release archives](docs/vortex-release-archive-knowledge.md): ZIP
   layouts for plain patches, extra files, content plugins, and DML actors;
-  read when building or reviewing a release.
+  read when defining or changing a package layout, or diagnosing unexpected
+  packaging or Vortex deployment. A routine successful public producer supplies
+  the structural ZIP result without a separate layout review.
 - [Nexus publication](docs/nexus-publication-knowledge.md): prepare the mod
   page and file, verify the draft, and distinguish it from a public release.
 - [Vehicle and HUD patterns](docs/vehicle-and-hud-modding-patterns-knowledge.md):
@@ -81,6 +83,8 @@ do not load every document just because it is indexed here.
 - [Git coordination](tools/repository-git-coordination.md): required semaphore
   and exact-path commit wrapper for Git mutations.
 - [Artifact families](artifacts/ARTIFACT-FAMILIES.md): owners and consumers of
-  retained ignored output; read local `AGENTS.md` before changing it.
+  retained ignored output; read it and local `AGENTS.md` for new families or
+  manual retained-output changes. A standard release retained through the
+  public installer follows the release workflow.
 - [Mapping registry](mappings/Voyage/): reviewed `.usmap` entries and their
   versioned manifests; resolution is owned by the tool index.

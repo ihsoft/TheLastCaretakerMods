@@ -35,13 +35,17 @@ same version is a conflict to resolve explicitly, not a routine overwrite.
 ## Release archive
 
 Every selected release candidate has one ZIP intended for Vortex. Its entries
-must deliver every game-consumed payload file to the mod's required destination
-using the [Vortex layouts](vortex-release-archive-knowledge.md). Do not wrap
-the payload in a release/version folder. Use the shared archive producer for a
-standard IoStore triplet, including INI, content-plugin, and LogicMods cases;
-verify the entry list, file hashes, and any override JSON or FOMOD metadata
-before selecting the candidate. These are integral ZIP contents, not
-post-release additions. Archive validation is structural. Claim Vortex
+must deliver every game-consumed payload file to the mod's required destination.
+Do not wrap the payload in a release/version folder. Use the shared archive
+producer for a standard IoStore triplet, including INI, content-plugin, and
+LogicMods cases. It selects the standard layout and verifies the entry list,
+file hashes, and any override JSON or FOMOD metadata. Its successful result
+satisfies the structural ZIP check on the normal path. Consult
+[Vortex layouts](vortex-release-archive-knowledge.md) when defining a
+nonstandard destination or investigating an unexpected result; do not unpack
+a successful routine archive merely to repeat the producer's checks. Override
+JSON and FOMOD metadata are integral ZIP contents, not post-release additions.
+Archive validation is structural. Claim Vortex
 compatibility only after installing, enabling, and deploying that exact ZIP
 in Vortex, then checking both required destinations and the absence of
 unexpected deployed files; claim gameplay compatibility only after the

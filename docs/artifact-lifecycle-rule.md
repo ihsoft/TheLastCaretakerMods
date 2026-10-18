@@ -54,12 +54,16 @@ retention may matter but its continuing use is unclear, ask before creating a
 new retained family. Do not register a family retroactively to justify an
 output location.
 
-Before creating or changing retained output, consult the family registry in
+Before creating a new retained family, or manually creating, changing,
+relocating, or removing retained output, consult the family registry in
 [`artifacts/ARTIFACT-FAMILIES.md`](../artifacts/ARTIFACT-FAMILIES.md) and its local
 [`AGENTS.md`](../artifacts/AGENTS.md). A family needs an owner and continuing
-consumer; individual run directories inherit that contract. Consult the owner
-before changing or removing existing retained content, and do not delete
-content whose value or dependencies are unknown.
+consumer; individual run directories inherit that contract. The standard
+release installer may retain a selected candidate in the existing
+`installations/<Mod>-V<N>/` family under the [release workflow](release-and-installation-rule.md)
+without a separate artifact-registry read. This applies only to that public
+installer path: manual changes and cleanup still require consulting the owner.
+Do not delete content whose value or dependencies are unknown.
 
 Selected release candidates and published release packages must remain usable
 without `Tmp/`. Working builds and transient installation

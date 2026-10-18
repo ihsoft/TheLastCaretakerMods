@@ -14,7 +14,10 @@
   generated output with a concrete use beyond the current research, feature,
   or release cycle. Preserve owner, consumer, revalidation, rollback, and
   cleanup boundaries there. Consult `artifacts/ARTIFACT-FAMILIES.md` and
-  `artifacts/AGENTS.md` before creating or changing retained content.
+  `artifacts/AGENTS.md` for a new retained family or manual retained-output
+  mutation. Standard release retention through the public installer follows
+  the [release workflow](release-and-installation-rule.md) without that
+  separate read.
 - Every mod writes temporary output below `Tmp/<Mod>/`, using its exact mod
   directory name. Give runs meaningful names: identify active research and its
   subject, while ordinary test builds remain disposable. A producer removes

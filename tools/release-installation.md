@@ -31,8 +31,9 @@ For a triplet built without a Vortex ZIP, call the shared archive producer:
 Add `-AdditionalFile` for an INI or another payload file. Use
 `-ContentPluginDescriptor` for a content plugin, or `-LogicMods` for a DML
 actor. The producer chooses and verifies the matching ZIP layout; consult
-[Vortex layouts](../docs/vortex-release-archive-knowledge.md) only to choose
-the intended destination. For a game-root override, it includes the FOMOD
+[Vortex layouts](../docs/vortex-release-archive-knowledge.md) when choosing a
+nonstandard destination or diagnosing an unexpected archive result. For a
+game-root override, it includes the FOMOD
 metadata inside the ZIP automatically. The archive path must be new. No ZIP
 goes in Paks.
 
