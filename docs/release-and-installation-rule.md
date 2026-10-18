@@ -5,6 +5,8 @@ The mod's root `version.txt` contains one non-negative decimal integer: the
 latest numbered release published on Nexus. `0` is a special value meaning
 there has been no numbered `V1` release yet. The mod may already have been
 published on Nexus without such a release number. `V0` is never a release.
+The value does not identify whether a Nexus mod page already exists; establish
+the page identity separately when preparing publication.
 It is not a build number, a game version, or the version of the currently
 installed local package. Present positive values as `V<N>`; never present `0`
 as `V0`.
@@ -14,6 +16,9 @@ not advance it.
 
 Work after `V<N>` consists of candidates for `V<N+1>`; with `0`, the work is
 on candidates for the first numbered release, `V1`.
+For a Nexus file belonging to that target release, enter the integer `N+1`
+as its version, without a `.0` suffix. Until publication, `version.txt` still
+contains `N` (or `0` before V1); it is not the candidate's Nexus file version.
 Candidate names may start with that next version and a distinguishing suffix;
 they must never imply that publication has occurred. A candidate promoted to
 a release keeps one exact ZIP identity. Publishing a different ZIP under the

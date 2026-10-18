@@ -3,7 +3,13 @@
 ## Release producers
 
 Build/cook/package contracts remain with their owning mods. Use these routes
-before searching for scripts or assembling Unreal/retoc commands manually:
+before searching for scripts or assembling Unreal/retoc commands manually.
+Every listed producer except ScopeFix launches Unreal build, generation, or
+cook. Start those producers outside the restricted sandbox from the first
+invocation, including a retry with `-IgnorePinnedGameVersion`; their Unreal
+stage may be hidden inside the PowerShell script. ScopeFix does not launch
+Unreal. See the [execution rule](../docs/game-derived-data-rule.md)
+for the failure boundary.
 
 For a requested candidate, run the owning producer first. If it reports only a
 pinned Steam build mismatch, retry with `-IgnorePinnedGameVersion`; the
