@@ -79,10 +79,12 @@ function Get-ContentPluginPlan {
     if ($pluginName -cnotmatch '^[0-9A-Za-z_]+$') {
         throw "contentPlugin has an unsafe pluginName: $pluginName"
     }
-    $expectedArchivePath = "Mods/$pluginName/$pluginName.uplugin"
+    $legacyArchivePath = "Mods/$pluginName/$pluginName.uplugin"
+    $expectedArchivePath = "Voyage/Mods/$pluginName/$pluginName.uplugin"
     $expectedInstallPath = "Voyage/Mods/$pluginName/$pluginName.uplugin"
-    if ([string](Get-OptionalPropertyValue -Object $Record -Name 'archivePath') -cne
-            $expectedArchivePath -or
+    $recordedArchivePath = [string](Get-OptionalPropertyValue -Object $Record -Name 'archivePath')
+    if (($recordedArchivePath -cne $expectedArchivePath -and
+         $recordedArchivePath -cne $legacyArchivePath) -or
         [string](Get-OptionalPropertyValue -Object $Record -Name 'installRelativePath') -cne
             $expectedInstallPath) {
         throw 'contentPlugin paths do not match its exact safe plugin identity.'
@@ -100,7 +102,7 @@ function Get-ContentPluginPlan {
     }
     [pscustomobject][ordered]@{
         pluginName = $pluginName
-        archivePath = $expectedArchivePath
+        archivePath = $recordedArchivePath
         installRelativePath = $expectedInstallPath
         artifact = $artifact
     }

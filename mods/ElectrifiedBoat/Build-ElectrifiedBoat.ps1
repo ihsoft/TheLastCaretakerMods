@@ -320,11 +320,15 @@ $manifestPath = Join-Path $package 'build-manifest.json'
 $validation = & (Join-Path $modRoot 'Test-ElectrifiedBoatCandidate.ps1') `
     -PackageRoot $package `
     -GameRoot $GameRoot
+$archivePath = Join-Path $output 'ElectrifiedBoat-candidate.zip'
+& (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
+    -Container $utoc -Archive $archivePath -LogicMods | Out-Null
 
 [pscustomobject]@{
     status = 'passed'
     outputRoot = $output
     packageRoot = $package
+    archivePath = $archivePath
     manifestPath = $manifestPath
     validationResult = $validation
     gameplayValidated = $false

@@ -143,7 +143,10 @@ try {
         Modules = @()
     } | ConvertTo-Json -Depth 4), [Text.UTF8Encoding]::new($false))
     $pluginArchive = Join-Path $pluginReleaseRoot 'SyntheticPluginMod-test-v1.zip'
-    Compress-Archive -Path (Join-Path $pluginPackageRoot '*') -DestinationPath $pluginArchive
+    & (Join-Path $PSScriptRoot 'New-VoyageVortexArchive.ps1') `
+        -Container (Join-Path $pluginPackageRoot ($containerBase + '.utoc')) `
+        -Archive $pluginArchive -ContentPluginDescriptor $pluginDescriptor `
+        -AdditionalFile (Join-Path $pluginPackageRoot ($containerBase + '.autoload')) | Out-Null
     $pluginResult = & $producer -ReleaseRoot $pluginReleaseRoot `
         -Mod 'SyntheticPluginMod' -Version 'test-v1' `
         -Container (Join-Path $pluginPackageRoot ($containerBase + '.utoc')) `
@@ -154,6 +157,8 @@ try {
     Add-Check -Name 'schema3-content-plugin-created' `
         -Passed ($pluginManifest.schemaVersion -eq 3 -and
             [string]$pluginManifest.contentPlugin.type -ceq 'content-plugin-descriptor' -and
+            [string]$pluginManifest.contentPlugin.archivePath -ceq
+                'Voyage/Mods/SyntheticCatalogue/SyntheticCatalogue.uplugin' -and
             [string]$pluginManifest.contentPlugin.installRelativePath -ceq
                 'Voyage/Mods/SyntheticCatalogue/SyntheticCatalogue.uplugin') `
         -Evidence ($pluginManifest.contentPlugin | ConvertTo-Json -Compress)

@@ -12,3 +12,5 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods\Railgun\Build-Railg
 ```
 
 Omit `-Install` to prepare a build under `Tmp/Railgun/` without installing it.
+The candidate ZIP maps the container, adjacent INI, and content-plugin
+descriptor to their game paths through Vortex override instructions.

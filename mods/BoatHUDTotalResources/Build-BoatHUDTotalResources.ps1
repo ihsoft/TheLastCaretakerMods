@@ -459,6 +459,10 @@ $buildManifest = [ordered]@{
     (Join-Path $package 'build-manifest.json'),
     (($buildManifest | ConvertTo-Json -Depth 5) + [Environment]::NewLine))
 
+$archivePath = Join-Path $output 'BoatHUDTotalResources-candidate.zip'
+& (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
+    -Container $utoc -Archive $archivePath | Out-Null
+
 Write-Host 'BoatHUDTotalResources mod built successfully.'
 Get-FileHash -Algorithm SHA256 -LiteralPath $containerFiles |
     Select-Object Path, Hash |

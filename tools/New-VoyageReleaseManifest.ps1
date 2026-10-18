@@ -125,7 +125,9 @@ function Write-Utf8Json {
 function Get-ContentPluginRecord {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$DescriptorPath
+        [string]$DescriptorPath,
+        [Parameter(Mandatory = $true)]
+        [string]$ArchivePath
     )
 
     $resolvedDescriptor = (Resolve-Path -LiteralPath $DescriptorPath).Path
@@ -149,11 +151,26 @@ function Get-ContentPluginRecord {
         throw ('Content plugin descriptor must declare CanContainContent=true, ' +
             'EnabledByDefault=true, ExplicitlyLoaded=false, and Modules=[].')
     }
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $newArchivePath = "Voyage/Mods/$pluginName/$pluginName.uplugin"
+    $oldArchivePath = "Mods/$pluginName/$pluginName.uplugin"
+    $zip = [IO.Compression.ZipFile]::OpenRead($ArchivePath)
+    try {
+        $matches = @($zip.Entries | Where-Object {
+            $_.FullName.Replace('\', '/') -ceq $newArchivePath -or
+                $_.FullName.Replace('\', '/') -ceq $oldArchivePath
+        })
+        if ($matches.Count -ne 1) {
+            throw 'Release ZIP must contain the content plugin at exactly one supported path.'
+        }
+        $descriptorArchivePath = $matches[0].FullName.Replace('\', '/')
+    } finally { $zip.Dispose() }
     [ordered]@{
         type = 'content-plugin-descriptor'
         pluginName = $pluginName
         artifact = New-ArtifactRecord -Path $resolvedDescriptor
-        archivePath = "Mods/$pluginName/$pluginName.uplugin"
+        archivePath = $descriptorArchivePath
         installRelativePath = "Voyage/Mods/$pluginName/$pluginName.uplugin"
     }
 }
@@ -263,7 +280,7 @@ if ($buildId -notmatch '^\d+$') {
 
 $contentPlugin = $null
 if (-not [string]::IsNullOrWhiteSpace($ContentPluginDescriptor)) {
-    $contentPlugin = Get-ContentPluginRecord -DescriptorPath $ContentPluginDescriptor
+    $contentPlugin = Get-ContentPluginRecord -DescriptorPath $ContentPluginDescriptor -ArchivePath $resolvedArchive
 }
 
 $manifest = [ordered]@{

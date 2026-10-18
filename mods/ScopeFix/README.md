@@ -42,13 +42,13 @@ The builder creates a new `Tmp/ScopeFix/build-*` directory; an explicit
 `-OutputRoot` must be a fresh directory below `Tmp/ScopeFix`. It reads the
 installed game's stock assets through the repository tools, checks their fingerprint and
 camera-offset values, changes only two values, and produces a verified
-container triplet plus `build-evidence.json`. It requires the published
+container triplet, a flat Vortex candidate ZIP, and `build-evidence.json`. It requires the published
 repository tools and reviewed mappings. It does not install the mod. On a
 changed Steam build, retry with `-IgnorePinnedGameVersion`. The old stock values
 and package structure remain checked; investigate a failing check, and test a
 successful candidate in game before updating `game-build.json`.
 
-For release packaging, archive the exact triplet and call
+For a selected release candidate, use the builder's exact ZIP and call
 `tools/New-VoyageReleaseManifest.ps1` with `-SourcePath mods/ScopeFix`.
 Follow the parameter contract in the [tool index](../../tools/README.md).
 Each new artifact still needs appropriate validation; a successful container

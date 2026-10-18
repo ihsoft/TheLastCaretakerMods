@@ -55,6 +55,9 @@ do not load every document just because it is indexed here.
 - [Runtime INI configuration](docs/runtime-configuration-patterns-knowledge.md):
   a repeatable settings recipe, session-once versus entry reload, and
   installation of user-edited files.
+- [Vortex release archives](docs/vortex-release-archive-knowledge.md): ZIP
+  layouts for plain patches, extra files, content plugins, and DML actors;
+  read when building or reviewing a release.
 - [Vehicle and HUD patterns](docs/vehicle-and-hud-modding-patterns-knowledge.md):
   shared actor lifecycle, provided actions, and widget behavior.
 - [Cooked-asset toolchain knowledge](docs/voyage-cooked-asset-toolchain-knowledge.md):

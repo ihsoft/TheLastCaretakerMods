@@ -928,80 +928,10 @@ $null = New-Item -ItemType Directory -Path $descriptorDirectory
 $descriptor = Join-Path $descriptorDirectory 'RailgunCatalogue.uplugin'
 Copy-Item -LiteralPath $descriptorSource -Destination $descriptor
 $archivePath = Join-Path $releaseStaging ('Railgun_' + $version + '.zip')
-Add-Type -AssemblyName System.IO.Compression
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-$archiveFiles = @(
-    [pscustomobject]@{ source = Join-Path $payload 'Railgun.pak'; entry = 'Content/Paks/Railgun.pak' },
-    [pscustomobject]@{ source = Join-Path $payload 'Railgun.ucas'; entry = 'Content/Paks/Railgun.ucas' },
-    [pscustomobject]@{ source = Join-Path $payload 'Railgun.utoc'; entry = 'Content/Paks/Railgun.utoc' },
-    [pscustomobject]@{ source = Join-Path $payload 'Railgun.ini'; entry = 'Content/Paks/Railgun.ini' },
-    [pscustomobject]@{
-        source = $descriptor
-        entry = 'Mods/RailgunCatalogue/RailgunCatalogue.uplugin'
-    }
-)
-$archiveStream = [IO.File]::Open(
-    $archivePath,
-    [IO.FileMode]::CreateNew,
-    [IO.FileAccess]::ReadWrite,
-    [IO.FileShare]::None)
-try {
-    $archive = [IO.Compression.ZipArchive]::new(
-        $archiveStream,
-        [IO.Compression.ZipArchiveMode]::Create,
-        $false)
-    try {
-        foreach ($archiveFile in $archiveFiles) {
-            [IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
-                $archive,
-                $archiveFile.source,
-                $archiveFile.entry,
-                [IO.Compression.CompressionLevel]::Optimal) | Out-Null
-        }
-    }
-    finally {
-        $archive.Dispose()
-    }
-}
-finally {
-    $archiveStream.Dispose()
-}
-$archiveReadback = [IO.Compression.ZipFile]::OpenRead($archivePath)
-try {
-    $expectedArchiveEntries = @($archiveFiles.entry | Sort-Object)
-    $actualArchiveEntries = @($archiveReadback.Entries | ForEach-Object {
-        $_.FullName.Replace('\', '/')
-    } | Sort-Object)
-    if (Compare-Object $expectedArchiveEntries $actualArchiveEntries) {
-        throw 'Railgun release ZIP does not contain exactly the supported five files.'
-    }
-    foreach ($archiveFile in $archiveFiles) {
-        $entry = @($archiveReadback.Entries | Where-Object {
-            $_.FullName.Replace('\', '/') -ceq $archiveFile.entry
-        })
-        if ($entry.Count -ne 1 -or $entry[0].Length -ne
-            (Get-Item -LiteralPath $archiveFile.source).Length) {
-            throw "Railgun release ZIP entry size mismatch: $($archiveFile.entry)"
-        }
-        $entryStream = $entry[0].Open()
-        $entryHasher = [Security.Cryptography.SHA256]::Create()
-        try {
-            $entrySha256 = [BitConverter]::ToString(
-                $entryHasher.ComputeHash($entryStream)).Replace('-', '')
-        }
-        finally {
-            $entryHasher.Dispose()
-            $entryStream.Dispose()
-        }
-        if ($entrySha256 -cne
-            (Get-FileHash -LiteralPath $archiveFile.source -Algorithm SHA256).Hash) {
-            throw "Railgun release ZIP entry hash mismatch: $($archiveFile.entry)"
-        }
-    }
-}
-finally {
-    $archiveReadback.Dispose()
-}
+& (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') `
+    -Container (Join-Path $payload 'Railgun.utoc') -Archive $archivePath `
+    -AdditionalFile (Join-Path $payload 'Railgun.ini') `
+    -ContentPluginDescriptor $descriptor | Out-Null
 $sourceAfter = @(Get-RailgunSourceStatus)
 if (($sourceAfter -join "`n") -cne ($sourceStatus -join "`n")) { throw 'Source status changed during preparation.' }
 if ((@(Get-RailgunSourceHashes) | ConvertTo-Json -Compress) -cne ($sourceHashes | ConvertTo-Json -Compress)) { throw 'Source content changed during preparation.' }

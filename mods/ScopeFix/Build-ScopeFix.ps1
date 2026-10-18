@@ -68,4 +68,6 @@ foreach ($scratch in @($extractRoots) + @($loose)) {
     }
     Remove-Item -LiteralPath $scratch -Recurse -Force
 }
-[pscustomobject]@{ container = $container; evidence = Join-Path $root 'build-evidence.json'; status = 'runtime-pending' }
+$archive = Join-Path $root 'ScopeFix-candidate.zip'
+& (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') -Container $container -Archive $archive | Out-Null
+[pscustomobject]@{ container = $container; archive = $archive; evidence = Join-Path $root 'build-evidence.json'; status = 'runtime-pending' }

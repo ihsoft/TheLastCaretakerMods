@@ -44,11 +44,12 @@ The defaults are `K:\Epic Games\UE_5.8` for the engine and
 append `-EngineRoot 'C:\path\to\UE_5.8'` and
 `-GameRoot 'D:\path\to\Voyage'` to the command.
 
-The script builds the mod and checks the resulting package. Output goes to
-`Tmp/ElectrifiedBoat/build-<timestamp>/package/`. Install only the three
+The script builds the mod, checks the resulting package, and creates a Vortex
+ZIP with an explicit `LogicMods/` directory. Output goes to
+`Tmp/ElectrifiedBoat/build-<timestamp>/`. Install only the three
 `ElectrifiedBoat.pak/.ucas/.utoc` files directly into `Voyage/Content/Paks/LogicMods`;
-the other files are build metadata. The script does not install the mod or
-produce a release ZIP. If the installed Steam build differs from the pin,
+the other files are build metadata. The script does not install the mod.
+If the installed Steam build differs from the pin,
 retry with `-IgnorePinnedGameVersion`. A successful candidate still needs a
 game test before the pin is updated.
 

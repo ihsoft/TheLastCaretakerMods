@@ -243,6 +243,7 @@ container and evidence, without installation.
 | Publish or resolve the native executable inspector | `Publish-VoyageExecutableInspectorBinary.ps1`, `Get-VoyageExecutableInspectorBinary.ps1` | Manifest-validated single-file `.tools/bin/VoyageExecutableInspector.exe` |
 | Stress-test hierarchy asset opens in patched UAssetGUI | `.tools/bin/UAssetGUI.exe stress-open` | Incremental per-asset JSONL plus parse/binary-equality summary |
 | Build, cook and package an existing mod release | [Release producers](#release-producers) | Route to the owning mod's documented orchestrator; no generic rebuild recipe |
+| Package an existing IoStore triplet for Vortex | `New-VoyageVortexArchive.ps1` | Verified ZIP with the plain PAK, PAK plus extra file, content-plugin, or LogicMods layout |
 | Create the common manifest for an already-built triplet and ZIP | `New-VoyageReleaseManifest.ps1` | Immutable schema-2 manifest, or schema 3 with one exact content-plugin descriptor, published only after installer validation |
 | Validate or install an already-built standalone IoStore release | `Install-VoyageRelease.ps1` | Manifest-gated install plan and temporary recovery evidence |
 | Verify one IoStore container and its expected package set | `Test-VoyageContainer.ps1` | Bounded integrity check with a transient package inventory, exact-set differences and file hashes |
@@ -327,10 +328,11 @@ identification; callers do not need a separate fingerprint probe.
 | MooringCable60m | [Release workflow](../mods/MooringCable60m/README.md) | `Build-MooringCable60m.ps1` builds, cooks, packages and validates the three-package stock override outside the sandbox, then creates a schema-2 release manifest under `Tmp/MooringCable60m/<run>/release/`; its early gate checks Steam build ID only, and `-IgnorePinnedGameVersion` permits a fresh-stock candidate build for a new build ID while exact reviewed mappings and a game test remain required; it does not install |
 | ContainerLidLabel | [Build and validation](../mods/ContainerLidLabel/README.md) | `Build-ContainerLidLabel.ps1` fingerprints the game, builds and cooks a large-container child, relocates its fresh stock parent, verifies exactly two runtime packages, and prepares an `_P` container, ZIP and schema-2 release manifest below `Tmp/ContainerLidLabel`. It does not install; placement and runtime behavior remain a separate game-validation gate |
 | DonkLiftKeyboardControl | [One-command release](../mods/DonkLiftKeyboardControl/README.md#one-command-release), [rules](../mods/DonkLiftKeyboardControl/AGENTS.md) | `Build-DonkLiftRelease.ps1` owns build, generation, cook, extraction, package verification, ZIP and schema-2 release manifest |
-| BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container; installation/removal uses the mod-owned evidence contract |
-| ElectrifiedBoat | [Build and validation](../mods/ElectrifiedBoat/README.md#build-and-validation), [installation](../mods/ElectrifiedBoat/README.md#distribution), [rules](../mods/ElectrifiedBoat/AGENTS.md) | `Build-ElectrifiedBoat.ps1` fingerprints the game, generates and cooks one additive `/Game/Mods/ElectrifiedBoat/ModActor`, packages the container, and invokes `Test-ElectrifiedBoatCandidate.ps1`. The distribution contains three unsuffixed IoStore files under `LogicMods/` without `.autoload`; extract its contents into `Voyage/Content/Paks` for DML discovery; keep the ZIP outside the game. The producer does not install or change loader configuration. See the [DML identity contract](../docs/voyage-cooked-asset-toolchain-knowledge.md#dml-actor-identity-and-physical-installation) |
+| BoatHUDTotalResources | [Build and install contracts](../mods/BoatHUDTotalResources/README.md#build), [rules](../mods/BoatHUDTotalResources/AGENTS.md) | Documented prepare/build stages produce a verified container and flat Vortex candidate ZIP; installation/removal uses the mod-owned evidence contract |
+| ElectrifiedBoat | [Build and validation](../mods/ElectrifiedBoat/README.md#build-and-validation), [installation](../mods/ElectrifiedBoat/README.md#distribution), [rules](../mods/ElectrifiedBoat/AGENTS.md) | `Build-ElectrifiedBoat.ps1` builds and checks the additive DML actor, then creates a Vortex ZIP with an explicit root `LogicMods/` directory and its three IoStore files; it does not install or change loader configuration. See the [DML identity contract](../docs/voyage-cooked-asset-toolchain-knowledge.md#dml-actor-identity-and-physical-installation) |
 | Railgun | [Mod index](../mods/Railgun/AGENTS.md) | `Build-Railgun.ps1` consumes owned model/data sources, generates all mod assets, cooks and verifies one `Railgun` container, calls the common native registry producer for its three owned JSON readbacks, and prepares a schema-3 ZIP/manifest below `Tmp/Railgun`. Optional `-Install` uses the common guarded installer; `-ReleaseCandidate` retains the versioned ZIP under `artifacts/installations/Railgun-V<N>`. Gameplay validation remains a separate gate |
 | PalletContainerSnap | [DML installer](../mods/PalletContainerSnap/Install-PalletContainerSnap.ps1) | A prepared release manifest drives the shared installer with `-LogicMods`; `-ReleaseCandidate` retains the selected ZIP outside the game. The producer is paused |
+| ScopeFix | [Build and installation](../mods/ScopeFix/README.md#build) | `Build-ScopeFix.ps1` produces a verified stock patch triplet and flat Vortex candidate ZIP; create a selected release manifest separately |
 
 Read only the selected producer's rules and workflow. These links are routing,
 not permission to build/install, evidence of current-game compatibility, or a
@@ -549,6 +551,35 @@ under ignored `Tmp/tests/installation-status-*/`.
 
 ### Release installation
 
+For a standard three-file IoStore release ZIP, use
+`New-VoyageVortexArchive.ps1` before creating the release manifest. It
+selects the Vortex layout from the supplied payload, verifies exact ZIP
+entries and hashes, and writes override instructions when needed:
+
+```powershell
+.\tools\New-VoyageVortexArchive.ps1 `
+  -Container '.\Tmp\Example\build\Example_P.utoc' `
+  -Archive '.\Tmp\Example\build\Example-candidate.zip' `
+  -AdditionalFile '.\Tmp\Example\build\Example.ini'
+```
+
+With no extra file, the triplet is flat at ZIP root. `-AdditionalFile` puts
+adjacent Paks files in a flat `thelastcaretaker-pakalt` archive; optional
+`-AdditionalDestination` supplies one ZIP-relative destination per extra file.
+For an extra file outside Paks, add `-RootLayout` and give each extra file a
+full `Voyage/...` destination.
+`-ContentPluginDescriptor` selects a game-root override with the descriptor
+under `Voyage/Mods/<Plugin>/`. `-LogicMods` alone creates a root `LogicMods/`
+folder, including its explicit ZIP directory entry; combined with a plugin or
+extra files it selects a game-root override. `-PaksRoot` forces `pakalt` for a
+plain patch that must go to Paks root. The destination directory must already
+exist and the archive path must be unused. See the
+[Vortex layouts](../docs/vortex-release-archive-knowledge.md) for destination
+choices and runtime validation boundaries.
+Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+.\tools\Test-New-VoyageVortexArchive.ps1` after changing the packager; its
+synthetic checks cover all supported layouts without building Unreal assets.
+
 For an already-built triplet and ZIP, create the common immutable schema-2
 manifest through the producer rather than assembling JSON or inspecting the
 installer implementation:
@@ -659,10 +690,10 @@ and result manifest beside the installation evidence.
 Install evidence may retain historical `releaseManifestPath` and `sourcePath`
 values after an owning producer removes temporary build input. Restore does not
 consume those paths: its operational contract is the completed install manifest,
-exact current installed hashes and `previous-files` backups. This is not an
-install-from-ZIP interface; a retained ZIP with `Mods/` and `Content/Paks/`
-layout is intended for explicit manual extraction when the owning mod documents
-that workflow.
+exact current installed hashes and `previous-files` backups. Restoration is
+not driven by a ZIP; installation can read the exact triplet and content-plugin
+descriptor from one. New Vortex bundles use `Voyage/...` paths; legacy
+manifests with `Mods/<Plugin>/<Plugin>.uplugin` remain readable.
 
 If either transaction reports `recovery-failed`, stop normal install/restore
 work: backups and remaining staging copies are intentionally retained for

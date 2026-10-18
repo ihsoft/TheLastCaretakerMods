@@ -19,6 +19,18 @@ they must never imply that publication has occurred. A candidate promoted to
 a release keeps one exact ZIP identity. Publishing a different ZIP under the
 same version is a conflict to resolve explicitly, not a routine overwrite.
 
+## Release archive
+
+Every selected release candidate has one ZIP intended for Vortex. Its entries
+must deliver every game-consumed payload file to the mod's required destination
+using the [Vortex layouts](vortex-release-archive-knowledge.md). Do not wrap
+the payload in a release/version folder. Use the shared archive producer for a
+standard IoStore triplet, including INI, content-plugin, and LogicMods cases;
+verify the entry list, file hashes, and any override JSON before selecting the
+candidate. Archive validation is structural. Claim Vortex compatibility only
+after Vortex install, enable, deploy, and destination readback; claim gameplay
+compatibility only after the real-game test.
+
 ## Game update and candidate builds
 
 Run the mod's public builder before manually inspecting game contracts. If its

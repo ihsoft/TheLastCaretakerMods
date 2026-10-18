@@ -186,7 +186,7 @@ foreach ($p in $childCdo[0].Properties.PSObject.Properties.Name) {
     if ($p -notin @('UberGraphFrame','RootComponent')) { throw "Unexpected child CDO override: $p" }
 }
 $archive = "$root/MooringCable60m-$version.zip"
-Compress-Archive -Path "$package/*" -DestinationPath $archive
+& "$tools/New-VoyageVortexArchive.ps1" -Container $container -Archive $archive | Out-Null
 $release = & "$tools/New-VoyageReleaseManifest.ps1" -ReleaseRoot $root -Mod MooringCable60m -Version $version -Container $container -Archive $archive -SourcePath $PSScriptRoot -GameRoot $GameRoot -AllowDirtySource
 $report = [ordered]@{
     status = 'candidate-validated'; runtimeValidated = $false

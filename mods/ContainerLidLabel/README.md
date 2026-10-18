@@ -46,7 +46,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
 The producer uses Unreal Engine 5.8 at `K:\Epic Games\UE_5.8` and Voyage at
 `P:\SteamLibrary\steamapps\common\Voyage` by default. It writes a fresh release
 below `Tmp/ContainerLidLabel`, validates the two-package `_P` container, includes
-the INI beside the container and in the ZIP, and produces a release manifest.
+the INI beside the container and in a Vortex Paks-root ZIP, and produces a
+release manifest.
 It never installs. For manifest-only refresh of an existing validated release,
 use `-FinalizeExisting` with its exact `-OutputRoot` and matching `-Version`;
 this does not rebuild or modify the payload.

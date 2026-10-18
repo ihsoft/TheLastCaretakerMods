@@ -299,11 +299,8 @@ if ($containerCheck.status -cne 'passed' -or $containerCheck.packageCount -ne 2 
 
 Write-Host '7/8 Creating ZIP and validated release manifest'
 $archive = Join-Path $releaseRoot "ContainerLidLabel-$Version.zip"
-Compress-Archive -LiteralPath @(
-    (Join-Path $packageRoot "$containerName.pak"),
-    (Join-Path $packageRoot "$containerName.ucas"),
-    $utoc,
-    $releaseConfig) -DestinationPath $archive -CompressionLevel Optimal
+& (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
+    -Container $utoc -Archive $archive -AdditionalFile $releaseConfig | Out-Null
 $manifestArgs = @{
     ReleaseRoot = $releaseRoot
     Mod = 'ContainerLidLabel'

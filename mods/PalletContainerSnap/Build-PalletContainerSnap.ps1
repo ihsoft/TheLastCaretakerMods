@@ -1777,26 +1777,16 @@ if ($runtimeInjection -and -not $dmlActivation) {
         (New-Object Text.UTF8Encoding($false)))
 }
 $archive = Join-Path $releaseRoot $supportedArchiveName
-Add-Type -AssemblyName System.IO.Compression
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-$archiveStream = [IO.File]::Open($archive,[IO.FileMode]::CreateNew,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
-try {
-    $zip = [IO.Compression.ZipArchive]::new($archiveStream,[IO.Compression.ZipArchiveMode]::Create,$false)
-    try {
-        $containerArchiveRoot = if ($dmlActivation) { 'Content/Paks/LogicMods/' } else { 'Content/Paks/' }
-        $archiveEntries = @(
-            [pscustomobject]@{source=$containerPak;name=($containerArchiveRoot + $supportedContainerStem + '.pak')},
-            [pscustomobject]@{source=[IO.Path]::ChangeExtension($container,'.ucas');name=($containerArchiveRoot + $supportedContainerStem + '.ucas')},
-            [pscustomobject]@{source=$container;name=($containerArchiveRoot + $supportedContainerStem + '.utoc')},
-            [pscustomobject]@{source=$descriptor;name='Mods/PalletContainerSnapCatalogue/PalletContainerSnapCatalogue.uplugin'})
-        if ($runtimeInjection -and -not $dmlActivation) {
-            $archiveEntries += [pscustomobject]@{source=$autoload;name=('Content/Paks/' + $supportedContainerStem + '.autoload')}
-        }
-        foreach ($entry in $archiveEntries) {
-            [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip,$entry.source,$entry.name,[IO.Compression.CompressionLevel]::Optimal) | Out-Null
-        }
-    } finally { $zip.Dispose() }
-} finally { $archiveStream.Dispose() }
+$archiveArguments = @{
+    Container = $container
+    Archive = $archive
+    ContentPluginDescriptor = $descriptor
+    LogicMods = [bool]$dmlActivation
+}
+if ($runtimeInjection -and -not $dmlActivation) {
+    $archiveArguments.AdditionalFile = @($autoload)
+}
+& (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') @archiveArguments | Out-Null
 
 $releaseManifest = & (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
     -ReleaseRoot $releaseRoot -Mod 'PalletContainerSnap' -Version $supportedArtifactVersion `

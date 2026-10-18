@@ -115,8 +115,8 @@ Useful explicit options:
 - `-AllowDirtySource` permits a development artifact from uncommitted DonkLift
   source and records that fact in the manifest. Omit it for a real release.
 
-The script never uploads or publishes anything. The ZIP contains the three
-container files and `README.md`; detailed logs, fingerprint,
+The script never uploads or publishes anything. The Vortex ZIP contains the
+three container files at its root; detailed logs, fingerprint,
 inventory, backup, and hashes stay beside it as local evidence.
 
 The remaining commands describe the internal stages and are useful for

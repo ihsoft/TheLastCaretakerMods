@@ -59,7 +59,8 @@ Build the container:
 ```
 
 The build gates the game fingerprint, clean extraction provenance, cooked
-graphs and CDOs, exact four-asset inventory, and final container hashes.
+graphs and CDOs, exact four-asset inventory, and final container hashes. It
+also writes a flat three-file Vortex candidate ZIP under the build output.
 If only the pinned ID differs, retry the build with
 `-IgnorePinnedGameVersion`. The original extraction must still match the
 installed game. Test a successful candidate in game before updating the pin.

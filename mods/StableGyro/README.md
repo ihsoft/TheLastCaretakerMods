@@ -131,7 +131,8 @@ generates the two helpers, reset action, keyboard context, and replacement child
 narrowly cooks five generated packages, freshly extracts
 and surgically patches the stock Gyro item data asset, packages and verifies
 the six-asset container, and creates a ZIP under a fresh ignored
-`Tmp/StableGyro` output by default.
+`Tmp/StableGyro` output by default. The Vortex ZIP maps its triplet and
+adjacent `StableGyro.ini` to Paks root.
 If only the pinned Steam build differs, retry with
 `-IgnorePinnedGameVersion`. The build still requires fresh stock inputs and a
 matching reviewed mapping; test a successful candidate in game before updating

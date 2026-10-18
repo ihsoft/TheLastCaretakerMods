@@ -410,8 +410,9 @@ Copy-Item -LiteralPath (Join-Path $modRoot 'README.md') -Destination (Join-Path 
 Copy-Item -LiteralPath $generatedSettingsIni -Destination (Join-Path $payloadRoot 'StableGyro.ini')
 $archivePath = Join-Path $releaseRoot "StableGyro-$Version.zip"
 $installedArchiveName = "StableGyro_$Version.zip"
-$payloadFiles = @(Get-ChildItem -LiteralPath $payloadRoot -File | Select-Object -ExpandProperty FullName)
-Compress-Archive -LiteralPath $payloadFiles -DestinationPath $archivePath -CompressionLevel Optimal
+& (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
+    -Container (Join-Path $payloadRoot ($containerName + '.utoc')) -Archive $archivePath `
+    -AdditionalFile (Join-Path $payloadRoot 'StableGyro.ini') | Out-Null
 $phase.Stop()
 $timings.Archive = $phase.Elapsed.TotalSeconds
 
