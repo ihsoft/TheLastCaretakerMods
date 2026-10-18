@@ -37,11 +37,13 @@
 - Except for the reviewed mapping registry, commit the method, not the snapshot.
   Reusable fingerprinting, extraction, inspection, patching, and disassembly
   logic belongs under `tools/`, with exact usage documented.
-- Treat `tools/README.md` as the tool-routing index. Read it before surveying
-  tool implementations, and update it whenever a reusable tool is added,
-  renamed, or its interface, prerequisites, outputs, or safety contract change.
+- Treat `tools/tool-index.md` as the task router and `tools/tool-catalog.md` as
+  the entry-point registry. Read only the relevant guide before surveying tool
+  implementations. Update the catalog and owning guide whenever a reusable tool
+  is added, renamed, or its interface, prerequisites, outputs, or safety
+  contract change.
 - Treat the documented scripts as black boxes on their supported path. Select
-  the tool by intent in `tools/README.md`, run its documented interface, and
+  the tool by intent in `tools/tool-index.md`, run its documented interface, and
   evaluate its exit code, manifest, summary, and output before reading source
   or tracing third-party internals. Do not demand a separate tool version,
   commit, or binary hash check before a normal call unless the documented
@@ -100,7 +102,7 @@
 - Public build, release, extraction, and packaging scripts must support Windows
   PowerShell 5.1 unless their documented interface explicitly says otherwise.
   Parse and smoke-test the public `-File` entry point with `powershell.exe`;
-  follow the implementation conventions in `tools/README.md`.
+  follow the implementation conventions in `tools/toolchain-maintenance.md`.
 - Never launch an Unreal Engine build producer, `Build.bat`, UnrealBuildTool, or
   an `UnrealEditor-Cmd.exe` build/generate/cook step in the restricted sandbox,
   not even as a first probe. Request outside-sandbox execution for the initial

@@ -22,7 +22,7 @@ yet establish which material or component to change for the requested color.
 ## Create the minimal directory
 
 Once the mod has a name and one-sentence goal, call the public
-[`New-ModSkeleton.ps1`](../tools/README.md#new-mod-skeleton) entry point. It
+[`New-ModSkeleton.ps1`](../tools/mod-setup.md#new-mod-skeleton) entry point. It
 creates `mods/<Mod>/` with only:
 
 - `AGENTS.md`: a short index to the repository index and local architecture.

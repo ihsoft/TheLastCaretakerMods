@@ -98,5 +98,5 @@ needed to resolve that failure.
 Check that the game is closed immediately before changing installed files,
 backup existing targets, install from a validated manifest, read back every
 installed hash, and restore or stop with explicit recovery evidence on failure.
-Follow the [shared installer contract](../tools/README.md#release-installation)
+Follow the [shared installer contract](../tools/release-installation.md#release-installation)
 and any owning mod's additional layout or settings contract.

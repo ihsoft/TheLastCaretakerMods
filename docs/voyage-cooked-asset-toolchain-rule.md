@@ -2,7 +2,7 @@
 
 This document owns the repository workflow for cooked-asset tools. Game and
 engine contracts are in [toolchain knowledge](voyage-cooked-asset-toolchain-knowledge.md);
-commands and parameters are in [the tool index](../tools/README.md).
+commands and parameters are in the guides linked from [the tool index](../tools/tool-index.md).
 
 ## Operating rule
 
@@ -19,7 +19,7 @@ tool log/manifest, minimal reproducer, then source.
 
 ## Tool boundary
 
-The public scripts in [`tools/README.md`](../tools/README.md) select the
+The public scripts in [the tool catalog](../tools/tool-catalog.md) select the
 published retoc, jmap, UAssetAPI/UAssetGUI, CUE4Parse and executable-inspection
 tools needed for each operation. Run the selected public interface first and
 evaluate its result. Publisher manifests retain binary provenance for diagnosis;
@@ -31,7 +31,7 @@ still has its own file-integrity and schema gates.
 
 Publisher manifests record exact binary provenance. Runtime-only JSON version
 handling and its boundaries are in [toolchain knowledge](voyage-cooked-asset-toolchain-knowledge.md#known-boundaries);
-command interfaces remain in the [tool index](../tools/README.md).
+command interfaces remain in the guides linked from the [tool index](../tools/tool-index.md).
 
 ## DML installation
 
@@ -45,7 +45,7 @@ explains this layout.
 
 ## Operations
 
-Use the wrappers listed in `tools/README.md`:
+Use the wrappers listed in the [tool catalog](../tools/tool-catalog.md):
 
 - fingerprint the installation with `Get-VoyageBuildFingerprint.ps1`;
 - resolve the existing reviewed mapping with `Get-VoyageMappings.ps1`; create a

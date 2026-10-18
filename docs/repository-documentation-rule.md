@@ -18,9 +18,16 @@
   example when useful. Do not keep task histories or per-run measurements in the
   shared reading path. Explicitly requested diagnostics use the opt-in method
   linked from the subagent workflow.
-- Repository-level README files are short folder labels. The shared tool index
-  contains only verified, established capabilities, current interfaces and
-  safety/compatibility limits.
+- Repository-level README files are short folder labels. The tool index routes
+  tasks to focused guides; the tool catalog records public entry points. Those
+  guides contain only verified, established capabilities, current interfaces,
+  and safety/compatibility limits.
+  Describe the public call, its useful result, and the next action on failure.
+  Do not copy a tool's implementation steps, pinned dependency commits, binary
+  hashes, or historical test counts into normal agent guidance. Run the selected
+  tool first; inspect its diagnostics and implementation only when it fails or
+  gives an unexpected result. Keep exact provenance in the tool's own checks
+  and generated manifests when those identities matter.
   Keep candidate IDs, experimental hypotheses, trial instructions and progress
   history in an optional ignored owning backlog for a large investigation;
   keep raw evidence in ignored storage, not in shared guidance.
@@ -41,8 +48,9 @@
   its public producer. Put only mod-specific behavior, settings, exceptional
   build boundaries, and compatibility contracts in their owning documents.
   AGENTS indexes and agent-facing documents link to those documents instead
-  of a README. The existing `tools/README.md` remains the tool-routing index
-  until its separate review. Do not maintain a second `README.txt` with a
+  of a README. The tools directory uses `tools/tool-index.md` for routing and
+  `tools/tool-catalog.md` for entry-point registration. Its README is a short
+  folder description. Do not maintain a second `README.txt` with a
   competing summary.
   If a release ZIP includes a README, package that same `README.md`.
 - Describe finished mods by their current behavior and necessary compatibility

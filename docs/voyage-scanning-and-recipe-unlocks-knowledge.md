@@ -95,7 +95,7 @@ listed item flags are necessary checks, not a complete sufficient condition.
 
 ## Reproducing the inspection
 
-Use the public interfaces in [the tool index](../tools/README.md): fingerprint
+Use the public interfaces in [asset inspection](../tools/asset-inspection.md): fingerprint
 with `Get-VoyageBuildFingerprint.ps1`, then inspect the exact stock assets above
 with `Get-VoyageAssetSummary.ps1` (`Calls` focus). Use
 `Inspect-VoyageAsset.ps1` for pseudocode and mapping queries
@@ -110,5 +110,6 @@ pseudocode were available.
 For native confirmation, `Invoke-VoyageExecutableInspector.ps1` locates
 `MarkItemScanned` and the two property registration records. Follow the
 resolved exec call with bounded `Inspect-VoyageNativeMemberAccess.py` windows
-as documented in the tool index. Do not reuse raw addresses on another build
+as documented in [executable inspection](../tools/executable-inspection.md).
+Do not reuse raw addresses on another build
 or treat string references alone as proof of behavior.

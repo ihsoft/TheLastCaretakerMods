@@ -5,7 +5,7 @@ and data contract behind game behavior. A patch that happens to work is not by
 itself a complete explanation. This document covers research decisions and
 evidence; generated output follows the shared
 [artifact lifecycle](artifact-lifecycle-rule.md), and tool commands live in the
-[tool index](../tools/README.md).
+[tool index](../tools/tool-index.md).
 
 After context compaction, recover from repository state rather than relying on
 chat history. For a large active investigation, first read the backlog's
@@ -28,7 +28,7 @@ backlog only when those pointers are insufficient.
 3. Use a reviewed mapping through `Get-VoyageMappings.ps1` when reflection data
    is needed. Generate a new mapping only after the resolver reports that no
    reviewed entry matches a genuinely new Steam build ID; follow the exceptional
-   procedure in the tool index.
+   procedure in the [mapping guide](../tools/mappings.md).
 4. Before an experiment, state the hypothesis, the one contract or variable to
    change, the distinguishable outcomes, and the decision supported by each
    outcome. If observation can answer the question, an in-game experiment is
@@ -65,7 +65,7 @@ permanent project documentation.
 
 Choose the smallest observation or experiment that can distinguish the live
 hypotheses. Start with the relevant public tool from the
-[tool index](../tools/README.md), using the narrowest query and its compact
+[tool index](../tools/tool-index.md), using the narrowest query and its compact
 result. For Blueprint structure, a focused summary is usually cheaper than a
 full export; for a specific package, narrow extraction is usually cheaper than
 a broad inventory or binary scan. These are examples, not a fixed ladder:

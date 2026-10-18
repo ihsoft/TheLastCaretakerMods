@@ -71,7 +71,7 @@ do not load every document just because it is indexed here.
 
 ## Entry points outside shared docs
 
-- [Tool index](tools/README.md): choose a public script by intent and read its
+- [Tool index](tools/tool-index.md): choose a public script by intent and read its
   supported interface before inspecting implementations.
 - [Git coordination](tools/repository-git-coordination.md): required semaphore
   and exact-path commit wrapper for Git mutations.
