@@ -21,6 +21,7 @@
 #include "RailgunRuntimeGeneratorPrivate.h"
 #include "RailgunReload.h"
 #include "VoyageInputContextAsset.h"
+#include "VoyageModSettingsGraph.h"
 #include "Components/InvalidationBox.h"
 
 namespace Railgun::Runtime
@@ -662,7 +663,9 @@ UClass* CreateDedicatedStation()
         UEdGraphSchema_K2::PC_Object, UCameraComponent::StaticClass());
     AddVariable(BP, EyeAim::FirstPersonCameraOwner,
         UEdGraphSchema_K2::PC_Object, APawn::StaticClass());
-    for (const auto& Setting : Settings::NumericSettings) AddVariable(BP, Setting.Field, UEdGraphSchema_K2::PC_Real);
+    check(VoyageModSettings::Graph::AddSettingMembers(
+        BP, Settings::Settings, UE_ARRAY_COUNT(Settings::Settings),
+        [](const VoyageModSettings::FSetting&) { return true; }));
     for (const auto& Font : Settings::FixedHudFonts)
         AddVariable(BP, Font.ObjectField, UEdGraphSchema_K2::PC_Object,
             UObject::StaticClass());
@@ -719,7 +722,10 @@ UClass* CreateDedicatedStation()
         EyeAim::FirstPersonCameraOwner, Aim::YawComponent,
         Aim::PitchComponent, Aim::ModelOwner})
         MarkVariableTransient(BP, RuntimeReference);
-    FKismetEditorUtilities::CompileBlueprint(BP);
+    check(VoyageModSettings::Graph::AddSettingsLoader(
+        BP, Settings::ReloadSettings, Settings::RelativePath,
+        Settings::Settings, UE_ARRAY_COUNT(Settings::Settings),
+        [](const VoyageModSettings::FSetting&) { return true; }));
     AddRailgunAimBindingFunctions(BP);
     auto* Hud = CastChecked<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(UVoyageBaseUserWidget::StaticClass(),
         CreatePackage(DS::HudPackage), *FPackageName::GetLongPackageAssetName(DS::HudPackage), BPTYPE_Normal,

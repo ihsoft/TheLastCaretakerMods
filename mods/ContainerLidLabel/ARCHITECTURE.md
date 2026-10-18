@@ -45,8 +45,10 @@ PlayerBox initialization. The inventory member belongs to
 exact generated Large CDO. Its transient loaded flag and configured float are
 shared by all instances. `EnsureCachedSettings` reads the INI once per loaded
 CDO using `VoyageEditorBlueprintFunctionLibrary.LoadFileToArray(FString)`, which
-returns `TArray<FString>` in the shipping game. Missing/invalid input is cached
-as 200 kg. Parsing has no world, latent, inventory or presentation side effects.
+returns `TArray<FString>` in the shipping game. The common generated parser and
+typed loader reset to the schema fallback before each read; missing or invalid
+input is cached as 200 kg. Parsing has no world, latent, inventory or
+presentation side effects.
 Class unload/reload may reread; the documented user workflow is game restart.
 
 The per-instance apply path calls
@@ -54,7 +56,8 @@ The per-instance apply path calls
 on the existing inventory, then sets `ResourceMeter` material scalar
 `ProgressLevel` from `GetPercentWeightUsed()`. No inventory recreation or stack
 trimming occurs. The value is a mass limit, not an item-slot count. Validation
-checks positivity after conversion to float as well as before conversion.
+checks positivity after conversion to float and rejects conversion to zero or
+overflow.
 
 The mod adds no Tick event, timer or recurring object search. Its added
 VoyageWidgetComponent inherits engine widget servicing; absence of mod Tick

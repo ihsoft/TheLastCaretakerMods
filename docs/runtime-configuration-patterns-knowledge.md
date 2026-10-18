@@ -43,28 +43,34 @@ describe it as a strict session snapshot without changing that ownership.
 ## Author one settings contract
 
 1. Put the distributable default `Assets/<Mod>.ini` under the mod. It owns
-   default values, player comments, order, and formatting. Install the same
+   distributed values, player comments, order, and formatting. Install the same
    file beside the consumed container when the mod reads it from
    `Voyage/Content/Paks`.
 2. Keep a small `Settings/<Mod>.settings.json` for what the INI cannot express:
-   exact key and generated member names, type (`number` or `boolean`), numeric
-   range, and runtime binding. The INI is the only source of default values;
-   the schema must not repeat them. Railgun's schema also groups keys and can
+   exact key and generated member names, type (`number`, `boolean`, or
+   `string`), required runtime fallback, optional inclusive numeric range,
+   final numeric storage, and runtime binding. Schema fallbacks are independent
+   of distributed INI values. Railgun's schema also groups keys and can
    bind a value to an external field; StableGyro's schema covers booleans. For
    a new mod, the flat StableGyro shape is the smaller starting point; add
    groups or external fields only when the consumers require them.
 3. At build time, require an exact case-sensitive key match between the default
    INI and schema. Reject duplicate or malformed keys, unsupported values,
-   missing defaults, nonfinite numbers, bad ranges, and inline comments. Copy
+   missing defaults, nonfinite numbers, bad ranges, and invalid quoted strings.
+   Reject duplicate keys in the repository INI. Copy
    the validated INI without rewriting its comments or layout. Generate runtime
    names/defaults from these inputs; never hand-edit generated headers or
    cooked output.
 4. In the runtime loader, reset the owner to defined fallbacks before each
-   read. Trim keys and values, parse numbers with an invariant decimal point,
-   validate in the final storage type, and clamp only where the schema says to.
-   Missing or invalid input uses the documented fallback. Most options use the
-   canonical default; a safety-sensitive option may explicitly choose another
-   value, as Railgun does for missing/invalid recoil settings. Unsupported keys
+   read. The first `=` separates a case-sensitive key from its value. Trim both,
+   and treat `#` as a comment only outside a quoted string. Numbers accept a
+   sign, decimal form, and exponent; they must be finite, representable in the
+   final storage type, and inside any inclusive bounds. Booleans accept only
+   `true` or `false`, case-insensitively. Strings are double quoted, may be
+   empty, and escape only quote and backslash. Missing or invalid input uses the
+   schema fallback and is never clamped. The last duplicate runtime occurrence
+   wins, including an invalid last value which therefore restores the schema
+   fallback. Unsupported keys
    must not silently alter another setting. Keep parser work free of latent,
    world, and instance side effects.
 5. Apply effective values through the actual owning setter or consumer path.
@@ -74,9 +80,12 @@ describe it as a strict session snapshot without changing that ownership.
    when a lifecycle event or direct reference suffices.
 
 The shared [settings generator](../tools/New-VoyageModSettings.ps1) validates
-either schema shape, copies the default INI byte for byte, and emits the
-runtime declarations. Mod-local scripts select the C++ collection form and
-retain the existing public build interfaces. The shared
+either schema shape, copies the default INI byte for byte, and emits one generic
+runtime table. The shared Blueprint graph generator in
+`tools/VoyageModSettings/Public` creates typed members and the parser/loader;
+each cooked mod contains its own generated graph and has no separately
+installed runtime dependency. Mod-local scripts retain existing public build
+interfaces. The shared
 [INI merger](../tools/Merge-VoyageModIni.ps1) prepares a new file without
 changing the installed one: it keeps player values and comments, removes only
 explicitly retired keys/comments, and adds missing defaults. The owning
@@ -87,7 +96,9 @@ The current concrete inputs and thin adapters are
 [Railgun generator](../mods/Railgun/Build/New-RailgunSettings.ps1),
 [StableGyro INI](../mods/StableGyro/Assets/StableGyro.ini),
 [StableGyro schema](../mods/StableGyro/Settings/StableGyro.settings.json), and
-[StableGyro generator](../mods/StableGyro/Build/New-StableGyroSettings.ps1).
+[StableGyro generator](../mods/StableGyro/Build/New-StableGyroSettings.ps1), plus
+[ContainerLidLabel schema](../mods/ContainerLidLabel/Settings/ContainerLidLabel.settings.json)
+and [generator](../mods/ContainerLidLabel/Build/New-ContainerLidLabelSettings.ps1).
 The normal build entry points remain `Build-Railgun.ps1` and
 `Build-StableGyro.ps1`; a coder adding a setting edits the INI, schema and
 runtime consumer, then runs that entry point. Their exact

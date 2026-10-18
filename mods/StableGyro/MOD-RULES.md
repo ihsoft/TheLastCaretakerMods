@@ -118,24 +118,24 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 
 ## Settings contract
 
-`Assets/StableGyro.ini` is the canonical packaged INI and sole source
-of defaults, comments, order, and formatting. Comments occupy their own lines;
-inline comments after values are rejected because the runtime numeric parser
-would otherwise keep the baked default.
-`Settings/StableGyro.settings.json` owns only the flat-section binding
-and validation metadata. For each option:
+`Assets/StableGyro.ini` owns distributed values, comments, order, and
+formatting. Inline `#` comments are supported.
+`Settings/StableGyro.settings.json` owns the flat-section binding, required
+schema fallbacks, and validation metadata. For each option:
 
 - `id` is the generated C++ symbol;
 - `runtimeName` is the generated Blueprint member and output-pin name;
 - `key` is the exact name to the left of `=` in the INI;
-- `type` creates a `double` or `bool` member on the generated settings owner; and
-- `minimum` and `maximum` clamp a numeric value after parsing.
+- `type` creates a `double`, `bool`, or string member on the generated owner;
+- `default` is the fallback for missing or invalid runtime input; and
+- `minimum` and `maximum` are optional inclusive bounds. Out-of-range input
+  uses the schema fallback and is never clamped.
 
 To add a setting, add the canonical value and adjacent comments to the INI,
 then add one schema entry with matching identities. Include
 `StableGyroSettings.h` and use the existing
 `namespace Settings = StableGyroSettings;` alias. The public producer creates
-the member, initializes it from the canonical default, and builds the callable
+the member, initializes it from the schema fallback, and builds the callable
 `ReloadSettings` loader. Both helpers call it at BeginPlay and synchronously on
 player entry through the owning Pawn's controller-changed delegate, resetting
 their defaults before every read. `ModActor` owns the full settings set for

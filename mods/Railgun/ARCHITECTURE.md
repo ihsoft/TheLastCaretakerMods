@@ -194,8 +194,8 @@ This coordinate conversion does not replace the game's inversion setting.
   changing idle consumption does not change `FullChargeTimeSeconds` while the
   requested input is available. Native ON and standby consumption remain zero
   so this explicit debit is the only idle-loss path. Zero and fractional values
-  are valid; the standard numeric parser supplies the `1` kW template fallback
-  for nonnumeric input and clamps values to the declared range.
+  are valid; the shared numeric parser supplies the `1` kW schema fallback for
+  invalid or out-of-range input without clamping.
 - Station initialization resolves and caches the concrete module, binds the
   exact value, socket-connection and power-state delegates, and performs
   initial charge and supply snapshots. The value callback refreshes cached
@@ -307,12 +307,11 @@ This coordinate conversion does not replace the game's inversion setting.
   result, and neither path changes character or control rotation. Ship recoil
   walks at most 32 scene-component attachment parents from the real module root
   and applies one backward impulse to the first simulated primitive it finds.
-  Both settings are bounded multipliers from zero through ten. Before parsing,
-  the runtime initializes only these two settings to zero, so a missing INI,
-  missing recoil key or invalid numeric value disables the corresponding
-  recoil. Explicit valid INI values override that fallback; one remains the
-  authored baseline. Missing/invalid-INI recoil fallback has static coverage
-  only, not runtime coverage.
+  Both settings are bounded multipliers from zero through ten. A missing INI,
+  missing recoil key or invalid numeric value uses the schema fallback: 0.5
+  for camera recoil and 2 for ship recoil. Explicit valid INI values override
+  those fallbacks; zero disables the corresponding effect. These fallback
+  values still require a real-game check.
 - The station binds the concrete shell owner's `OnEndPlay` delegate. Shell
   destruction or removal from the world immediately blocks acquisition and
   collision. An unoccupied station finalizes teardown directly; an occupied

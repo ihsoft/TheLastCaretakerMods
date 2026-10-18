@@ -4,6 +4,7 @@
 #include "StationEnergyHud.h"
 #include "StationRangeGraph.h"
 #include "RailgunRuntimeGeneratorFwd.h"
+#include "VoyageModSettingsTypes.h"
 
 namespace Railgun::Runtime
 {
@@ -11,9 +12,9 @@ namespace Settings
 {
 inline const FName FilePath(TEXT("InPath")); // Voyage declaring signature.
 inline constexpr TCHAR RelativePath[] = TEXT("Paks/Railgun.ini");
+inline const FName ReloadSettings(TEXT("ReloadRailgunSettings"));
 inline constexpr TCHAR Separator[] = TEXT("=");
 inline constexpr TCHAR Negate[] = TEXT("-1.0");
-inline constexpr TCHAR DisabledRecoilFallback[] = TEXT("0");
 inline const FName FontObjectPin(TEXT("FontObject"));
 inline const FName TypefaceFontNamePin(TEXT("TypefaceFontName"));
 inline const FName FontSizePin(TEXT("Size"));
@@ -27,14 +28,9 @@ inline const FName XPin(TEXT("X"));
 inline const FName YPin(TEXT("Y"));
 inline const FName MakeSlateFontInfoFunction(TEXT("MakeSlateFontInfo"));
 
-struct FNumericSetting
-{
-    const TCHAR* Key;
-    FName Field;
-    const TCHAR* Default;
-    const TCHAR* Minimum;
-    const TCHAR* Maximum;
-};
+using VoyageModSettings::ENumberStorage;
+using VoyageModSettings::ESettingType;
+using VoyageModSettings::FSetting;
 
 struct FFixedFont
 {
@@ -50,7 +46,6 @@ inline const FFixedFont FixedHudFonts[] = {
 
 #include "StationSettings.generated.h"
 
-const TCHAR* RuntimeFallback(const FNumericSetting& Setting);
 }
 
 UK2Node_MacroInstance* ContextLoop(FGraph& G, UEdGraphPin* Values);

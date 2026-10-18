@@ -1,12 +1,12 @@
 {
-  "schemaVersion": 1,
-  "section": "",
+  "schemaVersion": 2,
   "settings": [
     {
       "id": "PitchRampSeconds",
       "runtimeName": "PitchRampSeconds",
       "key": "PitchRampSeconds",
       "type": "number",
+      "default": 1.5,
       "minimum": 0.05,
       "maximum": 60.0
     },
@@ -15,12 +15,14 @@
       "runtimeName": "EnablePitchCorrection",
       "key": "EnablePitchCorrection",
       "type": "boolean"
+      ,"default": true
     },
     {
       "id": "StabilizationMinimumPropellerVelocity",
       "runtimeName": "StabilizationMinimumPropellerVelocity",
       "key": "StabilizationMinimumPropellerVelocity",
       "type": "number",
+      "default": 390.0,
       "minimum": 0.0,
       "maximum": 100000.0
     },
@@ -29,6 +31,7 @@
       "runtimeName": "AltitudeStabilizationVerticalDeceleration",
       "key": "AltitudeStabilizationVerticalDeceleration",
       "type": "number",
+      "default": 500.0,
       "minimum": 0.0,
       "maximum": 10000.0
     },
@@ -37,6 +40,7 @@
       "runtimeName": "AltitudeStabilizationMinimumThrottlePercent",
       "key": "AltitudeStabilizationMinimumThrottlePercent",
       "type": "number",
+      "default": 50.0,
       "minimum": 0.0,
       "maximum": 100.0
     },
@@ -45,6 +49,7 @@
       "runtimeName": "HorizontalVelocityDecayAcceleration",
       "key": "HorizontalVelocityDecayAcceleration",
       "type": "number",
+      "default": 150.0,
       "minimum": 1.0,
       "maximum": 10000.0
     }

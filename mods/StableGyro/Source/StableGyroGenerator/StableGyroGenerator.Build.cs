@@ -26,6 +26,10 @@ public class StableGyroGenerator : ModuleRules
             ModuleDirectory,
             "..", "..", "..", "..",
             "tools", "UnrealEditorGeneratorCommon", "Public")));
+        PrivateIncludePaths.Add(Path.GetFullPath(Path.Combine(
+            ModuleDirectory,
+            "..", "..", "..", "..",
+            "tools", "VoyageModSettings", "Public")));
 
         PrivateDependencyModuleNames.AddRange(new[]
         {

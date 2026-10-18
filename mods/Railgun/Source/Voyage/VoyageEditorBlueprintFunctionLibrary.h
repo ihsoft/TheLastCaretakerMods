@@ -5,6 +5,7 @@
 // Method: public executable inspector plus bounded registration decode.
 // Revalidate owner/signature on Steam build ID change; stub is authoring only.
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Misc/FileHelper.h"
 #include "VoyageEditorBlueprintFunctionLibrary.generated.h"
 UCLASS()
 class VOYAGE_API UVoyageEditorBlueprintFunctionLibrary : public UBlueprintFunctionLibrary
@@ -12,5 +13,12 @@ class VOYAGE_API UVoyageEditorBlueprintFunctionLibrary : public UBlueprintFuncti
     GENERATED_BODY()
 public:
     UFUNCTION(BlueprintCallable, Category="Voyage Mirror")
-    static TArray<FString> LoadFileToArray(FString InPath) { return {}; }
+    static TArray<FString> LoadFileToArray(FString InPath)
+    {
+        FString Text;
+        TArray<FString> Lines;
+        if (FFileHelper::LoadFileToString(Text, *InPath))
+            Text.ParseIntoArrayLines(Lines, false);
+        return Lines;
+    }
 };

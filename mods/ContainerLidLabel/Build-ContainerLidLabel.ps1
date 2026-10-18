@@ -25,32 +25,21 @@ $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
 $tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp\ContainerLidLabel'))
 $configSource = Join-Path $modRoot 'Assets\ContainerLidLabel.ini'
-$configKey = 'LargeContainerMaxWeightKg'
-if (-not (Test-Path -LiteralPath $configSource -PathType Leaf)) {
-    throw "Authored config is missing: $configSource"
-}
-$defaultMaxWeightKg = $null
-$matchingConfigKeys = 0
-foreach ($rawLine in Get-Content -LiteralPath $configSource) {
-    $line = $rawLine.Trim()
-    if ($line.Length -eq 0 -or $line.StartsWith(';') -or $line.StartsWith('#')) { continue }
-    $separatorIndex = $line.IndexOf('=')
-    if ($separatorIndex -lt 0 -or $line.Substring(0, $separatorIndex).Trim() -cne $configKey) { continue }
-    $matchingConfigKeys++
-    $valueText = $line.Substring($separatorIndex + 1).Trim()
-    $parsed = 0.0
-    if (-not [double]::TryParse($valueText, [Globalization.NumberStyles]::Float,
-            [Globalization.CultureInfo]::InvariantCulture, [ref]$parsed) -or
-        [double]::IsNaN($parsed) -or [double]::IsInfinity($parsed) -or
-        $parsed -le 0.0 -or $parsed -gt [single]::MaxValue) {
-        throw "Authored $configKey must be a finite positive float: $configSource"
-    }
-    $defaultMaxWeightKg = [single]$parsed
-}
-if ($matchingConfigKeys -ne 1 -or $null -eq $defaultMaxWeightKg) {
-    throw "Authored config must contain exactly one ${configKey}: $configSource"
-}
-$defaultMaxText = $defaultMaxWeightKg.ToString('R', [Globalization.CultureInfo]::InvariantCulture)
+$settingsSchema = Join-Path $modRoot 'Settings\ContainerLidLabel.settings.json'
+$settingsGenerator = Join-Path $modRoot 'Build\New-ContainerLidLabelSettings.ps1'
+$generatedSettingsDirectory = Join-Path $modRoot 'Intermediate\GeneratedSettings'
+$generatedSettingsHeader = Join-Path $generatedSettingsDirectory 'ContainerLidLabelSettings.generated.h'
+$generatedSettingsIni = Join-Path $generatedSettingsDirectory 'ContainerLidLabel.ini'
+& $settingsGenerator -SchemaPath $settingsSchema -DefaultIniPath $configSource `
+    -HeaderPath $generatedSettingsHeader -IniPath $generatedSettingsIni
+$testSchema = Join-Path $repoRoot 'tools\VoyageModSettings\Tests\VoyageModSettingsTest.settings.json'
+$testIni = Join-Path $repoRoot 'tools\VoyageModSettings\Tests\VoyageModSettingsTest.ini'
+$testHeader = Join-Path $generatedSettingsDirectory 'VoyageModSettingsTestSettings.generated.h'
+$testIniCopy = Join-Path $generatedSettingsDirectory 'VoyageModSettingsTest.ini'
+& (Join-Path $repoRoot 'tools\New-VoyageModSettings.ps1') `
+    -SchemaPath $testSchema -DefaultIniPath $testIni `
+    -HeaderPath $testHeader -IniPath $testIniCopy `
+    -GeneratedBy 'tools/VoyageModSettings/Tests/VoyageModSettingsTest.settings.json' | Out-Null
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $stamp = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
     $OutputRoot = Join-Path $tmpRoot "releases\ContainerLidLabel-$Version-$stamp"
@@ -174,7 +163,12 @@ if ($FinalizeExisting) {
         Get-Item -LiteralPath (Join-Path $modRoot 'Voyage.uproject')
         Get-Item -LiteralPath (Join-Path $modRoot 'Build-ContainerLidLabel.ps1')
         Get-ChildItem -LiteralPath (Join-Path $modRoot 'Assets') -Recurse -File
+        Get-ChildItem -LiteralPath (Join-Path $modRoot 'Build') -Recurse -File
+        Get-ChildItem -LiteralPath (Join-Path $modRoot 'Settings') -Recurse -File
         Get-ChildItem -LiteralPath (Join-Path $modRoot 'Source') -Recurse -File
+        Get-ChildItem -LiteralPath (Join-Path $repoRoot 'tools\VoyageModSettings') -Recurse -File |
+            Where-Object { $_.Name -cne '.local-backlog.md' }
+        Get-Item -LiteralPath (Join-Path $repoRoot 'tools\New-VoyageModSettings.ps1')
         Get-ChildItem -LiteralPath $modRoot -File -Filter '*.md'
     ) | Sort-Object FullName -Unique
     Write-Host "Finalize 3a/4 Enumerated $($sourceFiles.Count) source files"
@@ -190,7 +184,7 @@ if ($FinalizeExisting) {
         createdUtc = [DateTime]::UtcNow.ToString('o'); steamBuildId = [string]$releaseRecord.gameFingerprint.steamBuildId
         engine = '5.8.2'; retocEngineVersion = $retocVersion
         runtimePackages = [IO.File]::ReadAllLines($expectedList)
-        config = [ordered]@{ path = $releaseConfig; defaultMaxWeightKg = $defaultMaxWeightKg; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash }
+        config = [ordered]@{ path = $releaseConfig; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash }
         relocation = [ordered]@{ source = $sourcePackage; destination = $relocatedPackage; replacementCount = 2; sourceUexpSha256 = $stockHash; relocatedUexpSha256 = $stockHash }
         containerCheckReport = $verification.FullName; releaseManifest = $releaseManifestPath
         sourceFiles = @($sourceFiles | ForEach-Object { [ordered]@{ path = $_.FullName.Substring($repoRoot.Length + 1).Replace('\', '/'); length = $_.Length; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash } })
@@ -219,7 +213,7 @@ Invoke-LoggedProcess -FilePath $buildBatch -Name 'editor-build' -Arguments @(
 
 Write-Host '3/8 Generating Blueprint assets'
 $releaseConfig = Join-Path $releaseRoot 'ContainerLidLabel.ini'
-Copy-Item -LiteralPath $configSource -Destination $releaseConfig
+Copy-Item -LiteralPath $generatedSettingsIni -Destination $releaseConfig
 $content = [IO.Path]::GetFullPath((Join-Path $modRoot 'Content'))
 $contentPrefix = $modRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 if (-not $content.StartsWith($contentPrefix, [StringComparison]::OrdinalIgnoreCase) -or
@@ -231,7 +225,7 @@ if (Test-Path -LiteralPath $content) {
 }
 Invoke-LoggedProcess -FilePath $editor -Name 'generate' -Arguments @(
     ('"{0}"' -f $project), '-run=GenerateContainerLidLabel',
-    ('-DefaultMaxWeightKg={0}' -f $defaultMaxText), '-unattended', '-nop4', '-nosplash', '-nullrhi', '-nosound')
+    '-unattended', '-nop4', '-nosplash', '-nullrhi', '-nosound')
 
 Write-Host '4/8 Cooking exact replacement package'
 Invoke-LoggedProcess -FilePath $editor -Name 'cook' -Arguments @(
@@ -332,7 +326,12 @@ $sourceFiles = @(
     Get-Item -LiteralPath (Join-Path $modRoot 'Voyage.uproject')
     Get-Item -LiteralPath (Join-Path $modRoot 'Build-ContainerLidLabel.ps1')
     Get-ChildItem -LiteralPath (Join-Path $modRoot 'Assets') -Recurse -File
+    Get-ChildItem -LiteralPath (Join-Path $modRoot 'Build') -Recurse -File
+    Get-ChildItem -LiteralPath (Join-Path $modRoot 'Settings') -Recurse -File
     Get-ChildItem -LiteralPath (Join-Path $modRoot 'Source') -Recurse -File
+    Get-ChildItem -LiteralPath (Join-Path $repoRoot 'tools\VoyageModSettings') -Recurse -File |
+        Where-Object { $_.Name -cne '.local-backlog.md' }
+    Get-Item -LiteralPath (Join-Path $repoRoot 'tools\New-VoyageModSettings.ps1')
     Get-ChildItem -LiteralPath $modRoot -File -Filter '*.md'
 ) | Sort-Object FullName -Unique
 $buildManifest = [ordered]@{
@@ -347,7 +346,6 @@ $buildManifest = [ordered]@{
     runtimePackages = [IO.File]::ReadAllLines($expectedList)
     config = [ordered]@{
         path = $releaseConfig
-        defaultMaxWeightKg = $defaultMaxWeightKg
         sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash
     }
     relocation = [ordered]@{

@@ -8,14 +8,6 @@
 
 namespace Railgun::Runtime
 {
-const TCHAR* Settings::RuntimeFallback(const FNumericSetting& Setting)
-{
-    return Setting.Field == CameraRecoilStrength ||
-        Setting.Field == ShipRecoilStrength
-        ? DisabledRecoilFallback
-        : Setting.Default;
-}
-
 UEdGraphPin* TrimSetting(FGraph& G, UEdGraphPin* Text)
 {
     auto* Leading = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Trim));
@@ -44,43 +36,11 @@ UEdGraphPin* ClampStationAim(FGraph& G, bool Horizontal, UEdGraphPin* Value)
 
 void ReadStationSettings(FGraph& G)
 {
-    for (const auto& Setting : Settings::NumericSettings)
-        G.Write(Setting.Field, nullptr, Settings::RuntimeFallback(Setting));
-    auto* Work = G.Node(NewObject<UK2Node_ExecutionSequence>(G.Graph));
-    G.Link(G.Tail, G.Pin(Work, P::Execute)); G.Tail = Work->GetThenPinGivenIndex(0);
-    auto* Content = G.Call(UBlueprintPathsLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UBlueprintPathsLibrary, ProjectContentDir));
-    auto* Path = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Concat_StrStr));
-    G.Link(G.Pin(Content, P::ReturnValue), G.Pin(Path, P::Binary::LeftOperand)); G.Default(Path, P::Binary::RightOperand, Settings::RelativePath);
-    auto* Read = G.Call(UVoyageEditorBlueprintFunctionLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UVoyageEditorBlueprintFunctionLibrary, LoadFileToArray));
-    G.Link(G.Pin(Path, P::ReturnValue), G.Pin(Read, Settings::FilePath)); G.Exec(Read);
-    auto* Loop = ContextLoop(G, G.Pin(Read, P::ReturnValue));
-    auto* Split = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Split));
-    G.Link(G.Pin(Loop, CE::ArrayElement), G.Pin(Split, ActorScanGraphNames::SourceString));
-    G.Default(Split, TextSettingsGraphNames::SplitDelimiter, Settings::Separator);
-    G.Branch(G.Pin(Split, P::ReturnValue));
-    auto* Key = TrimSetting(G, G.Pin(Split, TextSettingsGraphNames::SplitLeft));
-    auto* Text = TrimSetting(G, G.Pin(Split, TextSettingsGraphNames::SplitRight));
-    auto* Numeric = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, IsNumeric));
-    G.Link(Text, G.Pin(Numeric, ActorScanGraphNames::SourceString)); G.Branch(G.Pin(Numeric, P::ReturnValue));
-    auto* Value = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Conv_StringToDouble));
-    G.Link(Text, G.Pin(Value, TextSettingsGraphNames::NumericString));
-    auto* NextKey = G.Tail;
-    auto ReadKey = [&](const TCHAR* Name, FName Field, const TCHAR* Minimum,
-        const TCHAR* Maximum)
-    {
-        G.Tail = NextKey;
-        auto* Match = G.Call(UKismetStringLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr));
-        G.Link(Key, G.Pin(Match, P::Binary::LeftOperand)); G.Default(Match, P::Binary::RightOperand, Name);
-        auto* Branch = G.Branch(G.Pin(Match, P::ReturnValue)); NextKey = G.Pin(Branch, P::Else);
-        auto* Clamp = G.Call(UKismetMathLibrary::StaticClass(), GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, FClamp));
-        G.Link(G.Pin(Value, P::ReturnValue), G.Pin(Clamp, OP::ClampValue)); G.Default(Clamp, OP::ClampMinimum, Minimum); G.Default(Clamp, OP::ClampMaximum, Maximum);
-        G.Write(Field, G.Pin(Clamp, P::ReturnValue));
-    };
-    for (const auto& Setting : Settings::NumericSettings)
-        ReadKey(Setting.Key, Setting.Field, Setting.Minimum, Setting.Maximum);
-
-    // A missing file returns an empty array. Parsing must never block entry.
-    G.Tail = Work->GetThenPinGivenIndex(1);
+    UBlueprint* Blueprint = G.Graph->GetTypedOuter<UBlueprint>();
+    check(Blueprint && Blueprint->GeneratedClass);
+    UK2Node_CallFunction* Reload = G.Call(
+        Blueprint->GeneratedClass, Settings::ReloadSettings);
+    G.Exec(Reload);
     G.Write(Aim::Yaw, ClampStationAim(G, true, G.Read(Aim::Yaw)));
     G.Write(Aim::Pitch, ClampStationAim(G, false, G.Read(Aim::Pitch)));
     auto LoadFont = [&](const TCHAR* ObjectPath, FName ObjectField)

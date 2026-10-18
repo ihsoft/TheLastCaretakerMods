@@ -5,6 +5,7 @@
 // mirror binary is shipped.
 
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Misc/FileHelper.h"
 #include "VoyageEditorBlueprintFunctionLibrary.generated.h"
 
 UCLASS()
@@ -14,5 +15,12 @@ class VOYAGE_API UVoyageEditorBlueprintFunctionLibrary : public UBlueprintFuncti
 
 public:
     UFUNCTION(BlueprintCallable, Category="ContainerLidLabel")
-    static TArray<FString> LoadFileToArray(FString InPath) { return {}; }
+    static TArray<FString> LoadFileToArray(FString InPath)
+    {
+        FString Text;
+        TArray<FString> Lines;
+        if (FFileHelper::LoadFileToString(Text, *InPath))
+            Text.ParseIntoArrayLines(Lines, false);
+        return Lines;
+    }
 };

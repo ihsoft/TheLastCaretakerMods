@@ -263,6 +263,7 @@ $sourceStatus = @(& git -C $repoRoot status --porcelain -- `
     'mods/StableGyro' `
     'tools/New-VoyageModSettings.ps1' `
     'tools/Merge-VoyageModIni.ps1' `
+    'tools/VoyageModSettings' `
     ':(exclude)mods/StableGyro/Slideshow')
 if ($LASTEXITCODE -ne 0) {
     throw 'Unable to inspect StableGyro source status.'

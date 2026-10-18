@@ -13,6 +13,8 @@ public class RailgunRuntimeGenerator : ModuleRules
         PrivateIncludePaths.Add(Path.GetFullPath(GeneratedSettingsDirectory));
         PrivateIncludePaths.Add(Path.GetFullPath(Path.Combine(ModuleDirectory,
             "../../../../tools/UnrealEditorGeneratorCommon/Public")));
+        PrivateIncludePaths.Add(Path.GetFullPath(Path.Combine(ModuleDirectory,
+            "../../../../tools/VoyageModSettings/Public")));
         PrivateDependencyModuleNames.AddRange(new[] {
             "Core", "CoreUObject", "Engine", "UnrealEd", "BlueprintGraph", "KismetCompiler",
             "UMG", "UMGEditor", "MovieScene", "MovieSceneTracks", "AdvancedWidgets", "SlateCore", "SlateBaseRenderer", "Voyage", "EnhancedInput", "InputCore", "InputBlueprintNodes",

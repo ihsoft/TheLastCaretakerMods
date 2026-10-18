@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "settings": [
+    {
+      "id": "LargeContainerMaxWeightKg",
+      "runtimeName": "ConfiguredMaxWeightKg",
+      "type": "number",
+      "storage": "float",
+      "default": 200,
+      "minimum": 1
+    }
+  ]
+}

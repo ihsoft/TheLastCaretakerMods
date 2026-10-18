@@ -44,6 +44,9 @@
 #include "WidgetBlueprint.h"
 #include "VoyageBaseInventoryComponent.h"
 #include "VoyageEditorBlueprintFunctionLibrary.h"
+#include "VoyageModSettingsGraph.h"
+#include "VoyageModSettingsTests.h"
+#include "ContainerLidLabelSettings.h"
 #include "VoyageInventoryWeightLimitedComponent.h"
 #include "VoyageMiscBlueprintFunctionLibrary.h"
 #include "VoyageWidgetComponent.h"
@@ -86,6 +89,7 @@ const FName OnPersistentActorPostLoad(TEXT("OnPersistentActorPostLoad"));
 const FName PersistentVersion(TEXT("Version"));
 const FName ApplyConfiguredCapacity(TEXT("ApplyConfiguredCapacity"));
 const FName EnsureCachedSettings(TEXT("EnsureCachedSettings"));
+const FName ReloadSettings(TEXT("ReloadContainerLidLabelSettings"));
 const FName PlayerBoxLid(TEXT("PlayerBox_Lid"));
 const FName ResourceMeter(TEXT("ResourceMeter"));
 const FName LeftIconPlane(TEXT("LeftIconPlane"));
@@ -625,7 +629,7 @@ void AddIconOverride(UBlueprint* Child)
         Pin(ShowLeft, UEdGraphSchema_K2::PN_Then), 1300, 0);
 }
 
-void AddCachedSettingsFunction(UBlueprint* Child, const FString& DefaultMaxWeightKg)
+void AddCachedSettingsFunction(UBlueprint* Child)
 {
     UEdGraph* Graph = nullptr;
     UK2Node_FunctionEntry* Entry = AddFunction(
@@ -638,99 +642,16 @@ void AddCachedSettingsFunction(UBlueprint* Child, const FString& DefaultMaxWeigh
     UK2Node_VariableGet* Loaded = ReadSelf(Graph, SettingsLoaded, 220, -360);
     UK2Node_IfThenElse* NeedsLoad = Branch(
         Graph, Pin(Entry, UEdGraphSchema_K2::PN_Then), Pin(Loaded, SettingsLoaded), 450, -600);
-    UK2Node_VariableSet* SetDefault = WriteSelf(Graph, ConfiguredMaxWeightKg, 680, -480);
-    Pin(SetDefault, ConfiguredMaxWeightKg)->DefaultValue = DefaultMaxWeightKg;
-    check(Link(Pin(NeedsLoad, UEdGraphSchema_K2::PN_Else), Pin(SetDefault, UEdGraphSchema_K2::PN_Execute)));
-    UK2Node_CallFunction* Content = Call(Graph,
-        UBlueprintPathsLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UBlueprintPathsLibrary, ProjectContentDir)), 910, -240);
-    UK2Node_CallFunction* Path = Call(Graph,
-        UKismetStringLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Concat_StrStr)), 1140, -240);
-    Pin(Path, BinaryRight)->DefaultValue = ConfigRelativePath;
-    check(Link(Pin(Content, UEdGraphSchema_K2::PN_ReturnValue), Pin(Path, BinaryLeft)));
-    UK2Node_CallFunction* Load = Call(Graph,
-        UVoyageEditorBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UVoyageEditorBlueprintFunctionLibrary, LoadFileToArray)), 1370, -480);
-    check(Link(Pin(SetDefault, UEdGraphSchema_K2::PN_Then), Pin(Load, UEdGraphSchema_K2::PN_Execute)));
-    check(Link(Pin(Path, UEdGraphSchema_K2::PN_ReturnValue), Pin(Load, InputPath)));
-    UK2Node_MacroInstance* Loop = AddForEachLoop(Graph, 1600, -480);
-    check(Link(Pin(Load, UEdGraphSchema_K2::PN_Then), FirstExecInput(Loop)));
-    check(Link(Pin(Load, UEdGraphSchema_K2::PN_ReturnValue), Pin(Loop, LoopArray)));
-
-    UEdGraphPin* Line = Trimmed(Graph, Pin(Loop, LoopElement), 1830, -240);
-    UK2Node_CallFunction* Split = Call(Graph,
-        UKismetStringLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Split)), 2520, -300);
-    Pin(Split, SplitDelimiter)->DefaultValue = ConfigSeparator;
-    check(Link(Line, Pin(Split, SourceString)));
-    UK2Node_IfThenElse* HasPair = Branch(
-        Graph, Pin(Loop, LoopBody),
-        Pin(Split, UEdGraphSchema_K2::PN_ReturnValue), 2520, -520);
-
-    UEdGraphPin* Key = Trimmed(Graph, Pin(Split, SplitLeft), 2750, -260);
-    UEdGraphPin* ValueText = Trimmed(Graph, Pin(Split, SplitRight), 2750, 40);
-    UK2Node_CallFunction* KeyMatches = Call(Graph,
-        UKismetStringLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr)), 3210, -260);
-    Pin(KeyMatches, BinaryRight)->DefaultValue = ConfigKey;
-    check(Link(Key, Pin(KeyMatches, BinaryLeft)));
-    UK2Node_IfThenElse* IsKey = Branch(
-        Graph, Pin(HasPair, UEdGraphSchema_K2::PN_Then),
-        Pin(KeyMatches, UEdGraphSchema_K2::PN_ReturnValue), 3440, -520);
-    UK2Node_CallFunction* IsNumeric = Call(Graph,
-        UKismetStringLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, IsNumeric)), 3440, -220);
-    check(Link(ValueText, Pin(IsNumeric, SourceString)));
-    UK2Node_IfThenElse* Numeric = Branch(
-        Graph, Pin(IsKey, UEdGraphSchema_K2::PN_Then),
-        Pin(IsNumeric, UEdGraphSchema_K2::PN_ReturnValue), 3670, -520);
-
-    UK2Node_CallFunction* Parsed = Call(Graph,
-        UKismetStringLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, Conv_StringToDouble)), 3670, -220);
-    check(Link(ValueText, Pin(Parsed, NumericString)));
-    UK2Node_CallFunction* Positive = Call(Graph,
-        UKismetMathLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble)), 3900, -320);
-    Pin(Positive, BinaryRight)->DefaultValue = ZeroLiteral;
-    check(Link(Pin(Parsed, UEdGraphSchema_K2::PN_ReturnValue), Pin(Positive, BinaryLeft)));
-    UK2Node_CallFunction* FitsFloat = Call(Graph,
-        UKismetMathLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, LessEqual_DoubleDouble)), 3900, -140);
-    Pin(FitsFloat, BinaryRight)->DefaultValue = FloatMaximumLiteral;
-    check(Link(Pin(Parsed, UEdGraphSchema_K2::PN_ReturnValue), Pin(FitsFloat, BinaryLeft)));
-    UK2Node_CallFunction* Valid = Call(Graph,
-        UKismetMathLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND)), 4130, -230);
-    check(Link(Pin(Positive, UEdGraphSchema_K2::PN_ReturnValue), Pin(Valid, BinaryLeft)));
-    check(Link(Pin(FitsFloat, UEdGraphSchema_K2::PN_ReturnValue), Pin(Valid, BinaryRight)));
-    UK2Node_IfThenElse* ValidValue = Branch(
-        Graph, Pin(Numeric, UEdGraphSchema_K2::PN_Then),
-        Pin(Valid, UEdGraphSchema_K2::PN_ReturnValue), 4360, -520);
-    UK2Node_CallFunction* ToFloat = Call(Graph,
-        UKismetMathLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Conv_DoubleToFloat)), 4360, -230);
-    check(Link(Pin(Parsed, UEdGraphSchema_K2::PN_ReturnValue), Pin(ToFloat, FloatInput)));
-    UK2Node_CallFunction* ConvertedDouble = Call(Graph,
-        UKismetMathLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Conv_FloatToDouble)), 4590, -230);
-    check(Link(Pin(ToFloat, UEdGraphSchema_K2::PN_ReturnValue), Pin(ConvertedDouble, DoubleInput)));
-    UK2Node_CallFunction* ConvertedPositive = Call(Graph,
-        UKismetMathLibrary::StaticClass()->FindFunctionByName(
-            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Greater_DoubleDouble)), 4820, -230);
-    Pin(ConvertedPositive, BinaryRight)->DefaultValue = ZeroLiteral;
-    check(Link(Pin(ConvertedDouble, UEdGraphSchema_K2::PN_ReturnValue), Pin(ConvertedPositive, BinaryLeft)));
-    UK2Node_IfThenElse* Representable = Branch(
-        Graph, Pin(ValidValue, UEdGraphSchema_K2::PN_Then),
-        Pin(ConvertedPositive, UEdGraphSchema_K2::PN_ReturnValue), 5050, -520);
-    UK2Node_VariableSet* SetConfigured = WriteSelf(Graph, ConfiguredMaxWeightKg, 5280, -520);
-    check(Link(Pin(Representable, UEdGraphSchema_K2::PN_Then), Pin(SetConfigured, UEdGraphSchema_K2::PN_Execute)));
-    check(Link(Pin(ToFloat, UEdGraphSchema_K2::PN_ReturnValue), Pin(SetConfigured, ConfiguredMaxWeightKg)));
-
-    UK2Node_VariableSet* MarkLoaded = WriteSelf(Graph, SettingsLoaded, 1830, 160);
+    UFunction* Reload = Child->GeneratedClass->FindFunctionByName(
+        ReloadSettings, EIncludeSuperFlag::ExcludeSuper);
+    check(Reload && Reload->GetOwnerClass() == Child->GeneratedClass);
+    UK2Node_CallFunction* ReloadCall = Call(Graph, Reload, 680, -480);
+    check(Link(Pin(NeedsLoad, UEdGraphSchema_K2::PN_Else),
+        Pin(ReloadCall, UEdGraphSchema_K2::PN_Execute)));
+    UK2Node_VariableSet* MarkLoaded = WriteSelf(Graph, SettingsLoaded, 910, -480);
     Pin(MarkLoaded, SettingsLoaded)->DefaultValue = TEXT("true");
-    check(Link(Pin(Loop, LoopCompleted), Pin(MarkLoaded, UEdGraphSchema_K2::PN_Execute)));
+    check(Link(Pin(ReloadCall, UEdGraphSchema_K2::PN_Then),
+        Pin(MarkLoaded, UEdGraphSchema_K2::PN_Execute)));
     if (Results.Num() == 1)
     {
         check(Link(Pin(MarkLoaded, UEdGraphSchema_K2::PN_Then), Pin(Results[0], UEdGraphSchema_K2::PN_Execute)));
@@ -870,9 +791,6 @@ UGenerateContainerLidLabelCommandlet::UGenerateContainerLidLabelCommandlet()
 
 int32 UGenerateContainerLidLabelCommandlet::Main(const FString& Params)
 {
-    FString DefaultMaxWeightKg;
-    checkf(FParse::Value(*Params, TEXT("DefaultMaxWeightKg="), DefaultMaxWeightKg) &&
-        !DefaultMaxWeightKg.IsEmpty(), TEXT("Missing -DefaultMaxWeightKg=<positive-float>"));
     if (FPackageName::DoesPackageExist(StockWidgetPackage) ||
         FPackageName::DoesPackageExist(StockContainerBasePackage) ||
         FPackageName::DoesPackageExist(StockInventoryParentPackage) ||
@@ -941,6 +859,14 @@ int32 UGenerateContainerLidLabelCommandlet::Main(const FString& Params)
     }
 
     Compile(Child);
+    check(VoyageModSettings::Graph::AddSettingsLoader(
+        Child, ReloadSettings, ContainerLidLabelSettings::RelativePath,
+        ContainerLidLabelSettings::Settings, UE_ARRAY_COUNT(ContainerLidLabelSettings::Settings),
+        [](const VoyageModSettings::FSetting&) { return true; }));
+    VoyageModSettings::Graph::TestLineParser(Child);
+    VoyageModSettings::Graph::TestNumberParser(Child);
+    VoyageModSettings::Graph::TestStringParser(Child);
+    VoyageModSettings::Tests::RunGeneratedLoaderTests();
     FStructProperty* FontProperty = FindFProperty<FStructProperty>(Child->GeneratedClass, LidFont);
     check(FontProperty);
     FSlateFontInfo* Font = FontProperty->ContainerPtrToValuePtr<FSlateFontInfo>(
@@ -950,7 +876,7 @@ int32 UGenerateContainerLidLabelCommandlet::Main(const FString& Params)
     Font->TypefaceFontName = BoldTypeface;
     Font->Size = LidFontSize;
 
-    AddCachedSettingsFunction(Child, DefaultMaxWeightKg);
+    AddCachedSettingsFunction(Child);
     Compile(Child);
     AddCapacityFunction(Child);
     Compile(Child);

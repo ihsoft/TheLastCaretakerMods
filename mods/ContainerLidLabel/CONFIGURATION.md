@@ -10,10 +10,11 @@ Authored default: [ContainerLidLabel.ini](Assets/ContainerLidLabel.ini).
 LargeContainerMaxWeightKg=200
 ```
 
-The flat parser trims whitespace, accepts standalone `;` and `#` comments, and
-uses the last valid matching key. Inline comments are unsupported. Missing or
-invalid input falls back to the embedded 200 kg default. Values must be finite,
-positive and representable as a positive float.
+The shared parser trims whitespace, treats `#` outside a quoted string as a
+comment, and matches keys case-sensitively. A semicolon is not a comment. The
+last matching key wins; if that occurrence is invalid, the schema fallback of
+200 kg wins. Values must be finite, at least 1 kg, and representable as a
+float. Values that convert to zero or overflow float storage are invalid.
 
 The generated Large class caches the result once while its class default object
 remains loaded. Containers and persistent-load callbacks reuse that value;
@@ -22,5 +23,6 @@ the limit never clears, recreates or trims stored stacks.
 
 For an older installation using `MaxWeightKg`, rename the key to
 `LargeContainerMaxWeightKg`, preserving the value and comments. The old key is
-not an alias. The common container installer does not manage this external INI;
-back it up, migrate it separately and verify the result.
+not an alias. The producer prepares and validates the shipped INI but does not
+install it. Use the shared merge tool to prepare a migrated file, then back up
+and replace the installed file through a separately guarded installation step.

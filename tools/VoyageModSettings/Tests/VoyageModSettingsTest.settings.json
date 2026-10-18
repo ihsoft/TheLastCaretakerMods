@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 2,
+  "settings": [
+    { "id": "Number", "runtimeName": "TestNumber", "type": "number", "default": 7, "minimum": -2, "maximum": 8 },
+    { "id": "AnyDouble", "runtimeName": "TestAnyDouble", "type": "number", "default": 9 },
+    { "id": "Boolean", "runtimeName": "TestBoolean", "type": "boolean", "default": false },
+    { "id": "String", "runtimeName": "TestString", "type": "string", "default": "schema default" },
+    { "id": "PositiveFloat", "runtimeName": "TestPositiveFloat", "type": "number", "storage": "float", "default": 200, "minimum": 1.401298464324817e-45 }
+  ]
+}

@@ -10,5 +10,5 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..\..')).Path
 & (Join-Path $repoRoot 'tools\New-VoyageModSettings.ps1') `
     -SchemaPath $SchemaPath -DefaultIniPath $DefaultIniPath `
-    -HeaderPath $HeaderPath -IniPath $IniPath -CollectionKind TArray `
+    -HeaderPath $HeaderPath -IniPath $IniPath `
     -GeneratedBy 'Build/New-StableGyroSettings.ps1'

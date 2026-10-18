@@ -24,16 +24,16 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   under `artifacts/installations/Railgun-V<N>`
   and removes the complete owned TMP run after verification. No ZIP goes into
   Voyage's Paks directory.
-- `Assets/Railgun.ini` is the canonical packaged INI and sole source of setting
-  defaults, comments, order and formatting. `Settings/Railgun.settings.json`
-  owns only runtime bindings, types and numeric ranges. Add each option to both,
+- `Assets/Railgun.ini` owns distributed values, comments, order and formatting.
+  `Settings/Railgun.settings.json` owns runtime bindings, types, required schema
+  fallbacks, numeric storage, and optional inclusive ranges. Add each option to both,
   then wire only its consuming behavior by hand; never edit generated output.
   Fixed presentation values that are intentionally not user options belong as
   named constants with their audio or HUD owner and in neither settings file.
   `Build-Railgun.ps1` owns the internal validation and generation step. The
-  only runtime safety fallback outside that file is disabled recoil: when the
-  INI or either recoil key is missing or invalid, camera and ship recoil use
-  zero. Explicit valid INI values still override that fallback.
+  recoil schema fallbacks are 0.5 for camera recoil and 2 for ship recoil,
+  matching the current distributed values. Missing or invalid values use these
+  fallbacks; an explicit zero disables the corresponding effect.
 - The user owns model geometry. The agent may move or wire model files and
   update the role manifest, but must not alter GLB geometry unless explicitly
   requested.

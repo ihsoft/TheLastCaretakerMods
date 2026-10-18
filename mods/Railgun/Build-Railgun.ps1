@@ -60,6 +60,7 @@ $sourcePaths = @(
     'tools/Install-VoyageRelease.ps1',
     'tools/Merge-VoyageModIni.ps1',
     'tools/New-VoyageModSettings.ps1',
+    'tools/VoyageModSettings',
     'tools/Invoke-VoyageBoundedTool.ps1',
     'tools/New-VoyageAssetRegistry.ps1',
     'tools/New-VoyageReleaseManifest.ps1',
