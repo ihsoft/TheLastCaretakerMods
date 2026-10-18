@@ -21,7 +21,7 @@ consumer of each layer separately.
 
 ## Actor attachment and save restoration
 
-For Steam build `25191271`,
+In an observed stock snapshot,
 `VoyagePersistentSubsystem` exposes two Blueprint-assignable lifecycle events:
 
 - `OnActorAttached(AActor* Child, USceneComponent* ParentComponent)` is
@@ -343,7 +343,7 @@ and [cooked semantic checks](../mods/Railgun/Validate-Railgun.ps1).
 ## Selecting a complete vehicle HUD
 
 The full HUD class and the standard provided-action rows are separate
-contracts. In Steam build `23962331`, both `BP_JetSki_Possessable` and
+contracts. In an earlier game snapshot, both `BP_JetSki_Possessable` and
 `BP_GyroCopter_Possessable` implement
 `/Script/Voyage.VoyageActorWidgetInterface` and their Blueprint event
 `GetHUDOverrideWidget()` returns the vehicle-specific

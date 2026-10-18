@@ -9,7 +9,10 @@ rule owns version identity and the exact ZIP to publish.
 
 1. Read the mod's `version.txt`. The target numbered release is its value plus
    one, including V1 when the file contains `0`. Determine separately whether
-   the mod already has a Nexus page; `0` does not answer that question.
+   the mod already has a Nexus page; `0` does not answer that question. Check
+   which game Updates the existing downloadable files support. When main and
+   beta Updates coexist, decide whether the new file is parallel to an older
+   supported file or replaces it before opening the upload form.
 2. Use the exact selected, game-tested ZIP. Do not rebuild it merely for the
    upload or substitute another archive under the same version.
 3. Create or update the mod page, then upload the ZIP as the main file. Enter

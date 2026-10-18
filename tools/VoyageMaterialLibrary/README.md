@@ -270,7 +270,7 @@ ordinary GLB inspector additionally checks geometry/ranges/hierarchy (NumPy).
 Self-tests cover input rejection, normal convention, ambiguous binding, scalar
 factors, skipped-resource non-decoding, used-only images, disabled emission,
 parameter-only materials and SharpGLTF roundtrip. Real batch verification covers
-the three socket materials in the example on Steam25191271 / UE5.8; import/render
+the three socket materials in the example with UE5.8 parsing; import/render
 checked in Blender2.80. This is extraction/import evidence, not gameplay validation
 or proof of arbitrary material fidelity. Future game fingerprints require matching
 reviewed mappings and fresh evidence; older snapshot outputs are not reused.

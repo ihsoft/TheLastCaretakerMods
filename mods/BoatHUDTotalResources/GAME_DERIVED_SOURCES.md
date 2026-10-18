@@ -1,10 +1,8 @@
 # Game-derived source contracts
 
-Current gate:
-
-- Steam app: `1783560`
-- Steam build ID: `25056839`
-- engine: Unreal Engine `5.8.1`
+The current source-build pin is in `game-build.json`. The published V1 targets
+Update 5.5 (`Voyage.exe` version `5.8.1.0`); the generating editor is Unreal
+`5.8.2`.
 
 Reconstructed editor-only identities:
 
@@ -26,7 +24,7 @@ The mapping records `Petrol = 1` and `Diesel = 16`. `BatteryTB` and
 `10`, `VoyageRoboto` Regular, specified color `(0.5, 0.5, 0.5, 1.0)`, centered
 justification, and uppercase transformation.
 
-The supported game build uses IoStore TOC `ReplaceIoChunkHashWithIoHash` and
+The observed IoStore format uses TOC `ReplaceIoChunkHashWithIoHash` and
 container header `SoftPackageReferencesOffset`, matching retoc's `UE5_7`
 profile. That compatibility profile remains explicit in the scripts because
 the installed retoc does not yet name `UE5_8`. The stock HUD's relocation

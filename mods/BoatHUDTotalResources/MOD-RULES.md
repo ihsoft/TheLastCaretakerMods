@@ -19,7 +19,7 @@ Repository rules in `../../AGENTS.md` also apply.
   must use `EModuleResourceType::Electricity`, convert the base amount to one
   decimal kWh, and must not alter local socket scan text.
 - Electricity is enum value `0`, Petrol is `1`, and Diesel is `16` in the
-  current build `25056839` mapping. Installation must reject a build manifest
+  reviewed mapping used by this mod. Installation must reject a build manifest
   that does not name and encode both displayed resources exactly.
 - Replacement text must copy the corresponding stock field's font, color, and
   text-transform policy during `PreConstruct`. Do not rely on UMG's default

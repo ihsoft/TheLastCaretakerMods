@@ -2,18 +2,19 @@
 
 ## Version-bound native contracts
 
-The native contracts in this document are bound to Steam build `25956314`.
-Names, owners, offsets, property types and flags reflect that build. On a new
-Steam build, attempt the public candidate path first; investigate these native
+The native contracts in this document were inspected on an earlier game
+snapshot. Names, owners, offsets, property types and flags reflect that
+snapshot; they are not a player-facing compatibility boundary. On a new Steam
+build, attempt the public candidate path first; investigate these native
 details when a build or game test reveals a discrepancy. The public
 producer separately re-extracts and checks the stock cooked assets consumed by
 each candidate build.
 
-For Steam build `25982825`,
-current mapping metadata revalidated the native owner and float/bool types of
-the fields consumed by these graphs, and the stock HUD binding described below
-was re-extracted unchanged. The offsets, reflected access flags, CDO defaults,
-and native formulas in this document remain bounded to `25956314`. Resetting
+Current reviewed mapping metadata revalidated the native owner and float/bool
+types of the fields consumed by these graphs, and the stock HUD binding
+described below was re-extracted unchanged. The offsets, reflected access
+flags, CDO defaults, and native formulas remain bounded to the earlier
+snapshot. Resetting
 `HoverPitchScale` to `1.0` is the recovery policy based on that earlier stock
 default; it is not a current-build CDO claim.
 
@@ -155,8 +156,8 @@ ineligible.
 
 On every change to a player controller, the PostPhysics helper writes the
 chosen recovery baseline `1.0` to saved `HoverPitchScale` through the Engine's
-`SetDoublePropertyByName` route. That value is the stock default recorded for
-Steam build `25956314`; the current fingerprint's CDO was not
+`SetDoublePropertyByName` route. That value is the stock default recorded in
+the earlier native snapshot; the current game's CDO was not
 independently revalidated. BeginPlay only binds the controller-change delegate;
 it does not invoke the callback for an already controlled Gyro. The reset runs
 only from a genuine later player-entry event and never from polling or a
@@ -187,5 +188,6 @@ mechanism remains unproven.
 The altitude-hold path does not adjust native throttle. Both the default
 vertical deceleration and its zero setting follow the documented control
 paths. Strong waves, every collision shape and every saved calibration state
-are outside the established compatibility scope. A new Steam build ID requires
-review of the game-derived input and calibration contracts.
+are outside the established compatibility scope. A changed game Update or a
+failed build/game test calls for review of the affected input and calibration
+contracts.

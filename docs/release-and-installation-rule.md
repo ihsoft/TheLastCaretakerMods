@@ -16,6 +16,14 @@ not advance it.
 
 Work after `V<N>` consists of candidates for `V<N+1>`; with `0`, the work is
 on candidates for the first numbered release, `V1`.
+Before publication, identify the supported game Update and whether an older
+Update remains in use on the main or beta channel. A new release for one Update
+does not automatically replace a downloadable file for another still-supported
+Update. Decide whether to add a parallel file or replace an existing file
+before preparing the Nexus upload. Use the
+[Update/version mapping](game-update-versions-knowledge.md) for player-facing
+compatibility; keep Steam build IDs in technical build evidence and mapping
+provenance.
 For a Nexus file belonging to that target release, enter the integer `N+1`
 as its version, without a `.0` suffix. Until publication, `version.txt` still
 contains `N` (or `0` before V1); it is not the candidate's Nexus file version.

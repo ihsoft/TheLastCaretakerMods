@@ -18,9 +18,10 @@ editor-only parent and does not enter the release container.
 
 ## Compatibility scope
 
-The last pinned Steam build is in `game-build.json`; its source contract was
-recorded for game UE `5.8.1`. Revalidate reflected game identities if a build
-or game test exposes a mismatch. Generated
+The exact source-build pin is in `game-build.json`. The source contract was
+recorded for Update 5.5 (`Voyage.exe` version `5.8.1.0`); this does not by
+itself establish support for a later Update. Revalidate reflected game
+identities if the public build or game test exposes a mismatch. Generated
 Content, cooked packages, extracted game data, logs and release evidence remain
 ignored.
 

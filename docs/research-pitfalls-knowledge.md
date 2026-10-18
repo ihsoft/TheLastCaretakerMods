@@ -1,414 +1,399 @@
-# Исследовательские ошибки (наблюдавшиеся результаты и ограниченные выводы)
+# Research pitfalls: observed results and limited conclusions
 
-Здесь фиксируются подходы, которые выглядели правдоподобно, но дали падение,
-no-op или неверную архитектуру. Цель — не повторять их после обновления игры
-или context compaction.
+These plausible approaches caused a crash, a no-op, or an incorrect architecture.
+Keep the distinctions below in mind after game updates or context compaction.
 
-## Общие
+## General
 
-- Успешная компиляция/cook доказывает только корректность editor-стенда, но не
-  то, что runtime вызывает созданный граф. Для каждого нового callback нужен
-  различимый call-marker и проверка в игре.
-- Несколько последовательных no-op означают, что, вероятнее всего, неверна
-  цепочка владения или producer, а не очередное поле структуры. После одного
-  или двух no-op нужно усиливать маркер либо возвращаться к архитектуре.
-- Не менять управление и HUD в одном эксперименте. Такая смесь уже приводила
-  к самостоятельному газу/рулю и делала причину неразличимой.
-- Не заменять файлы установленного мода при запущенной игре.
-- Отрицательный результат поиска процесса из restricted sandbox не доказывает,
-  что игра закрыта: запущенный Voyage уже был невидим такому процессу. Перед
-  установкой или live-диагностикой проверять процесс через разрешённый
-  outside-sandbox путь и считать неизвестное состояние блокирующим.
-- Не хранить извлечённый снимок игры как знание. Без fingerprint он быстро
-  становится правдоподобной, но устаревшей ловушкой.
-- `UKismetStringLibrary::IsNumeric` не принимает значение вида
-  `150.0 # comment`. Если runtime-граф использует эту проверку, inline-комментарий
-  молча оставляет встроенный default. Канонический INI должен держать комментарии
-  на отдельных строках, а producer — отклонять inline-комментарии до сборки.
+- A successful compile or cook proves only that the editor setup accepted the
+  graph, not that runtime calls it. Each new callback needs a distinguishable
+  call marker and an in-game check.
+- Repeated no-ops usually point to the wrong ownership chain or producer rather
+  than another wrong structure field. After one or two no-ops, strengthen the
+  marker or revisit the architecture.
+- Do not change controls and HUD in the same experiment. That combination has
+  caused autonomous throttle or steering and obscured the cause.
+- Do not replace installed mod files while the game is running.
+- A negative process lookup from a restricted sandbox does not prove the game is
+  closed: a running Voyage process was invisible there. Before installation or
+  live diagnostics, check through an allowed outside-sandbox path and treat an
+  unknown process state as blocking.
+- Do not preserve an extracted game snapshot as knowledge. Without provenance,
+  it soon becomes a plausible but stale trap.
+- `UKismetStringLibrary::IsNumeric` rejects values such as `150.0 # comment`.
+  If a runtime graph uses this check, an inline comment silently leaves the
+  built-in default in place. Put canonical INI comments on separate lines and
+  have the producer reject inline comments before building.
 
-## UObject и Blueprint
+## UObject and Blueprint
 
-- Разные Lua-wrapper-объекты могут представлять один UObject. Сравнение wrapper
-  identity не является стабильной идентичностью актора.
-- Для child Blueprint с unversioned properties недостаточно отразить в
-  editor-mirror только поле, к которому обращается новый граф. Cook сериализует
-  унаследованный CDO по индексам схемы editor-класса, а runtime читает его по
-  полной shipping-схеме. Неполный mirror может успешно скомпилироваться,
-  приготовиться и пройти `retoc verify`, но упасть ещё при async loading с
-  `Bad export index` до вызова любого графа. Так был отклонён Boat HUD child:
-  `BP_VoyageIngameBoatHud.Default__BP_VoyageIngameBoatHud_C`, индекс
-  `66559/5`. Перед runtime-тестом нужен exact native property prefix и
-  отдельная проверка cooked CDO против shipping mapping.
-- Запись нового UObject в поле виджета не гарантирует, что скомпилированный
-  Blueprint или `WidgetTree` начнёт использовать эту ссылку.
-- Копия оригинального Blueprint под новым package path сохраняет поведение, но
-  это snapshot текущей игры. Её нужно извлекать заново для каждой версии, а не
-  коммитить в репозиторий.
+- Different Lua wrappers may refer to the same UObject. Wrapper identity is
+  not a stable actor identity.
+- An editor mirror for a child Blueprint with unversioned properties needs more
+  than the field accessed by a new graph. Cook serializes the inherited CDO by
+  editor-class schema indices, while runtime reads it against the full shipping
+  schema. An incomplete mirror can compile, cook, and pass `retoc verify`, yet
+  fail during async loading with `Bad export index` before any graph runs. The
+  Boat HUD child failed this way at
+  `BP_VoyageIngameBoatHud.Default__BP_VoyageIngameBoatHud_C`, index `66559/5`.
+  Establish the exact native property prefix and check the cooked CDO against
+  the shipping mapping before runtime testing.
+- Writing a new UObject into a widget field does not guarantee that the
+  compiled Blueprint or `WidgetTree` uses the reference.
+- A copy of the original Blueprint at a new package path preserves behavior
+  only as a snapshot of the current game. Re-extract it for each applicable
+  game version; do not commit it.
 
-## Управление DonkLift
+## DonkLift controls
 
-- Helper, установленный в каждый экземпляр погрузчика, нельзя направлять на
-  глобальный `GetPlayerPawn(0)`: после выхода cast теряет покинутый погрузчик и
-  не может обнулить его газ, а при двух погрузчиках несколько helpers могут
-  писать в один активный pawn. Рабочая граница владения — `GetParentActor()`
-  child actor-а плюс `IsPlayerControlled()`.
-- Точные `-1`, `0`, `1` одновременно являются цифровыми командами игры.
-  Собственное активное состояние нельзя оставлять ровно на этих значениях:
-  рабочие sentinel-значения — `0.9999` и `0.0001`.
-- Опрос клавиатуры отдельно от штатной записи оси создавал гонки и залипание.
-  Проверенный UE4SS-путь — pre-hook native getter после записи игры.
-- Сброс `SteeringInput` при выходе прекращает ввод, но не обязан визуально
-  выпрямлять колёса: их положение хранится ещё где-то в физике погрузчика.
+- A helper attached to each forklift must not target global `GetPlayerPawn(0)`.
+  After exit, the cast loses the abandoned forklift and cannot zero its
+  throttle; with two forklifts, multiple helpers can write to the same active
+  pawn. Use the child actor's `GetParentActor()` and `IsPlayerControlled()` as
+  the ownership boundary.
+- Exact `-1`, `0`, and `1` are also digital game commands. Custom active state
+  cannot stay at those values; working sentinels are `0.9999` and `0.0001`.
+- Polling the keyboard separately from the game's axis write caused races and
+  stuck input. The validated UE4SS path is a pre-hook on the native getter
+  after the game's write.
+- Clearing `SteeringInput` on exit stops input but need not visibly straighten
+  the wheels; forklift physics stores their position elsewhere as well.
 
-## Управление Gyro
+## Gyro controls
 
-- Нельзя переносить stock `BP_GyroCopter_Possessable` в mod package и ставить
-  child на исходный package только потому, что этот inheritance-приём работает
-  для DonkLift. На Steam build `25191271` такой Gyro в реальной игре выглядел
-  привязанным к миру, а после входа из него нельзя было выйти. Compile, cook и
-  `retoc verify` при этом проходили. Служебный `DefaultSceneRoot` ребёнка не
-  является различителем: он также присутствует в рабочем DonkLift container.
-- Для нового Gyro сохранять stock Blueprint на исходном package identity.
-  Узкая точка выбора построенного класса —
-  `DA_Item_Module_GyroCopter.DroppedActor`; отдельный mod-subclass нужно
-  подключать через это поле, а не через relocation оригинального Blueprint.
-- Override `ReceiveTick` в сгенерированном child нельзя считать безопасным
-  способом дополнить stock Blueprint Tick. Parent-call такого графа собрался в
-  native final `AActor::ReceiveTick`, а не в доказанный вызов stock Blueprint,
-  и мог подавить его физику. Дополнительное движение должно жить в отдельном
-  helper-е, если точный Blueprint parent-call не подтверждён.
-- Запись `PropellerLift` действительно достигала live-поля, но не давала
-  пригодной компенсации: тяга всё равно направлена по наклонённому `UpVector`,
-  а даже при предельном наклоне 10 градусов множитель `1/cos(10 degrees)`
-  добавляет лишь около 1.54%. Доступное поле и наблюдаемый write ещё не
-  доказывают правильную управляющую величину.
-- Имя reflected Blueprint-свойства компонента и runtime UObject name могут
-  различаться. У Gyro `MeshComponent` указывает на объект `VehicleMesh`; поиск
-  по `GetObjectName == "MeshComponent"` оставлял цель пустой и превращал даже
-  огромный `AddForce` в no-op.
-- После замены имени на `VehicleMesh` и сохранения W/S-дискриминатора до
-  перезаписи input проб с world-up `AddForce=100000000` дал ожидаемый сильный
-  подъём. Значит, сам путь `AddForce` и его timing работоспособны; отклонена
-  настройка физической компенсации, а не возможность применять силу к Gyro.
-- Blueprint pure nodes вычисляются заново в каждой точке использования. Проб,
-  который сначала перезаписывал W/S state, а затем повторно использовал pure
-  equality nodes как gate, видел уже изменённое значение. Дискриминатор нужно
-  сохранить до мутации либо провести exec-цепью.
-- Повторное pure-чтение выражения интегратора после setter-а может дать
-  записанному native output опережение ровно на один дополнительный шаг, но
-  сохранённый аккумулятор всё равно меняется один раз за tick. Такой граф сам
-  по себе не доказывает устойчивое двукратное изменение скорости интеграции.
-- Псевдокод `Inspect-VoyageAsset` может напечатать `return` в конце тела
-  стандартного `ForEachLoop`, хотя cooked opcode там —
-  `EX_PopExecutionFlow`, после которого loop продолжает increment и
-  `EX_Jump`. Отличать ранний выход от продолжения цикла по raw bytecode:
-  настоящий выход функции использует `EX_Return`.
-- `PrintString` ненадёжен как телеметрия Shipping-сборки: его отсутствие на
-  экране не различает невыполненный граф и вырезанный shipping output. Для
-  диагностики нужен наблюдаемый физический маркер или настоящий UI-виджет.
-- Предфизический write скорости не компенсирует силу, которую stock код и Chaos
-  применяют позже в том же кадре. Для стабилизации Gyro helper должен наблюдать
-  и корректировать результат в `TG_PostPhysics`; горизонтальная коррекция должна
-  быть additive XY delta, иначе полный XYZ write конкурирует с вертикальным
-  режимом.
-- `TickGroup` только на CDO сгенерированного helper-класса не гарантирует тот же
-  порядок у экземпляра из `ChildActorComponent`. Одноаргументный
-  `SetChildActorClass` сохранил на `ChildActorTemplate` исходный override
-  `TG_PrePhysics`, хотя отдельный cooked CDO helper-а уже содержал
-  `TG_PostPhysics`. Generator должен явно задать и проверить tick group и флаги
-  включения созданного child template, а cooked readback — подтвердить либо эти
-  значения, либо отсутствие override при правильном CDO. Это подтверждённый
-  контракт сериализации; само по себе оно не является gameplay-проверкой.
+- Do not relocate stock `BP_GyroCopter_Possessable` into a mod package and put
+  a child at the original path merely because this inheritance pattern works
+  for DonkLift. In the tested configuration, the Gyro appeared fixed to the
+  world and could not be exited after entry. Compile, cook, and `retoc verify`
+  all passed. The child's utility `DefaultSceneRoot` is not a discriminator:
+  it also exists in the working DonkLift container.
+- Keep the stock Gyro Blueprint at its original package identity. The narrow
+  class-selection point is `DA_Item_Module_GyroCopter.DroppedActor`; connect a
+  separate mod subclass through that field instead of relocating the original.
+- Overriding `ReceiveTick` in a generated child is not a proven safe way to
+  extend stock Blueprint Tick. The graph's parent call compiled to native final
+  `AActor::ReceiveTick`, not a proven stock Blueprint call, and could suppress
+  stock physics. Put added movement in a separate helper unless the exact
+  Blueprint parent call is established.
+- Writing `PropellerLift` reached the live field but gave no useful
+  compensation: thrust still follows the tilted `UpVector`, and even at a
+  10-degree tilt the `1/cos(10 degrees)` factor adds only about 1.54%. A
+  reachable field and an observed write do not establish the right control.
+- A reflected Blueprint component-property name can differ from the runtime
+  UObject name. Gyro's `MeshComponent` points to `VehicleMesh`; looking up
+  `GetObjectName == "MeshComponent"` found no target, making even a huge
+  `AddForce` a no-op.
+- After using `VehicleMesh` and saving the W/S discriminator before changing
+  input, a world-up `AddForce=100000000` probe caused the expected strong lift.
+  The `AddForce` path and its timing worked; the physics-compensation tuning,
+  rather than the ability to apply force to Gyro, was rejected.
+- Blueprint pure nodes reevaluate at each use. A probe that first changed W/S
+  state and then reused pure equality nodes as a gate saw the changed value.
+  Save the discriminator before mutation or carry it through the exec chain.
+- Re-reading a pure integrator expression after its setter can put the written
+  native output one additional step ahead, while the stored accumulator still
+  changes only once per tick. That graph alone does not establish sustained
+  doubling of integration speed.
+- `Inspect-VoyageAsset` pseudocode may print `return` at the end of a standard
+  `ForEachLoop` body even though the cooked opcode is `EX_PopExecutionFlow`,
+  followed by loop increment and `EX_Jump`. Distinguish early return from loop
+  continuation in raw bytecode; a true function exit uses `EX_Return`.
+- `PrintString` is unreliable telemetry in a Shipping build. Its absence from
+  the screen cannot distinguish an uncalled graph from stripped shipping
+  output. Use an observable physical marker or a real UI widget.
+- A pre-physics velocity write cannot counter force applied by stock code and
+  Chaos later in the same frame. A Gyro stabilization helper must observe and
+  correct the result in `TG_PostPhysics`; horizontal correction must be an
+  additive XY delta so a full XYZ write does not compete with vertical mode.
+- Setting `TickGroup` only on the generated helper CDO does not ensure the
+  same order for a `ChildActorComponent` instance. One-argument
+  `SetChildActorClass` left a `TG_PrePhysics` override on `ChildActorTemplate`
+  even though the separate cooked helper CDO had `TG_PostPhysics`. The
+  generator must explicitly set and check the child template's tick group and
+  enable flags. Cooked readback must confirm either those values or the
+  absence of an override with a correct CDO. This establishes a serialization
+  contract, not gameplay validation.
 
-## Стандартные подсказки
+## Standard input hints
 
-- `BP_VoyageIngameForklift.KeybindRoot` существует, но не является runtime-host
-  видимого ряда `E/H`. Видимый host —
+- `BP_VoyageIngameForklift.KeybindRoot` exists but is not the runtime host of
+  the visible `E/H` row. That host is
   `BP_DynamicPlayerInputHorizontalWidget_Bottom.ContextInputActionsRoot`.
-- Добавление Enhanced Input mappings, action events и даже сериализованной
-  замены `IMC_Forklift_Keyboard` не заставляет стандартный HUD автоматически
-  показать новые действия.
-- Самостоятельный viewport overlay доказал, что HUD-child выполняется, но был
-  архитектурно неверен: он оставался видимым при pause menu и не наследовал
-  lifecycle стандартных подсказок.
-- `VoyageVehiclePawn.GetProvidedActionsBP` нельзя объявлять в editor-only
-  stand-in класса `VoyageVehicleForkliftPawn`, даже если Blueprint-граф с таким
-  именем успешно компилируется. Cooked override ссылается на конкретную parent
-  UFunction; нативная registration table доказала, что настоящий owner —
-  базовый `VoyageVehiclePawn`. Именно эта ошибка объясняет прежний no-op
-  `QuitGame` и требует исправления stand-in hierarchy перед повторным probe.
-- Нельзя придумывать отсутствующие enum members для удобства editor-стенда.
-  Реальный `EPlayerInputInterfaceActionType` — `Central=0`, `Context=1`,
-  `Hidden=2`; старый `Action=0` компилировался локально, но не существовал в
-  runtime enum.
-- `InteractiveInterface.GetInteractiveProvidedActions` относится к
-  взаимодействию персонажа с объектом снаружи. Его наличие в оригинальном
-  forklift Blueprint не доказывает связь с панелью подсказок водителя.
-- Прямой override `VoyagePlayerInputInterfaces.GetProvidedActions` на старом
-  stand-in forklift-child также не вызвался. Не выводить из этого, что dynamic
-  HUD обязательно опрашивает другой объект: зеркальная native/interface
-  иерархия тогда ещё не соответствовала игре.
-- Нельзя проверять producer заменой одного action-поля другим уже используемым
-  полем того же объекта. Horn→Exit убрал дубликат из HUD, но привязал к E два
-  несовместимых поведения: выход перестал работать, появился horn-звук, затем
-  игра упала. Для следующих substitution-пробов нужен уникальный action без
-  второй активной привязки на том же погрузчике.
-- После двух независимых no-op (`GetProvidedActionsBP` и
-  `GetProvidedActions`) нельзя было продолжать менять action-структуру. Этот
-  стоп оказался полезен: статический разбор восстановил ошибочного owner-а и
-  точный native producer. Следующий override допустим только после воспроизведения
-  реальной base-class hierarchy.
-- Не приписывать функцию классу только потому, что её строка лежит рядом с
-  именами полей этого класса в executable. Генерированные registration records
-  разных типов идут подряд; так `SetupPlayerControls`/`TeardownPlayerControls`
-  были ошибочно приписаны `VoyageInputControlsComponent`, хотя их owner —
-  `VoyageInGameVehicleWidget`. Owner подтверждается таблицей регистрации, а не
-  близостью строк.
-- `UUserWidget::GetWidgetFromName` не нашёлся как Blueprint-callable UFunction
-  в editor-стенде 5.7.4. Для child HUD, чей настоящий parent подставляется
-  только при упаковке, рабочий editor-приём — объявить в placeholder-parent
-  одноимённое поле нужного типа и обращаться к нему как к наследованной
-  Blueprint-переменной. Не добавлять выдуманный native UFUNCTION: в shipping
-  классе его не будет.
-- UAssetAPI 2.0 с поддержкой UE 5.7 всё равно может оставить экспорт
-  game-specific Widget Blueprint как `RawExport`, даже когда CUE4Parse
-  восстанавливает его свойства через тот же mapping. Нельзя считать
-  `RawExport` отсутствием объекта и нельзя менять байты по одному совпадению.
-  Для прямого E/H-проба сначала сравнены Bottom/Center, восстановлены границы
-  unversioned header/value/slot, а патчер принимает только полную известную
-  17-байтовую сигнатуру Voyage 5.7.4.
-- Запись `bRegisterFromWidgetOwner=true` из parent HUD `Construct` дала no-op:
-  вложенная dynamic-input панель успевает выбрать ветку регистрации раньше.
-  Поздний runtime write нельзя принимать за проверку serialized/default
-  значения при создании дочернего виджета.
-- В исследованной Steam-сборке `23962331` native action path использует `TSet`,
-  а не стабильную сортировку по
-  `Priority` или порядку extension array. Перестановка «первого ребёнка в
-  конец» дала нужный `E H X C` только для одного наблюдавшегося sparse-set
-  порядка. Даже корректная одноразовая перестановка X/C по object identity не
-  пережила ESC/resume: игра повторно заполнила ряд без реконструкции owning
-  HUD. Постоянный polling ради косметического порядка отклонён. Production-мод
-  оставляет порядок стандартных actions на усмотрение игры и вообще не
-  подменяет HUD.
+- Adding Enhanced Input mappings, action events, or even a serialized
+  replacement of `IMC_Forklift_Keyboard` does not make the standard HUD show
+  new actions automatically.
+- A separate viewport overlay proved the HUD child ran but had the wrong
+  lifecycle: it remained visible in the pause menu and did not follow the
+  standard hints.
+- Do not declare `VoyageVehiclePawn.GetProvidedActionsBP` on an editor-only
+  `VoyageVehicleForkliftPawn` stand-in, even if a same-named Blueprint graph
+  compiles. The cooked override binds to an exact parent UFunction. Native
+  registration records identify the base `VoyageVehiclePawn` as the owner.
+  This mistake explains the former `QuitGame` no-op; repair the stand-in
+  hierarchy before another probe.
+- Do not invent missing enum members for the editor setup. The runtime
+  `EPlayerInputInterfaceActionType` is `Central=0`, `Context=1`, `Hidden=2`.
+  The old `Action=0` compiled locally but was absent from the runtime enum.
+- `InteractiveInterface.GetInteractiveProvidedActions` serves interaction
+  with an object from outside. Its presence in the original forklift Blueprint
+  does not connect it to the driver's hint panel.
+- A direct `VoyagePlayerInputInterfaces.GetProvidedActions` override on the old
+  forklift-child stand-in was also uncalled. This does not prove that the
+  dynamic HUD queries a different object: the mirrored native/interface
+  hierarchy did not yet match the game.
+- Do not test a producer by replacing one action field with another field
+  already used on the same object. Horn-to-Exit removed a HUD duplicate but
+  bound two incompatible behaviors to E: exit stopped working, the horn
+  sounded, and the game crashed. Use a unique action with no second active
+  binding on that forklift for a substitution probe.
+- After independent no-ops from `GetProvidedActionsBP` and
+  `GetProvidedActions`, further action-structure changes were uninformative.
+  Static analysis then found the wrong owner and exact native producer.
+  Another override requires the real base-class hierarchy first.
+- Do not assign a function to a class merely because its string is near that
+  class's field names in the executable. Generated registration records for
+  different types are adjacent. This wrongly assigned
+  `SetupPlayerControls`/`TeardownPlayerControls` to
+  `VoyageInputControlsComponent`; their owner is `VoyageInGameVehicleWidget`.
+  Confirm ownership through the registration table.
+- `UUserWidget::GetWidgetFromName` was not available as a Blueprint-callable
+  UFunction in the 5.7.4 editor setup. For a HUD child whose real parent is
+  substituted only at packaging, declare a same-named field of the right type
+  in the placeholder parent and access it as an inherited Blueprint variable.
+  Do not invent a native UFUNCTION absent from the shipping class.
+- UAssetAPI 2.0 with UE 5.7 support may still leave a game-specific Widget
+  Blueprint export as `RawExport`, even when CUE4Parse reconstructs its
+  properties with the same mapping. `RawExport` does not mean the object is
+  absent, and one matching byte sequence is insufficient for mutation. The
+  direct E/H probe first compared Bottom/Center and established the unversioned
+  header/value/slot boundaries; its patcher accepts only the full known
+  17-byte Voyage 5.7.4 signature.
+- Writing `bRegisterFromWidgetOwner=true` from the parent HUD's `Construct`
+  had no effect: the nested dynamic-input panel had already chosen its
+  registration branch. A late runtime write does not test the serialized
+  default at child-widget creation.
+- In the investigated game version, the native action path uses a `TSet`,
+  not stable sorting by `Priority` or extension-array order. Moving the
+  “first child to the end” produced `E H X C` for only one observed sparse-set
+  order. Even a correct one-time X/C rearrangement by object identity did not
+  survive ESC/resume: the game repopulated the row without reconstructing the
+  owning HUD. Continuous polling for cosmetic ordering was rejected. The
+  production mod leaves standard-action order to the game and does not
+  replace the HUD.
 
-### Генерация описаний и размещение ряда: границы выводов
+### Description generation and row placement: limits of the evidence
 
-Общие контракты и уровни доказанности:
-[patterns для actions/HUD](vehicle-and-hud-modding-patterns-knowledge.md#evidence-levels-for-actions-and-hints).
-Они не зависят от мода, где обнаружено поведение. Известное устройство
-native-коллекций само по себе не объясняет сбой раскладки: для причинной связи
-нужны отдельные основания.
+Shared contracts and evidence levels are in the
+[action/HUD patterns](vehicle-and-hud-modding-patterns-knowledge.md#evidence-levels-for-actions-and-hints).
+They are independent of the mod where the behavior was found. The known native
+collection structure alone does not explain the layout failure; a causal link
+needs separate evidence.
 
-- **Подтверждено статически и в игре:** `DefaultObject` на неподключённом
-  target-пине генераторного `UK2Node_VariableGet` не обеспечил чтение
-  `ActionDescription` нужного InputAction. Проверять `EX_Context` и реальный
-  объект чтения в cooked bytecode; подключать typed object reference явно.
-  Не требовать только `EX_ObjectConst`: `UK2Node_Literal` может компилироваться
-  в ссылочное поле с нужным CDO default.
-- **Подтверждено наблюдением:** пустые подписи скрывают однокадровое наложение
-  текста, а постоянно включённое действие исключает проблемный переход.
-  Ни то ни другое не доказывает исправления раскладки с настоящим `bEnabled`.
-- **Подтверждено в совокупности, не по отдельности:** сериализованный штатный
-  hint-widget напрямую в Canvas под InvalidationBox работает без наблюдавшегося
-  наложения. Три изменения сделаны вместе; приписывать результат одному
-  InvalidationBox нельзя. Базовый HUD-класс при этом не менялся.
-- **Разумная гипотеза, не доказанный механизм:** промежуточное состояние
-  раскладки/инициализации при native-обновлении строки объясняет кадр с
-  отсутствующими иконками и наложенным слева текстом. Конкретный native
-  порядок пересоздания детей и необходимость `ForceLayoutPrepass` не доказаны.
-- **Подтверждено сборкой:** доступный в игре stock Blueprint может отсутствовать
-  в editor-проекте. Пустая exact-identity заготовка допустима для внешней ссылки,
-  но обязана отсутствовать в выпуске. Сохранённое пустое дерево вместо ссылки
-  на настоящий stock-класс — уже другая реализация, не аналог штатного HUD.
+- **Confirmed statically and in game:** `DefaultObject` on an unconnected
+  `UK2Node_VariableGet` target pin did not read the intended InputAction's
+  `ActionDescription`. Check `EX_Context` and the actual read object in cooked
+  bytecode; explicitly connect a typed object reference. Do not require only
+  `EX_ObjectConst`: `UK2Node_Literal` can compile to a reference field with
+  the correct CDO default.
+- **Confirmed by observation:** Blank labels hide a one-frame text overlap,
+  while an always-enabled action avoids the problematic transition. Neither
+  proves the layout works with the real `bEnabled` behavior.
+- **Confirmed together, not individually:** A serialized stock hint widget
+  placed directly in a Canvas under an InvalidationBox worked without the
+  observed overlap. Three changes were made together, so the outcome cannot
+  be attributed to the InvalidationBox alone. The base HUD class was unchanged.
+- **Plausible hypothesis, not an established mechanism:** An intermediate
+  layout/initialization state during native row updates could explain a frame
+  with missing icons and left-overlapping text. The native child-recreation
+  order and need for `ForceLayoutPrepass` are unproven.
+- **Confirmed by build:** A stock Blueprint present in the game may be absent
+  from the editor project. An empty exact-identity stub can satisfy an external
+  reference but must be omitted from the release. Shipping an empty tree in
+  place of the real stock class is a different implementation, not an
+  equivalent standard HUD.
 
-## Сборка и поставка IoStore
+## IoStore build and delivery
 
-- При прямом редактировании Blueprint bytecode адреса переходов используют VM
-  `iCode`, а не файловый offset и не offset, показываемый CUE4Parse. Вставка
-  инструкций требует пересчитать все затронутые jump targets и wrapper-entry
-  points по результату сериализации; совпадение отображаемого offset ничего не
-  доказывает. Текущий DonkLift-мод этот хрупкий путь больше не использует.
-- `retoc` release v0.1.5 предлагал режим UE 5.7, но не содержал нужных import
-  type hierarchies для разбора этих Voyage assets через UAssetAPI/UAssetGUI.
-  Не доверять одному наличию версии в CLI: проверять реальный round-trip и
-  `to-zen` на узком asset до построения инструмента вокруг конкретного релиза.
-- Legacy `.uasset`, извлечённый старой версией `retoc`, может иметь тот же
-  `.uexp` и правдоподобное содержимое, но быть непригодным для обратного
-  `to-zen` после relocation (`failed to fill whole buffer`). Перед сборкой
-  заново извлекать оригинал текущим зафиксированным инструментом и считать
-  успешный `to-zen`/`verify` обязательной проверкой формата заголовка.
-- Извлечение из всего каталога `Paks` при установленном override-моде может
-  вернуть заменённый asset вместо оригинала игры. Для обновления snapshot
-  сначала убрать дополнительные контейнеры при закрытой игре; инструмент
-  извлечения по умолчанию теперь останавливается на такой неоднозначности.
-- Подменённый child может выглядеть правдоподобным «оригиналом» и даже иметь
-  ожидаемые два вхождения собственного package path. Если перенести его на
-  путь parent, уже существующая ссылка child на этот parent превращается в
-  самонаследование: контейнер проходит `retoc verify`, а игра падает со
-  `STACK_OVERFLOW`. Упаковщик обязан до замены отвергать source asset, который
-  уже содержит relocated-parent path; после извлечения также проверять, что
-  фильтр реально дал хотя бы один `.uasset`.
-- Перемещённый оригинальный forklift Blueprint — snapshot конкретной версии
-  игры. Его нельзя коммитить как исходник и нельзя повторно использовать после
-  обновления. Перед сборкой его извлекают заново и проверяют fingerprint.
-- Подмена package name делается только между заранее проверенными
-  равнодлинными путями. Нельзя ослаблять assertion и патчить «похожее» число
-  строковых совпадений: изменение длины ломает cooked layout.
-- Broad `CookDir` оказался не более удобным вариантом: Unreal проследовал по
-  editor dependencies, начал компилировать глобальные shaders и готовить
-  посторонние Engine/OpenWorld packages. Production cook — пять узких
-  `-CookSinglePackageNoRefs` запусков.
-- Отдельные control/HUD containers были полезны как диагностическая граница,
-  но HUD-подмена удалена из production после отказа от принудительного порядка.
-  Валидированный результат собирается в один `DonkLiftKeyboardControl_P` и
-  проверяется без оставшегося probe-пака.
-- Успешный `retoc verify` доказывает целостность контейнера, но не runtime
-  совместимость Blueprint, input и HUD. После cleanup/consolidation всё равно
-  нужна полная проверка в игре.
-- Relocation-проб `WBP_InteractIndicator` для build `24990438` прошёл cook,
-  `retoc verify` и независимый разбор bytecode/CDO, но упал при старте на
-  `FAsyncLoadingThread` с null read до выполнения `PreConstruct`. Чистый
-  двухassetный inventory и правдоподобный child CDO не доказывают, что
-  reconstructed-native-parent совместим с конкретным Widget Blueprint.
-  Считать отклонённой всю эту конкретную архитектуру, а не менять следующий
-  граф поверх неё.
-- Нельзя перенаправлять package import только потому, что искомый путь
-  встречается в `.uasset` один раз. В `BP_VoyageIngameHud` единственный import
-  `WBP_InteractIndicator` одновременно обслуживает CDO-свойство
-  `IndicatorSubClass` и встроенный экземпляр в widget tree. Equal-length
-  замена пути меняет обоих потребителей; такой probe был отклонён статически и
-  не устанавливался. Для точечной замены нужен отдельный CDO delta либо
-  структурное добавление нового import, а не глобальная подмена существующего.
-- Нельзя считать inherited CDO property безопасной только потому, что
-  reconstructed native prefix имеет ожидаемый размер и generated Blueprint
-  успешно cook-ится. В probe3 для `BP_VoyageIngameHud` значение, заданное как
-  `IndicatorSubClass`, при независимом разборе вместе с оригинальным parent
-  декодировалось как `ButtonInfoContainer_Action_1`. Это несовпадение
-  unversioned-property индекса было найдено до установки. Для такого изменения
-  нужен структурный CDO patch с проверкой точного имени свойства, а не ещё один
-  mirror/child вариант.
-- В UE 5.8 Voyage `FObjectImport.PackageName` сериализуется и для filtered
-  cooked packages. UAssetAPI, как и исходный retoc 0.1.5, ошибочно пропускал
-  это поле при `IsFilterEditorOnly`, после чего import-map выглядел
-  правдоподобно, но был сдвинут. Однако глобальное снятие этого ограничения
-  тоже неверно: filtered fixtures UE4 и UE 5.3--5.7 используют старый layout
-  без `PackageName`. Чтение и запись должны включать поле только при явно
-  выбранном `VER_UE5_8`; unchanged roundtrip обязан быть побайтно идентичным
-  как для текущего Voyage, так и для более старых regression fixtures. У
-  нового import также `PackageName` должен совпадать с его `ObjectName`.
-- Нельзя объявлять существующие падения тестов допустимым baseline, сравнив
-  только два наших последовательных коммита. Коммит `48b6096` уже содержал
-  слишком широкий filtered-import patch и сам внёс десять binary-roundtrip
-  регрессий, поэтому сравнение более поздних изменений с `48b6096` или
-  `b5c47b7` их скрывало. Для изменения общей сериализации нужно отдельно
-  прогнать тот же набор на настоящем upstream merge-base; текущий контрольный
-  результат до и после корректного UE 5.8 gate -- `27/27`.
-- Имя `.uasset` package не обязано совпадать с внутренним именем Blueprint
-  asset. У marker package `WBP_InteractIndicator_M` внутренний asset оставлен
-  `WBP_InteractIndicator`, поэтому generated class называется
-  `WBP_InteractIndicator_C`. Конструировать имя класса из имени package suffix
-  нельзя; сравнивать с reference import от реально cooked child.
-- `AddFunctionGraph` для override `BlueprintNativeEvent` автоматически может
-  создать вызов родительской реализации и связать его return со служебным
-  result pin. Установка default value без разрыва этой связи ничего не меняет:
-  такой первый `GetDescriptionFooter` probe статически декомпилировался обратно
-  в вызов parent. Перед константным marker override нужно разорвать exec- и
-  value-связи auto-parent узла и проверить итоговый cooked bytecode.
-- Нельзя по одному actor-child probe решить, что сломано именно наследование,
-  если одновременно добавлен BlueprintNativeEvent override. Footer-probe для
-  `BP_Module_Diesel_Container` прошёл загрузку package, но через 22 секунды упал
-  на GameThread с записью по адресу `0xe0`. Это не прежний async-load/CDO crash,
-  однако опыт смешал подмену класса и `GetDescriptionFooter`. Следующий контроль
-  обязан сохранить relocation/child и убрать только override; до него отклонён
-  конкретный комбинированный пакет, а не паттерн наследования вообще.
-- Такой no-override контроль для `BP_Module_Diesel_Container` повторил через 24
-  секунды точный GameThread crash: запись по `0xe0`, тот же stack hash и стек.
-  Значит, для этого package отклонена сама stock-path actor-child/SCS подмена,
-  независимо от `GetDescriptionFooter`. В cooked child обнаружен второй
-  `DefaultSceneRoot_GEN_VARIABLE`, templated от одноимённого компонента
-  relocated parent; это ведущий механизм archetype collision. Рабочий child
-  другого Actor, например DonkLift, не доказывает безопасность этого package:
-  сравнивать нужно также SCS/component template identity и lifecycle.
-- Подмена native component import на Blueprint-child может сохранить исходный
-  Actor, его CDO, SCS owner и byte-identical `.uexp`, пройти cook и
-  `retoc verify`, но всё равно нарушить более широкий runtime-контракт класса.
-  Для двух Diesel socket templates такая подмена не уронила игру, зато
-  приклеила персонажа к кораблю и визуально оторвала часть кабелей. Поэтому
-  `VoyageModuleSocketViewComponent` нельзя считать только producer-ом текста:
-  его точная native identity участвует также в attachment/cable/interaction
-  поведении.
-- Наличие свежего файла с именем `Mappings.usmap` не доказывает наличие схем.
-  Ложный automatic `GUObjectArray` resolver для Voyage UE 5.8 создал корректный
-  по заголовку 28-байтовый USMAP с нулевым payload, тогда как полный manual dump
-  имел размер 2,141,952 байта. Любой parser workflow обязан проверять manifest,
-  Steam build ID, хеш маппинга, payload size и несколько обязательных schema names до
-  чтения asset. Даже текущий jmap с исправленным UE 5.6+ `MinAlignment`
-  повторил ложный automatic result; только structural `.data` scan и явный
-  `GUObjectArray` дали полный dump, байт-в-байт совпавший с прежним. Но одного
-  структурно допустимого снимка тоже недостаточно: на ещё прогревающемся
-  процессе такой кандидат прошёл pointer/count проверки, после чего dumper
-  запросил 231 GB памяти и завершился с `0xC0000409`. Тот же адрес и процесс
-  после стабилизации дали точный известный mapping. Перед dump нужны как
-  минимальный возраст процесса, так и несколько одинаковых снимков адреса,
-  pointers и object/chunk counts подряд.
-- Windows exit code `0xE0434352` сам по себе означает необработанное managed
-  exception, а не поломку CLR. Для наших повторявшихся диалогов журнал
-  `.NET Runtime` показал ожидаемые `InvalidDataException`,
-  `DirectoryNotFoundException` и LINQ assertion failures из
-  прежних asset tools и `VoyageAssetInspector`, а не runtime fault. CLI tools
-  должны перехватывать верхнеуровневое exception, печатать краткую ошибку и
-  возвращать exit code `1`, чтобы диагностический отказ не выглядел как crash
-  самого `.NET`.
-- Два вызова `retoc to-zen` на идентичном staging tree могут записать chunks в
-  разном физическом порядке. Тогда SHA-256 целых `.ucas/.utoc` различаются,
-  хотя chunk ID, asset path, размер и content hash полностью совпадают. Для
-  сравнения независимых сборок использовать отсортированный semantic inventory;
-  целые файловые хеши остаются обязательными только между конкретным
-  подготовленным пакетом и его установленной копией.
-- Успешный `UAsset.VerifyBinaryEquality()` не доказывает, что UAssetGUI разобрал
-  каждый export. `RawExport` сохраняет неизвестные байты и поэтому может дать
-  побайтно идентичную unchanged-сериализацию одновременно с диалогом
-  `Failed to parse N exports`. Обратная комбинация тоже возможна: asset может
-  не иметь raw fallback и всё же изменить байты при записи. Массовая проверка
-  открытия обязана независимо требовать ноль `RawExport` и положительное
-  binary equality; исключения и неприменённые mappings являются отдельными
-  отказами.
-- Командный `UAssetGUI fromjson` не принимает engine version и потому не
-  эквивалентен обычному GUI Save из asset, открытого с явно выбранным UE 5.8.
-  Для Voyage он может пересобрать JSON в смешанном layout: один слой следует
-  данным JSON/старой версии, а filtered-import header — текущему условию API.
-  До исправления интерфейса и regression test проверять изменённую пару надо
-  прямым открытием с `VER_UE5_8`, `VerifyBinaryEquality`, повторной записью в
-  том же режиме и независимым CUE4Parse/`retoc` проходом.
-- При динамическом построении schema из Blueprint нельзя загружать только
-  непосредственный dependency asset. Индексы unversioned properties включают
-  всю цепочку родителей. Кроме того, нельзя навсегда оставлять путь в
-  `PathsAlreadyProcessedForSchemas`, если preload завершился с отсутствующими
-  зависимостями: после извлечения нового transitive parent следующий проход
-  обязан повторить этот asset.
-- Native custom serialization не становится обычной отражённой структурой от
-  наличия свежего USMAP. `InstancedPropertyBag` в
-  `ABP_HologramPedestal` начинался собственным четырёхбайтовым `bHasData`; попытка
-  разобрать его как mapped `InstancedPropertyBag.Value` сдвинула поток до
-  ложного `FPackageIndex`. Поддерживать только доказанный вариант формата и
-  явно отвергать неизвестный, а не читать соседние bytes как свойства.
-- Отсутствующий в mappings импортированный native enum не требует выдумывать
-  его members. Для unchanged roundtrip допустим явно помеченный numeric
-  fallback (`UASSETAPI_INVALID_ENUM_IDX_<n>`), если ширина underlying property
-  известна, байты сохраняются, а stress report остаётся `notice`. В текущем
-  Voyage таким случаем является `/Script/FunctionalTesting.EComparisonMethod`.
-- `RigHierarchy` и `RigVM` имеют собственные native serializers. Их нельзя
-  считать обычными `NormalExport` и нельзя объявлять полностью разобранными.
-  Точное opaque-сохранение может пройти unchanged binary equality, но должно
-  оставаться отдельным `notice` и не разрешает структурное редактирование.
+- Blueprint bytecode jump addresses use VM `iCode`, not file offsets or the
+  offsets shown by CUE4Parse. Inserting instructions requires recalculating
+  affected jump targets and wrapper entry points after serialization. Matching
+  displayed offsets prove nothing. The current DonkLift mod no longer uses
+  this fragile approach.
+- `retoc` v0.1.5 offered a UE 5.7 mode but lacked the import type hierarchies
+  needed to parse these Voyage assets through UAssetAPI/UAssetGUI. A CLI
+  version option alone is insufficient; test a real round trip and `to-zen`
+  on a narrow asset before relying on a particular tool release.
+- A legacy `.uasset` extracted by an older `retoc` may have an identical
+  `.uexp` and plausible contents yet fail `to-zen` after relocation with
+  `failed to fill whole buffer`. Re-extract the original with the selected
+  current tool before building, and require successful `to-zen`/`verify` to
+  check the header format.
+- Extracting from the whole `Paks` directory while an override mod is
+  installed may return the replacement instead of the stock asset. Remove
+  extra containers with the game closed before refreshing a snapshot. The
+  extraction tool now stops on this ambiguity by default.
+- A substituted child may look like a plausible “original” and even have the
+  expected two occurrences of its own package path. Moving it to the parent
+  path turns its existing parent reference into self-inheritance: the
+  container passes `retoc verify`, but the game crashes with `STACK_OVERFLOW`.
+  Before replacement, reject a source asset that already contains the
+  relocated-parent path; after extraction, verify that filtering returned at
+  least one `.uasset`.
+- A relocated stock forklift Blueprint is a snapshot of one game version.
+  Do not commit it as source or reuse it after a game update. Re-extract it
+  and verify its provenance before building.
+- Substitute package names only between previously checked, equal-length
+  paths. Do not weaken assertions to patch a merely “similar” number of
+  string occurrences; length changes break the cooked layout.
+- Broad `CookDir` followed editor dependencies, compiled global shaders, and
+  cooked unrelated Engine/OpenWorld packages. Production cooking uses five
+  narrow `-CookSinglePackageNoRefs` runs.
+- Separate control/HUD containers helped diagnosis, but the HUD replacement
+  was removed from production after forced ordering was abandoned. The
+  accepted result is packaged as one `DonkLiftKeyboardControl_P` and checked
+  without a leftover probe package.
+- `retoc verify` establishes container integrity, not runtime Blueprint,
+  input, or HUD compatibility. Cleanup or consolidation still needs a full
+  in-game check.
+- A `WBP_InteractIndicator` relocation probe for build `24990438` passed
+  cook, `retoc verify`, and independent bytecode/CDO analysis but crashed on
+  `FAsyncLoadingThread` with a null read before `PreConstruct`. A clean
+  two-asset inventory and plausible child CDO do not prove a reconstructed
+  native parent is compatible with that Widget Blueprint. Reject that whole
+  architecture rather than changing another graph on top of it.
+- Do not redirect a package import just because the target path appears once
+  in the `.uasset`. In `BP_VoyageIngameHud`, the sole
+  `WBP_InteractIndicator` import serves both CDO property `IndicatorSubClass`
+  and an embedded widget-tree instance. Equal-length path replacement changes
+  both consumers. That probe was rejected statically and never installed. A
+  targeted replacement needs a separate CDO delta or a structural new import.
+- An inherited CDO property is not safe merely because a reconstructed native
+  prefix has the expected size and the generated Blueprint cooks. In
+  `BP_VoyageIngameHud` probe3, a value set as `IndicatorSubClass` decoded as
+  `ButtonInfoContainer_Action_1` when independently parsed with the original
+  parent. This unversioned-property index mismatch was found before
+  installation. Such a change needs a structural CDO patch that checks the
+  exact property name, not another mirror/child variant.
+- In Voyage UE 5.8, `FObjectImport.PackageName` is serialized even for
+  filtered cooked packages. UAssetAPI and the original retoc 0.1.5 wrongly
+  skipped it under `IsFilterEditorOnly`, shifting an otherwise plausible
+  import map. Removing that condition globally is also wrong: filtered UE4
+  and UE 5.3–5.7 fixtures use the older layout without `PackageName`. Read
+  and write this field only with an explicitly selected `VER_UE5_8`.
+  Unchanged round trips must remain byte-identical for both current Voyage
+  and older regression fixtures. A new import's `PackageName` must also
+  match its `ObjectName`.
+- Comparing only two successive local commits cannot establish that existing
+  test failures are an acceptable baseline. Commit `48b6096` already had an
+  overly broad filtered-import patch that introduced ten binary-roundtrip
+  regressions; comparisons with it or `b5c47b7` hid them. For shared
+  serialization changes, run the same suite against the actual upstream
+  merge base. The control result before and after the correct UE 5.8 gate was
+  `27/27`.
+- A `.uasset` package name need not match its internal Blueprint asset name.
+  In marker package `WBP_InteractIndicator_M`, the internal asset remains
+  `WBP_InteractIndicator`, so the generated class is
+  `WBP_InteractIndicator_C`. Do not derive the class name from the package
+  suffix; compare with a reference import from an actually cooked child.
+- `AddFunctionGraph` for a `BlueprintNativeEvent` override may automatically
+  create a parent call and connect its return to the result pin. Setting a
+  default value without breaking that connection has no effect: the first
+  `GetDescriptionFooter` probe decompiled back to a parent call. For a
+  constant marker override, disconnect the auto-parent node's exec and value
+  links and check the final cooked bytecode.
+- A single actor-child probe cannot isolate inheritance when it also adds a
+  `BlueprintNativeEvent` override. A `BP_Module_Diesel_Container` footer probe
+  loaded its package but crashed on GameThread after 22 seconds while writing
+  to `0xe0`. Unlike the earlier async-load/CDO crash, this test combined the
+  class substitution and `GetDescriptionFooter`. A control keeping the
+  relocation/child while removing only the override was needed; until then,
+  only that combined package was rejected.
+- That no-override `BP_Module_Diesel_Container` control reproduced the exact
+  GameThread crash after 24 seconds: write to `0xe0`, same stack hash and
+  stack. Thus the stock-path actor-child/SCS substitution itself is rejected
+  for this package, independently of `GetDescriptionFooter`. The cooked child
+  had a second `DefaultSceneRoot_GEN_VARIABLE` templated from the relocated
+  parent's same-named component, the leading archetype-collision mechanism.
+  A working child of another Actor, such as DonkLift, does not establish
+  safety here; compare SCS/component-template identity and lifecycle too.
+- Replacing a native component import with a Blueprint child can preserve the
+  original Actor, CDO, SCS owner, and byte-identical `.uexp`, pass cook and
+  `retoc verify`, yet violate the class's broader runtime contract. For two
+  Diesel socket templates, this did not crash but attached the character to
+  the ship and visually detached some cables. Therefore
+  `VoyageModuleSocketViewComponent` is more than a text producer: its exact
+  native identity also participates in attachment, cable, and interaction
+  behavior.
+- A fresh file named `Mappings.usmap` does not prove schemas are present. A
+  false automatic `GUObjectArray` resolver for Voyage UE 5.8 produced a valid
+  28-byte USMAP header with no payload; a complete manual dump was 2,141,952
+  bytes. Before asset parsing, a mapping workflow must check its manifest,
+  Steam build ID, mapping hash, payload size, and several required schema
+  names. Even a jmap with the corrected UE 5.6+ `MinAlignment` repeated the
+  false automatic result. A structural `.data` scan and explicit
+  `GUObjectArray` produced the full dump, byte-identical to the previous one.
+  A structurally plausible snapshot alone was still insufficient: while the
+  process was warming up, one candidate passed pointer/count checks, then
+  requested 231 GB of memory and exited with `0xC0000409`. The same address
+  and process yielded the known mapping after stabilization. Require both a
+  minimum process age and several consecutive matching snapshots of address,
+  pointers, and object/chunk counts before dumping.
+- Windows exit code `0xE0434352` by itself means an unhandled managed
+  exception, not a broken CLR. For the recurring dialogs, the `.NET Runtime`
+  log showed expected `InvalidDataException`, `DirectoryNotFoundException`,
+  and LINQ assertion failures from earlier asset tools and
+  `VoyageAssetInspector`, not a runtime fault. CLI tools should catch
+  top-level exceptions, print a concise error, and exit with code `1` so a
+  diagnostic failure does not look like a .NET crash.
+- Two `retoc to-zen` calls on an identical staging tree may write chunks in
+  different physical order. Whole-file `.ucas/.utoc` SHA-256 values then
+  differ although chunk IDs, asset paths, sizes, and content hashes match.
+  Compare independent builds through a sorted semantic inventory. Whole-file
+  hashes are still needed between one prepared package and its installed copy.
+- Passing `UAsset.VerifyBinaryEquality()` does not prove UAssetGUI parsed every
+  export. `RawExport` preserves unknown bytes and can yield byte-identical
+  unchanged serialization while the UI reports `Failed to parse N exports`.
+  The reverse is possible too: an asset without raw fallback may change bytes
+  when saved. Batch open checks must independently require zero `RawExport`
+  and positive binary equality. Exceptions and unapplied mappings are separate
+  failures.
+- CLI `UAssetGUI fromjson` does not accept an engine version and is therefore
+  not equivalent to a normal GUI Save of an asset opened explicitly as UE 5.8.
+  For Voyage, it may rebuild JSON into a mixed layout: one layer follows the
+  JSON or older-version data while the filtered-import header follows the
+  current API condition. Until the interface and regression test are fixed,
+  validate a modified pair by direct opening with `VER_UE5_8`,
+  `VerifyBinaryEquality`, rewriting in the same mode, and an independent
+  CUE4Parse/`retoc` pass.
+- Dynamically building a Blueprint schema requires more than its immediate
+  dependency asset. Unversioned-property indices cover the entire parent
+  chain. Also, do not leave an asset path permanently in
+  `PathsAlreadyProcessedForSchemas` if preload ended with missing dependencies:
+  after extracting a transitive parent, the next pass must retry that asset.
+- A fresh USMAP does not turn native custom serialization into an ordinary
+  reflected structure. `InstancedPropertyBag` in `ABP_HologramPedestal` began
+  with its own four-byte `bHasData`. Parsing it as mapped
+  `InstancedPropertyBag.Value` shifted the stream to a false `FPackageIndex`.
+  Support only established format variants and explicitly reject unknown
+  ones rather than reading adjacent bytes as properties.
+- A native enum imported but absent from mappings does not require invented
+  members. For an unchanged round trip, an explicitly marked numeric fallback
+  (`UASSETAPI_INVALID_ENUM_IDX_<n>`) is acceptable if the underlying property
+  width is known, bytes are preserved, and the stress report remains a
+  `notice`. In current Voyage this applies to
+  `/Script/FunctionalTesting.EComparisonMethod`.
+- `RigHierarchy` and `RigVM` have their own native serializers. Do not treat
+  them as ordinary `NormalExport` or claim they are fully parsed. Exact opaque
+  preservation may pass unchanged binary equality, but must remain a separate
+  `notice` and does not permit structural edits.
 
 ## UE4SS HUD
 
-- `pcall` не защищает от падения внутри native marshaling.
-- Lua-таблица вида `{ KeyName = "W" }` не является настоящим `FKey` для
-  `IsInputKeyDown` и уже вызывала native crash.
-- Создание нового `FText` требовало version-pinned сигнатуры конструктора.
-  Даже уникальный pattern нужно перепроверять после каждого изменения exe.
-- `KismetInternationalizationLibrary.GetCurrentLanguage` не отражал язык меню
-  Voyage. Проверенным источником был
+- `pcall` does not protect against a crash inside native marshaling.
+- A Lua table such as `{ KeyName = "W" }` is not a real `FKey` for
+  `IsInputKeyDown` and has caused a native crash.
+- Constructing a new `FText` required a version-pinned constructor signature.
+  Recheck even a unique pattern after every executable change.
+- `KismetInternationalizationLibrary.GetCurrentLanguage` did not reflect the
+  Voyage menu language. The validated source was
   `VoyageGameUserSettings.CustomSettings.LanguageType`.

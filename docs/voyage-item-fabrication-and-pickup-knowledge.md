@@ -6,11 +6,11 @@ This document separates item serialization, inventory ownership, transfer and
 notifications. General mechanisms are not tied to a particular mod or game
 build; static facts, runtime coverage and inferences are distinguished below.
 
-Where a section explicitly refers to a game build, its binary/schema evidence
-was obtained on Steam build `25191271`, parser profile `UE5_8`.
-This provenance gates reuse of the corresponding extracted
-inputs and reconstructed binary contracts, not the general ownership and event
-patterns. A game update alone is not a reason to repeat the whole investigation.
+Where a section refers to exact binary/schema evidence, it was obtained with
+parser profile `UE5_8` from a prior game snapshot. Its exact Steam build ID
+belongs with the extracted input's provenance and gates reuse of that input,
+not the general ownership and event patterns. A changed Update calls for
+checking affected contracts, not repeating the whole investigation.
 An optional implementation example is the
 [Railgun architecture](../mods/Railgun/ARCHITECTURE.md), which owns its item
 values and release evidence, not the general contracts described here.

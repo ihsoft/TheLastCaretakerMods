@@ -1,11 +1,11 @@
 # MooringCable60m architecture
 
-The mod supports Steam build `25956314` (game version `0.10.0.653158`).
 Connected cables retain the 2000 cm limit; a free end can deploy to 60 m.
 Existing saves resolve the replacement cable class. The native payout and
-force contract below was inspected on build `25191271`; it was not independently
-re-derived for `25956314`. The builder extracts and checks fresh stock assets
-on each run.
+force contract below is a starting model when diagnosing a mismatch. The
+builder extracts and checks fresh stock assets on each run. The exact accepted
+source build is recorded in `game-build.json`; an Update and executable-version
+support claim has not been established here.
 
 ## Stock length ownership
 

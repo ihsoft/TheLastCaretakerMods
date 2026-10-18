@@ -4,13 +4,13 @@ The tracked mod contains hand-written generator source, editor-only identity
 mirrors, scripts, and documentation. Extracted assets and raw inspection output
 remain in ignored storage and are not source inputs.
 
-## Version gate
+## Build inputs
 
-- Steam build ID: `25880952`
-- Unreal family: `5.8`; generating editor: `5.8.2`
-- on a changed Steam build, try a candidate with
-  `-IgnorePinnedGameVersion`; investigate the affected identity or import only
-  if the build or game test fails
+The exact accepted source-build pin is in `game-build.json`. The generating
+editor targets Unreal `5.8.2`; this is a toolchain identity, not a game Update
+or a player-facing compatibility claim. On a pin mismatch, try a candidate
+with `-IgnorePinnedGameVersion`; investigate an affected identity or import
+only if the build or game test fails.
 
 ## Stock identities and lifecycle
 

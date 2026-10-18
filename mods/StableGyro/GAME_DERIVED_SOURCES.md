@@ -1,9 +1,10 @@
 # Game-derived source and build inputs
 
-## Game-build gate
+## Source-build gate
 
-- Steam build: 25982825
-- Unreal parser target: 5.8
+The current accepted Steam build pin is in `game-build.json`; the Unreal
+parser target is `5.8`. The pin identifies exact build inputs, not the game's
+player-facing Update or executable version.
 
 The producer checks the Steam build ID while extracting current stock inputs.
 A different build ID permits a candidate attempt with
@@ -37,8 +38,8 @@ sources establish:
   `Collective`, and `HoverPitchScale`, plus bool `bEngineRunning`,
   `bAutoHoverCollective`, and `bAltitudeAssist`, on
   `/Script/Voyage.VoyageVehicleGyroCopter`;
-- Steam build `25956314`
-  established the protected Blueprint-readable SaveGame flags for
+- An earlier native snapshot established the protected Blueprint-readable
+  SaveGame flags for
   `PropellerVelocity`, `CurrentThrottle`, `bEngineRunning`, `Collective`, and
   `HoverPitchScale`, the public Blueprint-readonly non-SaveGame flags for
   `bAutoHoverCollective` and `bAltitudeAssist`, and the stock CDO
@@ -89,8 +90,7 @@ sources establish:
 
 ## Historical native context
 
-Steam build `25880952`
-established that native forward input targets
+An earlier native snapshot established that native forward input targets
 `TiltForwardAngle * TiltForwardInput` in `CommandedTilt`; normalized rotation
 interpolation uses `DeltaSeconds * TiltInterpSpeed`. The native control pass
 then computes `speedRatio = clamp(PropellerVelocity / GovernedRotorSpeed, 0, 1)`

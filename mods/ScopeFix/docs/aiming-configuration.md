@@ -38,14 +38,14 @@ be described simply as world-space height.
 
 ## Build and compatibility boundary
 
-The last pinned Steam build is `25880952`. By default the builder compares the
-installed build with that pin; on a mismatch, retry with
-`-IgnorePinnedGameVersion`. It still extracts fresh stock assets, checks their
-camera vectors, changes only the two intended X values and verifies the
-resulting package structure. A release built for the pinned version
-also starts on Steam build `25902891`; aiming behavior on that later build has
-no separate compatibility claim.
+V1 remains available for Update 5.5 (`Voyage.exe` version `5.8.1.0`); V2 is
+the separately published file for Update 6 beta (`5.8.2.0`). The exact accepted
+Steam build pin is in `game-build.json`, not in this compatibility description.
 
-A build for another Steam build needs reviewed mappings and fresh stock assets
-for that build, followed by the relevant structural and gameplay checks.
-Generated assets remain ignored output; the repository keeps the method.
+The builder extracts fresh stock assets, checks their camera vectors, changes
+only the two intended X values, and verifies the resulting package structure.
+On a pin mismatch, try the public builder with `-IgnorePinnedGameVersion`;
+resolve missing mappings and investigate the affected asset contract only if
+the normal path fails. A new Update needs a relevant game test before support
+is claimed. Generated assets remain ignored output; the repository keeps the
+method.

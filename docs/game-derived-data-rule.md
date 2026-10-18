@@ -165,13 +165,16 @@
   ID, mapping identity, and the exact tested package in release evidence.
   General engine behavior follows its engine/serialization checks rather than
   acquiring a game-build gate solely because it was observed on one build.
-- Keep mod version, artifact version, user-facing game version, Steam build ID,
-  and Unreal Engine version as separate identities. A game
-  update neither proves incompatibility nor requires a mod-version bump; it
-  invalidates version-bound build inputs and requires new evidence before a new
-  compatibility claim. Record whether a display/marketing version came from a
-  machine-readable source or from the user, and never infer it from an
-  executable version such as `UE5-CL-0`.
+- Keep mod version, artifact version, game Update, the numeric file version of
+  `Voyage.exe`, Steam build ID, and Unreal Engine version as separate identities.
+  Use the [observed Update mapping](game-update-versions-knowledge.md) for
+  player-facing compatibility; do not present a Steam build ID as the supported
+  game version. A changed Steam build may invalidate exact mappings or saved
+  game-derived inputs but does not alone revoke compatibility of an existing
+  release. A changed Update deserves review of affected contracts and an
+  in-game test before a new compatibility claim; it does not itself require a
+  mod-version bump. Read the executable's numeric file version, not its text
+  value `UE5-CL-0`, and do not infer the Update from the editor version.
 - Compatibility metadata may say `game-validated` only after the requested
   runtime behavior is checked in the real game. Compile, cook, container verify,
   semantic comparison, clean load, and save load remain lower gates.

@@ -4,10 +4,9 @@ This document records observed game, engine, and toolchain behavior with its
 version and validation boundaries. Treat unsupported extensions as hypotheses.
 Repository workflow rules are in [toolchain rules](voyage-cooked-asset-toolchain-rule.md).
 
-For Steam build `25056839`, game UE `5.8.1`, the reviewed mapping is
-`mappings/Voyage/steam-25056839-ue5.8.1/Voyage-25056839.usmap`. Its sibling
-manifest records generator identity, file hash, validation evidence, and
-invalidation condition.
+The [reviewed mapping registry](../mappings/Voyage/) keeps exact Steam build
+identities and validation manifests. Use the public mapping resolver for the
+installed game; this knowledge does not select a mapping by a historical ID.
 
 ## Reflected weak-object arrays
 
@@ -71,7 +70,7 @@ Voyage primary assets must still satisfy the independently configured Item and
 Skill scan roots and native class/primary-ID contracts; enabling a content
 plugin alone does not prove Asset Manager registration or recipe availability.
 
-On Steam build `25191271`, the supported layout uses a loose content-only
+The observed layout uses a loose content-only
 descriptor, a plugin-local registry in its PAK, and Item/Skill packages under
 the stock `/Game/Data/Assets` roots in IoStore. Package structure alone does
 not guarantee gameplay registration or initialization order.
@@ -227,8 +226,9 @@ reader/writer consistency, not gameplay compatibility.
   a broader engine-version setter that rewrites source metadata.
 - UE 5.8 filtered imports serialize `FObjectImport.PackageName`; older filtered
   fixtures do not. The API fix is deliberately gated on `VER_UE5_8`.
-- The game is UE `5.8.1`, while the available editor is UE `5.8.2`; loose
-  `.uasset/.uexp` cooking requires the documented `-SkipZenStore` path.
+- Update 5.5 reports numeric `Voyage.exe` version `5.8.1.0`; the available
+  editor is UE `5.8.2`. Loose `.uasset/.uexp` cooking requires the documented
+  `-SkipZenStore` path. These are distinct game and toolchain identities.
 - Keep the retoc binary identity, selected profile and extraction manifest
   together. Accepted retoc `49b7721` uses explicit `UE5_8` for Voyage's
   expanded imports, while `UE5_7` deliberately selects the upstream filtered

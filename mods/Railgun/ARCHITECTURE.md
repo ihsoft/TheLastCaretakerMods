@@ -2,7 +2,9 @@
 
 ## Stock aiming and input integration boundaries
 
-The following native contracts are bound to Steam build `25956314`.
+The following native contracts were inspected on an earlier game snapshot;
+that observation is not a player-facing compatibility gate. The current
+accepted source-build pin is in `game-build.json`.
 Railgun uses these contracts for stock actions, mapping-context lifecycle and
 ADS processing. Controller hardware behavior remains unverified. On a changed
 Steam build, try the public candidate producer first; investigate these native
@@ -357,7 +359,7 @@ This coordinate conversion does not replace the game's inversion setting.
   from the owned UAssetAPI JSON readbacks through the shared Voyage registry
   profile and native writer; `Voyage/AssetRegistry.bin` is neither read nor
   packaged or replaced. Railgun owns no registry serializer or class defaults.
-- On Steam build `25827816`, the native Asset Manager settings scan `Skill` below
+- The observed native Asset Manager settings scan `Skill` below
   `/Game/Data/Assets/Skill` and `Item` below `/Game/Data/Assets`. Registry
   membership alone is insufficient for discovery outside those roots.
 - Research unlocks both recipes; neither recipe is available before research.
@@ -559,7 +561,7 @@ destroying or reconfiguring another hit's effect. The helper stores only a
 runtime reference to the stock system; no stock VFX package is copied, patched
 or registered by Railgun.
 
-For Steam build `25880952`, the editor-only native mirror for water lookup is
+The editor-only native mirror for water lookup is
 `/Script/Voyage.VoyageMiscBlueprintFunctionLibrary`. Current reflection
 revalidation confirms `GetActorWorld(AActor*) -> UWorld*` and
 `GetWaterHeightAtLocation(UWorld*, FVector) -> float`. Earlier native behavior
@@ -615,7 +617,8 @@ The three-record plugin-local registry is derived solely from owned package
 readbacks through the shared Voyage registry profile and class-agnostic native
 writer, then reopened and compared field-for-field.
 
-- Steam build: `25956314`; parser profile: `UE5_8`; authoring editor: `5.8.2`.
+- Parser profile: `UE5_8`; authoring editor: `5.8.2`. The exact accepted
+  source-build pin is in `game-build.json`.
 - Selected candidate ZIPs live under `artifacts/installations/Railgun-V<N>/`.
   Temporary builds and their transient installation state stay in `Tmp/`;
   neither is a source dependency for rebuilding.

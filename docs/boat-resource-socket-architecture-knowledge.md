@@ -1,11 +1,13 @@
 # Boat resource socket hover cards (observed asset contracts)
 
 This document describes the Boat side connectors' resource producer and HUD
-consumer. Game-derived details are bound to their stated Steam build.
+consumer. The observations below come from game snapshots; recheck an affected
+contract when an Update changes it or a current asset query disagrees.
 
 ## Data path
 
-The asset contract below is bound to Steam build `25056839`.
+The asset contract below was observed during Update 5.5 (`Voyage.exe` version
+`5.8.1.0`).
 `BP_Boat_Base` loads `/Game/Maps/Boats/TestBoat` through its
 `VoyageLevelInstanceComponent`. The level contains a real
 `BP_Module_Battery` and a real `BP_Module_Diesel_Container`; the large side
@@ -70,8 +72,8 @@ text or action data.
 
 ## External socket registration
 
-This section applies to Steam build `25191271`.
-It does not update the separate HUD contracts' version boundary above.
+This section was observed in a later stock snapshot. Its exact Update label
+was not recorded; it does not extend the HUD observation above.
 
 The Boat's `VoyageLevelInstanceComponent.OwnedActors` contains its built-in
 actors, including battery modules and external ports. It is

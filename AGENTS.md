@@ -26,8 +26,8 @@ do not load every document just because it is indexed here.
   or retained `artifacts/`, including cleanup after a failed run.
 - [Release and installation](docs/release-and-installation-rule.md): published
   versions, candidates, packages, installation, and rollback.
-- [Game-derived data](docs/game-derived-data-rule.md): mappings, provenance,
-  Steam build gates, public tools, and build compatibility.
+- [Game-derived data](docs/game-derived-data-rule.md): mappings, exact source
+  provenance, public tools, and build validation boundaries.
 - [Cooked-asset toolchain rules](docs/voyage-cooked-asset-toolchain-rule.md):
   tool use, DML installation, and validation levels.
 - [Game experiments](docs/game-experiment-rule.md): live-game safety and
@@ -49,6 +49,8 @@ do not load every document just because it is indexed here.
   power and Diesel connectors, registration, and hover-card data flow.
 - [Gameplay observations](docs/gameplay-observations-knowledge.md): measured
   resource units and balancing values.
+- [Game Updates and versions](docs/game-update-versions-knowledge.md): map
+  Update labels to `Voyage.exe` versions and distinguish them from Steam IDs.
 - [Surface normals](docs/modeling-surface-normals-knowledge.md): geometric
   orientation, shading exceptions, and useful checks.
 - [Research pitfalls](docs/research-pitfalls-knowledge.md): observed failures

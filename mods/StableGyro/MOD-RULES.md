@@ -14,11 +14,11 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   owns the reusable PostPhysics correction model, axis-local velocity writes,
   previous-command growth rejection, control-intent projection, state reset,
   and actuator-speed gating used by this mod.
-- [Gyro research pitfalls](../../docs/research-pitfalls-knowledge.md#управление-gyro)
+- [Gyro research pitfalls](../../docs/research-pitfalls-knowledge.md#gyro-controls)
   owns rejected Gyro architectures and deceptive no-op causes, including stock
   Blueprint relocation, child Tick replacement, component runtime identity,
   pure-node reevaluation, Shipping diagnostics, and PrePhysics correction.
-- [Standard hint pitfalls](../../docs/research-pitfalls-knowledge.md#стандартные-подсказки)
+- [Standard hint pitfalls](../../docs/research-pitfalls-knowledge.md#standard-input-hints)
   and [standard action UI patterns][action-ui-pattern]
   own the provided-action/HUD distinction and exact UFunction-owner rules
   behind the X hint.

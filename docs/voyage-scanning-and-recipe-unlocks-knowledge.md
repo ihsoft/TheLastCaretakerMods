@@ -6,13 +6,14 @@ This is shared game-mechanism research, independent of any particular mod.
 The contracts below are bound to stock Blueprint bytecode, reflected property
 metadata and native behavior for:
 
-- Steam build: `25191271`.
 - Executable: `VoyageSteam-Win64-Shipping.exe`.
 - Asset parser profile: `UE5_8`.
 
 These are static findings, not validation of a mod calling the same functions.
-Revalidate the affected Blueprint and native contracts after a fingerprint
-change. Extracted assets, disassembly and raw reports remain ignored artifacts.
+The Update label for this earlier snapshot was not recorded. Revalidate the
+affected Blueprint and native
+contracts when a current query disagrees or a new Update changes the behavior.
+Extracted assets, disassembly and raw reports remain ignored artifacts.
 
 ## Stock Replica Scanner completion path
 

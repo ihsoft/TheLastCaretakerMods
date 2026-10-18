@@ -5,8 +5,8 @@ for mod balancing. It is not an experiment log.
 
 ## Provenance
 
-The values below are bound to Steam build `25191271`. Revalidate them when the
-relevant game contracts change.
+The exact Update and numeric executable version for these observations were
+not recorded. Revalidate a value when the relevant game contract changes.
 
 ## Electricity units
 

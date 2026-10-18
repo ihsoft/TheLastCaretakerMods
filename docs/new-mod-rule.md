@@ -45,7 +45,7 @@ investigation may use an ignored backlog under the mod, following the
 ## Advance the mod
 
 Keep the architecture and README honest about what exists. A planned skeleton
-does not claim a working mod, a supported game build, or a release. When a
+does not claim a working mod, a supported game Update, or a release. When a
 public producer exists, follow the [release workflow](release-and-installation-rule.md):
 build first, diagnose only an actual failure, and seek a proportional game test
 before claiming runtime behavior. Commit a skeleton or later research checkpoint

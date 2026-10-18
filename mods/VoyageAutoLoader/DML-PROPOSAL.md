@@ -24,7 +24,7 @@ copied containers. After discovery, it loads the entry Actor class and uses an
 existing-instance check before spawning.
 
 We have tested discovery, custom entry paths, phase selection and repeated
-menu/gameplay transitions on Steam build 25056839 (UE5.8.1). Our separate
+menu/gameplay transitions during Update 5.5 (`Voyage.exe` `5.8.1.0`). Our separate
 bootstrap also preserves the compatible DML menu console when DML is installed.
 This is still a prototype, not a claim of universal compatibility: one HUD test
 mod caused UI/exit problems while its autoload was enabled, and broader failure
