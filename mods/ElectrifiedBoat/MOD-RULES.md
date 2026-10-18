@@ -2,7 +2,7 @@
 
 Repository rules in [../../AGENTS.md](../../AGENTS.md) apply. Read
 [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md) for the fingerprint and exact
-game identities; [README.md](README.md) owns the build and installation steps.
+game identities.
 
 - DML loads `/Game/Mods/ElectrifiedBoat/ModActor.ModActor_C`. Ship only this
   additive package, not the generator's stock Blueprint stubs or native mirrors.

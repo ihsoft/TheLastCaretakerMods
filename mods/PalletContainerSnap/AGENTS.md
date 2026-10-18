@@ -12,6 +12,8 @@ This investigation is paused; preserve its current work.
   restart section before resuming.
 - Local ignored `PLACEMENT-RESEARCH.md`, when present: mod-local inspection and
   hypotheses; open targeted sections only when the question needs them.
-- [Build and DML installation](README.md): public scripts and payload layout.
+- [Candidate producer](Build-PalletContainerSnap.ps1) and
+  [DML installation wrapper](Install-PalletContainerSnap.ps1): current public
+  entry points; use the local backlog for active experimental routes.
 - [Shared item knowledge](../../docs/voyage-item-fabrication-and-pickup-knowledge.md):
   placement, inventory, and pickup contracts when applicable.

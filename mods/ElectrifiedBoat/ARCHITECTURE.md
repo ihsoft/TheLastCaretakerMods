@@ -9,5 +9,4 @@ away from a Boat keep their original behavior.
 
 The package entry is `/Game/Mods/ElectrifiedBoat/ModActor.ModActor_C`.
 [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md) identifies the stock classes
-and version-bound contracts. [Mod rules](MOD-RULES.md) give mutation limits;
-[README.md](README.md) gives the build and distribution interface.
+and version-bound contracts. [Mod rules](MOD-RULES.md) give mutation limits.

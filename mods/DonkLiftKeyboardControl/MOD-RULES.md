@@ -8,8 +8,7 @@ contract and workflow detail.
 
 - Treat this Unreal project, `GAME_DERIVED_SOURCES.md`, and the latest
   game-validated Git checkpoint as the implementation of record.
-- `README.md` is the single mod README: behavior, build, packaging, and
-  user-facing information.
+- [Architecture](ARCHITECTURE.md) describes the current behavior.
 - Durable negative findings live in `../../docs/research-pitfalls-knowledge.md`. Do not
   restore an older control or HUD design when it disagrees with the current
   source without a new isolated experiment.

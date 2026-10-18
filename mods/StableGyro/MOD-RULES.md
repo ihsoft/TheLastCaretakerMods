@@ -4,9 +4,6 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 
 ## Documentation map
 
-- [README.md](README.md) describes the shipped controls, runtime behavior,
-  user-facing settings, units, accepted ranges, and public build/install entry
-  point.
 - [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md) owns the source provenance,
   stock Gyro package/class/input/physics contracts, direct
   `PropellerVelocity` reference values, and tracked reconstructed inputs.

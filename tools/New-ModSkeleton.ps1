@@ -42,7 +42,6 @@ knowledge. For a new mod, follow its
 - **Read first for every mod task:** [Architecture](ARCHITECTURE.md) records the
   current design and known game contracts; the initial state is explicitly
   unimplemented.
-- [README](README.md): player-facing goal and current availability.
 "@
 
 $architecture = @"
@@ -68,7 +67,7 @@ $readme = @"
 
 Planned mod: $goal
 
-No build or installation is available yet.
+No candidate build command is available yet.
 "@
 
 $contents = [ordered]@{

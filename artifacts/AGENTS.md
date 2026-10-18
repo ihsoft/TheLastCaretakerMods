@@ -3,7 +3,7 @@
 Root `../AGENTS.md` applies.
 
 - Register every new top-level directory or distinct-purpose subtree in
-  `README.md` before creating it. Do not create anonymous `misc`, `temp` or
+  [the artifact-family registry](ARTIFACT-FAMILIES.md) before creating it. Do not create anonymous `misc`, `temp` or
   catch-all families here.
 - Record only the owner, producer, consumer, retention reason and owning
   contract link. Keep schemas, commands and private layout details with the

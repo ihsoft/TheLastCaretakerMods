@@ -6,6 +6,8 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
   the relocated stock container, lid label, icons, and configuration path.
 - [Game-derived sources](GAME_DERIVED_SOURCES.md): stock identities and build
   applicability.
-- [Build and usage](README.md): public producer, installation, and settings.
+- [Candidate producer](Build-ContainerLidLabel.ps1): prepares the package and
+  default INI; shared release and installation rules apply.
+- [Configuration](CONFIGURATION.md): INI fields and reload behavior.
 - [Shared INI recipe](../../docs/runtime-configuration-patterns-knowledge.md):
   read frequency, shared cache, and setter boundaries for many containers.

@@ -1,56 +1,7 @@
 # ElectrifiedBoat
 
-ElectrifiedBoat lets you connect to your boat's electrical network anywhere
-you can build an **Electric Wall Socket**. On a boat, the socket connects to
-the boat's power supply instead of looking for a matching socket through the
-wall. Existing sockets are connected when you load your save, too.
-
-Away from a boat, wall sockets work normally. Other resource sockets are not
-changed. No new building item, controls, or configuration are required.
-
-## Distribution
-
-Requires **DML v0.6**.
-
-1. Close the game and extract the release ZIP into the game's
-   `Voyage/Content/Paks` folder, preserving its `LogicMods` directory.
-   The result must be `Paks/LogicMods/ElectrifiedBoat.pak`, with `.ucas` and
-   `.utoc` beside it. Do not extract into an existing `LogicMods` folder:
-   that would create an extra nested directory. Do not leave another copy
-   of the mod in Paks or a different subfolder.
-2. Start the game so DML can discover the mod in `LogicMods`.
-3. Build an Electric Wall Socket on your boat and connect a cable to it.
-
-Keep only one version of this mod installed. Back up your save before removing
-the mod; loading a save without it is not a guaranteed compatibility feature.
-
-## Build and validation
-
-Building requires Windows, Unreal Engine **5.8.2** with its C++ build tools,
-the installed game, and the repository's prepared
-[build tools](../../tools/README.md). The build checks the supported game
-version. The last pinned Steam build is in `game-build.json`; the source
-identities are in [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md).
-
-Run this from the repository root:
+Connects the Boat's wall sockets to its electrical network.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\mods\ElectrifiedBoat\Build-ElectrifiedBoat.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/ElectrifiedBoat/Build-ElectrifiedBoat.ps1
 ```
-
-The defaults are `K:\Epic Games\UE_5.8` for the engine and
-`P:\SteamLibrary\steamapps\common\Voyage` for the game. To use other locations,
-append `-EngineRoot 'C:\path\to\UE_5.8'` and
-`-GameRoot 'D:\path\to\Voyage'` to the command.
-
-The script builds the mod, checks the resulting package, and creates a Vortex
-ZIP with an explicit `LogicMods/` directory. Output goes to
-`Tmp/ElectrifiedBoat/build-<timestamp>/`. Install only the three
-`ElectrifiedBoat.pak/.ucas/.utoc` files directly into `Voyage/Content/Paks/LogicMods`;
-the other files are build metadata. The script does not install the mod.
-If the installed Steam build differs from the pin,
-retry with `-IgnorePinnedGameVersion`. A successful candidate still needs a
-game test before the pin is updated.
-
-For development contracts, see [AGENTS.md](AGENTS.md).

@@ -1,8 +1,8 @@
 # Container Lid Label architecture
 
 Supported fingerprint and native-mirror provenance are owned by
-[GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md). The public configuration and
-build interface are in [README.md](README.md).
+[GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md). The public configuration is
+in [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Package and presentation ownership
 

@@ -55,7 +55,7 @@ new retained family. Do not register a family retroactively to justify an
 output location.
 
 Before creating or changing retained output, consult the family registry in
-[`artifacts/README.md`](../artifacts/README.md) and its local
+[`artifacts/ARTIFACT-FAMILIES.md`](../artifacts/ARTIFACT-FAMILIES.md) and its local
 [`AGENTS.md`](../artifacts/AGENTS.md). A family needs an owner and continuing
 consumer; individual run directories inherit that contract. Consult the owner
 before changing or removing existing retained content, and do not delete

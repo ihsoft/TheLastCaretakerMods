@@ -10,8 +10,8 @@ For an existing mod, open its index before its settings files. For a Gyro
 request, start with the [StableGyro index](../mods/StableGyro/AGENTS.md), then
 read its [architecture](../mods/StableGyro/ARCHITECTURE.md) to locate the
 settings owner and lifecycle, its [rules](../mods/StableGyro/MOD-RULES.md)
-before changing anything, and its [README](../mods/StableGyro/README.md) for
-the public producer. The [Railgun index](../mods/Railgun/AGENTS.md) and
+before changing anything. Its [candidate producer](../mods/StableGyro/Build-StableGyro.ps1)
+is indexed in the mod. The [Railgun index](../mods/Railgun/AGENTS.md) and
 [ContainerLidLabel index](../mods/ContainerLidLabel/AGENTS.md) provide the same
 routing for those mods. Use the owning public producer before investigating
 internals. For a new mod, identify the settings owner and lifecycle in its
@@ -108,7 +108,8 @@ file. The shared [release policy](release-and-installation-rule.md) owns the
 transaction and rollback lifetime.
 
 Railgun and StableGyro already merge active settings on installation. The
-ContainerLidLabel installer does **not** manage its external INI; its README
+ContainerLidLabel installer does **not** manage its external INI; its
+[configuration contract](../mods/ContainerLidLabel/CONFIGURATION.md)
 requires a separate backup and migration. That is not the pattern to copy for
 a new configurable mod.
 

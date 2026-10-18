@@ -1,6 +1,5 @@
 # MooringCable60m architecture
 
-The public behavior and build interface are in [README.md](README.md).
 The mod supports Steam build `25956314` (game version `0.10.0.653158`).
 Connected cables retain the 2000 cm limit; a free end can deploy to 60 m.
 Existing saves resolve the replacement cable class. The native payout and

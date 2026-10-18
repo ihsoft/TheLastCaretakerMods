@@ -13,7 +13,7 @@
   `Tmp/` holds one-cycle output by default, while ignored `artifacts/` is for
   generated output with a concrete use beyond the current research, feature,
   or release cycle. Preserve owner, consumer, revalidation, rollback, and
-  cleanup boundaries there. Consult `artifacts/README.md` and
+  cleanup boundaries there. Consult `artifacts/ARTIFACT-FAMILIES.md` and
   `artifacts/AGENTS.md` before creating or changing retained content.
 - Every mod writes temporary output below `Tmp/<Mod>/`, using its exact mod
   directory name. Give runs meaningful names: identify active research and its

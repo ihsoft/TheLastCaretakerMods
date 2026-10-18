@@ -18,8 +18,9 @@
   example when useful. Do not keep task histories or per-run measurements in the
   shared reading path. Explicitly requested diagnostics use the opt-in method
   linked from the subagent workflow.
-- Repository-level README files and the shared tool index contain only verified,
-  established capabilities, current interfaces and safety/compatibility limits.
+- Repository-level README files are short folder labels. The shared tool index
+  contains only verified, established capabilities, current interfaces and
+  safety/compatibility limits.
   Keep candidate IDs, experimental hypotheses, trial instructions and progress
   history in an optional ignored owning backlog for a large investigation;
   keep raw evidence in ignored storage, not in shared guidance.
@@ -32,11 +33,18 @@
   output are not links to existing resources. During an uncommitted
   investigation, local working files may link to each other; resolve such links
   before committing the documents that contain them.
-- Each mod has one `README.md` for its high-level purpose, user-facing behavior,
-  and public build/installation entry points. Begin with a brief description a
-  player can understand; add detailed usage below when needed. Do not maintain
-  a second `README.txt` with a competing summary. If a release ZIP includes a
-  README, package that same `README.md`.
+- A README is a short label for its directory, not an agent knowledge source.
+  Each mod has one `README.md` with a brief description and the command to
+  build a candidate from the command line. If no supported build command
+  exists, say so rather than inventing one. The shared release rule owns the
+  ordinary build and installation process; the mod index points directly to
+  its public producer. Put only mod-specific behavior, settings, exceptional
+  build boundaries, and compatibility contracts in their owning documents.
+  AGENTS indexes and agent-facing documents link to those documents instead
+  of a README. The existing `tools/README.md` remains the tool-routing index
+  until its separate review. Do not maintain a second `README.txt` with a
+  competing summary.
+  If a release ZIP includes a README, package that same `README.md`.
 - Describe finished mods by their current behavior and necessary compatibility
   boundaries. The checked-in state is the accepted result; do not preserve who
   confirmed it, trial chronology, test dates, or per-run proof in normal mod

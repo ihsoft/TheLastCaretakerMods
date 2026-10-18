@@ -12,4 +12,4 @@ X pitch-reset action.
 [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md) explains the native hover and
 stabilization boundary. [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md)
 identifies version-bound inputs; [mod rules](MOD-RULES.md) give the exact
-behavior and settings constraints; [README.md](README.md) owns build and usage.
+behavior and settings constraints.

@@ -3,7 +3,7 @@
 Start here for repository work. This file is a map, not a replacement for the
 linked documents. For a mod task, open its `mods/<Mod>/AGENTS.md` first: it
 identifies the architecture to read before working on that mod, any binding
-mod rules, and the README for behavior and public build/installation steps.
+mod rules, and the document owning build and installation details.
 When no mod exists yet, start with the new-mod workflow below.
 
 Shared `docs/` contains repository-wide rules and reusable knowledge. A
@@ -71,13 +71,11 @@ do not load every document just because it is indexed here.
 
 ## Entry points outside shared docs
 
-- [Repository README](README.md): human overview, repository layout, and
-  starting points for new work.
 - [Tool index](tools/README.md): choose a public script by intent and read its
   supported interface before inspecting implementations.
 - [Git coordination](tools/repository-git-coordination.md): required semaphore
   and exact-path commit wrapper for Git mutations.
-- [Artifact storage](artifacts/README.md): retained ignored output and its
-  ownership; read its local `AGENTS.md` before changing retained contents.
-- [Mapping registry](mappings/README.md): reviewed `.usmap` entries and their
-  versioned manifests.
+- [Artifact families](artifacts/ARTIFACT-FAMILIES.md): owners and consumers of
+  retained ignored output; read local `AGENTS.md` before changing it.
+- [Mapping registry](mappings/Voyage/): reviewed `.usmap` entries and their
+  versioned manifests; resolution is owned by the tool index.

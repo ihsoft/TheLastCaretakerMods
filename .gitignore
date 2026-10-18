@@ -8,6 +8,7 @@
 /artifacts/*
 !/artifacts/README.md
 !/artifacts/AGENTS.md
+!/artifacts/ARTIFACT-FAMILIES.md
 /Tmp/
 
 # Local working backlogs outlive a work cycle but do not enter Git.

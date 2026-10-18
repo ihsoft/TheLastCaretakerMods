@@ -6,5 +6,5 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
   the two stock camera-offset overrides and their scope.
 - [Aiming configuration](docs/aiming-configuration.md): selected values,
   reasoning, and game-build applicability.
-- [Build and installation](README.md): public producer, candidate checks, and
-  standalone IoStore package.
+- [Candidate producer](Build-ScopeFix.ps1): prepares the standalone IoStore
+  package; shared build and installation rules are in the repository index.

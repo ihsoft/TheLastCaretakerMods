@@ -25,13 +25,13 @@ Once the mod has a name and one-sentence goal, call the public
 [`New-ModSkeleton.ps1`](../tools/README.md#new-mod-skeleton) entry point. It
 creates `mods/<Mod>/` with only:
 
-- `AGENTS.md`: a short index to the repository index, local architecture, and
-  README. Add links when real mod-specific documents appear.
+- `AGENTS.md`: a short index to the repository index and local architecture.
+  Add links when real mod-specific documents appear.
 - `ARCHITECTURE.md`: the goal and an explicit statement that no implementation
   or game contract has been established yet. Replace that statement with the
   current design and its known boundaries as evidence arrives.
-- `README.md`: the one player-readable overview, marked planned until the mod
-  works. Add build and installation instructions only when they exist.
+- `README.md`: a short folder label, marked planned until the mod works. Add
+  the command-line candidate build command when a public producer exists.
 - `version.txt`: `0`, because no numbered `V1` release has been published.
 
 The scaffold does not create `MOD-RULES.md`, `game-build.json`, provenance

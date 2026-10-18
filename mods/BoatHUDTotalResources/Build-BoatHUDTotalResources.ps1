@@ -8,13 +8,13 @@ param(
 
     [string]$Retoc = "$PSScriptRoot\..\..\.tools\bin\retoc.exe",
 
-    [Parameter(Mandatory = $true)]
     [string]$OriginalsRoot,
 
-    [Parameter(Mandatory = $true)]
     [string]$OutputRoot,
 
     [string]$ContainerName = 'BoatHUDTotalResources_P',
+    [string]$Version,
+    [switch]$AllowDirtySource,
     [switch]$IgnorePinnedGameVersion
 )
 
@@ -52,9 +52,12 @@ if ($editorEngineVersion -cne $expectedEditorEngineVersion) {
 }
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
 $retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $retocPath).Hash
-$originals = (Resolve-Path -LiteralPath $OriginalsRoot).Path
-$output = [IO.Path]::GetFullPath($OutputRoot)
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot '..\..'))
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Join-Path $repoRoot (
+        'Tmp\BoatHUDTotalResources\build-' + [Guid]::NewGuid().ToString('N'))
+}
+$output = [IO.Path]::GetFullPath($OutputRoot)
 $tmpPrefix = (Join-Path $repoRoot 'Tmp').TrimEnd('\') + '\'
 $ownerPrefix = (Join-Path $repoRoot 'Tmp\BoatHUDTotalResources').TrimEnd('\') + '\'
 if ($output.StartsWith($tmpPrefix, [StringComparison]::OrdinalIgnoreCase) -and
@@ -65,7 +68,6 @@ if (Test-Path -LiteralPath $output) {
     throw "OutputRoot already exists: $output"
 }
 [IO.Directory]::CreateDirectory($output) | Out-Null
-
 $fingerprintPath = Join-Path $output 'game-fingerprint.json'
 $fingerprintTool = Join-Path $projectRoot '..\..\tools\Get-VoyageBuildFingerprint.ps1'
 & $fingerprintTool -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
@@ -73,6 +75,14 @@ $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
 $gameBuild = & (Join-Path $projectRoot '..\..\tools\Assert-VoyageModGameBuild.ps1') `
     -ModRoot $projectRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
     -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
+if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
+    $OriginalsRoot = Join-Path $output 'originals'
+    & (Join-Path $repoRoot 'tools\Extract-VoyagePackage.ps1') `
+        -Filter $expectedFilter -GameRoot $GameRoot -Retoc $retocPath `
+        -RetocEngineVersion $retocCompatibilityVersion `
+        -OutputRoot $OriginalsRoot | Out-Null
+}
+$originals = (Resolve-Path -LiteralPath $OriginalsRoot).Path
 
 $manifests = @(Get-ChildItem -LiteralPath $originals -File -Recurse -Filter 'extraction-manifest.json')
 if ($manifests.Count -ne 1) {
@@ -463,7 +473,24 @@ $archivePath = Join-Path $output 'BoatHUDTotalResources-candidate.zip'
 & (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
     -Container $utoc -Archive $archivePath | Out-Null
 
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $publishedVersion = [int](Get-Content -LiteralPath (
+        Join-Path $projectRoot 'version.txt') -Raw)
+    $Version = 'v' + ($publishedVersion + 1) + '-candidate'
+}
+$release = & (Join-Path $repoRoot 'tools/New-VoyageReleaseManifest.ps1') `
+    -ReleaseRoot $output -Mod BoatHUDTotalResources -Version $Version `
+    -Container $utoc -Archive $archivePath -SourcePath $projectRoot `
+    -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource -AsJson | ConvertFrom-Json
+if ($release.status -cne 'created-and-validated') {
+    throw 'Boat HUD release manifest validation failed.'
+}
+
 Write-Host 'BoatHUDTotalResources mod built successfully.'
-Get-FileHash -Algorithm SHA256 -LiteralPath $containerFiles |
-    Select-Object Path, Hash |
-    Format-Table -AutoSize
+[pscustomobject]@{
+    status = 'candidate-validated'
+    outputRoot = $output
+    archivePath = $archivePath
+    releaseManifest = $release.manifestPath
+    runtimeValidated = $false
+}
