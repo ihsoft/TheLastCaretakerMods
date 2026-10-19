@@ -80,8 +80,8 @@ operation and any coupled settings edit have succeeded, those records are
 disposable. Temporary outputs do not become release artifacts merely because
 they were installed or tested in game.
 
-Only explicitly selected release candidates and published releases belong in
-ignored `artifacts/`. Put a selected candidate's exact ZIP and release manifest under
+Only explicitly selected, game-tested release candidates and published releases
+belong in `artifacts/installations/`. Put the exact tested ZIP and release manifest under
 `artifacts/installations/<Mod>-V<N>/`, for example
 `artifacts/installations/Railgun-V5/`. The directory identifies the proposed
 release version, not a timestamp or installation run. Refuse to reuse an
@@ -93,6 +93,14 @@ manifest records against the ZIP and reads the container files from it when
 the loose build intermediates have been removed. Historical
 timestamped directories may be read for existing restore dependencies; migrate
 or remove them only after their ownership and recovery value are established.
+
+`artifacts/installations/` is the trusted rollback collection. All mod versions
+already retained there, including historical timestamped versions, are
+game-tested and must be treated as known-good rollback versions. Do not require
+a separate chat, log, or gameplay-test record to establish that status. New
+untested builds stay in `Tmp/<Mod>/`; promote a package into this collection
+only after its real-game test passes. Normal manifest, hash, and supported-game
+version checks still apply when reinstalling a retained package.
 
 `Voyage/Content/Paks` and `LogicMods` contain only files consumed by the game.
 Never copy a ZIP into either directory, including for a temporary build. A

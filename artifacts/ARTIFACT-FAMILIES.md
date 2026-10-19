@@ -10,9 +10,10 @@ Retained game-derived inputs keep relevant Steam build and asset provenance.
 | --- | --- | --- | --- |
 | `asset-cache/**` | Shared game-asset retrieval; populated by `Get-VoyageAssetJson.ps1` through the inspector | `Get-VoyageAssetJson.ps1`, `Get-VoyageAssetSummary.ps1` and research reuse the real stock cache | [Complete asset JSON](../tools/asset-inspection.md#complete-asset-json-or-package-inventory) |
 | `asset-cache/<version>/_summaries/**` | Shared compact-summary subsystem; created by `Get-VoyageAssetSummary.ps1` for validated stock JSON | Research calls reuse content-addressed derived summaries; removing an obsolete game-cache version also removes its summaries | [Compact Blueprint structure](../tools/asset-inspection.md#compact-blueprint-structure) |
-| `installations/<Mod>-V<N>/**` | Selected release candidate and the named mod | One exact ZIP and release manifest for publication, identification, and later reinstallation; a same-version collision stops the release | [Release workflow](../docs/release-and-installation-rule.md), [release installation](../tools/release-installation.md#release-installation) |
+| `installations/<Mod>-V<N>/**` | Game-tested selected release candidate and the named mod | One exact tested ZIP and release manifest for publication, identification, and reliable rollback; a same-version collision stops the release | [Release workflow](../docs/release-and-installation-rule.md), [release installation](../tools/release-installation.md#release-installation) |
 
-Earlier timestamped installation directories are historical recovery inputs.
+All versions in `installations/`, including earlier timestamped directories,
+are trusted, game-tested rollback versions under the release workflow.
 Do not rename or remove them while a restore or mod-specific migration still
 refers to their exact path or hash.
 

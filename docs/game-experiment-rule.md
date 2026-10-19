@@ -17,7 +17,9 @@
   to research-only work or waive the manifest, backup and readback gates.
 - Before a risky test, preserve an exact known-good package, change one
   architectural variable, state the expected outcomes, and record the actual
-  game result immediately.
+  game result immediately. Packages in `artifacts/installations/` already have
+  known-good status under the [release workflow](release-and-installation-rule.md#output-lifetime);
+  do not search for separate gameplay-validation evidence for them.
 - A successful compile, cook, container verification, clean log, or load is
   not gameplay/UI validation. Require a real-game test proportional to the
   changed behavior.

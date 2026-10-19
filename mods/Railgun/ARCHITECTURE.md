@@ -310,8 +310,7 @@ This coordinate conversion does not replace the game's inversion setting.
   Both settings are bounded multipliers from zero through ten. A missing INI,
   missing recoil key or invalid numeric value uses the schema fallback: 0.5
   for camera recoil and 2 for ship recoil. Explicit valid INI values override
-  those fallbacks; zero disables the corresponding effect. These fallback
-  values still require a real-game check.
+  those fallbacks; zero disables the corresponding effect.
 - The station binds the concrete shell owner's `OnEndPlay` delegate. Shell
   destruction or removal from the world immediately blocks acquisition and
   collision. An unoccupied station finalizes teardown directly; an occupied

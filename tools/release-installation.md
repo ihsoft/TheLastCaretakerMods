@@ -67,7 +67,7 @@ Inspect the planned destinations and any failure before installation. Remove
 the game is closed immediately before mutation, uses temporary recovery data,
 and reads back installed hashes. If it reports `recovery-failed`, stop and
 preserve the reported files under `Tmp/` for diagnosis. `-ReleaseCandidate`
-retains the selected exact ZIP and manifest under
+retains the selected exact ZIP and manifest after a successful real-game test under
 `artifacts/installations/<Mod>-V<N>/`; an existing version directory is a
 conflict, not an overwrite. Installed game directories contain only files the
 game consumes.
