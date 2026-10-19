@@ -2,13 +2,13 @@
   "schemaVersion": 1,
   "compatibilityPolicy": "Tested game versions are compatibility evidence, not a runtime allowlist. A game update requires review, but does not by itself prove incompatibility or require a new mod version.",
   "current": {
-    "modVersion": "v2",
+    "modVersion": "v3",
     "testedGame": {
-      "gameVersion": "5.5",
-      "steamBuildId": "25056839",
-      "unrealEngineVersion": "5.8.1",
+      "gameVersion": "6",
+      "steamBuildId": "25982825",
+      "unrealEngineVersion": "5.8.2",
       "status": "game-validated",
-      "validatedAt": "2026-09-03"
+      "validatedAt": "2026-10-18"
     }
   },
   "history": [
