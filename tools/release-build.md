@@ -15,8 +15,12 @@ For a requested candidate, run the owning producer first. If it reports only a
 pinned Steam build mismatch, retry with `-IgnorePinnedGameVersion`; the
 producer still checks current inputs and records the actual build. Resolve a
 reported mapping gap through the [mapping guide](mappings.md), then retry.
-After a successful build, request an in-game test before accepting behavior or
-updating the game-build pin. The [release rule](../docs/release-and-installation-rule.md)
+After a successful build, use the owning installation entry point and request
+an in-game test. Mods with a coupled user INI must preserve that file through
+their mod-specific installation path; a container-only installation is
+insufficient for them.
+Keep the same ZIP and manifest for release selection; no post-test rebuild is
+needed for compatibility metadata. The [release rule](../docs/release-and-installation-rule.md)
 owns candidate and publication status.
 
 | Mod | Candidate producer | Mod index |
@@ -36,18 +40,22 @@ Read only the selected mod's index and relevant contracts. The producer owns
 its fingerprint and provenance gates; a development probe or another mod's
 builder is not a substitute.
 
-Do not assume that omitting `-Install` makes every preparation phase safe while
-the game runs: the documented original-preparation workflows can temporarily
-disable installed containers and require a closed game. Respect the selected
-producer's preconditions. Do not manually bypass its source or manifest gates.
+Some preparation phases require a closed game even without `-Install`. The
+selected producer checks its own preconditions and reports a running game;
+there is no separate game-status or version preflight on the normal path. Do
+not manually bypass its source or manifest gates.
 
-For an already-built release, skip build/cook and use the common verification
-below and the [installation guide](release-installation.md). The common installer accepts schema-2 release
-manifests and schema 3 with one exact content-plugin descriptor, not every
-producer's build manifest. A producer without either schema
-keeps its documented installer until an explicit migration is implemented and
-validated. Keep exact commands and stage-specific details with the owning
-producer or its mod documentation, not duplicated here.
+For an already-built release, skip build/cook and use its release manifest with
+the [installation guide](release-installation.md). The common installer accepts
+schema-2 release manifests and schema 3 with one exact content-plugin
+descriptor. A build manifest is not an installer input. Keep exact commands and
+stage-specific details with the owning producer or its mod documentation.
+The shared installer covers the container payload for BoatHUDTotalResources,
+DonkLiftKeyboardControl, ElectrifiedBoat, MooringCable60m,
+PalletContainerSnap, ScopeFix, and VoyageAutoLoader. Railgun and StableGyro
+use their producer's `-Install` mode to preserve user INI settings.
+ContainerLidLabel requires the shared container installer plus its
+[INI migration](../mods/ContainerLidLabel/CONFIGURATION.md).
 
 ## Release container verification
 

@@ -7,7 +7,8 @@ param(
     [string]$Retoc,
 
     [string]$OutputRoot,
-    [switch]$IgnorePinnedGameVersion
+    [switch]$IgnorePinnedGameVersion,
+    [switch]$AllowDirtySource
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,6 +22,11 @@ $entryClass = '/Game/Mods/ElectrifiedBoat/ModActor.ModActor_C'
 $expectedPackage = '../../../Voyage/Content/Mods/ElectrifiedBoat/ModActor.uasset'
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
+$publishedVersionText = (Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw).Trim()
+if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+    throw 'ElectrifiedBoat published version must be a non-negative integer in version.txt.'
+}
+$candidateVersion = 'V' + ([int]$publishedVersionText + 1) + '-candidate'
 $ownerTmp = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp/ElectrifiedBoat'))
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $ownerTmp ('build-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
@@ -320,9 +326,13 @@ $manifestPath = Join-Path $package 'build-manifest.json'
 $validation = & (Join-Path $modRoot 'Test-ElectrifiedBoatCandidate.ps1') `
     -PackageRoot $package `
     -GameRoot $GameRoot
-$archivePath = Join-Path $output 'ElectrifiedBoat-candidate.zip'
+$archivePath = Join-Path $output "ElectrifiedBoat-$candidateVersion.zip"
 & (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
     -Container $utoc -Archive $archivePath -LogicMods | Out-Null
+$release = & (Join-Path $repoRoot 'tools/New-VoyageReleaseManifest.ps1') `
+    -ReleaseRoot $output -Mod 'ElectrifiedBoat' -Version $candidateVersion `
+    -Container $utoc -Archive $archivePath -SourcePath $modRoot `
+    -GameRoot $GameRoot -LogicMods -AllowDirtySource:$AllowDirtySource
 
 [pscustomobject]@{
     status = 'passed'
@@ -330,6 +340,7 @@ $archivePath = Join-Path $output 'ElectrifiedBoat-candidate.zip'
     packageRoot = $package
     archivePath = $archivePath
     manifestPath = $manifestPath
+    releaseManifestPath = $release.manifestPath
     validationResult = $validation
     gameplayValidated = $false
 }

@@ -1791,7 +1791,8 @@ if ($runtimeInjection -and -not $dmlActivation) {
 $releaseManifest = & (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
     -ReleaseRoot $releaseRoot -Mod 'PalletContainerSnap' -Version $supportedArtifactVersion `
     -Container $container -Archive $archive -SourcePath $modRoot `
-    -ContentPluginDescriptor $descriptor -AllowDirtySource -AsJson | ConvertFrom-Json
+    -ContentPluginDescriptor $descriptor -LogicMods:$dmlActivation `
+    -AllowDirtySource -AsJson | ConvertFrom-Json
 if ($releaseManifest.status -cne 'created-and-validated') { throw 'Schema-3 release manifest validation failed.' }
 
 $sourceAfter = @(Get-SourceSnapshot)

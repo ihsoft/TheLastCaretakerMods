@@ -10,6 +10,7 @@ param(
 
     [string]$EvidenceRoot,
     [switch]$ReleaseCandidate,
+    [switch]$RetainCandidateOnly,
     [switch]$LogicMods,
     [switch]$KeepRecoveryEvidence,
 
@@ -23,6 +24,9 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($RetainArchiveOnRestore) {
     throw 'RetainArchiveOnRestore is obsolete: ZIP archives are no longer installed in Paks.'
+}
+if ($RetainCandidateOnly -and ($ReleaseCandidate -or $ValidateOnly)) {
+    throw 'RetainCandidateOnly cannot be combined with ReleaseCandidate or ValidateOnly.'
 }
 Set-StrictMode -Version Latest
 
@@ -374,6 +378,17 @@ try {
     if ($archiveContainers.Count -ne $resolvedArtifacts.Count) {
         throw 'Release ZIP must contain exactly the manifest-owned triplet and optional autoload sidecar.'
     }
+    $logicModsContainers = @($archiveContainers | Where-Object {
+        $_.FullName.Replace('\', '/') -match '^(LogicMods/|Voyage/Content/Paks/LogicMods/)'
+    })
+    if ($logicModsContainers.Count -ne 0 -and
+        $logicModsContainers.Count -ne $archiveContainers.Count) {
+        throw 'Release ZIP mixes LogicMods and other container destinations.'
+    }
+    $archiveUsesLogicMods = $logicModsContainers.Count -gt 0
+    if ($LogicMods -and -not $archiveUsesLogicMods) {
+        throw 'LogicMods was requested but the release ZIP does not use a LogicMods layout.'
+    }
     foreach ($artifact in $resolvedArtifacts) {
         $entries = @($archiveContainers | Where-Object { $_.Name -ceq $artifact.name })
         if ($entries.Count -ne 1 -or $entries[0].Length -ne $artifact.size) {
@@ -431,18 +446,10 @@ finally {
     $archiveReader.Dispose()
 }
 
-$installedArchiveRecord = Get-OptionalPropertyValue -Object $manifest -Name 'installedArchive'
-$installedArchiveName = $null
-if ($null -ne $installedArchiveRecord) {
-    $installedArchiveName = [string](
-        Get-OptionalPropertyValue -Object $installedArchiveRecord -Name 'name')
-}
-if ([string]::IsNullOrWhiteSpace($installedArchiveName)) {
-    $installedArchiveName = $mod + '_' + $artifactVersion + '.zip'
-}
-Assert-SafeLeafName -Name $installedArchiveName -Label 'Installed archive name'
-if ([IO.Path]::GetExtension($installedArchiveName) -cne '.zip') {
-    throw "Installed archive must have a .zip filename: $installedArchiveName"
+$retainedArchiveRelativePath = [string](
+    Get-OptionalPropertyValue -Object $archiveRecord -Name 'path')
+if ([string]::IsNullOrWhiteSpace($retainedArchiveRelativePath)) {
+    $retainedArchiveRelativePath = $resolvedArchive.name
 }
 
 $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'
@@ -456,13 +463,14 @@ if ($actualBuildId -cne $expectedBuildId) {
 $resolvedGameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
 $paksDirectory = (Resolve-Path -LiteralPath (
     Join-Path $resolvedGameRoot 'Voyage\Content\Paks')).Path
-if ($LogicMods) {
-    $paksDirectory = (Resolve-Path -LiteralPath (
-        Join-Path $paksDirectory 'LogicMods')).Path
-    $logicDirectory = Get-Item -LiteralPath $paksDirectory -Force
-    if (-not $logicDirectory.PSIsContainer -or
-        ($logicDirectory.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-        throw "LogicMods must be a plain directory: $paksDirectory"
+if ($archiveUsesLogicMods) {
+    $paksDirectory = Join-Path $paksDirectory 'LogicMods'
+    if (Test-Path -LiteralPath $paksDirectory) {
+        $logicDirectory = Get-Item -LiteralPath $paksDirectory -Force
+        if (-not $logicDirectory.PSIsContainer -or
+            ($logicDirectory.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "LogicMods must be a plain directory: $paksDirectory"
+        }
     }
 }
 $contentPluginDestination = if ($null -eq $contentPluginPlan) {
@@ -493,7 +501,7 @@ else {
     Join-Path $evidenceParent "$safeMod\$safeVersion-$($token.Substring(0, 8))"
 }
 $releaseDirectory = $null
-if ($ReleaseCandidate) {
+if ($ReleaseCandidate -or $RetainCandidateOnly) {
     $publishedVersionPath = Join-Path (Join-Path $repositoryRoot "mods\$mod") 'version.txt'
     if (-not (Test-Path -LiteralPath $publishedVersionPath -PathType Leaf)) {
         throw "Published-version file is missing: $publishedVersionPath"
@@ -507,6 +515,51 @@ if ($ReleaseCandidate) {
     if (Test-Path -LiteralPath $releaseDirectory) {
         throw "Release version directory already exists: $releaseDirectory"
     }
+}
+function Save-ReleaseCandidate {
+    $releaseParent = Split-Path -Parent $releaseDirectory
+    [IO.Directory]::CreateDirectory($releaseParent) | Out-Null
+    $stagingDirectory = Join-Path $releaseParent (
+        '.selecting-' + [Guid]::NewGuid().ToString('N'))
+    [IO.Directory]::CreateDirectory($stagingDirectory) | Out-Null
+    try {
+        $selectedArchive = Join-Path $stagingDirectory $retainedArchiveRelativePath
+        $selectedManifest = Join-Path $stagingDirectory 'release-manifest.json'
+        [IO.Directory]::CreateDirectory((Split-Path -Parent $selectedArchive)) | Out-Null
+        Copy-Item -LiteralPath $resolvedArchive.path -Destination $selectedArchive
+        Copy-Item -LiteralPath $manifestPath -Destination $selectedManifest
+        if ((Get-FileHash -LiteralPath $selectedArchive -Algorithm SHA256).Hash -cne
+            $resolvedArchive.sha256 -or
+            (Get-FileHash -LiteralPath $selectedManifest -Algorithm SHA256).Hash -cne
+            $releaseManifestSha256) {
+            throw 'Retained candidate ZIP or manifest hash mismatch.'
+        }
+        [IO.Directory]::Move($stagingDirectory, $releaseDirectory)
+    }
+    finally {
+        if (Test-Path -LiteralPath $stagingDirectory) {
+            Remove-Item -LiteralPath $stagingDirectory -Recurse -Force
+        }
+    }
+    [pscustomobject][ordered]@{
+        archivePath = Join-Path $releaseDirectory $retainedArchiveRelativePath
+        manifestPath = Join-Path $releaseDirectory 'release-manifest.json'
+    }
+}
+if ($RetainCandidateOnly) {
+    $selected = Save-ReleaseCandidate
+    Write-Host "Game-tested release candidate retained without installation: $($selected.archivePath)"
+    [pscustomobject][ordered]@{
+        retained = $true
+        installed = $false
+        mod = $mod
+        artifactVersion = $artifactVersion
+        sourceCommit = $sourceCommit
+        steamBuildId = $actualBuildId
+        archivePath = $selected.archivePath
+        releaseManifestPath = $selected.manifestPath
+    }
+    return
 }
 if (Test-Path -LiteralPath $evidence) {
     throw "Installation evidence path already exists: $evidence"
@@ -582,7 +635,7 @@ if ($ValidateOnly) {
         gameRoot = $resolvedGameRoot
         steamBuildId = $actualBuildId
         paksDirectory = $paksDirectory
-        retainedArchivePath = $(if ($ReleaseCandidate) { Join-Path $releaseDirectory $installedArchiveName } else { $null })
+        retainedArchivePath = $(if ($ReleaseCandidate) { Join-Path $releaseDirectory $retainedArchiveRelativePath } else { $null })
         files = @($installItems | Select-Object kind, name, size, sourceSha256,
             retainOnRestore)
     }
@@ -591,19 +644,9 @@ if ($ValidateOnly) {
 
 [IO.Directory]::CreateDirectory($evidence) | Out-Null
 if ($ReleaseCandidate) {
-    [IO.Directory]::CreateDirectory($releaseDirectory) | Out-Null
-    $retainedArchivePath = Join-Path $releaseDirectory $installedArchiveName
-    $retainedManifestPath = Join-Path $releaseDirectory 'release-manifest.json'
-    Copy-Item -LiteralPath $resolvedArchive.path -Destination $retainedArchivePath
-    if ((Get-FileHash -LiteralPath $retainedArchivePath -Algorithm SHA256).Hash -cne
-        $resolvedArchive.sha256) {
-        throw "Retained candidate ZIP hash mismatch: $retainedArchivePath"
-    }
-    Copy-Item -LiteralPath $manifestPath -Destination $retainedManifestPath
-    if ((Get-FileHash -LiteralPath $retainedManifestPath -Algorithm SHA256).Hash -cne
-        $releaseManifestSha256) {
-        throw "Retained candidate manifest hash mismatch: $retainedManifestPath"
-    }
+    $selected = Save-ReleaseCandidate
+    $retainedArchivePath = $selected.archivePath
+    $retainedManifestPath = $selected.manifestPath
 }
 
 $transaction = [ordered]@{
@@ -628,6 +671,13 @@ Write-JsonFile -Path $transactionPath -Value $transaction
 $mutationStarted = $false
 try {
     Assert-GameClosed
+
+    if ($archiveUsesLogicMods -and -not (Test-Path -LiteralPath $paksDirectory)) {
+        [IO.Directory]::CreateDirectory($paksDirectory) | Out-Null
+        $installItems[0].createdDirectories = @($paksDirectory)
+        $mutationStarted = $true
+        Write-JsonFile -Path $transactionPath -Value $transaction
+    }
 
     foreach ($item in @($installItems | Where-Object {
         $_.kind -ceq 'content-plugin-descriptor'

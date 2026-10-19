@@ -3,6 +3,12 @@
 Use the owning mod's public producer for a new candidate. This guide covers an
 already-built IoStore triplet. The [shared release rule](../docs/release-and-installation-rule.md)
 owns version identity, candidate retention, installation, and rollback.
+For a routine candidate whose payload needs no mod-specific settings migration,
+use the producer's manifest directly with the installer. Railgun and StableGyro
+couple their settings installation to their producer's `-Install` mode;
+ContainerLidLabel has a separate INI migration contract in its mod docs.
+The read-only status snapshot below is for a specific installation question or
+unexpected result.
 
 ## Read-only installation status
 
@@ -52,23 +58,32 @@ The producer writes `release-manifest.json` only after validating the archive
 and payload. It refuses to replace an existing manifest. Use
 `-ContentPluginDescriptor` when that exact file is part of the release; the
 producer and installer support one content-only plugin descriptor. A dirty
-development candidate needs explicit `-AllowDirtySource`.
+development candidate needs explicit `-AllowDirtySource`. For a LogicMods ZIP,
+pass `-LogicMods` so manifest validation checks the correct destination.
 
-Validate an already-built release without installing it:
+Install the candidate produced by the public builder:
+
+```powershell
+.\tools\Install-VoyageRelease.ps1 `
+  -ReleaseManifest '.\Tmp\Example\V1-candidate\release-manifest.json'
+```
+
+The installer validates the archive and destinations, checks that the game is
+closed immediately before mutation, uses temporary recovery data, and reads
+back installed hashes. It selects Paks or LogicMods from the ZIP layout.
+Add `-ValidateOnly` when a read-only plan is specifically
+needed. If it reports `recovery-failed`, stop and preserve the reported files
+under `Tmp/` for diagnosis. After the installed
+candidate passes its real-game test, retain the same ZIP and its original
+manifest without another installation:
 
 ```powershell
 .\tools\Install-VoyageRelease.ps1 `
   -ReleaseManifest '.\Tmp\Example\V1-candidate\release-manifest.json' `
-  -ValidateOnly
+  -RetainCandidateOnly
 ```
 
-Inspect the planned destinations and any failure before installation. Remove
-`-ValidateOnly` only for an authorized installation. The installer checks that
-the game is closed immediately before mutation, uses temporary recovery data,
-and reads back installed hashes. If it reports `recovery-failed`, stop and
-preserve the reported files under `Tmp/` for diagnosis. `-ReleaseCandidate`
-retains the selected exact ZIP and manifest after a successful real-game test under
-`artifacts/installations/<Mod>-V<N>/`; an existing version directory is a
+This writes `artifacts/installations/<Mod>-V<N>/`. An existing version directory is a
 conflict, not an overwrite. Installed game directories contain only files the
 game consumes.
 

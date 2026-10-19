@@ -1,11 +1,14 @@
 [CmdletBinding()]
 param([string]$OutputRoot = '', [switch]$SkipBuild, [switch]$Install,
-    [switch]$ReleaseCandidate,
     [switch]$IgnorePinnedGameVersion,
     [string]$ArtifactVersion = '',
     [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if ($Install -and @(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
+        -ErrorAction SilentlyContinue).Count -gt 0) {
+    throw 'Voyage must be closed before a Railgun build that installs its candidate.'
+}
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $project = Join-Path $PSScriptRoot 'Voyage.uproject'
 $engine = 'K:\Epic Games\UE_5.8\Engine'
@@ -1016,19 +1019,17 @@ $release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
 $manifestPath = Join-Path $releaseStaging 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Manifest producer did not publish the candidate.' }
 $publicationValidation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
-    -ReleaseManifest $manifestPath -ValidateOnly -AllowDirtySource `
-    -ReleaseCandidate:$ReleaseCandidate
+    -ReleaseManifest $manifestPath -ValidateOnly -AllowDirtySource
 if (-not [bool]$publicationValidation.validated) {
     throw 'Prepared Railgun release did not pass installation validation.'
 }
 $installation = $null
 $settingsInstallation = $null
 $restoreValidation = $null
-$scratchCleaned = $false
 if ($Install) {
     $installation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
         -ReleaseManifest $manifestPath -AllowDirtySource `
-        -ReleaseCandidate:$ReleaseCandidate -KeepRecoveryEvidence
+        -KeepRecoveryEvidence
     $settingsPath = Join-Path $installation.paksDirectory 'Railgun.ini'
     $settingsTemplatePath = Join-Path $payload 'Railgun.ini'
     $settingsEvidenceDirectory = Split-Path -Parent `
@@ -1164,27 +1165,9 @@ if ($Install) {
     if (-not [bool]$restoreValidation.validated) {
         throw 'Installed Railgun release did not pass restore validation.'
     }
-    if ($ReleaseCandidate) {
-        $retainedArchivePath = [IO.Path]::GetFullPath($installation.retainedArchivePath)
-        if ((Get-FileHash -LiteralPath $retainedArchivePath -Algorithm SHA256).Hash -cne
-            (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash) {
-            throw 'Retained Railgun candidate ZIP hash does not match the prepared release.'
-        }
-    }
     if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase) -or
         [IO.Path]::GetFullPath($output) -ceq $tmpOwnerRoot) {
         throw 'Refusing to remove an unowned Railgun scratch path.'
-    }
-    if ($ReleaseCandidate) {
-        [IO.Directory]::Delete($output, $true)
-        if (Test-Path -LiteralPath $output) {
-            throw 'Railgun scratch cleanup did not complete.'
-        }
-        $scratchCleaned = $true
-        $manifestPath = Join-Path (Split-Path -Parent $retainedArchivePath) `
-            'release-manifest.json'
-        $archivePath = $retainedArchivePath
-        $validationSummaryPath = $null
     }
     $temporaryInstallRoot = [IO.Path]::GetFullPath(
         (Join-Path $repo 'Tmp/Railgun/installations'))
@@ -1212,7 +1195,6 @@ if ($Install) {
     validationSummaryPath = $validationSummaryPath
     verificationReport = $validationSummaryPath
     candidateRoot = $(if ($Install) { $null } else { $output })
-    scratchCleaned = $scratchCleaned
     installation = $installation
     settingsInstallation = $settingsInstallation
     restoreValidation = $restoreValidation

@@ -9,8 +9,8 @@ hand. The current candidate pin is in `game-build.json`.
 The pin in `game-build.json` binds the exact sources and build inputs; it is
 not a runtime compatibility allowlist. A later Steam build may still run the
 existing package. The published Nexus version lives in `version.txt`;
-compatibility evidence is in `VERSION.json`. The documented V2 game target is
-Update 5.5 (`Voyage.exe` version `5.8.1.0`).
+compatibility evidence is in `VERSION.json`. V3 is game-validated on Update 6;
+V2 remains the Update 5.5 release.
 
 Run the public producer first. On a pinned-ID mismatch, retry with
 `-IgnorePinnedGameVersion`. It re-extracts current inputs and checks them during
@@ -52,10 +52,10 @@ must bind to the selected Steam build ID recorded in their manifests.
 
 The builder freshly extracts the original forklift package and `scriptobjects.bin`,
 checks exact relocation occurrences, and verifies the six-asset container and
-replacement child's parent and native action owner. DonkLift `v2` supports
-input integration, native percentage display, X/C hints, pause, exit and
-re-entry on Update 5.5. The older `v1` package is incompatible with that
-Update because it targets the previous UE `5.7.4` generation.
+replacement child's parent and native action owner. DonkLift supports input
+integration, native percentage display, X/C hints, pause, exit and re-entry.
+The older `v1` package is incompatible with Update 5.5 because it targets the
+previous UE `5.7.4` generation.
 
 ## Version-bound files kept in Git
 

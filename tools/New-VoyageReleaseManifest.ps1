@@ -31,6 +31,8 @@ param(
 
     [string]$OutputPath,
 
+    [switch]$LogicMods,
+
     [switch]$AllowDirtySource,
 
     [switch]$AsJson
@@ -308,6 +310,9 @@ if (-not [string]::IsNullOrWhiteSpace($InstalledArchiveName)) {
     if ([IO.Path]::GetExtension($InstalledArchiveName) -cne '.zip') {
         throw "Installed archive name must end in lowercase .zip: $InstalledArchiveName"
     }
+    if ($InstalledArchiveName -cne [IO.Path]::GetFileName($resolvedArchive)) {
+        throw 'Retained archive name must match the ZIP name recorded in the manifest.'
+    }
     $manifest['installedArchive'] = [ordered]@{ name = $InstalledArchiveName }
 }
 
@@ -319,6 +324,7 @@ try {
         ReleaseManifest = $temporaryManifest
         GameRoot = $GameRoot
         ValidateOnly = $true
+        LogicMods = [bool]$LogicMods
     }
     if ($dirtySource) {
         $validationArguments.AllowDirtySource = $true

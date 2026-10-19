@@ -29,7 +29,7 @@ failure handling.
 | Create a Vortex archive | `New-VoyageVortexArchive.ps1` | [Release installation](release-installation.md) |
 | Create a release manifest | `New-VoyageReleaseManifest.ps1` | [Release installation](release-installation.md) |
 | Inspect the installed game and mods | `Get-VoyageInstallationStatus.ps1` | [Release installation](release-installation.md) |
-| Validate or install a release | `Install-VoyageRelease.ps1` | [Release installation](release-installation.md) |
+| Validate, install, or retain a release | `Install-VoyageRelease.ps1` | [Release installation](release-installation.md) |
 | Restore an interrupted installation | `Restore-VoyageReleaseInstallation.ps1` | [Release installation](release-installation.md) |
 | Inspect the shipping executable | `Invoke-VoyageExecutableInspector.ps1` | [Executable inspection](executable-inspection.md) |
 | Diagnose one native instruction window | `Inspect-VoyageNativeMemberAccess.py` | [Executable inspection](executable-inspection.md) |

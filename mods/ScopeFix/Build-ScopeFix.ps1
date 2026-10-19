@@ -1,11 +1,17 @@
 param(
     [string]$OutputRoot,
-    [switch]$IgnorePinnedGameVersion
+    [switch]$IgnorePinnedGameVersion,
+    [switch]$AllowDirtySource
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location $repo
 $ownerTmp = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/ScopeFix'))
+$publishedVersionText = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version.txt') -Raw).Trim()
+if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+    throw 'ScopeFix published version must be a non-negative integer in version.txt.'
+}
+$candidateVersion = 'V' + ([int]$publishedVersionText + 1) + '-candidate'
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $ownerTmp ('build-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 }
@@ -68,6 +74,10 @@ foreach ($scratch in @($extractRoots) + @($loose)) {
     }
     Remove-Item -LiteralPath $scratch -Recurse -Force
 }
-$archive = Join-Path $root 'ScopeFix-candidate.zip'
+$archive = Join-Path $root "ScopeFix-$candidateVersion.zip"
 & (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') -Container $container -Archive $archive | Out-Null
-[pscustomobject]@{ container = $container; archive = $archive; evidence = Join-Path $root 'build-evidence.json'; status = 'runtime-pending' }
+$release = & (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
+    -ReleaseRoot $root -Mod 'ScopeFix' -Version $candidateVersion `
+    -Container $container -Archive $archive -SourcePath $PSScriptRoot `
+    -AllowDirtySource:$AllowDirtySource
+[pscustomobject]@{ container = $container; archive = $archive; releaseManifest = $release.manifestPath; evidence = Join-Path $root 'build-evidence.json'; status = 'runtime-pending' }

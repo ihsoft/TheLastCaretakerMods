@@ -210,6 +210,33 @@ try {
         throw 'ValidateOnly did not return a clean, mutation-free installation plan.'
     }
 
+    if (-not $WithContentPluginDescriptor) {
+    $logicRelease = New-SyntheticRelease -Version 'logicmods-layout' `
+        -ContentMarker 'logicmods'
+    $logicStage = Join-Path $logicRelease.root 'logic-archive-stage'
+    $logicStagePaks = Join-Path $logicStage 'LogicMods'
+    [IO.Directory]::CreateDirectory($logicStagePaks) | Out-Null
+    Copy-Item -Path (Join-Path $logicRelease.root 'container\package\*') `
+        -Destination $logicStagePaks
+    $logicArchivePath = Join-Path $logicRelease.root "$modName-logicmods-layout.zip"
+    Remove-Item -LiteralPath $logicArchivePath -Force
+    Compress-Archive -Path (Join-Path $logicStage '*') -DestinationPath $logicArchivePath
+    $logicManifest = Get-Content -LiteralPath $logicRelease.manifestPath -Raw | ConvertFrom-Json
+    $logicManifest.archive.size = (Get-Item -LiteralPath $logicArchivePath).Length
+    $logicManifest.archive.sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $logicArchivePath).Hash
+    Write-Utf8Json -Path $logicRelease.manifestPath -Value $logicManifest
+    $logicPaks = Join-Path $paksDirectory 'LogicMods'
+    $logicInstall = & $installer -ReleaseManifest $logicRelease.manifestPath `
+        -GameRoot $gameRoot -EvidenceRoot (Join-Path $testRoot 'logicmods-evidence')
+    if ([string]$logicInstall.paksDirectory -cne $logicPaks) {
+        throw 'Installer did not infer the LogicMods destination from the ZIP.'
+    }
+    foreach ($record in $logicRelease.records) {
+        Assert-Hash -Path (Join-Path $logicPaks $record.name) `
+            -Expected $record.sha256 -Label "LogicMods $($record.name)"
+    }
+    }
+
     $wrongFingerprintRelease = New-SyntheticRelease -Version 'wrong-fingerprint' `
         -ContentMarker 'wrong-fingerprint' -SteamBuildId '88888888'
     Assert-Rejected -Pattern 'fingerprint does not match' -Action {

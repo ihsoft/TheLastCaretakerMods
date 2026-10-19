@@ -54,6 +54,15 @@ users through a new release.
 
 ## Game update and candidate builds
 
+The normal path is: run the public builder, install its candidate through the
+owning documented entry point, test that exact ZIP in the game, retain it as
+the next release candidate, then publish that same ZIP. Use the documented
+producer and installer commands; do not add
+a separate game-version or installation-status preflight. The producer and
+installer own their process, fingerprint, and installed-file checks. A running
+game is a reported blocker for a phase that needs it closed, not a reason to
+inspect game contracts manually.
+
 Run the mod's public builder before manually inspecting game contracts. If its
 only blocker is the pinned Steam build ID in `game-build.json`, rerun with
 `-IgnorePinnedGameVersion`. The flag never changes the actual build ID in the
@@ -65,7 +74,12 @@ Offer an in-game test for a successful candidate. A passing build alone does
 not establish gameplay compatibility. After the game test passes, update the
 pin for future default builds and retain the exact tested ZIP when selecting
 a release candidate. Changing the pin is metadata work; it must not silently
-replace the tested package. A temporary accepted build remains under `Tmp/`.
+replace the tested package. Record the game-test result separately from build
+provenance: the candidate manifest must keep the source commit, game build ID,
+and ZIP hash from the original build. Do not rebuild or regenerate its manifest
+merely to update a tested-game version or other post-test metadata. Use the
+installer's retention-only mode to select an already installed and tested ZIP
+without installing it again. A temporary accepted build remains under `Tmp/`.
 
 ## Output lifetime
 

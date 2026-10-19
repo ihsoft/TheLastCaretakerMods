@@ -31,19 +31,13 @@ $cookStorage = 'LooseCookedPackageWriter'
 
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
-$versionMetadataPath = Join-Path $modRoot 'VERSION.json'
-if (-not (Test-Path -LiteralPath $versionMetadataPath -PathType Leaf)) {
-    throw "DonkLift version metadata was not found: $versionMetadataPath"
+$publishedVersionText = (Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw).Trim()
+if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+    throw 'DonkLift published version must be a non-negative integer in version.txt.'
 }
-$versionMetadata = Get-Content -LiteralPath $versionMetadataPath -Raw | ConvertFrom-Json
-$modVersion = [string]$versionMetadata.current.modVersion
-$testedGameVersion = [string]$versionMetadata.current.testedGame.gameVersion
-if ($modVersion -notmatch '^v[1-9][0-9]*$' -or [string]::IsNullOrWhiteSpace($testedGameVersion)) {
-    throw "DonkLift version metadata is invalid: $versionMetadataPath"
-}
+$candidateModVersion = 'v' + ([int]$publishedVersionText + 1)
 if ([string]::IsNullOrWhiteSpace($Version)) {
-    $publishedVersion = [int](Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw)
-    $Version = 'v' + ($publishedVersion + 1) + '-candidate'
+    $Version = $candidateModVersion + '-candidate'
 }
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
@@ -168,6 +162,10 @@ function Get-CleanOriginalInputs {
         ForkliftDirectory = $forkliftDirectory
         ScriptObjects = $scriptObjects
     }
+}
+
+if ([string]::IsNullOrWhiteSpace($OriginalsRoot) -or $Install) {
+    Assert-GameClosed
 }
 
 $project = Resolve-RequiredPath -Path $project -Label 'Unreal project'
@@ -318,14 +316,12 @@ foreach ($name in $payloadNames) {
 }
 Copy-Item -LiteralPath (Join-Path $modRoot 'README.md') -Destination (Join-Path $payloadRoot 'README.md')
 $archivePath = Join-Path $releaseRoot "DonkLiftKeyboardControl-$Version.zip"
-$installedArchiveName = "DonkLiftKeyboardControl_$Version.zip"
 & (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
     -Container (Join-Path $payloadRoot ($containerName + '.utoc')) -Archive $archivePath | Out-Null
 $phase.Stop()
 $timings.Archive = $phase.Elapsed.TotalSeconds
 
 $installed = $false
-$installedArchive = $null
 if ($Install) {
     Assert-GameClosed
     $paks = Resolve-RequiredPath -Path (Join-Path $GameRoot 'Voyage\Content\Paks') -Label 'Voyage Paks directory'
@@ -363,14 +359,12 @@ $manifest = [ordered]@{
     schemaVersion = 2
     mod = 'DonkLiftKeyboardControl'
     version = $Version
-    modVersion = $modVersion
+    modVersion = $candidateModVersion
     createdAtUtc = [DateTime]::UtcNow.ToString('o')
     sourceCommit = $sourceCommit
     dirtySource = ($sourceStatus.Count -gt 0)
     sourceStatus = $sourceStatus
     gameEngineVersion = $expectedGameEngineVersion
-    testedGameVersion = $testedGameVersion
-    compatibilityPolicy = 'tested-evidence-not-runtime-allowlist'
     editorEngineVersion = $actualEngineVersion
     retocCompatibilityVersion = $retocCompatibilityVersion
     retocSha256 = $retocSha256
@@ -381,7 +375,6 @@ $manifest = [ordered]@{
     ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
     originalsManifest = $originalInputs.Manifest
     installed = $installed
-    installedArchive = $installedArchive
     payload = $payloadEvidence
     archive = [ordered]@{
         name = (Split-Path -Leaf $archivePath)

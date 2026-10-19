@@ -12,7 +12,7 @@ rules remain in the [repository index](../AGENTS.md).
 | Build a native primary-asset registry | [Asset registry](asset-registry.md) |
 | Resolve or generate game mappings | [Mappings](mappings.md) |
 | Build a mod candidate or verify its container | [Release build](release-build.md) |
-| Package, inspect, install, or restore a release | [Release installation](release-installation.md) |
+| Package, inspect, install, retain, or restore a release | [Release installation](release-installation.md) |
 | Inspect the shipping executable | [Executable inspection](executable-inspection.md) |
 | Repair a missing or invalid published binary, or change a toolchain | [Toolchain maintenance](toolchain-maintenance.md) |
 | Diagnose an unexpected native tool result or test a toolchain change | [Toolchain validation](toolchain-validation.md) |

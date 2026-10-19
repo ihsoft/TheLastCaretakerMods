@@ -2,7 +2,7 @@
 param(
     [Parameter(Mandatory = $true)] [string]$ReleaseManifest,
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
-    [switch]$ReleaseCandidate,
+    [switch]$RetainCandidateOnly,
     [switch]$AllowDirtySource,
     [switch]$ValidateOnly
 )
@@ -15,6 +15,6 @@ if ([string]$manifest.mod -cne 'PalletContainerSnap') {
     throw 'The release manifest does not belong to PalletContainerSnap.'
 }
 & (Join-Path $repo 'tools\Install-VoyageRelease.ps1') `
-    -ReleaseManifest $ReleaseManifest -GameRoot $GameRoot -LogicMods `
-    -ReleaseCandidate:$ReleaseCandidate -AllowDirtySource:$AllowDirtySource `
+    -ReleaseManifest $ReleaseManifest -GameRoot $GameRoot `
+    -RetainCandidateOnly:$RetainCandidateOnly -AllowDirtySource:$AllowDirtySource `
     -ValidateOnly:$ValidateOnly

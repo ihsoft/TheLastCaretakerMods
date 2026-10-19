@@ -5,8 +5,8 @@ This investigation is paused; preserve its current work.
 
 - [Architecture](ARCHITECTURE.md):
   four-slot placement, generator ownership, candidate routes, and validation limits.
-- **Required before changes, builds, or installation:** [Stable mod rules](MOD-RULES.md)
-  bind the public producer, authored slot data, and generator boundaries.
+- [Stable mod rules](MOD-RULES.md): public producer, authored slot data, and
+  generator boundaries; read when changing the mod or resuming investigation.
 - Local ignored `BACKLOG.md`, when present: current checkpoint,
   candidate-specific constraints, pending gates, and next action; read its
   restart section before resuming.

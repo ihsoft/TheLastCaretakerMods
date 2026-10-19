@@ -18,12 +18,12 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   reviewed reusable caches selected through their documented interfaces are
   separate dependencies. Apply the repository lifecycle policy: the public
   producer writes its candidate, loose payload, reports and logs below
-  repository `Tmp/Railgun/`. A preparation-only run leaves that temporary
-  candidate for inspection. A temporary installation keeps its recovery data
-  in `Tmp/Railgun/installations/`. `-ReleaseCandidate` preserves the exact ZIP and release manifest
-  under `artifacts/installations/Railgun-V<N>`
-  and removes the complete owned TMP run after verification. No ZIP goes into
-  Voyage's Paks directory.
+  repository `Tmp/Railgun/`. Keep the installed candidate there until its game
+  test passes. Then use the shared installer's `-RetainCandidateOnly` mode to
+  preserve the exact ZIP and original release manifest under
+  `artifacts/installations/Railgun-V<N>` without rebuilding or reinstalling.
+  A temporary installation keeps its recovery data in
+  `Tmp/Railgun/installations/`. No ZIP goes into Voyage's Paks directory.
 - `Assets/Railgun.ini` owns distributed values, comments, order and formatting.
   `Settings/Railgun.settings.json` owns runtime bindings, types, required schema
   fallbacks, numeric storage, and optional inclusive ranges. Add each option to both,

@@ -32,19 +32,13 @@ $cookStorage = 'LooseCookedPackageWriter'
 
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
-$versionMetadataPath = Join-Path $modRoot 'VERSION.json'
-if (-not (Test-Path -LiteralPath $versionMetadataPath -PathType Leaf)) {
-    throw "StableGyro version metadata was not found: $versionMetadataPath"
+$publishedVersionText = (Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw).Trim()
+if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+    throw 'StableGyro published version must be a non-negative integer in version.txt.'
 }
-$versionMetadata = Get-Content -LiteralPath $versionMetadataPath -Raw | ConvertFrom-Json
-$modVersion = [string]$versionMetadata.current.modVersion
-$testedGameVersion = $versionMetadata.current.testedGame.gameVersion
-if ($modVersion -notmatch '^v[1-9][0-9]*$') {
-    throw "StableGyro version metadata is invalid: $versionMetadataPath"
-}
+$candidateModVersion = 'v' + ([int]$publishedVersionText + 1)
 if ([string]::IsNullOrWhiteSpace($Version)) {
-    $publishedVersion = [int](Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw)
-    $Version = 'v' + ($publishedVersion + 1) + '-candidate'
+    $Version = $candidateModVersion + '-candidate'
 }
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
@@ -259,6 +253,10 @@ if ($actualEngineVersion -cne $expectedEditorEngineVersion) {
     throw "StableGyro requires Unreal Engine $expectedEditorEngineVersion; selected engine is $actualEngineVersion."
 }
 
+if ([string]::IsNullOrWhiteSpace($OriginalsRoot) -or $Install) {
+    Assert-GameClosed
+}
+
 $sourceStatus = @(& git -C $repoRoot status --porcelain -- `
     'mods/StableGyro' `
     'tools/New-VoyageModSettings.ps1' `
@@ -410,7 +408,6 @@ foreach ($name in $payloadNames) {
 Copy-Item -LiteralPath (Join-Path $modRoot 'README.md') -Destination (Join-Path $payloadRoot 'README.md')
 Copy-Item -LiteralPath $generatedSettingsIni -Destination (Join-Path $payloadRoot 'StableGyro.ini')
 $archivePath = Join-Path $releaseRoot "StableGyro-$Version.zip"
-$installedArchiveName = "StableGyro_$Version.zip"
 & (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
     -Container (Join-Path $payloadRoot ($containerName + '.utoc')) -Archive $archivePath `
     -AdditionalFile (Join-Path $payloadRoot 'StableGyro.ini') | Out-Null
@@ -418,7 +415,6 @@ $phase.Stop()
 $timings.Archive = $phase.Elapsed.TotalSeconds
 
 $installed = $false
-$installedArchive = $null
 $settingsInstallation = $null
 if ($Install) {
     Assert-GameClosed
@@ -492,14 +488,12 @@ $manifest = [ordered]@{
     schemaVersion = 2
     mod = 'StableGyro'
     version = $Version
-    modVersion = $modVersion
+    modVersion = $candidateModVersion
     createdAtUtc = [DateTime]::UtcNow.ToString('o')
     sourceCommit = $sourceCommit
     dirtySource = ($sourceStatus.Count -gt 0)
     sourceStatus = $sourceStatus
     gameEngineVersion = $expectedGameEngineVersion
-    testedGameVersion = $testedGameVersion
-    compatibilityPolicy = 'tested-evidence-not-runtime-allowlist'
     editorEngineVersion = $actualEngineVersion
     retocCompatibilityVersion = $retocCompatibilityVersion
     retocSha256 = $retocSha256
@@ -510,7 +504,6 @@ $manifest = [ordered]@{
     ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
     originalsManifest = $originalInputs.Manifest
     installed = $installed
-    installedArchive = $installedArchive
     settingsInstallation = $settingsInstallation
     payload = $payloadEvidence
     archive = [ordered]@{
@@ -536,6 +529,5 @@ if ($installed) {
     status = if ($installed) { 'installed' } else { 'prepared-not-installed' }
     releaseManifestPath = $manifestPath
     archivePath = $archivePath
-    installedArchive = $installedArchive
     settingsInstallation = $settingsInstallation
 } | ConvertTo-Json -Depth 6 -Compress
