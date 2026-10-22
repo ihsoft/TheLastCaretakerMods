@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true)][string]$Asset,
     [Parameter(Mandatory = $true)][string]$OutputPath,
     [ValidateSet('PbrApproximation', 'BakeReconstructed')][string]$MaterialMode,
+    [ValidateSet('Ordinary', 'Nanite')][string]$GeometryMode = 'Ordinary',
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage'
 )
 $ErrorActionPreference = 'Stop'
@@ -50,6 +51,7 @@ $request = [ordered]@{
     output = $output
     asset = $Asset
     materialMode = $MaterialMode
+    geometryMode = $GeometryMode
     fingerprintPath = $fingerprintPath
     mappingPath = $mapping.mappingsPath
     mappingManifestPath = $mapping.manifestPath
@@ -75,7 +77,8 @@ $process.Dispose()
 if ($exitCode -ne 0) { throw "Model export failed (exit $exitCode); evidence: $log" }
 $lastLine = @($outputText -split '\r?\n' | Where-Object { $_.Trim() })[-1]
 $result = $lastLine | ConvertFrom-Json
-if ($result.glbPath -cne $output -or (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash -cne $result.sha256) {
+if ($result.glbPath -cne $output -or $result.geometryMode -cne $GeometryMode -or
+    (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash -cne $result.sha256) {
     throw 'Export result/readback mismatch.'
 }
 $lastLine

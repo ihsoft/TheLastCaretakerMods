@@ -28,6 +28,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageModel
   -Asset '/Game/ModulesAnimations/Fabricator/Meshes/SM_Fabricator_Exterior_A_01' `
   -MaterialMode PbrApproximation `
   -OutputPath 'Tmp/model-export/fabricator-exterior.glb'
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/Export-VoyageModelGlb.ps1 `
+  -Asset '/Game/AssetSets/Vehicles/Gyrocopter/Mesh/Gyro_MooringPlate' `
+  -MaterialMode PbrApproximation -GeometryMode Nanite `
+  -OutputPath 'Tmp/model-export/gyro-mooring-plate-nanite.glb'
 ```
 
 `-MaterialMode` is deliberately required. If the user's request does not choose
@@ -44,6 +49,17 @@ a representation, the caller must ask instead of silently selecting one:
 wildcard or fragment. Convert `Voyage/Content/.../SM_Name.uasset` to
 `/Game/.../SM_Name`. `-GameRoot` is optional and defaults to the configured Steam
 installation.
+
+`-GeometryMode Ordinary` is the default and preserves the established highest
+ordinary-LOD behavior. `-GeometryMode Nanite` is a narrow, direct-StaticMesh
+mode for untrimmed Nanite resources: it loads every streaming page, requires a
+complete cluster decode, requires decoded leaf counts to match the source input
+triangle count, and fails rather than falling back to ordinary geometry. The
+report records pages, clusters, leaf counts, UV channels and source tangent
+availability. When the decoded source has no tangents, the GLB also omits
+`TANGENT`; a downstream modeling tool may derive valid tangents from normals and
+UVs instead of receiving zero vectors. Explicit Nanite tangent streams remain
+outside this bounded mode and fail closed.
 
 Output must be a fresh `.glb` below repository `Tmp/` by default. An
 `artifacts/` path is allowed only for an explicitly justified retained result.
@@ -65,8 +81,9 @@ logical indices. `material-omissions.md` is only a human-readable projection.
 
 ## Supported representation
 
-- Direct `StaticMesh`: highest ordinary render LOD, or an explicit reported
-  Nanite fallback only when no ordinary render LOD exists.
+- Direct `StaticMesh`: highest ordinary render LOD by default. The explicit
+  `Nanite` mode supports a complete, untrimmed decoded leaf mesh and rejects an
+  incomplete decode or ordinary fallback.
 - Blueprint: serialized `USimpleConstructionScript` hierarchy, inherited
   component override templates and default `StaticMeshComponent` templates.
   Local nodes attached to an overridden inherited component retain that
@@ -94,7 +111,9 @@ The evidence report lists these rather than silently claiming parity:
   spawning, state/visibility changes and gameplay logic;
 - skeletal animation, morphs, spline deformation, Niagara, decals, widget/UI
   rendering, lights, audio, collisions and child-actor contents;
-- exact high-resolution Nanite data when ordinary render LOD is used;
+- exact high-resolution Nanite data when ordinary render LOD is used, or when
+  a Nanite asset uses a trimmed input contract that this fail-closed mode does
+  not support;
 - Unreal shader graphs beyond the bounded masked-color rule: layered rust/damage,
   world/object-space projection, UV math, vertex effects, refraction, render targets and runtime dynamic
   material parameters.
@@ -109,8 +128,8 @@ Compensation is task-specific:
 4. For important shader appearance, use an explicit per-material bake or a
    reviewed alias/binding added from concrete evidence. Do not guess ambiguous
    maps or archive unused textures.
-5. If Nanite silhouette/detail matters, add a separately validated Nanite mode;
-   do not describe ordinary LOD0 as the original high-resolution source.
+5. If Nanite silhouette/detail matters, request `-GeometryMode Nanite` and
+   validate the reported page/leaf/attribute contract for that exact asset.
 
 ## Publish and validation
 

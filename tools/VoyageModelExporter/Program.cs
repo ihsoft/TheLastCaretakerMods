@@ -16,6 +16,8 @@ using CUE4Parse.UE4.Objects.UObject;
 using CUE4Parse.UE4.Versions;
 using CUE4Parse_Conversion.Options;
 using CUE4Parse_Conversion.Textures;
+using CUE4Parse_Conversion.Dto;
+using CUE4Parse_Conversion.Writers.Gltf;
 using SharpGLTF.Scenes;
 using SharpGLTF.Schema2;
 
@@ -36,8 +38,11 @@ internal static class Program
             string Str(string key) => request[key]!.GetValue<string>();
             var source = Str("asset");
             var materialMode = Str("materialMode");
+            var geometryMode = request["geometryMode"]?.GetValue<string>() ?? "Ordinary";
             if (materialMode is not ("PbrApproximation" or "BakeReconstructed"))
                 throw new ArgumentException("materialMode must be PbrApproximation or BakeReconstructed.");
+            if (geometryMode is not ("Ordinary" or "Nanite"))
+                throw new ArgumentException("geometryMode must be Ordinary or Nanite.");
             if (!Regex.IsMatch(source, @"^/(Game|Engine|[A-Za-z0-9_]+)/[A-Za-z0-9_ /-]+$") || source.Trim() != source)
                 throw new ArgumentException("Use one exact model or Blueprint package identity without object suffix, wildcard or traversal.");
             var output = Path.GetFullPath(Str("output"));
@@ -54,6 +59,7 @@ internal static class Program
             Directory.SetCurrentDirectory(Path.GetDirectoryName(Path.GetFullPath(args[0]))!);
             TextureDecoder.UseAssetRipperTextureDecoder = true;
             using var provider = new StockProvider(new DirectoryInfo(Path.Combine(gameRoot, "Voyage/Content/Paks")));
+            provider.ReadNaniteData = geometryMode == "Nanite";
             provider.MappingsContainer = new FileUsmapTypeMappingsProvider(Str("mappingPath"));
             provider.Initialize(); provider.Mount(); provider.PostMount(); provider.LoadVirtualPaths();
             var exports = provider.LoadPackage(source).GetExports();
@@ -64,6 +70,7 @@ internal static class Program
             var omittedInstances = new List<OmittedComponentRecord>();
             var nodeCount = 0;
             var inheritedOverrideCount = 0;
+            NaniteMeshData? naniteMeshData = null;
 
             void Omit(string key, string node, string reason)
             {
@@ -126,19 +133,39 @@ internal static class Program
             void AddMesh(NodeBuilder node, UStaticMesh mesh, UStaticMeshComponent? component, string componentName)
             {
                 var bindings = ResolveMaterials(mesh, component);
-                using var dto = new CUE4Parse_Conversion.Dto.StaticMeshDto(mesh, EMeshQuality.Highest, ENaniteMeshFormat.NoNanite);
+                var nanite = geometryMode == "Nanite" ? ValidateNaniteDecode(mesh) : null;
+                using var dto = new CUE4Parse_Conversion.Dto.StaticMeshDto(
+                    mesh, EMeshQuality.Highest,
+                    geometryMode == "Nanite" ? ENaniteMeshFormat.NaniteOnly : ENaniteMeshFormat.NoNanite);
                 var lod = dto.LODs.FirstOrDefault() ?? throw new InvalidDataException($"No exportable mesh LOD: {mesh.GetPathName()}");
-                var builder = ModelMeshWriter.Build(componentName, lod, bindings.Select(x => x.Builder).ToArray());
+                if (geometryMode == "Nanite" && (!lod.IsNanite || nanite == null))
+                    throw new InvalidDataException($"Nanite-only export unexpectedly fell back: {mesh.GetPathName()}");
+                if (nanite != null)
+                {
+                    var triangleCount = lod.Sections.Sum(x => x.NumFaces);
+                    var uvChannels = 1 + lod.ExtraUvs.Length;
+                    nanite.ExactZeroAreaTriangles = CountExactZeroAreaTriangles(lod);
+                    if (triangleCount != nanite.LeafTriangles || lod.Vertices.Length != nanite.LeafVertices ||
+                        uvChannels != nanite.UvChannels)
+                        throw new InvalidDataException($"Nanite DTO differs from the complete leaf decode: {mesh.GetPathName()}");
+                }
+                var includeTangents = nanite?.HasTangents ?? true;
+                if (nanite != null) naniteMeshData = ModelMeshWriter.CaptureNanite(lod);
+                var builder = ModelMeshWriter.Build(
+                    componentName, lod, bindings.Select(x => x.Builder).ToArray(), includeTangents);
                 scene.AddRigidMesh(builder, node);
                 meshRecords.Add(new MeshRecord
                 {
                     Component = componentName,
                     Source = ModelMaterialFactory.PackagePath(mesh.GetPathName()),
-                    Geometry = lod.IsNanite ? "Nanite fallback" : $"ordinary LOD{lod.SourceLodIndex}",
+                    Geometry = lod.IsNanite ? "decoded Nanite leaf geometry" : $"ordinary LOD{lod.SourceLodIndex}",
                     Vertices = lod.Vertices.Length,
                     Triangles = lod.Sections.Sum(x => x.NumFaces),
                     Sections = lod.Sections.Length,
-                    Materials = bindings.Select(x => x.Source).ToArray()
+                    UvChannels = 1 + lod.ExtraUvs.Length,
+                    HasTangents = includeTangents,
+                    Materials = bindings.Select(x => x.Source).ToArray(),
+                    Nanite = nanite
                 });
             }
             NodeBuilder AddComponent(USceneComponent component, NodeBuilder? parent, string? componentName = null)
@@ -181,6 +208,9 @@ internal static class Program
 
             var directMeshes = exports.OfType<UStaticMesh>().ToArray();
             var constructionScripts = exports.OfType<USimpleConstructionScript>().ToArray();
+            if (geometryMode == "Nanite" &&
+                (directMeshes.Length != 1 || constructionScripts.Length != 0))
+                throw new InvalidDataException("Nanite geometry mode requires one direct StaticMesh package.");
             string sourceKind;
             if (directMeshes.Length == 1 && constructionScripts.Length == 0)
             {
@@ -223,6 +253,7 @@ internal static class Program
             if (meshRecords.Count == 0) throw new InvalidDataException("The selected asset produced no static mesh components.");
 
             var model = scene.ToGltf2();
+            if (naniteMeshData != null) ModelMeshWriter.ApplyNaniteAccessors(model, naniteMeshData);
             materialFactory.MatchUsedImages(model);
             materialFactory.EmbedSourceArtifacts(model);
             var materialPipeline = new
@@ -256,6 +287,7 @@ internal static class Program
                 source,
                 sourceKind,
                 materialMode,
+                geometryMode,
                 steamBuildId = build,
                 mappingSha256 = Hash(Str("mappingPath")),
                 conversionCommit = ConversionCommit,
@@ -273,7 +305,9 @@ internal static class Program
                 {
                     "Static default representation only: Blueprint construction scripts, runtime spawning, state changes and animations are not executed.",
                     "Only StaticMeshComponent geometry is exported; skeletal meshes, splines, Niagara, decals, widgets, lights, audio, collisions and child actors are reported or omitted.",
-                    "Highest ordinary render LOD is preferred; high-resolution Nanite reconstruction is not promised.",
+                    geometryMode == "Nanite"
+                        ? "Nanite mode exports complete decoded leaf geometry only and fails instead of falling back to an ordinary LOD."
+                        : "Ordinary mode exports the highest ordinary render LOD; high-resolution Nanite reconstruction is not promised.",
                     materialMode == "BakeReconstructed"
                         ? "Material baking is reconstructed from cooked parameters and known recipes; the stripped Unreal expression graph is not executed."
                         : "Materials are bounded glTF PBR approximations; layered shader inputs are not baked."
@@ -285,6 +319,12 @@ internal static class Program
             var readback = ModelRoot.Load(pending);
             if (readback.LogicalMeshes.Count != meshRecords.Count || readback.LogicalMaterials.Count > materialFactory.Materials.Count)
                 throw new InvalidDataException("GLB mesh/material readback mismatch.");
+            var glbGeometry = ReadGlbGeometry(pending);
+            if (geometryMode == "Nanite" && glbGeometry.Triangles != meshRecords.Sum(x => x.Triangles))
+                throw new InvalidDataException("GLB primitive triangle count differs from the source DTO.");
+            if (geometryMode == "Nanite" &&
+                glbGeometry.HasTangents != meshRecords.Single().Nanite!.HasTangents)
+                throw new InvalidDataException("GLB tangent attribute differs from the decoded Nanite source.");
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
             File.Move(pending, output, false);
             var reportPath = Path.Combine(Directory.GetCurrentDirectory(), "export-report.json");
@@ -298,6 +338,8 @@ internal static class Program
                 sha256 = Hash(output),
                 sourceKind,
                 materialMode,
+                geometryMode,
+                geometry = glbGeometry,
                 nodeCount,
                 meshCount = meshRecords.Count,
                 uniqueMeshCount = meshRecords.Select(x => x.Source).Distinct(StringComparer.Ordinal).Count(),
@@ -317,6 +359,108 @@ internal static class Program
             Console.Error.WriteLine(ex);
             return 1;
         }
+    }
+
+    static NaniteDecodeRecord ValidateNaniteDecode(UStaticMesh mesh)
+    {
+        var nanite = mesh.RenderData?.NaniteResources ??
+            throw new InvalidDataException($"Nanite resources are absent: {mesh.GetPathName()}");
+        nanite.LoadAllPages();
+        var pageCount = nanite.PageStreamingStates.Length;
+        var loadedPages = nanite.LoadedPages.Count(page => page != null);
+        var clusters = nanite.LoadedPages
+            .Where(page => page != null)
+            .SelectMany(page => page!.Clusters)
+            .ToArray();
+        var leaves = clusters.Where(cluster => cluster.EdgeLength < 0).ToArray();
+        var leafTriangles = leaves.Sum(cluster => cluster.NumTris);
+        var leafVertices = leaves.Sum(cluster => cluster.NumVerts);
+        var missingVertices = leaves.Sum(cluster =>
+            cluster.Vertices.Count(vertex => vertex?.Attributes == null));
+        var uvCounts = leaves.Select(cluster => cluster.NumUVs).Distinct().ToArray();
+        var tangentStates = leaves.Select(cluster => cluster.bHasTangents).Distinct().ToArray();
+        if (pageCount == 0 || loadedPages != pageCount || clusters.Length != nanite.NumClusters ||
+            leaves.Length == 0 || leafTriangles != nanite.NumInputTriangles ||
+            missingVertices != 0 || uvCounts.Length != 1 || uvCounts[0] <= 0 ||
+            tangentStates.Length != 1)
+            throw new InvalidDataException($"Incomplete or inconsistent Nanite leaf decode: {mesh.GetPathName()}");
+        if (tangentStates[0])
+            throw new InvalidDataException($"Nanite sources with explicit tangents are outside this bounded export mode: {mesh.GetPathName()}");
+        var attributes = new List<string> { "POSITION", "NORMAL" };
+        if (tangentStates[0]) attributes.Add("TANGENT");
+        for (var index = 0; index < uvCounts[0]; index++) attributes.Add($"TEXCOORD_{index}");
+        return new NaniteDecodeRecord
+        {
+            InputTriangles = checked((int)nanite.NumInputTriangles),
+            InputVertices = checked((int)nanite.NumInputVertices),
+            TotalClusters = checked((int)nanite.NumClusters),
+            RootPages = checked((int)nanite.NumRootPages),
+            Pages = pageCount,
+            LoadedPages = loadedPages,
+            DecodedClusters = clusters.Length,
+            LeafClusters = leaves.Length,
+            LeafTriangles = checked((int)leafTriangles),
+            LeafVertices = checked((int)leafVertices),
+            MissingVertices = missingVertices,
+            UvChannels = checked((int)uvCounts[0]),
+            HasTangents = tangentStates[0],
+            Attributes = attributes.ToArray(),
+            PageInfo = nanite.LoadedPages.Select((page, index) => new NanitePageRecord
+            {
+                Index = index,
+                Clusters = page?.Clusters.Length ?? 0,
+                LeafTriangles = checked((int)(page?.Clusters.Where(cluster => cluster.EdgeLength < 0)
+                    .Sum(cluster => (long)cluster.NumTris) ?? 0L))
+            }).ToArray()
+        };
+    }
+
+    static int CountExactZeroAreaTriangles(MeshLodDto<MeshVertex> lod)
+    {
+        var count = 0;
+        for (var index = 0; index < lod.Indices.Length; index += 3)
+        {
+            var a = lod.Vertices[checked((int)lod.Indices[index])].Position;
+            var b = lod.Vertices[checked((int)lod.Indices[index + 1])].Position;
+            var c = lod.Vertices[checked((int)lod.Indices[index + 2])].Position;
+            var abx = (double)b.X - a.X; var aby = (double)b.Y - a.Y; var abz = (double)b.Z - a.Z;
+            var acx = (double)c.X - a.X; var acy = (double)c.Y - a.Y; var acz = (double)c.Z - a.Z;
+            var x = aby * acz - abz * acy;
+            var y = abz * acx - abx * acz;
+            var z = abx * acy - aby * acx;
+            if (x * x + y * y + z * z == 0d) count++;
+        }
+        return count;
+    }
+
+    static GlbGeometryRecord ReadGlbGeometry(string path)
+    {
+        using var stream = File.OpenRead(path);
+        using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
+        if (reader.ReadUInt32() != 0x46546C67 || reader.ReadUInt32() != 2 || reader.ReadUInt32() != stream.Length)
+            throw new InvalidDataException("Invalid GLB header.");
+        var jsonLength = reader.ReadUInt32();
+        if (reader.ReadUInt32() != 0x4E4F534A)
+            throw new InvalidDataException("GLB JSON chunk is absent.");
+        using var document = JsonDocument.Parse(reader.ReadBytes(checked((int)jsonLength)));
+        var root = document.RootElement;
+        var accessors = root.GetProperty("accessors");
+        var triangles = 0;
+        var primitives = 0;
+        var hasTangents = false;
+        foreach (var mesh in root.GetProperty("meshes").EnumerateArray())
+        foreach (var primitive in mesh.GetProperty("primitives").EnumerateArray())
+        {
+            if (primitive.TryGetProperty("mode", out var mode) && mode.GetInt32() != 4)
+                throw new InvalidDataException("GLB contains a non-triangle primitive.");
+            var accessor = accessors[primitive.GetProperty("indices").GetInt32()];
+            var indexCount = accessor.GetProperty("count").GetInt32();
+            if (indexCount % 3 != 0) throw new InvalidDataException("GLB index count is not divisible by three.");
+            triangles += indexCount / 3;
+            primitives++;
+            hasTangents |= primitive.GetProperty("attributes").TryGetProperty("TANGENT", out _);
+        }
+        return new GlbGeometryRecord { Primitives = primitives, Triangles = triangles, HasTangents = hasTangents };
     }
 
     static string MaterialOmissions(IEnumerable<MaterialRecord> materials, string materialMode)
@@ -382,7 +526,44 @@ internal sealed class MeshRecord
     public int Vertices { get; set; }
     public int Triangles { get; set; }
     public int Sections { get; set; }
+    public int UvChannels { get; set; }
+    public bool HasTangents { get; set; }
     public string?[] Materials { get; set; } = [];
+    public NaniteDecodeRecord? Nanite { get; set; }
+}
+
+internal sealed class NaniteDecodeRecord
+{
+    public int InputTriangles { get; set; }
+    public int InputVertices { get; set; }
+    public int TotalClusters { get; set; }
+    public int RootPages { get; set; }
+    public int Pages { get; set; }
+    public int LoadedPages { get; set; }
+    public int DecodedClusters { get; set; }
+    public int LeafClusters { get; set; }
+    public int LeafTriangles { get; set; }
+    public int LeafVertices { get; set; }
+    public int MissingVertices { get; set; }
+    public int ExactZeroAreaTriangles { get; set; }
+    public int UvChannels { get; set; }
+    public bool HasTangents { get; set; }
+    public string[] Attributes { get; set; } = [];
+    public NanitePageRecord[] PageInfo { get; set; } = [];
+}
+
+internal sealed class NanitePageRecord
+{
+    public int Index { get; set; }
+    public int Clusters { get; set; }
+    public int LeafTriangles { get; set; }
+}
+
+internal sealed class GlbGeometryRecord
+{
+    public int Primitives { get; set; }
+    public int Triangles { get; set; }
+    public bool HasTangents { get; set; }
 }
 
 internal sealed class OmittedComponentRecord
