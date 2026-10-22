@@ -111,6 +111,17 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   action provider and, only while pitch correction is enabled, append reset to
   its returned actions so base actions such as the conditional F cargo hint
   survive.
+- Always construct the two extra mooring socket endpoints with their stable
+  component names, SocketIDs, templates and native `VehicleMesh` attachment so
+  saved connections can resolve in either setting mode. When four-port mode is
+  disabled, leave the four custom plates and inherited stock-part layout out,
+  bind both extra endpoints for initial and late-restored connections, and use a
+  coalesced next-tick cleanup after every connection event regardless of its bool
+  payload. Cleanup must keep its guard set through both sockets, call the stock
+  non-destroying disconnect helper, keep the endpoint objects registered,
+  and disable only this Gyro's socket visuals and interaction collision. Do not
+  destroy sockets, poll, use an arbitrary load delay, or traverse cable and
+  remote-endpoint references for visual cleanup.
 - Gameplay validation covers pitch in both directions, release hold, both
   limits, X, exit/re-entry, altitude braking/hold across partial and full
   throttle, Ctrl descent/reacquisition, and horizontal
@@ -141,7 +152,12 @@ player entry through the owning Pawn's controller-changed delegate, resetting
 their defaults before every read. `ModActor` owns the full settings set for
 PostPhysics stabilization; `PitchInputActor` owns only the duplicated
 `PitchRampSeconds` and `EnablePitchCorrection` members needed by its PrePhysics
-graph and action-hint gate. Do not call `AddMemberVariable` separately for a schema
+graph and action-hint gate. The replacement Gyro child alone owns
+`EnableFourMooringPorts`; it reads the setting once per loaded replacement-class
+CDO before parent construction and all of its layout, cargo-input and
+provided-action branches use that same cached value. Class unload/reload may
+read again, so changing this setting requires a game restart. Existing helper
+loaders must explicitly exclude it. Do not call `AddMemberVariable` separately for a schema
 setting and do not edit the generated header. A consuming graph reads its
 own generated self-member
 like this:
@@ -156,8 +172,9 @@ Ok &= Connect(
     RequirePin(Consumer, ConsumerPin));
 ```
 
-The null owner is required: every generated setting belongs to the helper whose
-graph consumes it, not the stock Gyro or the replacement child. `Settings::<id>` is an `FName`, not
+The null owner is required for helper-owned settings: each belongs to the helper
+whose graph consumes it. The child-owned four-port setting is the narrow
+exception and is read from the exact replacement-class CDO. `Settings::<id>` is an `FName`, not
 the configured numeric or boolean value; it names the self-member and its value
 pin, while the `VariableGet` output carries the runtime value. In the initial
 helper generator the equivalent helpers are named `Read`, `Pin`, and `Link`;

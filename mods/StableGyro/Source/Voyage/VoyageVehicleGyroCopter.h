@@ -46,4 +46,7 @@ protected:
 
     UPROPERTY(BlueprintReadOnly, SaveGame, Category = "GyroCopter")
     float PropellerVelocity = 0.0f;
+
+    UPROPERTY(BlueprintReadOnly, Category = "GyroCopter")
+    float DropCargoTriggerTime = 1.0f;
 };

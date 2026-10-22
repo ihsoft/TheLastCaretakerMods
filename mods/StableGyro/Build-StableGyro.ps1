@@ -12,6 +12,8 @@ param(
 
     [string]$EngineRoot = 'K:\Epic Games\UE_5.8',
 
+    [string]$BlenderPath = 'K:\Program Files\Blender Foundation\Blender 5.2\blender.exe',
+
     [string]$Retoc,
 
     [string]$OutputRoot,
@@ -58,6 +60,8 @@ $packageScript = Join-Path $modRoot 'Build-InheritancePackage.ps1'
 $settingsSchema = Join-Path $modRoot 'Settings\StableGyro.settings.json'
 $settingsDefaults = Join-Path $modRoot 'Assets\StableGyro.ini'
 $settingsGenerator = Join-Path $modRoot 'Build\New-StableGyroSettings.ps1'
+$modelExporter = Join-Path $repoRoot 'tools\Export-VoyageModelGlb.ps1'
+$mooringSplitter = Join-Path $modRoot 'Build\Split-MooringPlateGlb.py'
 $containerName = 'StableGyro_P'
 $payloadNames = @(
     "$containerName.pak",
@@ -159,7 +163,8 @@ function Update-StableGyroSettings {
 function Invoke-UnrealGenerator {
     param(
         [Parameter(Mandatory = $true)] [string]$Commandlet,
-        [Parameter(Mandatory = $true)] [string]$LogDirectory
+        [Parameter(Mandatory = $true)] [string]$LogDirectory,
+        [string[]]$ExtraArguments = @()
     )
 
     $stdout = Join-Path $LogDirectory "$Commandlet.stdout.log"
@@ -174,6 +179,7 @@ function Invoke-UnrealGenerator {
         '-ddc=NoZenLocalFallback',
         ('-LocalDataCachePath="{0}"' -f (Join-Path $modRoot 'DerivedDataCache'))
     )
+    $arguments += $ExtraArguments
     $process = Start-Process `
         -FilePath $unrealEditor `
         -ArgumentList $arguments `
@@ -243,6 +249,9 @@ $packageScript = Resolve-RequiredPath -Path $packageScript -Label 'StableGyro pa
 $settingsSchema = Resolve-RequiredPath -Path $settingsSchema -Label 'StableGyro settings schema'
 $settingsDefaults = Resolve-RequiredPath -Path $settingsDefaults -Label 'StableGyro canonical settings INI'
 $settingsGenerator = Resolve-RequiredPath -Path $settingsGenerator -Label 'StableGyro settings generator'
+$modelExporter = Resolve-RequiredPath -Path $modelExporter -Label 'Voyage model exporter'
+$mooringSplitter = Resolve-RequiredPath -Path $mooringSplitter -Label 'Mooring plate splitter'
+$BlenderPath = Resolve-RequiredPath -Path $BlenderPath -Label 'Blender 5 executable'
 $Retoc = Resolve-RequiredPath -Path $Retoc -Label 'retoc'
 $retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Retoc).Hash
 $GameRoot = Resolve-RequiredPath -Path $GameRoot -Label 'Voyage game root'
@@ -315,10 +324,70 @@ $gameBuild = & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') `
     -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
     -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 $expectedBuild = [string]$fingerprint.steam.buildId
+$mapping = & (Join-Path $repoRoot 'tools\Get-VoyageMappings.ps1') -GameRoot $GameRoot
+if ([string]$mapping.steamBuildId -cne $expectedBuild -or
+    [string]$mapping.uassetApiEngineVersion -cne 'VER_UE5_8') {
+    throw 'Resolved Voyage mapping does not match the current StableGyro build contract.'
+}
 $phase.Stop()
 $timings.Fingerprint = $phase.Elapsed.TotalSeconds
 
-Write-Host '2/7 Building editor modules incrementally'
+Write-Host '2/8 Exporting and splitting the current stock mooring plate'
+$phase.Restart()
+Assert-GameClosed
+$mooringGeometryRoot = Join-Path $releaseRoot 'mooring-geometry'
+New-Item -ItemType Directory -Path $mooringGeometryRoot | Out-Null
+$stockMooringGlb = Join-Path $mooringGeometryRoot 'Gyro_MooringPlate.stock.glb'
+$positiveMooringGlb = Join-Path $mooringGeometryRoot 'StableGyroMooringPlatePositiveY.glb'
+$negativeMooringGlb = Join-Path $mooringGeometryRoot 'StableGyroMooringPlateNegativeY.glb'
+$mooringSplitReport = Join-Path $mooringGeometryRoot 'split-report.json'
+& $modelExporter `
+    -Asset '/Game/AssetSets/Vehicles/Gyrocopter/Mesh/Gyro_MooringPlate' `
+    -OutputPath $stockMooringGlb `
+    -MaterialMode PbrApproximation `
+    -GeometryMode Nanite `
+    -GameRoot $GameRoot | Out-Null
+$stockExportEvidence = Get-Content -LiteralPath ($stockMooringGlb + '.evidence\export-report.json') -Raw |
+    ConvertFrom-Json
+$stockNanite = @($stockExportEvidence.meshComponents)[0].Nanite
+if ($stockExportEvidence.geometryMode -cne 'Nanite' -or $stockNanite.Pages -ne 4 -or
+    $stockNanite.LoadedPages -ne 4 -or $stockNanite.DecodedClusters -ne 223 -or
+    $stockNanite.LeafClusters -ne 111 -or $stockNanite.LeafTriangles -ne 13790 -or
+    $stockNanite.UvChannels -ne 4 -or $stockNanite.ExactZeroAreaTriangles -ne 114 -or
+    $stockNanite.HasTangents) {
+    throw 'Stock mooring plate Nanite decode evidence differs from the reviewed source contract.'
+}
+$splitLog = Join-Path $logs 'mooring-split.log'
+$splitOutput = @(& $BlenderPath --background --factory-startup --python-exit-code 1 `
+    --python $mooringSplitter -- `
+    --source $stockMooringGlb `
+    --positive-y $positiveMooringGlb `
+    --negative-y $negativeMooringGlb `
+    --report $mooringSplitReport 2>&1)
+$splitExitCode = $LASTEXITCODE
+$splitOutput | Set-Content -LiteralPath $splitLog -Encoding utf8
+if ($splitExitCode -ne 0) {
+    $splitOutput | Select-Object -Last 60 | Write-Host
+    throw "Mooring plate split failed with exit code $splitExitCode."
+}
+$splitEvidence = Get-Content -LiteralPath $mooringSplitReport -Raw | ConvertFrom-Json
+if ($splitEvidence.status -cne 'passed' -or $splitEvidence.crossingTriangles -ne 0 -or
+    $splitEvidence.sourceMesh.triangles -ne 13790 -or
+    $splitEvidence.sourceMesh.exactZeroAreaTriangles -ne 88 -or
+    $splitEvidence.positiveY.triangles -ne 6895 -or
+    $splitEvidence.negativeY.triangles -ne 6895 -or
+    $splitEvidence.rawSourceNormalTrianglesRestored -ne 13790 -or
+    $splitEvidence.exportedRawNormalTrianglesRestored.positiveY.triangles -ne 6895 -or
+    $splitEvidence.exportedRawNormalTrianglesRestored.positiveY.nonNormalBytesChanged -ne 0 -or
+    $splitEvidence.exportedRawNormalTrianglesRestored.negativeY.triangles -ne 6895 -or
+    $splitEvidence.exportedRawNormalTrianglesRestored.negativeY.nonNormalBytesChanged -ne 0 -or
+    $splitEvidence.manualFacesRemoved -ne 0) {
+    throw 'Mooring plate split evidence does not match the reviewed stock geometry.'
+}
+$phase.Stop()
+$timings.MooringGeometry = $phase.Elapsed.TotalSeconds
+
+Write-Host '3/8 Building editor modules incrementally'
 $phase.Restart()
 $buildOutput = @(& $buildBatch VoyageEditor Win64 Development $project -NoUBA 2>&1)
 $buildExitCode = $LASTEXITCODE
@@ -330,7 +399,7 @@ if ($buildExitCode -ne 0) {
 $phase.Stop()
 $timings.EditorBuild = $phase.Elapsed.TotalSeconds
 
-Write-Host '3/7 Generating Blueprint source assets'
+Write-Host '4/8 Generating Blueprint source assets'
 $phase.Restart()
 $content = [IO.Path]::GetFullPath((Join-Path $modRoot 'Content'))
 $expectedContent = [IO.Path]::GetFullPath((Join-Path $modRoot 'Content'))
@@ -346,11 +415,15 @@ if (Test-Path -LiteralPath $content) {
 }
 New-Item -ItemType Directory -Path $content | Out-Null
 Invoke-UnrealGenerator -Commandlet 'GenerateStableGyroMod' -LogDirectory $logs
-Invoke-UnrealGenerator -Commandlet 'GenerateStableGyroInheritance' -LogDirectory $logs
+Invoke-UnrealGenerator -Commandlet 'GenerateStableGyroInheritance' -LogDirectory $logs `
+    -ExtraArguments @(
+        ('-MooringPositiveYGlb="{0}"' -f $positiveMooringGlb),
+        ('-MooringNegativeYGlb="{0}"' -f $negativeMooringGlb)
+    )
 $phase.Stop()
 $timings.Generation = $phase.Elapsed.TotalSeconds
 
-Write-Host '4/7 Cooking five generated production packages in one Unreal process'
+Write-Host '5/8 Cooking seven generated production packages in one Unreal process'
 $phase.Restart()
 $cookedRoot = Join-Path $releaseRoot 'cooked'
 & $cookScript `
@@ -362,7 +435,7 @@ $cookedRoot = Join-Path $releaseRoot 'cooked'
 $phase.Stop()
 $timings.Cook = $phase.Elapsed.TotalSeconds
 
-Write-Host '5/7 Resolving the clean stock Gyro item data asset'
+Write-Host '6/8 Resolving the clean stock Gyro item data asset'
 $phase.Restart()
 if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
     Assert-GameClosed
@@ -379,7 +452,7 @@ $originalInputs = Get-CleanOriginalInputs `
 $phase.Stop()
 $timings.Originals = $phase.Elapsed.TotalSeconds
 
-Write-Host '6/7 Building and verifying the six-asset IoStore container'
+Write-Host '7/8 Building and verifying the eight-asset IoStore container'
 $phase.Restart()
 $containerRoot = Join-Path $releaseRoot 'container'
 if (@($originalInputs).Count -ne 1) {
@@ -392,12 +465,13 @@ $packageArguments = @{
     Retoc = [string]$Retoc
     OutputRoot = [string]$containerRoot
     ActualSteamBuildId = $expectedBuild
+    MappingsPath = [string]$mapping.mappingsPath
 }
 & $packageScript @packageArguments
 $phase.Stop()
 $timings.Package = $phase.Elapsed.TotalSeconds
 
-Write-Host '7/7 Creating the player-facing archive'
+Write-Host '8/8 Creating the player-facing archive'
 $phase.Restart()
 $containerFiles = Join-Path $containerRoot 'package'
 $payloadRoot = Join-Path $releaseRoot "payload\StableGyro-$Version"

@@ -18,6 +18,13 @@
       ,"default": true
     },
     {
+      "id": "EnableFourMooringPorts",
+      "runtimeName": "EnableFourMooringPorts",
+      "key": "EnableFourMooringPorts",
+      "type": "boolean",
+      "default": true
+    },
+    {
       "id": "StabilizationMinimumPropellerVelocity",
       "runtimeName": "StabilizationMinimumPropellerVelocity",
       "key": "StabilizationMinimumPropellerVelocity",

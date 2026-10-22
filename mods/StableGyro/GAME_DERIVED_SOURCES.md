@@ -76,7 +76,28 @@ sources establish:
 - current stock `BP_GyroCopter_Possessable` has no Blueprint function override.
   The generated child overrides the inherited native
   `VoyageVehiclePawn.GetProvidedActionsBP`, calls that parent implementation to
-  preserve its actions, and appends the mod-owned X reset action;
+  preserve its actions, and appends the mod-owned X reset action. Steam build
+  `25982825` native inspection establishes that the Gyro provider calls this
+  base path first and only then appends its native cargo action when the
+  reflected `DropCargoAction` object property is non-null. The child therefore
+  preserves parent `ReceiveBeginPlay`, clears only that property through
+  `KismetSystemLibrary.SetObjectPropertyByName`, and owns one replacement
+  Enhanced Input binding and one provided-action record for the unchanged stock
+  `/Game/Game/Input/Vehicle/IA_GyroCopterDropCargo` action. Current native
+  inspection also establishes the owning `VoyageVehicleGyroCopter` float
+  `DropCargoTriggerTime` at actor offset `0x72c`, its constructor default
+  `1.0`, and the native provider's direct copy of that live value into the
+  provided action's `TriggerTime`. The editor mirror appends this field only
+  so the child can read it; the child does not serialize an override. Started
+  arms a fresh press, Triggered releases only after its elapsed time reaches
+  the same live field and only once per press, and Completed, Canceled, and
+  controller changes clear the transient press state;
+- the same current native inspection establishes
+  `VoyageMiscBlueprintFunctionLibrary.DisconnectCableFromSocket(
+  ModuleSocketComponent, bool)` as the stock disconnect helper and
+  `ModuleSocketComponent.IsSocketConnectedOrHasCable()` as the stock cargo-hint
+  predicate. The child applies them only to valid socket components whose
+  `Port.ResourceType` is Mooring and passes `false` for cable destruction;
 - StableGyro reads the reflected engine-running, current-throttle, and rotor
   velocity properties for its stabilization gate;
 - the native Gyro primary tick is in `TG_PostPhysics`. The generated pitch
@@ -86,7 +107,65 @@ sources establish:
 - the Blueprint property `MeshComponent` references a runtime component whose
   UObject name is `VehicleMesh`. Code that scans components through
   `GetObjectName` must compare the runtime UObject name, not the reflected
-  property name.
+  property name;
+- Steam build `25982825` stock Gyro JSON
+  `BP_GyroCopter_Possessable.json` (SHA-256
+  `51B0B5156265672FCD8AA0995F2F43897A81397ABFA4461E06C57527A0AFD5BB`)
+  establishes the two inherited `VoyageModuleSocketViewComponent` mooring
+  templates. Both attach to the native `VehicleMesh`, use
+  `DA_Socket_MooringSmall`, `ST_Any`, Mooring resource/category,
+  `DA_Cable_Hook`, integrated length `1000`, disabled auto-initialization and
+  absolute scale. Their stock socket IDs are `1051774499` and `3437279300`.
+  Their stock relative locations are
+  `(75.481674, 54.50848, -33.890068)` and
+  `(75.483, -54.360676, -33.705635)` respectively. The disabled four-port path
+  leaves the inherited stock components and their instance transforms untouched.
+  The generated child adds two distinct rear templates with the same socket
+  contract and unique IDs. It also adds four decorative plate components from
+  two side-specific meshes derived from the current stock
+  `/Game/AssetSets/Vehicles/Gyrocopter/Mesh/Gyro_MooringPlate` and reuses the
+  stock `Gyrocopter_Seat_p1` material. The public producer exports the current
+  decoded Nanite leaf geometry, requiring all four streaming pages, all 223
+  clusters, all 111 leaf clusters, 13,790 faces and four UV channels without an
+  ordinary-LOD fallback. The decoded source has no tangent stream, so both the
+  source GLB and Blender-split halves omit tangents. The splitter explicitly
+  copies corner normals, vertex colors, UV0..3 and material slots, and removes
+  no faces. Independent raw-GLB readback verifies triangle positions, UV0..3,
+  corner normals and vertex colors. Blender cannot
+  faithfully retain some imported normals near degenerate geometry, so the
+  bounded splitter restores the raw `NORMAL` accessor by complete
+  triangle/corner position+UV identity after export. Source-absent tangents stay
+  absent from the split GLB and Unreal derives them while retaining imported
+  normals. Interchange enables Nanite on import and otherwise produces a reduced
+  fallback mesh, so the generator explicitly disables Nanite and builds these
+  two derived assets as ordinary static meshes. All 114
+  exact-zero-area decoded faces reach the source GLB, though meter conversion
+  leaves 88 bit-exact zero in Blender and Unreal's standard StaticMesh build may
+  still discard coincident-position faces. Final cooked triangle counts and the
+  resulting plate detail/material appearance remain explicit build and
+  real-game visual validation boundaries. The child
+  construction graph hides only the inherited `MooringPlate` object and moves
+  `MooringSocket` and `MooringSocket1` along their respective frame tubes;
+  socket configuration, rotations and identities remain unchanged. The six mod
+  objects are retained as runtime-created Blueprint component templates outside
+  the unconditional SCS node list. The two rear sockets are created in both
+  modes; the four derived plates are created only in four-port mode. The internal
+  package stage validates those
+  identities after cook and proves a byte-identical unchanged writer roundtrip
+  with the exact source-cook schema overlay and no `RawExport`; it no longer
+  patches native-parent attachment metadata.
+
+Steam build `25982825` native reflection identifies
+`OnSocketConnectionChanged` as `FVoyageSocketConnectionDelegate`, with runtime
+signature `VoyageSocketConnectionDelegate__DelegateSignature(bool
+bSocketConnection)`. Bounded native inspection found the direct connect path
+broadcasting `true` and disconnect broadcasting `false`. It also found the
+`ConnectionCable` setter writing that field, updating the socket, then broadcasting
+the validity of `ConnectedToSocket`; cable assignment can therefore broadcast
+`false`. The disabled-mode graph treats either bool value as a cleanup request but
+defers cleanup to the next tick so it does not disconnect reentrantly inside a
+native callback. This establishes event shape and callback ordering, not the end
+of save restoration or real-game cable cleanup behavior.
 
 ## Historical native context
 
@@ -112,7 +191,10 @@ revalidated for the current fingerprint and are not consumed by this build.
 - Source/Voyage/PlayerInputInterfaceAction.h
 - Source/Voyage/VoyageInputAction.h
 - Source/Voyage/VoyageGameUserSettings.h
+- Source/Voyage/VoyageModuleSocketViewComponent.h
+- Source/Voyage/VoyageMiscBlueprintFunctionLibrary.h
 - both generator commandlets and Build-InheritancePackage.ps1
+- Validate-StableGyroMooringTemplates.ps1
 
 The original Gyro item data asset, scriptobjects.bin, mappings, extracted JSON,
 cooked packages, containers, inventories, and build logs are game-derived and

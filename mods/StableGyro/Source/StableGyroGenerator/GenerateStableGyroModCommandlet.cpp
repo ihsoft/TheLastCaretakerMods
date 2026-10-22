@@ -333,8 +333,9 @@ bool AddSettingsFunction(UBlueprint* Blueprint, const bool PitchOnly)
         Settings::Settings, UE_ARRAY_COUNT(Settings::Settings),
         [PitchOnly](const VoyageModSettings::FSetting& Setting)
         {
-            return !PitchOnly || Setting.Field == Settings::PitchRampSeconds ||
-                Setting.Field == Settings::EnablePitchCorrection;
+            return Setting.Field != Settings::EnableFourMooringPorts &&
+                (!PitchOnly || Setting.Field == Settings::PitchRampSeconds ||
+                    Setting.Field == Settings::EnablePitchCorrection);
         });
 }
 
@@ -527,8 +528,9 @@ bool AddSettingMembers(UBlueprint* Blueprint, const bool PitchOnly)
         Blueprint, Settings::Settings, UE_ARRAY_COUNT(Settings::Settings),
         [PitchOnly](const VoyageModSettings::FSetting& Setting)
         {
-            return !PitchOnly || Setting.Field == Settings::PitchRampSeconds ||
-                Setting.Field == Settings::EnablePitchCorrection;
+            return Setting.Field != Settings::EnableFourMooringPorts &&
+                (!PitchOnly || Setting.Field == Settings::PitchRampSeconds ||
+                    Setting.Field == Settings::EnablePitchCorrection);
         });
 }
 }

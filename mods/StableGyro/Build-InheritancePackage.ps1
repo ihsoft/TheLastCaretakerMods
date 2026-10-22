@@ -18,7 +18,9 @@ param(
 
     [string]$ContainerName = 'StableGyro_P',
 
-    [Parameter(Mandatory = $true)][string]$ActualSteamBuildId
+    [Parameter(Mandatory = $true)][string]$ActualSteamBuildId,
+
+    [Parameter(Mandatory = $true)][string]$MappingsPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -135,6 +137,22 @@ foreach ($assetName in @(
 )) {
     Copy-Item -LiteralPath (Join-Path $helperSource $assetName) -Destination $helperStage
 }
+foreach ($meshName in @('StableGyroMooringPlatePositiveY', 'StableGyroMooringPlateNegativeY')) {
+    $meshSource = Join-Path $helperSource ($meshName + '\StaticMeshes')
+    $meshStage = Join-Path $helperStage ($meshName + '\StaticMeshes')
+    New-Item -ItemType Directory -Path $meshStage -Force | Out-Null
+    foreach ($extension in @('.uasset', '.uexp')) {
+        Copy-Item -LiteralPath (Join-Path $meshSource ($meshName + $extension)) -Destination $meshStage
+    }
+}
+& (Join-Path $modRoot 'Validate-StableGyroMooringTemplates.ps1') `
+    -RepositoryRoot $repoRoot `
+    -AssetPath (Join-Path $childStage 'BP_GyroCopter_StablePilot.uasset') `
+    -GeneratedParentAssetPath (Join-Path $modRoot 'Content\Blueprints\Vehicles\BP_GyroCopter_Possessable.uasset') `
+    -PitchHelperAssetPath (Join-Path $helperStage 'PitchInputActor.uasset') `
+    -StabilizationHelperAssetPath (Join-Path $helperStage 'ModActor.uasset') `
+    -MappingsPath $MappingsPath `
+    -EvidencePath (Join-Path $output 'mooring-template-validation.json') | Out-Null
 foreach ($assetName in @('IAV_GyroPitchReset.uasset', 'IAV_GyroPitchReset.uexp')) {
     Copy-Item -LiteralPath (Join-Path $helperSource $assetName) -Destination $helperStage
 }
@@ -247,6 +265,8 @@ $expectedAssetPaths = @(
     '../../../Voyage/Content/Mods/StableGyro/IAV_GyroPitchReset.uasset'
     '../../../Voyage/Content/Mods/StableGyro/ModActor.uasset'
     '../../../Voyage/Content/Mods/StableGyro/PitchInputActor.uasset'
+    '../../../Voyage/Content/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY.uasset'
+    '../../../Voyage/Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.uasset'
     '../../../Voyage/Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset'
 )
 $inventory = @(& $retocPath list --path --size --hash --package $utoc)

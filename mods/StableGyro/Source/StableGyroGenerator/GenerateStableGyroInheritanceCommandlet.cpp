@@ -13,11 +13,16 @@
 #include "Components/ActorComponent.h"
 #include "Components/ChildActorComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
+#include "Engine/CollisionProfile.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/World.h"
+#include "InterchangeManager.h"
 #include "GameFramework/GameUserSettings.h"
 #include "K2Node_BreakStruct.h"
 #include "K2Node_CallArrayFunction.h"
@@ -27,6 +32,7 @@
 #include "K2Node_DynamicCast.h"
 #include "K2Node_Event.h"
 #include "K2Node_EnumEquality.h"
+#include "K2Node_EnhancedInputAction.h"
 #include "K2Node_ExecutionSequence.h"
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
@@ -34,6 +40,7 @@
 #include "K2Node_MacroInstance.h"
 #include "K2Node_MakeArray.h"
 #include "K2Node_MakeStruct.h"
+#include "K2Node_Literal.h"
 #include "K2Node_AddDelegate.h"
 #include "K2Node_RemoveDelegate.h"
 #include "K2Node_Self.h"
@@ -42,18 +49,28 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetArrayLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetStringLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/PackageName.h"
+#include "Misc/Parse.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "Materials/MaterialInstanceConstant.h"
+#include "MeshDescription.h"
+#include "PhysicsEngine/BodySetup.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "UObject/SavePackage.h"
 #include "UObject/UnrealType.h"
 #include "StableGyroAssetNames.h"
 #include "StableGyroSettings.h"
+#include "VoyageModSettingsGraph.h"
 #include "VoyageGameUserSettings.h"
 #include "VoyageInputAction.h"
+#include "VoyageMiscBlueprintFunctionLibrary.h"
+#include "VoyageModuleSocketViewComponent.h"
 #include "VoyageVehicleGyroCopter.h"
 #include "VoyageVehiclePawn.h"
 
@@ -65,11 +82,43 @@ constexpr TCHAR BaseAssetName[] = TEXT("BP_GyroCopter_Possessable");
 constexpr TCHAR ChildAssetName[] = TEXT("BP_GyroCopter_StablePilot");
 constexpr TCHAR StabilizationHelperPath[] = TEXT("/Game/Mods/StableGyro/ModActor.ModActor");
 constexpr TCHAR PitchHelperPath[] = TEXT("/Game/Mods/StableGyro/PitchInputActor.PitchInputActor");
+constexpr TCHAR HookCablePackage[] = TEXT("/Game/Data/Assets/Cable/DA_Cable_Hook");
+constexpr TCHAR HookCableObjectPath[] =
+    TEXT("/Game/Data/Assets/Cable/DA_Cable_Hook.DA_Cable_Hook");
+constexpr TCHAR MooringSocketDataPath[] =
+    TEXT("/Game/Data/Assets/ModuleSockets/DA_Socket_MooringSmall.DA_Socket_MooringSmall");
+constexpr TCHAR CableConnectSoundPath[] =
+    TEXT("/Game/Audio/SFX/World/Systems/Sys_Cables/CUE_Sys_Cable_Electric_Connect.CUE_Sys_Cable_Electric_Connect");
+constexpr TCHAR CableDisconnectSoundPath[] =
+    TEXT("/Game/Audio/SFX/World/Systems/Sys_Cables/CUE_Sys_Cable_Electric_Disconnect.CUE_Sys_Cable_Electric_Disconnect");
+constexpr TCHAR SwitchDirectionSoundPath[] =
+    TEXT("/Game/Audio/SFX/World/Systems/Sys_Device_Gen/CUE_Sys_Gen_Lever_Up.CUE_Sys_Gen_Lever_Up");
+constexpr TCHAR MooringMaterialPackage[] =
+    TEXT("/Game/AssetSets/Vehicles/Gyrocopter/Materials/Gyrocopter_Seat_p1");
+constexpr TCHAR MooringMaterialObjectPath[] =
+    TEXT("/Game/AssetSets/Vehicles/Gyrocopter/Materials/Gyrocopter_Seat_p1.Gyrocopter_Seat_p1");
+constexpr TCHAR PositiveMooringMeshPackage[] =
+    TEXT("/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY");
+constexpr TCHAR NegativeMooringMeshPackage[] =
+    TEXT("/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY");
 const FName BaseBlueprintName(TEXT("GenerateStableGyroInheritanceBase"));
 const FName ChildBlueprintName(TEXT("GenerateStableGyroInheritanceChild"));
 const FName StabilizationHelperComponentName(TEXT("StableGyroHelper"));
 const FName PitchHelperComponentName(TEXT("StableGyroPitchInputHelper"));
+const FName RearLeftMooringComponentName(TEXT("StableGyroMooringSocketRearLeft"));
+const FName RearRightMooringComponentName(TEXT("StableGyroMooringSocketRearRight"));
+const FName FrontPositiveMooringPlateName(TEXT("StableGyroMooringPlateFrontPositiveY"));
+const FName FrontNegativeMooringPlateName(TEXT("StableGyroMooringPlateFrontNegativeY"));
+const FName RearPositiveMooringPlateName(TEXT("StableGyroMooringPlateRearPositiveY"));
+const FName RearNegativeMooringPlateName(TEXT("StableGyroMooringPlateRearNegativeY"));
+const FName VehicleMeshComponentName(TEXT("VehicleMesh"));
 const FName ProvidedActionsFunctionName(TEXT("GetProvidedActionsBP"));
+const FName CargoAvailabilityLocal(TEXT("StableGyroCargoAvailable"));
+const FName MooringVehicleComponentsLocal(TEXT("StableGyroMooringVehicleComponents"));
+const FName MooringVehicleMeshLocal(TEXT("StableGyroMooringVehicleMesh"));
+const FName CargoPressArmed(TEXT("StableGyroCargoPressArmed"));
+const FName CargoPressFired(TEXT("StableGyroCargoPressFired"));
+const FName CargoControllerChangedCallbackName(TEXT("HandleCargoControllerChanged"));
 const FName ReloadSettingsFunctionName(TEXT("ReloadSettings"));
 const FName ControllerChangedCallbackName(TEXT("HandleControllerChanged"));
 const FName CollisionHitCallbackName(TEXT("HandleCollisionHit"));
@@ -99,11 +148,138 @@ const FName OwnedChildActorComponents(TEXT("OwnedChildActorComponents"));
 const FName NativeAltitudeOwnershipActive(TEXT("NativeAltitudeOwnershipActive"));
 const FName OriginalAutoHoverCollective(TEXT("OriginalAutoHoverCollective"));
 const FName OriginalAltitudeAssist(TEXT("OriginalAltitudeAssist"));
+const FName DropCargoTriggerTime(TEXT("DropCargoTriggerTime"));
+const FName FourPortSettingsLoaded(TEXT("StableGyroFourPortSettingsLoaded"));
+const FName EnsureFourPortSettingsCached(TEXT("EnsureFourPortSettingsCached"));
+const FName GetFourPortSetting(TEXT("GetFourPortSetting"));
+const FName CachedRearLeftMooringSocket(TEXT("StableGyroRearLeftMooringSocket"));
+const FName CachedRearRightMooringSocket(TEXT("StableGyroRearRightMooringSocket"));
+const FName DisabledMooringCleanupQueued(TEXT("StableGyroDisabledMooringCleanupQueued"));
+const FName DisableOwnedMooringObjectFunction(TEXT("DisableOwnedMooringObject"));
+const FName RunDisabledMooringCleanupFunction(TEXT("RunDisabledMooringCleanup"));
+const FName QueueDisabledMooringCleanupFunction(TEXT("QueueDisabledMooringCleanup"));
+const FName DisabledMooringConnectionCallback(TEXT("HandleDisabledMooringConnectionChanged"));
 const FName AutoHoverCollective(TEXT("bAutoHoverCollective"));
 const FName AltitudeAssist(TEXT("bAltitudeAssist"));
 const FName RestoreNativeAltitudeOwnershipFunction(TEXT("RestoreNativeAltitudeOwnership"));
 const FName UpdateNativeAltitudeOwnershipFunction(TEXT("UpdateNativeAltitudeOwnership"));
 namespace Settings = StableGyroSettings;
+
+namespace MooringLayout
+{
+constexpr TCHAR HookCableAssetName[] = TEXT("DA_Cable_Hook");
+constexpr TCHAR MaterialAssetName[] = TEXT("Gyrocopter_Seat_p1");
+constexpr TCHAR ImportDestination[] = TEXT("/Game/Mods/StableGyro");
+constexpr TCHAR PositiveGlbParameter[] = TEXT("MooringPositiveYGlb=");
+constexpr TCHAR NegativeGlbParameter[] = TEXT("MooringNegativeYGlb=");
+constexpr TCHAR MooringResourceEnum[] = TEXT("EModuleResourceType::Mooring");
+constexpr TCHAR StockPlateObjectName[] = TEXT("MooringPlate");
+constexpr TCHAR StockPositiveSocketObjectName[] = TEXT("MooringSocket");
+constexpr TCHAR StockNegativeSocketObjectName[] = TEXT("MooringSocket1");
+constexpr TCHAR StockPositiveSocketLocationDefault[] =
+    TEXT("(X=78.782426,Y=50.862349,Z=-32.989642)");
+constexpr TCHAR StockNegativeSocketLocationDefault[] =
+    TEXT("(X=78.783752,Y=-50.714545,Z=-32.805209)");
+constexpr TCHAR ManualAttachmentPin[] = TEXT("bManualAttachment");
+constexpr TCHAR RelativeTransformPin[] = TEXT("RelativeTransform");
+constexpr TCHAR DeferredFinishPin[] = TEXT("bDeferredFinish");
+constexpr TCHAR TemplateNamePin[] = TEXT("TemplateName");
+constexpr TCHAR ComponentPin[] = TEXT("Component");
+constexpr TCHAR ParentPin[] = TEXT("Parent");
+constexpr TCHAR SocketNamePin[] = TEXT("SocketName");
+constexpr TCHAR LocationRulePin[] = TEXT("LocationRule");
+constexpr TCHAR RotationRulePin[] = TEXT("RotationRule");
+constexpr TCHAR ScaleRulePin[] = TEXT("ScaleRule");
+constexpr TCHAR WeldBodiesPin[] = TEXT("bWeldSimulatedBodies");
+constexpr TCHAR KeepRelativeRule[] = TEXT("KeepRelative");
+constexpr TCHAR VectorTripleFormat[] = TEXT("%.9f,%.9f,%.9f");
+constexpr TCHAR NoSocket[] = TEXT("None");
+const FName LocationPin(TEXT("Location"));
+const FName RotationPin(TEXT("Rotation"));
+const FName ScalePin(TEXT("Scale"));
+constexpr uint32 RearLeftSocketId = 2056977161u;
+constexpr uint32 RearRightSocketId = 2056977162u;
+constexpr int32 PositiveSourceTriangleCount = 6895;
+constexpr int32 NegativeSourceTriangleCount = 6895;
+constexpr int32 RuntimeTriangleCountPerSide = 6852;
+constexpr float IntegratedCableLength = 1000.0f;
+const FName PortProperty(TEXT("Port"));
+const FName UserConstructionScriptFunction(TEXT("UserConstructionScript"));
+const FName SetVisibilityFunction(TEXT("SetVisibility"));
+const FName NewVisibility(TEXT("bNewVisibility"));
+const FName PropagateVisibilityToChildren(TEXT("bPropagateToChildren"));
+const FName SetHiddenInGameFunction(TEXT("SetHiddenInGame"));
+const FName NewHidden(TEXT("NewHidden"));
+const FName SetCollisionEnabledFunction(TEXT("SetCollisionEnabled"));
+const FName CollisionEnabledType(TEXT("NewType"));
+const FName SetGenerateOverlapEventsFunction(TEXT("SetGenerateOverlapEvents"));
+const FName GenerateOverlapEvents(TEXT("bInGenerateOverlapEvents"));
+const FName GetChildrenComponentsFunction(TEXT("GetChildrenComponents"));
+const FName IncludeAllDescendants(TEXT("bIncludeAllDescendants"));
+const FName Children(TEXT("Children"));
+const FName TargetObject(TEXT("TargetObject"));
+const FName SocketConnectionState(TEXT("bSocketConnection"));
+const FName TimerObject(TEXT("Object"));
+const FName TimerFunctionName(TEXT("FunctionName"));
+const FName MaterialSlotName(MaterialAssetName);
+const FVector RearLeftSocketLocation(49.075660, 83.677528, -41.093475);
+const FVector RearRightSocketLocation(49.076986, -83.529724, -40.909042);
+const FRotator RearLeftSocketRotation(9.615132, -50.542805, -119.624176);
+const FRotator RearRightSocketRotation(-8.652774, -130.16699, -118.37153);
+const FVector FrontPositivePlateLocation(3.300752, -3.646131, 0.900426);
+const FVector FrontNegativePlateLocation(3.300752, 3.646131, 0.900426);
+const FVector RearPositivePlateLocation(-26.406014, 29.169048, -7.203407);
+const FVector RearNegativePlateLocation(-26.406014, -29.169048, -7.203407);
+}
+
+namespace MooringSerializationFields
+{
+const FName ItemTransferTimer(TEXT("ItemTransferTimer"));
+const FName SocketId(TEXT("SocketID"));
+const FName LeakMultiplier(TEXT("LeakMultiplier"));
+const FName AddModuleRequirement(TEXT("bAddModuleRequirement"));
+const FName CustomRequirement(TEXT("CustomRequirement"));
+const FName AutoInitialize(TEXT("bAutoInitialize"));
+const FName AcceptsSignals(TEXT("bAcceptsSignals"));
+const FName OwningModule(TEXT("OwningModule"));
+const FName Standalone(TEXT("bStandalone"));
+const FName IsVirtual(TEXT("bIsVirtual"));
+const FName IsVirtualGrouped(TEXT("bIsVirtualGrouped"));
+const FName IsVirtualShareToGroup(TEXT("bIsVirtualShareToGroup"));
+const FName ConnectSound(TEXT("ConnectSound"));
+const FName DisconnectSound(TEXT("DisconnectSound"));
+const FName SwitchDirectionSound(TEXT("SwitchDirectionSound"));
+const FName SocketConnectionChanged(TEXT("OnSocketConnectionChanged"));
+const FName ResourcesTransferredLastFrame(TEXT("ResourcesTransferredLastFrame"));
+const FName ResourcesTransferredLastFrameAbsolute(TEXT("ResourcesTransferredLastFrameAbsolute"));
+const FName ResourcesTransferredLastFrameType(TEXT("ResourcesTransferredLastFrameType"));
+const FName ResourceTransferPerSecond(TEXT("ResourceTransferPerSecond"));
+const FName IntegratedCable(TEXT("IntegratedCable"));
+const FName IntegratedCableLength(TEXT("IntegratedCableLength"));
+const FName IntegratedCablePlaceholderMesh(TEXT("IntegratedCablePlaceholderMesh"));
+const FName ConnectedToSocket(TEXT("ConnectedToSocket"));
+const FName ModuleOwner(TEXT("ModuleOwner"));
+const FName ModuleOwnerOriginal(TEXT("ModuleOwnerOriginal"));
+const FName ConnectionCable(TEXT("ConnectionCable"));
+const FName SocketCollisionBox(TEXT("SocketCollisionBox"));
+const FName NiagaraFx(TEXT("NiagaraFX"));
+const FName NiagaraFxLeak(TEXT("NiagaraFXLeak"));
+const FName NiagaraFxLeakSystem(TEXT("NiagaraFXLeakSystem"));
+const FName NiagaraFxSystem(TEXT("NiagaraFXSystem"));
+const FName ConnectedSocketsCache(TEXT("ConnectedSocketsCache"));
+const FName Socket(TEXT("Socket"));
+const FName Mesh(TEXT("mesh"));
+const FName DataAsset(TEXT("DataAsset"));
+const FName MultiplyScale(TEXT("bMultiplyScale"));
+const FName Type(TEXT("Type"));
+const FName Bandwidth(TEXT("Bandwidth"));
+const FName IgnoreCableBandwidth(TEXT("bIgnoreCableBandwidth"));
+const FName DefaultDirection(TEXT("DefaultDirection"));
+const FName BalanceResourceLevels(TEXT("bBalanceResourceLevels"));
+const FName MatchByResourceCategory(TEXT("bMatchByResourceCategory"));
+const FName ResourceCategory(TEXT("ResourceCategory"));
+const FName AdditionalAcceptedResourceTypes(TEXT("AdditionalAcceptedResourceTypes"));
+}
 
 namespace ArcadeAltitude
 {
@@ -184,6 +360,7 @@ const FName Category(TEXT("Category"));
 const FName Text(TEXT("Text"));
 const FName Enabled(TEXT("bEnabled"));
 const FName Priority(TEXT("Priority"));
+const FName TriggerTime(TEXT("TriggerTime"));
 const FName Type(TEXT("Type"));
 const FName LanguageType(TEXT("LanguageType"));
 const FName TargetArray(TEXT("TargetArray"));
@@ -198,6 +375,27 @@ constexpr TCHAR Enabled[] = TEXT("true");
 constexpr TCHAR Priority[] = TEXT("10");
 constexpr TCHAR Type[] = TEXT("EPlayerInputInterfaceActionType::Central");
 constexpr TCHAR RussianLanguage[] = TEXT("EVoyageLanguageType::Russian");
+}
+
+namespace CargoAction
+{
+constexpr TCHAR DropCargoActionProperty[] = TEXT("DropCargoAction");
+constexpr TCHAR Disabled[] = TEXT("false");
+constexpr TCHAR Enabled[] = TEXT("true");
+constexpr TCHAR DestroyCable[] = TEXT("false");
+const FName SetObjectPropertyByName(TEXT("SetObjectPropertyByName"));
+const FName ComponentClass(TEXT("ComponentClass"));
+const FName Array(TEXT("Array"));
+const FName ArrayElement(TEXT("Array Element"));
+const FName ResourceType(TEXT("ResourceType"));
+const FName Socket(TEXT("Socket"));
+const FName Destroy(TEXT("bDestroy"));
+const FName Started(TEXT("Started"));
+const FName Triggered(TEXT("Triggered"));
+const FName Completed(TEXT("Completed"));
+const FName Canceled(TEXT("Canceled"));
+const FName ElapsedSeconds(TEXT("ElapsedSeconds"));
+const FName ActionDescription(TEXT("ActionDescription"));
 }
 
 template <typename NodeType>
@@ -343,6 +541,21 @@ FMulticastDelegateProperty* CollisionHitDelegateProperty()
         Hit && Hit->HasAnyPropertyFlags(CPF_Parm) &&
         Hit->Struct == FHitResult::StaticStruct());
     return Property;
+}
+
+FMulticastDelegateProperty* SocketConnectionDelegateProperty()
+{
+    FMulticastDelegateProperty* Property = FindFProperty<FMulticastDelegateProperty>(
+        UModuleSocketComponent::StaticClass(),
+        MooringSerializationFields::SocketConnectionChanged);
+    if (!Property || !Property->SignatureFunction ||
+        Property->SignatureFunction->GetName() !=
+            TEXT("VoyageSocketConnectionDelegate__DelegateSignature") ||
+        Property->SignatureFunction->NumParms != 1)
+        return nullptr;
+    FBoolProperty* State = FindFProperty<FBoolProperty>(
+        Property->SignatureFunction, MooringLayout::SocketConnectionState);
+    return State && State->HasAnyPropertyFlags(CPF_Parm) ? Property : nullptr;
 }
 
 bool ValidateNativeAltitudeOwnershipContracts()
@@ -1162,9 +1375,479 @@ bool AddNativeAltitudeOwnershipEndPlay(UBlueprint* Blueprint)
     return Ok;
 }
 
+UK2Node_VariableGet* AddLocalRead(
+    UBlueprint* Blueprint, UEdGraph* Graph, const FName Name, int32 X, int32 Y)
+{
+    UK2Node_VariableGet* Node = NewObject<UK2Node_VariableGet>(Graph);
+    Node->VariableReference.SetLocalMember(
+        Name, Graph->GetName(),
+        FBlueprintEditorUtils::FindLocalVariableGuidByName(Blueprint, Graph, Name));
+    return FinishNode(Node, Graph, X, Y);
+}
+
+UK2Node_VariableSet* AddLocalWrite(
+    UBlueprint* Blueprint, UEdGraph* Graph, const FName Name, int32 X, int32 Y)
+{
+    UK2Node_VariableSet* Node = NewObject<UK2Node_VariableSet>(Graph);
+    Node->VariableReference.SetLocalMember(
+        Name, Graph->GetName(),
+        FBlueprintEditorUtils::FindLocalVariableGuidByName(Blueprint, Graph, Name));
+    return FinishNode(Node, Graph, X, Y);
+}
+
+bool AddCargoControllerChangedCallback(UBlueprint* Blueprint)
+{
+    FMulticastDelegateProperty* DelegateProperty = ControllerChangedDelegateProperty();
+    UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(
+        Blueprint, CargoControllerChangedCallbackName, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(
+        Blueprint, Graph, true, DelegateProperty->SignatureFunction.Get());
+    UK2Node_FunctionEntry* Entry = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+        if (UK2Node_FunctionEntry* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+            Entry = Candidate;
+    if (!Entry) return false;
+    UEdGraphPin* Tail = RequirePin(Entry, P::Then);
+    Tail->BreakAllPinLinks();
+    UK2Node_VariableSet* ClearArmed = AddWrite(Graph, CargoPressArmed, 220, -120);
+    SetDefault(ClearArmed, CargoPressArmed, CargoAction::Disabled);
+    UK2Node_VariableSet* ClearFired = AddWrite(Graph, CargoPressFired, 450, -120);
+    SetDefault(ClearFired, CargoPressFired, CargoAction::Disabled);
+    return Connect(Tail, RequirePin(ClearArmed, P::Execute)) &&
+        Connect(RequirePin(ClearArmed, P::Then), RequirePin(ClearFired, P::Execute));
+}
+
+bool AddCargoControllerChangedBinding(UBlueprint* Blueprint)
+{
+    UEdGraph* Graph = FBlueprintEditorUtils::FindEventGraph(Blueprint);
+    if (!Graph || !Blueprint->GeneratedClass ||
+        !Blueprint->GeneratedClass->FindFunctionByName(CargoControllerChangedCallbackName))
+        return false;
+    UK2Node_Event* BeginPlay = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        UK2Node_Event* Event = Cast<UK2Node_Event>(Node);
+        if (Event && Event->EventReference.GetMemberName() ==
+            BlueprintGraphNames::Events::ActorReceiveBeginPlay) BeginPlay = Event;
+    }
+    if (!BeginPlay) return false;
+    UEdGraphPin* BeginTail = RequirePin(BeginPlay, P::Then);
+    if (BeginTail->LinkedTo.Num() != 1) return false;
+    UEdGraphPin* ExistingWork = BeginTail->LinkedTo[0];
+    BeginTail->BreakAllPinLinks();
+
+    UK2Node_ExecutionSequence* Sequence = FinishNode(
+        NewObject<UK2Node_ExecutionSequence>(Graph), Graph, 100, -720);
+    UK2Node_Self* Self = FinishNode(NewObject<UK2Node_Self>(Graph), Graph, 220, -540);
+    FMulticastDelegateProperty* DelegateProperty = ControllerChangedDelegateProperty();
+    UK2Node_CreateDelegate* Callback = FinishNode(
+        NewObject<UK2Node_CreateDelegate>(Graph), Graph, 220, -900);
+    Callback->SetFunction(CargoControllerChangedCallbackName);
+    UK2Node_RemoveDelegate* Remove = NewObject<UK2Node_RemoveDelegate>(Graph);
+    Remove->SetFromProperty(DelegateProperty, false, APawn::StaticClass());
+    FinishNode(Remove, Graph, 450, -720);
+    UK2Node_AddDelegate* AddBinding = NewObject<UK2Node_AddDelegate>(Graph);
+    AddBinding->SetFromProperty(DelegateProperty, false, APawn::StaticClass());
+    FinishNode(AddBinding, Graph, 680, -720);
+
+    bool Ok = true;
+    Ok &= Connect(BeginTail, RequirePin(Sequence, P::Execute));
+    Ok &= Connect(Sequence->GetThenPinGivenIndex(0), ExistingWork);
+    Ok &= Connect(Sequence->GetThenPinGivenIndex(1), RequirePin(Remove, P::Execute));
+    Ok &= Connect(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(Remove, P::FunctionTarget));
+    Ok &= Connect(Callback->GetDelegateOutPin(), Remove->GetDelegatePin());
+    Ok &= Connect(RequirePin(Remove, P::Then), RequirePin(AddBinding, P::Execute));
+    Ok &= Connect(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(AddBinding, P::FunctionTarget));
+    Ok &= Connect(Callback->GetDelegateOutPin(), AddBinding->GetDelegatePin());
+    return Ok;
+}
+
+bool AddFourPortSettingsCache(UBlueprint* Blueprint)
+{
+    if (!VoyageModSettings::Graph::AddSettingMembers(
+            Blueprint, Settings::Settings, UE_ARRAY_COUNT(Settings::Settings),
+            [](const VoyageModSettings::FSetting& Setting)
+            {
+                return Setting.Field == Settings::EnableFourMooringPorts;
+            }) ||
+        !FBlueprintEditorUtils::AddMemberVariable(
+            Blueprint, FourPortSettingsLoaded,
+            []
+            {
+                FEdGraphPinType Type;
+                Type.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+                return Type;
+            }(), CargoAction::Disabled))
+    {
+        return false;
+    }
+    for (const FName Field : {Settings::EnableFourMooringPorts, FourPortSettingsLoaded})
+    {
+        FBPVariableDescription* Variable = Blueprint->NewVariables.FindByPredicate(
+            [&Field](const FBPVariableDescription& Candidate)
+            {
+                return Candidate.VarName == Field;
+            });
+        if (!Variable) return false;
+        Variable->PropertyFlags |= CPF_Transient;
+    }
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    if (Blueprint->Status == BS_Error ||
+        !VoyageModSettings::Graph::AddSettingsLoader(
+            Blueprint, ReloadSettingsFunctionName, Settings::RelativePath,
+            Settings::Settings, UE_ARRAY_COUNT(Settings::Settings),
+            [](const VoyageModSettings::FSetting& Setting)
+            {
+                return Setting.Field == Settings::EnableFourMooringPorts;
+            }))
+    {
+        return false;
+    }
+
+    UEdGraph* CacheGraph = FBlueprintEditorUtils::CreateNewGraph(
+        Blueprint, EnsureFourPortSettingsCached, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(
+        Blueprint, CacheGraph, false, static_cast<UClass*>(nullptr));
+    UK2Node_FunctionEntry* CacheEntry = nullptr;
+    UK2Node_FunctionResult* CacheResult = nullptr;
+    for (UEdGraphNode* Node : CacheGraph->Nodes)
+    {
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node)) CacheEntry = Candidate;
+        if (auto* Candidate = Cast<UK2Node_FunctionResult>(Node)) CacheResult = Candidate;
+    }
+    if (!CacheEntry) return false;
+    CacheEntry->AddExtraFlags(FUNC_Public | FUNC_BlueprintCallable);
+    if (!CacheResult)
+        CacheResult = FinishNode(NewObject<UK2Node_FunctionResult>(CacheGraph), CacheGraph, 1140, 0);
+    UEdGraphPin* CacheStart = RequirePin(CacheEntry, P::Then);
+    CacheStart->BreakAllPinLinks();
+    UK2Node_VariableGet* Loaded = AddRead(
+        CacheGraph, FourPortSettingsLoaded, nullptr, 220, -180);
+    UK2Node_IfThenElse* NeedsLoad = FinishNode(
+        NewObject<UK2Node_IfThenElse>(CacheGraph), CacheGraph, 450, 0);
+    UFunction* Reload = Blueprint->GeneratedClass->FindFunctionByName(
+        ReloadSettingsFunctionName, EIncludeSuperFlag::ExcludeSuper);
+    if (!Reload || Reload->GetOwnerClass() != Blueprint->GeneratedClass) return false;
+    UK2Node_CallFunction* ReloadCall = AddCall(CacheGraph, Reload->GetOwnerClass(),
+        ReloadSettingsFunctionName, 680, 0);
+    UK2Node_VariableSet* MarkLoaded = AddWrite(
+        CacheGraph, FourPortSettingsLoaded, 910, 0);
+    SetDefault(MarkLoaded, FourPortSettingsLoaded, ProvidedActionDefaults::Enabled);
+
+    bool Ok = true;
+    Ok &= Connect(CacheStart, RequirePin(NeedsLoad, P::Execute));
+    Ok &= Connect(Loaded->GetValuePin(), RequirePin(NeedsLoad, P::Condition));
+    Ok &= Connect(RequirePin(NeedsLoad, P::Then), RequirePin(CacheResult, P::Execute));
+    Ok &= Connect(RequirePin(NeedsLoad, P::Else), RequirePin(ReloadCall, P::Execute));
+    Ok &= Connect(RequirePin(ReloadCall, P::Then), RequirePin(MarkLoaded, P::Execute));
+    Ok &= Connect(RequirePin(MarkLoaded, P::Then), RequirePin(CacheResult, P::Execute));
+    if (!Ok) return false;
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    if (Blueprint->Status == BS_Error) return false;
+
+    UEdGraph* GetterGraph = FBlueprintEditorUtils::CreateNewGraph(
+        Blueprint, GetFourPortSetting, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(
+        Blueprint, GetterGraph, false, static_cast<UClass*>(nullptr));
+    UK2Node_FunctionEntry* GetterEntry = nullptr;
+    UK2Node_FunctionResult* GetterResult = nullptr;
+    for (UEdGraphNode* Node : GetterGraph->Nodes)
+    {
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node)) GetterEntry = Candidate;
+        if (auto* Candidate = Cast<UK2Node_FunctionResult>(Node)) GetterResult = Candidate;
+    }
+    if (!GetterEntry) return false;
+    GetterEntry->AddExtraFlags(FUNC_Public | FUNC_BlueprintCallable);
+    if (!GetterResult)
+        GetterResult = FinishNode(NewObject<UK2Node_FunctionResult>(GetterGraph), GetterGraph, 1140, 0);
+    FEdGraphPinType BoolType;
+    BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+    if (!GetterResult->CreateUserDefinedPin(P::ReturnValue, BoolType, EGPD_Input)) return false;
+    UEdGraphPin* GetterStart = RequirePin(GetterEntry, P::Then);
+    GetterStart->BreakAllPinLinks();
+    UK2Node_CallFunction* Defaults = AddCall(
+        GetterGraph, UVoyageMiscBlueprintFunctionLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UVoyageMiscBlueprintFunctionLibrary, GetClassDefaultObject),
+        220, 0);
+    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultObject(
+        *RequirePin(Defaults, FName(TEXT("Class"))), Blueprint->GeneratedClass);
+    UK2Node_DynamicCast* CastDefaults = NewObject<UK2Node_DynamicCast>(GetterGraph);
+    CastDefaults->TargetType = Blueprint->GeneratedClass;
+    FinishNode(CastDefaults, GetterGraph, 450, 0);
+    UFunction* Ensure = Blueprint->GeneratedClass->FindFunctionByName(
+        EnsureFourPortSettingsCached, EIncludeSuperFlag::ExcludeSuper);
+    if (!Ensure || Ensure->GetOwnerClass() != Blueprint->GeneratedClass) return false;
+    UK2Node_CallFunction* EnsureCall = AddCall(
+        GetterGraph, Ensure->GetOwnerClass(), EnsureFourPortSettingsCached, 680, 0);
+    UK2Node_VariableGet* Enabled = AddRead(
+        GetterGraph, Settings::EnableFourMooringPorts, Blueprint->GeneratedClass, 910, 180);
+    Ok = true;
+    Ok &= Connect(GetterStart, RequirePin(Defaults, P::Execute));
+    Ok &= Connect(RequirePin(Defaults, P::Then), RequirePin(CastDefaults, P::Execute));
+    Ok &= Connect(RequirePin(Defaults, P::ReturnValue), CastDefaults->GetCastSourcePin());
+    Ok &= Connect(CastDefaults->GetValidCastPin(), RequirePin(EnsureCall, P::Execute));
+    Ok &= Connect(CastDefaults->GetCastResultPin(), RequirePin(EnsureCall, P::FunctionTarget));
+    Ok &= Connect(CastDefaults->GetCastResultPin(), RequirePin(Enabled, P::FunctionTarget));
+    Ok &= Connect(RequirePin(EnsureCall, P::Then), RequirePin(GetterResult, P::Execute));
+    Ok &= Connect(Enabled->GetValuePin(), RequirePin(GetterResult, P::ReturnValue));
+    if (!Ok) return false;
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    return Blueprint->Status != BS_Error;
+}
+
+bool AddCargoOwnershipGraph(UBlueprint* Blueprint, UInputAction* DropCargoAction)
+{
+    UEdGraph* Graph = FBlueprintEditorUtils::FindEventGraph(Blueprint);
+    if (!Graph || !DropCargoAction) return false;
+    UK2Node_Event* BeginPlay = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        UK2Node_Event* Event = Cast<UK2Node_Event>(Node);
+        if (Event && Event->EventReference.GetMemberName() ==
+            BlueprintGraphNames::Events::ActorReceiveBeginPlay) BeginPlay = Event;
+    }
+    if (!BeginPlay)
+    {
+        BeginPlay = NewObject<UK2Node_Event>(Graph);
+        BeginPlay->EventReference.SetExternalMember(
+            BlueprintGraphNames::Events::ActorReceiveBeginPlay, AActor::StaticClass());
+        BeginPlay->bOverrideFunction = true;
+        FinishNode(BeginPlay, Graph, 0, -400);
+    }
+    UEdGraphPin* BeginTail = RequirePin(BeginPlay, P::Then);
+    if (BeginTail->LinkedTo.Num() > 1) return false;
+    UK2Node_CallParentFunction* ParentBeginPlay = nullptr;
+    if (BeginTail->LinkedTo.Num() == 1)
+    {
+        ParentBeginPlay = Cast<UK2Node_CallParentFunction>(
+            BeginTail->LinkedTo[0]->GetOwningNode());
+        if (!ParentBeginPlay ||
+            ParentBeginPlay->FunctionReference.GetMemberName() !=
+                BlueprintGraphNames::Events::ActorReceiveBeginPlay)
+        {
+            return false;
+        }
+    }
+    BeginTail->BreakAllPinLinks();
+
+    if (!ParentBeginPlay)
+    {
+        UFunction* BeginPlayFunction = AActor::StaticClass()->FindFunctionByName(
+            BlueprintGraphNames::Events::ActorReceiveBeginPlay);
+        if (!BeginPlayFunction) return false;
+        ParentBeginPlay = NewObject<UK2Node_CallParentFunction>(Graph);
+        ParentBeginPlay->SetFromFunction(BeginPlayFunction);
+        FinishNode(ParentBeginPlay, Graph, 220, -400);
+    }
+    UK2Node_CallFunction* ClearNativeAction = AddCall(
+        Graph, UKismetSystemLibrary::StaticClass(),
+        CargoAction::SetObjectPropertyByName, 450, -400);
+    UK2Node_CallFunction* BeginFourPorts = AddCall(
+        Graph, Blueprint->GeneratedClass, GetFourPortSetting, 450, -580);
+    UK2Node_IfThenElse* BeginFourPortsBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 680, -400);
+    UK2Node_Self* BeginSelf = FinishNode(NewObject<UK2Node_Self>(Graph), Graph, 0, -220);
+    SetDefault(ClearNativeAction, HoverPitchReset::PropertyName,
+        CargoAction::DropCargoActionProperty);
+
+    UK2Node_EnhancedInputAction* Input = NewObject<UK2Node_EnhancedInputAction>(Graph);
+    Input->InputAction = DropCargoAction;
+    FinishNode(Input, Graph, 0, 0);
+
+    UK2Node_VariableSet* StartedClearFired = AddWrite(
+        Graph, CargoPressFired, 220, -40);
+    SetDefault(StartedClearFired, CargoPressFired, CargoAction::Disabled);
+    UK2Node_VariableSet* StartedArm = AddWrite(Graph, CargoPressArmed, 450, -40);
+    SetDefault(StartedArm, CargoPressArmed, ProvidedActionDefaults::Enabled);
+    UK2Node_CallFunction* StartedFourPorts = AddCall(
+        Graph, Blueprint->GeneratedClass, GetFourPortSetting, 220, -180);
+    UK2Node_IfThenElse* StartedFourPortsBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 450, -180);
+
+    UK2Node_CallFunction* PlayerControlled = AddCall(
+        Graph, APawn::StaticClass(), GET_FUNCTION_NAME_CHECKED(APawn, IsPlayerControlled),
+        220, 240);
+    UK2Node_VariableGet* Armed = AddRead(Graph, CargoPressArmed, nullptr, 220, 390);
+    UK2Node_VariableGet* Fired = AddRead(Graph, CargoPressFired, nullptr, 220, 540);
+    UK2Node_CallFunction* NotFired = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Not_PreBool), 450, 540);
+    UK2Node_VariableGet* HoldDuration = AddRead(
+        Graph, DropCargoTriggerTime, AVoyageVehicleGyroCopter::StaticClass(), 220, 690);
+    UK2Node_CallFunction* HeldLongEnough = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), 450, 690);
+    UK2Node_CallFunction* ControlledAndArmed = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND), 680, 330);
+    UK2Node_CallFunction* FreshAndElapsed = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND), 680, 600);
+    UK2Node_CallFunction* MayReleaseCargo = AddCall(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND), 910, 450);
+    UK2Node_IfThenElse* PlayerBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 1140, 240);
+    UK2Node_CallFunction* TriggeredFourPorts = AddCall(
+        Graph, Blueprint->GeneratedClass, GetFourPortSetting, 910, 80);
+    UK2Node_IfThenElse* TriggeredFourPortsBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 1140, 80);
+    UK2Node_VariableSet* LatchFired = AddWrite(Graph, CargoPressFired, 1370, 240);
+    SetDefault(LatchFired, CargoPressFired, ProvidedActionDefaults::Enabled);
+    UK2Node_CallFunction* Components = AddCall(
+        Graph, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetComponentsByClass),
+        1370, 450);
+    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultObject(
+        *RequirePin(Components, CargoAction::ComponentClass),
+        UModuleSocketComponent::StaticClass());
+    UK2Node_MacroInstance* Loop = NewObject<UK2Node_MacroInstance>(Graph);
+    Loop->SetMacroGraph(StandardForEachLoop());
+    FinishNode(Loop, Graph, 1600, 240);
+    UK2Node_DynamicCast* Socket = NewObject<UK2Node_DynamicCast>(Graph);
+    Socket->TargetType = UModuleSocketComponent::StaticClass();
+    Socket->SetPurity(false);
+    FinishNode(Socket, Graph, 1830, 240);
+    UK2Node_CallFunction* Valid = AddCall(
+        Graph, UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, IsValid), 2060, 450);
+    UK2Node_IfThenElse* ValidBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 2060, 240);
+    UK2Node_VariableGet* Port = AddRead(
+        Graph, MooringLayout::PortProperty,
+        UModuleSocketComponent::StaticClass(), 2290, 450);
+    UK2Node_BreakStruct* BreakPort = NewObject<UK2Node_BreakStruct>(Graph);
+    BreakPort->StructType = FModuleSocketIOData::StaticStruct();
+    BreakPort->bMadeAfterOverridePinRemoval = true;
+    FinishNode(BreakPort, Graph, 2520, 450);
+    UK2Node_EnumEquality* IsMooring = FinishNode(
+        NewObject<UK2Node_EnumEquality>(Graph), Graph, 2750, 450);
+    UK2Node_IfThenElse* MooringBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 2980, 240);
+    UK2Node_CallFunction* Connected = AddCall(
+        Graph, UModuleSocketComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UModuleSocketComponent, IsSocketConnectedOrHasCable),
+        3210, 450);
+    UK2Node_IfThenElse* ConnectedBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 3210, 240);
+    UK2Node_CallFunction* Disconnect = AddCall(
+        Graph, UVoyageMiscBlueprintFunctionLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(
+            UVoyageMiscBlueprintFunctionLibrary, DisconnectCableFromSocket), 3440, 240);
+    SetDefault(Disconnect, CargoAction::Destroy, CargoAction::DestroyCable);
+
+    UK2Node_VariableSet* CompletedClearArmed = AddWrite(
+        Graph, CargoPressArmed, 220, 940);
+    SetDefault(CompletedClearArmed, CargoPressArmed, CargoAction::Disabled);
+    UK2Node_VariableSet* CompletedClearFired = AddWrite(
+        Graph, CargoPressFired, 450, 940);
+    SetDefault(CompletedClearFired, CargoPressFired, CargoAction::Disabled);
+    UK2Node_VariableSet* CanceledClearArmed = AddWrite(
+        Graph, CargoPressArmed, 220, 1110);
+    SetDefault(CanceledClearArmed, CargoPressArmed, CargoAction::Disabled);
+    UK2Node_VariableSet* CanceledClearFired = AddWrite(
+        Graph, CargoPressFired, 450, 1110);
+    SetDefault(CanceledClearFired, CargoPressFired, CargoAction::Disabled);
+
+    const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
+    bool Ok = true;
+    Ok &= Connect(BeginTail, RequirePin(ParentBeginPlay, P::Execute));
+    Ok &= Connect(RequirePin(ParentBeginPlay, P::Then),
+        RequirePin(BeginFourPorts, P::Execute));
+    Ok &= Connect(RequirePin(BeginFourPorts, P::Then),
+        RequirePin(BeginFourPortsBranch, P::Execute));
+    Ok &= Connect(RequirePin(BeginFourPorts, P::ReturnValue),
+        RequirePin(BeginFourPortsBranch, P::Condition));
+    Ok &= Connect(RequirePin(BeginFourPortsBranch, P::Then),
+        RequirePin(ClearNativeAction, P::Execute));
+    Ok &= Connect(BeginSelf->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(ClearNativeAction, P::Object));
+    Ok &= Connect(RequirePin(Input, CargoAction::Started),
+        RequirePin(StartedFourPorts, P::Execute));
+    Ok &= Connect(RequirePin(StartedFourPorts, P::Then),
+        RequirePin(StartedFourPortsBranch, P::Execute));
+    Ok &= Connect(RequirePin(StartedFourPorts, P::ReturnValue),
+        RequirePin(StartedFourPortsBranch, P::Condition));
+    Ok &= Connect(RequirePin(StartedFourPortsBranch, P::Then),
+        RequirePin(StartedClearFired, P::Execute));
+    Ok &= Connect(RequirePin(StartedClearFired, P::Then), RequirePin(StartedArm, P::Execute));
+    Ok &= Connect(RequirePin(Input, CargoAction::Triggered),
+        RequirePin(TriggeredFourPorts, P::Execute));
+    Ok &= Connect(RequirePin(TriggeredFourPorts, P::Then),
+        RequirePin(TriggeredFourPortsBranch, P::Execute));
+    Ok &= Connect(RequirePin(TriggeredFourPorts, P::ReturnValue),
+        RequirePin(TriggeredFourPortsBranch, P::Condition));
+    Ok &= Connect(RequirePin(TriggeredFourPortsBranch, P::Then),
+        RequirePin(PlayerBranch, P::Execute));
+    UK2Node_Self* InputSelf = FinishNode(NewObject<UK2Node_Self>(Graph), Graph, 220, 220);
+    Ok &= Connect(InputSelf->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(PlayerControlled, P::FunctionTarget));
+    Ok &= Connect(InputSelf->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(HoldDuration, P::FunctionTarget));
+    Ok &= Connect(RequirePin(PlayerControlled, P::ReturnValue),
+        RequirePin(ControlledAndArmed, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(Armed->GetValuePin(),
+        RequirePin(ControlledAndArmed, BlueprintGraphNames::Pins::Binary::RightOperand));
+    Ok &= Connect(Fired->GetValuePin(),
+        RequirePin(NotFired, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(RequirePin(Input, CargoAction::ElapsedSeconds),
+        RequirePin(HeldLongEnough, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(HoldDuration->GetValuePin(),
+        RequirePin(HeldLongEnough, BlueprintGraphNames::Pins::Binary::RightOperand));
+    Ok &= Connect(RequirePin(NotFired, P::ReturnValue),
+        RequirePin(FreshAndElapsed, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(RequirePin(HeldLongEnough, P::ReturnValue),
+        RequirePin(FreshAndElapsed, BlueprintGraphNames::Pins::Binary::RightOperand));
+    Ok &= Connect(RequirePin(ControlledAndArmed, P::ReturnValue),
+        RequirePin(MayReleaseCargo, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(RequirePin(FreshAndElapsed, P::ReturnValue),
+        RequirePin(MayReleaseCargo, BlueprintGraphNames::Pins::Binary::RightOperand));
+    Ok &= Connect(RequirePin(MayReleaseCargo, P::ReturnValue),
+        RequirePin(PlayerBranch, P::Condition));
+    Ok &= Connect(InputSelf->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(Components, P::FunctionTarget));
+    Ok &= Connect(RequirePin(PlayerBranch, P::Then), RequirePin(LatchFired, P::Execute));
+    Ok &= Connect(RequirePin(LatchFired, P::Then), RequireExecInputPin(Loop));
+    Ok &= Connect(RequirePin(Components, P::ReturnValue), RequirePin(Loop, CargoAction::Array));
+    Ok &= Connect(RequirePin(Loop, P::LoopBody), RequirePin(Socket, P::Execute));
+    Ok &= Connect(RequirePin(Loop, CargoAction::ArrayElement), Socket->GetCastSourcePin());
+    Ok &= Connect(Socket->GetValidCastPin(), RequirePin(ValidBranch, P::Execute));
+    Ok &= Connect(Socket->GetCastResultPin(), RequirePin(Valid, P::Object));
+    Ok &= Connect(RequirePin(Valid, P::ReturnValue), RequirePin(ValidBranch, P::Condition));
+    Ok &= Connect(RequirePin(ValidBranch, P::Then), RequirePin(MooringBranch, P::Execute));
+    Ok &= Connect(Socket->GetCastResultPin(), RequirePin(Port, P::FunctionTarget));
+    Ok &= Connect(Port->GetValuePin(), FindInputPin(BreakPort));
+    Ok &= Connect(RequirePin(BreakPort, CargoAction::ResourceType), IsMooring->GetInput1Pin());
+    Schema->TrySetDefaultValue(*IsMooring->GetInput2Pin(),
+        MooringLayout::MooringResourceEnum);
+    Ok &= Connect(IsMooring->GetReturnValuePin(), RequirePin(MooringBranch, P::Condition));
+    Ok &= Connect(RequirePin(MooringBranch, P::Then), RequirePin(ConnectedBranch, P::Execute));
+    Ok &= Connect(Socket->GetCastResultPin(), RequirePin(Connected, P::FunctionTarget));
+    Ok &= Connect(RequirePin(Connected, P::ReturnValue), RequirePin(ConnectedBranch, P::Condition));
+    Ok &= Connect(RequirePin(ConnectedBranch, P::Then), RequirePin(Disconnect, P::Execute));
+    Ok &= Connect(Socket->GetCastResultPin(), RequirePin(Disconnect, CargoAction::Socket));
+    Ok &= Connect(RequirePin(Input, CargoAction::Completed),
+        RequirePin(CompletedClearArmed, P::Execute));
+    Ok &= Connect(RequirePin(CompletedClearArmed, P::Then),
+        RequirePin(CompletedClearFired, P::Execute));
+    Ok &= Connect(RequirePin(Input, CargoAction::Canceled),
+        RequirePin(CanceledClearArmed, P::Execute));
+    Ok &= Connect(RequirePin(CanceledClearArmed, P::Then),
+        RequirePin(CanceledClearFired, P::Execute));
+    return Ok;
+}
+
 bool AddProvidedActionsBpOverride(
     UBlueprint* Blueprint,
     UInputAction* ResetAction,
+    UInputAction* DropCargoAction,
     UClass* PitchHelperClass)
 {
     UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(
@@ -1180,7 +1863,12 @@ bool AddProvidedActionsBpOverride(
         if (UK2Node_FunctionEntry* Candidate = Cast<UK2Node_FunctionEntry>(Node)) Entry = Candidate;
         if (UK2Node_FunctionResult* Candidate = Cast<UK2Node_FunctionResult>(Node)) Result = Candidate;
     }
-    if (!Entry || !Result) return false;
+    if (!Entry || !Result || !DropCargoAction) return false;
+    FEdGraphPinType BoolType;
+    BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+    if (!FBlueprintEditorUtils::AddLocalVariable(
+            Blueprint, Graph, CargoAvailabilityLocal, BoolType, CargoAction::Disabled))
+        return false;
     UEdGraphPin* EntryThen = RequirePin(Entry, UEdGraphSchema_K2::PN_Then);
     UEdGraphPin* ResultExec = RequirePin(Result, UEdGraphSchema_K2::PN_Execute);
     UEdGraphPin* ResultValue = RequirePin(Result, PinNames::ReturnValue);
@@ -1201,6 +1889,82 @@ bool AddProvidedActionsBpOverride(
     UK2Node_CallParentFunction* Parent = NewObject<UK2Node_CallParentFunction>(Graph);
     Parent->SetFromFunction(ProvidedFunction);
     FinishNode(Parent, Graph, -900, -120);
+    UK2Node_CallFunction* FourPorts = AddCall(
+        Graph, Blueprint->GeneratedClass, GetFourPortSetting, -660, -260);
+    UK2Node_IfThenElse* FourPortsBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, -420, -120);
+
+    UK2Node_VariableSet* ClearCargoAvailable = AddLocalWrite(
+        Blueprint, Graph, CargoAvailabilityLocal, -660, -120);
+    SetDefault(ClearCargoAvailable, CargoAvailabilityLocal, CargoAction::Disabled);
+    UK2Node_Self* CargoSelf = FinishNode(NewObject<UK2Node_Self>(Graph), Graph, -660, -740);
+    UK2Node_CallFunction* CargoComponents = AddCall(
+        Graph, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetComponentsByClass),
+        -420, -740);
+    Schema->TrySetDefaultObject(*RequirePin(CargoComponents, CargoAction::ComponentClass),
+        UModuleSocketComponent::StaticClass());
+    UK2Node_MacroInstance* CargoLoop = NewObject<UK2Node_MacroInstance>(Graph);
+    CargoLoop->SetMacroGraph(StandardForEachLoop());
+    FinishNode(CargoLoop, Graph, -180, -120);
+    UK2Node_DynamicCast* CargoSocket = NewObject<UK2Node_DynamicCast>(Graph);
+    CargoSocket->TargetType = UModuleSocketComponent::StaticClass();
+    CargoSocket->SetPurity(false);
+    FinishNode(CargoSocket, Graph, 40, -120);
+    UK2Node_CallFunction* CargoValid = AddCall(
+        Graph, UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, IsValid), 260, -740);
+    UK2Node_IfThenElse* CargoValidBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 260, -120);
+    UK2Node_VariableGet* CargoPort = AddRead(
+        Graph, MooringLayout::PortProperty,
+        UModuleSocketComponent::StaticClass(), 480, -740);
+    UK2Node_BreakStruct* BreakCargoPort = NewObject<UK2Node_BreakStruct>(Graph);
+    BreakCargoPort->StructType = FModuleSocketIOData::StaticStruct();
+    BreakCargoPort->bMadeAfterOverridePinRemoval = true;
+    FinishNode(BreakCargoPort, Graph, 700, -740);
+    UK2Node_EnumEquality* CargoIsMooring = FinishNode(
+        NewObject<UK2Node_EnumEquality>(Graph), Graph, 920, -740);
+    UK2Node_IfThenElse* CargoMooringBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 1140, -120);
+    UK2Node_CallFunction* CargoConnected = AddCall(
+        Graph, UModuleSocketComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UModuleSocketComponent, IsSocketConnectedOrHasCable),
+        1360, -740);
+    UK2Node_IfThenElse* CargoConnectedBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 1360, -120);
+    UK2Node_VariableSet* SetCargoAvailable = AddLocalWrite(
+        Blueprint, Graph, CargoAvailabilityLocal, 1580, -120);
+    SetDefault(SetCargoAvailable, CargoAvailabilityLocal, ProvidedActionDefaults::Enabled);
+
+    UK2Node_Literal* CargoActionLiteral = FinishNode(
+        NewObject<UK2Node_Literal>(Graph), Graph, 40, -980);
+    CargoActionLiteral->SetObjectRef(DropCargoAction);
+    UK2Node_VariableGet* CargoDescription = AddRead(
+        Graph, CargoAction::ActionDescription, UInputAction::StaticClass(), 260, -980);
+    UK2Node_MakeStruct* CargoRecord = NewObject<UK2Node_MakeStruct>(Graph);
+    CargoRecord->StructType = FPlayerInputInterfaceAction::StaticStruct();
+    CargoRecord->bMadeAfterOverridePinRemoval = true;
+    FinishNode(CargoRecord, Graph, 480, -980);
+    Schema->TrySetDefaultObject(
+        *RequirePin(CargoRecord, PinNames::InputAction), DropCargoAction);
+    Schema->TrySetDefaultValue(*RequirePin(CargoRecord, PinNames::Name),
+        StableGyroAssetNames::DropCargoMappingName);
+    Schema->TrySetDefaultValue(*RequirePin(CargoRecord, PinNames::Category),
+        StableGyroAssetNames::VehicleInputCategory);
+    Schema->TrySetDefaultValue(*RequirePin(CargoRecord, PinNames::Type),
+        ProvidedActionDefaults::Type);
+    UK2Node_VariableGet* CargoAvailable = AddLocalRead(
+        Blueprint, Graph, CargoAvailabilityLocal, 480, -1160);
+    UK2Node_VariableGet* CargoTriggerTime = AddRead(
+        Graph, DropCargoTriggerTime, AVoyageVehicleGyroCopter::StaticClass(), 480, -1320);
+    UK2Node_Self* CargoTriggerSelf = FinishNode(
+        NewObject<UK2Node_Self>(Graph), Graph, 260, -1320);
+    UK2Node_MakeArray* CargoArray = NewObject<UK2Node_MakeArray>(Graph);
+    FinishNode(CargoArray, Graph, 700, -980);
+    UK2Node_CallArrayFunction* AppendCargo = NewObject<UK2Node_CallArrayFunction>(Graph);
+    AppendCargo->SetFromFunction(UKismetArrayLibrary::StaticClass()->FindFunctionByName(
+        GET_FUNCTION_NAME_CHECKED(UKismetArrayLibrary, Array_Append)));
+    FinishNode(AppendCargo, Graph, 920, -980);
 
     UK2Node_VariableGet* PitchHelperComponent = NewObject<UK2Node_VariableGet>(Graph);
     PitchHelperComponent->VariableReference.SetSelfMember(PitchHelperComponentName);
@@ -1276,6 +2040,70 @@ bool AddProvidedActionsBpOverride(
     bool Ok = true;
     Ok &= Schema->TryCreateConnection(EntryThen, RequirePin(Parent, UEdGraphSchema_K2::PN_Execute));
     Ok &= Schema->TryCreateConnection(RequirePin(Parent, UEdGraphSchema_K2::PN_Then),
+        RequirePin(FourPorts, UEdGraphSchema_K2::PN_Execute));
+    Ok &= Schema->TryCreateConnection(RequirePin(FourPorts, UEdGraphSchema_K2::PN_Then),
+        RequirePin(FourPortsBranch, UEdGraphSchema_K2::PN_Execute));
+    Ok &= Schema->TryCreateConnection(RequirePin(FourPorts, P::ReturnValue),
+        RequirePin(FourPortsBranch, P::Condition));
+    Ok &= Schema->TryCreateConnection(RequirePin(FourPortsBranch, P::Then),
+        RequirePin(ClearCargoAvailable, UEdGraphSchema_K2::PN_Execute));
+    Ok &= Schema->TryCreateConnection(RequirePin(FourPortsBranch, P::Else),
+        RequirePin(EnabledBranch, UEdGraphSchema_K2::PN_Execute));
+    Ok &= Schema->TryCreateConnection(CargoSelf->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(CargoComponents, P::FunctionTarget));
+    Ok &= Schema->TryCreateConnection(RequirePin(ClearCargoAvailable, P::Then),
+        RequireExecInputPin(CargoLoop));
+    Ok &= Schema->TryCreateConnection(RequirePin(CargoComponents, P::ReturnValue),
+        RequirePin(CargoLoop, CargoAction::Array));
+    Ok &= Schema->TryCreateConnection(RequirePin(CargoLoop, P::LoopBody),
+        RequirePin(CargoSocket, P::Execute));
+    Ok &= Schema->TryCreateConnection(RequirePin(CargoLoop, CargoAction::ArrayElement),
+        CargoSocket->GetCastSourcePin());
+    Ok &= Schema->TryCreateConnection(CargoSocket->GetValidCastPin(),
+        RequirePin(CargoValidBranch, P::Execute));
+    Ok &= Schema->TryCreateConnection(CargoSocket->GetCastResultPin(),
+        RequirePin(CargoValid, P::Object));
+    Ok &= Schema->TryCreateConnection(RequirePin(CargoValid, P::ReturnValue),
+        RequirePin(CargoValidBranch, P::Condition));
+    Ok &= Schema->TryCreateConnection(RequirePin(CargoValidBranch, P::Then),
+        RequirePin(CargoMooringBranch, P::Execute));
+    Ok &= Schema->TryCreateConnection(CargoSocket->GetCastResultPin(),
+        RequirePin(CargoPort, P::FunctionTarget));
+    Ok &= Schema->TryCreateConnection(CargoPort->GetValuePin(), FindInputPin(BreakCargoPort));
+    Ok &= Schema->TryCreateConnection(RequirePin(BreakCargoPort, CargoAction::ResourceType),
+        CargoIsMooring->GetInput1Pin());
+    Schema->TrySetDefaultValue(*CargoIsMooring->GetInput2Pin(),
+        MooringLayout::MooringResourceEnum);
+    Ok &= Schema->TryCreateConnection(CargoIsMooring->GetReturnValuePin(),
+        RequirePin(CargoMooringBranch, P::Condition));
+    Ok &= Schema->TryCreateConnection(RequirePin(CargoMooringBranch, P::Then),
+        RequirePin(CargoConnectedBranch, P::Execute));
+    Ok &= Schema->TryCreateConnection(CargoSocket->GetCastResultPin(),
+        RequirePin(CargoConnected, P::FunctionTarget));
+    Ok &= Schema->TryCreateConnection(RequirePin(CargoConnected, P::ReturnValue),
+        RequirePin(CargoConnectedBranch, P::Condition));
+    Ok &= Schema->TryCreateConnection(RequirePin(CargoConnectedBranch, P::Then),
+        RequirePin(SetCargoAvailable, P::Execute));
+    Ok &= Schema->TryCreateConnection(RequirePin(CargoLoop, P::Completed),
+        RequirePin(AppendCargo, P::Execute));
+    Ok &= Schema->TryCreateConnection(CargoActionLiteral->GetValuePin(),
+        RequirePin(CargoDescription, P::FunctionTarget));
+    Ok &= Schema->TryCreateConnection(RequirePin(CargoDescription, CargoAction::ActionDescription),
+        RequirePin(CargoRecord, PinNames::Text));
+    Ok &= Schema->TryCreateConnection(CargoAvailable->GetValuePin(),
+        RequirePin(CargoRecord, PinNames::Enabled));
+    Ok &= Schema->TryCreateConnection(
+        CargoTriggerSelf->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(CargoTriggerTime, P::FunctionTarget));
+    Ok &= Schema->TryCreateConnection(CargoTriggerTime->GetValuePin(),
+        RequirePin(CargoRecord, PinNames::TriggerTime));
+    Ok &= Schema->TryCreateConnection(FindOutputPin(CargoRecord),
+        RequirePin(CargoArray, PinNames::FirstArrayElement));
+    Ok &= Schema->TryCreateConnection(CargoArray->GetOutputPin(),
+        RequirePin(AppendCargo, PinNames::SourceArray));
+    Ok &= Schema->TryCreateConnection(RequirePin(Parent, PinNames::ReturnValue),
+        RequirePin(AppendCargo, PinNames::TargetArray));
+    Ok &= Schema->TryCreateConnection(RequirePin(AppendCargo, P::Then),
         RequirePin(EnabledBranch, UEdGraphSchema_K2::PN_Execute));
     Ok &= Schema->TryCreateConnection(
         RequirePin(EnabledBranch, BlueprintGraphNames::Pins::Condition),
@@ -2345,6 +3173,1264 @@ bool SaveBlueprint(
     Args.SaveFlags = SAVE_NoError;
     return UPackage::SavePackage(Package, Blueprint, *Filename, Args);
 }
+
+bool ValidateReflectedOrdinals(
+    const UStruct* Owner,
+    const TArray<FName>& ExpectedNames)
+{
+    TArray<FName> ActualNames;
+    for (TFieldIterator<FProperty> Property(Owner, EFieldIteratorFlags::ExcludeSuper);
+        Property; ++Property)
+    {
+        for (int32 ArrayIndex = 0; ArrayIndex < Property->ArrayDim; ++ArrayIndex)
+        {
+            ActualNames.Add(Property->GetFName());
+        }
+    }
+    if (ActualNames != ExpectedNames)
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Reflected ordinal mismatch for %s: expected %d entries, found %d"),
+            *Owner->GetPathName(), ExpectedNames.Num(), ActualNames.Num());
+        return false;
+    }
+    return true;
+}
+
+bool ValidateMooringSerializationContracts()
+{
+    namespace Fields = MooringSerializationFields;
+    const TArray<FName> SocketProperties = {
+        Fields::ItemTransferTimer, Fields::SocketId, Fields::LeakMultiplier,
+        Fields::AddModuleRequirement, Fields::CustomRequirement,
+        Fields::AutoInitialize, MooringLayout::PortProperty, Fields::AcceptsSignals,
+        Fields::OwningModule, Fields::Standalone, Fields::IsVirtual,
+        Fields::IsVirtualGrouped, Fields::IsVirtualShareToGroup,
+        Fields::ConnectSound, Fields::DisconnectSound, Fields::SwitchDirectionSound,
+        Fields::SocketConnectionChanged, Fields::ResourcesTransferredLastFrame,
+        Fields::ResourcesTransferredLastFrameAbsolute,
+        Fields::ResourcesTransferredLastFrameType, Fields::ResourceTransferPerSecond,
+        Fields::IntegratedCable, Fields::IntegratedCableLength,
+        Fields::IntegratedCablePlaceholderMesh, Fields::ConnectedToSocket,
+        Fields::ModuleOwner, Fields::ModuleOwnerOriginal, Fields::ConnectionCable,
+        Fields::SocketCollisionBox, Fields::NiagaraFx, Fields::NiagaraFxLeak,
+        Fields::NiagaraFxLeakSystem, Fields::NiagaraFxSystem,
+        Fields::ConnectedSocketsCache, Fields::ConnectedSocketsCache,
+        Fields::ConnectedSocketsCache
+    };
+    const TArray<FName> ViewProperties = {
+        Fields::Socket, Fields::Mesh, Fields::DataAsset, Fields::MultiplyScale
+    };
+    const TArray<FName> PortProperties = {
+        Fields::Type, CargoAction::ResourceType, Fields::Bandwidth,
+        Fields::IgnoreCableBandwidth, Fields::DefaultDirection,
+        Fields::BalanceResourceLevels, Fields::MatchByResourceCategory,
+        Fields::ResourceCategory, Fields::AdditionalAcceptedResourceTypes
+    };
+    return ValidateReflectedOrdinals(UModuleSocketComponent::StaticClass(), SocketProperties) &&
+        ValidateReflectedOrdinals(UVoyageModuleSocketViewComponent::StaticClass(), ViewProperties) &&
+        ValidateReflectedOrdinals(FModuleSocketIOData::StaticStruct(), PortProperties);
+}
+
+UVoyageItemCable* CreateHookCableReferenceStub()
+{
+    if (FPackageName::DoesPackageExist(HookCablePackage))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Hook Cable source stub already exists"));
+        return nullptr;
+    }
+    UPackage* Package = CreatePackage(HookCablePackage);
+    UVoyageItemCable* Cable = NewObject<UVoyageItemCable>(
+        Package, MooringLayout::HookCableAssetName, RF_Public | RF_Standalone);
+    if (!Cable) return nullptr;
+    Package->MarkPackageDirty();
+    const FString Filename = FPackageName::LongPackageNameToFilename(
+        Package->GetName(), FPackageName::GetAssetPackageExtension());
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(Filename), true);
+    FSavePackageArgs Args;
+    Args.TopLevelFlags = RF_Public | RF_Standalone;
+    Args.SaveFlags = SAVE_NoError;
+    return UPackage::SavePackage(Package, Cable, *Filename, Args) ? Cable : nullptr;
+}
+
+bool AddRearMooringSocket(
+    UBlueprint* Blueprint,
+    const FName ComponentName,
+    const uint32 SocketId,
+    const FVector& Location,
+    const FRotator& Rotation,
+    UVoyageItemCable* HookCable)
+{
+    auto* Socket = NewObject<UVoyageModuleSocketViewComponent>(
+        Blueprint->GeneratedClass, ComponentName, RF_ArchetypeObject | RF_Public);
+    if (!Socket) return false;
+
+    Socket->SetRelativeLocationAndRotation(Location, Rotation);
+    Socket->SetAbsolute(false, false, true);
+    Socket->DataAsset = TSoftObjectPtr<UObject>(FSoftObjectPath(MooringSocketDataPath));
+    Socket->SocketID = SocketId;
+    Socket->bAutoInitialize = false;
+    Socket->Port.Type = EModuleSocketType::ST_Any;
+    Socket->Port.ResourceType = EModuleResourceType::Mooring;
+    Socket->Port.ResourceCategory = EModuleResourceCategory::Mooring;
+    Socket->ConnectSound = TSoftObjectPtr<UObject>(FSoftObjectPath(CableConnectSoundPath));
+    Socket->DisconnectSound = TSoftObjectPtr<UObject>(FSoftObjectPath(CableDisconnectSoundPath));
+    Socket->SwitchDirectionSound = TSoftObjectPtr<UObject>(
+        FSoftObjectPath(SwitchDirectionSoundPath));
+    Socket->IntegratedCable = HookCable;
+    Socket->IntegratedCableLength = MooringLayout::IntegratedCableLength;
+    Blueprint->ComponentTemplates.Add(Socket);
+    return true;
+}
+
+UMaterialInstanceConstant* CreateMooringMaterialReferenceStub()
+{
+    if (FPackageName::DoesPackageExist(MooringMaterialPackage)) return nullptr;
+    UPackage* Package = CreatePackage(MooringMaterialPackage);
+    auto* Material = NewObject<UMaterialInstanceConstant>(
+        Package, MooringLayout::MaterialAssetName, RF_Public | RF_Standalone);
+    if (!Material || Material->GetPathName() != MooringMaterialObjectPath) return nullptr;
+    Package->MarkPackageDirty();
+    const FString Filename = FPackageName::LongPackageNameToFilename(
+        Package->GetName(), FPackageName::GetAssetPackageExtension());
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(Filename), true);
+    FSavePackageArgs Args;
+    Args.TopLevelFlags = RF_Public | RF_Standalone;
+    Args.SaveFlags = SAVE_NoError;
+    return UPackage::SavePackage(Package, Material, *Filename, Args) ? Material : nullptr;
+}
+
+UStaticMesh* ImportMooringHalf(
+    const FString& Source,
+    const TCHAR* ExpectedPackage,
+    UMaterialInterface* StockMaterial,
+    const int32 ExpectedTriangles)
+{
+    if (!FPaths::FileExists(Source) || FPackageName::DoesPackageExist(ExpectedPackage)) return nullptr;
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) return nullptr;
+    TArray<UObject*> Imported;
+    FImportAssetParameters Parameters;
+    Parameters.bIsAutomated = true;
+    Parameters.bReplaceExisting = false;
+    Parameters.ImportLevel = World->PersistentLevel;
+    Parameters.OnAssetDoneNative.BindLambda([&Imported](UObject* Asset) { Imported.Add(Asset); });
+    auto& Manager = UInterchangeManager::GetInterchangeManager();
+    if (!Manager.ImportScene(MooringLayout::ImportDestination,
+        UInterchangeManager::CreateSourceData(Source), Parameters)) return nullptr;
+    TArray<UStaticMesh*> Meshes;
+    for (UObject* Asset : Imported)
+    {
+        if (auto* Mesh = Cast<UStaticMesh>(Asset)) Meshes.AddUnique(Mesh);
+    }
+    if (Meshes.Num() != 1)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Expected one imported mooring mesh, found %d"), Meshes.Num());
+        return nullptr;
+    }
+    UStaticMesh* Mesh = Meshes[0];
+    if (Mesh->GetOutermost()->GetName() != ExpectedPackage ||
+        Mesh->GetNumUVChannels(0) < 4 || !Mesh->GetMeshDescription(0))
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Mooring mesh contract: package=%s expected=%s uv=%d description=%d"),
+            *Mesh->GetOutermost()->GetName(), ExpectedPackage, Mesh->GetNumUVChannels(0),
+            Mesh->GetMeshDescription(0) ? 1 : 0);
+        return nullptr;
+    }
+    const FMeshDescription* Description = Mesh->GetMeshDescription(0);
+    if (Description->Triangles().Num() != ExpectedTriangles)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Mooring triangle count %d expected %d"),
+            Description->Triangles().Num(), ExpectedTriangles);
+        return nullptr;
+    }
+    FMeshBuildSettings& BuildSettings = Mesh->GetSourceModel(0).BuildSettings;
+    BuildSettings.bGenerateLightmapUVs = false;
+    BuildSettings.bRemoveDegenerates = false;
+    BuildSettings.bRecomputeNormals = false;
+    BuildSettings.bRecomputeTangents = true;
+    Mesh->GetNaniteSettings().bEnabled = false;
+    Mesh->Build(false);
+    if (Mesh->GetNaniteSettings().bEnabled ||
+        Mesh->GetNumTriangles(0) != MooringLayout::RuntimeTriangleCountPerSide ||
+        Mesh->GetNumUVChannels(0) < 4)
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("Mooring runtime mesh contract: package=%s triangles=%d expected=%d uv=%d nanite=%d"),
+            *Mesh->GetOutermost()->GetName(), Mesh->GetNumTriangles(0),
+            MooringLayout::RuntimeTriangleCountPerSide, Mesh->GetNumUVChannels(0),
+            Mesh->GetNaniteSettings().bEnabled ? 1 : 0);
+        return nullptr;
+    }
+    Mesh->GetStaticMaterials().Reset();
+    Mesh->GetStaticMaterials().Add(FStaticMaterial(
+        StockMaterial, MooringLayout::MaterialSlotName, MooringLayout::MaterialSlotName));
+    if (!Mesh->GetBodySetup()) Mesh->CreateBodySetup();
+    Mesh->GetBodySetup()->RemoveSimpleCollision();
+    Mesh->GetBodySetup()->CollisionTraceFlag = CTF_UseDefault;
+    Mesh->MarkPackageDirty();
+    const FString Filename = FPackageName::LongPackageNameToFilename(
+        Mesh->GetOutermost()->GetName(), FPackageName::GetAssetPackageExtension());
+    FSavePackageArgs Args;
+    Args.TopLevelFlags = RF_Public | RF_Standalone;
+    Args.SaveFlags = SAVE_NoError;
+    return UPackage::SavePackage(Mesh->GetOutermost(), Mesh, *Filename, Args) ? Mesh : nullptr;
+}
+
+bool AddMooringPlate(
+    UBlueprint* Blueprint,
+    const FName ComponentName,
+    UStaticMesh* Mesh,
+    UMaterialInterface* Material,
+    const FVector& Location)
+{
+    auto* Component = NewObject<UStaticMeshComponent>(
+        Blueprint->GeneratedClass, ComponentName, RF_ArchetypeObject | RF_Public);
+    if (!Component) return false;
+    Component->SetStaticMesh(Mesh);
+    Component->SetMaterial(0, Material);
+    Component->SetRelativeLocation(Location);
+    Component->SetRelativeRotation(FRotator::ZeroRotator);
+    Component->SetRelativeScale3D(FVector::OneVector);
+    Component->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+    Component->SetGenerateOverlapEvents(false);
+    Component->SetMobility(EComponentMobility::Movable);
+    Blueprint->ComponentTemplates.Add(Component);
+    return true;
+}
+
+bool AddDisabledMooringState(UBlueprint* Blueprint)
+{
+    FEdGraphPinType SocketType;
+    SocketType.PinCategory = UEdGraphSchema_K2::PC_Object;
+    SocketType.PinSubCategoryObject = UVoyageModuleSocketViewComponent::StaticClass();
+    FEdGraphPinType BoolType;
+    BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+    if (!FBlueprintEditorUtils::AddMemberVariable(
+            Blueprint, CachedRearLeftMooringSocket, SocketType) ||
+        !FBlueprintEditorUtils::AddMemberVariable(
+            Blueprint, CachedRearRightMooringSocket, SocketType) ||
+        !FBlueprintEditorUtils::AddMemberVariable(
+            Blueprint, DisabledMooringCleanupQueued, BoolType, CargoAction::Disabled))
+        return false;
+    for (const FName Field : {
+        CachedRearLeftMooringSocket, CachedRearRightMooringSocket,
+        DisabledMooringCleanupQueued})
+    {
+        FBPVariableDescription* Variable = Blueprint->NewVariables.FindByPredicate(
+            [&Field](const FBPVariableDescription& Candidate)
+            {
+                return Candidate.VarName == Field;
+            });
+        if (!Variable) return false;
+        Variable->PropertyFlags |= CPF_Transient;
+    }
+    return true;
+}
+
+bool AddDisableOwnedMooringObject(UBlueprint* Blueprint)
+{
+    UEdGraph* Graph = nullptr;
+    UK2Node_FunctionEntry* Entry = AddVoidFunction(
+        Blueprint, DisableOwnedMooringObjectFunction, Graph);
+    if (!Entry) return false;
+    FEdGraphPinType ObjectType;
+    ObjectType.PinCategory = UEdGraphSchema_K2::PC_Object;
+    ObjectType.PinSubCategoryObject = UObject::StaticClass();
+    if (!Entry->CreateUserDefinedPin(
+            MooringLayout::TargetObject, ObjectType, EGPD_Output)) return false;
+
+    auto* Component = NewObject<UK2Node_DynamicCast>(Graph);
+    Component->TargetType = UActorComponent::StaticClass();
+    Component->SetPurity(false);
+    FinishNode(Component, Graph, 220, 0);
+    auto* Owner = AddCall(Graph, UActorComponent::StaticClass(),
+        FName(TEXT("GetOwner")), 450, 180);
+    auto* Self = FinishNode(NewObject<UK2Node_Self>(Graph), Graph, 450, 360);
+    auto* IsOwned = AddCall(Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, EqualEqual_ObjectObject), 680, 180);
+    auto* OwnedBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 910, 0);
+    auto* Deactivate = AddCall(Graph, UActorComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UActorComponent, Deactivate), 1140, 0);
+    auto* Scene = NewObject<UK2Node_DynamicCast>(Graph);
+    Scene->TargetType = USceneComponent::StaticClass();
+    Scene->SetPurity(false);
+    FinishNode(Scene, Graph, 1370, 0);
+    auto* HideVisibility = AddCall(Graph, USceneComponent::StaticClass(),
+        MooringLayout::SetVisibilityFunction, 1600, 0);
+    SetDefault(HideVisibility, MooringLayout::NewVisibility, CargoAction::Disabled);
+    SetDefault(HideVisibility, MooringLayout::PropagateVisibilityToChildren,
+        CargoAction::Disabled);
+    auto* HideInGame = AddCall(Graph, USceneComponent::StaticClass(),
+        MooringLayout::SetHiddenInGameFunction, 1830, 0);
+    SetDefault(HideInGame, MooringLayout::NewHidden, CargoAction::Enabled);
+    SetDefault(HideInGame, MooringLayout::PropagateVisibilityToChildren,
+        CargoAction::Disabled);
+    auto* Primitive = NewObject<UK2Node_DynamicCast>(Graph);
+    Primitive->TargetType = UPrimitiveComponent::StaticClass();
+    Primitive->SetPurity(false);
+    FinishNode(Primitive, Graph, 2060, 0);
+    auto* NoCollision = AddCall(Graph, UPrimitiveComponent::StaticClass(),
+        MooringLayout::SetCollisionEnabledFunction, 2290, 0);
+    SetDefault(NoCollision, MooringLayout::CollisionEnabledType, TEXT("NoCollision"));
+    auto* NoOverlap = AddCall(Graph, UPrimitiveComponent::StaticClass(),
+        MooringLayout::SetGenerateOverlapEventsFunction, 2520, 0);
+    SetDefault(NoOverlap, MooringLayout::GenerateOverlapEvents, CargoAction::Disabled);
+
+    bool Ok = true;
+    Ok &= Connect(RequirePin(Entry, P::Then), RequirePin(Component, P::Execute));
+    Ok &= Connect(RequirePin(Entry, MooringLayout::TargetObject),
+        Component->GetCastSourcePin());
+    Ok &= Connect(Component->GetValidCastPin(), RequirePin(OwnedBranch, P::Execute));
+    Ok &= Connect(Component->GetCastResultPin(), RequirePin(Owner, P::FunctionTarget));
+    Ok &= Connect(RequirePin(Owner, P::ReturnValue),
+        RequirePin(IsOwned, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(IsOwned, BlueprintGraphNames::Pins::Binary::RightOperand));
+    Ok &= Connect(RequirePin(IsOwned, P::ReturnValue), RequirePin(OwnedBranch, P::Condition));
+    Ok &= Connect(RequirePin(OwnedBranch, P::Then), RequirePin(Deactivate, P::Execute));
+    Ok &= Connect(Component->GetCastResultPin(), RequirePin(Deactivate, P::FunctionTarget));
+    Ok &= Connect(RequirePin(Deactivate, P::Then), RequirePin(Scene, P::Execute));
+    Ok &= Connect(Component->GetCastResultPin(), Scene->GetCastSourcePin());
+    Ok &= Connect(Scene->GetValidCastPin(), RequirePin(HideVisibility, P::Execute));
+    Ok &= Connect(Scene->GetCastResultPin(), RequirePin(HideVisibility, P::FunctionTarget));
+    Ok &= Connect(RequirePin(HideVisibility, P::Then), RequirePin(HideInGame, P::Execute));
+    Ok &= Connect(Scene->GetCastResultPin(), RequirePin(HideInGame, P::FunctionTarget));
+    Ok &= Connect(RequirePin(HideInGame, P::Then), RequirePin(Primitive, P::Execute));
+    Ok &= Connect(Scene->GetCastResultPin(), Primitive->GetCastSourcePin());
+    Ok &= Connect(Primitive->GetValidCastPin(), RequirePin(NoCollision, P::Execute));
+    Ok &= Connect(Primitive->GetCastResultPin(), RequirePin(NoCollision, P::FunctionTarget));
+    Ok &= Connect(RequirePin(NoCollision, P::Then), RequirePin(NoOverlap, P::Execute));
+    Ok &= Connect(Primitive->GetCastResultPin(), RequirePin(NoOverlap, P::FunctionTarget));
+    return Ok;
+}
+
+bool AddRunDisabledMooringCleanup(UBlueprint* Blueprint)
+{
+    UFunction* Disable = Blueprint->GeneratedClass
+        ? Blueprint->GeneratedClass->FindFunctionByName(DisableOwnedMooringObjectFunction)
+        : nullptr;
+    if (!Disable) return false;
+    UEdGraph* Graph = nullptr;
+    UK2Node_FunctionEntry* Entry = AddVoidFunction(
+        Blueprint, RunDisabledMooringCleanupFunction, Graph);
+    if (!Entry) return false;
+    auto* CleanupSequence = FinishNode(
+        NewObject<UK2Node_ExecutionSequence>(Graph), Graph, 220, 0);
+    auto* ClearQueued = AddWrite(Graph, DisabledMooringCleanupQueued, 1140, 1980);
+    SetDefault(ClearQueued, DisabledMooringCleanupQueued, CargoAction::Disabled);
+    auto* FourPorts = AddCall(
+        Graph, Blueprint->GeneratedClass, GetFourPortSetting, 450, 0);
+    auto* DisabledBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 680, 0);
+    auto* SocketSequence = FinishNode(
+        NewObject<UK2Node_ExecutionSequence>(Graph), Graph, 910, 0);
+
+    bool Ok = true;
+    Ok &= Connect(RequirePin(Entry, P::Then), RequirePin(CleanupSequence, P::Execute));
+    Ok &= Connect(CleanupSequence->GetThenPinGivenIndex(0), RequirePin(FourPorts, P::Execute));
+    Ok &= Connect(CleanupSequence->GetThenPinGivenIndex(1), RequirePin(ClearQueued, P::Execute));
+    Ok &= Connect(RequirePin(FourPorts, P::Then), RequirePin(DisabledBranch, P::Execute));
+    Ok &= Connect(RequirePin(FourPorts, P::ReturnValue), RequirePin(DisabledBranch, P::Condition));
+    Ok &= Connect(RequirePin(DisabledBranch, P::Else), RequirePin(SocketSequence, P::Execute));
+
+    const TArray<FName> SocketFields = {
+        CachedRearLeftMooringSocket, CachedRearRightMooringSocket};
+    int32 SocketIndex = 0;
+    for (const FName SocketField : SocketFields)
+    {
+        const int32 Y = SocketIndex * 900;
+        auto* Socket = AddRead(Graph, SocketField, nullptr, 1140, Y + 180);
+        auto* Valid = AddCall(Graph, UKismetSystemLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, IsValid), 1140, Y);
+        auto* ValidBranch = FinishNode(
+            NewObject<UK2Node_IfThenElse>(Graph), Graph, 1370, Y);
+        auto* Disconnect = AddCall(
+            Graph, UVoyageMiscBlueprintFunctionLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(
+                UVoyageMiscBlueprintFunctionLibrary, DisconnectCableFromSocket), 1600, Y);
+        SetDefault(Disconnect, CargoAction::Destroy, CargoAction::DestroyCable);
+        auto* DisableSocket = AddCall(
+            Graph, Blueprint->GeneratedClass, DisableOwnedMooringObjectFunction, 1830, Y);
+        auto* GetChildren = AddCall(Graph, USceneComponent::StaticClass(),
+            MooringLayout::GetChildrenComponentsFunction, 2060, Y);
+        SetDefault(GetChildren, MooringLayout::IncludeAllDescendants, CargoAction::Enabled);
+        auto* ChildLoop = NewObject<UK2Node_MacroInstance>(Graph);
+        ChildLoop->SetMacroGraph(StandardForEachLoop());
+        FinishNode(ChildLoop, Graph, 2290, Y);
+        auto* DisableChild = AddCall(
+            Graph, Blueprint->GeneratedClass, DisableOwnedMooringObjectFunction, 2520, Y);
+
+        Ok &= Connect(SocketSequence->GetThenPinGivenIndex(SocketIndex),
+            RequirePin(ValidBranch, P::Execute));
+        Ok &= Connect(RequirePin(Socket, SocketField), RequirePin(Valid, P::Object));
+        Ok &= Connect(RequirePin(Valid, P::ReturnValue), RequirePin(ValidBranch, P::Condition));
+        Ok &= Connect(RequirePin(ValidBranch, P::Then), RequirePin(Disconnect, P::Execute));
+        Ok &= Connect(RequirePin(Socket, SocketField), RequirePin(Disconnect, CargoAction::Socket));
+        Ok &= Connect(RequirePin(Disconnect, P::Then), RequirePin(DisableSocket, P::Execute));
+        Ok &= Connect(RequirePin(Socket, SocketField),
+            RequirePin(DisableSocket, MooringLayout::TargetObject));
+        Ok &= Connect(RequirePin(DisableSocket, P::Then), RequireExecInputPin(ChildLoop));
+        Ok &= Connect(RequirePin(Socket, SocketField), RequirePin(GetChildren, P::FunctionTarget));
+        Ok &= Connect(RequirePin(GetChildren, MooringLayout::Children),
+            RequirePin(ChildLoop, CargoAction::Array));
+        Ok &= Connect(RequirePin(ChildLoop, P::LoopBody), RequirePin(DisableChild, P::Execute));
+        Ok &= Connect(RequirePin(ChildLoop, CargoAction::ArrayElement),
+            RequirePin(DisableChild, MooringLayout::TargetObject));
+
+        UEdGraphPin* Tail = RequirePin(ChildLoop, P::Completed);
+        for (const FName ObjectField : {
+            MooringSerializationFields::Socket, MooringSerializationFields::Mesh,
+            MooringSerializationFields::SocketCollisionBox,
+            MooringSerializationFields::IntegratedCablePlaceholderMesh})
+        {
+            UClass* OwnerClass =
+                (ObjectField == MooringSerializationFields::Socket ||
+                 ObjectField == MooringSerializationFields::Mesh)
+                    ? UVoyageModuleSocketViewComponent::StaticClass()
+                    : UModuleSocketComponent::StaticClass();
+            auto* Object = AddRead(Graph, ObjectField, OwnerClass, 2750, Y + 180);
+            auto* DisableObject = AddCall(
+                Graph, Blueprint->GeneratedClass, DisableOwnedMooringObjectFunction, 2980, Y);
+            Ok &= Connect(RequirePin(Socket, SocketField),
+                RequirePin(Object, P::FunctionTarget));
+            Ok &= Connect(Tail, RequirePin(DisableObject, P::Execute));
+            Ok &= Connect(RequirePin(Object, ObjectField),
+                RequirePin(DisableObject, MooringLayout::TargetObject));
+            Tail = RequirePin(DisableObject, P::Then);
+        }
+        ++SocketIndex;
+    }
+    return Ok;
+}
+
+bool AddQueueDisabledMooringCleanup(UBlueprint* Blueprint)
+{
+    UEdGraph* Graph = nullptr;
+    UK2Node_FunctionEntry* Entry = AddVoidFunction(
+        Blueprint, QueueDisabledMooringCleanupFunction, Graph);
+    if (!Entry) return false;
+    auto* FourPorts = AddCall(Graph, Blueprint->GeneratedClass, GetFourPortSetting, 220, 0);
+    auto* DisabledBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 450, 0);
+    auto* Queued = AddRead(Graph, DisabledMooringCleanupQueued, nullptr, 680, 180);
+    auto* QueuedBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 680, 0);
+    auto* MarkQueued = AddWrite(Graph, DisabledMooringCleanupQueued, 910, 0);
+    SetDefault(MarkQueued, DisabledMooringCleanupQueued, CargoAction::Enabled);
+    auto* Self = FinishNode(NewObject<UK2Node_Self>(Graph), Graph, 1140, 180);
+    auto* Timer = AddCall(Graph, UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, K2_SetTimerForNextTick), 1140, 0);
+    SetDefault(Timer, MooringLayout::TimerFunctionName,
+        *RunDisabledMooringCleanupFunction.ToString());
+
+    bool Ok = true;
+    Ok &= Connect(RequirePin(Entry, P::Then), RequirePin(FourPorts, P::Execute));
+    Ok &= Connect(RequirePin(FourPorts, P::Then), RequirePin(DisabledBranch, P::Execute));
+    Ok &= Connect(RequirePin(FourPorts, P::ReturnValue), RequirePin(DisabledBranch, P::Condition));
+    Ok &= Connect(RequirePin(DisabledBranch, P::Else), RequirePin(QueuedBranch, P::Execute));
+    Ok &= Connect(RequirePin(Queued, DisabledMooringCleanupQueued),
+        RequirePin(QueuedBranch, P::Condition));
+    Ok &= Connect(RequirePin(QueuedBranch, P::Else), RequirePin(MarkQueued, P::Execute));
+    Ok &= Connect(RequirePin(MarkQueued, P::Then), RequirePin(Timer, P::Execute));
+    Ok &= Connect(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(Timer, MooringLayout::TimerObject));
+    return Ok;
+}
+
+bool AddDisabledMooringConnectionCallback(UBlueprint* Blueprint)
+{
+    FMulticastDelegateProperty* DelegateProperty = SocketConnectionDelegateProperty();
+    UFunction* Queue = Blueprint->GeneratedClass
+        ? Blueprint->GeneratedClass->FindFunctionByName(QueueDisabledMooringCleanupFunction)
+        : nullptr;
+    if (!DelegateProperty || !Queue) return false;
+    UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(
+        Blueprint, DisabledMooringConnectionCallback, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(
+        Blueprint, Graph, true, DelegateProperty->SignatureFunction.Get());
+    UK2Node_FunctionEntry* Entry = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node)) Entry = Candidate;
+    if (!Entry) return false;
+    RequirePin(Entry, P::Then)->BreakAllPinLinks();
+    auto* QueueCall = AddCall(
+        Graph, Blueprint->GeneratedClass, QueueDisabledMooringCleanupFunction, 220, 0);
+    return Connect(RequirePin(Entry, P::Then), RequirePin(QueueCall, P::Execute));
+}
+
+bool AddDisabledMooringBeginPlayBinding(UBlueprint* Blueprint)
+{
+    FMulticastDelegateProperty* DelegateProperty = SocketConnectionDelegateProperty();
+    if (!DelegateProperty || !Blueprint->GeneratedClass ||
+        !Blueprint->GeneratedClass->FindFunctionByName(DisabledMooringConnectionCallback) ||
+        !Blueprint->GeneratedClass->FindFunctionByName(QueueDisabledMooringCleanupFunction))
+        return false;
+    UEdGraph* Graph = FBlueprintEditorUtils::FindEventGraph(Blueprint);
+    if (!Graph) return false;
+    UK2Node_Event* BeginPlay = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        auto* Event = Cast<UK2Node_Event>(Node);
+        if (Event && Event->EventReference.GetMemberName() ==
+            BlueprintGraphNames::Events::ActorReceiveBeginPlay) BeginPlay = Event;
+    }
+    if (!BeginPlay) return false;
+    UEdGraphPin* BeginTail = RequirePin(BeginPlay, P::Then);
+    if (BeginTail->LinkedTo.Num() != 1) return false;
+    UEdGraphPin* ExistingWork = BeginTail->LinkedTo[0];
+    BeginTail->BreakAllPinLinks();
+
+    auto* BeginSequence = FinishNode(
+        NewObject<UK2Node_ExecutionSequence>(Graph), Graph, 100, -1560);
+    auto* FourPorts = AddCall(
+        Graph, Blueprint->GeneratedClass, GetFourPortSetting, 220, -1560);
+    auto* DisabledBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 450, -1560);
+    auto* Self = FinishNode(NewObject<UK2Node_Self>(Graph), Graph, 450, -1340);
+    auto* Components = AddCall(
+        Graph, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetComponentsByClass),
+        680, -1560);
+    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultObject(
+        *RequirePin(Components, CargoAction::ComponentClass),
+        UVoyageModuleSocketViewComponent::StaticClass());
+    auto* Loop = NewObject<UK2Node_MacroInstance>(Graph);
+    Loop->SetMacroGraph(StandardForEachLoop());
+    FinishNode(Loop, Graph, 910, -1560);
+    auto* Socket = NewObject<UK2Node_DynamicCast>(Graph);
+    Socket->TargetType = UVoyageModuleSocketViewComponent::StaticClass();
+    Socket->SetPurity(false);
+    FinishNode(Socket, Graph, 1140, -1560);
+    auto* ObjectName = AddCall(
+        Graph, UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, GetObjectName), 1370, -1340);
+    auto* IsLeft = AddCall(
+        Graph, UKismetStringLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr), 1600, -1340);
+    SetDefault(IsLeft, BlueprintGraphNames::Pins::Binary::RightOperand,
+        *RearLeftMooringComponentName.ToString());
+    auto* LeftBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 1830, -1560);
+    auto* StoreLeft = AddWrite(Graph, CachedRearLeftMooringSocket, 2060, -1680);
+    auto* IsRight = AddCall(
+        Graph, UKismetStringLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr), 2060, -1340);
+    SetDefault(IsRight, BlueprintGraphNames::Pins::Binary::RightOperand,
+        *RearRightMooringComponentName.ToString());
+    auto* RightBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 2290, -1440);
+    auto* StoreRight = AddWrite(Graph, CachedRearRightMooringSocket, 2520, -1440);
+    auto* BindSequence = FinishNode(
+        NewObject<UK2Node_ExecutionSequence>(Graph), Graph, 1140, -1080);
+    auto* Callback = FinishNode(
+        NewObject<UK2Node_CreateDelegate>(Graph), Graph, 1370, -860);
+    Callback->SetFunction(DisabledMooringConnectionCallback);
+
+    bool Ok = true;
+    Ok &= Connect(BeginTail, RequirePin(BeginSequence, P::Execute));
+    Ok &= Connect(BeginSequence->GetThenPinGivenIndex(0), ExistingWork);
+    Ok &= Connect(BeginSequence->GetThenPinGivenIndex(1), RequirePin(FourPorts, P::Execute));
+    Ok &= Connect(RequirePin(FourPorts, P::Then), RequirePin(DisabledBranch, P::Execute));
+    Ok &= Connect(RequirePin(FourPorts, P::ReturnValue), RequirePin(DisabledBranch, P::Condition));
+    Ok &= Connect(RequirePin(DisabledBranch, P::Else), RequireExecInputPin(Loop));
+    Ok &= Connect(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(Components, P::FunctionTarget));
+    Ok &= Connect(RequirePin(Components, P::ReturnValue), RequirePin(Loop, CargoAction::Array));
+    Ok &= Connect(RequirePin(Loop, P::LoopBody), RequirePin(Socket, P::Execute));
+    Ok &= Connect(RequirePin(Loop, CargoAction::ArrayElement), Socket->GetCastSourcePin());
+    Ok &= Connect(Socket->GetValidCastPin(), RequirePin(LeftBranch, P::Execute));
+    Ok &= Connect(Socket->GetCastResultPin(), RequirePin(ObjectName, P::Object));
+    Ok &= Connect(RequirePin(ObjectName, P::ReturnValue),
+        RequirePin(IsLeft, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(RequirePin(IsLeft, P::ReturnValue), RequirePin(LeftBranch, P::Condition));
+    Ok &= Connect(RequirePin(LeftBranch, P::Then), RequirePin(StoreLeft, P::Execute));
+    Ok &= Connect(Socket->GetCastResultPin(), RequirePin(StoreLeft, CachedRearLeftMooringSocket));
+    Ok &= Connect(RequirePin(LeftBranch, P::Else), RequirePin(RightBranch, P::Execute));
+    Ok &= Connect(RequirePin(ObjectName, P::ReturnValue),
+        RequirePin(IsRight, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(RequirePin(IsRight, P::ReturnValue), RequirePin(RightBranch, P::Condition));
+    Ok &= Connect(RequirePin(RightBranch, P::Then), RequirePin(StoreRight, P::Execute));
+    Ok &= Connect(Socket->GetCastResultPin(), RequirePin(StoreRight, CachedRearRightMooringSocket));
+    Ok &= Connect(RequirePin(Loop, P::Completed), RequirePin(BindSequence, P::Execute));
+
+    const TArray<FName> SocketFields = {
+        CachedRearLeftMooringSocket, CachedRearRightMooringSocket};
+    int32 BindIndex = 0;
+    for (const FName SocketField : SocketFields)
+    {
+        const int32 Y = -1080 + BindIndex * 300;
+        auto* Cached = AddRead(Graph, SocketField, nullptr, 1370, Y);
+        auto* Valid = AddCall(Graph, UKismetSystemLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, IsValid), 1600, Y - 120);
+        auto* ValidBranch = FinishNode(
+            NewObject<UK2Node_IfThenElse>(Graph), Graph, 1830, Y);
+        auto* Remove = NewObject<UK2Node_RemoveDelegate>(Graph);
+        Remove->SetFromProperty(DelegateProperty, false, UModuleSocketComponent::StaticClass());
+        FinishNode(Remove, Graph, 2060, Y);
+        auto* Add = NewObject<UK2Node_AddDelegate>(Graph);
+        Add->SetFromProperty(DelegateProperty, false, UModuleSocketComponent::StaticClass());
+        FinishNode(Add, Graph, 2290, Y);
+        Ok &= Connect(BindSequence->GetThenPinGivenIndex(BindIndex),
+            RequirePin(ValidBranch, P::Execute));
+        Ok &= Connect(RequirePin(Cached, SocketField), RequirePin(Valid, P::Object));
+        Ok &= Connect(RequirePin(Valid, P::ReturnValue), RequirePin(ValidBranch, P::Condition));
+        Ok &= Connect(RequirePin(ValidBranch, P::Then), RequirePin(Remove, P::Execute));
+        Ok &= Connect(RequirePin(Cached, SocketField), RequirePin(Remove, P::FunctionTarget));
+        Ok &= Connect(Callback->GetDelegateOutPin(), Remove->GetDelegatePin());
+        Ok &= Connect(RequirePin(Remove, P::Then), RequirePin(Add, P::Execute));
+        Ok &= Connect(RequirePin(Cached, SocketField), RequirePin(Add, P::FunctionTarget));
+        Ok &= Connect(Callback->GetDelegateOutPin(), Add->GetDelegatePin());
+        ++BindIndex;
+    }
+    BindSequence->AddInputPin();
+    auto* Queue = AddCall(
+        Graph, Blueprint->GeneratedClass, QueueDisabledMooringCleanupFunction, 1370, -480);
+    Ok &= Connect(BindSequence->GetThenPinGivenIndex(2), RequirePin(Queue, P::Execute));
+    return Ok;
+}
+
+bool AddMooringLayoutConstruction(UBlueprint* Blueprint)
+{
+    UEdGraph* Graph = FBlueprintEditorUtils::FindUserConstructionScript(Blueprint);
+    if (!Graph) return false;
+    UK2Node_FunctionEntry* Entry = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+        if (auto* Candidate = Cast<UK2Node_FunctionEntry>(Node)) Entry = Candidate;
+    if (!Entry) return false;
+    UEdGraphPin* EntryThen = RequirePin(Entry, P::Then);
+    EntryThen->BreakAllPinLinks();
+    FEdGraphPinType SceneComponentArrayType;
+    SceneComponentArrayType.PinCategory = UEdGraphSchema_K2::PC_Object;
+    SceneComponentArrayType.PinSubCategoryObject = USceneComponent::StaticClass();
+    SceneComponentArrayType.ContainerType = EPinContainerType::Array;
+    if (!FBlueprintEditorUtils::AddLocalVariable(
+            Blueprint, Graph, MooringVehicleComponentsLocal, SceneComponentArrayType))
+        return false;
+    FEdGraphPinType SceneComponentType;
+    SceneComponentType.PinCategory = UEdGraphSchema_K2::PC_Object;
+    SceneComponentType.PinSubCategoryObject = USceneComponent::StaticClass();
+    if (!FBlueprintEditorUtils::AddLocalVariable(
+            Blueprint, Graph, MooringVehicleMeshLocal, SceneComponentType))
+        return false;
+    UFunction* ConstructionFunction = AActor::StaticClass()->FindFunctionByName(
+        MooringLayout::UserConstructionScriptFunction);
+    if (!ConstructionFunction) return false;
+    auto* Parent = NewObject<UK2Node_CallParentFunction>(Graph);
+    Parent->SetFromFunction(ConstructionFunction);
+    FinishNode(Parent, Graph, 1600, -440);
+    auto* FourPorts = AddCall(
+        Graph, Blueprint->GeneratedClass, GetFourPortSetting, -900, -440);
+    auto* ModeBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, -680, -440);
+    auto* Self = FinishNode(NewObject<UK2Node_Self>(Graph), Graph, -900, -220);
+    auto* ComponentsForVehicleMesh = AddCall(
+        Graph, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetComponentsByClass),
+        -680, -220);
+    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultObject(
+        *RequirePin(ComponentsForVehicleMesh, CargoAction::ComponentClass),
+        USceneComponent::StaticClass());
+    auto* SaveVehicleComponents = AddLocalWrite(
+        Blueprint, Graph, MooringVehicleComponentsLocal, -450, -440);
+    auto* SavedVehicleComponents = AddLocalRead(
+        Blueprint, Graph, MooringVehicleComponentsLocal, -450, -660);
+    auto* VehicleLoop = NewObject<UK2Node_MacroInstance>(Graph);
+    VehicleLoop->SetMacroGraph(StandardForEachLoop());
+    FinishNode(VehicleLoop, Graph, -450, -220);
+    auto* VehicleScene = NewObject<UK2Node_DynamicCast>(Graph);
+    VehicleScene->TargetType = USceneComponent::StaticClass();
+    VehicleScene->SetPurity(false);
+    FinishNode(VehicleScene, Graph, -220, -220);
+    auto* VehicleObjectName = AddCall(
+        Graph, UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, GetObjectName), 0, -220);
+    auto* IsVehicleMesh = AddCall(
+        Graph, UKismetStringLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr), 220, -220);
+    SetDefault(IsVehicleMesh, BlueprintGraphNames::Pins::Binary::RightOperand,
+        *VehicleMeshComponentName.ToString());
+    auto* VehicleBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 440, -220);
+    auto* SaveVehicleMesh = AddLocalWrite(
+        Blueprint, Graph, MooringVehicleMeshLocal, 660, -440);
+    auto* SavedVehicleMesh = AddLocalRead(
+        Blueprint, Graph, MooringVehicleMeshLocal, 660, -660);
+    auto* VehicleIsValid = AddCall(
+        Graph, UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, IsValid), 660, -220);
+    auto* VehicleFoundBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 880, -220);
+
+    struct FConditionalComponent
+    {
+        FName Name;
+        FTransform RelativeTransform;
+        bool bFourPortOnly;
+    };
+    const TArray<FConditionalComponent> ComponentsToCreate = {
+        { RearLeftMooringComponentName,
+          FTransform(MooringLayout::RearLeftSocketRotation,
+              MooringLayout::RearLeftSocketLocation, FVector::OneVector), false },
+        { RearRightMooringComponentName,
+          FTransform(MooringLayout::RearRightSocketRotation,
+              MooringLayout::RearRightSocketLocation, FVector::OneVector), false },
+        { FrontPositiveMooringPlateName,
+          FTransform(FRotator::ZeroRotator,
+              MooringLayout::FrontPositivePlateLocation, FVector::OneVector), true },
+        { FrontNegativeMooringPlateName,
+          FTransform(FRotator::ZeroRotator,
+              MooringLayout::FrontNegativePlateLocation, FVector::OneVector), true },
+        { RearPositiveMooringPlateName,
+          FTransform(FRotator::ZeroRotator,
+              MooringLayout::RearPositivePlateLocation, FVector::OneVector), true },
+        { RearNegativeMooringPlateName,
+          FTransform(FRotator::ZeroRotator,
+              MooringLayout::RearNegativePlateLocation, FVector::OneVector), true }
+    };
+    UEdGraphPin* CreateThen = RequirePin(VehicleFoundBranch, P::Then);
+    int32 CreateX = 1100;
+    bool Ok = true;
+    bool RoutedThroughModeBranch = false;
+    for (const FConditionalComponent& ComponentToCreate : ComponentsToCreate)
+    {
+        if (ComponentToCreate.bFourPortOnly && !RoutedThroughModeBranch)
+        {
+            Ok &= Connect(CreateThen, RequirePin(ModeBranch, P::Execute));
+            CreateThen = RequirePin(ModeBranch, P::Then);
+            RoutedThroughModeBranch = true;
+        }
+        const FVector Location = ComponentToCreate.RelativeTransform.GetLocation();
+        const FRotator Rotation = ComponentToCreate.RelativeTransform.Rotator();
+        const FVector Scale = ComponentToCreate.RelativeTransform.GetScale3D();
+        const FString LocationDefault = FString::Printf(
+            MooringLayout::VectorTripleFormat, Location.X, Location.Y, Location.Z);
+        const FString RotationDefault = FString::Printf(
+            MooringLayout::VectorTripleFormat,
+            Rotation.Pitch, Rotation.Yaw, Rotation.Roll);
+        const FString ScaleDefault = FString::Printf(
+            MooringLayout::VectorTripleFormat, Scale.X, Scale.Y, Scale.Z);
+        auto* MakeTransform = AddCall(
+            Graph, UKismetMathLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeTransform),
+            CreateX, -520);
+        SetDefault(MakeTransform, MooringLayout::LocationPin, *LocationDefault);
+        SetDefault(MakeTransform, MooringLayout::RotationPin, *RotationDefault);
+        SetDefault(MakeTransform, MooringLayout::ScalePin, *ScaleDefault);
+        auto* Add = AddCall(
+            Graph, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, AddComponent),
+            CreateX, -220);
+        SetDefault(Add, MooringLayout::TemplateNamePin, *ComponentToCreate.Name.ToString());
+        SetDefault(Add, MooringLayout::ManualAttachmentPin, ArcadeAltitude::Enabled);
+        SetDefault(Add, MooringLayout::DeferredFinishPin, ArcadeAltitude::Enabled);
+        auto* AddedScene = NewObject<UK2Node_DynamicCast>(Graph);
+        AddedScene->TargetType = USceneComponent::StaticClass();
+        AddedScene->SetPurity(false);
+        FinishNode(AddedScene, Graph, CreateX + 220, -220);
+        auto* Attach = AddCall(
+            Graph, USceneComponent::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_AttachToComponent),
+            CreateX + 440, -220);
+        SetDefault(Attach, MooringLayout::SocketNamePin, MooringLayout::NoSocket);
+        SetDefault(Attach, MooringLayout::LocationRulePin, MooringLayout::KeepRelativeRule);
+        SetDefault(Attach, MooringLayout::RotationRulePin, MooringLayout::KeepRelativeRule);
+        SetDefault(Attach, MooringLayout::ScaleRulePin, MooringLayout::KeepRelativeRule);
+        SetDefault(Attach, MooringLayout::WeldBodiesPin, ArcadeAltitude::Disabled);
+        auto* Finish = AddCall(
+            Graph, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, FinishAddComponent),
+            CreateX + 660, -220);
+        SetDefault(Finish, MooringLayout::ManualAttachmentPin, ArcadeAltitude::Enabled);
+
+        Ok &= Connect(CreateThen, RequirePin(Add, P::Execute));
+        Ok &= Connect(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+            RequirePin(Add, P::FunctionTarget));
+        Ok &= Connect(RequirePin(MakeTransform, P::ReturnValue),
+            RequirePin(Add, MooringLayout::RelativeTransformPin));
+        Ok &= Connect(RequirePin(Add, P::Then), RequirePin(AddedScene, P::Execute));
+        Ok &= Connect(RequirePin(Add, P::ReturnValue), AddedScene->GetCastSourcePin());
+        Ok &= Connect(AddedScene->GetValidCastPin(), RequirePin(Attach, P::Execute));
+        Ok &= Connect(AddedScene->GetCastResultPin(), RequirePin(Attach, P::FunctionTarget));
+        Ok &= Connect(SavedVehicleMesh->GetValuePin(),
+            RequirePin(Attach, MooringLayout::ParentPin));
+        Ok &= Connect(RequirePin(Attach, P::Then), RequirePin(Finish, P::Execute));
+        Ok &= Connect(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+            RequirePin(Finish, P::FunctionTarget));
+        Ok &= Connect(RequirePin(Add, P::ReturnValue),
+            RequirePin(Finish, MooringLayout::ComponentPin));
+        Ok &= Connect(RequirePin(MakeTransform, P::ReturnValue),
+            RequirePin(Finish, MooringLayout::RelativeTransformPin));
+        CreateThen = RequirePin(Finish, P::Then);
+        CreateX += 900;
+    }
+
+    auto* AfterParentModeBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 1820, -440);
+    auto* LayoutComponents = AddCall(
+        Graph, AActor::StaticClass(), GET_FUNCTION_NAME_CHECKED(AActor, K2_GetComponentsByClass),
+        1820, -220);
+    GetDefault<UEdGraphSchema_K2>()->TrySetDefaultObject(
+        *RequirePin(LayoutComponents, CargoAction::ComponentClass), USceneComponent::StaticClass());
+    auto* LayoutLoop = NewObject<UK2Node_MacroInstance>(Graph);
+    LayoutLoop->SetMacroGraph(StandardForEachLoop());
+    FinishNode(LayoutLoop, Graph, 2040, -220);
+    auto* LayoutScene = NewObject<UK2Node_DynamicCast>(Graph);
+    LayoutScene->TargetType = USceneComponent::StaticClass();
+    LayoutScene->SetPurity(false);
+    FinishNode(LayoutScene, Graph, 2260, -220);
+    auto* LayoutObjectName = AddCall(
+        Graph, UKismetSystemLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetSystemLibrary, GetObjectName), 2480, -220);
+
+    const auto AddNameTest = [&](const TCHAR* Name, int32 X, int32 Y)
+    {
+        auto* Equals = AddCall(
+            Graph, UKismetStringLibrary::StaticClass(),
+            GET_FUNCTION_NAME_CHECKED(UKismetStringLibrary, EqualEqual_StrStr), X, Y - 180);
+        SetDefault(Equals, BlueprintGraphNames::Pins::Binary::RightOperand, Name);
+        auto* Branch = FinishNode(NewObject<UK2Node_IfThenElse>(Graph), Graph, X + 220, Y);
+        Ok &= Connect(RequirePin(LayoutObjectName, P::ReturnValue),
+            RequirePin(Equals, BlueprintGraphNames::Pins::Binary::LeftOperand));
+        Ok &= Connect(RequirePin(Equals, P::ReturnValue), RequirePin(Branch, P::Condition));
+        return Branch;
+    };
+
+    auto* PlateBranch = AddNameTest(MooringLayout::StockPlateObjectName, 2700, 0);
+    auto* HidePlate = AddCall(
+        Graph, USceneComponent::StaticClass(),
+        MooringLayout::SetVisibilityFunction, 2920, -220);
+    SetDefault(HidePlate, MooringLayout::NewVisibility, CargoAction::Disabled);
+    SetDefault(HidePlate, MooringLayout::PropagateVisibilityToChildren,
+        CargoAction::Disabled);
+    auto* PositiveBranch = AddNameTest(
+        MooringLayout::StockPositiveSocketObjectName, 2920, 220);
+    auto* SetPositive = AddCall(
+        Graph, USceneComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_SetRelativeLocation), 3140, 120);
+    SetDefault(SetPositive, ArcadeAltitude::NewLocation,
+        MooringLayout::StockPositiveSocketLocationDefault);
+    SetDefault(SetPositive, ArcadeAltitude::Sweep, CargoAction::Disabled);
+    SetDefault(SetPositive, ArcadeAltitude::Teleport, CargoAction::Disabled);
+    auto* NegativeBranch = AddNameTest(
+        MooringLayout::StockNegativeSocketObjectName, 3140, 440);
+    auto* SetNegative = AddCall(
+        Graph, USceneComponent::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(USceneComponent, K2_SetRelativeLocation), 3360, 340);
+    SetDefault(SetNegative, ArcadeAltitude::NewLocation,
+        MooringLayout::StockNegativeSocketLocationDefault);
+    SetDefault(SetNegative, ArcadeAltitude::Sweep, CargoAction::Disabled);
+    SetDefault(SetNegative, ArcadeAltitude::Teleport, CargoAction::Disabled);
+
+    Ok &= Connect(EntryThen, RequirePin(FourPorts, P::Execute));
+    Ok &= Connect(RequirePin(FourPorts, P::ReturnValue), RequirePin(ModeBranch, P::Condition));
+    Ok &= Connect(RequirePin(FourPorts, P::Then), RequirePin(SaveVehicleComponents, P::Execute));
+    Ok &= Connect(RequirePin(ModeBranch, P::Else), RequirePin(Parent, P::Execute));
+    Ok &= Connect(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(ComponentsForVehicleMesh, P::FunctionTarget));
+    Ok &= Connect(RequirePin(ComponentsForVehicleMesh, P::ReturnValue),
+        RequirePin(SaveVehicleComponents, MooringVehicleComponentsLocal));
+    Ok &= Connect(RequirePin(SaveVehicleComponents, P::Then), RequireExecInputPin(VehicleLoop));
+    Ok &= Connect(SavedVehicleComponents->GetValuePin(),
+        RequirePin(VehicleLoop, CargoAction::Array));
+    Ok &= Connect(RequirePin(VehicleLoop, P::LoopBody), RequirePin(VehicleScene, P::Execute));
+    Ok &= Connect(RequirePin(VehicleLoop, CargoAction::ArrayElement),
+        VehicleScene->GetCastSourcePin());
+    Ok &= Connect(VehicleScene->GetValidCastPin(), RequirePin(VehicleBranch, P::Execute));
+    Ok &= Connect(VehicleScene->GetCastResultPin(), RequirePin(VehicleObjectName, P::Object));
+    Ok &= Connect(RequirePin(VehicleObjectName, P::ReturnValue),
+        RequirePin(IsVehicleMesh, BlueprintGraphNames::Pins::Binary::LeftOperand));
+    Ok &= Connect(RequirePin(IsVehicleMesh, P::ReturnValue), RequirePin(VehicleBranch, P::Condition));
+    Ok &= Connect(RequirePin(VehicleBranch, P::Then), RequirePin(SaveVehicleMesh, P::Execute));
+    Ok &= Connect(VehicleScene->GetCastResultPin(),
+        RequirePin(SaveVehicleMesh, MooringVehicleMeshLocal));
+    Ok &= Connect(RequirePin(VehicleLoop, P::Completed), RequirePin(VehicleFoundBranch, P::Execute));
+    Ok &= Connect(SavedVehicleMesh->GetValuePin(), RequirePin(VehicleIsValid, P::Object));
+    Ok &= Connect(RequirePin(VehicleIsValid, P::ReturnValue),
+        RequirePin(VehicleFoundBranch, P::Condition));
+    Ok &= Connect(RequirePin(VehicleFoundBranch, P::Else), RequirePin(Parent, P::Execute));
+    Ok &= Connect(CreateThen, RequirePin(Parent, P::Execute));
+    Ok &= Connect(RequirePin(Parent, P::Then), RequirePin(AfterParentModeBranch, P::Execute));
+    Ok &= Connect(RequirePin(FourPorts, P::ReturnValue), RequirePin(AfterParentModeBranch, P::Condition));
+    Ok &= Connect(RequirePin(AfterParentModeBranch, P::Then), RequireExecInputPin(LayoutLoop));
+    Ok &= Connect(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
+        RequirePin(LayoutComponents, P::FunctionTarget));
+    Ok &= Connect(RequirePin(LayoutComponents, P::ReturnValue),
+        RequirePin(LayoutLoop, CargoAction::Array));
+    Ok &= Connect(RequirePin(LayoutLoop, P::LoopBody), RequirePin(LayoutScene, P::Execute));
+    Ok &= Connect(RequirePin(LayoutLoop, CargoAction::ArrayElement), LayoutScene->GetCastSourcePin());
+    Ok &= Connect(LayoutScene->GetValidCastPin(), RequirePin(PlateBranch, P::Execute));
+    Ok &= Connect(LayoutScene->GetCastResultPin(), RequirePin(LayoutObjectName, P::Object));
+    Ok &= Connect(RequirePin(PlateBranch, P::Then), RequirePin(HidePlate, P::Execute));
+    Ok &= Connect(LayoutScene->GetCastResultPin(), RequirePin(HidePlate, P::FunctionTarget));
+    Ok &= Connect(RequirePin(PlateBranch, P::Else), RequirePin(PositiveBranch, P::Execute));
+    Ok &= Connect(RequirePin(PositiveBranch, P::Then), RequirePin(SetPositive, P::Execute));
+    Ok &= Connect(LayoutScene->GetCastResultPin(), RequirePin(SetPositive, P::FunctionTarget));
+    Ok &= Connect(RequirePin(PositiveBranch, P::Else), RequirePin(NegativeBranch, P::Execute));
+    Ok &= Connect(RequirePin(NegativeBranch, P::Then), RequirePin(SetNegative, P::Execute));
+    Ok &= Connect(LayoutScene->GetCastResultPin(), RequirePin(SetNegative, P::FunctionTarget));
+    return Ok;
+}
+
+bool TestFourPortSettingsAndLayout(UBlueprint* Blueprint)
+{
+    if (!Blueprint || !Blueprint->GeneratedClass) return false;
+    UClass* Class = Blueprint->GeneratedClass;
+    UObject* Defaults = Class->GetDefaultObject();
+    FBoolProperty* EnabledProperty = FindFProperty<FBoolProperty>(
+        Class, Settings::EnableFourMooringPorts);
+    FBoolProperty* LoadedProperty = FindFProperty<FBoolProperty>(
+        Class, FourPortSettingsLoaded);
+    UFunction* Getter = Class->FindFunctionByName(
+        GetFourPortSetting, EIncludeSuperFlag::ExcludeSuper);
+    UFunction* Construction = Class->FindFunctionByName(
+        MooringLayout::UserConstructionScriptFunction);
+    if (!Defaults || !EnabledProperty || !LoadedProperty || !Getter || !Construction ||
+        !EnabledProperty->HasAnyPropertyFlags(CPF_Transient) ||
+        !LoadedProperty->HasAnyPropertyFlags(CPF_Transient)) return false;
+
+    const FString SettingsPath = FPaths::Combine(
+        FPaths::ProjectContentDir(), Settings::RelativePath);
+    const bool HadSettings = FPaths::FileExists(SettingsPath);
+    TArray<uint8> OriginalSettings;
+    if (HadSettings && !FFileHelper::LoadFileToArray(OriginalSettings, *SettingsPath))
+        return false;
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(SettingsPath), true);
+
+    bool Passed = true;
+    auto WriteSettings = [&SettingsPath](const TCHAR* Text)
+    {
+        return FFileHelper::SaveStringToFile(
+            Text, *SettingsPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+    };
+    auto ResetDefaults = [&](const bool Enabled)
+    {
+        EnabledProperty->SetPropertyValue_InContainer(Defaults, Enabled);
+        LoadedProperty->SetPropertyValue_InContainer(Defaults, false);
+    };
+    auto ReadSetting = [&](UObject* Target)
+    {
+        struct FGetterResult { bool ReturnValue = false; } Result;
+        Target->ProcessEvent(Getter, &Result);
+        return Result.ReturnValue;
+    };
+
+    Passed &= WriteSettings(TEXT("EnableFourMooringPorts=false\n"));
+    ResetDefaults(true);
+    Passed &= !ReadSetting(Defaults);
+    Passed &= WriteSettings(TEXT("EnableFourMooringPorts=true\n"));
+    Passed &= !ReadSetting(Defaults);
+    LoadedProperty->SetPropertyValue_InContainer(Defaults, false);
+    Passed &= ReadSetting(Defaults);
+    IFileManager::Get().Delete(*SettingsPath, false, true);
+    ResetDefaults(false);
+    Passed &= ReadSetting(Defaults);
+    Passed &= WriteSettings(TEXT("EnableFourMooringPorts=invalid\n"));
+    ResetDefaults(false);
+    Passed &= ReadSetting(Defaults);
+
+    const TArray<FName> ModComponentNames = {
+        RearLeftMooringComponentName, RearRightMooringComponentName,
+        FrontPositiveMooringPlateName, FrontNegativeMooringPlateName,
+        RearPositiveMooringPlateName, RearNegativeMooringPlateName};
+    for (const FName Name : ModComponentNames)
+    {
+        int32 TemplateCount = 0;
+        for (const UActorComponent* Component : Blueprint->ComponentTemplates)
+            if (Component && Component->GetFName() == Name) ++TemplateCount;
+        Passed &= TemplateCount == 1;
+        Passed &= Blueprint->SimpleConstructionScript->FindSCSNode(Name) == nullptr;
+    }
+
+    UWorld* World = UWorld::CreateWorld(EWorldType::Game, false);
+    if (World)
+        World->InitializeActorsForPlay(FURL());
+
+    auto SpawnActor = [&](const bool Enabled)
+    {
+        if (!World) return static_cast<AActor*>(nullptr);
+        EnabledProperty->SetPropertyValue_InContainer(Defaults, Enabled);
+        LoadedProperty->SetPropertyValue_InContainer(Defaults, true);
+        FActorSpawnParameters SpawnParameters;
+        SpawnParameters.SpawnCollisionHandlingOverride =
+            ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        return World->SpawnActor<AActor>(Class, FTransform::Identity, SpawnParameters);
+    };
+    auto CountModComponents = [&ModComponentNames](AActor* Actor)
+    {
+        if (!Actor) return -1;
+        int32 Count = 0;
+        TInlineComponentArray<UActorComponent*> Components;
+        Actor->GetComponents(Components);
+        for (UActorComponent* Component : Components)
+        {
+            if (!IsValid(Component)) continue;
+            if (ModComponentNames.Contains(Component->GetFName()))
+                ++Count;
+        }
+        return Count;
+    };
+    struct FLayoutFixture
+    {
+        USceneComponent* VehicleMesh = nullptr;
+        UStaticMeshComponent* StockPlate = nullptr;
+        USceneComponent* StockPositive = nullptr;
+        USceneComponent* StockNegative = nullptr;
+    };
+    auto AddFixtureComponents = [](AActor* Actor)
+    {
+        FLayoutFixture Fixture;
+        if (!Actor) return Fixture;
+        Fixture.VehicleMesh = NewObject<USceneComponent>(Actor, VehicleMeshComponentName);
+        Fixture.StockPlate = NewObject<UStaticMeshComponent>(
+            Actor, FName(MooringLayout::StockPlateObjectName));
+        Fixture.StockPositive = NewObject<USceneComponent>(
+            Actor, FName(MooringLayout::StockPositiveSocketObjectName));
+        Fixture.StockNegative = NewObject<USceneComponent>(
+            Actor, FName(MooringLayout::StockNegativeSocketObjectName));
+        TArray<UActorComponent*> Components = {
+            Fixture.VehicleMesh, Fixture.StockPlate,
+            Fixture.StockPositive, Fixture.StockNegative};
+        for (UActorComponent* Component : Components)
+        {
+            Actor->AddInstanceComponent(Component);
+            Component->RegisterComponent();
+        }
+        Fixture.StockPlate->SetVisibility(true, false);
+        Fixture.StockPositive->SetRelativeLocation(FVector::ZeroVector);
+        Fixture.StockNegative->SetRelativeLocation(FVector::ZeroVector);
+        return Fixture;
+    };
+
+    AActor* StockActor = SpawnActor(false);
+    FLayoutFixture StockFixture = AddFixtureComponents(StockActor);
+    if (StockActor) StockActor->ProcessEvent(Construction, nullptr);
+    Passed &= StockActor != nullptr;
+    Passed &= CountModComponents(StockActor) == 2;
+    Passed &= StockFixture.StockPlate && StockFixture.StockPlate->IsVisible();
+    Passed &= StockFixture.StockPositive &&
+        StockFixture.StockPositive->GetRelativeLocation().IsNearlyZero();
+    Passed &= StockFixture.StockNegative &&
+        StockFixture.StockNegative->GetRelativeLocation().IsNearlyZero();
+
+    AActor* FourPortActor = SpawnActor(true);
+    FLayoutFixture FourPortFixture = AddFixtureComponents(FourPortActor);
+    if (FourPortActor) FourPortActor->ProcessEvent(Construction, nullptr);
+    Passed &= FourPortActor != nullptr;
+    Passed &= CountModComponents(FourPortActor) == 6;
+    Passed &= FourPortFixture.StockPlate && !FourPortFixture.StockPlate->IsVisible();
+    Passed &= FourPortFixture.StockPositive &&
+        FourPortFixture.StockPositive->GetRelativeLocation().Equals(
+            FVector(78.782426, 50.862349, -32.989642), UE_KINDA_SMALL_NUMBER);
+    Passed &= FourPortFixture.StockNegative &&
+        FourPortFixture.StockNegative->GetRelativeLocation().Equals(
+            FVector(78.783752, -50.714545, -32.805209), UE_KINDA_SMALL_NUMBER);
+
+    auto ValidateRearSockets = [&](AActor* Actor, USceneComponent* VehicleMesh)
+    {
+        auto* RearLeft = Actor ? FindObject<UVoyageModuleSocketViewComponent>(
+            Actor, *RearLeftMooringComponentName.ToString()) : nullptr;
+        auto* RearRight = Actor ? FindObject<UVoyageModuleSocketViewComponent>(
+            Actor, *RearRightMooringComponentName.ToString()) : nullptr;
+        auto* RearLeftTemplate = Cast<USceneComponent>(
+            Blueprint->FindTemplateByName(RearLeftMooringComponentName));
+        auto* RearRightTemplate = Cast<USceneComponent>(
+            Blueprint->FindTemplateByName(RearRightMooringComponentName));
+        Passed &= RearLeft && RearLeft->SocketID == MooringLayout::RearLeftSocketId &&
+            RearLeft->GetAttachParent() == VehicleMesh && RearLeftTemplate &&
+            RearLeft->GetRelativeTransform().Equals(
+                RearLeftTemplate->GetRelativeTransform(), UE_KINDA_SMALL_NUMBER);
+        Passed &= RearRight && RearRight->SocketID == MooringLayout::RearRightSocketId &&
+            RearRight->GetAttachParent() == VehicleMesh && RearRightTemplate &&
+            RearRight->GetRelativeTransform().Equals(
+                RearRightTemplate->GetRelativeTransform(), UE_KINDA_SMALL_NUMBER);
+    };
+    ValidateRearSockets(StockActor, StockFixture.VehicleMesh);
+    ValidateRearSockets(FourPortActor, FourPortFixture.VehicleMesh);
+
+    FObjectProperty* CachedLeftProperty = FindFProperty<FObjectProperty>(
+        Class, CachedRearLeftMooringSocket);
+    FObjectProperty* CachedRightProperty = FindFProperty<FObjectProperty>(
+        Class, CachedRearRightMooringSocket);
+    FBoolProperty* CleanupQueuedProperty = FindFProperty<FBoolProperty>(
+        Class, DisabledMooringCleanupQueued);
+    UFunction* Cleanup = Class->FindFunctionByName(RunDisabledMooringCleanupFunction);
+    UFunction* ConnectionCallback = Class->FindFunctionByName(
+        DisabledMooringConnectionCallback);
+    Passed &= CachedLeftProperty && CachedRightProperty && CleanupQueuedProperty &&
+        Cleanup && ConnectionCallback;
+
+    auto FindRearSocket = [](AActor* Actor, const FName Name)
+    {
+        return Actor ? FindObject<UVoyageModuleSocketViewComponent>(
+            Actor, *Name.ToString()) : nullptr;
+    };
+    auto AddTestPrimitive = [](AActor* Owner, USceneComponent* Parent, const FName Name)
+    {
+        auto* Primitive = Owner ? NewObject<UBoxComponent>(Owner, Name) : nullptr;
+        if (!Primitive) return Primitive;
+        Owner->AddInstanceComponent(Primitive);
+        if (Parent) Primitive->SetupAttachment(Parent);
+        Primitive->RegisterComponent();
+        Primitive->SetVisibility(true, false);
+        Primitive->SetHiddenInGame(false, false);
+        Primitive->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        Primitive->SetGenerateOverlapEvents(true);
+        Primitive->Activate(true);
+        return Primitive;
+    };
+    auto IsDisabledPrimitive = [](const UPrimitiveComponent* Primitive)
+    {
+        return Primitive && !Primitive->IsActive() && !Primitive->IsVisible() &&
+            Primitive->bHiddenInGame &&
+            Primitive->GetCollisionEnabled() == ECollisionEnabled::NoCollision &&
+            !Primitive->GetGenerateOverlapEvents();
+    };
+    auto IsEnabledPrimitive = [](const UPrimitiveComponent* Primitive)
+    {
+        return Primitive && Primitive->IsActive() && Primitive->IsVisible() &&
+            !Primitive->bHiddenInGame &&
+            Primitive->GetCollisionEnabled() == ECollisionEnabled::QueryAndPhysics &&
+            Primitive->GetGenerateOverlapEvents();
+    };
+
+    auto* StockRearLeft = FindRearSocket(StockActor, RearLeftMooringComponentName);
+    auto* StockRearRight = FindRearSocket(StockActor, RearRightMooringComponentName);
+    auto* OwnedChild = AddTestPrimitive(
+        StockActor, StockRearLeft, TEXT("StableGyroFixtureOwnedChild"));
+    auto* OwnedCollision = AddTestPrimitive(
+        StockActor, nullptr, TEXT("StableGyroFixtureOwnedCollision"));
+    auto* OwnedPlaceholder = AddTestPrimitive(
+        StockActor, nullptr, TEXT("StableGyroFixtureOwnedPlaceholder"));
+    AActor* ForeignOwner = World ? World->SpawnActor<AActor>() : nullptr;
+    auto* ForeignMesh = AddTestPrimitive(
+        ForeignOwner, nullptr, TEXT("StableGyroFixtureForeignMesh"));
+    if (StockRearLeft)
+    {
+        StockRearLeft->SocketCollisionBox = OwnedCollision;
+        StockRearLeft->IntegratedCablePlaceholderMesh = OwnedPlaceholder;
+        StockRearLeft->mesh = ForeignMesh;
+    }
+    if (StockActor && CachedLeftProperty && CachedRightProperty && CleanupQueuedProperty &&
+        ConnectionCallback && Cleanup)
+    {
+        EnabledProperty->SetPropertyValue_InContainer(Defaults, false);
+        LoadedProperty->SetPropertyValue_InContainer(Defaults, true);
+        CachedLeftProperty->SetObjectPropertyValue_InContainer(StockActor, StockRearLeft);
+        CachedRightProperty->SetObjectPropertyValue_InContainer(StockActor, StockRearRight);
+        struct FConnectionEvent { bool bSocketConnection = false; } Event;
+        CleanupQueuedProperty->SetPropertyValue_InContainer(StockActor, false);
+        StockActor->ProcessEvent(ConnectionCallback, &Event);
+        Passed &= CleanupQueuedProperty->GetPropertyValue_InContainer(StockActor);
+        Event.bSocketConnection = true;
+        StockActor->ProcessEvent(ConnectionCallback, &Event);
+        Passed &= CleanupQueuedProperty->GetPropertyValue_InContainer(StockActor);
+        StockActor->ProcessEvent(Cleanup, nullptr);
+        Passed &= !CleanupQueuedProperty->GetPropertyValue_InContainer(StockActor);
+        StockActor->ProcessEvent(ConnectionCallback, &Event);
+        Passed &= CleanupQueuedProperty->GetPropertyValue_InContainer(StockActor);
+        Event.bSocketConnection = false;
+        StockActor->ProcessEvent(ConnectionCallback, &Event);
+        Passed &= CleanupQueuedProperty->GetPropertyValue_InContainer(StockActor);
+        StockActor->ProcessEvent(Cleanup, nullptr);
+        Passed &= !CleanupQueuedProperty->GetPropertyValue_InContainer(StockActor);
+    }
+    Passed &= IsDisabledPrimitive(StockRearLeft);
+    Passed &= IsDisabledPrimitive(StockRearRight);
+    Passed &= IsDisabledPrimitive(OwnedChild);
+    Passed &= IsDisabledPrimitive(OwnedCollision);
+    Passed &= IsDisabledPrimitive(OwnedPlaceholder);
+    Passed &= IsEnabledPrimitive(ForeignMesh);
+    Passed &= StockFixture.StockPlate && StockFixture.StockPlate->IsVisible();
+    Passed &= StockFixture.StockPositive &&
+        StockFixture.StockPositive->GetRelativeLocation().IsNearlyZero();
+    Passed &= StockFixture.StockNegative &&
+        StockFixture.StockNegative->GetRelativeLocation().IsNearlyZero();
+
+    auto* FourPortRearLeft = FindRearSocket(FourPortActor, RearLeftMooringComponentName);
+    auto* FourPortRearRight = FindRearSocket(FourPortActor, RearRightMooringComponentName);
+    auto* FourPortChild = AddTestPrimitive(
+        FourPortActor, FourPortRearLeft, TEXT("StableGyroFixtureFourPortChild"));
+    struct FPrimitiveState
+    {
+        bool bActive = false;
+        bool bVisible = false;
+        bool bHiddenInGame = false;
+        bool bGenerateOverlapEvents = false;
+        ECollisionEnabled::Type Collision = ECollisionEnabled::NoCollision;
+    };
+    auto CapturePrimitiveState = [](const UPrimitiveComponent* Primitive)
+    {
+        FPrimitiveState State;
+        if (Primitive)
+        {
+            State.bActive = Primitive->IsActive();
+            State.bVisible = Primitive->IsVisible();
+            State.bHiddenInGame = Primitive->bHiddenInGame;
+            State.bGenerateOverlapEvents = Primitive->GetGenerateOverlapEvents();
+            State.Collision = Primitive->GetCollisionEnabled();
+        }
+        return State;
+    };
+    auto MatchesPrimitiveState = [](const UPrimitiveComponent* Primitive,
+        const FPrimitiveState& State)
+    {
+        return Primitive && Primitive->IsActive() == State.bActive &&
+            Primitive->IsVisible() == State.bVisible &&
+            Primitive->bHiddenInGame == State.bHiddenInGame &&
+            Primitive->GetGenerateOverlapEvents() == State.bGenerateOverlapEvents &&
+            Primitive->GetCollisionEnabled() == State.Collision;
+    };
+    const FPrimitiveState FourPortLeftBefore = CapturePrimitiveState(FourPortRearLeft);
+    const FPrimitiveState FourPortRightBefore = CapturePrimitiveState(FourPortRearRight);
+    if (FourPortActor && CachedLeftProperty && CachedRightProperty && Cleanup)
+    {
+        EnabledProperty->SetPropertyValue_InContainer(Defaults, true);
+        LoadedProperty->SetPropertyValue_InContainer(Defaults, true);
+        CachedLeftProperty->SetObjectPropertyValue_InContainer(FourPortActor, FourPortRearLeft);
+        CachedRightProperty->SetObjectPropertyValue_InContainer(FourPortActor, FourPortRearRight);
+        FourPortActor->ProcessEvent(Cleanup, nullptr);
+    }
+    Passed &= MatchesPrimitiveState(FourPortRearLeft, FourPortLeftBefore);
+    Passed &= MatchesPrimitiveState(FourPortRearRight, FourPortRightBefore);
+    Passed &= IsEnabledPrimitive(FourPortChild);
+
+    if (FourPortActor)
+    {
+        TInlineComponentArray<UActorComponent*> Components;
+        FourPortActor->GetComponents(Components);
+        for (const FName Name : ModComponentNames)
+        {
+            UActorComponent* const* Match = Components.FindByPredicate(
+                [&Name](const UActorComponent* Component)
+                {
+                    return IsValid(Component) && Component->GetFName() == Name;
+                });
+            auto* SceneComponent = Match ? Cast<USceneComponent>(*Match) : nullptr;
+            auto* TemplateScene = Cast<USceneComponent>(Blueprint->FindTemplateByName(Name));
+            Passed &= SceneComponent &&
+                SceneComponent->GetAttachParent() == FourPortFixture.VehicleMesh;
+            Passed &= SceneComponent && TemplateScene &&
+                SceneComponent->GetRelativeTransform().Equals(
+                    TemplateScene->GetRelativeTransform(), UE_KINDA_SMALL_NUMBER);
+        }
+    }
+
+    if (World)
+    {
+        World->DestroyWorld(false);
+    }
+    if (HadSettings)
+        Passed &= FFileHelper::SaveArrayToFile(OriginalSettings, *SettingsPath);
+    else
+        Passed &= IFileManager::Get().Delete(*SettingsPath, false, true);
+    ResetDefaults(true);
+    Passed &= EnabledProperty->GetPropertyValue_InContainer(Defaults);
+    Passed &= !LoadedProperty->GetPropertyValue_InContainer(Defaults);
+    UE_LOG(LogTemp, Display, TEXT("StableGyro four-port cache/layout fixture: %s"),
+        Passed ? TEXT("passed") : TEXT("failed"));
+    return Passed;
+}
+
 }
 
 UGenerateStableGyroInheritanceCommandlet::UGenerateStableGyroInheritanceCommandlet()
@@ -2357,6 +4443,14 @@ UGenerateStableGyroInheritanceCommandlet::UGenerateStableGyroInheritanceCommandl
 
 int32 UGenerateStableGyroInheritanceCommandlet::Main(const FString& Params)
 {
+    FString PositiveMooringGlb;
+    FString NegativeMooringGlb;
+    if (!FParse::Value(*Params, MooringLayout::PositiveGlbParameter, PositiveMooringGlb) ||
+        !FParse::Value(*Params, MooringLayout::NegativeGlbParameter, NegativeMooringGlb))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Both generated mooring-half GLB paths are required"));
+        return 1;
+    }
     if (FPackageName::DoesPackageExist(BasePackage) ||
         FPackageName::DoesPackageExist(ChildPackage))
     {
@@ -2368,10 +4462,24 @@ int32 UGenerateStableGyroInheritanceCommandlet::Main(const FString& Params)
     if (!StabilizationHelper || !StabilizationHelper->GeneratedClass ||
         !PitchHelper || !PitchHelper->GeneratedClass ||
         !ValidateNativeAltitudeOwnershipContracts() ||
-        !ValidateHoverPitchResetContracts()) return 1;
+        !ValidateHoverPitchResetContracts() ||
+        !ValidateMooringSerializationContracts()) return 1;
     UVoyageInputAction* ResetAction = LoadObject<UVoyageInputAction>(
         nullptr, StableGyroAssetNames::ResetActionObjectPath);
-    if (!ResetAction) return 1;
+    UInputAction* DropCargoAction = LoadObject<UInputAction>(
+        nullptr, StableGyroAssetNames::DropCargoActionObjectPath);
+    if (!ResetAction || !DropCargoAction) return 1;
+    UVoyageItemCable* HookCable = CreateHookCableReferenceStub();
+    if (!HookCable || HookCable->GetPathName() != HookCableObjectPath) return 1;
+    UMaterialInstanceConstant* MooringMaterial = CreateMooringMaterialReferenceStub();
+    if (!MooringMaterial) return 1;
+    UStaticMesh* PositiveMooringMesh = ImportMooringHalf(
+        PositiveMooringGlb, PositiveMooringMeshPackage, MooringMaterial,
+        MooringLayout::PositiveSourceTriangleCount);
+    UStaticMesh* NegativeMooringMesh = ImportMooringHalf(
+        NegativeMooringGlb, NegativeMooringMeshPackage, MooringMaterial,
+        MooringLayout::NegativeSourceTriangleCount);
+    if (!PositiveMooringMesh || !NegativeMooringMesh) return 1;
 
     UPackage* ParentPackage = CreatePackage(BasePackage);
     UBlueprint* Parent = FKismetEditorUtilities::CreateBlueprint(
@@ -2527,12 +4635,83 @@ int32 UGenerateStableGyroInheritanceCommandlet::Main(const FString& Params)
     Replacement->SimpleConstructionScript->AddNode(StabilizationNode);
     Replacement->SimpleConstructionScript->AddNode(PitchNode);
     Replacement->SimpleConstructionScript->ValidateSceneRootNodes();
+    if (!AddRearMooringSocket(
+            Replacement,
+            RearLeftMooringComponentName,
+            MooringLayout::RearLeftSocketId,
+            MooringLayout::RearLeftSocketLocation,
+            MooringLayout::RearLeftSocketRotation,
+            HookCable) ||
+        !AddRearMooringSocket(
+            Replacement,
+            RearRightMooringComponentName,
+            MooringLayout::RearRightSocketId,
+            MooringLayout::RearRightSocketLocation,
+            MooringLayout::RearRightSocketRotation,
+            HookCable) ||
+        !AddMooringPlate(
+            Replacement, FrontPositiveMooringPlateName, PositiveMooringMesh,
+            MooringMaterial, MooringLayout::FrontPositivePlateLocation) ||
+        !AddMooringPlate(
+            Replacement, FrontNegativeMooringPlateName, NegativeMooringMesh,
+            MooringMaterial, MooringLayout::FrontNegativePlateLocation) ||
+        !AddMooringPlate(
+            Replacement, RearPositiveMooringPlateName, PositiveMooringMesh,
+            MooringMaterial, MooringLayout::RearPositivePlateLocation) ||
+        !AddMooringPlate(
+            Replacement, RearNegativeMooringPlateName, NegativeMooringMesh,
+            MooringMaterial, MooringLayout::RearNegativePlateLocation) ||
+        !FBlueprintEditorUtils::AddMemberVariable(
+            Replacement, CargoPressArmed, BoolType, CargoAction::Disabled) ||
+        !FBlueprintEditorUtils::AddMemberVariable(
+            Replacement, CargoPressFired, BoolType, CargoAction::Disabled)) return 1;
+
+    for (const FName TransientField : {CargoPressArmed, CargoPressFired})
+    {
+        FBPVariableDescription* Variable = Replacement->NewVariables.FindByPredicate(
+            [&TransientField](const FBPVariableDescription& Candidate)
+            {
+                return Candidate.VarName == TransientField;
+            });
+        if (!Variable) return 1;
+        Variable->PropertyFlags |= CPF_Transient;
+    }
+
+    if (!AddFourPortSettingsCache(Replacement) ||
+        !AddDisabledMooringState(Replacement)) return 1;
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Replacement);
     FKismetEditorUtilities::CompileBlueprint(Replacement);
     if (Replacement->Status == BS_Error ||
+        !AddDisableOwnedMooringObject(Replacement)) return 1;
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Replacement);
+    FKismetEditorUtilities::CompileBlueprint(Replacement);
+    if (Replacement->Status == BS_Error ||
+        !AddRunDisabledMooringCleanup(Replacement)) return 1;
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Replacement);
+    FKismetEditorUtilities::CompileBlueprint(Replacement);
+    if (Replacement->Status == BS_Error ||
+        !AddQueueDisabledMooringCleanup(Replacement)) return 1;
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Replacement);
+    FKismetEditorUtilities::CompileBlueprint(Replacement);
+    if (Replacement->Status == BS_Error ||
+        !AddDisabledMooringConnectionCallback(Replacement) ||
+        !AddCargoControllerChangedCallback(Replacement)) return 1;
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Replacement);
+    FKismetEditorUtilities::CompileBlueprint(Replacement);
+    if (Replacement->Status == BS_Error ||
+        !AddMooringLayoutConstruction(Replacement) ||
+        !AddCargoOwnershipGraph(Replacement, DropCargoAction) ||
+        !AddCargoControllerChangedBinding(Replacement) ||
+        !AddDisabledMooringBeginPlayBinding(Replacement) ||
         !AddProvidedActionsBpOverride(
-            Replacement, ResetAction, PitchHelper->GeneratedClass)) return 1;
+            Replacement, ResetAction, DropCargoAction,
+            PitchHelper->GeneratedClass)) return 1;
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Replacement);
+    FKismetEditorUtilities::CompileBlueprint(Replacement);
+    if (Replacement->Status == BS_Error ||
+        !TestFourPortSettingsAndLayout(Replacement)) return 1;
 
     if (!SaveBlueprint(ReplacementPackage, Replacement)) return 1;
     UE_LOG(LogTemp, Display, TEXT("Generated Gyro parent and replacement child"));
