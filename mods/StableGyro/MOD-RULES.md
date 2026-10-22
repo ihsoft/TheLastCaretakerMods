@@ -86,7 +86,8 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   `-0.9999..0.9999`, and reset helper plus native pitch state when the owning
   Gyro is not player controlled. Run the pitch helper in `TG_PrePhysics`, order
   it after the player controller and before the stock Gyro with explicit tick
-  prerequisites, and restore the stored integrated value before every controlled
+  prerequisites established at BeginPlay and controller changes, without
+  re-adding them per tick, and restore the stored integrated value before every controlled
   Gyro tick, including neutral input. When pitch correction is disabled, the
   pitch helper must not read or write native `TiltForwardInput` on any tick or
   lifecycle path and must not append the mod-owned X reset hint; inherited
@@ -121,7 +122,17 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   non-destroying disconnect helper, keep the endpoint objects registered,
   and disable only this Gyro's socket visuals and interaction collision. Do not
   destroy sockets, poll, use an arbitrary load delay, or traverse cable and
-  remote-endpoint references for visual cleanup.
+  remote-endpoint references for visual cleanup. Capture each socket's child
+  component array once before traversing it.
+- Four-port mode must retain the stock Drop Cargo action identity, native hold
+  threshold and once-per-press behavior. Use the same live threshold for input
+  and hint; include any connected Mooring port in the hint predicate and stock
+  disconnect path. Disabled mode keeps the native two-port action and hint.
+- Preserve the extracted mooring mesh's corner normals, UV channels, vertex
+  colors and material override when splitting its two sides. Do not manually
+  remove zero-area triangles or invent tangents absent from the source. Keep
+  the derived detailed meshes as ordinary StaticMesh assets so automatic Nanite
+  import does not substitute a reduced fallback for the desired render geometry.
 - Gameplay validation covers pitch in both directions, release hold, both
   limits, X, exit/re-entry, altitude braking/hold across partial and full
   throttle, Ctrl descent/reacquisition, and horizontal

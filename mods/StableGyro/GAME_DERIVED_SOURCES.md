@@ -80,7 +80,8 @@ sources establish:
   `25982825` native inspection establishes that the Gyro provider calls this
   base path first and only then appends its native cargo action when the
   reflected `DropCargoAction` object property is non-null. The child therefore
-  preserves parent `ReceiveBeginPlay`, clears only that property through
+  preserves parent `ReceiveBeginPlay` and, only in four-port mode, clears that
+  property through
   `KismetSystemLibrary.SetObjectPropertyByName`, and owns one replacement
   Enhanced Input binding and one provided-action record for the unchanged stock
   `/Game/Game/Input/Vehicle/IA_GyroCopterDropCargo` action. Current native
@@ -121,7 +122,8 @@ sources establish:
   `(75.483, -54.360676, -33.705635)` respectively. The disabled four-port path
   leaves the inherited stock components and their instance transforms untouched.
   The generated child adds two distinct rear templates with the same socket
-  contract and unique IDs. It also adds four decorative plate components from
+  contract and unique IDs `2056977161` and `2056977162`. It also adds four
+  decorative plate components from
   two side-specific meshes derived from the current stock
   `/Game/AssetSets/Vehicles/Gyrocopter/Mesh/Gyro_MooringPlate` and reuses the
   stock `Gyrocopter_Seat_p1` material. The public producer exports the current
@@ -166,6 +168,56 @@ the validity of `ConnectedToSocket`; cable assignment can therefore broadcast
 defers cleanup to the next tick so it does not disconnect reentrantly inside a
 native callback. This establishes event shape and callback ordering, not the end
 of save restoration or real-game cable cleanup behavior.
+
+## Mooring registration, reeling and geometry findings
+
+The reusable socket/cable implications are summarized in
+[mooring cable and socket lifecycle](../../docs/mooring-cable-and-socket-knowledge.md).
+The exact Gyro producer/consumer evidence remains here.
+
+The following native findings are bounded to Steam build `25982825`.
+Module socket discovery at `0x1455468d0..0x145546c47` enumerates components on
+the owning actor and assigns eligible sockets to the module. It does not cap the
+list at two. `bAutoInitialize=false` does not exclude a socket: assignment at
+`0x145512c10` establishes its module owner before checking that flag, which
+controls initialization of port data. Preserve the stock non-standalone socket
+configuration and create extra components on the Gyro itself.
+
+The Gyro reeling pass at `0x14549ed50`, called from its native Tick, enumerates
+all of the actor's socket components and processes connected mooring cables.
+By contrast, the native Drop Cargo callback at `0x145486d20` uses only its cached
+`MooringSocketA/B` references. This is why extending the component set is enough
+for reeling, while both the action and its hint predicate need replacement.
+The stock Gyro uses `DA_Socket_MooringSmall` and `DA_Cable_Hook` with a 1000 cm
+integrated cable; the ship socket uses `DA_Socket_Mooring`, `ST_Output` and
+`DA_Cable_Mooring` with 2000 cm. Hook Cable's attachment is `DA_Hook_Attachment`.
+Do not substitute the ship actor or infer zero values from absent overrides.
+
+Stock asset inspection establishes one `MooringPlate` component and one mesh
+containing both separated sides, not an exporter merge of two components.
+Its ordinary LOD0 has one material section and 3301 triangles; the decoded
+Nanite leaf geometry has 13,790 faces. No triangle crosses the Y=0 split plane.
+The mesh's material slot itself names `WorldGridMaterial`; the required visible
+material comes from the component's `Gyrocopter_Seat_p1` override. Derived plate
+components retain NoCollision and disabled overlap generation.
+
+The source includes 114 zero-area triangles. The material chain
+`Gyrocopter_Seat_p1` -> `Gyrocopte_Master_Hull` ->
+`/Game/ModulesAnimations/Common/Materials/M_Modules` has a connected
+WorldPositionOffset output (`PropertyConnectedMask=267747`, bit 12). Coincident
+positions do not imply identical normals or UVs, so deleting those faces as
+unconditionally irrelevant is not justified by their initial area alone.
+This proves possible vertex deformation, not visible contribution from every
+degenerate face. Extraction and splitting preserve all faces and corner data;
+Unreal's ordinary mesh builder may still discard coincident-position faces.
+
+These contracts can be revisited through the public
+[asset inspection](../../tools/asset-inspection.md),
+[executable inspection](../../tools/executable-inspection.md) and
+[model export](../../tools/model-and-material-tools.md) entry points. The
+exporter's bounded Nanite mode is documented in its
+[guide](../../tools/VoyageModelExporter/README.md). Current behavior and the
+scope of completed game checks are in [architecture](ARCHITECTURE.md).
 
 ## Historical native context
 

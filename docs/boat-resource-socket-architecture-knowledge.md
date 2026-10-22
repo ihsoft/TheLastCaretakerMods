@@ -127,6 +127,8 @@ safe removal of a mod from a saved game.
 
 See [attachment and restoration events](vehicle-and-hud-modding-patterns-knowledge.md#actor-attachment-and-save-restoration)
 and [weak-array Blueprint access](voyage-cooked-asset-toolchain-knowledge.md#reflected-weak-object-arrays).
+For cable connection events, native disconnect and optional saved endpoints,
+see [mooring cable and socket lifecycle](mooring-cable-and-socket-knowledge.md).
 
 ## Integration boundary
 

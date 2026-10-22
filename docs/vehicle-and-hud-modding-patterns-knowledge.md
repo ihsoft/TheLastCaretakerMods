@@ -215,6 +215,13 @@ conditions before mutation. Do not assume a disabled hint alone
 blocks an independently bound input handler, or wire both paths to the same
 mutation without proving dispatch ownership.
 
+For a hold action, `Started` alone is insufficient. Match the native elapsed-time
+threshold in both the input handler and hint, release once per press, and reset
+press state on completion, cancellation and controller changes. StableGyro uses
+the live native `DropCargoTriggerTime` for this purpose. The
+[mooring socket contract](mooring-cable-and-socket-knowledge.md) explains why
+adding endpoints can require changes to both release and availability consumers.
+
 Capture the original character before possession; after entering a station,
 the currently possessed pawn is not the character's inventory owner. Refresh
 inventory-dependent availability initially and from both inventories'

@@ -47,6 +47,9 @@ do not load every document just because it is indexed here.
 
 - [Boat resource sockets](docs/boat-resource-socket-architecture-knowledge.md):
   power and Diesel connectors, registration, and hover-card data flow.
+- [Mooring cables and sockets](docs/mooring-cable-and-socket-knowledge.md):
+  Hook versus Mooring assets, connection events, native disconnect, and saved
+  endpoint identity; vehicle-specific consumer boundaries.
 - [Gameplay observations](docs/gameplay-observations-knowledge.md): measured
   resource units and balancing values.
 - [Game Updates and versions](docs/game-update-versions-knowledge.md): map
