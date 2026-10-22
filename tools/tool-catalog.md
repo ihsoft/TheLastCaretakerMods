@@ -14,11 +14,16 @@ failure handling.
 | Summarize a Blueprint | `Get-VoyageAssetSummary.ps1` | [Asset inspection](asset-inspection.md) |
 | Retrieve one asset JSON or package inventory | `Get-VoyageAssetJson.ps1` | [Asset inspection](asset-inspection.md) |
 | Extract one cooked package | `Extract-VoyagePackage.ps1` | [Asset inspection](asset-inspection.md) |
-| Export a stock model | `Export-VoyageModelGlb.ps1` | [Model and material tools](model-and-material-tools.md) |
-| Export stock material samples | `Export-VoyageMaterialsGlb.ps1` | [Model and material tools](model-and-material-tools.md) |
-| Render material previews | `Export-VoyageMaterialPreview.ps1` | [Model and material tools](model-and-material-tools.md) |
-| Package one material | `Export-VoyageMaterialPack.ps1` | [Model and material tools](model-and-material-tools.md) |
-| Package a material batch | `Export-VoyageMaterialBundle.ps1` | [Model and material tools](model-and-material-tools.md) |
+| Export a stock model | `Export-VoyageModelGlb.ps1` | [Model export](model-export.md) |
+| Export stock material samples | `Export-VoyageMaterialsGlb.ps1` | [Material export](material-export.md) |
+| Render material previews | `Export-VoyageMaterialPreview.ps1` | [Material export](material-export.md) |
+| Package one material | `Export-VoyageMaterialPack.ps1` | [Material export](material-export.md) |
+| Package a material batch | `Export-VoyageMaterialBundle.ps1` | [Material export](material-export.md) |
+| Inspect a GLB or owning model registry | `glb/inspect_glb.py` | [GLB tools](glb-tools.md) |
+| Preview a GLB | `glb/preview_glb.py` | [GLB tools](glb-tools.md) |
+| Preview imported material swatches | `glb/preview_material_glb.py` | [GLB tools](glb-tools.md) |
+| Convert an authored Blender hierarchy to GLB | `glb/export_blender_glb.py` | [GLB tools](glb-tools.md) |
+| Verify a material-library GLB | `glb/verify_material_library.py` | [GLB tools](glb-tools.md) |
 | Resolve reviewed mappings | `Get-VoyageMappings.ps1` | [Mappings](mappings.md) |
 | Generate mappings for a new game build | `New-VoyageMappings.ps1` | [Mappings](mappings.md) |
 | Validate a mapping candidate | `Test-VoyageMappings.ps1` | [Mappings](mappings.md) |

@@ -80,8 +80,11 @@ registry; a file's existence alone does not establish a valid map.
 ## Shared generator helpers
 
 `UnrealEditorGeneratorCommon` contains header-only editor helpers, never
-runtime payload. Read its [local guide](UnrealEditorGeneratorCommon/README.md)
-when changing generator code.
+runtime payload. Keep only engine-level reflected identities and semantic graph
+helpers there. Game paths, reconstructed Voyage contracts, and mod tuning stay
+with their owning mod. Extend an existing semantic group before adding another;
+consuming generators address semantic roles rather than raw reflected pins such
+as `A`, `B`, or `bPickA`.
 
 ## Maintain tool documentation
 

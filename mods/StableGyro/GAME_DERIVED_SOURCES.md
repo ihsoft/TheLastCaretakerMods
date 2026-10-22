@@ -216,7 +216,7 @@ These contracts can be revisited through the public
 [executable inspection](../../tools/executable-inspection.md) and
 [model export](../../tools/model-and-material-tools.md) entry points. The
 exporter's bounded Nanite mode is documented in its
-[guide](../../tools/VoyageModelExporter/README.md). Current behavior and the
+[guide](../../tools/model-export.md). Current behavior and the
 scope of completed game checks are in [architecture](ARCHITECTURE.md).
 
 ## Historical native context
