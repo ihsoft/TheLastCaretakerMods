@@ -20,7 +20,7 @@ foreach ($file in $canonical.files) {
     }
 }
 $output = Join-Path $repo '.tools\bin\VoyageModelExporter'
-$logs = Join-Path $repo ('artifacts\model-export\publish-' + [Guid]::NewGuid().ToString('N'))
+$logs = Join-Path $repo ('Tmp\tools\VoyageModelExporter\publish-' + [Guid]::NewGuid().ToString('N'))
 [void](New-Item -ItemType Directory -Path $logs)
 $log = Join-Path $logs 'build.log'
 & dotnet publish (Join-Path $PSScriptRoot 'VoyageModelExporter.csproj') -c Release -o $output -p:RestoreLockedMode=true --nologo -v quiet *> $log
