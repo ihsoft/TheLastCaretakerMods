@@ -116,6 +116,8 @@ const FName ProvidedActionsFunctionName(TEXT("GetProvidedActionsBP"));
 const FName CargoAvailabilityLocal(TEXT("StableGyroCargoAvailable"));
 const FName MooringVehicleComponentsLocal(TEXT("StableGyroMooringVehicleComponents"));
 const FName MooringVehicleMeshLocal(TEXT("StableGyroMooringVehicleMesh"));
+const FName DisabledMooringLeftChildrenLocal(TEXT("StableGyroDisabledMooringLeftChildren"));
+const FName DisabledMooringRightChildrenLocal(TEXT("StableGyroDisabledMooringRightChildren"));
 const FName CargoPressArmed(TEXT("StableGyroCargoPressArmed"));
 const FName CargoPressFired(TEXT("StableGyroCargoPressFired"));
 const FName CargoControllerChangedCallbackName(TEXT("HandleCargoControllerChanged"));
@@ -3517,6 +3519,17 @@ bool AddRunDisabledMooringCleanup(UBlueprint* Blueprint)
     UK2Node_FunctionEntry* Entry = AddVoidFunction(
         Blueprint, RunDisabledMooringCleanupFunction, Graph);
     if (!Entry) return false;
+    FEdGraphPinType SceneComponentArrayType;
+    SceneComponentArrayType.PinCategory = UEdGraphSchema_K2::PC_Object;
+    SceneComponentArrayType.PinSubCategoryObject = USceneComponent::StaticClass();
+    SceneComponentArrayType.ContainerType = EPinContainerType::Array;
+    for (const FName ChildrenLocal : {
+        DisabledMooringLeftChildrenLocal, DisabledMooringRightChildrenLocal})
+    {
+        if (!FBlueprintEditorUtils::AddLocalVariable(
+                Blueprint, Graph, ChildrenLocal, SceneComponentArrayType))
+            return false;
+    }
     auto* CleanupSequence = FinishNode(
         NewObject<UK2Node_ExecutionSequence>(Graph), Graph, 220, 0);
     auto* ClearQueued = AddWrite(Graph, DisabledMooringCleanupQueued, 1140, 1980);
@@ -3541,6 +3554,8 @@ bool AddRunDisabledMooringCleanup(UBlueprint* Blueprint)
     int32 SocketIndex = 0;
     for (const FName SocketField : SocketFields)
     {
+        const FName ChildrenLocal = SocketIndex == 0
+            ? DisabledMooringLeftChildrenLocal : DisabledMooringRightChildrenLocal;
         const int32 Y = SocketIndex * 900;
         auto* Socket = AddRead(Graph, SocketField, nullptr, 1140, Y + 180);
         auto* Valid = AddCall(Graph, UKismetSystemLibrary::StaticClass(),
@@ -3557,11 +3572,13 @@ bool AddRunDisabledMooringCleanup(UBlueprint* Blueprint)
         auto* GetChildren = AddCall(Graph, USceneComponent::StaticClass(),
             MooringLayout::GetChildrenComponentsFunction, 2060, Y);
         SetDefault(GetChildren, MooringLayout::IncludeAllDescendants, CargoAction::Enabled);
+        auto* SaveChildren = AddLocalWrite(Blueprint, Graph, ChildrenLocal, 2290, Y);
+        auto* SavedChildren = AddLocalRead(Blueprint, Graph, ChildrenLocal, 2290, Y + 180);
         auto* ChildLoop = NewObject<UK2Node_MacroInstance>(Graph);
         ChildLoop->SetMacroGraph(StandardForEachLoop());
-        FinishNode(ChildLoop, Graph, 2290, Y);
+        FinishNode(ChildLoop, Graph, 2520, Y);
         auto* DisableChild = AddCall(
-            Graph, Blueprint->GeneratedClass, DisableOwnedMooringObjectFunction, 2520, Y);
+            Graph, Blueprint->GeneratedClass, DisableOwnedMooringObjectFunction, 2750, Y);
 
         Ok &= Connect(SocketSequence->GetThenPinGivenIndex(SocketIndex),
             RequirePin(ValidBranch, P::Execute));
@@ -3572,10 +3589,12 @@ bool AddRunDisabledMooringCleanup(UBlueprint* Blueprint)
         Ok &= Connect(RequirePin(Disconnect, P::Then), RequirePin(DisableSocket, P::Execute));
         Ok &= Connect(RequirePin(Socket, SocketField),
             RequirePin(DisableSocket, MooringLayout::TargetObject));
-        Ok &= Connect(RequirePin(DisableSocket, P::Then), RequireExecInputPin(ChildLoop));
+        Ok &= Connect(RequirePin(DisableSocket, P::Then), RequirePin(SaveChildren, P::Execute));
         Ok &= Connect(RequirePin(Socket, SocketField), RequirePin(GetChildren, P::FunctionTarget));
         Ok &= Connect(RequirePin(GetChildren, MooringLayout::Children),
-            RequirePin(ChildLoop, CargoAction::Array));
+            RequirePin(SaveChildren, ChildrenLocal));
+        Ok &= Connect(RequirePin(SaveChildren, P::Then), RequireExecInputPin(ChildLoop));
+        Ok &= Connect(SavedChildren->GetValuePin(), RequirePin(ChildLoop, CargoAction::Array));
         Ok &= Connect(RequirePin(ChildLoop, P::LoopBody), RequirePin(DisableChild, P::Execute));
         Ok &= Connect(RequirePin(ChildLoop, CargoAction::ArrayElement),
             RequirePin(DisableChild, MooringLayout::TargetObject));
@@ -3591,9 +3610,9 @@ bool AddRunDisabledMooringCleanup(UBlueprint* Blueprint)
                  ObjectField == MooringSerializationFields::Mesh)
                     ? UVoyageModuleSocketViewComponent::StaticClass()
                     : UModuleSocketComponent::StaticClass();
-            auto* Object = AddRead(Graph, ObjectField, OwnerClass, 2750, Y + 180);
+            auto* Object = AddRead(Graph, ObjectField, OwnerClass, 2980, Y + 180);
             auto* DisableObject = AddCall(
-                Graph, Blueprint->GeneratedClass, DisableOwnedMooringObjectFunction, 2980, Y);
+                Graph, Blueprint->GeneratedClass, DisableOwnedMooringObjectFunction, 3210, Y);
             Ok &= Connect(RequirePin(Socket, SocketField),
                 RequirePin(Object, P::FunctionTarget));
             Ok &= Connect(Tail, RequirePin(DisableObject, P::Execute));

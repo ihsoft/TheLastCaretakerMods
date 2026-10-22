@@ -415,11 +415,6 @@ bool AddTickGraph(UEdGraph* Graph)
 
     UK2Node_CallFunction* Controller = Call(Graph, APawn::StaticClass(),
         BlueprintGraphNames::ActorFunctions::GetController, 680, -180);
-    UK2Node_CallFunction* HelperAfterController = Call(Graph, AActor::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(AActor, AddTickPrerequisiteActor), 910, -180);
-    UK2Node_Self* Self = AddNode(NewObject<UK2Node_Self>(Graph), Graph, 1140, -400);
-    UK2Node_CallFunction* GyroAfterHelper = Call(Graph, AActor::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(AActor, AddTickPrerequisiteActor), 1140, -180);
 
     UK2Node_VariableGet* Raw = Read(Graph, TiltForwardInput,
         AVoyageVehicleGyroCopter::StaticClass(), 680, 240);
@@ -479,14 +474,8 @@ bool AddTickGraph(UEdGraph* Graph)
     bool Ok = true;
     Ok &= Link(Pin(Tick, P::Then), Pin(Cast, P::Execute));
     Ok &= Link(Pin(GetParent, P::ReturnValue), Cast->GetCastSourcePin());
-    Ok &= Link(Cast->GetValidCastPin(), Pin(HelperAfterController, P::Execute));
+    Ok &= Link(Cast->GetValidCastPin(), Pin(EnabledBranch, P::Execute));
     Ok &= Link(Cast->GetCastResultPin(), Pin(Controller, P::FunctionTarget));
-    Ok &= Link(Pin(Controller, P::ReturnValue), Pin(HelperAfterController, P::PrerequisiteActor));
-    Ok &= Link(Pin(HelperAfterController, P::Then), Pin(GyroAfterHelper, P::Execute));
-    Ok &= Link(Cast->GetCastResultPin(), Pin(GyroAfterHelper, P::FunctionTarget));
-    Ok &= Link(Self->FindPinChecked(UEdGraphSchema_K2::PN_Self),
-        Pin(GyroAfterHelper, P::PrerequisiteActor));
-    Ok &= Link(Pin(GyroAfterHelper, P::Then), Pin(EnabledBranch, P::Execute));
     Ok &= Link(Pin(Enabled, Settings::EnablePitchCorrection),
         Pin(EnabledBranch, P::Condition));
     Ok &= Link(Pin(EnabledBranch, P::Then), Pin(Branch, P::Execute));
