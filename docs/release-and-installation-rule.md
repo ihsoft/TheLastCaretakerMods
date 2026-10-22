@@ -16,6 +16,12 @@ not advance it.
 
 Work after `V<N>` consists of candidates for `V<N+1>`; with `0`, the work is
 on candidates for the first numbered release, `V1`.
+For a requested publication, read `version.txt` directly and compare the
+proposed release number with the numbered files already published on the mod's
+Nexus page before selecting that number. If they disagree, resolve the target
+release number explicitly; do not infer a missing or unread value from the
+usual `N+1` path. This publication check does not precede an ordinary candidate
+build that has no publication request, and it is not a game-version preflight.
 Before publication, identify the supported game Update and whether an older
 Update remains in use on the main or beta channel. A new release for one Update
 does not automatically replace a downloadable file for another still-supported
@@ -31,6 +37,13 @@ Candidate names may start with that next version and a distinguishing suffix;
 they must never imply that publication has occurred. A candidate promoted to
 a release keeps one exact ZIP identity. Publishing a different ZIP under the
 same version is a conflict to resolve explicitly, not a routine overwrite.
+If the user explicitly changes the target release number after a game test,
+keep the tested ZIP bytes and original build manifest. The manifest's candidate
+label remains build provenance, not proof of the eventual Nexus version. Name
+the retained release directory for the actual target, report both identities,
+and check whether any version-bearing content inside the ZIP makes that change
+unsafe. Do not leave a local selection under the old release number or rebuild
+solely to change a label.
 
 ## Release archive
 

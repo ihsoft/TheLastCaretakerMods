@@ -1,29 +1,39 @@
 # Nexus publication workflow (observed UI; recheck when changed)
 
-This guide covers the Nexus page after a candidate has passed the shared
-[release gates](release-and-installation-rule.md). The site's controls can
-change; use the current visible state to verify each transition. The release
-rule owns version identity and the exact ZIP to publish.
+This guide covers the Nexus page and the shared
+[release gates](release-and-installation-rule.md). For a requested publication,
+complete the version check in step 1 before selecting a numbered release;
+complete the upload steps after the candidate passes those gates. The site's
+controls can change; use the current visible state to verify each transition.
+The release rule owns version identity and the exact ZIP to publish.
 
 ## Prepare the page and file
 
 1. Read the mod's `version.txt`. The target numbered release is its value plus
    one, including V1 when the file contains `0`. Determine separately whether
-   the mod already has a Nexus page; `0` does not answer that question. Check
+   the mod already has a Nexus page; `0` does not answer that question. Compare
+   the proposed number with files already published on that page. If the
+   repository value is stale or the proposed number is occupied, resolve the
+   target before retaining or publishing a numbered candidate. Check
    which game Updates the existing downloadable files support. When main and
    beta Updates coexist, decide whether the new file is parallel to an older
    supported file or replaces it before opening the upload form.
 2. Use the exact selected, game-tested ZIP. Do not rebuild it merely for the
-   upload or substitute another archive under the same version.
+   upload or substitute another archive under the same version. If an explicit
+   decision changed the target number after the game test, keep the original
+   ZIP and build manifest as evidence, and identify both the tested candidate
+   label and the actual release number. The retained directory must name the
+   actual release; inspect version-bearing ZIP content before reusing its bytes.
 3. Create or update the mod page, then upload the ZIP as the main file. Enter
    the target release number as a plain integer in the Nexus file-version
    field, such as `1`, not `1.0`. Confirm the saved file's category, version,
    and identity before publication.
 4. Distinguish a prepared page, a saved file in a draft, and a public page.
    A completed upload or enabled Publish control is not evidence that the mod
-   is public. After publication, verify the public state or use the user's
-   explicit report that he completed the final step. Only then advance
-   `version.txt` under the release rule; state when publication was reported
+   is public. Opening a public-page tab alone is not verification: inspect the
+   visible file listing and version. After publication, verify the public state
+   or use the user's explicit report that he completed the final step. Only
+   then advance `version.txt` under the release rule; state when publication was reported
    by the user rather than independently observed.
 
 ## If the site behaves unexpectedly

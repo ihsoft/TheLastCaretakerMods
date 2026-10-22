@@ -99,11 +99,14 @@ narrower step cannot answer the question or has already failed to do so.
   misleading approach in [research pitfalls](research-pitfalls-knowledge.md) when it can
   prevent repeated mistakes. One-off logs and measurements do not belong in
   shared guidance.
-- Commit a coherent positive research checkpoint when it establishes a useful
-  intermediate fact, method, or validated candidate, even if the investigation
-  and feature remain open. Name its evidence and validation boundary; do not
-  present it as a finished mod or release. This differs from implementation
-  work, where a commit normally completes a logical piece of behavior.
+- Unless the user has restricted commits for the current task, commit a coherent
+  positive research checkpoint when it establishes a useful intermediate fact,
+  method, or validated candidate, even if the investigation and feature remain
+  open. Permission for one checkpoint in unfinished implementation work does
+  not authorize later experimental commits. Name the checkpoint's evidence and
+  validation boundary; do not present it as a finished mod or release. This
+  differs from implementation work, where a commit normally completes a
+  logical piece of behavior.
   Combine minor observations at a natural checkpoint rather than committing
   each one. Commit eligible source, methods, and documentation through the
   repository Git workflow; generated output follows the

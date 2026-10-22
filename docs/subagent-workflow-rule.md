@@ -33,6 +33,10 @@ metrics routinely or put individual measurement results in shared documentation.
   ownership of architectural decisions and unknown game contracts. Conversely,
   do not invent an investigation for an already understood operation. Resolving
   mixed changes, merge conflicts or history rewriting is not a prepared commit.
+  That distinction does not make delegation automatic: when a history edit has
+  a known consecutive scope, no interleaved unrelated changes, and a preserved
+  rollback, the parent can perform the bounded operation directly under the
+  required Git coordination.
 - Delegate implementation and work with substantial build/debugging context.
   A short request is not necessarily a trivial task. If a direct operation
   uncovers substantial implementation or debugging, reassess delegation at
