@@ -43,6 +43,15 @@
       "maximum": 10000.0
     },
     {
+      "id": "AltitudeStabilizationDescentDeceleration",
+      "runtimeName": "AltitudeStabilizationDescentDeceleration",
+      "key": "AltitudeStabilizationDescentDeceleration",
+      "type": "number",
+      "default": 500.0,
+      "minimum": 0.0,
+      "maximum": 10000.0
+    },
+    {
       "id": "AltitudeStabilizationMinimumThrottlePercent",
       "runtimeName": "AltitudeStabilizationMinimumThrottlePercent",
       "key": "AltitudeStabilizationMinimumThrottlePercent",

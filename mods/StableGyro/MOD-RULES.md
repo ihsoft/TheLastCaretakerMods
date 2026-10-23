@@ -60,8 +60,16 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   full-throttle requirement.
   While Ctrl is held, clear vertical hold/braking state and let stock descent
   operate; Ctrl takes precedence over Space, while propulsion- and contact-gated
-  horizontal damping may continue. Re-entering with Space released must brake positive Vz
-  before exact hold, rather than discarding climb inertia. Do not alter A/D integration, yaw, camera,
+  horizontal damping may continue. Track the Ctrl hold/release transition. On
+  an eligible release, brake negative physics Vz toward zero at
+  `AltitudeStabilizationDescentDeceleration`, rejecting physics-injected growth
+  in downward speed against the previous helper command before applying the
+  constant-rate correction. Acquire exact hold only when corrected Vz reaches
+  or crosses zero. A zero descent-deceleration setting disables negative-Vz
+  damping and growth rejection while observed Vz remains negative, clears the
+  previous vertical sample, and still allows exact hold once observed Vz becomes
+  nonnegative. Re-entering with Space released must brake positive Vz before
+  exact hold, rather than discarding climb inertia. Do not alter A/D integration, yaw, camera,
   possession, save behavior, or other HUD/input behavior without a new user
   request.
 - Native altitude-assistance ownership is independent of
@@ -135,7 +143,8 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   import does not substitute a reduced fallback for the desired render geometry.
 - Gameplay validation covers pitch in both directions, release hold, both
   limits, X, exit/re-entry, altitude braking/hold across partial and full
-  throttle, Ctrl descent/reacquisition, and horizontal
+  throttle, Ctrl descent/reacquisition with positive and zero configured descent
+  deceleration, and horizontal
   damping under climb, descent, neutral, directional, and reversing input.
 
 ## Settings contract

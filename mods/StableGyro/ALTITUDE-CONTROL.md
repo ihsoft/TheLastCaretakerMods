@@ -145,6 +145,17 @@ performs no Z position or velocity write, and clears the old vertical sample.
 This does not disable horizontal stabilization or later exact-hold acquisition
 after Vz naturally becomes nonpositive.
 
+Descent-release braking separately defaults to `500 cm/s^2`. While Ctrl is
+held, StableGyro leaves stock descent unmodified and clears vertical hold and
+braking state while remembering the held input. On an eligible release it
+rejects physics-injected growth in downward speed against the previous helper
+command, applies constant-rate damping toward zero, and acquires exact hold only
+when corrected Vz reaches or crosses zero. At `0`, negative observed Vz bypasses
+both damping and growth rejection, performs no Z position or velocity write,
+and clears the old vertical sample; exact hold remains available once physics Vz
+becomes nonnegative. The setting is reread on the next player entry with the
+other flight settings.
+
 The minimum displayed-throttle setting defaults to `50%`. Below its configured
 inclusive threshold, PostPhysics still performs eligible horizontal damping but
 skips every Z braking, exact-hold and Space-floor correction, then clears the
@@ -185,9 +196,12 @@ mechanism remains unproven.
 
 ## Compatibility boundary
 
-The altitude-hold path does not adjust native throttle. Both the default
-vertical deceleration and its zero setting follow the documented control
-paths. Strong waves, every collision shape and every saved calibration state
-are outside the established compatibility scope. A changed game Update or a
-failed build/game test calls for review of the affected input and calibration
-contracts.
+The altitude-hold path does not adjust native throttle. Static generation and
+cooked readback establish the ascent/descent graph structure and settings
+contract, not flight behavior. A game test must verify Ctrl-held stock descent,
+smooth braking after Ctrl release at a positive configured rate, no negative-Vz
+kinematic correction at `0`, later exact-hold acquisition after Vz becomes
+nonnegative, and unchanged horizontal damping. Strong waves, every collision
+shape and every saved calibration state are outside the established
+compatibility scope. A changed game Update or a failed build/game test calls
+for review of the affected input and calibration contracts.
