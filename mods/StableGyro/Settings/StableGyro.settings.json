@@ -25,6 +25,15 @@
       "default": true
     },
     {
+      "id": "HoverPitchScale",
+      "runtimeName": "HoverPitchScale",
+      "key": "HoverPitchScale",
+      "type": "number",
+      "default": 2.5,
+      "minimum": 0.5,
+      "maximum": 2.5
+    },
+    {
       "id": "EnableHorizontalVelocityControl",
       "runtimeName": "EnableHorizontalVelocityControl",
       "key": "EnableHorizontalVelocityControl",

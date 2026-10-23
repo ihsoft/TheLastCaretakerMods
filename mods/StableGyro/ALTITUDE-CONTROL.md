@@ -2,36 +2,98 @@
 
 ## Version-bound native contracts
 
-The native contracts in this document were inspected on an earlier game
-snapshot. Names, owners, offsets, property types and flags reflect that
-snapshot; they are not a player-facing compatibility boundary. On a new Steam
-build, attempt the public candidate path first; investigate these native
-details when a build or game test reveals a discrepancy. The public
+The calculation chain below was checked against the Shipping executable for
+Steam build `25982825`, UE `5.8.2`, together with that build's reviewed mapping
+metadata. Native addresses are image virtual addresses, not portable runtime
+offsets. [Game-derived sources](GAME_DERIVED_SOURCES.md) records the executable
+identity. This is a calculation contract, not a claim that every flight state
+has been game-tested or a player-facing compatibility label.
+
+Current mappings establish native owners and field types; the stock HUD
+binding was independently extracted. Reflected access flags and numerical CDO
+defaults explicitly identified as earlier observations below retain their older
+evidence boundary. Do not silently treat them as newly inspected defaults.
+StableGyro's configured `HoverPitchScale` entry baseline defaults and falls
+back to `2.5`; that is mod tuning, not the native CDO default.
+
+On a new Steam build, attempt the public candidate path first; investigate
+these native details when a build or game test reveals a discrepancy. The
 producer separately re-extracts and checks the stock cooked assets consumed by
 each candidate build.
 
-Current reviewed mapping metadata revalidated the native owner and float/bool
-types of the fields consumed by these graphs, and the stock HUD binding
-described below was re-extracted unchanged. The offsets, reflected access
-flags, CDO defaults, and native formulas remain bounded to the earlier
-snapshot. Resetting
-`HoverPitchScale` to `1.0` is the recovery policy based on that earlier stock
-default; it is not a current-build CDO claim.
+## Native calculation order and state ownership
 
-## Native producer and calibration
+The important quantities are distinct; none should be used as a synonym for
+all of the others:
 
-The Gyro control pass samples physical vertical velocity into `ClimbRate`, then
-updates collective, altitude assistance and hover calibration. StableGyro's
-kinematic correction follows in `TG_PostPhysics`. Correcting final world Z does
-not change the velocity that the native controller observed earlier in the same
-frame.
+| Native field | Meaning and producer |
+| --- | --- |
+| `ThrottleInput` (`0x7E4`) | Signed input intent, not the resulting engine command. |
+| `Collective` (`0x800`) | Integrated collective, also writable by native trim/calibration. |
+| `BladePitch` (`0x808`) | Computed dimensionless pitch demand, including boost, assist and scale. |
+| `HoverPitchScale` (`0x80C`) | Saved multiplier of pitch demand, not a percentage limited to one. |
+| `CurrentThrottle` (`0x7FC`) | Engine command integrated by the rotor-speed governor. |
+| `PropellerVelocity` (`0x89C`) | Measured rotor speed in the game's scaled units, not an engine-throttle setting or literal RPM. |
+| `ClimbRate` (`0x898`) | Physical chassis world-Z velocity; positive is climbing. |
 
-Manual throttle input changes `Collective`; it is distinct from governed engine
-`CurrentThrottle`. With neutral input, a running engine, sufficient rotor
-authority and the native control predicate, altitude assistance trims collective
-according to negative climb rate and supplies a damped `AssistPitch`. Engine
-throttle can therefore rise without new player input. Kinematic support is not
-engine propulsion.
+The native Tick at `0x1454a4d20` executes the relevant passes in this order:
+
+1. Read chassis physical velocity Z into `ClimbRate` (`0x1454a4dbf`).
+2. Update input/collective, altitude assist, calibration and `BladePitch`
+   (`0x1454ac470`).
+3. Update temperature-derived cold severity (`0x1454ac2b0`).
+4. Compute governed rotor target, drag correlation and `CurrentThrottle`
+   (`0x1454ad710`).
+5. Sample rotor angular velocity/rate and submit rotor torque commands
+   (`0x1454af0c0`).
+6. Sample root world Z into `Altitude`, then submit rotor lift and update tilt
+   (`0x1454acc90`).
+7. Submit fuel demand and engine-resource production settings
+   (`0x1454a4ec1..0x1454a4f5e`).
+
+Thus the governor uses the rotor speed/rate retained from the preceding rotor
+sample; its new target is also later than the authority check in the collective
+pass. These are sequential feedback passes, not one simultaneous equilibrium
+solution. Resource processing and physics integration are separate consumers;
+setting throttle does not instantly assign a rotor speed.
+
+The dependency loop is:
+
+```text
+input + assist/calibration -> collective/boost/assist/scale -> blade pitch
+blade pitch -> drag + measured rotor speed -> governor -> engine throttle
+engine throttle -> module energy -> rotor physics -> measured rotor speed
+rotor speed + blade pitch + world lift axis -> lift -> physical climb rate
+physical climb rate -> assist/calibration -> collective/assist/scale
+```
+
+StableGyro's eligible PrePhysics helper suppresses the native assistance before
+this chain; its PostPhysics kinematic support runs after the stock Gyro tick.
+Correcting final world Z cannot change the physical climb-rate sample already
+read by that native tick.
+
+## Input, collective and blade pitch
+
+For normal positive `dt`, manual integration is:
+
+```text
+Cmin = min(MinCollective, 0)
+Collective = clamp(Collective + ThrottleInput * CollectiveRate * dt, Cmin, 1)
+boostTarget = ThrottleInput * CollectiveInputBoost
+PitchBoost = FInterpTo(PitchBoost, boostTarget, dt, CollectiveBoostInterpSpeed)
+```
+
+The native lower bound is not unconditionally zero: a negative `MinCollective`
+permits negative collective. `CollectiveInputDeadzone` supplies separate
+up/down predicates for engine and assistance logic; it does not replace the
+raw input in the integration above. Positive input can start a stopped engine;
+held downward input at the lower bound can stop it subject to the native
+hold-time and ground-clearance conditions.
+
+Here `FInterpTo` blends toward the target by `clamp(dt * speed, 0, 1)` for a
+positive speed, snaps when sufficiently close, and uses the target directly
+when the interpolation speed is nonpositive. This is different from constant
+rate movement used by hover calibration.
 
 For this fingerprint, the stock HUD Blueprint
 `/Game/UI/Game/HUD/WBP_VoyageIngameGyroCopter` binds its `Throttle` slider's
@@ -42,31 +104,227 @@ altitude throttle compares `Collective >= configuredPercent / 100`. This is an
 inclusive vertical-only gate and does not replace the separate governed
 `CurrentThrottle > 0` propulsion gate.
 
-With automatic hover calibration enabled, calibration additionally requires:
+After assistance and calibration, native control writes:
 
-- neither upward nor downward input beyond the native deadzone;
-- a running engine and adequate rotor authority;
-- `Collective / max(HoverCollective, epsilon)` above
-  `HoverCalibrationMinPitch`;
-- absolute assist pitch below its calibration limit;
-- absolute climb rate below its calibration limit; and
-- ground clearance above its calibration limit.
-
-For this fingerprint, the native calibration routine at
-`0x1454aa4c0..0x1454aa8d3` applies:
-
-```
-newScale = clamp(oldScale * oldCollective / newCollective,
-                 MinHoverPitchScale, MaxHoverPitchScale)
+```text
 BladePitch = (Collective / max(HoverCollective, epsilon)
               + PitchBoost + AssistPitch) * HoverPitchScale
 ```
 
-The compensation and pitch writes are at `0x1454aa84f..0x1454aa8c2`.
-Reflection verifies `HoverCollective=0.65`, scale bounds `0.5..2.5` and a native
-CDO `HoverPitchScale` of `1`. Full upward input supplies `PitchBoost=0.25`.
-The formula explains why a reduced scale can leave full input unable to produce
-the previous lift even at full rotor speed.
+The earlier reflected defaults were `HoverCollective=0.65`,
+`CollectiveInputBoost=0.25`, native `HoverPitchScale=1`, and scale bounds
+`0.5..2.5`. These explain the formula but are not newly verified current CDO
+values. A scale above one is supported calibration/tuning, not invalid
+normalized input. At equal rotor speed and other force factors, reducing this
+scale reduces positive lift even when engine throttle is already saturated.
+
+`Collective` alone is not a record of player intent: manual integration,
+automatic trim and calibration share it. `ThrottleInput` identifies the current
+input direction; `CurrentThrottle` identifies the governor output. The HUD
+collective percentage cannot distinguish those causes by itself.
+
+## Altitude assistance: feedback from vertical speed
+
+Rotor authority here is `PropellerVelocity / GovernedRotorSpeed` when the
+target is positive, otherwise zero; this assistance ratio is not clamped to one.
+With `bAltitudeAssist`, neutral up/down input, a running engine, authority at
+least `AssistMinRotorAuthority`, and the additional native eligibility predicate
+at `0x145497420`, the control pass computes:
+
+```text
+assistTarget = clamp(-ClimbRate * AssistClimbRateDamping,
+                     -AssistMaxPitch, AssistMaxPitch)
+trimRate = clamp(-ClimbRate * AssistTrimGain,
+                 -AssistMaxTrimRate, AssistMaxTrimRate)
+Collective = clamp(Collective + trimRate * dt, Cmin, 1)
+AssistPitch = FInterpTo(AssistPitch, assistTarget, dt, AssistInterpSpeed)
+```
+
+When assistance is ineligible, its target is zero and `AssistPitch` interpolates
+back toward zero; this is not an unconditional immediate reset. This path uses
+physical vertical velocity, not an error against a stored target height. For
+negative `ClimbRate`, both pitch assistance and collective trim tend upward;
+for positive `ClimbRate`, they tend downward.
+
+Neither hull attitude nor the vertical projection of rotor lift appears as a
+feed-forward term in this assistance calculation. Tilting the rotor or hull
+can first reduce vertical lift; the response follows the resulting physical
+descent measured by a later native tick. A rotor-speed governor alone need not
+respond to that projection loss if rotor speed has not changed.
+
+## Hover calibration and scale compensation
+
+With `bAutoHoverCollective`, calibration requires:
+
+- neither upward nor downward input beyond the native deadzone;
+- a running engine and authority at least `AssistMinRotorAuthority`;
+- `Collective / max(HoverCollective, epsilon) > HoverCalibrationMinPitch`;
+- `abs(AssistPitch) < HoverCalibrationMaxAssistPitch`;
+- `abs(ClimbRate) < HoverCalibrationClimbRate`; and
+- `GroundClearance > HoverCalibrationClearance`.
+
+The verified calibration block is `0x1454ac756..0x1454ac823`. It moves
+collective toward `HoverCollective` using constant-rate interpolation. Only a
+sufficiently positive candidate collective is committed together with the
+compensated multiplier; otherwise the pair is left unchanged:
+
+```text
+newCollective = FInterpConstantTo(oldCollective, HoverCollective,
+                                 dt, HoverCalibrationRate)
+newScale = clamp(oldScale * oldCollective / newCollective,
+                 MinHoverPitchScale, MaxHoverPitchScale)
+```
+
+For normal nonnegative calibration rate, `FInterpConstantTo` moves at most
+`HoverCalibrationRate * dt` per pass. Without active scale clamping,
+`oldCollective * oldScale = newCollective * newScale`: this preserves the base
+collective contribution to pitch, not an exact total-force invariant when boost,
+assist, ground effect or attitude changes. The final pitch write follows at
+`0x1454ac82b..0x1454ac872`.
+
+## Rotor-speed governor and automatic engine throttle
+
+The governor at `0x1454ad710..0x1454ad929` derives its target from the chassis
+primitive's native `GetMass`, world gravity and the lift coefficient:
+
+```text
+GovernedRotorSpeed = VehicleMesh.GetMass() * abs(worldGravityZ)
+                     / max(PropellerLift, epsilon)
+```
+
+The `GetMass` identity is established by its Engine registration and thunk
+`0x142915cc0`, which dispatches through the same virtual slot `0x958` used by
+the governor. This resolves the otherwise ambiguous virtual query; it is not
+an estimate based only on a nearby function name. It reads the chassis body
+mass, not an explicit sum of suspended cargo attached by cables. Tilt, ground
+effect and `HoverPitchScale` are not terms in this rotor target.
+
+The pass retains the previous `RotorDragCoefficient` and calculates:
+
+```text
+Dnew = rotorAngularDamping + abs(BladePitch) * RotorPitchDrag
+       + ColdSeverity * ColdRotorDrag
+```
+
+If `bCollectiveCorrelator` is enabled and both drag coefficients exceed the
+native small-value guard, it first rescales the previous engine command:
+
+```text
+CurrentThrottle = clamp(CurrentThrottle * Dnew / Dold, IdleThrottle, 1)
+```
+
+With a running engine and positive target, it then integrates speed feedback:
+
+```text
+speedError = (GovernedRotorSpeed - PropellerVelocity) / GovernedRotorSpeed
+speedRate = RotorSpeedRate / GovernedRotorSpeed
+ThrottleCommand = clamp(GovernorGain * speedError - GovernorDamping * speedRate,
+                        -MaxThrottleRate, MaxThrottleRate)
+CurrentThrottle = clamp(CurrentThrottle + ThrottleCommand * dt, IdleThrottle, 1)
+```
+
+`ThrottleCommand` is the bounded rate of throttle change, not the throttle
+itself. With the engine stopped or a nonpositive target, the command is
+`-MaxThrottleRate` and throttle decays toward zero without the idle floor.
+Higher pitch can therefore increase automatic throttle through both immediate
+drag correlation and subsequent speed feedback, even with neutral player input.
+There is no direct `CurrentThrottle = Collective` or proportional RPM assignment.
+
+## Engine resources, rotor dynamics and measured speed
+
+The rotor pass at `0x1454af0c0` measures angular velocity along the propeller's
+world up axis and stores:
+
+```text
+PropellerVelocity = abs(dot(rotorAngularVelocity, rotorUp))
+                     * PropellerVelocityScale
+RotorSpeedRate = (newPropellerVelocity - previousPropellerVelocity) / dt
+```
+
+The rate is zero for nonpositive `dt`. The speed uses the game's scaling;
+do not label it RPM without a separate units conversion. It is an observation
+of physics, not an integration of the player input or of `CurrentThrottle`.
+
+Native Tick writes engine production rates proportional to `CurrentThrottle`,
+including `PhysicalEnergyProduction * CurrentThrottle`. The rotor reads
+`CustomModule.GetResourceAmount(PhysicalEnergy)` and multiplies that available
+amount by `PropellerTorquePerEnergy` for its engine torque command. The getter
+returns an amount, not a production rate or a last-frame change. Its native
+registration thunk `0x14532e790` dispatches through slot `0x548`; the enum value
+is `5` for PhysicalEnergy (`1` for Petrol).
+
+Consequently, the observed chain is throttle -> module production/resource
+state -> torque -> physics -> measured rotor speed. It does not justify
+replacing the available resource amount with the advertised production rate or
+assuming that their consumers execute in one simultaneous calculation.
+
+The rotor also applies pitch drag proportional to
+`abs(BladePitch) * RotorPitchDrag * abs(dot(rotorAngularVelocity, rotorUp))`,
+temperature-dependent drag and an explicit rotor-brake branch. Native
+autorotation can add torque from downward airflow when its pitch/speed and
+steady-torque conditions permit, including without a running engine. Thus a
+stopped engine is not proof of a stopped rotor, and neither throttle nor pitch
+alone determines the actual rotor acceleration. These are game torque commands,
+not a complete SI-unit aerodynamic model.
+
+## Lift vector, tilt and the feedback loop
+
+For a valid chassis and `TiltControlComp`, the force block
+`0x1454acf73..0x1454ad0be` uses the measured rotor speed, computed pitch, ground
+clearance and root world altitude:
+
+```text
+q = clamp(GroundClearance / max(GroundEffectHeight, epsilon), 0, 1)
+GroundEffect = 1 + GroundEffectLift * (1 - q)^2
+heightFactor = exp(-max(Altitude, 0) * LiftReductionByHeight)
+pitchForLift = BladePitch * GroundEffect    when BladePitch > 0
+             = BladePitch                  otherwise
+liftMagnitude = PropellerVelocity * PropellerLift * pitchForLift * heightFactor
+liftAxis = worldUp(TiltControlComp)
+forceVector = liftAxis * liftMagnitude
+```
+
+Force is applied to the chassis at the tilt component's world position. The
+ground-effect multiplier boosts positive pitch; the nonpositive-pitch branch
+keeps the signed pitch instead of receiving that boost. The native code is
+linear in the stored rotor-speed value here; do not substitute a presumed
+real-world RPM-squared lift law.
+
+Both hull attitude and the tilt component's relative orientation affect its
+world axis. As a consequence of the vector force, the vertical contribution
+is `liftMagnitude * dot(liftAxis, worldUp)`, and the remaining components can
+accelerate the craft horizontally. This projection is a consequence of the
+applied force, not an additional compensation term in native altitude assist.
+The force block submits lift before its later tilt update, so the newly
+commanded tilt is not retroactively applied to that force submission.
+
+Gravity, cargo/cable reactions, collisions and the other force paths then affect
+physical motion. A later tick reads that motion into `ClimbRate`, closing the
+native assistance loop. More scale can restore lift at the same measured rotor
+speed, but it does not remove orientation, altitude, ground-effect or physical
+load dependencies.
+
+## Fuel request versus observed consumption
+
+The Gyro's base native Petrol request is:
+
+```text
+requestedPetrolPerSecond = PetrolConsumption * CurrentThrottle
+requestedPetrolPerMinute = requestedPetrolPerSecond * 60
+```
+
+Tick submits that value to the custom module's `TemporaryConsumptions[Petrol]`
+through `0x1454fc450`; the callee accumulates the request rather than directly
+subtracting that amount from the tank. No blade pitch, rotor-drag or mechanical
+work term occurs in this base request. At equal `CurrentThrottle`, changing
+scale does not directly change it. An indirect change remains possible when
+the governor changes throttle in response to pitch drag or rotor-speed error.
+
+Requested rate is not unconditional actual tank consumption. Module resource
+processing, availability and other consumers or transfers remain separate.
+`GetResourceAmount(Petrol)` measures the local stored quantity; a decrease can
+also include transfer or leakage, while refill/supply can mask consumption.
+Quantities use native resource units, not established liters.
 
 ## Conflict with kinematic height support
 
@@ -90,7 +348,9 @@ and StableGyro's later correction.
 
 ## Reflected state and setter route
 
-For this fingerprint, `HoverPitchScale` at offset `0x80C` is a protected,
+Earlier reflection established the following access flags and CDO defaults;
+current mappings revalidate field names/types, not all of those flags/defaults.
+`HoverPitchScale` at offset `0x80C` is a protected,
 BlueprintReadOnly **SaveGame** float. `Collective` at `0x800` is also saved.
 The CDO values do not reset values already stored on a vehicle.
 
@@ -157,9 +417,10 @@ and clears the old vertical sample; exact hold remains available once physics Vz
 becomes nonnegative. The setting is reread on the next player entry with the
 other flight settings.
 
-The minimum displayed-throttle setting defaults to `50%`. Below its configured
-inclusive threshold, PostPhysics still performs eligible horizontal damping but
-skips every Z braking, exact-hold and Space-floor correction, then clears the
+The distributed INI sets the minimum displayed-throttle threshold to `65%`.
+The schema fallback for a missing or invalid value remains `50%`. Below the
+configured inclusive threshold, PostPhysics still performs eligible horizontal
+damping but skips every Z braking, exact-hold and Space-floor correction, then clears the
 vertical state for fresh reacquisition. PrePhysics uses the same threshold and
 restores the captured native assistance booleans while vertical stabilization is
 ineligible.
@@ -167,12 +428,14 @@ ineligible.
 ## Entry reset and remaining limits
 
 On every change to a player controller while `EnableAltitudeControl=true`, the
-PostPhysics helper writes the chosen recovery baseline `1.0` to saved
-`HoverPitchScale` through the Engine's `SetDoublePropertyByName` route. When
+PostPhysics helper writes the entry-reloaded `HoverPitchScale` INI setting to
+the saved native field through the Engine's `SetDoublePropertyByName` route.
+This advanced setting defaults and falls back to `2.5`, accepts `0.5..2.5`,
+and is listed under the INI's advanced-settings warning. When
 altitude control is false, it skips this write and leaves native altitude and
-automatic-throttle assistance state in charge. The baseline is the stock default recorded in
-the earlier native snapshot; the current game's CDO was not
-independently revalidated. BeginPlay only binds the controller-change delegate;
+automatic-throttle assistance state in charge. The configured baseline is mod
+tuning, independent of the earlier recorded native CDO default `1.0`.
+BeginPlay only binds the controller-change delegate;
 it does not invoke the callback for an already controlled Gyro. The reset runs
 only from a genuine later player-entry event and never from polling or a
 per-tick write. It does not write `Collective`, calibration limits, or any other
@@ -181,19 +444,10 @@ saved flight field.
 The reset deliberately discards a scale learned in an earlier session or while
 another controller owned the Gyro. Native calibration can still adjust the
 scale later whenever StableGyro does not own neutral altitude control; the next
-player entry restores `1.0` again.
+player entry writes the freshly reloaded configured value again.
 
-The rotor-force path at `0x1454ab013..0x1454ab10e` multiplies rotor speed by
-`PropellerLift`, positive blade pitch, ground effect and an exponential altitude
-factor, then applies the force along the rotor's up direction at its position.
-Reflection verifies `PropellerLift=75` at offset `0x5CC`. The governor at
-`0x1454ab760` derives its target from a component virtual query times absolute
-world gravity divided by this lift coefficient. The virtual query is consistent
-with mass, but its exact Shipping identity is not independently verified, so a
-complete mass-normalized formula is not established.
-
-Resetting every player-entered Gyro to the `1.0` baseline is the recovery
-policy. Altitude, orientation, ground effect and load still affect the
+Writing the configured baseline on player entry is the recovery policy.
+Altitude, orientation, ground effect and load still affect the
 equilibrium reached by later native calibration. The yaw-related recovery
 mechanism remains unproven.
 

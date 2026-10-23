@@ -337,7 +337,6 @@ const FName ArrayElement(TEXT("Array Element"));
 
 namespace HoverPitchReset
 {
-constexpr TCHAR DefaultScale[] = TEXT("1.0");
 const FName SetDoublePropertyByName(TEXT("SetDoublePropertyByName"));
 const FName PropertyName(TEXT("PropertyName"));
 }
@@ -792,19 +791,22 @@ bool AddControllerChangedCallback(UBlueprint* Blueprint, const bool PitchHelper)
     {
         UK2Node_VariableGet* AltitudeControlEnabled = AddRead(
             Graph, Settings::EnableAltitudeControl, nullptr, 910, -540);
+        UK2Node_VariableGet* ConfiguredHoverPitchScale = AddRead(
+            Graph, Settings::HoverPitchScale, nullptr, 1140, -540);
         UK2Node_IfThenElse* AltitudeControlBranch = FinishNode(
             NewObject<UK2Node_IfThenElse>(Graph), Graph, 910, -400);
         UK2Node_CallFunction* ResetScale = AddCall(
             Graph, UKismetSystemLibrary::StaticClass(),
             HoverPitchReset::SetDoublePropertyByName, 1140, -400);
         SetDefault(ResetScale, HoverPitchReset::PropertyName, *HoverPitchScale.ToString());
-        SetDefault(ResetScale, P::Value, HoverPitchReset::DefaultScale);
         Ok &= Connect(RequirePin(ReloadCall, P::Then),
             RequirePin(AltitudeControlBranch, P::Execute));
         Ok &= Connect(RequirePin(AltitudeControlEnabled, Settings::EnableAltitudeControl),
             RequirePin(AltitudeControlBranch, P::Condition));
         Ok &= Connect(RequirePin(AltitudeControlBranch, P::Then),
             RequirePin(ResetScale, P::Execute));
+        Ok &= Connect(RequirePin(ConfiguredHoverPitchScale, Settings::HoverPitchScale),
+            RequirePin(ResetScale, P::Value));
         Ok &= Connect(RequirePin(Entry, BlueprintGraphNames::Pins::Pawn),
             RequirePin(ResetScale, P::Object));
     }

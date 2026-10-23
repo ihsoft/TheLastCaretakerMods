@@ -112,7 +112,8 @@ function Update-StableGyroSettings {
         'AltitudeStabilizationDelaySeconds',
         'CompensateTiltLift',
         'TiltLiftCompensationMultiplier',
-        'StabilizationMinimumRotorSpeedPercent'
+        'StabilizationMinimumRotorSpeedPercent',
+        'EnableFuelDiagnostics'
     )
     $retiredComments = @(
         '# Absolute delay after releasing Space at full throttle before exact altitude hold activates.',
@@ -120,7 +121,9 @@ function Update-StableGyroSettings {
         '# Keep vertical rotor lift while pitch is tilted forward/back.',
         '# Scale the separate world-up force: 0=none, 1=lost vertical component. Clamped to 0..5.',
         '# Percent of the stock rotor''s physical maximum speed (0 disables the gate).',
-        '# Percent of the stock rotor''s normal 100% operating speed (0 disables the gate).'
+        '# Percent of the stock rotor''s normal 100% operating speed (0 disables the gate).',
+        '# Temporary compact fuel/throttle diagnostics; set false to hide on the next Gyro entry.',
+        '# Valid range is 0.5..2.5; missing or invalid values fall back to 1.0.'
     )
     $temporary = $SettingsPath + '.stablegyro-' + [guid]::NewGuid().ToString('N') + '.tmp'
     $backup = $SettingsPath + '.stablegyro-' + [guid]::NewGuid().ToString('N') + '.bak'

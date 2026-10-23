@@ -23,6 +23,12 @@ reference, declines native altitude-assistance ownership, and restores any
 captured `bAutoHoverCollective` and `bAltitudeAssist` values. W/S pitch
 integration and eligible horizontal damping remain available.
 
+When altitude control is true, the genuine player-entry callback writes the
+entry-reloaded `HoverPitchScale` setting to the native Gyro. This advanced INI
+setting defaults and falls back to `2.5`, accepts `0.5..2.5`, and is listed
+under the warning against changing advanced settings. It is dimensionless and
+is not polled or rewritten on tick.
+
 When horizontal velocity control is false, PostPhysics branches before reading
 or writing horizontal physics velocity, clears its prior XY sample, and
 continues into the independent altitude path. Altitude control and W/S pitch

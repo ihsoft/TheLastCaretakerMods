@@ -59,8 +59,9 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   after horizontal damping and before Ctrl/Space/hold processing. Below that
   threshold, clear only vertical lock, exact-hold, Space, braking and sample
   state; do not clear or gate horizontal state. Keep the setting inclusive,
-  configurable over `0..100`, and default it to `50` rather than hardcoding a
-  full-throttle requirement.
+  configurable over `0..100`, and retain the schema fallback `50` rather than
+  hardcoding a full-throttle requirement. The distributed INI sets it to `65`;
+  do not replace the schema fallback with that distributed value.
   While Ctrl is held, clear vertical hold/braking state and let stock descent
   operate; Ctrl takes precedence over Space, while propulsion- and contact-gated
   horizontal damping may continue. Track the Ctrl hold/release transition. On
@@ -92,8 +93,10 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   disable them before the native Gyro tick, and restore the exact captured
   values on every ownership loss, controller change and EndPlay. On each change
   to a player controller, the PostPhysics helper must reset the owning Gyro's
-  saved `HoverPitchScale` to the selected recovery baseline `1.0` through the
-  validated Engine property setter. Reset only from the genuine
+  saved `HoverPitchScale` to the entry-reloaded `HoverPitchScale` INI setting
+  through the validated Engine property setter. Its default and invalid-or-missing
+  fallback are `2.5`, its accepted range is `0.5..2.5`, and the canonical INI
+  keeps it under the advanced-settings warning. Reset only from the genuine
   controller-change event; BeginPlay binds the delegate but does not invoke the
   callback. Do not poll, reset per tick, or write `Collective`. The
   version-bound native formula and recovery boundary live in

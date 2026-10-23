@@ -17,10 +17,21 @@ only their explicitly named build.
 The public producer freshly extracts the stock cooked inputs and asserts the
 asset contracts consumed by each candidate build. Current mapping metadata
 independently revalidates the native owner and property types consumed by the
-stabilization and calibration-prevention graphs. Access flags, offsets, CDO
-defaults and bounded native-code findings retain their explicit older
-fingerprints below rather than being silently carried forward. Together, these
-sources establish:
+stabilization and calibration-prevention graphs. Previously inspected access
+flags, CDO defaults and native details retain their explicit older fingerprints
+unless independently revalidated below; they are not silently carried forward.
+
+The native calculation chain in [altitude control](ALTITUDE-CONTROL.md) was
+checked against Steam build `25982825`, UE `5.8.2`, Shipping executable SHA-256
+`08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734`.
+Its scope is input/collective/assist/calibration, rotor-speed governor, resource
+drive, lift and base fuel request. Engine registration/thunk inspection
+identifies the governor's virtual `GetMass` query and the module's
+`GetResourceAmount(EModuleResourceType): double` getter. Formula-level evidence
+and native entry addresses belong in that document; this does not promote
+older reflected access flags or native CDO values into current observations.
+
+Together, these sources establish:
 
 - the vehicle package is /Game/Blueprints/Vehicles/BP_GyroCopter_Possessable;
 - its native parent is /Script/Voyage.VoyageVehicleGyroCopter;
@@ -49,9 +60,10 @@ sources establish:
   temporarily writes them through the current Engine
   `KismetSystemLibrary.SetBoolPropertyByName(UObject, FName, bool)` contract and
   restores their captured values; it does not alter their reflected flags;
-- StableGyro leaves `Collective` untouched and resets `HoverPitchScale` to the
-  user-selected target `1.0` once on player entry. That target uses the older
-  proven stock default above; it is not a current-fingerprint CDO claim. The
+- StableGyro leaves `Collective` untouched and, while altitude control is enabled,
+  writes the entry-reloaded `HoverPitchScale` INI setting once on player entry.
+  Its default and invalid-or-missing fallback are `2.5`, with accepted range
+  `0.5..2.5`. This is mod tuning, not a claim about the native CDO default. The
   reset uses the Engine
   `KismetSystemLibrary.SetDoublePropertyByName(UObject, FName, double)` contract,
   whose implementation accepts a native float property fallback. The generated
