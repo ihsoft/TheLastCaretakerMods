@@ -118,15 +118,16 @@ Before each native control pass, it computes the same neutral stabilization
 eligibility used by the PostPhysics helper: the Gyro is player-controlled, a
 player controller exists, the engine is running, `CurrentThrottle` is positive,
 `PropellerVelocity` meets the configured threshold, `Collective` meets the
-configured displayed-throttle percentage, neither Ctrl nor Space is held, and
-the collision-release deadline has expired. On first acquisition it
+configured displayed-throttle percentage, `EnableAltitudeControl` is true,
+neither Ctrl nor Space is held, and the collision-release deadline has expired.
+On first acquisition it
 captures the exact current values of `bAutoHoverCollective` and
 `bAltitudeAssist`, then temporarily sets both false. This prevents the native
 controller from learning an equilibrium created by the mod's neutral hold or
 braking path, including on the first acquisition frame.
 
 The helper restores both captured values when any eligibility condition is
-lost, on controller change and on EndPlay. A contact first observed in
+lost, including when altitude control is disabled, on controller change and on EndPlay. A contact first observed in
 PostPhysics starts the release deadline; the next PrePhysics pass restores the
 native values before the next native consumer tick. The mod never permanently
 changes these tuning booleans.
@@ -165,9 +166,11 @@ ineligible.
 
 ## Entry reset and remaining limits
 
-On every change to a player controller, the PostPhysics helper writes the
-chosen recovery baseline `1.0` to saved `HoverPitchScale` through the Engine's
-`SetDoublePropertyByName` route. That value is the stock default recorded in
+On every change to a player controller while `EnableAltitudeControl=true`, the
+PostPhysics helper writes the chosen recovery baseline `1.0` to saved
+`HoverPitchScale` through the Engine's `SetDoublePropertyByName` route. When
+altitude control is false, it skips this write and leaves native altitude and
+automatic-throttle assistance state in charge. The baseline is the stock default recorded in
 the earlier native snapshot; the current game's CDO was not
 independently revalidated. BeginPlay only binds the controller-change delegate;
 it does not invoke the callback for an already controlled Gyro. The reset runs
@@ -201,7 +204,11 @@ cooked readback establish the ascent/descent graph structure and settings
 contract, not flight behavior. A game test must verify Ctrl-held stock descent,
 smooth braking after Ctrl release at a positive configured rate, no negative-Vz
 kinematic correction at `0`, later exact-hold acquisition after Vz becomes
-nonnegative, and unchanged horizontal damping. Strong waves, every collision
+nonnegative, and unchanged horizontal damping. It must also verify both control
+flags independently and together: entry-reloaded altitude disablement restores
+native assistance and preserves saved `HoverPitchScale`, while horizontal
+disablement performs no XY correction and does not disable the vertical path.
+Strong waves, every collision
 shape and every saved calibration state are outside the established
 compatibility scope. A changed game Update or a failed build/game test calls
 for review of the affected input and calibration contracts.

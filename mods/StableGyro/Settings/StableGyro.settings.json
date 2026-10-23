@@ -18,6 +18,20 @@
       ,"default": true
     },
     {
+      "id": "EnableAltitudeControl",
+      "runtimeName": "EnableAltitudeControl",
+      "key": "EnableAltitudeControl",
+      "type": "boolean",
+      "default": true
+    },
+    {
+      "id": "EnableHorizontalVelocityControl",
+      "runtimeName": "EnableHorizontalVelocityControl",
+      "key": "EnableHorizontalVelocityControl",
+      "type": "boolean",
+      "default": true
+    },
+    {
       "id": "EnableFourMooringPorts",
       "runtimeName": "EnableFourMooringPorts",
       "key": "EnableFourMooringPorts",

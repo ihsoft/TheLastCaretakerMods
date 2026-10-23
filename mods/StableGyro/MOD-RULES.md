@@ -33,7 +33,10 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   Away from external contact, neutral controls reject physics-injected
   horizontal speed growth before decay. Apply horizontal correction as an additive XY-only velocity delta;
   never rewrite the full velocity vector or its Z component from the horizontal
-  path. The stabilization helper must tick in `TG_PostPhysics`, explicitly after
+  path. `EnableHorizontalVelocityControl=false` must branch before every
+  horizontal physics-velocity read or write, clear both the stored horizontal
+  sample and its validity flag, and continue into the independent vertical path.
+  It must not disable altitude or W/S pitch control. The stabilization helper must tick in `TG_PostPhysics`, explicitly after
   the stock Gyro tick and its rotor/Chaos force integration. Gate every
   kinematic horizontal or vertical stabilization
   correction on `bEngineRunning`, positive `CurrentThrottle`, and the stock
@@ -72,8 +75,16 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   exact hold, rather than discarding climb inertia. Do not alter A/D integration, yaw, camera,
   possession, save behavior, or other HUD/input behavior without a new user
   request.
+- `EnableAltitudeControl=false` must branch after the independent horizontal
+  path and before every mod-owned vertical position or Z-velocity correction.
+  Clear vertical lock, exact hold, Space/Ctrl transition state, both braking
+  modes, locked altitude and previous vertical samples. Do not reset saved
+  `HoverPitchScale`, and do not acquire native altitude-assistance ownership;
+  restore any captured `bAutoHoverCollective` and `bAltitudeAssist` values.
+  Disabled altitude control leaves horizontal damping and W/S pitch integration
+  available. Both control flags default to true and reload on player entry.
 - Native altitude-assistance ownership is independent of
-  `EnablePitchCorrection`. In the PrePhysics helper, derive ownership from the
+  `EnablePitchCorrection`, but requires `EnableAltitudeControl=true`. In the PrePhysics helper, derive ownership from the
   same player-control, propulsion, input and contact eligibility used by the
   PostPhysics vertical stabilization path, including its configured minimum
   `Collective` percentage. Cache the owned Gyro and sibling helper once,
@@ -144,8 +155,11 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 - Gameplay validation covers pitch in both directions, release hold, both
   limits, X, exit/re-entry, altitude braking/hold across partial and full
   throttle, Ctrl descent/reacquisition with positive and zero configured descent
-  deceleration, and horizontal
-  damping under climb, descent, neutral, directional, and reversing input.
+  deceleration, and horizontal damping under climb, descent, neutral,
+  directional, and reversing input. Test both new flags independently and
+  together, including entry reload, restoration of native altitude assistance,
+  no `HoverPitchScale` reset while altitude control is disabled, and no XY
+  physics-velocity access while horizontal control is disabled.
 
 ## Settings contract
 
@@ -170,7 +184,10 @@ the member, initializes it from the schema fallback, and builds the callable
 `ReloadSettings` loader. Both helpers call it at BeginPlay and synchronously on
 player entry through the owning Pawn's controller-changed delegate, resetting
 their defaults before every read. `ModActor` owns the full settings set for
-PostPhysics stabilization; `PitchInputActor` owns only the duplicated
+PostPhysics stabilization, including both independent control-enable flags;
+`PitchInputActor` reads `EnableAltitudeControl` through its cached sibling only
+for native altitude-ownership eligibility and does not duplicate the setting.
+`PitchInputActor` owns only the duplicated
 `PitchRampSeconds` and `EnablePitchCorrection` members needed by its PrePhysics
 graph and action-hint gate. The replacement Gyro child alone owns
 `EnableFourMooringPorts`; it reads the setting once per loaded replacement-class

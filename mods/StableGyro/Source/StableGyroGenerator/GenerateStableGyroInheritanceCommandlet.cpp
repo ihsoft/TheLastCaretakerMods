@@ -790,12 +790,21 @@ bool AddControllerChangedCallback(UBlueprint* Blueprint, const bool PitchHelper)
     }
     else
     {
+        UK2Node_VariableGet* AltitudeControlEnabled = AddRead(
+            Graph, Settings::EnableAltitudeControl, nullptr, 910, -540);
+        UK2Node_IfThenElse* AltitudeControlBranch = FinishNode(
+            NewObject<UK2Node_IfThenElse>(Graph), Graph, 910, -400);
         UK2Node_CallFunction* ResetScale = AddCall(
             Graph, UKismetSystemLibrary::StaticClass(),
-            HoverPitchReset::SetDoublePropertyByName, 910, -400);
+            HoverPitchReset::SetDoublePropertyByName, 1140, -400);
         SetDefault(ResetScale, HoverPitchReset::PropertyName, *HoverPitchScale.ToString());
         SetDefault(ResetScale, P::Value, HoverPitchReset::DefaultScale);
-        Ok &= Connect(RequirePin(ReloadCall, P::Then), RequirePin(ResetScale, P::Execute));
+        Ok &= Connect(RequirePin(ReloadCall, P::Then),
+            RequirePin(AltitudeControlBranch, P::Execute));
+        Ok &= Connect(RequirePin(AltitudeControlEnabled, Settings::EnableAltitudeControl),
+            RequirePin(AltitudeControlBranch, P::Condition));
+        Ok &= Connect(RequirePin(AltitudeControlBranch, P::Then),
+            RequirePin(ResetScale, P::Execute));
         Ok &= Connect(RequirePin(Entry, BlueprintGraphNames::Pins::Pawn),
             RequirePin(ResetScale, P::Object));
     }
@@ -1043,6 +1052,8 @@ bool AddUpdateNativeAltitudeOwnership(UBlueprint* Blueprint, UClass* Stabilizati
         Graph, PropellerVelocity, AVoyageVehicleGyroCopter::StaticClass(), 450, 470);
     UK2Node_VariableGet* MinimumRotor = AddRead(
         Graph, Settings::StabilizationMinimumPropellerVelocity, StabilizationClass, 450, 620);
+    UK2Node_VariableGet* AltitudeControlEnabled = AddRead(
+        Graph, Settings::EnableAltitudeControl, StabilizationClass, 450, 700);
     UK2Node_CallFunction* RotorReady = AddCall(
         Graph, UKismetMathLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), 680, 520);
@@ -1092,6 +1103,7 @@ bool AddUpdateNativeAltitudeOwnership(UBlueprint* Blueprint, UClass* Stabilizati
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, LessEqual_DoubleDouble), 910, 1100);
 
     TArray<UEdGraphPin*> Eligibility;
+    Eligibility.Add(RequirePin(AltitudeControlEnabled, Settings::EnableAltitudeControl));
     Eligibility.Add(RequirePin(Engine, EngineRunning));
     Eligibility.Add(RequirePin(PositiveThrottle, P::ReturnValue));
     Eligibility.Add(RequirePin(RotorReady, P::ReturnValue));
@@ -1169,6 +1181,8 @@ bool AddUpdateNativeAltitudeOwnership(UBlueprint* Blueprint, UClass* Stabilizati
         RequirePin(RotorReady, BlueprintGraphNames::Pins::Binary::LeftOperand));
     Ok &= Connect(RequirePin(Stabilization, CachedStabilizationHelper),
         RequirePin(MinimumRotor, P::FunctionTarget));
+    Ok &= Connect(RequirePin(Stabilization, CachedStabilizationHelper),
+        RequirePin(AltitudeControlEnabled, P::FunctionTarget));
     Ok &= Connect(RequirePin(MinimumRotor, Settings::StabilizationMinimumPropellerVelocity),
         RequirePin(RotorReady, BlueprintGraphNames::Pins::Binary::RightOperand));
     Ok &= Connect(RequirePin(Stabilization, CachedStabilizationHelper),
@@ -2164,6 +2178,19 @@ bool AddHorizontalVelocityDamping(
     namespace P = BlueprintGraphNames::Pins;
     namespace Binary = BlueprintGraphNames::Pins::Binary;
 
+    UK2Node_VariableGet* HorizontalControlEnabled = AddRead(
+        Graph, Settings::EnableHorizontalVelocityControl, nullptr, 7580, 480);
+    UK2Node_IfThenElse* HorizontalControlBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 7810, 480);
+    UK2Node_VariableSet* ClearPreviousHorizontalSample = AddWrite(
+        Graph, PreviousCorrectedHorizontalVelocity, 8040, 480);
+    SetDefault(ClearPreviousHorizontalSample,
+        PreviousCorrectedHorizontalVelocity, ArcadeHorizontal::ZeroVectorDefault);
+    UK2Node_VariableSet* ClearHorizontalSampleValid = AddWrite(
+        Graph, HorizontalVelocitySampleValid, 8270, 480);
+    SetDefault(ClearHorizontalSampleValid,
+        HorizontalVelocitySampleValid, ArcadeAltitude::Disabled);
+
     UK2Node_VariableGet* Root = AddRead(
         Graph, RootComponent, AActor::StaticClass(), 7810, 660);
     UK2Node_DynamicCast* PrimitiveRoot = NewObject<UK2Node_DynamicCast>(Graph);
@@ -2310,7 +2337,18 @@ bool AddHorizontalVelocityDamping(
     SetDefault(MarkSampleValid, HorizontalVelocitySampleValid, ArcadeAltitude::Enabled);
 
     bool Ok = true;
-    Ok &= Connect(StartExecution, RequirePin(PrimitiveRoot, P::Execute));
+    Ok &= Connect(StartExecution, RequirePin(HorizontalControlBranch, P::Execute));
+    Ok &= Connect(RequirePin(HorizontalControlEnabled,
+        Settings::EnableHorizontalVelocityControl),
+        RequirePin(HorizontalControlBranch, P::Condition));
+    Ok &= Connect(RequirePin(HorizontalControlBranch, P::Then),
+        RequirePin(PrimitiveRoot, P::Execute));
+    Ok &= Connect(RequirePin(HorizontalControlBranch, P::Else),
+        RequirePin(ClearPreviousHorizontalSample, P::Execute));
+    Ok &= Connect(RequirePin(ClearPreviousHorizontalSample, P::Then),
+        RequirePin(ClearHorizontalSampleValid, P::Execute));
+    Ok &= Connect(RequirePin(ClearHorizontalSampleValid, P::Then),
+        RequirePin(Continuation, P::Execute));
     Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(Root, P::FunctionTarget));
     Ok &= Connect(RequirePin(Root, RootComponent), PrimitiveRoot->GetCastSourcePin());
     Ok &= Connect(PrimitiveRoot->GetValidCastPin(), RequirePin(LinearVelocity, P::Execute));
@@ -2522,8 +2560,48 @@ bool AddArcadeAltitudeHold(
     UK2Node_CallFunction* CollectiveReady = AddCall(
         Graph, UKismetMathLibrary::StaticClass(),
         GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, GreaterEqual_DoubleDouble), 2520, 620);
+    UK2Node_VariableGet* AltitudeControlEnabled = AddRead(
+        Graph, Settings::EnableAltitudeControl, nullptr, 2520, 500);
+    UK2Node_IfThenElse* AltitudeControlBranch = FinishNode(
+        NewObject<UK2Node_IfThenElse>(Graph), Graph, 2750, 500);
     UK2Node_IfThenElse* VerticalThrottleGateBranch = FinishNode(
         NewObject<UK2Node_IfThenElse>(Graph), Graph, 2750, 620);
+
+    UK2Node_VariableSet* ClearLockWhenAltitudeDisabled = AddWrite(
+        Graph, AltitudeLockActive, 2980, 400);
+    SetDefault(ClearLockWhenAltitudeDisabled,
+        AltitudeLockActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ClearExactWhenAltitudeDisabled = AddWrite(
+        Graph, AltitudeExactHoldActive, 3210, 400);
+    SetDefault(ClearExactWhenAltitudeDisabled,
+        AltitudeExactHoldActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ClearSpaceWhenAltitudeDisabled = AddWrite(
+        Graph, SpaceWasHeld, 3440, 400);
+    SetDefault(ClearSpaceWhenAltitudeDisabled,
+        SpaceWasHeld, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ClearDescentWhenAltitudeDisabled = AddWrite(
+        Graph, DescentWasHeld, 3670, 400);
+    SetDefault(ClearDescentWhenAltitudeDisabled,
+        DescentWasHeld, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* StopBrakingWhenAltitudeDisabled = AddWrite(
+        Graph, AltitudeBrakingActive, 3900, 400);
+    SetDefault(StopBrakingWhenAltitudeDisabled,
+        AltitudeBrakingActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* StopDescentBrakingWhenAltitudeDisabled = AddWrite(
+        Graph, AltitudeDescentBrakingActive, 4130, 400);
+    SetDefault(StopDescentBrakingWhenAltitudeDisabled,
+        AltitudeDescentBrakingActive, ArcadeAltitude::Disabled);
+    UK2Node_VariableSet* ClearLockedAltitudeWhenDisabled = AddWrite(
+        Graph, LockedAltitude, 4360, 400);
+    SetDefault(ClearLockedAltitudeWhenDisabled, LockedAltitude, ArcadeAltitude::Zero);
+    UK2Node_VariableSet* ClearPreviousVerticalSampleWhenDisabled = AddWrite(
+        Graph, PreviousCorrectedVerticalVelocity, 4590, 400);
+    SetDefault(ClearPreviousVerticalSampleWhenDisabled,
+        PreviousCorrectedVerticalVelocity, ArcadeAltitude::Zero);
+    UK2Node_VariableSet* ClearVerticalSampleValidWhenDisabled = AddWrite(
+        Graph, VerticalVelocitySampleValid, 4820, 400);
+    SetDefault(ClearVerticalSampleValidWhenDisabled,
+        VerticalVelocitySampleValid, ArcadeAltitude::Disabled);
 
     UK2Node_VariableSet* ClearWhenBelowMinimumThrottle = AddWrite(
         Graph, AltitudeLockActive, 2980, 620);
@@ -3034,7 +3112,29 @@ bool AddArcadeAltitudeHold(
         RequirePin(CollisionReleaseBranch, P::Condition));
     Ok &= AddHorizontalVelocityDamping(
         Graph, TickEvent, Gyro, RequirePin(CollisionReleaseBranch, P::Else),
-        VerticalThrottleGateBranch, GyroOwner);
+        AltitudeControlBranch, GyroOwner);
+    Ok &= Connect(RequirePin(AltitudeControlEnabled, Settings::EnableAltitudeControl),
+        RequirePin(AltitudeControlBranch, P::Condition));
+    Ok &= Connect(RequirePin(AltitudeControlBranch, P::Then),
+        RequirePin(VerticalThrottleGateBranch, P::Execute));
+    Ok &= Connect(RequirePin(AltitudeControlBranch, P::Else),
+        RequirePin(ClearLockWhenAltitudeDisabled, P::Execute));
+    Ok &= Connect(RequirePin(ClearLockWhenAltitudeDisabled, P::Then),
+        RequirePin(ClearExactWhenAltitudeDisabled, P::Execute));
+    Ok &= Connect(RequirePin(ClearExactWhenAltitudeDisabled, P::Then),
+        RequirePin(ClearSpaceWhenAltitudeDisabled, P::Execute));
+    Ok &= Connect(RequirePin(ClearSpaceWhenAltitudeDisabled, P::Then),
+        RequirePin(ClearDescentWhenAltitudeDisabled, P::Execute));
+    Ok &= Connect(RequirePin(ClearDescentWhenAltitudeDisabled, P::Then),
+        RequirePin(StopBrakingWhenAltitudeDisabled, P::Execute));
+    Ok &= Connect(RequirePin(StopBrakingWhenAltitudeDisabled, P::Then),
+        RequirePin(StopDescentBrakingWhenAltitudeDisabled, P::Execute));
+    Ok &= Connect(RequirePin(StopDescentBrakingWhenAltitudeDisabled, P::Then),
+        RequirePin(ClearLockedAltitudeWhenDisabled, P::Execute));
+    Ok &= Connect(RequirePin(ClearLockedAltitudeWhenDisabled, P::Then),
+        RequirePin(ClearPreviousVerticalSampleWhenDisabled, P::Execute));
+    Ok &= Connect(RequirePin(ClearPreviousVerticalSampleWhenDisabled, P::Then),
+        RequirePin(ClearVerticalSampleValidWhenDisabled, P::Execute));
     Ok &= Connect(Gyro->GetCastResultPin(), RequirePin(CollectiveValue, P::FunctionTarget));
     Ok &= Connect(RequirePin(MinimumThrottlePercent,
         Settings::AltitudeStabilizationMinimumThrottlePercent),

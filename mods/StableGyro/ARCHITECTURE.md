@@ -9,6 +9,25 @@ X pitch-reset action. Tick prerequisites are established at BeginPlay and on
 controller changes, not re-added every frame. The two flight helpers remain in
 their respective PrePhysics and PostPhysics groups.
 
+## Independent flight-control settings
+
+`EnableAltitudeControl` and `EnableHorizontalVelocityControl` both default to
+true and are reread by the PostPhysics `ModActor` when the player enters a
+Gyro. They are independent of each other and of `EnablePitchCorrection`.
+
+When altitude control is false, PostPhysics clears all vertical lock, braking
+and sample state and performs no mod-owned Z position or velocity correction.
+The player-entry callback also leaves saved `HoverPitchScale` untouched. The
+PrePhysics helper reads the altitude flag through its cached `ModActor`
+reference, declines native altitude-assistance ownership, and restores any
+captured `bAutoHoverCollective` and `bAltitudeAssist` values. W/S pitch
+integration and eligible horizontal damping remain available.
+
+When horizontal velocity control is false, PostPhysics branches before reading
+or writing horizontal physics velocity, clears its prior XY sample, and
+continues into the independent altitude path. Altitude control and W/S pitch
+integration remain available.
+
 ## Four mooring ports
 
 `EnableFourMooringPorts=true` adds two Hook Cable ports, giving four usable
