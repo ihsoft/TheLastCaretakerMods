@@ -16,12 +16,12 @@ try {
     $cases = @(
         @{ name = 'pak'; arguments = @{}; entries = @('Example_P.pak','Example_P.ucas','Example_P.utoc'); modType = $null },
         @{ name = 'pakalt'; arguments = @{ AdditionalFile = @($ini) }; entries = @('Example_P.pak','Example_P.ucas','Example_P.utoc','Example.ini','vortex_override_instructions.json'); modType = 'thelastcaretaker-pakalt' },
-        @{ name = 'root'; arguments = @{ ContentPluginDescriptor = $plugin; AdditionalFile = @($ini) }; entries = @('Voyage/Content/Paks/Example_P.pak','Voyage/Content/Paks/Example_P.ucas','Voyage/Content/Paks/Example_P.utoc','Voyage/Content/Paks/Example.ini','Voyage/Mods/ExampleCatalogue/ExampleCatalogue.uplugin','vortex_override_instructions.json'); modType = 'thelastcaretaker-root' },
+        @{ name = 'root'; arguments = @{ ContentPluginDescriptor = $plugin; AdditionalFile = @($ini) }; entries = @('Voyage/Content/Paks/Example_P.pak','Voyage/Content/Paks/Example_P.ucas','Voyage/Content/Paks/Example_P.utoc','Voyage/Content/Paks/Example.ini','Voyage/Mods/ExampleCatalogue/ExampleCatalogue.uplugin'); modType = $null },
         @{ name = 'logicmods'; arguments = @{ LogicMods = $true }; entries = @('LogicMods/','LogicMods/Example_P.pak','LogicMods/Example_P.ucas','LogicMods/Example_P.utoc'); modType = $null },
-        @{ name = 'logicmods-mixed'; arguments = @{ LogicMods = $true; AdditionalFile = @($ini) }; entries = @('Voyage/Content/Paks/LogicMods/Example_P.pak','Voyage/Content/Paks/LogicMods/Example_P.ucas','Voyage/Content/Paks/LogicMods/Example_P.utoc','Voyage/Content/Paks/Example.ini','vortex_override_instructions.json'); modType = 'thelastcaretaker-root' },
-        @{ name = 'logicmods-plugin'; arguments = @{ LogicMods = $true; ContentPluginDescriptor = $plugin }; entries = @('Voyage/Content/Paks/LogicMods/Example_P.pak','Voyage/Content/Paks/LogicMods/Example_P.ucas','Voyage/Content/Paks/LogicMods/Example_P.utoc','Voyage/Mods/ExampleCatalogue/ExampleCatalogue.uplugin','vortex_override_instructions.json'); modType = 'thelastcaretaker-root' },
+        @{ name = 'logicmods-mixed'; arguments = @{ LogicMods = $true; AdditionalFile = @($ini) }; entries = @('Voyage/Content/Paks/LogicMods/Example_P.pak','Voyage/Content/Paks/LogicMods/Example_P.ucas','Voyage/Content/Paks/LogicMods/Example_P.utoc','Voyage/Content/Paks/Example.ini'); modType = $null },
+        @{ name = 'logicmods-plugin'; arguments = @{ LogicMods = $true; ContentPluginDescriptor = $plugin }; entries = @('Voyage/Content/Paks/LogicMods/Example_P.pak','Voyage/Content/Paks/LogicMods/Example_P.ucas','Voyage/Content/Paks/LogicMods/Example_P.utoc','Voyage/Mods/ExampleCatalogue/ExampleCatalogue.uplugin'); modType = $null },
         @{ name = 'paks-root'; arguments = @{ PaksRoot = $true }; entries = @('Example_P.pak','Example_P.ucas','Example_P.utoc','vortex_override_instructions.json'); modType = 'thelastcaretaker-pakalt' },
-        @{ name = 'root-extra'; arguments = @{ RootLayout = $true; AdditionalFile = @($ini); AdditionalDestination = @('Voyage/Mods/Example/Example.ini') }; entries = @('Voyage/Content/Paks/Example_P.pak','Voyage/Content/Paks/Example_P.ucas','Voyage/Content/Paks/Example_P.utoc','Voyage/Mods/Example/Example.ini','vortex_override_instructions.json'); modType = 'thelastcaretaker-root' }
+        @{ name = 'root-extra'; arguments = @{ RootLayout = $true; AdditionalFile = @($ini); AdditionalDestination = @('Voyage/Mods/Example/Example.ini') }; entries = @('Voyage/Content/Paks/Example_P.pak','Voyage/Content/Paks/Example_P.ucas','Voyage/Content/Paks/Example_P.utoc','Voyage/Mods/Example/Example.ini'); modType = $null }
     )
     foreach ($case in $cases) {
         $archive = Join-Path $root ($case.name + '.zip')
@@ -37,28 +37,7 @@ try {
         $zip = [IO.Compression.ZipFile]::OpenRead($archive)
         try {
             $entries = @($zip.Entries | ForEach-Object { $_.FullName })
-            $expectedEntries = @($case.entries)
-            if ($expectedLayout -ceq 'root') {
-                $expectedEntries += @('fomod/', 'fomod/ModuleConfig.xml', 'fomod/info.xml')
-            }
-            if (Compare-Object $expectedEntries $entries) { throw "ZIP entries mismatch: $($case.name)" }
-            if ($expectedLayout -ceq 'root') {
-                $moduleEntry = $zip.GetEntry('fomod/ModuleConfig.xml')
-                $infoEntry = $zip.GetEntry('fomod/info.xml')
-                $moduleReader = New-Object IO.StreamReader($moduleEntry.Open())
-                try { [xml]$moduleConfig = $moduleReader.ReadToEnd() } finally { $moduleReader.Dispose() }
-                $infoReader = New-Object IO.StreamReader($infoEntry.Open())
-                try { [xml]$info = $infoReader.ReadToEnd() } finally { $infoReader.Dispose() }
-                $folder = $moduleConfig.SelectSingleNode('/config/requiredInstallFiles/folder')
-                $moduleName = $moduleConfig.SelectSingleNode('/config/moduleName')
-                $infoName = $info.SelectSingleNode('/fomod/Name')
-                if ($null -eq $moduleName -or $moduleName.InnerText -cne 'Example' -or
-                    $null -eq $infoName -or $infoName.InnerText -cne 'Example' -or
-                    $null -eq $folder -or $folder.source -cne 'Voyage' -or
-                    $folder.destination -cne 'Voyage' -or $folder.priority -cne '0') {
-                    throw "FOMOD metadata mismatch: $($case.name)"
-                }
-            }
+            if (Compare-Object $case.entries $entries) { throw "ZIP entries mismatch: $($case.name)" }
         } finally { $zip.Dispose() }
     }
     [pscustomobject]@{ status = 'passed'; layouts = $cases.Count }

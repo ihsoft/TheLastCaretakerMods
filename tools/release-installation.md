@@ -39,9 +39,8 @@ Add `-AdditionalFile` for an INI or another payload file. Use
 actor. The producer chooses and verifies the matching ZIP layout; consult
 [Vortex layouts](../docs/vortex-release-archive-knowledge.md) when choosing a
 nonstandard destination or diagnosing an unexpected archive result. For a
-game-root override, it includes the FOMOD
-metadata inside the ZIP automatically. The archive path must be new. No ZIP
-goes in Paks.
+game-root layout, every entry starts with `Voyage/`; Vortex 1.1.0 and newer
+deploy those paths directly. The archive path must be new. No ZIP goes in Paks.
 
 Create the release manifest for an already-built triplet and ZIP:
 
