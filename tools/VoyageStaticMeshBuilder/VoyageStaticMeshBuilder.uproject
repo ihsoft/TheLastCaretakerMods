@@ -1,0 +1,19 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Tools",
+  "Description": "Published editor host for manifest-driven native StaticMesh builds.",
+  "Modules": [
+    {
+      "Name": "VoyageStaticMeshBuilder",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    }
+  ]
+}

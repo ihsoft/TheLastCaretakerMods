@@ -8,7 +8,7 @@ rules remain in the [repository index](../AGENTS.md).
 | --- | --- |
 | Create a mod skeleton or prepare its INI | [Mod setup](mod-setup.md) |
 | Find, summarize, or extract a game asset | [Asset inspection](asset-inspection.md) |
-| Export a model or material | [Model and material tools](model-and-material-tools.md) |
+| Export, cook, or inspect a model or material | [Model and material tools](model-and-material-tools.md) |
 | Build a native primary-asset registry | [Asset registry](asset-registry.md) |
 | Resolve or generate game mappings | [Mappings](mappings.md) |
 | Build a mod candidate or verify its container | [Release build](release-build.md) |

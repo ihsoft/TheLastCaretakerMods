@@ -181,7 +181,7 @@ internal static partial class Program
             {
                 ["steamBuildId"] = build,
                 ["mappingSha256"] = Hash(mappingPath),
-                ["conversionCommit"] = "ec6595e46448a817ac21ea9bde01caa48f80a420",
+                ["conversionCommit"] = "c38cf24676514773ac106d7b51640f09f4590c61",
                 ["exporterSha256"] = Hash(typeof(Program).Assembly.Location)
             }
         };

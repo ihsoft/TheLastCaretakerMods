@@ -25,7 +25,7 @@ namespace VoyageModelExporter;
 
 internal static class Program
 {
-    internal const string ConversionCommit = "ec6595e46448a817ac21ea9bde01caa48f80a420";
+    internal const string ConversionCommit = "c38cf24676514773ac106d7b51640f09f4590c61";
     internal static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     internal static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
 

@@ -233,9 +233,11 @@ reader/writer consistency, not gameplay compatibility.
   together. Accepted retoc `49b7721` uses explicit `UE5_8` for Voyage's
   expanded imports, while `UE5_7` deliberately selects the upstream filtered
   layout. A profile name alone is not a cross-checkpoint serialization guarantee.
-- The canonical CUE4Parse bundle is managed-only. Its publisher uses a
-  temporary host to replace upstream `Microsoft.Bcl.Memory 9.0.0` with
-  `10.0.11` without modifying the upstream checkout. NuGet can still print the
+- The canonical CUE4Parse bundle is built from a reviewed `ihsoft/CUE4Parse`
+  fork commit and records its upstream base. Tool-required source changes live
+  as explained commits in that fork; publishers do not patch dependency source
+  at build time. The managed-only publisher uses a temporary host to replace
+  `Microsoft.Bcl.Memory 9.0.0` with `10.0.11`. NuGet can still print the
   dependency project's upstream audit warning during compilation; the
   published manifest, DLL metadata, and `VoyageAssetInspector` output were
   verified to resolve `10.0.11`.

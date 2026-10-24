@@ -7,7 +7,10 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$expectedSourceCommit = 'ec6595e46448a817ac21ea9bde01caa48f80a420'
+$expectedSourceCommit = 'c38cf24676514773ac106d7b51640f09f4590c61'
+$upstreamBaseCommit = 'ec6595e46448a817ac21ea9bde01caa48f80a420'
+$sourceRepository = 'https://github.com/ihsoft/CUE4Parse.git'
+$upstreamRepository = 'https://github.com/FabianFG/CUE4Parse.git'
 $microsoftBclMemoryVersion = '10.0.11'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $sourceGitPath = $source.Replace('\', '/')
@@ -19,6 +22,12 @@ $manifestPath = Join-Path $destination $manifestFileName
 $actualCommit = (& git -c "safe.directory=$sourceGitPath" -C $source rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $actualCommit -cne $expectedSourceCommit) {
     throw "CUE4Parse must be at the validated commit $expectedSourceCommit."
+}
+$actualSourceRepository = (& git -c "safe.directory=$sourceGitPath" -C $source remote get-url origin).Trim()
+$actualUpstreamRepository = (& git -c "safe.directory=$sourceGitPath" -C $source remote get-url upstream).Trim()
+if ($LASTEXITCODE -ne 0 -or $actualSourceRepository -cne $sourceRepository -or
+    $actualUpstreamRepository -cne $upstreamRepository) {
+    throw 'CUE4Parse checkout must use the reviewed fork as origin and the original repository as upstream.'
 }
 $sourceChanges = @(& git -c "safe.directory=$sourceGitPath" -C $source status --porcelain --untracked-files=no)
 if ($LASTEXITCODE -ne 0 -or $sourceChanges.Count -ne 0) {
@@ -33,6 +42,9 @@ function Test-PublishedBundle {
         $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
         if ([string]$manifest.kind -cne 'Voyage canonical CUE4Parse bundle' -or
             [string]$manifest.sourceCommit -cne $actualCommit -or
+            [string]$manifest.upstreamBaseCommit -cne $upstreamBaseCommit -or
+            [string]$manifest.sourceRepository -cne $sourceRepository -or
+            [string]$manifest.upstreamRepository -cne $upstreamRepository -or
             [string]$manifest.microsoftBclMemoryVersion -cne $microsoftBclMemoryVersion -or
             [bool]$manifest.nativeBackend) {
             return $false
@@ -150,7 +162,10 @@ try {
     )
     $stableManifest = [ordered]@{
         kind = 'Voyage canonical CUE4Parse bundle'
+        sourceRepository = $sourceRepository
         sourceCommit = $actualCommit
+        upstreamRepository = $upstreamRepository
+        upstreamBaseCommit = $upstreamBaseCommit
         targetFramework = 'net10.0'
         assemblyVersion = $assemblyName.Version.ToString()
         nativeBackend = $false

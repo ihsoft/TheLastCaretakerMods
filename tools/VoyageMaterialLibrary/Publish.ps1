@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $source = Join-Path $repo '.tools\CUE4Parse'
 $gitSource = $source.Replace('\', '/')
-$expectedCommit = 'ec6595e46448a817ac21ea9bde01caa48f80a420'
+$expectedCommit = 'c38cf24676514773ac106d7b51640f09f4590c61'
 $sourceCommit = & git -c "safe.directory=$gitSource" -C $source rev-parse HEAD
 if ($LASTEXITCODE -ne 0 -or [string]$sourceCommit -cne $expectedCommit) {
     throw 'CUE4Parse conversion checkout must match the reviewed parser commit.'

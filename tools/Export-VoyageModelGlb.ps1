@@ -29,7 +29,7 @@ $bundle = Join-Path $repo '.tools\bin\VoyageModelExporter'
 $manifestFile = Join-Path $bundle 'publish-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestFile)) { throw 'Publish once with tools/VoyageModelExporter/Publish.ps1; normal export never builds tools.' }
 $manifest = Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
-if ($manifest.kind -cne 'VoyageModelExporter' -or $manifest.conversionCommit -cne 'ec6595e46448a817ac21ea9bde01caa48f80a420') {
+if ($manifest.kind -cne 'VoyageModelExporter' -or $manifest.conversionCommit -cne 'c38cf24676514773ac106d7b51640f09f4590c61') {
     throw 'Unexpected model exporter provenance.'
 }
 foreach ($file in $manifest.files) {

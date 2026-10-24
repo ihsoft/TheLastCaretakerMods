@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CanonicalCue4ParseDir Condition="'$(CanonicalCue4ParseDir)' == ''">../../.tools/bin/CUE4Parse</CanonicalCue4ParseDir>
+    <CanonicalExporterDir Condition="'$(CanonicalExporterDir)' == ''">../../.tools/bin/VoyageModelExporter</CanonicalExporterDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="CUE4Parse"><HintPath>$(CanonicalCue4ParseDir)/CUE4Parse.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="VoyageModelExporter"><HintPath>$(CanonicalExporterDir)/VoyageModelExporter.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="Serilog"><HintPath>$(CanonicalExporterDir)/Serilog.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="Serilog.Sinks.Console"><HintPath>$(CanonicalExporterDir)/Serilog.Sinks.Console.dll</HintPath><Private>true</Private></Reference>
+  </ItemGroup>
+</Project>

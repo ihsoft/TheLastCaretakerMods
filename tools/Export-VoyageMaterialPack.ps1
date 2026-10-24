@@ -40,7 +40,7 @@ $bundle = Join-Path $repo '.tools\bin\VoyageMaterialLibrary'
 $manifestFile = Join-Path $bundle 'publish-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestFile)) { throw 'Publish once with tools/VoyageMaterialLibrary/Publish.ps1; normal export never builds tools.' }
 $manifest = Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
-if ($manifest.kind -cne 'VoyageMaterialLibrary' -or $manifest.conversionCommit -cne 'ec6595e46448a817ac21ea9bde01caa48f80a420') { throw 'Unexpected exporter provenance.' }
+if ($manifest.kind -cne 'VoyageMaterialLibrary' -or $manifest.conversionCommit -cne 'c38cf24676514773ac106d7b51640f09f4590c61') { throw 'Unexpected exporter provenance.' }
 foreach ($file in $manifest.files) {
     if ((Get-FileHash -LiteralPath (Join-Path $bundle $file.path) -Algorithm SHA256).Hash -cne $file.sha256) { throw "Exporter bundle drift: $($file.path)" }
 }

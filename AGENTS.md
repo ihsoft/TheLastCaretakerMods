@@ -56,6 +56,9 @@ do not load every document just because it is indexed here.
   Update labels to `Voyage.exe` versions and distinguish them from Steam IDs.
 - [Surface normals](docs/modeling-surface-normals-knowledge.md): geometric
   orientation, shading exceptions, and useful checks.
+- [StaticMesh cooking and validation](docs/static-mesh-cooking-knowledge.md):
+  independent ordinary, Nanite, fallback, and ray-tracing representations;
+  evidence levels and consumer-owned quality policy.
 - [Research pitfalls](docs/research-pitfalls-knowledge.md): observed failures
   and misleading approaches worth avoiding or rechecking.
 - [Runtime INI configuration](docs/runtime-configuration-patterns-knowledge.md):

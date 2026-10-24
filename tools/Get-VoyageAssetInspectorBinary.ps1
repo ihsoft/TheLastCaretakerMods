@@ -17,7 +17,10 @@ if (-not (Test-Path -LiteralPath $cueManifestPath -PathType Leaf)) {
 }
 $cue = Get-Content -LiteralPath $cueManifestPath -Raw | ConvertFrom-Json
 if ($cue.kind -cne 'Voyage canonical CUE4Parse bundle' -or
-    $cue.sourceCommit -cne 'ec6595e46448a817ac21ea9bde01caa48f80a420' -or
+    $cue.sourceCommit -cne 'c38cf24676514773ac106d7b51640f09f4590c61' -or
+    $cue.upstreamBaseCommit -cne 'ec6595e46448a817ac21ea9bde01caa48f80a420' -or
+    $cue.sourceRepository -cne 'https://github.com/ihsoft/CUE4Parse.git' -or
+    $cue.upstreamRepository -cne 'https://github.com/FabianFG/CUE4Parse.git' -or
     $cue.microsoftBclMemoryVersion -cne '10.0.11' -or [bool]$cue.nativeBackend) {
     throw 'CUE4Parse does not match the accepted managed-only checkpoint.'
 }
@@ -35,7 +38,7 @@ foreach ($file in @($cue.files | Sort-Object path)) {
 }
 $cueDll = @($inputs | Where-Object path -ceq 'CUE4Parse/CUE4Parse.dll')
 if ($cueDll.Count -ne 1 -or $cueDll[0].sha256 -cne
-    'F304981BAD4C53D209DFDABA9EB65A01D825572E543A04914BEBFD3538DCF4FD') {
+    '0DF12700C7E3897601504CD8CC4B881FE8EB5F67E5EEE6E4CA7A63728216B00B') {
     throw 'CUE4Parse DLL does not match the accepted binary.'
 }
 $actualBundleNames = @(Get-ChildItem -LiteralPath $bundle -File |

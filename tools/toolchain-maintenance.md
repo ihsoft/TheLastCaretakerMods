@@ -16,6 +16,8 @@ and diagnostic path before inspecting a checkout under ignored `.tools/`.
 | `UAssetAPI/` | `Publish-UAssetApiBinary.ps1` |
 | `CUE4Parse/` | `Publish-Cue4ParseBinary.ps1` |
 | `UAssetGUI.exe` | `Publish-UAssetGuiBinary.ps1` |
+| `VoyageStaticMeshBuilder/` | `VoyageStaticMeshBuilder/Publish-VoyageStaticMeshBuilder.ps1` |
+| `VoyageStaticMeshValidator.exe` | `VoyageStaticMeshValidator/Publish.ps1` |
 
 Run commands from the repository root with Windows PowerShell 5.1 unless the
 entry point documents another host. Unreal build, generation, and cook stages
@@ -24,6 +26,20 @@ a launch-permission failure. Pass `-GameRoot` when the game is installed outside
 the configured default location.
 
 ## Development-only source preparation
+
+If `.tools/CUE4Parse` is absent, restore the ignored source checkout from the
+owned fork and keep the original project as `upstream`:
+
+```powershell
+git clone https://github.com/ihsoft/CUE4Parse.git .tools/CUE4Parse
+git -C .tools/CUE4Parse remote add upstream https://github.com/FabianFG/CUE4Parse.git
+```
+
+Then run `Publish-Cue4ParseBinary.ps1`. If it reports a checkpoint mismatch,
+fetch `origin`, check out the exact commit named by that error, and rerun the
+publisher. The publisher owns the accepted commit and verifies both remotes,
+the clean checkout, upstream base, and resulting bundle. Do not recreate fork
+changes as local edits or publication-time patches.
 
 `Prepare-UAssetApiVoyageUe58.ps1` copies the publisher-approved UAssetAPI
 source to a new ignored directory for deliberate tool development. It is not

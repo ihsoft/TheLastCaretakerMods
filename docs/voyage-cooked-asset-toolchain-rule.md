@@ -61,6 +61,11 @@ Use the wrappers listed in the [tool catalog](../tools/tool-catalog.md):
   `.tools/bin/UAssetGUI.exe stress-open`;
 - publish retoc, jmap, UAssetAPI, and CUE4Parse through their dedicated
   `Publish-*` wrappers, then consume only `.tools/bin/` on the normal path;
+- when a third-party tool requires source changes, maintain them as clear,
+  human-readable commits in an owned fork. Keep the original repository as
+  `upstream`, record the upstream base, and make comments and commit messages
+  understandable outside this repository. Publishers consume one exact clean
+  fork commit; they must not apply local source patches during publication;
 - publish the tracked Inspector through `Publish-VoyageAssetInspectorBinary.ps1`;
   both inspection wrappers resolve `.tools/bin/VoyageAssetInspector.exe` with
   `Get-VoyageAssetInspectorBinary.ps1`. Runtime paths check provenance and never
