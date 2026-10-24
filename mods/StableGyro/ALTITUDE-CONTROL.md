@@ -406,23 +406,56 @@ performs no Z position or velocity write, and clears the old vertical sample.
 This does not disable horizontal stabilization or later exact-hold acquisition
 after Vz naturally becomes nonpositive.
 
-Descent-release braking separately defaults to `500 cm/s^2`. While Ctrl is
-held, StableGyro leaves stock descent unmodified and clears vertical hold and
-braking state while remembering the held input. On an eligible release it
-rejects physics-injected growth in downward speed against the previous helper
-command, applies constant-rate damping toward zero, and acquires exact hold only
-when corrected Vz reaches or crosses zero. At `0`, negative observed Vz bypasses
+Descent-release braking separately defaults to `500 cm/s^2`. Ctrl clears
+vertical hold, braking and previous-sample validity before the minimum
+Collective gate. With Ctrl released and Space neutral, fresh eligible hold
+acquisition snapshots physical Vz before writes and selects descent braking
+when Vz is negative, ascent braking when positive, or exact hold at zero.
+This also applies when native Collective recovers to the configured threshold
+several frames after Ctrl release; it does not require remembered input state.
+Descent braking rejects physics-injected growth in downward speed against the
+previous helper command, applies constant-rate damping toward zero, and acquires
+exact hold only when corrected Vz reaches or crosses zero. At `0`, negative observed Vz bypasses
 both damping and growth rejection, performs no Z position or velocity write,
 and clears the old vertical sample; exact hold remains available once physics Vz
 becomes nonnegative. The setting is reread on the next player entry with the
 other flight settings.
 
+While Ctrl is held, an independent upward-speed cap prevents excess native
+lift from causing a hop when height support is released. PrePhysics captures
+the initial physical velocity before the first freed physics step. PostPhysics
+uses these values, with positive Vz pointing upward:
+
+```text
+initial cap = max(physical Vz, 0)
+outputVz = min(observed physics Vz, cap)
+velocityDelta = (0, 0, outputVz - observed physics Vz)
+next cap = max(outputVz, 0)
+```
+
+The cap only decreases while Ctrl remains eligible. Existing climb inertia can
+decay naturally, while fresh upward acceleration is rejected. Negative Vz is
+unrestricted, including slowing a descent from a larger to a smaller downward
+speed. After upward motion stops, the zero cap prevents upward reversal. This
+guard does not apply either configured braking rate or change position, throttle,
+collective, pitch scale or native forces. Velocity clipping does not undo
+displacement already integrated during a physics step.
+
+The guard requires altitude control, player control, engine-running,
+positive CurrentThrottle, sufficient measured rotor speed and expired contact
+cooldown. It runs below the minimum Collective percentage and independently of
+the pitch and horizontal control flags; Ctrl overrides Space. Release,
+controller changes, either helper's EndPlay, invalid references and eligibility
+loss clear its transient state. Ordinary native-assistance restoration during
+held Ctrl leaves the cap intact.
+
 The distributed INI sets the minimum displayed-throttle threshold to `65%`.
 The schema fallback for a missing or invalid value remains `50%`. Below the
 configured inclusive threshold, PostPhysics still performs eligible horizontal
-damping but skips every Z braking, exact-hold and Space-floor correction, then clears the
-vertical state for fresh reacquisition. PrePhysics uses the same threshold and
-restores the captured native assistance booleans while vertical stabilization is
+damping and the eligible Ctrl-held cap. With Ctrl released, it skips Z braking,
+exact hold and Space-floor correction, then clears vertical state for fresh
+reacquisition. Native-assistance ownership uses the threshold for neutral
+stabilization and restores captured assistance booleans while that ownership is
 ineligible.
 
 ## Entry reset and remaining limits
@@ -453,12 +486,14 @@ mechanism remains unproven.
 
 ## Compatibility boundary
 
-The altitude-hold path does not adjust native throttle. Static generation and
-cooked readback establish the ascent/descent graph structure and settings
-contract, not flight behavior. A game test must verify Ctrl-held stock descent,
-smooth braking after Ctrl release at a positive configured rate, no negative-Vz
-kinematic correction at `0`, later exact-hold acquisition after Vz becomes
-nonnegative, and unchanged horizontal damping. It must also verify both control
+The altitude-hold path does not adjust native throttle. Game checks cover smooth
+descent braking and hold reacquisition after Ctrl release, including delayed
+eligibility at the configured Collective threshold, and suppression of the hop
+when Ctrl releases hover support. Static generation and cooked readback also
+establish the ascent/descent graph structure and settings contract. Separate
+game checks remain necessary for zero descent deceleration, later exact-hold
+acquisition after Vz becomes nonnegative, every Ctrl-cap lifecycle transition
+and unchanged horizontal damping. They must also verify both control
 flags independently and together: entry-reloaded altitude disablement restores
 native assistance and preserves saved `HoverPitchScale`, while horizontal
 disablement performs no XY correction and does not disable the vertical path.

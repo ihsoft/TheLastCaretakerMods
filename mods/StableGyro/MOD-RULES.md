@@ -54,18 +54,33 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   sample. It does not disable later exact-hold acquisition once Vz becomes
   non-positive or any horizontal stabilization. Space must preserve all
   positive Vz, including when current altitude is at or below the stored floor;
-  raise the floor only when current altitude exceeds it. Gate only the vertical
-  path on `Collective >= AltitudeStabilizationMinimumThrottlePercent / 100`,
-  after horizontal damping and before Ctrl/Space/hold processing. Below that
-  threshold, clear only vertical lock, exact-hold, Space, braking and sample
-  state; do not clear or gate horizontal state. Keep the setting inclusive,
+  raise the floor only when current altitude exceeds it. After horizontal
+  damping and the altitude-enable gate, process Ctrl before the minimum
+  `Collective` gate. Gate neutral braking, Space and exact hold on
+  `Collective >= AltitudeStabilizationMinimumThrottlePercent / 100`. Below that
+  threshold with Ctrl released, clear only vertical lock, exact-hold, Space,
+  braking and sample state; do not clear or gate horizontal state. Keep the setting inclusive,
   configurable over `0..100`, and retain the schema fallback `50` rather than
   hardcoding a full-throttle requirement. The distributed INI sets it to `65`;
   do not replace the schema fallback with that distributed value.
-  While Ctrl is held, clear vertical hold/braking state and let stock descent
-  operate; Ctrl takes precedence over Space, while propulsion- and contact-gated
-  horizontal damping may continue. Track the Ctrl hold/release transition. On
-  an eligible release, brake negative physics Vz toward zero at
+  While Ctrl is held, clear vertical hold/braking/sample state and let stock
+  descent operate with an upward-speed cap. On first eligibility, capture
+  `cap = max(physical Vz, 0)` in PrePhysics before the freed physics step;
+  PostPhysics applies `outputVz = min(observedVz, cap)` and then
+  `cap = max(outputVz, 0)`. Preserve existing upward inertia and its natural
+  decay, reject renewed upward acceleration, and leave negative Vz free to
+  increase or decrease. Apply an additive Z-only velocity delta, never a
+  position correction or configured braking rate in this Ctrl-held guard.
+  It requires altitude control, player control, propulsion, rotor speed and
+  expired contact cooldown, including below the minimum Collective percentage.
+  It is independent of pitch and horizontal control flags. Ctrl takes precedence
+  over Space, while eligible horizontal damping may continue. Clear the cap on
+  release, controller/EndPlay changes, invalid references and eligibility loss;
+  ordinary native-assistance restoration must not clear an active held-Ctrl cap.
+  On fresh eligible hold acquisition with Space released, snapshot physical Vz
+  before writes and select braking direction from its sign. This includes
+  delayed reacquisition after native Collective recovers to the threshold;
+  do not depend on a remembered Ctrl-release flag. Brake negative Vz toward zero at
   `AltitudeStabilizationDescentDeceleration`, rejecting physics-injected growth
   in downward speed against the previous helper command before applying the
   constant-rate correction. Acquire exact hold only when corrected Vz reaches
@@ -78,7 +93,7 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   request.
 - `EnableAltitudeControl=false` must branch after the independent horizontal
   path and before every mod-owned vertical position or Z-velocity correction.
-  Clear vertical lock, exact hold, Space/Ctrl transition state, both braking
+  Clear vertical lock, exact hold, Space and Ctrl-cap state, both braking
   modes, locked altitude and previous vertical samples. Do not reset saved
   `HoverPitchScale`, and do not acquire native altitude-assistance ownership;
   restore any captured `bAutoHoverCollective` and `bAltitudeAssist` values.
@@ -86,8 +101,8 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   available. Both control flags default to true and reload on player entry.
 - Native altitude-assistance ownership is independent of
   `EnablePitchCorrection`, but requires `EnableAltitudeControl=true`. In the PrePhysics helper, derive ownership from the
-  same player-control, propulsion, input and contact eligibility used by the
-  PostPhysics vertical stabilization path, including its configured minimum
+  same player-control, propulsion, neutral-input and contact eligibility used by
+  PostPhysics neutral altitude stabilization, including its configured minimum
   `Collective` percentage. Cache the owned Gyro and sibling helper once,
   capture `bAutoHoverCollective` and `bAltitudeAssist` on first acquisition,
   disable them before the native Gyro tick, and restore the exact captured

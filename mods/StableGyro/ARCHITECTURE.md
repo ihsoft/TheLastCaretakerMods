@@ -9,6 +9,15 @@ X pitch-reset action. Tick prerequisites are established at BeginPlay and on
 controller changes, not re-added every frame. The two flight helpers remain in
 their respective PrePhysics and PostPhysics groups.
 
+Ctrl releases height support and ordinary vertical braking. The PrePhysics
+helper captures existing upward inertia; PostPhysics caps further positive-speed
+growth while preserving natural decay and unrestricted descent, including below
+the configured minimum Collective. Releasing Ctrl clears the cap. Once neutral
+height control becomes eligible, it selects braking from the current physical
+vertical-speed sign before acquiring exact hold. Delayed threshold recovery
+therefore retains descent inertia for braking. [Altitude control](ALTITUDE-CONTROL.md)
+owns the formulas, eligibility and reset boundaries.
+
 ## Independent flight-control settings
 
 `EnableAltitudeControl` and `EnableHorizontalVelocityControl` both default to
