@@ -1,5 +1,10 @@
 # Repository Git coordination
 
+This guide defines how to perform an already authorized Git mutation; it does
+not authorize one. Create a commit only after the user explicitly requests or
+approves that concrete commit scope. Editing, building, testing, installing, or
+preparing a release does not imply permission to commit.
+
 All agents share one working tree and one Git index. Exact path ownership alone
 does not prevent another process from staging files between an index check and
 `git commit`. On 2026-09-05 that race created a local mixed commit containing

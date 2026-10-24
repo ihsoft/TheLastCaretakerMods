@@ -23,6 +23,15 @@
 - A successful compile, cook, container verification, clean log, or load is
   not gameplay/UI validation. Require a real-game test proportional to the
   changed behavior.
+- Until that real-game test confirms the intended behavior, keep the candidate's
+  implementation, configuration, and build changes uncommitted. Keep proposed
+  architecture, rules, knowledge, and other current-state documentation in an
+  ignored owning backlog. Lower validation gates authorize installation and
+  testing only. After the game test passes, prepare the exact tested change and
+  its durable conclusions for review without rebuilding the candidate merely
+  to obtain a clean-source package. Commit them only after explicit user
+  authorization. An explicit user request for an unvalidated checkpoint is the
+  only exception and must preserve the missing validation boundary.
 - If an experiment removes control, causes autonomous behavior, corrupts UI,
   or crashes, restore the last checkpoint instead of layering speculative
   fixes on the unknown state.

@@ -23,8 +23,9 @@ metrics routinely or put individual measurement results in shared documentation.
   these prepared operations deserve delegation. Status/hash checks and small
   documentation updates usually qualify too. A commit already included in a
   coder's ongoing assignment may remain with that coder; do not wake a coder
-  just to perform a prepared commit. Existing action authorization and explicit
-  user restrictions still apply; this role choice adds no permission gate.
+  just to perform a prepared commit. Prepared scope does not imply commit
+  authority: the user must have explicitly authorized that exact commit. This
+  role choice adds no permission.
 - Evaluate discovery cost before calling a task trivial. If the procedure or
   required inputs are unknown and meaningful searching, source/log inspection
   or debugging seems likely, delegation can pay off by isolating that work.

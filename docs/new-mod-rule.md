@@ -49,5 +49,6 @@ does not claim a working mod, a supported game Update, or a release. When a
 public producer exists, follow the [release workflow](release-and-installation-rule.md):
 build first, diagnose only an actual failure, and seek a proportional game test
 before claiming runtime behavior. Commit a skeleton or later research checkpoint
-only when its recorded facts and status are accurate and useful; never commit an
-active backlog or raw game-derived output.
+only after the user explicitly authorizes that concrete commit and its recorded
+facts and status are accurate and useful; never commit an active backlog or raw
+game-derived output.

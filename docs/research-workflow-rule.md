@@ -99,15 +99,25 @@ narrower step cannot answer the question or has already failed to do so.
   misleading approach in [research pitfalls](research-pitfalls-knowledge.md) when it can
   prevent repeated mistakes. One-off logs and measurements do not belong in
   shared guidance.
-- Unless the user has restricted commits for the current task, commit a coherent
-  positive research checkpoint when it establishes a useful intermediate fact,
-  method, or validated candidate, even if the investigation and feature remain
-  open. Permission for one checkpoint in unfinished implementation work does
-  not authorize later experimental commits. Name the checkpoint's evidence and
-  validation boundary; do not present it as a finished mod or release. This
-  differs from implementation work, where a commit normally completes a
-  logical piece of behavior.
-  Combine minor observations at a natural checkpoint rather than committing
-  each one. Commit eligible source, methods, and documentation through the
-  repository Git workflow; generated output follows the
-  [artifact lifecycle](artifact-lifecycle-rule.md).
+- Research may use intermediate checkpoint commits that are not intended to
+  remain as permanent history. A later authorized operation may revert them or
+  combine them into a durable result. Before each checkpoint, show the user its
+  concrete scope, evidence, missing gates, and intended temporary or durable
+  role, and obtain explicit commit authorization. Permission for one checkpoint
+  does not authorize another or its later revert, squash, merge, amendment, or
+  replacement.
+- A checkpoint may record a useful intermediate fact or a reusable method whose
+  claimed capability has been validated at the applicable level. It does not
+  turn lower-level evidence into accepted gameplay behavior. Keep mod
+  implementation, configuration, and producer changes uncommitted while their
+  intended runtime behavior awaits a real-game test, unless the user explicitly
+  authorizes that exact unvalidated checkpoint. Keep proposed current-state
+  documentation in the ignored owning backlog until the runtime gate passes.
+  A successful build, structural comparison, installation, clean load, or
+  other lower gate authorizes the next test, not a commit. State every
+  checkpoint's evidence and validation boundary and do not present it as a
+  finished mod or release.
+- Combine minor observations at a natural checkpoint rather than proposing a
+  commit for each one. After explicit authorization, commit eligible source,
+  methods, and documentation through the repository Git workflow; generated
+  output follows the [artifact lifecycle](artifact-lifecycle-rule.md).

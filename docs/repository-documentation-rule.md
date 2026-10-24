@@ -33,6 +33,12 @@
   keep raw evidence in ignored storage, not in shared guidance.
   Promote validated conclusions as general contracts without candidate labels;
   retain version/fingerprint restrictions when they determine applicability.
+  Durable documentation describes accepted repository state. Do not update it
+  ahead of a pending runtime gate: when a behavior or presentation claim needs
+  a real-game test, keep the proposed documentation change in the ignored
+  owning backlog until that test passes. Build, structural, installation, and
+  clean-load evidence may be documented only for the narrower claim they prove;
+  they do not make the intended gameplay behavior current repository knowledge.
 - Before committing documentation, make every link to a repository-local file
   resolve in the committed repository. Committed guidance must not depend on
   ignored or otherwise local-only files, including working backlogs and output

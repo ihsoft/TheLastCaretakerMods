@@ -21,7 +21,7 @@ do not load every document just because it is indexed here.
 - [Starting a new mod](docs/new-mod-rule.md): find related game knowledge and
   create a minimal, honest mod directory before selecting an implementation.
 - [Research workflow](docs/research-workflow-rule.md): investigate, record
-  evidence, maintain a large-task backlog, and commit intermediate findings.
+  evidence, maintain a large-task backlog, and coordinate optional checkpoints.
 - [Generated-output lifecycle](docs/artifact-lifecycle-rule.md): choose `Tmp/`
   or retained `artifacts/`, including cleanup after a failed run.
 - [Release and installation](docs/release-and-installation-rule.md): published

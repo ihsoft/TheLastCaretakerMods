@@ -1,5 +1,14 @@
 # Repository hygiene
 
+- Create a commit only after the user explicitly authorizes that commit. A
+  request to edit, research, build, validate, install, prepare a release, or
+  continue work does not imply commit permission. Earlier permission applies
+  only to the reviewed scope it covered and is not standing authorization for
+  later commits. Prepare and validate the change first; if the user has not
+  already requested its commit, present the concrete result and wait. This gate
+  also applies to temporary research checkpoints. Any later revert, squash,
+  merge, amend, or replacement of such a checkpoint requires its own explicit
+  authorization when it creates or rewrites repository history.
 - Serialize every Git-state mutation through the repository `git-transaction`
   semaphore documented in `tools/repository-git-coordination.md`. Normal scoped
   commits must use `tools/commit-repository-changes.ps1`, which owns exact-path

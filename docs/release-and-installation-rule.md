@@ -83,9 +83,14 @@ mappings are a separate prerequisite; resolve them and retry. Analyze the
 specific failing contract only when these inexpensive paths fail.
 
 Offer an in-game test for a successful candidate. A passing build alone does
-not establish gameplay compatibility. After the game test passes, update the
-pin for future default builds and retain the exact tested ZIP when selecting
-a release candidate. Changing the pin is metadata work; it must not silently
+not establish gameplay compatibility or authorize committing implementation
+and current-state documentation that still await that test. Keep such changes
+uncommitted and record proposed documentation in the ignored owning backlog.
+After the game test passes, prepare the exact tested implementation and its
+durable documentation for review; commit them only with explicit user
+authorization. Update the pin for future default builds and retain the exact
+tested ZIP when selecting a release candidate. Changing the pin is metadata
+work; it must not silently
 replace the tested package. Record the game-test result separately from build
 provenance: the candidate manifest must keep the source commit, game build ID,
 and ZIP hash from the original build. Do not rebuild or regenerate its manifest
