@@ -92,8 +92,7 @@ if ((Get-FileHash -LiteralPath $canonical -Algorithm SHA256).Hash -cne $canonica
 $summary = [pscustomobject]@{
     status = 'passed'; cases = $cases; caseCount = $cases.Count; writerByteIdentity = $true; zenIdentityExceptSourceHeaderSize = $true
     steamBuildId = $fp.steam.buildId
-    candidateSha256 = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash
     evidencePath = $run; reportPath = (Join-Path $run 'summary.json'); gameFilesChanged = $false
 }
 [IO.File]::WriteAllText((Join-Path $run 'summary.json'), ($summary | ConvertTo-Json -Depth 6))
-$summary | Select-Object status, caseCount, writerByteIdentity, zenIdentityExceptSourceHeaderSize, candidateSha256, reportPath, gameFilesChanged
+$summary | Select-Object status, caseCount, writerByteIdentity, zenIdentityExceptSourceHeaderSize, reportPath, gameFilesChanged

@@ -82,7 +82,7 @@ remain explicit metadata rather than invented payloads.
 
 ## Result and failure boundary
 
-Consume the wrapper's compact status, output hash, counts, warnings, and report
+Consume the wrapper's compact status, output path, counts, warnings, and report
 path. A texture decode problem produces an explicit partial result; it is not a
 complete extraction. Read detailed evidence only for the reported material or
 failure. Inspect source after a reproducible wrapper failure or for explicit

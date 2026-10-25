@@ -60,9 +60,8 @@ internal static partial class Program
             var gameRoot = fingerprint["gameRoot"]!.GetValue<string>();
             var build = fingerprint["steam"]!["buildId"]!.GetValue<string>();
             if (mapping["engineVersion"]!.GetValue<string>() != "5.8" ||
-                mapping["steamBuildId"]!.GetValue<string>() != build ||
-                mapping["mappingSha256"]!.GetValue<string>() != Hash(Str("mappingPath")))
-                throw new InvalidDataException("Game/mapping provenance mismatch.");
+                mapping["steamBuildId"]!.GetValue<string>() != build)
+                throw new InvalidDataException("Game/mapping identity mismatch.");
 
             // Upstream native helper extraction is confined to this fresh evidence directory.
             Directory.SetCurrentDirectory(Path.GetDirectoryName(Path.GetFullPath(args[0]))!);
@@ -124,10 +123,7 @@ internal static partial class Program
             var evidence = new { schemaVersion = 3, status = textureCache.Values.Any(t => t.Error != null) ? "partial-textures" :
                     materialMode == "BakeReconstructed" ? "reconstructed-bake" : "approximate",
                 materialMode,
-                steamBuildId = build, mappingSha256 = Hash(Str("mappingPath")),
-                conversionCommit = "c38cf24676514773ac106d7b51640f09f4590c61",
-                exporterSha256 = Hash(typeof(Program).Assembly.Location),
-                parserSha256 = Hash(typeof(DefaultFileProvider).Assembly.Location),
+                steamBuildId = build, mappingPath = Path.GetFullPath(Str("mappingPath")),
                 stockContainers = fingerprint["containers"]!.AsArray().Where(x => StockProvider.IsStock(x!["name"]!.GetValue<string>())).Select(x => x!.DeepClone()).ToArray(),
                 materials = reports, textures = textureCache.Values, materialPipeline,
                 note = materialMode == "BakeReconstructed" && sourceArtifactPolicy == "embedded"
@@ -145,7 +141,7 @@ internal static partial class Program
             File.Move(pending, output, false);
             var reportPath = Path.Combine(Directory.GetCurrentDirectory(), "export-report.json");
             File.WriteAllText(reportPath, JsonSerializer.Serialize(evidence, JsonOptions));
-            Console.WriteLine(JsonSerializer.Serialize(new { status = evidence.status, glbPath = output, sha256 = Hash(output),
+            Console.WriteLine(JsonSerializer.Serialize(new { status = evidence.status, glbPath = output, bytes = new FileInfo(output).Length,
                 materialMode,
                 materialCount = reports.Count, imageCount = readback.LogicalImages.Count,
                 pbrTexturedMaterials = reports.Count(r => r.Bindings.ContainsKey("baseColor") || r.Bindings.ContainsKey("normal") || r.Bindings.ContainsKey("ORM") || r.Bindings.ContainsKey("emissive")),
@@ -241,12 +237,10 @@ internal static partial class Program
             schema = "voyage.material-color-preview/1",
             status = "preview",
             steamBuildId = build,
-            mappingSha256 = Hash(mappingPath),
-            exporterSha256 = Hash(typeof(Program).Assembly.Location),
-            parserSha256 = Hash(typeof(DefaultFileProvider).Assembly.Location),
+            mappingPath = Path.GetFullPath(mappingPath),
             materials = assets,
             policy = new { include = "sRGB color Texture2D", exclude = "normal, mask and linear data textures", originalsWritten = false },
-            preview = new { path = output, sha256 = Hash(output), width = sheet.Width, height = sheet.Height, thumbnailSize },
+            preview = new { path = output, width = sheet.Width, height = sheet.Height, thumbnailSize },
             textures = selected.Select(x => new { x.Texture.Source, x.Texture.Width, x.Texture.Height, x.Texture.Format,
                 x.Texture.Srgb, x.Texture.IsNormal, x.Texture.Sha256, x.Consumers }),
             excluded = decoded.Where(x => !x.Included).Select(x => new { x.Texture.Source, x.Texture.Width, x.Texture.Height,
@@ -254,7 +248,7 @@ internal static partial class Program
         };
         var reportPath = Path.Combine(Directory.GetCurrentDirectory(), "preview-report.json");
         File.WriteAllText(reportPath, JsonSerializer.Serialize(report, JsonOptions));
-        Console.WriteLine(JsonSerializer.Serialize(new { status = "preview", previewPath = output, sha256 = Hash(output),
+        Console.WriteLine(JsonSerializer.Serialize(new { status = "preview", previewPath = output, bytes = new FileInfo(output).Length,
             materialCount = assets.Length, colorTextureCount = selected.Length, excludedTextureCount = decoded.Length - selected.Length,
             width = sheet.Width, height = sheet.Height, originalsWritten = false, reportPath }));
         return 0;

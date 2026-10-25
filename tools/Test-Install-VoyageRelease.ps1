@@ -35,11 +35,6 @@ $expectedInstalledCount = $fixtureExtensions.Count +
     $(if ($WithContentPluginDescriptor) { 1 } else { 0 })
 $pluginName = 'SyntheticCatalogue'
 $pluginInstallPath = Join-Path $gameRoot "Voyage\Mods\$pluginName\$pluginName.uplugin"
-$sourceCommit = (& git -C $repositoryRoot rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
-    throw 'Could not resolve the repository HEAD for the synthetic manifest.'
-}
-
 function Write-Utf8Json {
     param(
         [Parameter(Mandatory = $true)]
@@ -80,12 +75,14 @@ function New-SyntheticRelease {
         $item = Get-Item -LiteralPath $path
         $records += [pscustomobject][ordered]@{
             name = $name
+            path = "container/package/$name"
             size = $item.Length
             sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash
         }
     }
 
     $contentPlugin = $null
+    $contentPluginExpectedSha256 = $null
     if ($WithContentPluginDescriptor) {
         $descriptorDirectory = Join-Path $packageRoot "Mods\$pluginName"
         [IO.Directory]::CreateDirectory($descriptorDirectory) | Out-Null
@@ -98,6 +95,8 @@ function New-SyntheticRelease {
             Modules = @()
         })
         $descriptor = Get-Item -LiteralPath $descriptorPath
+        $contentPluginExpectedSha256 = (
+            Get-FileHash -Algorithm SHA256 -LiteralPath $descriptorPath).Hash
         $contentPlugin = [ordered]@{
             type = 'content-plugin-descriptor'
             pluginName = $pluginName
@@ -105,7 +104,6 @@ function New-SyntheticRelease {
                 name = $descriptor.Name
                 path = "container/package/Mods/$pluginName/$pluginName.uplugin"
                 size = $descriptor.Length
-                sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $descriptorPath).Hash
             }
             archivePath = "Mods/$pluginName/$pluginName.uplugin"
             installRelativePath = "Voyage/Mods/$pluginName/$pluginName.uplugin"
@@ -115,16 +113,19 @@ function New-SyntheticRelease {
     Compress-Archive -Path (Join-Path $packageRoot '*') -DestinationPath $archivePath
     $archive = Get-Item -LiteralPath $archivePath
     $manifest = [ordered]@{
-        schemaVersion = $(if ($WithContentPluginDescriptor) { 3 } else { 2 })
+        schemaVersion = $(if ($WithContentPluginDescriptor) { 5 } else { 4 })
         mod = $modName
         version = $Version
         modVersion = 'test'
-        sourceCommit = $sourceCommit
         dirtySource = $false
         gameFingerprint = [ordered]@{
             steamBuildId = $SteamBuildId
         }
-        payload = $records
+        payload = @($records | ForEach-Object { [ordered]@{
+            name = $_.name
+            path = $_.path
+            size = $_.size
+        } })
         archive = [ordered]@{
             name = $archive.Name
             size = $archive.Length
@@ -142,6 +143,7 @@ function New-SyntheticRelease {
         records = $records
         archive = $manifest.archive
         contentPlugin = $contentPlugin
+        contentPluginExpectedSha256 = $contentPluginExpectedSha256
     }
 }
 
@@ -302,10 +304,8 @@ try {
     $wrongArchiveManifest = Get-Content -LiteralPath $wrongArchiveRelease.manifestPath `
         -Raw | ConvertFrom-Json
     $wrongArchiveManifest.payload[0].size = (Get-Item -LiteralPath $wrongArchivePayloadPath).Length
-    $wrongArchiveManifest.payload[0].sha256 = (
-        Get-FileHash -Algorithm SHA256 -LiteralPath $wrongArchivePayloadPath).Hash
     Write-Utf8Json -Path $wrongArchiveRelease.manifestPath -Value $wrongArchiveManifest
-    Assert-Rejected -Pattern 'Release ZIP (does not match|content disagrees)' -Action {
+    Assert-Rejected -Pattern 'Release ZIP does not match|Loose payload differs' -Action {
         & $installer -ReleaseManifest $wrongArchiveRelease.manifestPath `
             -GameRoot $gameRoot -ValidateOnly
     }
@@ -347,7 +347,7 @@ try {
     }
     if ($WithContentPluginDescriptor) {
         Assert-Hash -Path $pluginInstallPath `
-            -Expected $firstRelease.contentPlugin.artifact.sha256 `
+            -Expected $firstRelease.contentPluginExpectedSha256 `
             -Label 'Installed content plugin descriptor'
     }
     if (@(Get-ChildItem -LiteralPath $paksDirectory -File -Filter '*.zip').Count -ne 0) {
@@ -681,7 +681,7 @@ try {
     }
     if ($WithContentPluginDescriptor) {
         Assert-Hash -Path $pluginInstallPath `
-            -Expected $archiveOnlyRelease.contentPlugin.artifact.sha256 `
+            -Expected $archiveOnlyRelease.contentPluginExpectedSha256 `
             -Label 'Archive-only installed content plugin descriptor'
     }
 

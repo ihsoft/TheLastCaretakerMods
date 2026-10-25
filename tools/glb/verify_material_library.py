@@ -135,7 +135,7 @@ def verify(path):
             'materialMode': pipeline['requestedMode'] if pipeline else None,
             'sourceArtifacts': len(pipeline['sourceArtifacts']) if pipeline else 0,
             'unavailableTextures': failures, 'selfContained': True,
-            'sha256': hashlib.sha256(data).hexdigest().upper()}
+            'byteLength': len(data)}
 
 
 if __name__ == '__main__':

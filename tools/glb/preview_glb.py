@@ -66,5 +66,5 @@ a.output.parent.mkdir(parents=True,exist_ok=True)
 scene.render.filepath = str(a.output.resolve())
 bpy.ops.render.render(write_still=True)
 assert hashlib.sha256(a.input.read_bytes()).hexdigest() == before
-print('GLB_PREVIEW_OK '+json.dumps(dict(sourceSha256=before, meshObjects=len(meshes),
+print('GLB_PREVIEW_OK '+json.dumps(dict(meshObjects=len(meshes),
       triangles=sum(len(o.data.polygons) for o in meshes), output=str(a.output.resolve()), sourceUnchanged=True)))

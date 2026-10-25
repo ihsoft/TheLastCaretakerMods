@@ -26,19 +26,19 @@
   naming and cleanup contract is in the shared lifecycle document.
 - Every tracked `.usmap` must live in its own Steam-build/engine-version
   directory and have a sibling manifest containing the Steam build ID,
-  exact engine/parser version, generator commit, file hash, validation evidence,
-  and revalidation condition. Never overwrite an older mapping for a new game
+  exact engine/parser version, structural validation evidence, and revalidation
+  condition. Never overwrite an older mapping for a new game
   build. Keep a selected candidate and the evidence required to review it as a
   durable artifact; raw dumper output and logs are temporary unless retained
   explicitly for an unresolved investigation.
 - Never generate mappings merely because a task needs them. Call
-  `tools/Get-VoyageMappings.ps1`; it fingerprints the installed game, selects
+  `tools/Get-VoyageMappings.ps1`; it reads the installed Steam build ID, selects
   the matching reviewed entry from `mappings/Voyage/`, validates it, and returns
   the path. Run `New-VoyageMappings.ps1` only after that resolver reports that
   no reviewed mapping matches a genuinely new Steam build ID, and ask the user to
   start the game before generation.
 - Except for the reviewed mapping registry, commit the method, not the snapshot.
-  Reusable fingerprinting, extraction, inspection, patching, and disassembly
+  Reusable game identification, extraction, inspection, patching, and disassembly
   logic belongs under `tools/`, with exact usage documented.
 - Treat `tools/tool-index.md` as the task router and `tools/tool-catalog.md` as
   the entry-point registry. Read only the relevant guide before surveying tool
@@ -49,8 +49,8 @@
   the tool by intent in `tools/tool-index.md`, run its documented interface, and
   evaluate its exit code, manifest, summary, and output before reading source
   or tracing third-party internals. Do not demand a separate tool version,
-  commit, or binary hash check before a normal call unless the documented
-  interface requires it for an actual format or safety contract. Inspect
+  commit, or binary hash check before a normal call. Hashes are permitted only
+  by the shared [hash-usage rule](hash-usage-rule.md). Inspect
   implementation only when the tool
   fails, hangs, rejects valid-looking inputs, produces an unexpected result,
   or the documented contract is insufficient for the task.
@@ -165,7 +165,7 @@
   structurally checked candidate; offer a real-game test next. A successful
   game test accepts the tested behavior on that build. Then update the mod's
   pinned ID without changing the tested package bytes. Keep the actual build
-  ID, mapping identity, and the exact tested package in release evidence.
+  ID, mapping path, and the exact tested package in release evidence.
   General engine behavior follows its engine/serialization checks rather than
   acquiring a game-build gate solely because it was observed on one build.
 - Keep mod version, artifact version, game Update, the numeric file version of
@@ -184,7 +184,8 @@
 - An installer that replaces a Voyage mod container must check the game process
   immediately before mutation, preserve an exact temporary recovery copy during
   mutation, install from a validated release manifest, and read back every
-  installed hash. Keep transaction records and recovery copies in `Tmp/` only
+  installed file. Temporary digests may enforce copy and rollback integrity
+  under the [hash-usage rule](hash-usage-rule.md). Keep transaction records and recovery copies in `Tmp/` only
   while they are needed for that operation. Keep ZIP archives outside the game;
   install only files the game consumes. This also applies to temporary builds.
 - Any generated or reconstructed game-derived file that must remain in Git as

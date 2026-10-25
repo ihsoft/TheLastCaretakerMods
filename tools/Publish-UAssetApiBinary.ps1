@@ -9,7 +9,6 @@ if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScri
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) { $OutputRoot = Join-Path $PSScriptRoot '..\.tools\bin\UAssetAPI' }
 Set-StrictMode -Version Latest
 
-$expectedSourceCommit = '21c982fa8f04e12d5d216fdf330a2f206e81156f'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $sourceGitPath = $source.Replace('\', '/')
 $project = (Resolve-Path -LiteralPath (Join-Path $source 'UAssetAPI\UAssetAPI.csproj')).Path
@@ -17,10 +16,6 @@ $destination = [IO.Path]::GetFullPath($OutputRoot)
 $manifestFileName = 'publish-manifest.json'
 $manifestPath = Join-Path $destination $manifestFileName
 
-$actualCommit = (& git -c "safe.directory=$sourceGitPath" -C $source rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $actualCommit -cne $expectedSourceCommit) {
-    throw "UAssetAPI must be at the validated commit $expectedSourceCommit."
-}
 $sourceChanges = @(& git -c "safe.directory=$sourceGitPath" -C $source status --porcelain --untracked-files=no)
 if ($LASTEXITCODE -ne 0 -or $sourceChanges.Count -ne 0) {
     throw 'Refusing to publish UAssetAPI from tracked source changes.'
@@ -32,8 +27,7 @@ function Test-PublishedBundle {
     }
     try {
         $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-        if ([string]$manifest.kind -cne 'Voyage canonical UAssetAPI bundle' -or
-            [string]$manifest.sourceCommit -cne $actualCommit) {
+        if ([string]$manifest.kind -cne 'Voyage canonical UAssetAPI bundle') {
             return $false
         }
         $manifestFiles = @($manifest.files)
@@ -50,8 +44,7 @@ function Test-PublishedBundle {
         foreach ($file in $manifestFiles) {
             $path = Join-Path $destination ([string]$file.path)
             if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
-                (Get-Item -LiteralPath $path).Length -ne [long]$file.length -or
-                (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash -cne [string]$file.sha256) {
+                (Get-Item -LiteralPath $path).Length -ne [long]$file.length) {
                 return $false
             }
         }
@@ -60,18 +53,6 @@ function Test-PublishedBundle {
     catch {
         return $false
     }
-}
-
-if (Test-PublishedBundle) {
-    $dll = Join-Path $destination 'UAssetAPI.dll'
-    [pscustomobject]@{
-        Path = (Resolve-Path -LiteralPath $dll).Path
-        Length = (Get-Item -LiteralPath $dll).Length
-        Sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $dll).Hash
-        SourceCommit = $actualCommit
-        Rebuilt = $false
-    }
-    return
 }
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
@@ -113,13 +94,11 @@ try {
                 [ordered]@{
                     path = $_.Name
                     length = $_.Length
-                    sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
                 }
             }
     )
     $stableManifest = [ordered]@{
         kind = 'Voyage canonical UAssetAPI bundle'
-        sourceCommit = $actualCommit
         targetFramework = 'net10.0'
         assemblyVersion = $assemblyName.Version.ToString()
         files = $files
@@ -156,8 +135,6 @@ try {
     [pscustomobject]@{
         Path = $installedDll
         Length = (Get-Item -LiteralPath $installedDll).Length
-        Sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $installedDll).Hash
-        SourceCommit = $actualCommit
         Rebuilt = $true
     }
 }

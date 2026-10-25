@@ -101,6 +101,4 @@ if ($files.Count -ne $expectedFileCount) {
 }
 
 Write-Host "Cooked DonkLift production assets: $output"
-Get-FileHash -Algorithm SHA256 -LiteralPath $files.FullName |
-    Select-Object Path, Hash |
-    Format-Table -AutoSize
+$files | Select-Object FullName, Length | Format-Table -AutoSize

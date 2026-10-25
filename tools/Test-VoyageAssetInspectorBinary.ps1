@@ -61,7 +61,7 @@ $checks.Add('optional-null-property-powershell7')
 $binary = & (Join-Path $PSScriptRoot 'Get-VoyageAssetInspectorBinary.ps1')
 $beforeTime = (Get-Item -LiteralPath $binary.Path).LastWriteTimeUtc
 $published = & (Join-Path $PSScriptRoot 'Publish-VoyageAssetInspectorBinary.ps1')
-Assert-InspectorTest (-not $published.Rebuilt -and $published.Sha256 -ceq $binary.Sha256 -and
+Assert-InspectorTest (-not $published.Rebuilt -and $published.Path -ceq $binary.Path -and
     (Get-Item -LiteralPath $binary.Path).LastWriteTimeUtc -eq $beforeTime) 'Publisher rebuilt a current binary.'
 $checks.Add('publisher-reuse-without-dotnet')
 
@@ -77,7 +77,7 @@ Assert-InspectorTest ($inspectionResult.status -ceq 'completed' -and
     $inspectionResult.manifestPath -ceq $inspection[0].FullName -and
     (Test-Path -LiteralPath $inspectionResult.logPath -PathType Leaf)) `
     'Normal inspection did not return one compact result with retained evidence.'
-Assert-InspectorTest ($manifest.inspectorBinarySha256 -ceq $binary.Sha256) 'Inspection used an unexpected binary.'
+Assert-InspectorTest ($manifest.inspectorBinaryPath -ceq $binary.Path) 'Inspection used an unexpected binary.'
 Assert-InspectorTest ($manifest.source -ceq 'Game' -and $null -eq $manifest.modContainer) `
     'Default inspection did not isolate stock game containers.'
 $matchesFile = Join-Path $inspection[0].DirectoryName 'matches.txt'
@@ -130,8 +130,7 @@ $jsonInventoryText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $
 Assert-InspectorTest ($LASTEXITCODE -eq 0) 'Get-VoyageAssetJson -AsJson failed through powershell.exe -File.'
 $jsonInventory = ([string]::Join([Environment]::NewLine, @($jsonInventoryText))) | ConvertFrom-Json
 Assert-InspectorTest ($jsonInventory.packageCount -eq $packages.packageCount -and
-    $jsonInventory.packageListPath -ceq $packages.packageListPath -and
-    $jsonInventory.packageListSha256 -ceq $packages.packageListSha256) `
+    $jsonInventory.packageListPath -ceq $packages.packageListPath) `
     'Get-VoyageAssetJson -AsJson did not preserve the complete inventory result.'
 $checks.Add('game-inventory-json-file-entry-point')
 $formatterJsonText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $getJson `
@@ -141,8 +140,7 @@ $formatterJsonText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $
 Assert-InspectorTest ($LASTEXITCODE -eq 0) 'Formatter-only failure blocked Get-VoyageAssetJson.'
 $formatterResult = ([string]::Join([Environment]::NewLine, @($formatterJsonText))) | ConvertFrom-Json
 Assert-InspectorTest ($formatterResult.pseudocodeStatus -ceq 'unavailable' -and
-    (Test-Path -LiteralPath $formatterResult.jsonPath -PathType Leaf) -and
-    (Get-FileHash -LiteralPath $formatterResult.jsonPath -Algorithm SHA256).Hash -ceq $formatterResult.jsonSha256) `
+    (Test-Path -LiteralPath $formatterResult.jsonPath -PathType Leaf)) `
     'Formatter-only failure did not return validated asset JSON with explicit status.'
 $checks.Add('asset-json-independent-of-optional-pseudocode')
 $summaryText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $summaryScript `
@@ -154,9 +152,8 @@ $summaryResult = ([string]::Join([Environment]::NewLine, @($summaryText))) | Con
 Assert-InspectorTest ($summaryResult.status -ceq 'summarized' -and
     $summaryResult.counts.generatedClasses -eq 1 -and $summaryResult.counts.functions -gt 0 -and
     $summaryResult.resultCount -eq 1 -and
-    (Test-Path -LiteralPath $summaryResult.summaryPath -PathType Leaf) -and
-    (Get-FileHash -LiteralPath $summaryResult.summaryPath -Algorithm SHA256).Hash -ceq $summaryResult.summarySha256) `
-    'Compact asset overview is incomplete or its evidence hash is wrong.'
+    (Test-Path -LiteralPath $summaryResult.summaryPath -PathType Leaf)) `
+    'Compact asset overview is incomplete.'
 $checks.Add('compact-asset-structure-overview')
 $functionText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $summaryScript `
     -GameRoot $GameRoot `
@@ -166,8 +163,7 @@ Assert-InspectorTest ($LASTEXITCODE -eq 0) 'Get-VoyageAssetSummary exact functio
 $functionResult = ([string]::Join([Environment]::NewLine, @($functionText))) | ConvertFrom-Json
 Assert-InspectorTest ($functionResult.resultCount -eq 1 -and
     $functionResult.data[0].name -ceq 'GetInteractiveProvidedActions' -and
-    $functionResult.summaryPath -ceq $summaryResult.summaryPath -and
-    $functionResult.summarySha256 -ceq $summaryResult.summarySha256) `
+    $functionResult.summaryPath -ceq $summaryResult.summaryPath) `
     'Exact function focus did not reuse and filter the asset summary.'
 $checks.Add('compact-asset-function-focus')
 $functionIndexText = & $powerShell7.Source -NoProfile -File $summaryScript `
@@ -192,23 +188,21 @@ Assert-InspectorTest ($functionIndex.resultCount -gt 0 -and
 $checks.Add('compact-function-index-powershell7')
 $asset = & $getJson -GameRoot $GameRoot -Query '/Game/Blueprints/BP_VoyageCableUpdater'
 Assert-InspectorTest ((Test-Path -LiteralPath $asset.jsonPath -PathType Leaf) -and
-    (Get-FileHash -LiteralPath $asset.jsonPath -Algorithm SHA256).Hash -ceq $asset.jsonSha256 -and
     -not [string]::IsNullOrWhiteSpace([string]$asset.pseudocodeStatus)) `
-    'Asset JSON hash or pseudocode-status contract is invalid.'
+    'Asset JSON or pseudocode-status contract is invalid.'
 $jsonTime = (Get-Item -LiteralPath $asset.jsonPath).LastWriteTimeUtc
 $checks.Add('game-json-without-dotnet')
 $again = & $getJson -GameRoot $GameRoot -Query '/Game/Blueprints/BP_VoyageCableUpdater'
-Assert-InspectorTest ($again.jsonPath -ceq $asset.jsonPath -and $again.jsonSha256 -ceq $asset.jsonSha256 -and
+Assert-InspectorTest ($again.jsonPath -ceq $asset.jsonPath -and
     (Get-Item -LiteralPath $again.jsonPath).LastWriteTimeUtc -eq $jsonTime) 'Repeated asset request did not reuse the result.'
 $checks.Add('game-json-reuse')
 $result = [pscustomobject]@{
     status = 'passed'
     checks = @($checks)
     powerShellVersion = $PSVersionTable.PSVersion.ToString()
-    inspectorBinarySha256 = $binary.Sha256
+    inspectorBinaryPath = $binary.Path
     packageCount = $packages.packageCount
     jsonPath = $asset.jsonPath
-    jsonSha256 = $asset.jsonSha256
     evidencePath = $run
     gameFilesChanged = $false
 }

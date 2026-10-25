@@ -27,7 +27,7 @@
 - Keep a durable fact only when it changes a concrete implementation,
   compatibility, release-selection or recovery decision. State the current
   contract and its applicability, without the story of discovering it. Give
-  each fact one owning source: do not duplicate artifact hashes, build labels,
+  each fact one owning source: do not duplicate artifact identities, build labels,
   test dates or results already owned by manifests or local evidence. Release
   compatibility constraints may distinguish versions; they are not a work log.
 - Shared `docs/` content must have a concrete or reasonably expected use across
@@ -42,10 +42,11 @@
   and safety/compatibility limits.
   Describe the public call, its useful result, and the next action on failure.
   Do not copy a tool's implementation steps, pinned dependency commits, binary
-  hashes, or historical test counts into normal agent guidance. Run the selected
+  per-file digests, or historical test counts into normal agent guidance. Run the selected
   tool first; inspect its diagnostics and implementation only when it fails or
   gives an unexpected result. Keep exact provenance in the tool's own checks
-  and generated manifests when those identities matter.
+  and generated manifests only when those identities matter under the shared
+  [hash rule](hash-usage-rule.md).
   Promote validated conclusions as general contracts without candidate labels;
   retain version/fingerprint restrictions when they determine applicability.
   Durable documentation describes accepted repository state. Do not update it

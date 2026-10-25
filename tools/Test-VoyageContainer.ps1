@@ -18,13 +18,11 @@ if ([IO.Path]::GetExtension($utoc) -ine '.utoc' -or -not (Test-Path -LiteralPath
 $canonical = [string]::IsNullOrWhiteSpace($Retoc)
 if ($canonical) { $Retoc = Join-Path $repo '.tools\bin\retoc.exe' }
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
-$retocHash = (Get-FileHash -LiteralPath $retocPath -Algorithm SHA256).Hash
 if ($canonical) {
     $publication = Get-Content -LiteralPath (Join-Path $repo '.tools\bin\retoc.manifest.json') -Raw | ConvertFrom-Json
     if ($publication.kind -cne 'Voyage canonical retoc binary' -or
-        $publication.executableSha256 -cne $retocHash -or
         $publication.executableLength -ne (Get-Item -LiteralPath $retocPath).Length) {
-        throw 'Canonical retoc does not match its publication manifest; diagnose publication before retrying.'
+        throw 'Canonical retoc does not satisfy its published interface; diagnose publication before retrying.'
     }
 }
 function Normalize-PackagePath([string]$Path) {
@@ -37,10 +35,8 @@ function Normalize-PackagePath([string]$Path) {
     $value
 }
 $expected = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-$expectedHash = $null
 if ($ExpectedPackageList) {
     $ExpectedPackageList = (Resolve-Path -LiteralPath $ExpectedPackageList).Path
-    $expectedHash = (Get-FileHash -LiteralPath $ExpectedPackageList).Hash
     foreach ($line in [IO.File]::ReadAllLines($ExpectedPackageList)) {
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
         $path = Normalize-PackagePath $line
@@ -54,10 +50,13 @@ $filePattern = '^' + [regex]::Escape($stem) + '(\.utoc|\.pak|(?:_s\d+)?\.ucas)$'
 function Get-ContainerFiles {
     @(Get-ChildItem -LiteralPath $parent -File | Where-Object Name -match $filePattern | Sort-Object Name | ForEach-Object {
         if ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Container symlinks are unsupported.' }
-        [pscustomobject]@{ path = $_.FullName; name = $_.Name; size = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName).Hash }
+        [pscustomobject]@{ path = $_.FullName; name = $_.Name; size = $_.Length }
     })
 }
 $before = Get-ContainerFiles
+$beforeIntegrity = @($before | ForEach-Object {
+    [pscustomobject]@{ path = $_.path; sha256 = (Get-FileHash -LiteralPath $_.path -Algorithm SHA256).Hash }
+})
 if (-not (Test-Path -LiteralPath (Join-Path $parent ($stem + '.ucas')) -PathType Leaf)) { throw 'Matching .ucas is missing.' }
 $allowedOutputRoots = @(
     [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')),
@@ -84,13 +83,13 @@ $packageListPath = Join-Path $directory 'packages.txt'
 $runner = Join-Path $PSScriptRoot 'Invoke-VoyageBoundedTool.ps1'
 $report = [ordered]@{
     schemaVersion = 1; status = 'failed'; container = $utoc; capturedAtUtc = [DateTime]::UtcNow.ToString('o')
-    retocPath = $retocPath; retocSha256 = $retocHash; canonicalRetoc = $canonical
-    expectedPackageList = $ExpectedPackageList; expectedPackageListSha256 = $expectedHash
+    retocPath = $retocPath; canonicalRetoc = $canonical
+    expectedPackageList = $ExpectedPackageList
     files = $before; packageCount = 0; chunkCount = 0; chunkTypes = @()
     packageSetMatches = $null; missingPackages = @(); unexpectedPackages = @()
     verificationRun = $null; inventoryRun = $null; packageListPath = $null
     reportPath = $reportPath; error = $null
-    scope = 'Retoc IoStore integrity plus optional exact ExportBundleData paths. PAK is fingerprinted only. Not UObject parsing, dependency resolution, mount precedence or runtime validation.'
+    scope = 'Retoc IoStore integrity plus optional exact ExportBundleData paths. Not UObject parsing, dependency resolution, mount precedence or runtime validation.'
 }
 try {
     $verify = & $runner -Executable $retocPath -Arguments @('verify', $utoc) `
@@ -131,10 +130,13 @@ try {
         $report.unexpectedPackages = @($packages | Where-Object { -not $expected.Contains($_) } | Sort-Object)
         $report.packageSetMatches = $report.missingPackages.Count -eq 0 -and $report.unexpectedPackages.Count -eq 0
         if (-not $report.packageSetMatches) { throw 'Actual package paths differ from the expected exact set.' }
-        if ($expectedHash -cne (Get-FileHash -LiteralPath $ExpectedPackageList).Hash) { throw 'Expected list changed during verification.' }
     }
-    if (($before | ConvertTo-Json -Compress) -cne ((Get-ContainerFiles) | ConvertTo-Json -Compress)) { throw 'Container files changed during verification.' }
-    if ($retocHash -cne (Get-FileHash -LiteralPath $retocPath).Hash) { throw 'Retoc changed during verification.' }
+    $afterIntegrity = @(Get-ContainerFiles | ForEach-Object {
+        [pscustomobject]@{ path = $_.path; sha256 = (Get-FileHash -LiteralPath $_.path -Algorithm SHA256).Hash }
+    })
+    if (($beforeIntegrity | ConvertTo-Json -Compress) -cne ($afterIntegrity | ConvertTo-Json -Compress)) {
+        throw 'Container files changed during verification.'
+    }
     $report.status = 'passed'
 } catch { $report.error = $_.Exception.Message }
 [IO.File]::WriteAllText($reportPath, ($report | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))

@@ -107,7 +107,7 @@ The inherited paired plate is hidden only in four-port mode.
 The Blueprint generator uses valid editor-only reference meshes at the final
 package identities. These dependencies are excluded from the mod cook; the
 common producer's cooked meshes and every emitted bulk companion supply the
-runtime packages. Staging checks their manifest hashes. Final-container
+runtime packages. Staging checks their declared paths and sizes. Final-container
 validation checks Nanite, fallback, ray tracing, source attributes and the stock
 material reference before installation. The shared
 [cooking knowledge](../../docs/static-mesh-cooking-knowledge.md) defines the

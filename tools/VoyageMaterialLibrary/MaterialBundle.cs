@@ -83,8 +83,7 @@ internal static partial class Program
             ["deduplicatedTextureReferences"] = textureReferences - texturePayloads.Count,
             ["previewCount"] = previewPayloads.Count,
             ["totalRawTextureBytesBeforeDedup"] = rawTextureBytes,
-            ["totalStoredTextureBytesAfterDedup"] = storedTextureBytes,
-            ["exporterSha256"] = Hash(typeof(Program).Assembly.Location)
+            ["totalStoredTextureBytesAfterDedup"] = storedTextureBytes
         };
         var bundleBytes = Encoding.UTF8.GetBytes(bundle.ToJsonString(JsonOptions) + Environment.NewLine);
         Directory.CreateDirectory(Path.GetDirectoryName(output)!);
@@ -99,7 +98,7 @@ internal static partial class Program
         Console.WriteLine(JsonSerializer.Serialize(new { status = "bundled", materialBundle = output, bundleName,
             materials = materialPayloads.Count, textures = texturePayloads.Count, textureReferences,
             deduplicatedTextureReferences = textureReferences - texturePayloads.Count,
-            bytes = new FileInfo(output).Length, sha256 = Hash(output) }));
+            bytes = new FileInfo(output).Length }));
         return 0;
     }
 
@@ -190,7 +189,7 @@ internal static partial class Program
         Console.WriteLine(JsonSerializer.Serialize(new { status = "verified", materialBundle = fullPath,
             bundleName = bundle["bundleName"]!.GetValue<string>(), materials = materialPaths.Length,
             textures = textureCount, textureReferences, deduplicatedTextureReferences = textureReferences - textureCount,
-            bytes = new FileInfo(fullPath).Length, sha256 = Hash(fullPath) }));
+            bytes = new FileInfo(fullPath).Length }));
         return 0;
     }
 

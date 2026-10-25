@@ -64,7 +64,7 @@ if ($Source -eq 'Mod') {
         throw 'Mod inspection output must be below repository artifacts or Tmp.'
     }
 }
-$cacheSchemaVersion = 3
+$cacheSchemaVersion = 4
 $sha256Pattern = '^[0-9A-F]{64}$'
 
 function Write-PublicResult {
@@ -272,7 +272,6 @@ function Resolve-ValidatedMappings {
         return [pscustomobject]@{
             mappingsPath = $mapping
             manifestPath = (Resolve-Path -LiteralPath $manifest).Path
-            sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $mapping).Hash
         }
     }
 
@@ -283,7 +282,6 @@ function Resolve-ValidatedMappings {
     [pscustomobject]@{
         mappingsPath = [string]$resolved.mappingsPath
         manifestPath = [string]$resolved.manifestPath
-        sha256 = [string]$resolved.sha256
     }
 }
 
@@ -345,7 +343,6 @@ function Resolve-ModContainer {
         path = $resolved
         name = $name
         length = (Get-Item -LiteralPath $resolved).Length
-        sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $resolved).Hash
     }
 }
 
@@ -361,7 +358,7 @@ function Get-PackageIndex {
         [string]$SteamBuildId,
 
         [Parameter(Mandatory = $true)]
-        [string]$Cue4ParseBinarySha256,
+        [string]$InspectorPublication,
 
         [Parameter(Mandatory = $true)]
         [object]$GameContainerSet
@@ -378,9 +375,7 @@ function Get-PackageIndex {
             [string](Get-OptionalPropertyValue -Object $manifest -Name 'source') -ceq 'Game' -and
             [string]$manifest.kind -ceq 'Voyage asset package index' -and
             [string]$manifest.steamBuildId -ceq $SteamBuildId -and
-            [string]$manifest.cue4ParseBinarySha256 -ceq $Cue4ParseBinarySha256 -and
-            [string]$manifest.inspectorSourceSha256 -ceq $inspector.SourceSha256 -and
-            [string](Get-OptionalPropertyValue -Object $manifest -Name 'inspectorBinarySha256') -ceq $inspector.Sha256 -and
+            [string]$manifest.inspectorPublication -ceq $InspectorPublication -and
             [string]$manifest.gameContainersSha256 -ceq [string]$GameContainerSet.gameContainersSha256 -and
             [string]$manifest.packageIndexSha256 -ceq $actualHash) {
             return (Resolve-Path -LiteralPath $indexPath).Path
@@ -425,14 +420,12 @@ function Get-PackageIndex {
         kind = 'Voyage asset package index'
         source = 'Game'
         steamBuildId = $SteamBuildId
-        cue4ParseBinarySha256 = $Cue4ParseBinarySha256
+        inspectorPublication = $InspectorPublication
         engineVersion = $EngineVersion
         gameContainers = @($GameContainerSet.gameContainers)
         gameContainersSha256 = [string]$GameContainerSet.gameContainersSha256
         packageCount = $packages.Count
         packageIndexSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $indexPath).Hash
-        inspectorSourceSha256 = $inspector.SourceSha256
-        inspectorBinarySha256 = $inspector.Sha256
         generatedAtUtc = [DateTime]::UtcNow.ToString('o')
     }
     [IO.File]::WriteAllText(
@@ -506,12 +499,12 @@ function New-PackageListResult {
         source = $ResultSource
         packageListPath = $resolvedPath
         packageCount = $packageCount
-        packageListSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $resolvedPath).Hash
     }
 }
 
 $inspector = & $getInspectorScript
-$cue4ParseBinarySha256 = $inspector.Cue4ParseSha256
+$inspectorManifest = Get-Content -LiteralPath $inspector.ManifestPath -Raw | ConvertFrom-Json
+$inspectorPublication = [string]$inspectorManifest.publishedAtUtc + ':' + [string]$inspectorManifest.length
 $fingerprintText = (& $fingerprintScript -GameRoot $GameRoot) -join [Environment]::NewLine
 $fingerprint = $fingerprintText | ConvertFrom-Json
 $steamBuildId = [string]$fingerprint.steam.buildId
@@ -555,10 +548,7 @@ if ($Source -eq 'Mod') {
             modContainer = $selectedMod
             packageListPath = $listResult.packageListPath
             packageCount = $listResult.packageCount
-            packageListSha256 = $listResult.packageListSha256
-            cue4ParseBinarySha256 = $cue4ParseBinarySha256
-            inspectorSourceSha256 = $inspector.SourceSha256
-            inspectorBinarySha256 = $inspector.Sha256
+            inspectorPublication = $inspectorPublication
             generatedAtUtc = [DateTime]::UtcNow.ToString('o')
         }
         [IO.File]::WriteAllText(
@@ -598,7 +588,6 @@ if ($Source -eq 'Mod') {
     $exportStatus = Get-ExactAssetExportStatus -ErrorPath $errorPath -JsonPath $jsonPath `
         -VirtualPath $virtualPath `
         -FailureMessage "VoyageAssetInspector could not parse the exact mod asset. Inspection: $runRoot"
-    $jsonSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $jsonPath).Hash
     $inspectionManifest = [ordered]@{
         kind = 'Voyage one-off mod asset inspection'
         source = 'Mod'
@@ -608,13 +597,10 @@ if ($Source -eq 'Mod') {
         virtualPath = $virtualPath
         mappingsPath = [string]$mapping.mappingsPath
         mappingsManifestPath = [string]$mapping.manifestPath
-        mappingsSha256 = [string]$mapping.sha256
-        cue4ParseBinarySha256 = $cue4ParseBinarySha256
-        inspectorSourceSha256 = $inspector.SourceSha256
-        inspectorBinarySha256 = $inspector.Sha256
+        mappingManifestUpdatedUtc = (Get-Item -LiteralPath $mapping.manifestPath).LastWriteTimeUtc.ToString('o')
+        inspectorPublication = $inspectorPublication
         jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
         jsonLength = (Get-Item -LiteralPath $jsonPath).Length
-        jsonSha256 = $jsonSha256
         pseudocodeStatus = $exportStatus.pseudocodeStatus
         pseudocodeError = $exportStatus.pseudocodeError
         generatedAtUtc = [DateTime]::UtcNow.ToString('o')
@@ -625,7 +611,6 @@ if ($Source -eq 'Mod') {
     $result = [pscustomobject]@{
         virtualPath = $virtualPath
         jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
-        jsonSha256 = $jsonSha256
         pseudocodeStatus = $exportStatus.pseudocodeStatus
         pseudocodeError = $exportStatus.pseudocodeError
     }
@@ -637,7 +622,7 @@ $packageIndexPath = Get-PackageIndex `
     -PaksDirectory $paksDirectory `
     -CacheVersionRoot $cacheVersionRoot `
     -SteamBuildId $steamBuildId `
-    -Cue4ParseBinarySha256 $cue4ParseBinarySha256 `
+    -InspectorPublication $inspectorPublication `
     -GameContainerSet $gameContainerSet
 if ($ListPackages) {
     $listResult = New-PackageListResult -ResultSource 'Game' -PackageIndexPath $packageIndexPath
@@ -668,10 +653,8 @@ if ((Test-Path -LiteralPath $jsonPath -PathType Leaf) -and
     if ([string]$manifest.steamBuildId -cne $steamBuildId) { $provenanceFailures.Add('steamBuildId') }
     if ([string]$manifest.gameContainersSha256 -cne [string]$gameContainerSet.gameContainersSha256) { $provenanceFailures.Add('gameContainersSha256') }
     if ([string]$manifest.virtualPath -cne $virtualPath) { $provenanceFailures.Add('virtualPath') }
-    if ([string]$manifest.mappingsSha256 -cne [string]$mapping.sha256) { $provenanceFailures.Add('mappingsSha256') }
-    if ([string]$manifest.cue4ParseBinarySha256 -cne $cue4ParseBinarySha256) { $provenanceFailures.Add('cue4ParseBinarySha256') }
-    if ([string]$manifest.inspectorSourceSha256 -cne $inspector.SourceSha256) { $provenanceFailures.Add('inspectorSourceSha256') }
-    if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'inspectorBinarySha256') -cne $inspector.Sha256) { $provenanceFailures.Add('inspectorBinarySha256') }
+    if ([string]$manifest.mappingManifestUpdatedUtc -cne (Get-Item -LiteralPath $mapping.manifestPath).LastWriteTimeUtc.ToString('o')) { $provenanceFailures.Add('mappingManifestUpdatedUtc') }
+    if ([string]$manifest.inspectorPublication -cne $inspectorPublication) { $provenanceFailures.Add('inspectorPublication') }
     if ([string]$manifest.jsonSha256 -cne $actualJsonHash) { $provenanceFailures.Add('jsonSha256') }
     if ([long]$manifest.jsonLength -ne (Get-Item -LiteralPath $jsonPath).Length) { $provenanceFailures.Add('jsonLength') }
     if ($provenanceFailures.Count -gt 0) {
@@ -688,7 +671,6 @@ if ((Test-Path -LiteralPath $jsonPath -PathType Leaf) -and
         $result = [pscustomobject]@{
             virtualPath = $virtualPath
             jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
-            jsonSha256 = $actualJsonHash
             pseudocodeStatus = $cachedPseudocodeStatus
             pseudocodeError = if ($null -eq $cachedPseudocodeErrorValue) {
                 $null
@@ -752,10 +734,8 @@ $assetManifest = [ordered]@{
     packageIndexSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $packageIndexPath).Hash
     mappingsPath = [string]$mapping.mappingsPath
     mappingsManifestPath = [string]$mapping.manifestPath
-    mappingsSha256 = [string]$mapping.sha256
-    cue4ParseBinarySha256 = $cue4ParseBinarySha256
-    inspectorSourceSha256 = $inspector.SourceSha256
-    inspectorBinarySha256 = $inspector.Sha256
+    mappingManifestUpdatedUtc = (Get-Item -LiteralPath $mapping.manifestPath).LastWriteTimeUtc.ToString('o')
+    inspectorPublication = $inspectorPublication
     jsonFile = [IO.Path]::GetFileName($jsonPath)
     jsonLength = $jsonItem.Length
     jsonSha256 = $jsonSha256
@@ -773,7 +753,6 @@ Move-Item -LiteralPath $temporaryManifest -Destination $manifestPath
 $result = [pscustomobject]@{
     virtualPath = $virtualPath
     jsonPath = (Resolve-Path -LiteralPath $jsonPath).Path
-    jsonSha256 = $jsonSha256
     pseudocodeStatus = $exportStatus.pseudocodeStatus
     pseudocodeError = $exportStatus.pseudocodeError
 }

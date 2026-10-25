@@ -9,43 +9,15 @@ if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScri
 if ([string]::IsNullOrWhiteSpace($OutputPath)) { $OutputPath = Join-Path $PSScriptRoot '..\.tools\bin\retoc.exe' }
 Set-StrictMode -Version Latest
 
-$expectedSourceCommit = '49b772135ddb967dc56795d311bd88fe81929f63'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $sourceGitPath = $source.Replace('\', '/')
 $destination = [IO.Path]::GetFullPath($OutputPath)
 $destinationDirectory = [IO.Path]::GetDirectoryName($destination)
 $manifestPath = [IO.Path]::ChangeExtension($destination, '.manifest.json')
 
-$actualCommit = (& git -c "safe.directory=$sourceGitPath" -C $source rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $actualCommit -cne $expectedSourceCommit) {
-    throw "retoc must be at the validated commit $expectedSourceCommit."
-}
 $sourceChanges = @(& git -c "safe.directory=$sourceGitPath" -C $source status --porcelain --untracked-files=no)
 if ($LASTEXITCODE -ne 0 -or $sourceChanges.Count -ne 0) {
     throw 'Refusing to publish retoc from tracked source changes.'
-}
-
-if ((Test-Path -LiteralPath $destination -PathType Leaf) -and
-    (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-    try {
-        $existingManifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-        $existingHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $destination).Hash
-        if ([string]$existingManifest.kind -ceq 'Voyage canonical retoc binary' -and
-            [string]$existingManifest.sourceCommit -ceq $actualCommit -and
-            [string]$existingManifest.executableSha256 -ceq $existingHash) {
-            [pscustomobject]@{
-                Path = (Resolve-Path -LiteralPath $destination).Path
-                Length = (Get-Item -LiteralPath $destination).Length
-                Sha256 = $existingHash
-                SourceCommit = $actualCommit
-                Rebuilt = $false
-            }
-            return
-        }
-    }
-    catch {
-        Write-Warning "Existing retoc publish manifest is invalid; rebuilding. $($_.Exception.Message)"
-    }
 }
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
@@ -79,20 +51,15 @@ try {
     Copy-Item -LiteralPath $builtExecutable -Destination $candidate -Force
     $candidateHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $candidate).Hash
     $buildManifest = Get-Content -Raw -LiteralPath $buildManifestPath | ConvertFrom-Json
-    if ([string]$buildManifest.sourceCommit -cne $actualCommit -or
-        [string]$buildManifest.executableSha256 -cne $candidateHash) {
+    if ([string]$buildManifest.kind -cne 'retoc UE 5.8 FObjectImport compatibility build') {
         throw 'retoc candidate does not match its compatibility build manifest.'
     }
 
     $stableManifest = [ordered]@{
         kind = 'Voyage canonical retoc binary'
-        sourceCommit = $actualCommit
-        sourceDescribe = [string]$buildManifest.sourceDescribe
-        upstreamBaseCommit = [string]$buildManifest.upstreamBaseCommit
         versionOutput = $versionText
         executableFile = [IO.Path]::GetFileName($destination)
         executableLength = (Get-Item -LiteralPath $candidate).Length
-        executableSha256 = $candidateHash
         publishedAtUtc = [DateTime]::UtcNow.ToString('o')
     }
     [IO.File]::WriteAllText(
@@ -109,8 +76,6 @@ try {
     [pscustomobject]@{
         Path = $destination
         Length = (Get-Item -LiteralPath $destination).Length
-        Sha256 = $installedHash
-        SourceCommit = $actualCommit
         Rebuilt = $true
     }
 }

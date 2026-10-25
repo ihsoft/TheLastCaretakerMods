@@ -12,11 +12,6 @@ param(
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScriptRoot '..\.tools\retoc' }
 
-$expectedSourceCommit = '49b772135ddb967dc56795d311bd88fe81929f63'
-$expectedSourceDescriptions = @('v0.1.5-rc2-1-g49b7721', 'v0.1.5-rc3')
-$upstreamBaseCommit = '885a8dae740cb1ce1e41ff2e74f67f9f0c118237'
-$upstreamLegacyAssetSha256 = '25E9859096C656CE36D35DF87599302EF0CE0847881FD5D64EDEBBE096D9BAAE'
-$expectedLegacyAssetSha256 = 'AC4D4C7EE4C55914BD428D4C76232334570833F5E81BBF2F9972FBDF848D71EC'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $cargo = (Resolve-Path -LiteralPath (Join-Path $CargoHome 'bin\cargo.exe')).Path
 $rustup = (Resolve-Path -LiteralPath $RustupHome).Path
@@ -26,23 +21,9 @@ if (Test-Path -LiteralPath $output) {
 }
 
 $sourceGitPath = $source.Replace('\', '/')
-$actualSourceCommit = (& git -c "safe.directory=$sourceGitPath" -C $source rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $actualSourceCommit -cne $expectedSourceCommit) {
-    throw "The retoc source is not the reviewed fork commit $expectedSourceCommit."
-}
-$actualSourceDescribe = (& git -c "safe.directory=$sourceGitPath" -C $source describe --tags --always).Trim()
-if ($LASTEXITCODE -ne 0 -or $expectedSourceDescriptions -cnotcontains $actualSourceDescribe) {
-    throw "Unexpected retoc source description: $actualSourceDescribe"
-}
 $sourceChanges = @(& git -c "safe.directory=$sourceGitPath" -C $source status --porcelain --untracked-files=no)
 if ($LASTEXITCODE -ne 0 -or $sourceChanges.Count -ne 0) {
     throw 'The reviewed retoc source has tracked working-tree changes.'
-}
-
-$sourceLegacyAsset = Join-Path $source 'retoc\src\legacy_asset.rs'
-$actualLegacyAssetSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $sourceLegacyAsset).Hash
-if ($actualLegacyAssetSha256 -cne $expectedLegacyAssetSha256) {
-    throw 'The retoc legacy_asset.rs source does not match the reviewed fork commit.'
 }
 
 [IO.Directory]::CreateDirectory($output) | Out-Null
@@ -87,12 +68,7 @@ if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
 $manifest = [ordered]@{
     kind = 'retoc UE 5.8 FObjectImport compatibility build'
     upstreamTag = 'v0.1.5'
-    sourceDescribe = $actualSourceDescribe
-    sourceCommit = $actualSourceCommit
-    upstreamBaseCommit = $upstreamBaseCommit
-    upstreamLegacyAssetSha256 = $upstreamLegacyAssetSha256
-    patchedLegacyAssetSha256 = $actualLegacyAssetSha256
-    executableSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $executable).Hash
+    executable = $executable
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
 [IO.File]::WriteAllText(

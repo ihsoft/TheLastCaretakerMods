@@ -121,7 +121,6 @@ function Write-JsonFile {
 
 $manifestPath = (Resolve-Path -LiteralPath $InstallManifest).Path
 $installationEvidence = Split-Path -Parent $manifestPath
-$manifestSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $manifestPath).Hash
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 if ([int](Get-OptionalPropertyValue -Object $manifest -Name 'schemaVersion') -ne 1 -or
     [string](Get-OptionalPropertyValue -Object $manifest -Name 'kind') -cne
@@ -318,7 +317,6 @@ if ($ValidateOnly) {
         mod = $mod
         artifactVersion = $artifactVersion
         installManifestPath = $manifestPath
-        installManifestSha256 = $manifestSha256
         paksDirectory = $paksDirectory
         restoreCount = @($mutationItems | Where-Object { $_.hadExisting }).Count
         removeCount = @($mutationItems | Where-Object { -not $_.hadExisting }).Count
@@ -348,7 +346,6 @@ $transaction = [ordered]@{
     kind = 'Voyage release restoration transaction'
     status = 'preparing'
     installManifestPath = $manifestPath
-    installManifestSha256 = $manifestSha256
     mod = $mod
     artifactVersion = $artifactVersion
     paksDirectory = $paksDirectory
@@ -432,7 +429,6 @@ try {
         kind = 'Voyage release installation restoration'
         status = 'restored'
         installManifestPath = $manifestPath
-        installManifestSha256 = $manifestSha256
         mod = $mod
         artifactVersion = $artifactVersion
         paksDirectory = $paksDirectory

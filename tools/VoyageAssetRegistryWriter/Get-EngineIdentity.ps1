@@ -28,8 +28,5 @@ if ([int]$version.MajorVersion -ne 5 -or [int]$version.MinorVersion -ne 8 -or
     compatibleChangelist = [int64]$version.CompatibleChangelist
     branchName = [string]$version.BranchName
     buildId = [string]$modules.BuildId
-    buildVersionSha256 = (Get-FileHash -LiteralPath $versionPath -Algorithm SHA256).Hash
-    editorModulesSha256 = (Get-FileHash -LiteralPath $modulesPath -Algorithm SHA256).Hash
     editorPath = $editorPath
-    editorSha256 = (Get-FileHash -LiteralPath $editorPath -Algorithm SHA256).Hash
 }

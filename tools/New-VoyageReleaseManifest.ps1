@@ -97,16 +97,21 @@ function Get-RelativePath {
 function New-ArtifactRecord {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Path
+        [string]$Path,
+
+        [switch]$IncludeDigest
     )
 
     $item = Get-Item -LiteralPath $Path
-    [pscustomobject][ordered]@{
+    $record = [ordered]@{
         name = $item.Name
         path = Get-RelativePath -Root $resolvedReleaseRoot -Path $item.FullName
         size = $item.Length
-        sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $item.FullName).Hash
     }
+    if ($IncludeDigest) {
+        $record['sha256'] = (Get-FileHash -Algorithm SHA256 -LiteralPath $item.FullName).Hash
+    }
+    [pscustomobject]$record
 }
 
 function Write-Utf8Json {
@@ -294,10 +299,6 @@ foreach ($declaredSourcePath in $SourcePath) {
     }
 }
 
-$sourceCommit = ((& git -C $repositoryRoot rev-parse HEAD) -join '').Trim()
-if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-fA-F]{40}$') {
-    throw 'Could not resolve the repository HEAD for release provenance.'
-}
 $sourceStatus = @(& git -C $repositoryRoot status --porcelain=v1 `
     --untracked-files=all -- $gitPathSpecs)
 if ($LASTEXITCODE -ne 0) {
@@ -322,18 +323,17 @@ if (-not [string]::IsNullOrWhiteSpace($ContentPluginDescriptor)) {
 }
 
 $manifest = [ordered]@{
-    schemaVersion = $(if ($null -eq $contentPlugin) { 2 } else { 3 })
+    schemaVersion = $(if ($null -eq $contentPlugin) { 4 } else { 5 })
     mod = $Mod
     version = $Version
     createdAtUtc = [DateTime]::UtcNow.ToString('o')
-    sourceCommit = $sourceCommit
     dirtySource = $dirtySource
     sourcePaths = $sourceRecords
     gameFingerprint = [ordered]@{
         steamBuildId = $buildId
     }
     payload = @($payloadPaths | ForEach-Object { New-ArtifactRecord -Path $_ })
-    archive = New-ArtifactRecord -Path $resolvedArchive
+    archive = New-ArtifactRecord -Path $resolvedArchive -IncludeDigest
 }
 if ($null -ne $changelogRecord) {
     $manifest['changelog'] = $changelogRecord
@@ -386,10 +386,8 @@ finally {
 $result = [pscustomobject][ordered]@{
     status = 'created-and-validated'
     manifestPath = $resolvedOutputPath
-    manifestSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $resolvedOutputPath).Hash
     mod = $Mod
     artifactVersion = $Version
-    sourceCommit = $sourceCommit
     dirtySource = $dirtySource
     steamBuildId = $buildId
     payloadCount = $payloadPaths.Count

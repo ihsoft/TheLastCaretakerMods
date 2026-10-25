@@ -8,16 +8,16 @@ This is the only normal entry point for obtaining mappings:
 .\tools\Get-VoyageMappings.ps1
 ```
 
-It fingerprints the installed game, searches only the reviewed tracked
+It reads the installed Steam build ID, searches only the reviewed tracked
 registry under `mappings/Voyage/`, runs `Test-VoyageMappings.ps1`, and returns
-the exact mapping and manifest paths plus their identity. Consumers such as
+the exact mapping and manifest paths plus their structural validation result. Consumers such as
 `Get-VoyageAssetJson.ps1` and non-list `Inspect-VoyageAsset.ps1` call it
 automatically when no explicit mapping is supplied. A new agent should neither
 walk mapping directories nor inspect generation scripts on this successful
 path.
 
 If no reviewed entry matches, the resolver exits non-zero and explicitly says
-not to regenerate automatically. Confirm that the fingerprint is genuinely
+not to regenerate automatically. Confirm that the Steam build ID is genuinely
 new, ask the user to start Voyage, and only then use the generator below.
 
 ## `New-VoyageMappings.ps1`
@@ -53,5 +53,5 @@ for dumper repair and the exceptional UE4SS fallback.
 
 For a standalone check of an old saved input, use
 `Get-VoyageBuildFingerprint.ps1` and compare its Steam build ID to the input's
-provenance. Do not add this call before a producer or resolver that already
+recorded build. Do not add this call before a producer or resolver that already
 identifies the game during its run.

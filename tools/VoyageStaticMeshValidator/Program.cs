@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -19,7 +18,6 @@ namespace VoyageStaticMeshValidator;
 
 internal static class Program
 {
-    internal const string CueCommit = "c38cf24676514773ac106d7b51640f09f4590c61";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -107,15 +105,11 @@ internal static class Program
 
         var provenance = new JsonObject
         {
-            ["requestSha256"] = Hash(requestPath),
-            ["cue4ParseSourceCommit"] = CueCommit,
+            ["requestPath"] = requestPath,
             ["gameRoot"] = Path.GetFullPath(request.GameRoot),
             ["fingerprintPath"] = Path.GetFullPath(request.FingerprintPath),
-            ["fingerprintSha256"] = Hash(request.FingerprintPath),
             ["mappingPath"] = Path.GetFullPath(request.MappingPath),
-            ["mappingSha256"] = Hash(request.MappingPath),
             ["mappingManifestPath"] = Path.GetFullPath(request.MappingManifestPath),
-            ["mappingManifestSha256"] = Hash(request.MappingManifestPath),
             ["source"] = source
         };
         var inspection = new JsonObject
@@ -264,7 +258,7 @@ internal static class Program
         var maxArea = missing.Select(x => TriangleArea(source.Rows, x)).DefaultIfEmpty(0d).Max();
         return new JsonObject
         {
-            ["status"] = "compared", ["sourceGlb"] = Path.GetFullPath(request.Path), ["sourceGlbSha256"] = Hash(request.Path),
+            ["status"] = "compared", ["sourceGlb"] = Path.GetFullPath(request.Path),
             ["coordinateConvention"] = "decoded UE centimeters (X,Y,Z) -> glTF meters (X,Z,Y); normals (X,Y,Z) -> (X,Z,Y); UV/color unchanged",
             ["meshIndex"] = source.MeshIndex, ["meshName"] = source.MeshName, ["attributes"] = new JsonArray(request.Attributes.Keys.Select(x => JsonValue.Create(x)).ToArray()),
             ["sourceTriangles"] = source.Triangles.Length, ["decodedTriangles"] = target.Indices.Length / 3,
@@ -474,21 +468,20 @@ internal static class Program
         var result = new JsonObject { ["kind"] = source.Kind };
         if (candidate is null) return result;
         if (!candidate.Exists) throw new RequestException($"Candidate UTOC does not exist: {candidate.FullName}");
-        result["utoc"] = candidate.FullName; result["utocSha256"] = Hash(candidate.FullName);
+        result["utoc"] = candidate.FullName;
         var stem = Path.Combine(candidate.DirectoryName!, Path.GetFileNameWithoutExtension(candidate.Name));
         foreach (var extension in new[] { ".ucas", ".pak" })
         {
             var path = stem + extension;
             if (!File.Exists(path)) throw new RequestException($"Candidate container sibling is missing: {path}");
             result[extension[1..] + "Path"] = Path.GetFullPath(path);
-            result[extension[1..] + "Sha256"] = Hash(path);
+            result[extension[1..] + "Length"] = new FileInfo(path).Length;
         }
         return result;
     }
 
     private static string Owner(GameFile file) => file is VfsEntry entry ? Path.GetFullPath(entry.Vfs.Path) : file.GetType().Name;
     private static bool SamePath(string left, string right) => string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
-    private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.GetFullPath(path))));
     private static void WriteJson(string path, JsonNode node) => File.WriteAllText(path, node.ToJsonString(JsonOptions));
     private static string Classify(Exception exception) => exception switch
     {

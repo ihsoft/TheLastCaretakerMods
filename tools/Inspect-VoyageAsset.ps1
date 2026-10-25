@@ -86,16 +86,16 @@ if ($Source -eq 'Mod') {
         throw "Selected mod container has no adjacent .ucas file: $selectedModData"
     }
     $isInstalledMod = (Split-Path -Parent $selectedModPath) -ieq $paks
+    $selectedModDigest = (Get-FileHash -LiteralPath $selectedModPath -Algorithm SHA256).Hash
     $selectedMod = [pscustomobject]@{
         name = $selectedModItem.Name
         path = $selectedModPath
         length = $selectedModItem.Length
-        sha256 = (Get-FileHash -LiteralPath $selectedModPath -Algorithm SHA256).Hash
         isInstalled = $isInstalledMod
     }
     $sourceLocation = if ($isInstalledMod) { 'installed' } else { 'external' }
     $sourceIdentity = 'mod-' + $sourceLocation + '-' + $selectedModItem.BaseName +
-        '-' + $selectedMod.sha256.Substring(0, 12)
+        '-' + $selectedModDigest.Substring(0, 12)
 }
 $buildId = "steam-$steamBuildId-$sourceIdentity"
 $querySafe = ($Query -replace '[^A-Za-z0-9._-]', '_').Trim('_')
@@ -186,10 +186,8 @@ $manifest = [ordered]@{
     mappingsPath = $MappingsPath
     mappingsManifestPath = $mappingsManifestPath
     cue4ParseBinaryPath = (Resolve-Path -LiteralPath $cue4ParseBinary).Path
-    cue4ParseBinarySha256 = $inspector.Cue4ParseSha256
     inspectorBinaryPath = $inspector.Path
-    inspectorBinarySha256 = $inspector.Sha256
-    inspectorInputFingerprint = $inspector.InputFingerprint
+    inspectorBinaryManifestPath = $inspector.ManifestPath
     engineVersion = $EngineVersion
     source = $Source
     modContainer = $selectedMod

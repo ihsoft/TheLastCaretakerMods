@@ -36,6 +36,8 @@ do not load every document just because it is indexed here.
   from failures in mods and tools.
 - [Repository hygiene](docs/repository-hygiene-rule.md): Git coordination,
   source conventions, and cleanup boundaries.
+- [Hash usage](docs/hash-usage-rule.md): the closed set of justified digest
+  uses and the default prohibition on hash-based provenance and preflights.
 - [Subagent workflow](docs/subagent-workflow-rule.md): when and how to delegate,
   report, review, and hand off installation.
 - [Agent work measurement](docs/agent-work-measurement-rule.md): optional

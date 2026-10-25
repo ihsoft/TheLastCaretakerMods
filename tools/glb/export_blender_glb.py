@@ -152,8 +152,8 @@ def main():
             max_error = max(max_error, max(tree.find(point)[2] for point in left))
     require(max_error < 1e-5, 'Re-import world geometry differs by >0.001 cm')
     require(sha(source) == source_hash, 'Source blend changed')
-    audit = dict(source=str(source), sourceSha256=source_hash, output=str(output),
-                 outputSha256=sha(output), blender=bpy.app.version_string,
+    audit = dict(source=str(source), output=str(output),
+                 outputBytes=output.stat().st_size, blender=bpy.app.version_string,
                  exporter='Blender built-in glTF 2.0', nodes=len(nodes),
                  meshObjects=len(expected_triangles), triangles=sum(expected_triangles.values()),
                  materials=len(materials), hierarchyVerified=True, materialValuesVerified=True,

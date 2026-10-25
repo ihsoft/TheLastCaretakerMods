@@ -77,7 +77,7 @@ prepares a **new** file from `-TemplatePath`, `-CurrentPath`, and a fresh
 `-OutputPath`. Optional `-RetiredKeys`, `-RetiredComments`, and
 `-DefaultsComment` describe mod-owned migrations. Omit `-CurrentPath` to
 copy the template for a first installation. Its compact result reports
-`Created`, `Changed`, `AddedKeys`, `RemovedKeys`, and `Sha256`. It never writes
+`Created`, `Changed`, `AddedKeys`, and `RemovedKeys`. It never writes
 the installed INI; the owning installer checks that the game is closed, keeps
 a recovery copy, replaces the file, and checks the readback hash. A value or
 unit conversion remains mod-specific. See the

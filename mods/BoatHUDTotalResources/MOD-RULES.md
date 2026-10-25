@@ -26,8 +26,8 @@ Repository rules in `../../AGENTS.md` also apply.
   Roboto Bold/white style; it is visibly different from the stock HUD.
 - The relocated original is version-bound game data. Keep it under ignored
   `artifacts/`, never in Git, and rebuild it from a clean current extraction.
-- UE 5.8 extraction and packaging must use the hash-gated retoc compatibility
-  build from `tools/Build-RetocUe58Compatibility.ps1`; upstream retoc 0.1.5
+- UE 5.8 extraction and packaging must use the published retoc compatibility
+  build; upstream retoc 0.1.5
   misreads `FObjectImport.PackageName` in filtered cooked packages.
 - Never install or remove the mod while Voyage is running. Keep its unique
   container name so removal is exact and does not touch another mod.

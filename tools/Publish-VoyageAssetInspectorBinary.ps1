@@ -10,10 +10,6 @@ $sourceChanges = @(& git -C $repo status --porcelain --untracked-files=all -- to
 if ($LASTEXITCODE -ne 0 -or $sourceChanges.Count -ne 0) {
     throw 'Commit and validate Inspector source changes before replacing its canonical binary.'
 }
-$sourceCommit = (& git -C $repo log -1 --format=%H -- tools/VoyageAssetInspector).Trim()
-if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
-    throw 'Could not identify the Inspector source checkpoint.'
-}
 $existing = $null
 try { $existing = & $resolver } catch { Write-Verbose $_.Exception.Message }
 if ($null -ne $existing) {
@@ -54,18 +50,14 @@ if ($smokeExit -ne 2 -or $usage -notmatch 'Usage: VoyageAssetInspector') {
 $inputsAfter = & $resolver -BuildInputsOnly
 if ($inputsAfter.Fingerprint -cne $inputs.Fingerprint) { throw 'Inspector inputs changed during publication.' }
 $manifest = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     kind = 'Voyage canonical AssetInspector'
-    sourceCommit = $sourceCommit
-    inputFingerprint = $inputs.Fingerprint
-    inputs = $inputs.Files
     runtimeIdentifier = 'win-x64'
     targetFramework = 'net10.0'
     selfContained = $false
     singleFile = $true
     publishedAtUtc = [DateTime]::UtcNow.ToString('o')
     length = (Get-Item -LiteralPath $candidate).Length
-    sha256 = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash
 }
 $candidateManifest = Join-Path $workspace 'publish-manifest.json'
 [IO.File]::WriteAllText($candidateManifest, ($manifest | ConvertTo-Json -Depth 6), [Text.UTF8Encoding]::new($false))

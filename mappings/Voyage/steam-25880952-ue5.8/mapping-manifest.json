@@ -9,17 +9,13 @@
   "uassetApiEngineVersion": "VER_UE5_8",
   "engineVersionBasis": "jmap dumper and UAssetAPI parser use the UE 5.8 serialization contract; the separate ElectrifiedBoat generator is pinned to Unreal Editor 5.8.2",
   "generator": "ihsoft/jmap Voyage UE 5.8 compatibility fork; canonical published binary",
-  "generatorCommit": "fad7b923d31e098d958bd35867f3ed0bedc637a2",
-  "generatorSha256": "6A56DFCA0654835160E94F3E1D83023A86DDB1C3D29356FC0C4B008B7190987D",
-  "canonicalPublishedSha256": "6A56DFCA0654835160E94F3E1D83023A86DDB1C3D29356FC0C4B008B7190987D",
   "generationWorkflow": "tools/New-VoyageMappings.ps1 live-process USMAP generation with jmap --all and JMAP_CONCURRENCY=128",
   "observedObjectCount": 261730,
   "mappingFile": "Voyage-25880952.usmap",
   "mappingLength": 2426587,
-  "mappingSha256": "EB11CF2D96E0C7CE9430C4A90B4784AF423172B65A36FC3BA13BD1DAC44A8953",
   "generatedAtUtc": "2026-10-12T19:58:09.3649662Z",
   "validation": {
-    "mappingGate": "Test-VoyageMappings.ps1 passed header, payload, fingerprint, hash and required-name checks",
+    "mappingGate": "Test-VoyageMappings.ps1 passed header, payload, Steam build ID, and required-name checks",
     "assetParser": "Get-VoyageAssetSummary.ps1 or Get-VoyageAssetJson.ps1 parsed current stock BP_WallSocket_Electric, BP_AttachmentVirtualSocketActor_Electricity, and TestBoat with this mapping; no pseudocode failures",
     "runtime": "Read-only live reflection capture and offline parser validation only; no gameplay compatibility claim"
   },

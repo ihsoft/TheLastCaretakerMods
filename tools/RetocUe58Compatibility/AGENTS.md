@@ -11,4 +11,4 @@ themselves; do not build this component as a routine preflight.
 
 For explicit compatibility development, use
 `../Build-RetocUe58Compatibility.ps1`; its checks and generated manifest own the
-exact source identity and hashes.
+required interface and compatibility assertions.

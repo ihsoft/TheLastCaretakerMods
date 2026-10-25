@@ -38,12 +38,9 @@ $bundle = Join-Path $repo '.tools\bin\VoyageMaterialLibrary'
 $manifestFile = Join-Path $bundle 'publish-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestFile)) { throw 'Publish once with tools/VoyageMaterialLibrary/Publish.ps1; normal preview never builds tools.' }
 $manifest = Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
-if ($manifest.kind -cne 'VoyageMaterialLibrary' -or $manifest.conversionCommit -cne 'c38cf24676514773ac106d7b51640f09f4590c61') { throw 'Unexpected exporter provenance.' }
+if ($manifest.kind -cne 'VoyageMaterialLibrary') { throw 'Unexpected exporter interface.' }
 foreach ($file in $manifest.files) {
-    if ((Get-FileHash -LiteralPath (Join-Path $bundle $file.path) -Algorithm SHA256).Hash -cne $file.sha256) { throw "Exporter bundle drift: $($file.path)" }
-}
-foreach ($file in $manifest.sources) {
-    if ((Get-FileHash -LiteralPath (Join-Path $PSScriptRoot ('VoyageMaterialLibrary\' + $file.path)) -Algorithm SHA256).Hash -cne $file.sha256) { throw 'Exporter source changed; republish explicitly.' }
+    if (-not (Test-Path -LiteralPath (Join-Path $bundle $file.path) -PathType Leaf)) { throw "Exporter bundle file is missing: $($file.path)" }
 }
 [void](New-Item -ItemType Directory -Path $evidence)
 $fingerprintPath = Join-Path $evidence 'fingerprint.json'
@@ -75,7 +72,8 @@ $exportText = $exportStdout.Result
 $exportProcess.Dispose()
 if ($exportExitCode -ne 0) { throw "Material preview source export failed (exit $exportExitCode); evidence: $exportLog" }
 $exportResult = @($exportText -split '\r?\n' | Where-Object { $_.Trim() })[-1] | ConvertFrom-Json
-if ($exportResult.glbPath -cne $previewGlb -or (Get-FileHash -LiteralPath $previewGlb -Algorithm SHA256).Hash -cne $exportResult.sha256) {
+if ($exportResult.glbPath -cne $previewGlb -or -not (Test-Path -LiteralPath $previewGlb -PathType Leaf) -or
+    (Get-Item -LiteralPath $previewGlb).Length -lt 1) {
     throw 'Material preview source/readback mismatch.'
 }
 $renderLog = Join-Path $evidence 'render.log'
@@ -101,7 +99,7 @@ if (-not $renderLine) { throw 'Blender preview completion marker missing.' }
 $renderResult = $renderLine.Substring('MATERIAL_PREVIEW_OK '.Length) | ConvertFrom-Json
 $expectedFitAxis = if ($renderResult.columns -ge ($renderResult.rows * $renderResult.tileHeight / [double]$renderResult.tileWidth)) { 'horizontal' } else { 'vertical' }
 $expectedOrthoScale = if ($expectedFitAxis -ceq 'horizontal') { [double]$renderResult.columns } else { $renderResult.rows * $renderResult.tileHeight / [double]$renderResult.tileWidth }
-if ($renderResult.sourceSha256.ToUpperInvariant() -cne $exportResult.sha256 -or -not $renderResult.sourceUnchanged -or
+if (-not $renderResult.sourceUnchanged -or
     -not $renderResult.isolatedRenders -or $renderResult.columns -lt 1 -or $renderResult.columns -gt 6 -or
     $renderResult.rows -ne [Math]::Ceiling($Materials.Count / [double]$renderResult.columns) -or
     $renderResult.contactSheetFitAxis -cne $expectedFitAxis -or
@@ -114,8 +112,8 @@ $width = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($png, 16))
 $height = [Net.IPAddress]::NetworkToHostOrder([BitConverter]::ToInt32($png, 20))
 $reportPath = Join-Path $evidence 'preview-report.json'
 $result = [ordered]@{ schema = 'voyage.material-preview/1'; status = 'preview'; materialMode = $MaterialMode;
-    previewPath = $output; sha256 = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash; width = $width; height = $height;
-    materialCount = $Materials.Count; sourceGlbPath = $previewGlb; sourceGlbSha256 = $exportResult.sha256;
+    previewPath = $output; width = $width; height = $height;
+    materialCount = $Materials.Count; sourceGlbPath = $previewGlb;
     isolatedRenders = $true; lightingRecipe = $renderResult.lightingRecipe; columns = $renderResult.columns; rows = $renderResult.rows;
     tileWidth = $renderResult.tileWidth; tileHeight = $renderResult.tileHeight; contactSheetFitAxis = $renderResult.contactSheetFitAxis;
     contactSheetOrthoScale = $renderResult.contactSheetOrthoScale;

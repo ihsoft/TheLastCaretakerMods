@@ -6,12 +6,6 @@ Set-StrictMode -Version Latest
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $resolver = Join-Path $PSScriptRoot 'Get-VoyageAssetRegistryWriter.ps1'
 $inputs = & $resolver -BuildInputsOnly -EngineRoot $EngineRoot
-try {
-    $existing = & $resolver -EngineRoot $EngineRoot
-    $existing | Add-Member -NotePropertyName Rebuilt -NotePropertyValue $false -PassThru
-    return
-} catch { Write-Verbose $_.Exception.Message }
-
 $projectRoot = $PSScriptRoot
 $project = Join-Path $projectRoot 'VoyageAssetRegistryWriter.uproject'
 $build = Join-Path $EngineRoot 'Build\BatchFiles\Build.bat'
@@ -59,17 +53,14 @@ $files = @(Get-ChildItem -LiteralPath $candidate -File -Recurse | ForEach-Object
     [pscustomobject]@{
         path = $_.FullName.Substring($candidate.Length + 1).Replace('\', '/')
         length = $_.Length
-        sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
     }
 })
 $manifest = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     kind = 'Voyage canonical AssetRegistry writer'
     engineVersion = '5.8'
     engine = $inputs.Engine
     target = 'VoyageAssetRegistryWriterEditor Win64 Development'
-    inputFingerprint = $inputs.Fingerprint
-    sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
     sourceStatus = @(& git -C $repo status --porcelain -- tools/VoyageAssetRegistryWriter)
     publishedAtUtc = [DateTime]::UtcNow.ToString('o')
     files = $files

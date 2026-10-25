@@ -180,7 +180,6 @@ bpy.ops.render.render(write_still=True)
 shutil.rmtree(tile_directory)
 assert hashlib.sha256(args.input.read_bytes()).hexdigest() == before
 print('MATERIAL_PREVIEW_OK ' + json.dumps({
-    'sourceSha256': before,
     'materials': [material.name for material in materials],
     'swatches': len(materials),
     'isolatedRenders': True,

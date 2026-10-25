@@ -46,7 +46,6 @@ if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools/bin/retoc.exe'
 }
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
-$retocSha256 = (Get-FileHash -LiteralPath $retocPath -Algorithm SHA256).Hash
 $project = Join-Path $modRoot 'Voyage.uproject'
 $buildBatch = (Resolve-Path -LiteralPath (
     Join-Path $EngineRoot 'Engine/Build/BatchFiles/Build.bat')).Path
@@ -279,12 +278,6 @@ foreach ($containerFile in $containerFiles) {
         throw "Expected container file was not produced: $containerFile"
     }
 }
-$containerHashes = @(
-    Get-FileHash -LiteralPath $containerFiles -Algorithm SHA256 |
-        ForEach-Object {
-            [ordered]@{ path = $_.Path; sha256 = $_.Hash }
-        }
-)
 $buildManifest = [ordered]@{
     kind = 'ElectrifiedBoat candidate'
     artifactVersion = '0.1-candidate'
@@ -310,8 +303,7 @@ $buildManifest = [ordered]@{
     ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
     editorVersion = $editorVersion
     retocCompatibilityVersion = $retocCompatibilityVersion
-    retocSha256 = $retocSha256
-    containerFiles = $containerHashes
+    containerFiles = @($containerFiles)
     gameplayValidated = $false
     saveReloadValidated = $false
     removalValidated = $false

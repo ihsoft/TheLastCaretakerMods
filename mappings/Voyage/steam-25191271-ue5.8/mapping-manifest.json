@@ -9,15 +9,12 @@
   "uassetApiEngineVersion": "VER_UE5_8",
   "engineVersionBasis": "Explicit UE 5.8 dumper/parser target; minor/patch game engine version not independently established",
   "generator": "ihsoft/jmap Voyage UE 5.8 compatibility fork",
-  "generatorCommit": "4f88d8af758712839529f9eeeb02b82c9469e271",
-  "generatorSha256": "75E693C2ACD22BB63671EF368C8608931CEF59E8F6F441AFFA3F7A72A3D11543",
   "generationWorkflow": "tools/New-VoyageMappings.ps1 (PowerShell 7, main menu)",
   "mappingFile": "Voyage-25191271.usmap",
   "mappingLength": 2376216,
-  "mappingSha256": "E25620FB2D0674B26A3E4EF059AC2C5AF58E28CE1B4F07307860F7FADB9A0F68",
   "generatedAtUtc": "2026-09-11T03:23:42.4132576Z",
   "validation": {
-    "mappingGate": "Test-VoyageMappings.ps1 passed header, payload, fingerprint, hash and required names",
+    "mappingGate": "Test-VoyageMappings.ps1 passed header, payload, Steam build ID, and required names",
     "assetParser": "Get-VoyageAssetJson.ps1 parsed current stock BP_ModuleCable_Mooring and BP_MooringCable_Socket_Male, no pseudocode failures",
     "runtime": "No new cooked-asset runtime compatibility claim",
     "evidence": "Live jmap generation for Steam build 25191271, captured 2026-09-11"

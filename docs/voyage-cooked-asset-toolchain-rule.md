@@ -14,7 +14,7 @@ implementation or reconstructing the dependency chain.
 Investigate internals only when a tool exits non-zero, crashes or opens a crash
 dialog, hangs, rejects valid-looking inputs, returns an unexpected result, or
 lacks a documented operation required by the task. Diagnose from the outside
-in: inputs and fingerprint, paths and exact dependency commits, mapping gate,
+in: inputs and game identity, paths, mapping gate,
 tool log/manifest, minimal reproducer, then source.
 
 ## Tool boundary
@@ -22,14 +22,14 @@ tool log/manifest, minimal reproducer, then source.
 The public scripts in [the tool catalog](../tools/tool-catalog.md) select the
 published retoc, jmap, UAssetAPI/UAssetGUI, CUE4Parse and executable-inspection
 tools needed for each operation. Run the selected public interface first and
-evaluate its result. Publisher manifests retain binary provenance for diagnosis;
-normal callers do not compare tool commits, sizes or hashes in advance.
+evaluate its result. Normal callers do not compare tool commits, sizes, or
+hashes in advance; the shared [hash-usage rule](hash-usage-rule.md) applies.
 
-If a tool fails or produces unexpected output, inspect its diagnostics and
-publication identity before changing the asset contract. The reviewed mapping
-still has its own file-integrity and schema gates.
+If a tool fails or produces unexpected output, inspect its diagnostics before
+changing the asset contract. The reviewed mapping still has its structural,
+required-name, and Steam-build gates.
 
-Publisher manifests record exact binary provenance. Runtime-only JSON version
+Runtime-only JSON version
 handling and its boundaries are in [toolchain knowledge](voyage-cooked-asset-toolchain-knowledge.md#known-boundaries);
 command interfaces remain in the guides linked from the [tool index](../tools/tool-index.md).
 
@@ -47,10 +47,10 @@ explains this layout.
 
 Use the wrappers listed in the [tool catalog](../tools/tool-catalog.md):
 
-- fingerprint the installation with `Get-VoyageBuildFingerprint.ps1`;
+- read the installation identity with `Get-VoyageBuildFingerprint.ps1`;
 - resolve the existing reviewed mapping with `Get-VoyageMappings.ps1`; create a
   new candidate with `New-VoyageMappings.ps1` only after a confirmed unmatched
-  game fingerprint, then validate it with `Test-VoyageMappings.ps1`;
+  Steam build ID, then validate it with `Test-VoyageMappings.ps1`;
 - cache an asset as versioned JSON with `Get-VoyageAssetJson.ps1`;
 - answer ordinary Blueprint structure questions with
   `Get-VoyageAssetSummary.ps1`, selecting only the needed focus and opening the
@@ -73,14 +73,14 @@ Use the wrappers listed in the [tool catalog](../tools/tool-catalog.md):
   reviewed mappings; source/dependency changes invalidate it, not a new query;
 - run native name, address, and member-offset correlation through
   `Invoke-VoyageExecutableInspector.ps1`; it resolves the validated EXE and
-  returns compact fingerprinted evidence while retaining the detailed report.
+  returns compact game-version evidence while retaining the detailed report.
   Publish through `Publish-VoyageExecutableInspectorBinary.ps1` only after an
   intentional committed source change. Its output does not prove reflected
   ownership, call relations, or lifecycle;
 - build or prepare fork source only while deliberately changing a dependency
   checkpoint or diagnosing an unexpected publisher/tool result;
-- create the common schema-2 manifest for an ordinary triplet and ZIP, or
-  schema 3 when the release owns one exact content-plugin descriptor, with
+- create the common schema-4 manifest for an ordinary triplet and ZIP, or
+  schema 5 when the release owns one exact content-plugin descriptor, with
   `New-VoyageReleaseManifest.ps1`; give it the exact source scope and let its
   installer validation gate publish the immutable manifest;
 - validate or install an already-built standalone IoStore release through
@@ -88,8 +88,8 @@ Use the wrappers listed in the [tool catalog](../tools/tool-catalog.md):
   publication and retaining the published ZIP under `artifacts/installations/`;
   use temporary transaction data during mutation and reinstall the
   previous ready package if a game test fails;
-- install and remove unchanged runtime canaries only through the hash- and
-  fingerprint-gated probe scripts.
+- install and remove unchanged runtime canaries only through their guarded
+  probe scripts.
 
 The script is the reusable method. Generated output follows the
 [artifact lifecycle](artifact-lifecycle-rule.md): use ignored `Tmp/` by default
@@ -100,7 +100,7 @@ and retain only selected output with a continuing use under `artifacts/`.
 Passing a lower level never implies a higher one:
 
 1. relevant Steam build and asset provenance match;
-2. the mapping passes header, payload, required-schema, hash, and Steam build
+2. the mapping passes header, payload, required-schema, and Steam build
    gates;
 3. the asset opens with no unexpected `RawExport` fallback;
 4. unchanged save is binary-equal and reopens;

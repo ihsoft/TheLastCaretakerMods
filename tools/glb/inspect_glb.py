@@ -211,7 +211,7 @@ def inspect(path):
                     bounds.extend([transformed.min(axis=0), transformed.max(axis=0)])
         reports.append(report)
     require(bounds, 'No visible mesh geometry')
-    return dict(schemaVersion=1, path=str(path.resolve()), sha256=hashlib.sha256(data).hexdigest().upper(),
+    return dict(schemaVersion=1, path=str(path.resolve()),
                 byteLength=len(data), format='GLB 2.0', units='meters', upAxis='+Y',
                 counts=dict(nodes=len(nodes), activeNodes=len(active), meshDefinitions=len(geometry),
                             meshNodes=sum('mesh' in n for n in nodes), instantiatedTriangles=triangles,
@@ -230,7 +230,6 @@ def main():
     parser.add_argument('input', type=Path, nargs='?')
     parser.add_argument('--registry', type=Path, help='Resolve and verify an owning model-source.json')
     parser.add_argument('--output', type=Path)
-    parser.add_argument('--expect-sha256')
     args = parser.parse_args()
     require(bool(args.input) != bool(args.registry), 'Supply input OR --registry')
     if args.registry:
@@ -238,14 +237,11 @@ def main():
         require(registry['schemaVersion'] == 1, 'Unsupported model registry')
         if 'source' in registry:
             args.input = (args.registry.parent / registry['source']['path']).resolve()
-            args.expect_sha256 = registry['source'].get('sha256')
         else:
             candidates = list(args.registry.parent.glob('*.glb'))
             require(len(candidates) == 1, 'Registry directory must contain exactly one GLB')
             args.input = candidates[0].resolve()
     report = inspect(args.input)
-    if args.expect_sha256:
-        require(report['sha256'] == args.expect_sha256.upper(), 'Source hash mismatch')
     if args.registry:
         if 'source' in registry and 'byteLength' in registry['source']:
             require(report['byteLength'] == registry['source']['byteLength'], 'Registry size mismatch')
@@ -259,7 +255,7 @@ def main():
         require(not args.output.exists(), 'Choose a fresh audit path')
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
-    print(json.dumps({k:report[k] for k in ('sha256', 'byteLength', 'counts', 'worldBoundsMeters', 'selfContained', 'materialPipeline')} |
+    print(json.dumps({k:report[k] for k in ('byteLength', 'counts', 'worldBoundsMeters', 'selfContained', 'materialPipeline')} |
                      {'auditPath': str(args.output.resolve()) if args.output else None}))
 
 

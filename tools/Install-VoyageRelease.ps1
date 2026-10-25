@@ -193,15 +193,21 @@ function Resolve-ManifestArtifact {
         [Parameter(Mandatory = $true)]
         [string]$Label,
 
-        [switch]$ArchiveContained
+        [switch]$ArchiveContained,
+
+        [switch]$RequireHash
     )
 
     $name = [string](Get-OptionalPropertyValue -Object $Record -Name 'name')
     $expectedHash = [string](Get-OptionalPropertyValue -Object $Record -Name 'sha256')
     $expectedSizeValue = Get-OptionalPropertyValue -Object $Record -Name 'size'
     Assert-SafeLeafName -Name $name -Label "$Label name"
-    if ($expectedHash -cnotmatch $sha256Pattern) {
+    if ($RequireHash -and $expectedHash -cnotmatch $sha256Pattern) {
         throw "$Label has an invalid SHA-256: $expectedHash"
+    }
+    if (-not $RequireHash -and -not [string]::IsNullOrWhiteSpace($expectedHash) -and
+        $expectedHash -cnotmatch $sha256Pattern) {
+        throw "$Label has an invalid legacy SHA-256: $expectedHash"
     }
     if ($null -eq $expectedSizeValue) {
         throw "$Label has no size."
@@ -237,14 +243,15 @@ function Resolve-ManifestArtifact {
             if ($candidate.Name -cne $name -or $candidate.Length -ne $expectedSize) {
                 continue
             }
-            $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $candidate.FullName).Hash
-            if ($actualHash -ceq $expectedHash) {
+            if ([string]::IsNullOrWhiteSpace($expectedHash) -or
+                (Get-FileHash -Algorithm SHA256 -LiteralPath $candidate.FullName).Hash -ceq
+                    $expectedHash) {
                 $candidate
             }
         }
     )
     if ($valid.Count -lt 1 -and -not ($ArchiveContained -and $candidates.Count -eq 0)) {
-        throw "$Label could not be resolved with its declared size and hash below $ReleaseRoot"
+        throw "$Label could not be resolved with its declared identity below $ReleaseRoot"
     }
 
     [pscustomobject][ordered]@{
@@ -273,35 +280,30 @@ function Write-JsonFile {
 
 $manifestPath = (Resolve-Path -LiteralPath $ReleaseManifest).Path
 $releaseRoot = Split-Path -Parent $manifestPath
-$releaseManifestSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $manifestPath).Hash
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $manifestSchema = [int](Get-OptionalPropertyValue -Object $manifest -Name 'schemaVersion')
-if ($manifestSchema -notin @(2, 3)) {
-    throw 'Install-VoyageRelease supports release-manifest schemaVersion 2 or 3 only.'
+if ($manifestSchema -notin @(2, 3, 4, 5)) {
+    throw 'Install-VoyageRelease supports release-manifest schemaVersion 2 through 5 only.'
 }
 
 $mod = [string](Get-OptionalPropertyValue -Object $manifest -Name 'mod')
 $artifactVersion = [string](Get-OptionalPropertyValue -Object $manifest -Name 'version')
 $modVersion = [string](Get-OptionalPropertyValue -Object $manifest -Name 'modVersion')
-$sourceCommit = [string](Get-OptionalPropertyValue -Object $manifest -Name 'sourceCommit')
 $dirtySourceValue = Get-OptionalPropertyValue -Object $manifest -Name 'dirtySource'
 $gameFingerprint = Get-OptionalPropertyValue -Object $manifest -Name 'gameFingerprint'
 $payload = @(Get-OptionalPropertyValue -Object $manifest -Name 'payload')
 $archiveRecord = Get-OptionalPropertyValue -Object $manifest -Name 'archive'
 $contentPluginRecord = Get-OptionalPropertyValue -Object $manifest -Name 'contentPlugin'
-if ($manifestSchema -eq 2 -and $null -ne $contentPluginRecord) {
-    throw 'release-manifest schemaVersion 2 cannot contain contentPlugin.'
+if ($manifestSchema -in @(2, 4) -and $null -ne $contentPluginRecord) {
+    throw "release-manifest schemaVersion $manifestSchema cannot contain contentPlugin."
 }
-if ($manifestSchema -eq 3 -and $null -eq $contentPluginRecord) {
-    throw 'release-manifest schemaVersion 3 requires contentPlugin.'
+if ($manifestSchema -in @(3, 5) -and $null -eq $contentPluginRecord) {
+    throw "release-manifest schemaVersion $manifestSchema requires contentPlugin."
 }
 
 if ([string]::IsNullOrWhiteSpace($mod) -or
     [string]::IsNullOrWhiteSpace($artifactVersion)) {
     throw 'Release manifest must identify both mod and artifact version.'
-}
-if ($sourceCommit -cnotmatch '^[0-9a-fA-F]{40}$') {
-    throw "Release manifest has an invalid source commit: $sourceCommit"
 }
 if ($null -eq $dirtySourceValue -or $dirtySourceValue -isnot [bool]) {
     throw 'Release manifest must explicitly declare boolean dirtySource.'
@@ -309,11 +311,6 @@ if ($null -eq $dirtySourceValue -or $dirtySourceValue -isnot [bool]) {
 $dirtySource = [Convert]::ToBoolean($dirtySourceValue)
 if ($dirtySource -and -not $AllowDirtySource) {
     throw 'Refusing to install a dirty-source release without -AllowDirtySource.'
-}
-
-& git -C $repositoryRoot cat-file -e "$sourceCommit`^{commit}" 2>$null
-if ($LASTEXITCODE -ne 0) {
-    throw "Release source commit is not present in this repository: $sourceCommit"
 }
 
 if ($null -eq $gameFingerprint) {
@@ -360,7 +357,7 @@ if ($null -eq $archiveRecord) {
 }
 
 $resolvedArchive = Resolve-ManifestArtifact -ReleaseRoot $releaseRoot `
-    -Record $archiveRecord -Label 'Release archive'
+    -Record $archiveRecord -Label 'Release archive' -RequireHash
 $resolvedArtifacts = @(
     foreach ($record in @($containerRecords) + @($sidecarRecords)) {
         Resolve-ManifestArtifact -ReleaseRoot $releaseRoot -Record $record `
@@ -415,9 +412,16 @@ try {
             $hasher.Dispose()
             $stream.Dispose()
         }
-        if ($entryHash -cne $artifact.sha256) {
-            throw "Release ZIP content disagrees with payload hash: $($artifact.name)"
+        if (-not [string]::IsNullOrWhiteSpace([string]$artifact.sha256) -and
+            $entryHash -cne $artifact.sha256) {
+            throw "Release ZIP content disagrees with the legacy payload hash: $($artifact.name)"
         }
+        if ($null -ne $artifact.path -and
+            (Get-FileHash -Algorithm SHA256 -LiteralPath $artifact.path).Hash -cne
+                $entryHash) {
+            throw "Loose payload differs from the release ZIP: $($artifact.name)"
+        }
+        $artifact.sha256 = $entryHash
         $artifact.archiveEntryName = $entries[0].FullName
     }
     if ($null -ne $contentPluginPlan) {
@@ -438,9 +442,18 @@ try {
             $hasher.Dispose()
             $stream.Dispose()
         }
-        if ($descriptorHash -cne $contentPluginPlan.artifact.sha256) {
-            throw 'Release ZIP content plugin descriptor hash mismatch.'
+        if (-not [string]::IsNullOrWhiteSpace(
+                [string]$contentPluginPlan.artifact.sha256) -and
+            $descriptorHash -cne $contentPluginPlan.artifact.sha256) {
+            throw 'Release ZIP content plugin descriptor disagrees with its legacy hash.'
         }
+        if ($null -ne $contentPluginPlan.artifact.path -and
+            (Get-FileHash -Algorithm SHA256 `
+                -LiteralPath $contentPluginPlan.artifact.path).Hash -cne
+                $descriptorHash) {
+            throw 'Loose content plugin descriptor differs from the release ZIP.'
+        }
+        $contentPluginPlan.artifact.sha256 = $descriptorHash
         $contentPluginPlan.artifact.archiveEntryName = $descriptorEntries[0].FullName
         if ($null -eq $contentPluginPlan.artifact.path) {
             $descriptorStream = $descriptorEntries[0].Open()
@@ -467,6 +480,8 @@ if ([string]::IsNullOrWhiteSpace($retainedArchiveRelativePath)) {
 $safeMod = $mod -replace '[^0-9A-Za-z._-]', '_'
 $safeVersion = $artifactVersion -replace '[^0-9A-Za-z._-]', '_'
 if ($RetainPublishedRelease) {
+    $releaseManifestSha256 = (
+        Get-FileHash -Algorithm SHA256 -LiteralPath $manifestPath).Hash
     $publishedVersionPath = Join-Path (Join-Path $repositoryRoot "mods\$mod") 'version.txt'
     if (-not (Test-Path -LiteralPath $publishedVersionPath -PathType Leaf)) {
         throw "Published-version file is missing: $publishedVersionPath"
@@ -519,7 +534,6 @@ if ($RetainPublishedRelease) {
         installed = $false
         mod = $mod
         artifactVersion = $artifactVersion
-        sourceCommit = $sourceCommit
         steamBuildId = $expectedBuildId
         archivePath = $selectedArchive
         releaseManifestPath = $selectedManifest
@@ -643,12 +657,10 @@ if ($ValidateOnly) {
         mod = $mod
         artifactVersion = $artifactVersion
         releaseManifestPath = $manifestPath
-        releaseManifestSha256 = $releaseManifestSha256
         gameRoot = $resolvedGameRoot
         steamBuildId = $actualBuildId
         paksDirectory = $paksDirectory
-        files = @($installItems | Select-Object kind, name, size, sourceSha256,
-            retainOnRestore)
+        files = @($installItems | Select-Object kind, name, size, retainOnRestore)
     }
     return
 }
@@ -660,11 +672,9 @@ $transaction = [ordered]@{
     kind = 'Voyage release installation transaction'
     status = 'preparing'
     releaseManifestPath = $manifestPath
-    releaseManifestSha256 = $releaseManifestSha256
     mod = $mod
     artifactVersion = $artifactVersion
     modVersion = $modVersion
-    sourceCommit = $sourceCommit
     dirtySource = $dirtySource
     gameRoot = $resolvedGameRoot
     steamBuildId = $actualBuildId
@@ -781,11 +791,9 @@ try {
         kind = 'Voyage release installation'
         status = 'installed'
         releaseManifestPath = $manifestPath
-        releaseManifestSha256 = $releaseManifestSha256
         mod = $mod
         artifactVersion = $artifactVersion
         modVersion = $modVersion
-        sourceCommit = $sourceCommit
         dirtySource = $dirtySource
         gameRoot = $resolvedGameRoot
         steamBuildId = $actualBuildId
@@ -886,7 +894,7 @@ if (-not $KeepRecoveryEvidence) {
     [IO.Directory]::Delete($ownedEvidence, $true)
     $installManifestPath = $null
 }
-Write-Host "Voyage release installed with matching hashes: $mod $artifactVersion"
+Write-Host "Voyage release installed and read back successfully: $mod $artifactVersion"
 if ($KeepRecoveryEvidence) { Write-Host "Temporary recovery evidence: $installManifestPath" }
 [pscustomobject][ordered]@{
     mod = $mod

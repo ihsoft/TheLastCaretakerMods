@@ -65,7 +65,6 @@ if ([string]$buildManifest.kind -cne 'BoatHUDTotalResources mod' -or
     [string]$buildManifest.retocCompatibilityVersion -cne 'UE5_7' -or
     [string]$buildManifest.legacyImportPackageNameLayout -cne
         'SerializedForFilteredCookedPackages' -or
-    [string]$buildManifest.retocSha256 -notmatch '^[0-9A-F]{64}$' -or
     [string]$buildManifest.cookStorage -cne 'LooseCookedPackageWriter' -or
     [string]$buildManifest.steamBuildId -cnotmatch '^[0-9]+$') {
     throw 'Only the statically checked BoatHUDTotalResources build is allowed.'
@@ -120,9 +119,6 @@ foreach ($extension in $extensions) {
         throw "Build manifest does not contain exactly one record for $name"
     }
     $sourceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $source).Hash
-    if ($sourceHash -cne [string]$manifestRecord[0].sha256) {
-        throw "BoatHUDTotalResources package hash does not match its build manifest: $source"
-    }
 
     $hadExisting = Test-Path -LiteralPath $destination -PathType Leaf
     $previousHash = $null

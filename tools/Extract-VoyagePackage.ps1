@@ -30,7 +30,6 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
 
 $root = (Resolve-Path -LiteralPath $GameRoot).Path
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
-$retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $retocPath).Hash
 $paks = Join-Path $root 'Voyage\Content\Paks'
 $exe = Join-Path $root 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe'
 if (-not (Test-Path -LiteralPath $paks -PathType Container)) {
@@ -81,7 +80,10 @@ elseif (-not $supportsSelection -and ($Source -eq 'Mod' -or $additionalContainer
     throw 'This retoc cannot isolate containers. A validated retoc with --include-container is required; no files were extracted. Do not remove installed mods to work around this gate.'
 }
 $selectedRecords = @($selected | ForEach-Object {
-    [ordered]@{ path = $_.FullName; length = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
+    [ordered]@{ path = $_.FullName; length = $_.Length }
+})
+$selectedIntegrity = @($selected | ForEach-Object {
+    [ordered]@{ path = $_.FullName; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
 })
 
 $version = (Get-Item -LiteralPath $exe).VersionInfo.ProductVersion
@@ -131,7 +133,7 @@ if ($Source -eq 'Mod') {
         if ($modPackages -inotcontains $relative) { throw "Extracted package is not owned by the selected mod: $relative" }
     }
 }
-foreach ($record in $selectedRecords) {
+foreach ($record in $selectedIntegrity) {
     if ((Get-FileHash -LiteralPath $record.path -Algorithm SHA256).Hash -cne $record.sha256) {
         throw "Container changed during extraction: $($record.path)"
     }
@@ -144,13 +146,12 @@ $manifest = [ordered]@{
     gameVersion = $version
     retocEngineVersion = $RetocEngineVersion
     retocPath = $retocPath
-    retocSha256 = $retocSha256
     filter = $Filter
     source = $(if ($AllowAdditionalContainers) { 'InstalledLegacy' } else { $Source })
     selectedContainers = $selectedRecords
     containerSelection = $(if ($supportsSelection -and -not $AllowAdditionalContainers) { 'explicit-first-wins' } else { 'directory' })
     assets = @($extractedAssets | ForEach-Object {
-        [ordered]@{ path = $_.FullName.Substring($output.Length + 1).Replace('\', '/'); sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
+        [ordered]@{ path = $_.FullName.Substring($output.Length + 1).Replace('\', '/'); length = $_.Length }
     })
     allowAdditionalContainers = [bool]$AllowAdditionalContainers
     additionalContainers = @(

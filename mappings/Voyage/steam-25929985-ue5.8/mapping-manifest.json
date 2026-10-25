@@ -9,19 +9,15 @@
   "uassetApiEngineVersion": "VER_UE5_8",
   "engineVersionBasis": "jmap dumper and UAssetAPI parser use the UE 5.8 serialization contract; the separate ElectrifiedBoat generator is pinned to Unreal Editor 5.8.2",
   "generator": "ihsoft/jmap Voyage UE 5.8 compatibility fork; canonical published binary",
-  "generatorCommit": "fad7b923d31e098d958bd35867f3ed0bedc637a2",
-  "generatorSha256": "6A56DFCA0654835160E94F3E1D83023A86DDB1C3D29356FC0C4B008B7190987D",
-  "canonicalPublishedSha256": "6A56DFCA0654835160E94F3E1D83023A86DDB1C3D29356FC0C4B008B7190987D",
   "generationWorkflow": "tools/New-VoyageMappings.ps1 live-process USMAP generation with jmap --all and JMAP_CONCURRENCY=128 after three stable structural GUObjectArray samples",
   "observedObjectCount": 79328,
   "mappingFile": "Voyage-25929985.usmap",
   "mappingLength": 2428737,
-  "mappingSha256": "4EA5D93EBF41FDE3C45C7DB938763E942179DC8EF24951A97EDB94FB1FA9E2FF",
   "generatedAtUtc": "2026-10-15T03:07:02.3748815Z",
   "validation": {
-    "mappingGate": "Test-VoyageMappings.ps1 passed USMAP version 4 header, 2428721-byte payload, fingerprint, hash, and required-name checks for EModuleResourceType, VoyageInGameBoatWidget, VoyageModuleSocketViewComponent, and Diesel",
+    "mappingGate": "Test-VoyageMappings.ps1 passed USMAP version 4 header, payload structure, Steam build ID, and required-name checks for EModuleResourceType, VoyageInGameBoatWidget, VoyageModuleSocketViewComponent, and Diesel",
     "assetParser": "Inspect-VoyageAsset.ps1 with this explicit mapping matched and parsed exactly one stock Voyage/Content/Blueprints/Modules/Storage/BP_Module_Battery.uasset package with zero errors and produced JSON plus Blueprint pseudocode",
-    "uassetGui": "Canonical UAssetGUI df18b5f with UAssetAPI 21c982f completed the 24-asset Storage subtree with 24 ok, 0 notices, and 0 failures; BP_Module_Battery loaded 35 exports with mappings, zero raw exports or structs, no unknown types, dependency failures, enum gaps, or parse failures, and unchanged-save binary equality passed",
+    "uassetGui": "Canonical UAssetGUI completed the 24-asset Storage subtree with 24 ok, 0 notices, and 0 failures; BP_Module_Battery loaded 35 exports with mappings, zero raw exports or structs, no unknown types, dependency failures, enum gaps, or parse failures, and unchanged-save binary equality passed",
     "runtime": "Read-only live reflection capture and offline parser/UAssetGUI unchanged-save validation only; no changed-save or gameplay compatibility claim"
   },
   "revalidateWhen": "Steam build ID changes"

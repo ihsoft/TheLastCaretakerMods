@@ -20,7 +20,7 @@ metrics routinely or put individual measurement results in shared documentation.
   already reviewed release through its documented installer, and committing
   already reviewed changes with a known exact file scope through
   `tools/commit-repository-changes.ps1`. Do not repeatedly investigate whether
-  these prepared operations deserve delegation. Status/hash checks and small
+  these prepared operations deserve delegation. Small read-only status checks and
   documentation updates usually qualify too. A commit already included in a
   coder's ongoing assignment may remain with that coder; do not wake a coder
   just to perform a prepared commit. Prepared scope does not imply commit
@@ -113,7 +113,7 @@ not sufficient authorization.
   Do not invent extra per-step approval gates for already authorized operations.
 - At every completed assignment, review hold, failure or blocker, send a compact
   report to the named parent through the verified route. Include task/result,
-  scope/diff, checks and evidence, exact artifact/manifest paths and hashes,
+  scope/diff, checks and evidence, and exact artifact/manifest paths,
   installed state when relevant, commit state, limitations and next decision.
   Coding reports also include a compact tool-use report: intended operations,
   documented entry points invoked, successes and evidence, failures or
@@ -150,7 +150,7 @@ check is inconclusive, do not mutate installed files; report and wait for the
 user. Never stop the game or treat an earlier check as current.
 
 Preserve the exact rollback, validate the release manifest, read back installed
-hashes and report the final physical path, version and installation manifest.
+files and report the final physical path, version and installation manifest.
 Do not silently change loader configuration. If a staged replacement fails,
 report the actual installed state and use the documented authorized recovery
 path rather than leaving the user to infer whether the old version still works.

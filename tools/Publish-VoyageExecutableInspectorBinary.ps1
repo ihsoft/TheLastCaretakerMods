@@ -9,13 +9,8 @@ $resolver = Join-Path $PSScriptRoot 'Get-VoyageExecutableInspectorBinary.ps1'
 $sourceRoot = Join-Path $PSScriptRoot 'VoyageExecutableInspector'
 $project = Join-Path $sourceRoot 'VoyageExecutableInspector.csproj'
 $inputs = & $resolver -BuildInputsOnly
-$sourceInputPaths = @($inputs.Files | Where-Object {
-    [string]$_.path -like 'source/*'
-} | ForEach-Object {
-    'tools/VoyageExecutableInspector/' + ([string]$_.path).Substring('source/'.Length)
-})
 $sourceChanges = @(& git -C $repositoryRoot status --porcelain `
-    --untracked-files=all -- $sourceInputPaths)
+    --untracked-files=all -- tools/VoyageExecutableInspector)
 if ($LASTEXITCODE -ne 0 -or $sourceChanges.Count -ne 0) {
     throw 'Commit and validate VoyageExecutableInspector source changes before publication.'
 }
@@ -82,18 +77,14 @@ if ($inputsAfterBuild.Fingerprint -cne $inputs.Fingerprint) {
     throw 'VoyageExecutableInspector inputs changed during publication.'
 }
 $manifest = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     kind = 'Voyage canonical ExecutableInspector'
-    sourceCommit = [string]$inputs.SourceCommit
-    inputFingerprint = $inputs.Fingerprint
-    inputs = $inputs.Files
     runtimeIdentifier = 'win-x64'
     targetFramework = 'net10.0'
     selfContained = $false
     singleFile = $true
     publishedAtUtc = [DateTime]::UtcNow.ToString('o')
     length = (Get-Item -LiteralPath $candidate).Length
-    sha256 = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash
 }
 $candidateManifest = Join-Path $workspace 'publish-manifest.json'
 [IO.File]::WriteAllText(

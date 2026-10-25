@@ -22,7 +22,7 @@ details are needed. `-InstallManifest <path>` checks exact installed targets
 from a completed common installation manifest. Exit zero means the snapshot
 was obtained; inspect the returned match states before drawing conclusions.
 This read-only snapshot does not replace the installer's immediate process and
-hash checks.
+copy-integrity checks.
 
 ## Release installation
 
@@ -69,7 +69,9 @@ Install the candidate produced by the public builder:
 
 The installer validates the archive and destinations, checks that the game is
 closed immediately before mutation, uses temporary recovery data, and reads
-back installed hashes. It selects Paks or LogicMods from the ZIP layout.
+back installed files. Its operation-local digests exist only to protect copy,
+rollback, and ownership decisions under the shared
+[hash rule](../docs/hash-usage-rule.md). It selects Paks or LogicMods from the ZIP layout.
 Add `-ValidateOnly` when a read-only plan is specifically
 needed. If it reports `recovery-failed`, stop and preserve the reported files
 under `Tmp/` for diagnosis. After the installed candidate passes its real-game

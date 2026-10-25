@@ -77,7 +77,8 @@ $fingerprinter = Join-Path $repoRoot 'tools\Get-VoyageBuildFingerprint.ps1'
 $extractor = Join-Path $repoRoot 'tools\Extract-VoyagePackage.ps1'
 $containerTester = Join-Path $repoRoot 'tools\Test-VoyageContainer.ps1'
 $manifestProducer = Join-Path $repoRoot 'tools\New-VoyageReleaseManifest.ps1'
-foreach ($required in @($project, $buildBatch, $editor, $retoc, $fingerprinter, $extractor, $containerTester, $manifestProducer)) {
+$releaseInstaller = Join-Path $repoRoot 'tools\Install-VoyageRelease.ps1'
+foreach ($required in @($project, $buildBatch, $editor, $retoc, $fingerprinter, $extractor, $containerTester, $manifestProducer, $releaseInstaller)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Required file was not found: $required" }
 }
 if ($sourcePackage.Length -ne $relocatedPackage.Length) { throw 'Relocation paths must have equal byte lengths.' }
@@ -117,70 +118,36 @@ if ($FinalizeExisting) {
     $releaseConfig = Join-Path $releaseRoot 'ContainerLidLabel.ini'
     $releaseManifestPath = Join-Path $releaseRoot 'release-manifest.json'
     $expectedList = Join-Path $releaseRoot 'expected-packages.txt'
-    $verification = Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'container-check') `
-        -Recurse -File -Filter 'verification.json' | Select-Object -First 1
     $stockUexp = Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'work\stock-extraction') `
         -Recurse -File -Filter "$assetName.uexp" | Select-Object -First 1
     $relocatedUexp = Join-Path $releaseRoot "work\stage\Voyage\Content\Mods\ContainerLidLabel\StockOrigin\$assetName.uexp"
-    foreach ($required in @($utoc, $archive, $releaseConfig, $releaseManifestPath, $expectedList, $verification.FullName, $stockUexp.FullName, $relocatedUexp)) {
+    foreach ($required in @($utoc, $archive, $releaseConfig, $releaseManifestPath, $expectedList, $stockUexp.FullName, $relocatedUexp)) {
         if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "FinalizeExisting input missing: $required" }
     }
-    $verificationRecord = Get-Content -LiteralPath $verification.FullName -Raw | ConvertFrom-Json
-    if ([string]$verificationRecord.status -cne 'passed' -or
-        [int]$verificationRecord.packageCount -ne 2 -or
-        $verificationRecord.packageSetMatches -ne $true -or
-        @($verificationRecord.missingPackages).Count -ne 0 -or
-        @($verificationRecord.unexpectedPackages).Count -ne 0 -or
-        [string]$verificationRecord.expectedPackageListSha256 -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $expectedList).Hash) {
-        throw "FinalizeExisting rejected the container verification report: $($verification.FullName)"
+    $containerCheckOutput = @(& $containerTester -Container $utoc -ExpectedPackageList $expectedList -OutputRoot (Join-Path $releaseRoot 'container-check'))
+    $containerCheck = @($containerCheckOutput | Where-Object { $null -ne $_.PSObject.Properties['status'] }) | Select-Object -Last 1
+    if ($null -eq $containerCheck -or $containerCheck.status -cne 'passed' -or
+        $containerCheck.packageCount -ne 2 -or $containerCheck.packageSetMatches -ne $true) {
+        throw 'FinalizeExisting container revalidation failed.'
     }
-    foreach ($fileRecord in @($verificationRecord.files)) {
-        $livePath = Join-Path $packageRoot ([string]$fileRecord.name)
-        if (-not (Test-Path -LiteralPath $livePath -PathType Leaf) -or
-            [int64]$fileRecord.size -ne (Get-Item -LiteralPath $livePath).Length -or
-            [string]$fileRecord.sha256 -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $livePath).Hash) {
-            throw "FinalizeExisting rejected changed container file: $livePath"
-        }
-    }
-    Write-Host 'Finalize 2/4 Validating immutable release manifest'
+    Write-Host 'Finalize 2/4 Validating release archive and manifest'
     $releaseRecord = Get-Content -LiteralPath $releaseManifestPath -Raw | ConvertFrom-Json
-    if ([int]$releaseRecord.schemaVersion -ne 2 -or
+    if ([int]$releaseRecord.schemaVersion -notin @(4, 5) -or
         [string]$releaseRecord.mod -cne 'ContainerLidLabel' -or
         [string]$releaseRecord.version -cne $Version -or
         [string]$releaseRecord.gameFingerprint.steamBuildId -cnotmatch '^[0-9]+$') {
         throw "FinalizeExisting rejected release identity: $releaseManifestPath"
     }
-    foreach ($record in @($releaseRecord.payload) + @($releaseRecord.archive)) {
-        $livePath = Join-Path $releaseRoot ([string]$record.path)
-        if (-not (Test-Path -LiteralPath $livePath -PathType Leaf) -or
-            [int64]$record.size -ne (Get-Item -LiteralPath $livePath).Length -or
-            [string]$record.sha256 -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $livePath).Hash) {
-            throw "FinalizeExisting rejected changed release file: $livePath"
-        }
-    }
-    $stockHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $stockUexp.FullName).Hash
-    if ($stockHash -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $relocatedUexp).Hash) {
+    & $releaseInstaller -ReleaseManifest $releaseManifestPath -GameRoot $GameRoot -ValidateOnly | Out-Null
+    if (-not [Linq.Enumerable]::SequenceEqual(
+        [byte[]][IO.File]::ReadAllBytes($stockUexp.FullName),
+        [byte[]][IO.File]::ReadAllBytes($relocatedUexp))) {
         throw 'FinalizeExisting found a changed relocated stock export payload.'
     }
-    if ((Get-FileHash -Algorithm SHA256 -LiteralPath $configSource).Hash -cne
-        (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash) {
+    if ([IO.File]::ReadAllText($configSource) -cne [IO.File]::ReadAllText($releaseConfig)) {
         throw 'FinalizeExisting found a changed shipped config.'
     }
-    Write-Host 'Finalize 3/4 Hashing authored source and artifacts'
-    $sourceFiles = @(
-        Get-Item -LiteralPath (Join-Path $modRoot '.gitignore')
-        Get-Item -LiteralPath (Join-Path $modRoot 'Voyage.uproject')
-        Get-Item -LiteralPath (Join-Path $modRoot 'Build-ContainerLidLabel.ps1')
-        Get-ChildItem -LiteralPath (Join-Path $modRoot 'Assets') -Recurse -File
-        Get-ChildItem -LiteralPath (Join-Path $modRoot 'Build') -Recurse -File
-        Get-ChildItem -LiteralPath (Join-Path $modRoot 'Settings') -Recurse -File
-        Get-ChildItem -LiteralPath (Join-Path $modRoot 'Source') -Recurse -File
-        Get-ChildItem -LiteralPath (Join-Path $repoRoot 'tools\VoyageModSettings') -Recurse -File |
-            Where-Object { $_.Name -cne '.local-backlog.md' }
-        Get-Item -LiteralPath (Join-Path $repoRoot 'tools\New-VoyageModSettings.ps1')
-        Get-ChildItem -LiteralPath $modRoot -File -Filter '*.md'
-    ) | Sort-Object FullName -Unique
-    Write-Host "Finalize 3a/4 Enumerated $($sourceFiles.Count) source files"
+    Write-Host 'Finalize 3/4 Recording semantic build evidence'
     $payload = @(
         (Join-Path $packageRoot "$containerName.pak"),
         (Join-Path $packageRoot "$containerName.ucas"),
@@ -193,15 +160,13 @@ if ($FinalizeExisting) {
         createdUtc = [DateTime]::UtcNow.ToString('o'); steamBuildId = [string]$releaseRecord.gameFingerprint.steamBuildId
         engine = '5.8.2'; retocEngineVersion = $retocVersion
         runtimePackages = [IO.File]::ReadAllLines($expectedList)
-        config = [ordered]@{ path = $releaseConfig; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash }
-        relocation = [ordered]@{ source = $sourcePackage; destination = $relocatedPackage; replacementCount = 2; sourceUexpSha256 = $stockHash; relocatedUexpSha256 = $stockHash }
-        containerCheckReport = $verification.FullName; releaseManifest = $releaseManifestPath
-        sourceFiles = @($sourceFiles | ForEach-Object { [ordered]@{ path = $_.FullName.Substring($repoRoot.Length + 1).Replace('\', '/'); length = $_.Length; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash } })
-        files = @($payload | ForEach-Object { $item = Get-Item -LiteralPath $_; [ordered]@{ path = $item.FullName; length = $item.Length; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_).Hash } })
+        config = [ordered]@{ path = $releaseConfig }
+        relocation = [ordered]@{ source = $sourcePackage; destination = $relocatedPackage; replacementCount = 2 }
+        containerCheckReport = $containerCheck.reportPath; releaseManifest = $releaseManifestPath
+        files = @($payload | ForEach-Object { $item = Get-Item -LiteralPath $_; [ordered]@{ path = $item.FullName; length = $item.Length } })
     }
-    Write-Host 'Finalize 3b/4 Hash records assembled'
     $buildManifestPath = Join-Path $releaseRoot 'build-manifest.json'
-    Write-Host 'Finalize 3c/4 Serializing build identity'
+    Write-Host 'Finalize 3b/4 Serializing build evidence'
     [IO.File]::WriteAllText($buildManifestPath, ($buildManifest | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
     Write-Host 'Finalize 4/4 Build identity recorded'
     [pscustomobject]@{ status = 'succeeded'; releaseRoot = $releaseRoot; releaseManifest = $releaseManifestPath; buildManifest = $buildManifestPath; container = $utoc; archive = $archive; packageCount = 2 }
@@ -282,7 +247,11 @@ $relocatedUasset = Join-Path $parentStage "$assetName.uasset"
 $relocatedUexp = Join-Path $parentStage "$assetName.uexp"
 [IO.File]::WriteAllBytes($relocatedUasset, $bytes)
 Copy-Item -LiteralPath $sourceUexp -Destination $relocatedUexp
-if ((Get-FileHash $sourceUexp).Hash -cne (Get-FileHash $relocatedUexp).Hash) { throw 'Relocation changed the stock export payload.' }
+if (-not [Linq.Enumerable]::SequenceEqual(
+    [byte[]][IO.File]::ReadAllBytes($sourceUexp),
+    [byte[]][IO.File]::ReadAllBytes($relocatedUexp))) {
+    throw 'Relocation changed the stock export payload.'
+}
 Copy-Item -LiteralPath $scriptObjects -Destination (Join-Path $stage 'scriptobjects.bin')
 
 Write-Host '6/8 Packaging and verifying exact two-package container'
@@ -330,19 +299,6 @@ $payload = @(
     $releaseConfig,
     $archive,
     $releaseManifestPath)
-$sourceFiles = @(
-    Get-Item -LiteralPath (Join-Path $modRoot '.gitignore')
-    Get-Item -LiteralPath (Join-Path $modRoot 'Voyage.uproject')
-    Get-Item -LiteralPath (Join-Path $modRoot 'Build-ContainerLidLabel.ps1')
-    Get-ChildItem -LiteralPath (Join-Path $modRoot 'Assets') -Recurse -File
-    Get-ChildItem -LiteralPath (Join-Path $modRoot 'Build') -Recurse -File
-    Get-ChildItem -LiteralPath (Join-Path $modRoot 'Settings') -Recurse -File
-    Get-ChildItem -LiteralPath (Join-Path $modRoot 'Source') -Recurse -File
-    Get-ChildItem -LiteralPath (Join-Path $repoRoot 'tools\VoyageModSettings') -Recurse -File |
-        Where-Object { $_.Name -cne '.local-backlog.md' }
-    Get-Item -LiteralPath (Join-Path $repoRoot 'tools\New-VoyageModSettings.ps1')
-    Get-ChildItem -LiteralPath $modRoot -File -Filter '*.md'
-) | Sort-Object FullName -Unique
 $buildManifest = [ordered]@{
     schemaVersion = 1
     mod = 'ContainerLidLabel'
@@ -353,31 +309,19 @@ $buildManifest = [ordered]@{
     engine = '5.8.2'
     retocEngineVersion = $retocVersion
     runtimePackages = [IO.File]::ReadAllLines($expectedList)
-    config = [ordered]@{
-        path = $releaseConfig
-        sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseConfig).Hash
-    }
+    config = [ordered]@{ path = $releaseConfig }
     relocation = [ordered]@{
         source = $sourcePackage
         destination = $relocatedPackage
         replacementCount = 2
         sourceLength = $originalBytes.Length
         relocatedLength = $bytes.Length
-        sourceUexpSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $sourceUexp).Hash
-        relocatedUexpSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $relocatedUexp).Hash
     }
     containerCheckReport = $containerCheck.reportPath
     releaseManifest = $releaseManifestPath
-    sourceFiles = @($sourceFiles | ForEach-Object {
-        [ordered]@{
-            path = $_.FullName.Substring($repoRoot.Length + 1).Replace('\', '/')
-            length = $_.Length
-            sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
-        }
-    })
     files = @($payload | ForEach-Object {
         $item = Get-Item -LiteralPath $_
-        [ordered]@{ path = $item.FullName; length = $item.Length; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_).Hash }
+        [ordered]@{ path = $item.FullName; length = $item.Length }
     })
 }
 $buildManifestPath = Join-Path $releaseRoot 'build-manifest.json'

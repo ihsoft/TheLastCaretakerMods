@@ -30,7 +30,7 @@ function Invoke-MergeVoyageModIni {
     [void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($output))
     if (-not $CurrentPath) {
         [IO.File]::WriteAllBytes($output, [IO.File]::ReadAllBytes($template))
-        return [pscustomobject]@{ Created=$true; AddedKeys=@(); RemovedKeys=@(); Changed=$true; Sha256=(Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash }
+        return [pscustomobject]@{ Created=$true; AddedKeys=@(); RemovedKeys=@(); Changed=$true }
     }
     $current = (Resolve-Path -LiteralPath $CurrentPath).Path
     $bytes = [IO.File]::ReadAllBytes($current)
@@ -88,7 +88,7 @@ function Invoke-MergeVoyageModIni {
         }
         [IO.File]::WriteAllText($output,$text,$encoding)
     }
-    [pscustomobject]@{ Created=$false; AddedKeys=@($added); RemovedKeys=@($removed); Changed=$changed; Sha256=(Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash }
+    [pscustomobject]@{ Created=$false; AddedKeys=@($added); RemovedKeys=@($removed); Changed=$changed }
 }
 
 Export-ModuleMember -Function Invoke-MergeVoyageModIni

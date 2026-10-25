@@ -12,7 +12,7 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   Steam build, retry with `-IgnorePinnedGameVersion` and test the resulting
   candidate in game before updating `game-build.json`.
 - Never stop the game. Installation must retain the common closed-game,
-  manifest, backup and installed-hash gates.
+  manifest, backup, readback, and rollback gates.
 - All mod-authored build inputs, including the GLB, sound and settings schema,
   live below this directory. A Railgun build must not depend on preserved
   scratch output from an earlier Railgun run. Published toolchain binaries and
@@ -44,8 +44,9 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
   by behavior-critical roles, stable owned identities, usable render geometry
   and collision, and the dependencies actually produced from the main GLB. Do
   not freeze authored models by revision hash, topology, decorative-node names,
-  previous bounds, or material and texture counts. Build provenance still hashes
-  the actual inputs and rejects source edits made during one build.
+  previous bounds, or material and texture counts. The producer validates the
+  actual inputs and retains only the bounded Core cook-list digest required by
+  the commandlet's time-of-check/time-of-use contract.
 - The live model has the stable path `Assets/Model/Railgun.glb`. Model logic
   binds stable roles and explicit boxes from `Assets/Model/model-source.json`;
   do not hard-code vertex topology, offsets or incidental Blender object order.

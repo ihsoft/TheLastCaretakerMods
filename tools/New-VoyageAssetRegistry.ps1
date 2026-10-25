@@ -36,7 +36,7 @@ $inputSnapshot = @($AssetJsonPath | ForEach-Object {
     [pscustomobject]@{
         path = $path
         length = (Get-Item -LiteralPath $path).Length
-        sha256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+        operationDigest = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
     }
 })
 foreach ($protected in @($inputSnapshot | ForEach-Object path)) {
@@ -102,7 +102,7 @@ if ($writerExit -ne 0 -or -not (Test-Path -LiteralPath $candidate -PathType Leaf
 foreach ($input in $inputSnapshot) {
     if (-not (Test-Path -LiteralPath $input.path -PathType Leaf) -or
         (Get-Item -LiteralPath $input.path).Length -ne $input.length -or
-        (Get-FileHash -LiteralPath $input.path -Algorithm SHA256).Hash -cne $input.sha256) {
+        (Get-FileHash -LiteralPath $input.path -Algorithm SHA256).Hash -cne $input.operationDigest) {
         throw "Asset JSON input changed during generation: $($input.path)"
     }
 }
@@ -112,14 +112,12 @@ if (-not [bool]$writerSummary.reopenVerified -or
     throw 'AssetRegistry writer did not verify the expected records.'
 }
 
-$candidateHash = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash
 $manifest = [ordered]@{
     schemaVersion = 1
     kind = 'Voyage generated AssetRegistry'
     createdAtUtc = [DateTime]::UtcNow.ToString('o')
     outputPath = $output
     length = (Get-Item -LiteralPath $candidate).Length
-    sha256 = $candidateHash
     formatVersion = [int]$writerSummary.formatVersion
     filterEditorOnly = [bool]$writerSummary.filterEditorOnly
     assetCount = [int]$writerSummary.assetCount
@@ -128,13 +126,10 @@ $manifest = [ordered]@{
     primaryAssetIds = @($writerSummary.assets | ForEach-Object {
         [string]$_.primaryAssetId
     })
-    inputFiles = $inputSnapshot
+    inputFiles = @($inputSnapshot | ForEach-Object { [ordered]@{path=$_.path;length=$_.length} })
     writerManifest = $writer.ManifestPath
-    writerInputFingerprint = $writer.InputFingerprint
     voyagePolicyPath = Join-Path $PSScriptRoot `
         'VoyageAssetRegistryWriter\voyage-policy.json'
-    voyagePolicySha256 = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot `
-        'VoyageAssetRegistryWriter\voyage-policy.json') -Algorithm SHA256).Hash
     evidenceRoot = $evidence
     writerLog = $log
     metadataPath = $metadata
@@ -183,7 +178,6 @@ try {
     status = 'passed'
     outputPath = $output
     manifestPath = $manifestPath
-    sha256 = $manifest.sha256
     assetCount = $manifest.assetCount
     packageCount = $manifest.packageCount
     primaryAssetIds = $manifest.primaryAssetIds

@@ -67,8 +67,6 @@ $checks.Add('unowned-query-rejected')
 Assert-Extraction ((Get-FileHash -LiteralPath $canonical -Algorithm SHA256).Hash -ceq $canonicalBefore) 'Canonical retoc was modified.'
 $result = [pscustomobject]@{
     status = 'passed'; checks = @($checks); evidencePath = $run
-    candidateSha256 = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash
-    canonicalSha256 = $canonicalBefore; gamePairHashes = $gameHashes; modPairHashes = $modHashes
     powerShellVersion = $PSVersionTable.PSVersion.ToString(); gameFilesChanged = $false
 }
 [IO.File]::WriteAllText((Join-Path $run 'summary.json'), ($result | ConvertTo-Json -Depth 4))

@@ -159,29 +159,21 @@ if ($originalDifference.Count -ne 0) {
     throw 'A non-class stock export changed in the canonical candidate.'
 }
 
-$candidateContractJson = $candidatePropertyContract | ConvertTo-Json -Depth 4 -Compress
-$candidateContractHash = [Convert]::ToHexString(
-    [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($candidateContractJson)))
-
 $report = [ordered]@{
     scope = 'Packaged cooked Blueprint structure only; no runtime or mount-precedence validation'
     container = $containerPath
-    containerSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $containerPath).Hash
     candidate = [ordered]@{
         jsonPath = [string]$candidateResult.jsonPath
-        jsonSha256 = [string]$candidateResult.jsonSha256
         nativeParentObjectPath = [string]$candidateClasses[0].SuperStruct.ObjectPath
         ownPropertyCount = $candidateProperties.Count
         originalExportCount = $stockExports.Count
         totalExportCount = $candidateExports.Count
         functionNames = $functionNames
         executeUbergraphCount = $ubergraphFunctions.Count
-        orderedPropertyContractSha256 = $candidateContractHash
         nonClassStockExportsUnchanged = $true
     }
     stockControl = [ordered]@{
         jsonPath = [string]$stockResult.jsonPath
-        jsonSha256 = [string]$stockResult.jsonSha256
         ownPropertyCount = $stockProperties.Count
     }
 }

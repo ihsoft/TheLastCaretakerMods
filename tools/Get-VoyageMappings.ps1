@@ -60,7 +60,6 @@ foreach ($candidate in $candidates | Sort-Object generatedAtUtc -Descending) {
         [pscustomobject]@{
             mappingsPath = (Resolve-Path -LiteralPath $candidate.mappingsPath).Path
             manifestPath = (Resolve-Path -LiteralPath $candidate.manifestPath).Path
-            sha256 = [string]$validation.sha256
             length = [long]$validation.length
             steamBuildId = $steamBuildId
             engineVersion = $candidate.engineVersion
@@ -75,6 +74,6 @@ foreach ($candidate in $candidates | Sort-Object generatedAtUtc -Descending) {
 }
 
 if ($validationFailures.Count -gt 0) {
-    throw "A reviewed Voyage mapping matches the installed fingerprint but failed validation. Do not regenerate or replace it; diagnose the resolver/registry failure:`n$($validationFailures -join [Environment]::NewLine)"
+    throw "A reviewed Voyage mapping matches the installed build but failed validation. Do not regenerate or replace it; diagnose the resolver/registry failure:`n$($validationFailures -join [Environment]::NewLine)"
 }
 throw "No reviewed Voyage mapping matches Steam build $steamBuildId. Do not regenerate automatically: confirm that the installed build is new, ask the user to start the game, then run tools\New-VoyageMappings.ps1."

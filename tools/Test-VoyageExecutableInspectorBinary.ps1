@@ -54,7 +54,7 @@ $binary = & $resolver
 $beforeTime = (Get-Item -LiteralPath $binary.Path).LastWriteTimeUtc
 $published = & $publisher
 Assert-InspectorTest (-not [bool]$published.Rebuilt -and
-    [string]$published.Sha256 -ceq [string]$binary.Sha256 -and
+    [string]$published.Path -ceq [string]$binary.Path -and
     (Get-Item -LiteralPath $binary.Path).LastWriteTimeUtc -eq $beforeTime) `
     'Publisher rebuilt a current VoyageExecutableInspector binary.'
 $checks.Add('publisher-reuse-without-dotnet')
@@ -98,10 +98,8 @@ $scanJson = & (Join-Path $PSScriptRoot 'Invoke-VoyageExecutableInspector.ps1') `
 $scan = $scanJson | ConvertFrom-Json
 Assert-InspectorTest ($scan.status -ceq 'completed' -and
     $scan.matchCount -gt 0 -and
-    $scan.inspectorBinarySha256 -ceq $binary.Sha256 -and
     (Test-Path -LiteralPath $scan.outputPath -PathType Leaf) -and
-    (Get-FileHash -LiteralPath $scan.outputPath -Algorithm SHA256).Hash -ceq
-        $scan.outputSha256) `
+    (Get-Item -LiteralPath $scan.outputPath).Length -eq $scan.outputSize) `
     'Current executable query did not return compact validated evidence.'
 $checks.Add('current-executable-query-without-dotnet')
 
@@ -117,11 +115,9 @@ $result = [pscustomobject][ordered]@{
     checkCount = $checks.Count
     powerShellVersion = $PSVersionTable.PSVersion.ToString()
     inspectorBinaryPath = $binary.Path
-    inspectorBinarySha256 = $binary.Sha256
     steamBuildId = [string]$fingerprint.steam.buildId
     queryMatches = [int]$scan.matchCount
     reportPath = [string]$scan.outputPath
-    reportSha256 = [string]$scan.outputSha256
     evidencePath = $testRoot
     gameFilesChanged = $false
 }

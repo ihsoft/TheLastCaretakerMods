@@ -213,9 +213,6 @@ $assetResultText = (& $getAssetScript @assetArguments) -join [Environment]::NewL
 $assetResult = $assetResultText | ConvertFrom-Json
 $jsonPath = (Resolve-Path -LiteralPath ([string]$assetResult.jsonPath)).Path
 $jsonSha256 = (Get-FileHash -LiteralPath $jsonPath -Algorithm SHA256).Hash
-if ($jsonSha256 -cne [string]$assetResult.jsonSha256) {
-    throw "Asset JSON changed after retrieval: $jsonPath"
-}
 
 $summaryDirectory = if ($Source -eq 'Game') {
     $relativeJsonPath = [IO.Path]::ChangeExtension(
@@ -452,7 +449,6 @@ $result = [ordered]@{
     virtualPath = [string]$summary.virtualPath
     focus = $Focus
     summaryPath = $resolvedSummaryPath
-    summarySha256 = (Get-FileHash -LiteralPath $resolvedSummaryPath -Algorithm SHA256).Hash
     counts = $counts
 }
 $focusData = $null

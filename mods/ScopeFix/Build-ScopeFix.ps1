@@ -61,7 +61,7 @@ foreach ($spec in @(
     New-Item -ItemType Directory -Force (Split-Path $destination -Parent) | Out-Null
     Copy-Item -LiteralPath (Join-Path $extracted.outputPath ($relative + '.uasset')) -Destination ($destination + '.uasset')
     [IO.File]::WriteAllBytes(($destination + '.uexp'), $bytes)
-    $changes += [pscustomobject]@{ package = '/Game/' + $spec.Path; property = 'ADSCameraOffset.X'; before = $spec.Before; after = $spec.After; exportByteOffset = $offset; sourceSha256 = (Get-FileHash $source).Hash; outputSha256 = (Get-FileHash ($destination + '.uexp')).Hash }
+    $changes += [pscustomobject]@{ package = '/Game/' + $spec.Path; property = 'ADSCameraOffset.X'; before = $spec.Before; after = $spec.After; exportByteOffset = $offset }
 }
 $container = Join-Path $root 'ScopeFix_P.utoc'
 & tools/Invoke-VoyageBoundedTool.ps1 -Executable .tools/bin/retoc.exe -Arguments @('to-zen', $loose, $container, '--version', 'UE5_8') | Out-Null

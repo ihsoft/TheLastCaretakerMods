@@ -72,7 +72,8 @@ $verifyText = (& $exporter --verify-material-bundle $output) -join [Environment]
 if ($LASTEXITCODE -ne 0) { throw "Material-bundle validation failed; evidence: $evidence" }
 $verified = @($verifyText -split '\r?\n' | Where-Object { $_.Trim() })[-1] | ConvertFrom-Json
 if ($verified.status -cne 'verified' -or $verified.bundleName -cne $BundleName -or
-    $verified.materials -ne $Materials.Count -or (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash -cne $verified.sha256) {
+    $verified.materials -ne $Materials.Count -or -not (Test-Path -LiteralPath $output -PathType Leaf) -or
+    (Get-Item -LiteralPath $output).Length -ne [long]$verified.bytes) {
     throw 'Material-bundle validation/readback mismatch.'
 }
 [IO.File]::WriteAllText((Join-Path $evidence 'finalize.log'), $finalizeText)
@@ -87,7 +88,7 @@ try {
 foreach ($packPath in $packPaths) { Remove-Item -LiteralPath $packPath -Force }
 $result = [ordered]@{ schema = 'voyage.material-bundle-export/1'; status = 'exported'; profile = $Profile;
     materialMode = $MaterialMode; sourceTexturePolicy = 'MetadataOnly'; bundleName = $BundleName;
-    materialBundlePath = $output; sha256 = $verified.sha256; bytes = $verified.bytes; materialCount = $verified.materials;
+    materialBundlePath = $output; bytes = $verified.bytes; materialCount = $verified.materials;
     textureCount = $verified.textures; textureReferences = $verified.textureReferences;
     deduplicatedTextureReferences = $verified.deduplicatedTextureReferences; materials = $Materials;
     bundleManifestPath = (Join-Path $evidence 'bundle.json'); reportPath = (Join-Path $evidence 'bundle-report.json') }

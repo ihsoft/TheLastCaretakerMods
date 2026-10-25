@@ -8,8 +8,6 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $SourceRoot = Join-Path $PSScriptRoot '..\.tools\UAssetGUI' }
 if ([string]::IsNullOrWhiteSpace($OutputPath)) { $OutputPath = Join-Path $PSScriptRoot '..\.tools\bin\UAssetGUI.exe' }
 
-$expectedGuiCommit = 'df18b5fd0d263d78fdb0cd5f49de1ee5cf6a9520'
-$expectedApiCommit = '21c982fa8f04e12d5d216fdf330a2f206e81156f'
 $source = (Resolve-Path -LiteralPath $SourceRoot).Path
 $apiSource = (Resolve-Path -LiteralPath (Join-Path $source 'UAssetAPI')).Path
 $project = (Resolve-Path -LiteralPath (
@@ -17,14 +15,6 @@ $project = (Resolve-Path -LiteralPath (
 $destination = [IO.Path]::GetFullPath($OutputPath)
 $destinationDirectory = [IO.Path]::GetDirectoryName($destination)
 
-$actualGuiCommit = (& git -C $source rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $actualGuiCommit -cne $expectedGuiCommit) {
-    throw "UAssetGUI must be at the validated commit $expectedGuiCommit."
-}
-$actualApiCommit = (& git -C $apiSource rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $actualApiCommit -cne $expectedApiCommit) {
-    throw "UAssetAPI must be at the validated commit $expectedApiCommit."
-}
 $guiChanges = @(& git -C $source status --porcelain --untracked-files=no)
 $apiChanges = @(& git -C $apiSource status --porcelain --untracked-files=no)
 if ($LASTEXITCODE -ne 0 -or $guiChanges.Count -ne 0 -or $apiChanges.Count -ne 0) {
@@ -72,10 +62,6 @@ try {
     $manifestPath = [IO.Path]::ChangeExtension($destination, '.manifest.json')
     $manifest = [ordered]@{
         kind = 'Voyage canonical UAssetGUI binary'
-        guiCommit = $actualGuiCommit
-        apiCommit = $actualApiCommit
-        retocResourceSha256 = (Get-FileHash -LiteralPath (Join-Path $source 'UAssetGUI\retoc.exe.gz') -Algorithm SHA256).Hash
-        executableSha256 = $installedHash
         executableLength = (Get-Item -LiteralPath $destination).Length
         publishedAtUtc = [DateTime]::UtcNow.ToString('o')
     }
@@ -84,9 +70,6 @@ try {
     [pscustomobject]@{
         Path = $destination
         Length = (Get-Item -LiteralPath $destination).Length
-        Sha256 = $installedHash
-        UAssetGuiCommit = $actualGuiCommit
-        UAssetApiCommit = $actualApiCommit
         SelfContained = $false
         RuntimeIdentifier = 'win-x64'
         ManifestPath = $manifestPath

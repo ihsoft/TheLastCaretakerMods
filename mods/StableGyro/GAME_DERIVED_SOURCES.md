@@ -18,12 +18,11 @@ The public producer freshly extracts the stock cooked inputs and asserts the
 asset contracts consumed by each candidate build. Current mapping metadata
 independently revalidates the native owner and property types consumed by the
 stabilization and calibration-prevention graphs. Previously inspected access
-flags, CDO defaults and native details retain their explicit older fingerprints
+flags, CDO defaults and native details retain their explicit older game-version context
 unless independently revalidated below; they are not silently carried forward.
 
 The native calculation chain in [altitude control](ALTITUDE-CONTROL.md) was
-checked against Steam build `25982825`, UE `5.8.2`, Shipping executable SHA-256
-`08228B72D4590F9B00E2171F252D618464C2E04B785237FE728DDDBF27D3B734`.
+checked against Steam build `25982825` and UE `5.8.2`.
 Its scope is input/collective/assist/calibration, rotor-speed governor, resource
 drive, lift and base fuel request. Engine registration/thunk inspection
 identifies the governor's virtual `GetMass` query and the module's
@@ -132,8 +131,7 @@ Together, these sources establish:
   `GetObjectName` must compare the runtime UObject name, not the reflected
   property name;
 - Steam build `25982825` stock Gyro JSON
-  `BP_GyroCopter_Possessable.json` (SHA-256
-  `51B0B5156265672FCD8AA0995F2F43897A81397ABFA4461E06C57527A0AFD5BB`)
+  `BP_GyroCopter_Possessable.json`
   establishes the two inherited `VoyageModuleSocketViewComponent` mooring
   templates. Both attach to the native `VehicleMesh`, use
   `DA_Socket_MooringSmall`, `ST_Any`, Mooring resource/category,

@@ -11,16 +11,13 @@
   "uassetApiEngineVersion": "VER_UE5_8",
   "engineVersionBasis": "Reviewed Voyage UE 5.8 mapping generator and parser contract",
   "generator": "ihsoft/jmap Voyage UE 5.8 compatibility fork; canonical published binary",
-  "generatorCommit": "fad7b923d31e098d958bd35867f3ed0bedc637a2",
-  "generatorSha256": "6A56DFCA0654835160E94F3E1D83023A86DDB1C3D29356FC0C4B008B7190987D",
   "generationWorkflow": "tools/New-VoyageMappings.ps1 live-process USMAP generation with jmap --all and concurrency 128 after three stable structural GUObjectArray samples",
   "observedObjectCount": 80243,
   "mappingFile": "Voyage-0.10.0.653173.usmap",
   "mappingLength": 2429048,
-  "mappingSha256": "24ED679C5BE228E6635939494DB2F7682281250035D1980821B2A4A3E3D1E33D",
   "generatedAtUtc": "2026-10-16T20:40:33.3338369Z",
   "validation": {
-    "mappingGate": "New-VoyageMappings.ps1 completed successfully and Test-VoyageMappings.ps1 passed USMAP header, payload, fingerprint, hash, and required Voyage schema checks",
+    "mappingGate": "New-VoyageMappings.ps1 completed successfully and Test-VoyageMappings.ps1 passed USMAP header, payload, Steam build ID, and required Voyage schema checks",
     "runtime": "Read-only reflection capture from main menu; no changed-save or gameplay compatibility claim"
   },
   "revalidateWhen": "Steam build ID changes"

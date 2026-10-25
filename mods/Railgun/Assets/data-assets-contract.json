@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "assets": [
     {
       "sourceFile": "Assets/Fabricator/railgun-ammo-item.json",
@@ -27,7 +27,6 @@
   },
   "serialization": {
     "engineVersion": "5.8",
-    "mappingSha256": "1B777468894C071262FE5821DAFC1B509EFD5B8481213CC197C1B4B74177542E",
     "steamBuildId": "25956314"
   },
   "revalidateWhen": "The Steam build ID, reviewed mapping, native asset identity, required runtime references, or serialized format changes."

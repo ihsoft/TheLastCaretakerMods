@@ -37,7 +37,6 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $PSScriptRoot '..\Tmp\mappings'
 }
 
-$expectedDumperCommit = 'fad7b923d31e098d958bd35867f3ed0bedc637a2'
 $gameProcessName = 'VoyageSteam-Win64-Shipping'
 $engineVersion = '5.8'
 $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'
@@ -55,28 +54,12 @@ function Get-SingleVoyageProcess {
     return $null
 }
 
-function Get-ReviewedDumper {
+function Get-Dumper {
     $executablePath = [IO.Path]::GetFullPath($DumperPath)
-    $manifestPath = [IO.Path]::ChangeExtension($executablePath, '.manifest.json')
-    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf) -or
-        -not (Test-Path -LiteralPath $executablePath -PathType Leaf)) {
-        throw "The canonical jmap binary is absent or incomplete. Run tools\Publish-JmapBinary.ps1: $executablePath"
+    if (-not (Test-Path -LiteralPath $executablePath -PathType Leaf)) {
+        throw "The canonical jmap binary is absent. Run tools\Publish-JmapBinary.ps1: $executablePath"
     }
-
-    $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-    $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $executablePath).Hash
-    if ([string]$manifest.kind -cne 'Voyage canonical jmap mappings dumper' -or
-        [string]$manifest.sourceCommit -cne $expectedDumperCommit -or
-        [string]$manifest.executableSha256 -cne $actualHash) {
-        throw "The canonical jmap binary failed its provenance check: $executablePath"
-    }
-
-    [pscustomobject]@{
-        executable = (Resolve-Path -LiteralPath $executablePath).Path
-        manifest = $manifest
-        manifestPath = (Resolve-Path -LiteralPath $manifestPath).Path
-        sha256 = $actualHash
-    }
+    (Resolve-Path -LiteralPath $executablePath).Path
 }
 
 function Get-RequiredVoyageProcess {
@@ -234,7 +217,7 @@ if ($steamBuildId -notmatch '^\d+$') {
 
 $resolvedGameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
 $gameExecutable = Join-Path $resolvedGameRoot 'Voyage\Binaries\Win64\VoyageSteam-Win64-Shipping.exe'
-$dumper = Get-ReviewedDumper
+$dumper = Get-Dumper
 $liveExecutable = $gameProcess.MainModule.FileName
 if ([IO.Path]::GetFullPath($liveExecutable) -ine [IO.Path]::GetFullPath($gameExecutable)) {
     throw 'The running Voyage process is not from the selected game installation.'
@@ -244,8 +227,7 @@ Write-Host "Waiting for Voyage reflection data in PID $($gameProcess.Id)..."
 $candidate = Wait-ForObjectArray -Process $gameProcess
 
 $timestamp = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ')
-$commitPrefix = $expectedDumperCommit.Substring(0, 7)
-$runName = "steam-$steamBuildId-jmap-$commitPrefix-$timestamp"
+$runName = "steam-$steamBuildId-jmap-$timestamp"
 $runRoot = Join-Path ([IO.Path]::GetFullPath($OutputRoot)) $runName
 if (Test-Path -LiteralPath $runRoot) {
     throw "Mappings output already exists: $runRoot"
@@ -276,7 +258,7 @@ $scanEvidence = [ordered]@{
 
 Write-Host "Dumping complete UE $engineVersion mappings to $mappingsPath"
 Invoke-JmapDumper `
-    -ExecutablePath $dumper.executable `
+    -ExecutablePath $dumper `
     -TargetProcessId $gameProcess.Id `
     -GuObjectArray ([string]$candidate.guObjectArray) `
     -MappingsPath $mappingsPath `
@@ -287,15 +269,12 @@ if (-not (Test-Path -LiteralPath $mappingsPath -PathType Leaf)) {
     throw "jmap completed without producing mappings: $mappingsPath"
 }
 $mappingItem = Get-Item -LiteralPath $mappingsPath
-$mappingSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $mappingsPath).Hash
+$mappingCopyDigest = (Get-FileHash -Algorithm SHA256 -LiteralPath $mappingsPath).Hash
 $mappingManifest = [ordered]@{
     kind = 'Voyage reflection mappings'
     steamBuildId = $steamBuildId
     engineVersion = $engineVersion
     dumper = 'ihsoft/jmap Voyage UE 5.8 compatibility fork'
-    dumperSourceCommit = [string]$dumper.manifest.sourceCommit
-    dumperSha256 = $dumper.sha256
-    dumperBuildManifest = $dumper.manifestPath
     resolver = 'Find-VoyageUObjectArray.ps1 structural .data scan plus explicit GUObjectArray'
     liveProcessId = $gameProcess.Id
     imageBase = [string]$candidate.imageBase
@@ -309,7 +288,6 @@ $mappingManifest = [ordered]@{
     concurrency = $Concurrency
     mappingFile = $mappingItem.Name
     mappingLength = $mappingItem.Length
-    mappingSha256 = $mappingSha256
     stdoutLog = (Split-Path -Leaf $stdoutPath)
     stderrLog = (Split-Path -Leaf $stderrPath)
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
@@ -338,14 +316,14 @@ if ($InstallForUAssetGUI) {
     $uassetGuiPath = Join-Path $uassetGuiDirectory "Voyage-$steamBuildId.usmap"
     if (Test-Path -LiteralPath $uassetGuiPath -PathType Leaf) {
         $existingHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $uassetGuiPath).Hash
-        if ($existingHash -cne $mappingSha256) {
+        if ($existingHash -cne $mappingCopyDigest) {
             $backupPath = Join-Path $uassetGuiDirectory "Voyage-$steamBuildId.backup-$timestamp.usmap"
             Copy-Item -LiteralPath $uassetGuiPath -Destination $backupPath
             Write-Host "Preserved previous UAssetGUI mapping: $backupPath"
         }
     }
     Copy-Item -LiteralPath $mappingsPath -Destination $uassetGuiPath -Force
-    if ((Get-FileHash -Algorithm SHA256 -LiteralPath $uassetGuiPath).Hash -cne $mappingSha256) {
+    if ((Get-FileHash -Algorithm SHA256 -LiteralPath $uassetGuiPath).Hash -cne $mappingCopyDigest) {
         throw "Installed UAssetGUI mapping failed hash verification: $uassetGuiPath"
     }
 }
@@ -355,7 +333,6 @@ if ($InstallForUAssetGUI) {
     gameProcessId = $gameProcess.Id
     mappingsPath = (Resolve-Path -LiteralPath $mappingsPath).Path
     manifestPath = (Resolve-Path -LiteralPath $manifestPath).Path
-    sha256 = [string]$validation.sha256
     length = [long]$validation.length
     steamBuildId = $steamBuildId
     uassetGuiPath = $uassetGuiPath

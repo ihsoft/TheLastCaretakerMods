@@ -46,8 +46,8 @@ Do not rename or rebuild an already retained historical package merely to make
 its old name conform; the canonical rule applies when creating new candidates.
 If the user explicitly changes the target release number after a game test,
 keep the tested ZIP bytes and original build manifest. Rename the ZIP file to
-the canonical name for the actual target without recompressing it, and verify
-that its hash is unchanged. Name the retained release directory for that target
+the canonical name for the actual target without recompressing it. Name the
+retained release directory for that target
 and check whether any version-bearing content inside the ZIP makes the change
 unsafe. Do not leave a local selection under the old release number or rebuild
 solely to change a filename.
@@ -59,7 +59,7 @@ must deliver every game-consumed payload file to the mod's required destination.
 Do not wrap the payload in a release/version folder. Use the shared archive
 producer for a standard IoStore triplet, including INI, content-plugin, and
 LogicMods cases. It selects the standard layout and verifies the entry list,
-file hashes, and any required override JSON. Its successful result
+payload readback, and any required override JSON. Its successful result
 satisfies the structural ZIP check on the normal path. Consult
 [Vortex layouts](vortex-release-archive-knowledge.md) when defining a
 nonstandard destination or investigating an unexpected result; do not unpack
@@ -107,7 +107,7 @@ owning documented entry point, test that exact ZIP in the game, keep that
 selected candidate under `Tmp/<Mod>/`, then publish that same ZIP. Use the
 documented producer and installer commands; do not add
 a separate game-version or installation-status preflight. The producer and
-installer own their process, fingerprint, and installed-file checks. A running
+installer own their game identification and installed-file checks. A running
 game is a reported blocker for a phase that needs it closed, not a reason to
 inspect game contracts manually.
 
@@ -131,8 +131,9 @@ it is selected for publication. Prefer a meaningful
 but do not move or rebuild an existing candidate merely to rename it. Changing
 the pin is metadata work; it must not silently
 replace the tested package. Record the game-test result separately from build
-provenance: the candidate manifest must keep the source commit, game build ID,
-and ZIP hash from the original build. Do not rebuild or regenerate its manifest
+provenance: the candidate manifest must keep the game build ID and the one
+allowed final-ZIP digest from the original build under the shared
+[hash rule](hash-usage-rule.md). Do not rebuild or regenerate its manifest
 merely to update a tested-game version or other post-test metadata. Selection
 does not promote the candidate into `artifacts/`: keep the exact ZIP and its
 original manifest in `Tmp/` until that ZIP is either published or rejected.
@@ -172,8 +173,8 @@ log, or gameplay-test record. Historical noncanonical directories may predate
 this contract; audit their owner and consumers rather than inferring publication
 from location alone. Every unpublished build stays in `Tmp/<Mod>/`, including a
 game-tested candidate selected for the next release. Promote the exact ZIP only
-after publication is confirmed. Normal manifest, hash, and supported-game
-version checks still apply when reinstalling a retained package.
+after publication is confirmed. Normal archive-identity, installation-integrity,
+and supported-game version checks still apply when reinstalling a retained package.
 
 `Voyage/Content/Paks` and `LogicMods` contain only files consumed by the game.
 Never copy a ZIP into either directory, including for a temporary build. A
@@ -199,6 +200,6 @@ needed to resolve that failure.
 
 Check that the game is closed immediately before changing installed files,
 backup existing targets, install from a validated manifest, read back every
-installed hash, and restore or stop with explicit recovery evidence on failure.
+installed file, and restore or stop with explicit recovery evidence on failure.
 Follow the [shared installer contract](../tools/release-installation.md#release-installation)
 and any owning mod's additional layout or settings contract.

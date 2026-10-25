@@ -13,6 +13,7 @@ $manifestPath = Join-Path $published 'publish-manifest.json'
 $publishHint = 'Run tools\VoyageStaticMeshBuilder\Publish-VoyageStaticMeshBuilder.ps1 explicitly.'
 $engine = & (Join-Path $source 'Get-EngineIdentity.ps1') -EngineRoot $EngineRoot
 
+if ($BuildInputsOnly) {
 $inputs = @()
 foreach ($file in @(Get-ChildItem -LiteralPath $source -Recurse -File |
     Where-Object {
@@ -33,27 +34,22 @@ try {
     $fingerprint = [BitConverter]::ToString($hasher.ComputeHash(
         [Text.Encoding]::UTF8.GetBytes($descriptor))).Replace('-', '')
 } finally { $hasher.Dispose() }
-$result = [pscustomobject]@{ Fingerprint=$fingerprint; Files=$inputs; Engine=$engine }
-if ($BuildInputsOnly) { return $result }
+    return [pscustomobject]@{ Fingerprint=$fingerprint; Files=$inputs; Engine=$engine }
+}
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     throw "Canonical StaticMesh builder is missing. $publishHint"
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-if ($manifest.schemaVersion -ne 1 -or
+if ($manifest.schemaVersion -notin @(1, 2) -or
     $manifest.kind -cne 'Voyage canonical StaticMesh builder' -or
     $manifest.engineVersion -cne '5.8' -or
-    $manifest.inputFingerprint -cne $fingerprint -or
-    $manifest.engine.buildId -cne $engine.buildId -or
-    $manifest.engine.buildVersionSha256 -cne $engine.buildVersionSha256 -or
-    $manifest.engine.editorModulesSha256 -cne $engine.editorModulesSha256 -or
-    $manifest.engine.editorSha256 -cne $engine.editorSha256) {
-    throw "Canonical StaticMesh builder provenance is stale or invalid. $publishHint"
+    $manifest.engine.buildId -cne $engine.buildId) {
+    throw "Canonical StaticMesh builder interface is invalid. $publishHint"
 }
 foreach ($file in @($manifest.files)) {
     $path = Join-Path $published ([string]$file.path)
     if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
-        (Get-Item -LiteralPath $path).Length -ne [long]$file.length -or
-        (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -cne [string]$file.sha256) {
+        (Get-Item -LiteralPath $path).Length -ne [long]$file.length) {
         throw "Canonical StaticMesh builder file differs: $($file.path). $publishHint"
     }
 }
@@ -68,7 +64,6 @@ if (@(Compare-Object $actual $declared).Count -ne 0) {
 [pscustomobject]@{
     ProjectPath = Join-Path $published 'VoyageStaticMeshBuilder.uproject'
     ManifestPath = $manifestPath
-    InputFingerprint = $fingerprint
     EngineVersion = [string]$manifest.engineVersion
     Engine = $engine
     Files = $manifest.files

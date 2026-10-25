@@ -44,7 +44,6 @@ $cooked = (Resolve-Path -LiteralPath $CookedRoot).Path
 $originalDirectory = (Resolve-Path -LiteralPath $OriginalForkliftDirectory).Path
 $scriptObjectsPath = (Resolve-Path -LiteralPath $ScriptObjects).Path
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
-$retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $retocPath).Hash
 $output = [IO.Path]::GetFullPath($OutputRoot)
 if (Test-Path -LiteralPath $output) {
     throw "OutputRoot already exists: $output"
@@ -88,8 +87,7 @@ function Get-ExtractionEvidence {
     if ([string]$manifest.filter -cne $ExpectedFilter) {
         throw "$Label extraction used filter '$($manifest.filter)'; expected '$ExpectedFilter'."
     }
-    if ([string]$manifest.retocEngineVersion -cne $sourceRetocEngineVersion -or
-        [string]$manifest.retocSha256 -cne $retocSha256) {
+    if ([string]$manifest.retocEngineVersion -cne $sourceRetocEngineVersion) {
         throw "$Label extraction does not match the selected retoc compatibility contract."
     }
     if ([string]$manifest.steamBuildId -cne $ActualSteamBuildId) {
@@ -302,6 +300,5 @@ foreach ($path in $outputs) {
 }
 
 Write-Host 'Autonomous DonkLift control package built successfully.'
-Get-FileHash -Algorithm SHA256 -LiteralPath $outputs |
-    Select-Object Path, Hash |
-    Format-Table -AutoSize
+$outputs | ForEach-Object { Get-Item -LiteralPath $_ } |
+    Select-Object FullName, Length | Format-Table -AutoSize

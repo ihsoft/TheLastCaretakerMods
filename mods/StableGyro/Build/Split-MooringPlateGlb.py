@@ -5,7 +5,6 @@ glTF operators. The script selects each disconnected side, preserves all faces,
 and restores the source corner normals in the exported NORMAL accessor.
 """
 import argparse
-import hashlib
 import json
 import math
 from pathlib import Path
@@ -18,10 +17,6 @@ import bpy
 def require(value, message):
     if not value:
         raise RuntimeError(message)
-
-
-def sha256(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest().upper()
 
 
 def rounded(values):
@@ -233,11 +228,6 @@ def triangle_records(obj):
     return sorted(records)
 
 
-def records_hash(records):
-    payload = json.dumps(records, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest().upper()
-
-
 def keep_side(source, name, positive_y):
     source_mesh = source.data
     # Voyage's exported UE coordinates import into Blender as (UE.X, -UE.Y, UE.Z).
@@ -316,16 +306,16 @@ def add_material_binding_metadata(path):
     encoded = json.dumps(document, separators=(",", ":")).encode("utf-8")
     encoded += b" " * ((4 - len(encoded) % 4) % 4)
     preserved_chunks = data[20 + json_size:]
-    preserved_sha256 = hashlib.sha256(preserved_chunks).hexdigest().upper()
+    preserved_chunks_before = preserved_chunks
     rebuilt = (struct.pack("<4sII", b"glTF", 2, 20 + len(encoded) + len(preserved_chunks)) +
                struct.pack("<II", len(encoded), 0x4E4F534A) + encoded + preserved_chunks)
     path.write_bytes(rebuilt)
-    require(hashlib.sha256(rebuilt[20 + len(encoded):]).hexdigest().upper() == preserved_sha256,
+    require(rebuilt[20 + len(encoded):] == preserved_chunks_before,
             "Material metadata update changed non-JSON GLB chunks")
     return {
         "slot": "Gyrocopter_Seat_p1",
         "primitiveMaterialIndex": 0,
-        "preservedNonJsonChunksSha256": preserved_sha256,
+        "preservedNonJsonChunks": True,
     }
 
 
@@ -431,7 +421,6 @@ def main():
         "method": "Blender built-in glTF import/export with disconnected-side vertex deletion",
         "blender": bpy.app.version_string,
         "source": str(source),
-        "sourceSha256": sha256(source),
         "crossingTriangles": crossing,
         "manualFacesRemoved": source_evidence["triangles"] -
                               positive_evidence["triangles"] - negative_evidence["triangles"],
@@ -439,13 +428,12 @@ def main():
         "exportedRawNormalTrianglesRestored": restored_output_normals,
         "sourceMesh": source_evidence,
         "sourceAttributes": source_attributes,
-        "sourceTrianglePositionUvSha256": records_hash(source_records),
-        "splitTrianglePositionUvSha256": records_hash(split_records),
-        "finalReadbackTrianglePositionUvSha256": records_hash(final_records),
+        "splitTrianglePositionUvPreserved": split_records == source_records,
+        "finalReadbackTrianglePositionUvPreserved": final_records == source_records,
         "positiveY": {**positive_evidence, "readback": positive_readback,
-                      "path": str(args.positive_y), "sha256": sha256(args.positive_y)},
+                      "path": str(args.positive_y)},
         "negativeY": {**negative_evidence, "readback": negative_readback,
-                      "path": str(args.negative_y), "sha256": sha256(args.negative_y)},
+                      "path": str(args.negative_y)},
         "originPreserved": True,
         "materialExport": "PLACEHOLDER",
         "materialBindings": material_bindings,

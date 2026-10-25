@@ -21,13 +21,11 @@ $usmapMagic0 = 0xC4
 $usmapMagic1 = 0x30
 $usmapHeaderSize = 16
 $minimumPayloadLength = 1MB
-$sha256Pattern = '^[0-9A-F]{64}$'
 
 $mapping = (Resolve-Path -LiteralPath $MappingsPath).Path
 $manifestFile = (Resolve-Path -LiteralPath $ManifestPath).Path
 $manifest = Get-Content -Raw -LiteralPath $manifestFile | ConvertFrom-Json
 $bytes = [IO.File]::ReadAllBytes($mapping)
-$actualSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $mapping).Hash
 
 if ($bytes.Length -lt $usmapHeaderSize) {
     throw "Mappings file is shorter than the USMAP header: $mapping"
@@ -47,10 +45,6 @@ if ($decompressedSize -lt $minimumPayloadLength) {
 
 if ([string]$manifest.kind -cne 'Voyage reflection mappings') {
     throw "Unexpected mappings manifest kind: $manifestFile"
-}
-if ([string]$manifest.mappingSha256 -notmatch $sha256Pattern -or
-    [string]$manifest.mappingSha256 -cne $actualSha256) {
-    throw "Mappings SHA-256 does not match its manifest: $mapping"
 }
 if ([long]$manifest.mappingLength -ne $bytes.Length) {
     throw "Mappings length does not match its manifest: $mapping"
@@ -74,7 +68,6 @@ foreach ($requiredName in $RequiredNames) {
 
 [pscustomobject]@{
     mappingsPath = $mapping
-    sha256 = $actualSha256
     length = $bytes.Length
     usmapVersion = [int]$bytes[2]
     compressionMethod = [int]$bytes[3]

@@ -147,7 +147,7 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   packaging, verification, ZIP creation, and optional -Install.
 - `-Install` must preserve current values and comments in an existing
   `StableGyro.ini`, remove explicitly retired keys, append missing canonical
-  keys, and hash-check the resulting settings file. Create it from canonical
+  keys, and read back the resulting settings file. Create it from canonical
   defaults only when it does not exist.
 - Treat GAME_DERIVED_SOURCES.md as source provenance, not a mandatory manual
   audit before a candidate build. On a pin mismatch retry the public producer

@@ -48,9 +48,8 @@ The `_P` suffix is not a universal DML requirement. Apply the repository's
 stock-package override suffix rule when a container actually overrides stock
 packages; additive-only mods do not need it for that reason.
 
-This contract is bound to the DML v0.6 payload whose `dml_P.utoc` SHA-256 is
-`8DDE713A29CA21227E91757DFE64A9928135C3AD1C549E207EAED8BF412B7A2F`.
-Its `CM_DMG` implements the `DML add` command and virtual class construction;
+This contract was observed with DML v0.6. Its `CM_DMG` implements the `DML add`
+command and virtual class construction;
 the widget's physical discovery helper is a separate path.
 
 ## Additive content-plugin registries
@@ -250,6 +249,7 @@ reader/writer consistency, not gameplay compatibility.
   and IDs, exported imports/exports/references and properties, Blueprint
   pseudocode, and sorted retoc semantic inventory. Do not discard a differing
   field as volatile until the normalization contract proves it. Reserve exact
-  hashes for a prepared release artifact versus its installed or archived copy.
+  digests for the final published ZIP and for temporary copy-integrity checks
+  during installation or retention.
   Any unexplained semantic difference or new compatibility claim still requires
   a real-game canary; the normalization contract itself remains active research.

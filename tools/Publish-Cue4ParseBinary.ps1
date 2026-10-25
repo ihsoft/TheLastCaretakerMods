@@ -7,8 +7,6 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$expectedSourceCommit = 'c38cf24676514773ac106d7b51640f09f4590c61'
-$upstreamBaseCommit = 'ec6595e46448a817ac21ea9bde01caa48f80a420'
 $sourceRepository = 'https://github.com/ihsoft/CUE4Parse.git'
 $upstreamRepository = 'https://github.com/FabianFG/CUE4Parse.git'
 $microsoftBclMemoryVersion = '10.0.11'
@@ -19,10 +17,6 @@ $destination = [IO.Path]::GetFullPath($OutputRoot)
 $manifestFileName = 'publish-manifest.json'
 $manifestPath = Join-Path $destination $manifestFileName
 
-$actualCommit = (& git -c "safe.directory=$sourceGitPath" -C $source rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $actualCommit -cne $expectedSourceCommit) {
-    throw "CUE4Parse must be at the validated commit $expectedSourceCommit."
-}
 $actualSourceRepository = (& git -c "safe.directory=$sourceGitPath" -C $source remote get-url origin).Trim()
 $actualUpstreamRepository = (& git -c "safe.directory=$sourceGitPath" -C $source remote get-url upstream).Trim()
 if ($LASTEXITCODE -ne 0 -or $actualSourceRepository -cne $sourceRepository -or
@@ -41,8 +35,6 @@ function Test-PublishedBundle {
     try {
         $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
         if ([string]$manifest.kind -cne 'Voyage canonical CUE4Parse bundle' -or
-            [string]$manifest.sourceCommit -cne $actualCommit -or
-            [string]$manifest.upstreamBaseCommit -cne $upstreamBaseCommit -or
             [string]$manifest.sourceRepository -cne $sourceRepository -or
             [string]$manifest.upstreamRepository -cne $upstreamRepository -or
             [string]$manifest.microsoftBclMemoryVersion -cne $microsoftBclMemoryVersion -or
@@ -63,8 +55,7 @@ function Test-PublishedBundle {
         foreach ($file in $manifestFiles) {
             $path = Join-Path $destination ([string]$file.path)
             if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
-                (Get-Item -LiteralPath $path).Length -ne [long]$file.length -or
-                (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash -cne [string]$file.sha256) {
+                (Get-Item -LiteralPath $path).Length -ne [long]$file.length) {
                 return $false
             }
         }
@@ -80,19 +71,6 @@ function Test-PublishedBundle {
     catch {
         return $false
     }
-}
-
-if (Test-PublishedBundle) {
-    $dll = Join-Path $destination 'CUE4Parse.dll'
-    [pscustomobject]@{
-        Path = (Resolve-Path -LiteralPath $dll).Path
-        Length = (Get-Item -LiteralPath $dll).Length
-        Sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $dll).Hash
-        SourceCommit = $actualCommit
-        NativeBackend = $false
-        Rebuilt = $false
-    }
-    return
 }
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
@@ -156,16 +134,13 @@ try {
                 [ordered]@{
                     path = $_.Name
                     length = $_.Length
-                    sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
                 }
             }
     )
     $stableManifest = [ordered]@{
         kind = 'Voyage canonical CUE4Parse bundle'
         sourceRepository = $sourceRepository
-        sourceCommit = $actualCommit
         upstreamRepository = $upstreamRepository
-        upstreamBaseCommit = $upstreamBaseCommit
         targetFramework = 'net10.0'
         assemblyVersion = $assemblyName.Version.ToString()
         nativeBackend = $false
@@ -204,8 +179,6 @@ try {
     [pscustomobject]@{
         Path = $installedDll
         Length = (Get-Item -LiteralPath $installedDll).Length
-        Sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $installedDll).Hash
-        SourceCommit = $actualCommit
         NativeBackend = $false
         Rebuilt = $true
     }

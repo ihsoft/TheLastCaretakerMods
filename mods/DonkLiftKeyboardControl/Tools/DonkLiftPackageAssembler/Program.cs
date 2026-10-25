@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using System.Text.Json;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
@@ -109,9 +108,9 @@ internal static class Program
             var report = new
             {
                 schemaVersion = 1,
-                stock = new { path = Path.GetFullPath(stockPath), sha256 = Hash(stockPath), exports = originalExportCount, imports = originalImportCount, names = originalNames.Length, rawExportCount = stockRawExports.Length, binaryEquality = true },
-                donor = new { path = Path.GetFullPath(donorPath), sha256 = Hash(donorPath), functionPayloadBinaryEquality = true },
-                output = new { path = Path.GetFullPath(outputPath), sha256 = Hash(outputPath), uexpSha256 = Hash(Path.ChangeExtension(outputPath, "uexp")) },
+                stock = new { path = Path.GetFullPath(stockPath), length = new FileInfo(stockPath).Length, exports = originalExportCount, imports = originalImportCount, names = originalNames.Length, rawExportCount = stockRawExports.Length, binaryEquality = true },
+                donor = new { path = Path.GetFullPath(donorPath), length = new FileInfo(donorPath).Length, functionPayloadBinaryEquality = true },
+                output = new { path = Path.GetFullPath(outputPath), length = new FileInfo(outputPath).Length, uexpLength = new FileInfo(Path.ChangeExtension(outputPath, "uexp")).Length },
                 originalPrefix = new { exportIdentityPreserved = true, nameOrderPreserved = true, unchangedExportPayloadsBinaryEqual = true },
                 merged = new
                 {
@@ -253,7 +252,6 @@ internal static class Program
         Buffer.BlockCopy(payload, 0, combined, header.Length, payload.Length);
         return combined;
     }
-    private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidDataException(message); }
 
     private static Dictionary<string, string> ParseOptions(string[] args)

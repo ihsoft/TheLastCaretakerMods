@@ -51,7 +51,6 @@ if ($editorEngineVersion -cne $expectedEditorEngineVersion) {
     throw "Unreal Editor version must be exactly $expectedEditorEngineVersion; found $editorEngineVersion."
 }
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
-$retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $retocPath).Hash
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot '..\..'))
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $repoRoot (
@@ -92,7 +91,6 @@ $extractionManifest = Get-Content -LiteralPath $manifests[0].FullName -Raw | Con
 if ([string]$extractionManifest.filter -cne $expectedFilter -or
     $extractionManifest.allowAdditionalContainers -ne $false -or
     [string]$extractionManifest.retocEngineVersion -cne $retocCompatibilityVersion -or
-    [string]$extractionManifest.retocSha256 -cne $retocSha256 -or
     [string]$extractionManifest.steamBuildId -cne [string]$fingerprint.steam.buildId) {
     throw 'Original Boat HUD extraction does not satisfy the clean current-build gate.'
 }
@@ -423,10 +421,6 @@ foreach ($containerFile in $containerFiles) {
         throw "Expected container file was not produced: $containerFile"
     }
 }
-$containerHashes = @(
-    Get-FileHash -Algorithm SHA256 -LiteralPath $containerFiles |
-        ForEach-Object { [ordered]@{ path = $_.Path; sha256 = $_.Hash } }
-)
 $buildManifest = [ordered]@{
     kind = 'BoatHUDTotalResources mod'
     mountEvent = 'UUserWidget::PreConstruct override'
@@ -455,14 +449,13 @@ $buildManifest = [ordered]@{
     engineVersion = $expectedGameEngineVersion
     editorEngineVersion = $editorEngineVersion
     retocCompatibilityVersion = $retocCompatibilityVersion
-    retocSha256 = $retocSha256
     legacyImportPackageNameLayout = 'SerializedForFilteredCookedPackages'
     cookStorage = $cookStorage
     steamBuildId = [string]$fingerprint.steam.buildId
     ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
     originalExtractionManifest = $manifests[0].FullName
-    originalAssetSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $originalUassets[0].FullName).Hash
-    containerFiles = $containerHashes
+    originalAsset = $originalUassets[0].FullName
+    containerFiles = @($containerFiles)
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
 [IO.File]::WriteAllText(

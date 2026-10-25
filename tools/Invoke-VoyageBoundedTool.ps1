@@ -18,7 +18,6 @@ if (-not (Test-Path -LiteralPath $exe -PathType Leaf) -or [IO.Path]::GetExtensio
     throw 'Select one executable .exe, not a script or shell command string.'
 }
 $helper = Join-Path $PSScriptRoot 'BoundedProcess\WindowsJobRunner.cs'
-$helperHash = (Get-FileHash -LiteralPath $helper -Algorithm SHA256).Hash
 if (-not ('Voyage.Tools.WindowsJobRunner' -as [type])) {
     Add-Type -Path $helper
     [AppDomain]::CurrentDomain.SetData('VoyageJobRunnerHash', $helperHash)
@@ -51,10 +50,9 @@ $stderr = Join-Path $run 'stderr.log'
 $reportPath = Join-Path $run 'result.json'
 $report = [ordered]@{
     schemaVersion = 1; status = 'launch-failed'; executable = $exe
-    executableSha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
     arguments = @($Arguments); workingDirectory = $directory
     memoryLimitBytes = [long]$MemoryLimitMB * 1MB; timeoutSeconds = $TimeoutSeconds
-    runnerSourceSha256 = $helperHash; startedAtUtc = [DateTime]::UtcNow.ToString('o')
+    startedAtUtc = [DateTime]::UtcNow.ToString('o')
     stdoutPath = $stdout; stderrPath = $stderr; reportPath = $reportPath
 }
 try {

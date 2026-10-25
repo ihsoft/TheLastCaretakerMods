@@ -86,9 +86,9 @@ foreach ($mode in @('unchanged', 'obsolete-hint', 'changed')) {
 if (((PayloadHashes $inputPath) -join '|') -cne $before) { throw 'Source changed during the test.' }
 $result = [pscustomobject]@{
     status = 'passed'; engineVersion = $EngineVersion; cases = $cases
-    guiSha256 = (Get-FileHash -LiteralPath $gui -Algorithm SHA256).Hash
-    mappingSha256 = (Get-FileHash -LiteralPath $mappingPath -Algorithm SHA256).Hash
-    sourcePayloadHashes = $before; reportPath = (Join-Path $run 'summary.json')
+    guiPath = $gui
+    mappingPath = $mappingPath
+    reportPath = (Join-Path $run 'summary.json')
 }
 [IO.File]::WriteAllText($result.reportPath, ($result | ConvertTo-Json -Depth 8))
 $result

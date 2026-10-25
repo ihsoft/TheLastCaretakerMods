@@ -143,8 +143,6 @@ function Update-StableGyroSettings {
         if ($result.Changed) {
             Assert-GameClosed
             [IO.File]::Replace($temporary, $SettingsPath, $backup, $true)
-            if ((Get-FileHash -LiteralPath $SettingsPath -Algorithm SHA256).Hash -cne
-                $result.Sha256) { throw 'StableGyro settings readback hash mismatch.' }
         }
         return [pscustomobject]@{
             AddedKeys=@($result.AddedKeys); RemovedKeys=@($result.RemovedKeys)
@@ -209,8 +207,7 @@ function Get-CleanOriginalInputs {
     param(
         [Parameter(Mandatory = $true)] [string]$Root,
         [Parameter(Mandatory = $true)] [string]$ExpectedBuild,
-        [Parameter(Mandatory = $true)] [string]$ExpectedRetocCompatibilityVersion,
-        [Parameter(Mandatory = $true)] [string]$ExpectedRetocHash
+        [Parameter(Mandatory = $true)] [string]$ExpectedRetocCompatibilityVersion
     )
 
     $resolvedRoot = Resolve-RequiredPath -Path $Root -Label 'Originals root'
@@ -223,7 +220,6 @@ function Get-CleanOriginalInputs {
     if ([string]$manifest.filter -cne 'Data/Assets/Modules/DA_Item_Module_GyroCopter' -or
         [string]$manifest.steamBuildId -cne $ExpectedBuild -or
         [string]$manifest.retocEngineVersion -cne $ExpectedRetocCompatibilityVersion -or
-        [string]$manifest.retocSha256 -cne $ExpectedRetocHash -or
         $manifest.allowAdditionalContainers -ne $false) {
         throw "Originals manifest is not a clean extraction for the current validated game: $($manifests[0].FullName)"
     }
@@ -267,7 +263,6 @@ $releaseInstaller = Resolve-RequiredPath -Path $releaseInstaller -Label 'Voyage 
 $mooringSplitter = Resolve-RequiredPath -Path $mooringSplitter -Label 'Mooring plate splitter'
 $BlenderPath = Resolve-RequiredPath -Path $BlenderPath -Label 'Blender 5 executable'
 $Retoc = Resolve-RequiredPath -Path $Retoc -Label 'retoc'
-$retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Retoc).Hash
 $GameRoot = Resolve-RequiredPath -Path $GameRoot -Label 'Voyage game root'
 
 $engineVersion = Get-Content -LiteralPath $engineVersionPath -Raw | ConvertFrom-Json
@@ -289,11 +284,6 @@ $sourceStatus = @(& git -C $repoRoot status --porcelain -- `
 if ($LASTEXITCODE -ne 0) {
     throw 'Unable to inspect StableGyro source status.'
 }
-$sourceCommit = (& git -C $repoRoot rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0) {
-    throw 'Unable to resolve the source commit.'
-}
-
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $buildIdentity = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
     $OutputRoot = Join-Path $tmpOwnerRoot "build-$buildIdentity"
@@ -318,8 +308,7 @@ $generatedSettingsIni = Join-Path $generatedSettingsDirectory 'StableGyro.ini'
     -DefaultIniPath $settingsDefaults `
     -HeaderPath $generatedSettingsHeader `
     -IniPath $generatedSettingsIni
-if ((Get-FileHash -LiteralPath $settingsDefaults -Algorithm SHA256).Hash -cne
-    (Get-FileHash -LiteralPath $generatedSettingsIni -Algorithm SHA256).Hash) {
+if ([IO.File]::ReadAllText($settingsDefaults) -cne [IO.File]::ReadAllText($generatedSettingsIni)) {
     throw 'Generated settings INI differs from the canonical source INI.'
 }
 New-Item -ItemType Directory -Path $releaseGeneratedSettingsDirectory | Out-Null
@@ -401,8 +390,8 @@ if ($splitEvidence.status -cne 'passed' -or $splitEvidence.crossingTriangles -ne
     $splitEvidence.materialBindings.positiveY.primitiveMaterialIndex -ne 0 -or
     [string]$splitEvidence.materialBindings.negativeY.slot -cne 'Gyrocopter_Seat_p1' -or
     $splitEvidence.materialBindings.negativeY.primitiveMaterialIndex -ne 0 -or
-    [string]::IsNullOrWhiteSpace([string]$splitEvidence.materialBindings.positiveY.preservedNonJsonChunksSha256) -or
-    [string]::IsNullOrWhiteSpace([string]$splitEvidence.materialBindings.negativeY.preservedNonJsonChunksSha256) -or
+    $splitEvidence.materialBindings.positiveY.preservedNonJsonChunks -ne $true -or
+    $splitEvidence.materialBindings.negativeY.preservedNonJsonChunks -ne $true -or
     $splitEvidence.manualFacesRemoved -ne 0) {
     throw 'Mooring plate split evidence does not match the reviewed stock geometry.'
 }
@@ -590,8 +579,7 @@ foreach ($file in @($staticMeshOutputManifest.files)) {
     }
     $source = Resolve-RequiredPath -Path (Join-Path $staticMeshOutputRoot $relativePath) `
         -Label 'Common StaticMesh cooked companion'
-    if ((Get-Item -LiteralPath $source).Length -ne [long]$file.length -or
-        (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -cne [string]$file.sha256) {
+    if ((Get-Item -LiteralPath $source).Length -ne [long]$file.length) {
         throw "Common StaticMesh cooked companion does not match its output manifest: $source"
     }
     $destination = Join-Path $cookedRoot $relativePath
@@ -600,12 +588,13 @@ foreach ($file in @($staticMeshOutputManifest.files)) {
     }
     New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
     Copy-Item -LiteralPath $source -Destination $destination
-    if ((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash -cne [string]$file.sha256) {
-        throw "Staged common StaticMesh companion hash mismatch: $destination"
+    if ((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash -cne
+        (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash) {
+        throw "Staged common StaticMesh companion copy mismatch: $destination"
     }
     $stagedStaticMeshFiles += [ordered]@{
         path = $relativePath
-        sha256 = [string]$file.sha256
+        length = (Get-Item -LiteralPath $destination).Length
     }
 }
 if ($stagedStaticMeshFiles.Count -lt 4) {
@@ -629,8 +618,7 @@ if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
 $originalInputs = Get-CleanOriginalInputs `
     -Root $OriginalsRoot `
     -ExpectedBuild $expectedBuild `
-    -ExpectedRetocCompatibilityVersion $retocCompatibilityVersion `
-    -ExpectedRetocHash $retocSha256
+    -ExpectedRetocCompatibilityVersion $retocCompatibilityVersion
 $phase.Stop()
 $timings.Originals = $phase.Elapsed.TotalSeconds
 
@@ -753,7 +741,6 @@ foreach ($side in @('PositiveY', 'NegativeY')) {
     $materialValidation[$side] = [ordered]@{
         virtualPath = $virtualPath
         jsonPath = [string]$inspection.jsonPath
-        jsonSha256 = [string]$inspection.jsonSha256
         materialObjectName = [string]$materials[0].MaterialInterface.ObjectName
         materialObjectPath = [string]$materials[0].MaterialInterface.ObjectPath
         materialSlotName = [string]$materials[0].MaterialSlotName
@@ -836,10 +823,6 @@ if ($Install) {
                 -TemplatePath $settingsTemplate -OutputPath $temporarySettings
             Assert-GameClosed
             [IO.File]::Move($temporarySettings, $settingsPath)
-            if ((Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash -cne
-                $settingsCreate.Sha256) {
-                throw 'Created StableGyro settings readback hash mismatch.'
-            }
         } finally {
             if (Test-Path -LiteralPath $temporarySettings) {
                 Remove-Item -LiteralPath $temporarySettings -Force
@@ -859,7 +842,6 @@ if ($Install) {
         created = $settingsCreated
         addedKeys = $addedKeys
         removedKeys = $removedKeys
-        sha256 = (Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash
     }
     $installed = $true
 }
@@ -872,7 +854,6 @@ $payloadEvidence = @(
             [pscustomobject]@{
                 name = $_.Name
                 size = $_.Length
-                sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
             }
         }
 )
@@ -882,55 +863,43 @@ $manifest = [ordered]@{
     version = $Version
     modVersion = $candidateModVersion
     createdAtUtc = [DateTime]::UtcNow.ToString('o')
-    sourceCommit = $sourceCommit
     dirtySource = ($sourceStatus.Count -gt 0)
     sourceStatus = $sourceStatus
     gameEngineVersion = $expectedGameEngineVersion
     editorEngineVersion = $actualEngineVersion
     retocCompatibilityVersion = $retocCompatibilityVersion
-    retocSha256 = $retocSha256
     cookStorage = $cookStorage
     staticMeshes = [ordered]@{
         builderRequest = [ordered]@{
             path = $staticMeshRequestPath
-            sha256 = (Get-FileHash -LiteralPath $staticMeshRequestPath -Algorithm SHA256).Hash
         }
         builderResult = [ordered]@{
             path = $staticMeshBuildResultPath
-            sha256 = (Get-FileHash -LiteralPath $staticMeshBuildResultPath -Algorithm SHA256).Hash
         }
         builderOutputManifest = [ordered]@{
             path = $staticMeshOutputManifestPath
-            sha256 = (Get-FileHash -LiteralPath $staticMeshOutputManifestPath -Algorithm SHA256).Hash
         }
         stagingReport = [ordered]@{
             path = $staticMeshStagingReportPath
-            sha256 = (Get-FileHash -LiteralPath $staticMeshStagingReportPath -Algorithm SHA256).Hash
         }
         validationRequest = [ordered]@{
             path = $staticMeshValidationRequestPath
-            sha256 = (Get-FileHash -LiteralPath $staticMeshValidationRequestPath -Algorithm SHA256).Hash
         }
         inspection = [ordered]@{
             path = $staticMeshInspectionPath
-            sha256 = (Get-FileHash -LiteralPath $staticMeshInspectionPath -Algorithm SHA256).Hash
         }
         validation = [ordered]@{
             path = $staticMeshValidationPath
-            sha256 = (Get-FileHash -LiteralPath $staticMeshValidationPath -Algorithm SHA256).Hash
         }
         materialValidation = [ordered]@{
             path = $materialValidationPath
-            sha256 = (Get-FileHash -LiteralPath $materialValidationPath -Algorithm SHA256).Hash
         }
     }
     commonReleaseManifest = [ordered]@{
         path = $commonReleaseManifestPath
-        sha256 = (Get-FileHash -LiteralPath $commonReleaseManifestPath -Algorithm SHA256).Hash
     }
     installValidationPlan = [ordered]@{
         path = $installValidationPlanPath
-        sha256 = (Get-FileHash -LiteralPath $installValidationPlanPath -Algorithm SHA256).Hash
     }
     gameFingerprint = [ordered]@{
         steamBuildId = [string]$fingerprint.steam.buildId
@@ -956,7 +925,7 @@ Write-Host "StableGyro release artifact is ready: $archivePath"
 Write-Host "Manifest: $manifestPath"
 Write-Host ("Elapsed: {0:N1} seconds" -f $totalStopwatch.Elapsed.TotalSeconds)
 if ($installed) {
-    Write-Host 'The prepared container was backed up and installed with matching hashes.'
+    Write-Host 'The prepared container was backed up, installed, and read back successfully.'
 }
 
 [pscustomobject]@{

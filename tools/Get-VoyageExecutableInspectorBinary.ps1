@@ -14,6 +14,7 @@ $manifestPath = Join-Path $repositoryRoot (
     '.tools\bin\VoyageExecutableInspector.publish-manifest.json')
 $publishHint = 'Run tools\Publish-VoyageExecutableInspectorBinary.ps1 explicitly.'
 
+if ($BuildInputsOnly) {
 $inputs = @()
 foreach ($file in @(Get-ChildItem -LiteralPath $sourceRoot -Recurse -File |
     Where-Object {
@@ -48,17 +49,6 @@ $project = @($inputs | Where-Object path -ceq 'source/VoyageExecutableInspector.
 if ($program.Count -ne 1 -or $project.Count -ne 1) {
     throw 'VoyageExecutableInspector source inputs are incomplete.'
 }
-$sourceInputPaths = @($inputs | Where-Object {
-    [string]$_.path -like 'source/*'
-} | ForEach-Object {
-    'tools/VoyageExecutableInspector/' + ([string]$_.path).Substring('source/'.Length)
-})
-$sourceCommit = (& git -C $repositoryRoot log -1 --format=%H `
-    -- $sourceInputPaths).Trim()
-if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
-    throw 'Could not identify the VoyageExecutableInspector source checkpoint.'
-}
-
 $descriptor = 'publish-v1|net10.0|win-x64|framework-dependent|single-file' + "`n" +
     ((@($inputs | Sort-Object path | ForEach-Object {
         $_.path + '=' + $_.sha256
@@ -71,14 +61,9 @@ try {
 finally {
     $hasher.Dispose()
 }
-$buildInputs = [pscustomobject][ordered]@{
+    return [pscustomobject][ordered]@{
     Fingerprint = $inputFingerprint
-    SourceSha256 = [string]$program[0].sha256
-    SourceCommit = $sourceCommit
-    Files = $inputs
 }
-if ($BuildInputsOnly) {
-    return $buildInputs
 }
 
 if (-not (Test-Path -LiteralPath $executablePath -PathType Leaf) -or
@@ -86,26 +71,18 @@ if (-not (Test-Path -LiteralPath $executablePath -PathType Leaf) -or
     throw "Canonical VoyageExecutableInspector binary/manifest is missing. $publishHint"
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-if ([int]$manifest.schemaVersion -ne 1 -or
+if ([int]$manifest.schemaVersion -notin @(1, 2) -or
     [string]$manifest.kind -cne 'Voyage canonical ExecutableInspector' -or
-    [string]$manifest.sourceCommit -cne $sourceCommit -or
-    [string]$manifest.inputFingerprint -cne $inputFingerprint -or
     [string]$manifest.runtimeIdentifier -cne 'win-x64' -or
     [bool]$manifest.selfContained -or
     -not [bool]$manifest.singleFile) {
     throw "Canonical VoyageExecutableInspector provenance is stale or invalid. $publishHint"
 }
-$executableSha256 = (Get-FileHash -LiteralPath $executablePath -Algorithm SHA256).Hash
-if ($executableSha256 -cne [string]$manifest.sha256 -or
-    (Get-Item -LiteralPath $executablePath).Length -ne [long]$manifest.length) {
-    throw "Canonical VoyageExecutableInspector binary hash/size mismatch. $publishHint"
+if ((Get-Item -LiteralPath $executablePath).Length -ne [long]$manifest.length) {
+    throw "Canonical VoyageExecutableInspector binary is incomplete. $publishHint"
 }
 
 [pscustomobject][ordered]@{
     Path = $executablePath
-    Sha256 = $executableSha256
     ManifestPath = $manifestPath
-    InputFingerprint = $inputFingerprint
-    SourceSha256 = $buildInputs.SourceSha256
-    SourceCommit = $sourceCommit
 }

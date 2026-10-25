@@ -106,15 +106,17 @@ try {
         -Evidence ([string]$result.manifestPath)
 
     $manifest = Get-Content -LiteralPath $result.manifestPath -Raw | ConvertFrom-Json
-    Add-Check -Name 'schema-and-fingerprint' `
-        -Passed ($manifest.schemaVersion -eq 2 -and
+    Add-Check -Name 'schema-and-game-build' `
+        -Passed ($manifest.schemaVersion -eq 4 -and
             [string]$manifest.gameFingerprint.steamBuildId -ceq $buildId) `
         -Evidence ([string]$manifest.gameFingerprint.steamBuildId)
     Add-Check -Name 'exact-payload-records' `
         -Passed (@($manifest.payload).Count -eq 4 -and
             @($manifest.payload | Where-Object {
-                $_.path -notmatch '^package/' -or $_.sha256 -notmatch '^[0-9A-F]{64}$'
-            }).Count -eq 0) `
+                $_.path -notmatch '^package/' -or
+                $_.PSObject.Properties.Name -contains 'sha256'
+            }).Count -eq 0 -and
+            [string]$manifest.archive.sha256 -match '^[0-9A-F]{64}$') `
         -Evidence ((@($manifest.payload | ForEach-Object { $_.path })) -join ', ')
     Add-Check -Name 'optional-release-identity' `
         -Passed ([string]$manifest.modVersion -ceq 'V1' -and
@@ -202,9 +204,11 @@ try {
         -GameRoot $gameRoot -ContentPluginDescriptor $pluginDescriptor
     $pluginManifest = Get-Content -LiteralPath $pluginResult.manifestPath -Raw |
         ConvertFrom-Json
-    Add-Check -Name 'schema3-content-plugin-created' `
-        -Passed ($pluginManifest.schemaVersion -eq 3 -and
+    Add-Check -Name 'schema5-content-plugin-created' `
+        -Passed ($pluginManifest.schemaVersion -eq 5 -and
             [string]$pluginManifest.contentPlugin.type -ceq 'content-plugin-descriptor' -and
+            -not ($pluginManifest.contentPlugin.artifact.PSObject.Properties.Name -contains
+                'sha256') -and
             [string]$pluginManifest.contentPlugin.archivePath -ceq
                 'Voyage/Mods/SyntheticCatalogue/SyntheticCatalogue.uplugin' -and
             [string]$pluginManifest.contentPlugin.installRelativePath -ceq

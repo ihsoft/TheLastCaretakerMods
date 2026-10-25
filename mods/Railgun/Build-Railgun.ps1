@@ -76,7 +76,6 @@ $sourcePaths = @(
     'tools/Test-VoyageContainer.ps1',
     'tools/VoyageAssetRegistryWriter'
 )
-$sourceCommit = (& git -C $repo rev-parse HEAD).Trim()
 $modelDirectory = Join-Path $PSScriptRoot 'Assets/Model'
 $modelPath = Join-Path $modelDirectory 'model-source.json'
 $model = Get-Content -LiteralPath $modelPath -Raw | ConvertFrom-Json
@@ -144,7 +143,7 @@ $expectedAssetSources = @(
 $actualAssetSources = @($dataAssetContract.assets | ForEach-Object {
     [string]$_.sourceFile
 } | Sort-Object)
-if ($dataAssetContract.schemaVersion -ne 3 -or
+if ($dataAssetContract.schemaVersion -ne 4 -or
     (Compare-Object $dataAssetContractFields @(
         'assets','revalidateWhen','schemaVersion','serialization',
         'structuralValidation')) -or
@@ -157,7 +156,7 @@ if ($dataAssetContract.schemaVersion -ne 3 -or
     [string]::IsNullOrWhiteSpace(
         [string]$dataAssetContract.structuralValidation.result) -or
     (Compare-Object $serializationFields @(
-        'engineVersion','mappingSha256','steamBuildId')) -or
+        'engineVersion','steamBuildId')) -or
     (Compare-Object $actualAssetSources @($expectedAssetSources | Sort-Object)) -or
     @($dataAssetContract.assets).Count -ne $expectedAssetSources.Count) {
     throw 'Railgun shared data-asset contract has an unsupported schema or asset set.'
@@ -230,14 +229,6 @@ function Get-RailgunSourceStatus {
     @(& git -C $repo status --porcelain -- $sourcePaths)
 }
 $sourceStatus = @(Get-RailgunSourceStatus)
-function Get-RailgunSourceHashes {
-    @(& git -C $repo ls-files --cached --others --exclude-standard -- $sourcePaths | Sort-Object -Unique | Where-Object {
-        Test-Path -LiteralPath (Join-Path $repo $_) -PathType Leaf
-    } | ForEach-Object {
-        [pscustomobject]@{path=$_;sha256=(Get-FileHash -LiteralPath (Join-Path $repo $_) -Algorithm SHA256).Hash}
-    })
-}
-$sourceHashes = @(Get-RailgunSourceHashes)
 $fingerprint = (& (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -OutputPath (Join-Path $output 'fingerprint.json')) | ConvertFrom-Json
 $gameBuild = & (Join-Path $repo 'tools/Assert-VoyageModGameBuild.ps1') `
     -ModRoot $PSScriptRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
@@ -321,8 +312,6 @@ function Update-RailgunSettings([string]$TemplatePath, [string]$SettingsPath) {
                 throw 'Game started; Railgun settings update refused.'
             }
             [IO.File]::Replace($merged, $SettingsPath, $backup, $true)
-            if ((Get-FileHash -LiteralPath $SettingsPath -Algorithm SHA256).Hash -cne
-                $result.Sha256) { throw 'Railgun settings readback hash mismatch.' }
         }
         $added = @($result.AddedKeys)
         if ($migratedEnergy -and $added -cnotcontains 'FullChargeEnergyKWh') {
@@ -456,12 +445,10 @@ $cookPackageManifest = Join-Path $output 'cook-packages.txt'
 $cookPackageManifestText = ($packages -join "`n") + "`n"
 [IO.File]::WriteAllText($cookPackageManifest, $cookPackageManifestText,
     (New-Object System.Text.UTF8Encoding($false)))
-$cookPackageManifestSha256 = (Get-FileHash -LiteralPath $cookPackageManifest -Algorithm SHA256).Hash
 $cookPackageManifestSha1 = (Get-FileHash -LiteralPath $cookPackageManifest -Algorithm SHA1).Hash
 $cookPackageManifestEvidence = [ordered]@{
     schemaVersion = 1
     packageCount = $packages.Count
-    sha256 = $cookPackageManifestSha256
     sha1 = $cookPackageManifestSha1
     manifestPath = $cookPackageManifest
 }
@@ -716,10 +703,7 @@ if (-not (Test-Path -LiteralPath $globalUtoc -PathType Leaf) -or
     -not (Test-Path -LiteralPath $globalUcas -PathType Leaf)) {
     throw 'Current-game global IoStore metadata is missing.'
 }
-$scriptObjectsInput = @(
-    [pscustomobject]@{path=$globalUtoc;sha256=(Get-FileHash -LiteralPath $globalUtoc -Algorithm SHA256).Hash},
-    [pscustomobject]@{path=$globalUcas;sha256=(Get-FileHash -LiteralPath $globalUcas -Algorithm SHA256).Hash}
-)
+$scriptObjectsInput = @($globalUtoc, $globalUcas)
 $scriptObjectsDirectory = Join-Path $output 'scriptobjects-only'
 $null = New-Item -ItemType Directory -Path $scriptObjectsDirectory
 $scriptObjectsRun = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
@@ -732,8 +716,6 @@ if ($scriptObjectsRun.status -cne 'passed' -or $scriptObjectsFiles.Count -ne 1 -
     $scriptObjectsFiles[0].Name -cne 'scriptobjects.bin') {
     throw 'Metadata-only extraction did not produce exactly one scriptobjects.bin.'
 }
-$scriptObjectsSha256 = (Get-FileHash -LiteralPath $scriptObjectsFiles[0].FullName `
-    -Algorithm SHA256).Hash
 Copy-Item -LiteralPath $scriptObjectsFiles[0].FullName `
     -Destination (Join-Path $loose 'scriptobjects.bin')
 $null = New-Item -ItemType Directory -Path $releaseStaging
@@ -943,8 +925,6 @@ $archivePath = Join-Path $releaseStaging ('Railgun-' + $version + '.zip')
     -ContentPluginDescriptor $descriptor | Out-Null
 $sourceAfter = @(Get-RailgunSourceStatus)
 if (($sourceAfter -join "`n") -cne ($sourceStatus -join "`n")) { throw 'Source status changed during preparation.' }
-if ((@(Get-RailgunSourceHashes) | ConvertTo-Json -Compress) -cne ($sourceHashes | ConvertTo-Json -Compress)) { throw 'Source content changed during preparation.' }
-if ((& git -C $repo rev-parse HEAD).Trim() -cne $sourceCommit) { throw 'Repository HEAD changed during preparation.' }
 $semanticReport = Get-Content -LiteralPath $semantic.reportPath -Raw |
     ConvertFrom-Json
 $validationSummary = [ordered]@{
@@ -960,18 +940,15 @@ $validationSummary = [ordered]@{
             [ordered]@{
                 name = [string]$_.name
                 size = [long]$_.size
-                sha256 = [string]$_.sha256
             }
         })
     }
     semantic = [ordered]@{
         status = [string]$semanticReport.status
         runtime = [string]$semanticReport.runtime
-        containerSha256 = [string]$semanticReport.containerSha256
         assertions = [string]$semanticReport.assertions
     }
     primaryAssetRegistry = [ordered]@{
-        sha256 = (Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash
         assetCount = [int]$registryResult.assetCount
         packageCount = [int]$registryResult.packageCount
         reopenVerified = [bool]$registryResult.reopenVerified
@@ -986,34 +963,31 @@ $validationSummaryPath = Join-Path $releaseStaging 'validation-summary.json'
     (New-Object Text.UTF8Encoding($false)))
 $provenance = [ordered]@{
     schemaVersion=1;mod='Railgun';version=$version;createdAtUtc=[DateTime]::UtcNow.ToString('o');
-    sourceCommit=$sourceCommit;dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;sourceHashes=$sourceHashes;
+    dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;
     gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';
     gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId};ignoredPinnedGameVersion=[bool]$gameBuild.ignoredPinnedGameVersion;
     validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, plugin-local three-record primary-asset registry, GLB module actor with lifecycle-owned station initialization, operator, inputs, HUD and shot audio';
-    mappingSha256=$mapping.sha256;validationSummary='validation-summary.json';
+    mappingPath=$mapping.mappingsPath;validationSummary='validation-summary.json';
     packagingStatus=$pack.status;containerVerificationStatus=$verify.status;semanticStatus=$semantic.status;
-    ammoSourceJson='mods/Railgun/Assets/Fabricator/railgun-ammo-item.json';ammoSourceJsonSha256=(Get-FileHash -LiteralPath $ammoItemJsonPath -Algorithm SHA256).Hash;
+    ammoSourceJson='mods/Railgun/Assets/Fabricator/railgun-ammo-item.json';
     ammoWriterStatus=$ammoWrite.status;ammoReadbackStatus=$ammoReadback.status;
-    dataAssetContract='mods/Railgun/Assets/data-assets-contract.json';dataAssetContractSha256=(Get-FileHash -LiteralPath $dataAssetContractPath -Algorithm SHA256).Hash;
+    dataAssetContract='mods/Railgun/Assets/data-assets-contract.json';
     dataAssetSerialization=$serializationContract;
-    skillSourceJson='mods/Railgun/Assets/Skill/railgun-skill.json';skillSourceJsonSha256=(Get-FileHash -LiteralPath $skillJsonPath -Algorithm SHA256).Hash;
+    skillSourceJson='mods/Railgun/Assets/Skill/railgun-skill.json';
     skillWriterStatus=$skillWrite.status;skillReadbackStatus=$skillReadback.status;
-    gunSourceJson='mods/Railgun/Assets/Fabricator/railgun-item.json';gunSourceJsonSha256=(Get-FileHash -LiteralPath $gunJsonPath -Algorithm SHA256).Hash;
+    gunSourceJson='mods/Railgun/Assets/Fabricator/railgun-item.json';
     gunWriterStatus=$gunWrite.status;gunReadbackStatus=$gunReadback.status;
-    scriptObjectsInput=@($scriptObjectsInput | ForEach-Object { [ordered]@{name=[IO.Path]::GetFileName($_.path);sha256=$_.sha256} });scriptObjectsStatus=$scriptObjectsRun.status;
-    scriptObjectsSha256=$scriptObjectsSha256;
-    primaryAssetRegistrySha256=(Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash;
+    scriptObjectsInput=@($scriptObjectsInput | ForEach-Object { [IO.Path]::GetFileName($_) });scriptObjectsStatus=$scriptObjectsRun.status;
     primaryAssetRegistryAssetCount=[int]$registryResult.assetCount;
     primaryAssetRegistryPackageCount=[int]$registryResult.packageCount;
     primaryAssetRegistryReopenVerified=[bool]$registryResult.reopenVerified;
     contentPluginDescriptor='mods/Railgun/Registry/RailgunCatalogue.uplugin';
-    contentPluginDescriptorSha256=(Get-FileHash -LiteralPath $descriptorSource -Algorithm SHA256).Hash;
 }
 [IO.File]::WriteAllText(
     (Join-Path $releaseStaging 'build-provenance.json'),
     (($provenance | ConvertTo-Json -Depth 8) + [Environment]::NewLine),
     (New-Object Text.UTF8Encoding($false)))
-$releaseSourcePaths = @($sourceHashes.path | ForEach-Object {
+$releaseSourcePaths = @($sourcePaths | ForEach-Object {
     [IO.Path]::GetFullPath((Join-Path $repo $_))
 })
 $release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
@@ -1097,8 +1071,6 @@ if ($Install) {
             }).Count -ne 0) {
             throw 'A deprecated Railgun setting remains installed.'
         }
-        $settingsHash = (Get-FileHash -LiteralPath $settingsPath `
-            -Algorithm SHA256).Hash
         $settingsInstallation = [pscustomobject]@{
             schemaVersion=1
             status='installed'
@@ -1109,11 +1081,8 @@ if ($Install) {
             previousBackupPath=$(if ($settingsExisted) {
                 $settingsBackupPath
             } else { $null })
-            templateSha256=(Get-FileHash -LiteralPath $settingsTemplatePath `
-                -Algorithm SHA256).Hash
             addedKeys=$addedKeys
             removedKeys=$removedKeys
-            sha256=$settingsHash
             processCheckedAtUtc=$settingsProcessCheckedAtUtc
             installedAtUtc=[DateTime]::UtcNow.ToString('o')
             releaseInstallManifestPath=$installation.installManifestPath
@@ -1189,9 +1158,8 @@ if ($Install) {
     $settingsInstallation = [pscustomobject]@{
         status = 'installed'
         path = $settingsPath
-        sha256 = $settingsHash
     }
-    Write-Host 'Railgun installed successfully; container hashes verified and settings are present.'
+    Write-Host 'Railgun installed successfully; container files were read back and settings are present.'
 }
 [pscustomobject]@{
     status = $(if ($Install) { 'installed' } else { 'prepared-not-installed' })

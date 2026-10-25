@@ -94,7 +94,6 @@ after = hashlib.sha256(args.input.read_bytes()).hexdigest().upper()
 if before != after:
     raise RuntimeError('Internal material GLB changed during preview rendering')
 print('MATERIAL_PACK_PREVIEW_OK ' + json.dumps({
-    'sourceSha256': before,
     'material': materials[0].name,
     'output': str(args.output.resolve()),
     'width': 768,

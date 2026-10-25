@@ -280,7 +280,7 @@ try {
             if ($null -ne $assertIn.PSObject.Properties[$name]) { $assertions[$name] = Normalize-Count $assertIn.$name "$at.assertions.$name" }
         }
         $assets += [ordered]@{id=$id;sourcePath=$sourcePath;sourceMesh=$sourceMesh;packagePath=$packagePath;objectName=$objectName;materialMode=$materialMode;materialBindings=$bindings;import=$import;nanite=$nanite;rayTracing=$ray;assertions=$assertions}
-        $sources += [ordered]@{path=$sourcePath;length=(Get-Item -LiteralPath $sourcePath).Length;sha256=(Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash}
+        $sources += [ordered]@{path=$sourcePath;length=(Get-Item -LiteralPath $sourcePath).Length;operationDigest=(Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash}
     }
 
     foreach ($asset in $assets) {
@@ -338,12 +338,13 @@ try {
         }
     }
     foreach ($file in @(Get-ChildItem -LiteralPath (Join-Path $staged 'Content') -File -Recurse | Sort-Object FullName)) {
-        $fileRecords += [ordered]@{path=$file.FullName.Substring($staged.Length+1).Replace('\','/');length=$file.Length;sha256=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash}
+        $fileRecords += [ordered]@{path=$file.FullName.Substring($staged.Length+1).Replace('\','/');length=$file.Length}
     }
     foreach ($source in $sources) {
-        if ((Get-Item -LiteralPath $source.path).Length -ne $source.length -or (Get-FileHash -LiteralPath $source.path -Algorithm SHA256).Hash -cne $source.sha256) { throw "Input changed during build: $($source.path)" }
+        if ((Get-Item -LiteralPath $source.path).Length -ne $source.length -or (Get-FileHash -LiteralPath $source.path -Algorithm SHA256).Hash -cne $source.operationDigest) { throw "Input changed during build: $($source.path)" }
     }
-    $result = [ordered]@{schemaVersion=1;status='passed';createdAtUtc=[DateTime]::UtcNow.ToString('o');builder=[ordered]@{manifestPath=$builder.ManifestPath;inputFingerprint=$builder.InputFingerprint;engine=$builder.Engine};request=[ordered]@{manifestPath=$manifestPath;manifestSha256=(Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash;sources=$sources};normalizedRequest=$normalized;assets=$editorSummary.assets;files=$fileRecords;limitations=@('Schema v1 supports /Game destinations only.','Embedded GLB shader fidelity is not preserved; materialMode explicitly selects default engine materials or external references.','Loose cooked assets are not a package, container, installation, or game-runtime proof.')}
+    $publicSources = @($sources | ForEach-Object { [ordered]@{path=$_.path;length=$_.length} })
+    $result = [ordered]@{schemaVersion=2;status='passed';createdAtUtc=[DateTime]::UtcNow.ToString('o');builder=[ordered]@{manifestPath=$builder.ManifestPath;engine=$builder.Engine};request=[ordered]@{manifestPath=$manifestPath;sources=$publicSources};normalizedRequest=$normalized;assets=$editorSummary.assets;files=$fileRecords;limitations=@('Schema v1 requests support /Game destinations only.','Embedded GLB shader fidelity is not preserved; materialMode explicitly selects default engine materials or external references.','Loose cooked assets are not a package, container, installation, or game-runtime proof.')}
     Write-Utf8Json (Join-Path $staged 'build-result.json') $result
     Write-Utf8Json (Join-Path $staged 'output-manifest.json') ([ordered]@{schemaVersion=1;kind='Voyage loose cooked StaticMesh assets';files=$fileRecords;assetObjectPaths=@($assets | ForEach-Object { $_.packagePath + '.' + $_.objectName })})
     Move-Item -LiteralPath $staged -Destination $output

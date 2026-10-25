@@ -180,9 +180,7 @@ internal static partial class Program
             ["provenance"] = new JsonObject
             {
                 ["steamBuildId"] = build,
-                ["mappingSha256"] = Hash(mappingPath),
-                ["conversionCommit"] = "c38cf24676514773ac106d7b51640f09f4590c61",
-                ["exporterSha256"] = Hash(typeof(Program).Assembly.Location)
+                ["mappingPath"] = Path.GetFullPath(mappingPath)
             }
         };
         var manifestPath = Path.Combine(output, "manifest.json");
@@ -516,7 +514,7 @@ internal static partial class Program
             foreach (var pair in payloads) WritePackEntry(archive, pair.Key, pair.Value);
         }
         var result = new { status = "packed", materialPack = output, entries = payloads.Count + 1,
-            bytes = new FileInfo(output).Length, sha256 = Hash(output) };
+            bytes = new FileInfo(output).Length };
         Console.WriteLine(JsonSerializer.Serialize(result));
         return 0;
     }
@@ -635,7 +633,7 @@ internal static partial class Program
             profile = profile.ToString(),
             sourceTexturePolicy = sourceTexturePolicy.ToString(),
             sourceTextures = sources.Count, includedSourceTextures = sources.Count(x => x!["included"]!.GetValue<bool>()),
-            entries = names.Length, bytes = new FileInfo(fullPath).Length, sha256 = Hash(fullPath) };
+            entries = names.Length, bytes = new FileInfo(fullPath).Length };
         Console.WriteLine(JsonSerializer.Serialize(result));
         return 0;
     }

@@ -268,6 +268,5 @@ foreach ($source in $sourceHashes) {
     converterCases = 10
     nativeCases = 4
     outputRoot = $root
-    baselineRegistrySha256 = $outputHash
-    writerInputFingerprint = $writer.InputFingerprint
+    writerManifest = $writer.ManifestPath
 }

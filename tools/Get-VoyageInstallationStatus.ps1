@@ -3,7 +3,6 @@
 param(
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
     [string]$InstallManifest,
-    [switch]$HashModFiles,
     [switch]$Summary
 )
 $ErrorActionPreference = 'Stop'
@@ -67,11 +66,11 @@ $files = @(
         Where-Object { $_.Extension -in @('.pak', '.utoc', '.ucas', '.zip') } |
         ForEach-Object {
             $stock = $_.Name -match '^(global|pakchunk\d+(optional)?-Windows)(\.pak|\.utoc|(?:_s\d+)?\.ucas)$'
-            $snapshot = Get-Snapshot $_.FullName ($HashModFiles -and -not $stock)
+            $snapshot = Get-Snapshot $_.FullName $false
             [pscustomobject]@{
                 name = $_.Name; path = $_.FullName
                 category = $(if ($stock) { 'stock-name' } else { 'additional' })
-                state = $snapshot.state; size = $snapshot.size; sha256 = $snapshot.sha256
+                state = $snapshot.state; size = $snapshot.size
             }
         }
 )
@@ -135,7 +134,6 @@ if ($InstallManifest) {
         }
         [pscustomobject]@{
             name = $record.name; state = $state; size = $snapshot.size
-            expectedSha256 = $record.installedSha256; actualSha256 = $snapshot.sha256
         }
     })
     $comparison = [pscustomobject]@{
@@ -166,7 +164,6 @@ if ($Summary) {
             name = $_.name
             state = $_.state
             size = $_.size
-            sha256 = $_.sha256
         }
     })
     $installationSummary = $null

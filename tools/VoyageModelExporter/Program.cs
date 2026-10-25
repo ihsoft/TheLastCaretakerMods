@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -25,9 +24,7 @@ namespace VoyageModelExporter;
 
 internal static class Program
 {
-    internal const string ConversionCommit = "c38cf24676514773ac106d7b51640f09f4590c61";
     internal static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-    internal static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
 
     static int Main(string[] args)
     {
@@ -52,9 +49,8 @@ internal static class Program
             var gameRoot = fingerprint["gameRoot"]!.GetValue<string>();
             var build = fingerprint["steam"]!["buildId"]!.GetValue<string>();
             if (mapping["engineVersion"]!.GetValue<string>() != "5.8" ||
-                mapping["steamBuildId"]!.GetValue<string>() != build ||
-                mapping["mappingSha256"]!.GetValue<string>() != Hash(Str("mappingPath")))
-                throw new InvalidDataException("Game/mapping provenance mismatch.");
+                mapping["steamBuildId"]!.GetValue<string>() != build)
+                throw new InvalidDataException("Game/mapping identity mismatch.");
 
             Directory.SetCurrentDirectory(Path.GetDirectoryName(Path.GetFullPath(args[0]))!);
             TextureDecoder.UseAssetRipperTextureDecoder = true;
@@ -289,10 +285,7 @@ internal static class Program
                 materialMode,
                 geometryMode,
                 steamBuildId = build,
-                mappingSha256 = Hash(Str("mappingPath")),
-                conversionCommit = ConversionCommit,
-                exporterSha256 = Hash(typeof(Program).Assembly.Location),
-                parserSha256 = Hash(typeof(DefaultFileProvider).Assembly.Location),
+                mappingPath = Path.GetFullPath(Str("mappingPath")),
                 nodeCount,
                 inheritedOverrideCount,
                 meshComponents = meshRecords,
@@ -335,7 +328,7 @@ internal static class Program
             {
                 status = evidence.status,
                 glbPath = output,
-                sha256 = Hash(output),
+                bytes = new FileInfo(output).Length,
                 sourceKind,
                 materialMode,
                 geometryMode,

@@ -309,8 +309,8 @@ needs separate evidence.
   relocation/child while removing only the override was needed; until then,
   only that combined package was rejected.
 - That no-override `BP_Module_Diesel_Container` control reproduced the exact
-  GameThread crash after 24 seconds: write to `0xe0`, same stack hash and
-  stack. Thus the stock-path actor-child/SCS substitution itself is rejected
+  GameThread crash after 24 seconds: write to `0xe0` with the same stack. Thus
+  the stock-path actor-child/SCS substitution itself is rejected
   for this package, independently of `GetDescriptionFooter`. The cooked child
   had a second `DefaultSceneRoot_GEN_VARIABLE` templated from the relocated
   parent's same-named component, the leading archetype-collision mechanism.
@@ -328,10 +328,10 @@ needs separate evidence.
   false automatic `GUObjectArray` resolver for Voyage UE 5.8 produced a valid
   28-byte USMAP header with no payload; a complete manual dump was 2,141,952
   bytes. Before asset parsing, a mapping workflow must check its manifest,
-  Steam build ID, mapping hash, payload size, and several required schema
+  Steam build ID, payload structure, and several required schema
   names. Even a jmap with the corrected UE 5.6+ `MinAlignment` repeated the
   false automatic result. A structural `.data` scan and explicit
-  `GUObjectArray` produced the full dump, byte-identical to the previous one.
+  `GUObjectArray` produced the full dump with the required schema content.
   A structurally plausible snapshot alone was still insufficient: while the
   process was warming up, one candidate passed pointer/count checks, then
   requested 231 GB of memory and exited with `0xC0000409`. The same address
@@ -348,8 +348,8 @@ needs separate evidence.
 - Two `retoc to-zen` calls on an identical staging tree may write chunks in
   different physical order. Whole-file `.ucas/.utoc` SHA-256 values then
   differ although chunk IDs, asset paths, sizes, and content hashes match.
-  Compare independent builds through a sorted semantic inventory. Whole-file
-  hashes are still needed between one prepared package and its installed copy.
+  Compare independent builds through a sorted semantic inventory. Temporary
+  copy-integrity checks are still needed during installation.
 - Passing `UAsset.VerifyBinaryEquality()` does not prove UAssetGUI parsed every
   export. `RawExport` preserves unknown bytes and can yield byte-identical
   unchanged serialization while the UI reports `Failed to parse N exports`.

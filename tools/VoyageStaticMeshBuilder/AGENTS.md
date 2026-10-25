@@ -11,5 +11,5 @@ inspect this source.
   and repair boundary.
 
 `Publish-VoyageStaticMeshBuilder.ps1` is the deliberate tool-development path.
-It pins the exact UE 5.8 editor identity and source fingerprint. Generated
+It validates the supported Unreal interface before publishing the host. Generated
 assets, cook output, test fixtures, and logs stay in ignored `Tmp/`.

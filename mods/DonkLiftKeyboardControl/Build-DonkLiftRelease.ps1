@@ -136,8 +136,7 @@ function Get-CleanOriginalInputs {
     param(
         [Parameter(Mandatory = $true)] [string]$Root,
         [Parameter(Mandatory = $true)] [string]$ExpectedBuild,
-        [Parameter(Mandatory = $true)] [string]$ExpectedSourceRetocEngineVersion,
-        [Parameter(Mandatory = $true)] [string]$ExpectedRetocHash
+        [Parameter(Mandatory = $true)] [string]$ExpectedSourceRetocEngineVersion
     )
 
     $resolvedRoot = Resolve-RequiredPath -Path $Root -Label 'Originals root'
@@ -150,7 +149,6 @@ function Get-CleanOriginalInputs {
     if ([string]$manifest.filter -cne 'Vehicles/BP_Forklift_Possesable' -or
         [string]$manifest.steamBuildId -cne $ExpectedBuild -or
         [string]$manifest.retocEngineVersion -cne $ExpectedSourceRetocEngineVersion -or
-        [string]$manifest.retocSha256 -cne $ExpectedRetocHash -or
         $manifest.allowAdditionalContainers -ne $false) {
         throw "Originals manifest is not a clean UE5.8 extraction for the current game: $($manifests[0].FullName)"
     }
@@ -189,7 +187,6 @@ $prepareScript = Resolve-RequiredPath -Path $prepareScript -Label 'DonkLift orig
 $packageScript = Resolve-RequiredPath -Path $packageScript -Label 'DonkLift package builder'
 $schemaValidator = Resolve-RequiredPath -Path $schemaValidator -Label 'DonkLift schema validator'
 $Retoc = Resolve-RequiredPath -Path $Retoc -Label 'retoc'
-$retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Retoc).Hash
 $GameRoot = Resolve-RequiredPath -Path $GameRoot -Label 'Voyage game root'
 
 $engineVersion = Get-Content -LiteralPath $engineVersionPath -Raw | ConvertFrom-Json
@@ -207,11 +204,6 @@ if ($LASTEXITCODE -ne 0) {
 if ($sourceStatus.Count -gt 0 -and -not $AllowDirtySource) {
     throw "DonkLift source is dirty. Commit the validated source or use -AllowDirtySource for a non-release test build.`n$($sourceStatus -join "`n")"
 }
-$sourceCommit = (& git -C $repoRoot rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0) {
-    throw 'Unable to resolve the source commit.'
-}
-
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $tmpOwnerRoot ("build-$Version-" + [Guid]::NewGuid().ToString('N'))
 }
@@ -299,8 +291,7 @@ if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
 $originalInputs = Get-CleanOriginalInputs `
     -Root $OriginalsRoot `
     -ExpectedBuild $expectedBuild `
-    -ExpectedSourceRetocEngineVersion $sourceRetocEngineVersion `
-    -ExpectedRetocHash $retocSha256
+    -ExpectedSourceRetocEngineVersion $sourceRetocEngineVersion
 $phase.Stop()
 $timings.Originals = $phase.Elapsed.TotalSeconds
 
@@ -372,7 +363,6 @@ $payloadEvidence = @(
             [pscustomobject]@{
                 name = $_.Name
                 size = $_.Length
-                sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
             }
         }
 )
@@ -382,14 +372,12 @@ $manifest = [ordered]@{
     version = $Version
     modVersion = $candidateModVersion
     createdAtUtc = [DateTime]::UtcNow.ToString('o')
-    sourceCommit = $sourceCommit
     dirtySource = ($sourceStatus.Count -gt 0)
     sourceStatus = $sourceStatus
     gameEngineVersion = $expectedGameEngineVersion
     editorEngineVersion = $actualEngineVersion
     sourceRetocEngineVersion = $sourceRetocEngineVersion
     targetRetocEngineVersion = $targetRetocEngineVersion
-    retocSha256 = $retocSha256
     cookStorage = $cookStorage
     gameFingerprint = [ordered]@{
         steamBuildId = [string]$fingerprint.steam.buildId
@@ -398,11 +386,9 @@ $manifest = [ordered]@{
     originalsManifest = $originalInputs.Manifest
     schemaValidation = [ordered]@{
         reportPath = [string]$schemaValidation.reportPath
-        reportSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $schemaValidation.reportPath).Hash
         candidateJsonPath = [string]$schemaValidation.candidateJsonPath
         stockJsonPath = [string]$schemaValidation.stockJsonPath
         assemblyReportPath = (Join-Path $containerRoot 'assembly-report.json')
-        assemblyReportSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $containerRoot 'assembly-report.json')).Hash
     }
     installed = $installed
     payload = $payloadEvidence
@@ -425,5 +411,5 @@ Write-Host "DonkLift release artifact is ready: $archivePath"
 Write-Host "Manifest: $manifestPath"
 Write-Host ("Elapsed: {0:N1} seconds" -f $totalStopwatch.Elapsed.TotalSeconds)
 if ($installed) {
-    Write-Host 'The prepared container was backed up and installed with matching hashes.'
+    Write-Host 'The prepared container was backed up, installed, and read back successfully.'
 }
