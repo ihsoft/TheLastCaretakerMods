@@ -26,8 +26,11 @@ The release rule owns version identity and the exact ZIP to publish.
    actual release; inspect version-bearing ZIP content before reusing its bytes.
 3. Require the canonical archive name `<Mod>-V<N>.zip`. Read the mod's
    `CHANGELOG.md`, review the `Next` section against the exact selected ZIP, and
-   use it as the Nexus file changelog. The changelog is publication input and
-   is not included in the ZIP.
+   use it as the Nexus file changelog. It must describe the net player-visible
+   difference from the latest published release, not the commits or discarded
+   candidates that led there. If it is empty or materially incomplete, stop
+   instead of reconstructing or inventing release notes. The changelog is
+   publication input and is not included in the ZIP.
 4. Create or update the mod page, then upload the ZIP as the main file. Enter
    the target release number as a plain integer in the Nexus file-version
    field, such as `1`, not `1.0`. Confirm the saved file's category, version,

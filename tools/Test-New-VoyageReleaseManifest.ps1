@@ -127,6 +127,22 @@ try {
             [string]$manifest.sourcePaths[0].path -ceq 'README.md') `
         -Evidence ($manifest.sourcePaths | ConvertTo-Json -Compress)
 
+    $existingModArchive = Join-Path $releaseRoot 'BoatHUDTotalResources-V1.zip'
+    Copy-Item -LiteralPath $archivePath -Destination $existingModArchive
+    $existingModManifestPath = Join-Path $releaseRoot 'changelog-record.json'
+    & $producer -ReleaseRoot $releaseRoot `
+        -Mod 'BoatHUDTotalResources' -Version 'V1' `
+        -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
+        -Archive $existingModArchive -SourcePath (Join-Path $repositoryRoot 'README.md') `
+        -GameRoot $gameRoot -OutputPath $existingModManifestPath | Out-Null
+    $existingModManifest = Get-Content -LiteralPath $existingModManifestPath -Raw |
+        ConvertFrom-Json
+    Add-Check -Name 'changelog-location-without-content-hash' `
+        -Passed ([string]$existingModManifest.changelog.path -ceq
+            'mods/BoatHUDTotalResources/CHANGELOG.md' -and
+            -not ($existingModManifest.changelog.PSObject.Properties.Name -contains 'sha256')) `
+        -Evidence ($existingModManifest.changelog | ConvertTo-Json -Compress)
+
     Assert-Rejected -Name 'noncanonical-version-rejected' `
         -Pattern 'canonical V<N>' -Action {
         & $producer -ReleaseRoot $releaseRoot `

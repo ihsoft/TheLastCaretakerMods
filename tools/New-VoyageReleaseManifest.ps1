@@ -247,7 +247,6 @@ if (Test-Path -LiteralPath $modRoot -PathType Container) {
     }
     $changelogRecord = [ordered]@{
         path = Get-RelativePath -Root $repositoryRoot -Path $changelogPath
-        sha256 = (Get-FileHash -LiteralPath $changelogPath -Algorithm SHA256).Hash
     }
 }
 

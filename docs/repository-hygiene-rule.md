@@ -19,6 +19,12 @@
   is busy, wait or report its recorded owner; never delete an active lock.
 - Preserve unrelated worktree changes and stage only the exact files belonging
   to the validated change.
+- Before committing a change under `mods/<Mod>/`, assess its net player-visible
+  effect relative to the latest published release. Update that mod's
+  `CHANGELOG.md` in the same proposed commit when the cumulative result changes;
+  rewrite or remove stale `Next` entries when later work supersedes or reverts
+  them. Follow the shared release rule rather than treating the changelog as a
+  list of commits.
 - In C++ generator code, replace every repeated `TEXT("...")` literal with a
   named constant. Also name a single-use literal when it represents a logical
   contract, tuning value, asset identity, or naturally belongs to an existing

@@ -75,15 +75,30 @@ users through a new release.
 
 Every mod owns `mods/<Mod>/CHANGELOG.md`. It is repository source for
 player-facing release notes, not payload: never put it inside the Vortex ZIP.
-Keep pending user-visible changes under `## Next`. Do not use build logs, Git
-history, architecture documents, or a descriptive ZIP filename as a substitute.
+`## Next` describes the player-visible difference between the latest published
+release and the version that would be published now. It is not a history of
+commits, candidates, experiments, reversals, or implementation steps. Do not
+use build logs, Git history, architecture documents, or a descriptive ZIP
+filename as a substitute.
+
+Before committing a change to a mod, determine whether the resulting mod changes
+what a player receives or observes relative to the latest published release. If
+it does, update `Next` in the same proposed commit. Keep its text aligned with
+the current cumulative result: rewrite or remove an earlier entry when later
+work changes, supersedes, or reverts that result. A reverted intermediate
+change leaves no changelog entry. Experimental work that is not being accepted
+into the mod does not enter the changelog. Internal refactors, build-tool
+maintenance, and validation details belong there only when their final result
+affects players.
 
 When preparing publication, read `Next`, make it accurate and concise, and use
-that text for the Nexus file changelog. After the exact ZIP is publicly
-released and `version.txt` advances to `N`, rename that section to `## V<N>`
-and create a fresh empty `## Next` section. Do not invent history for releases
-that predate the changelog. Internal refactors, build-tool maintenance, and
-validation details belong there only when they affect players.
+that text for the Nexus file changelog. Do not reconstruct a missing release
+story from commit history or preserve notes about work that is absent from the
+selected ZIP. An empty or materially incomplete `Next` is a publication
+blocker, not permission for the publishing agent to invent one. After the exact
+ZIP is publicly released and `version.txt` advances to `N`, rename that section
+to `## V<N>` and create a fresh empty `## Next` section. Do not invent history
+for releases that predate the changelog.
 
 ## Game update and candidate builds
 

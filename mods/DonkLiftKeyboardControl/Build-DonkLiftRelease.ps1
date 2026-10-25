@@ -413,7 +413,6 @@ $manifest = [ordered]@{
     }
     changelog = [ordered]@{
         path = 'mods/DonkLiftKeyboardControl/CHANGELOG.md'
-        sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $changelogPath).Hash
     }
     timingsSeconds = $timings
     totalSeconds = $totalStopwatch.Elapsed.TotalSeconds
