@@ -5,18 +5,42 @@ identity and generates a child selected through the stock item data asset's
 `DroppedActor`. One helper handles pitch input before the stock physics tick;
 another applies eligible altitude and horizontal stabilization after physics.
 The child retains stock mappings and provided actions while adding an optional
-X pitch-reset action. Tick prerequisites are established at BeginPlay and on
-controller changes, not re-added every frame. The two flight helpers remain in
+pitch-reset action whose default key is X. Tick prerequisites are established at
+BeginPlay and controller changes, not re-added every frame. The two flight helpers remain in
 their respective PrePhysics and PostPhysics groups.
 
-Ctrl releases height support and ordinary vertical braking. The PrePhysics
+The descend action (Ctrl by default) releases height support and ordinary
+vertical braking. The PrePhysics
 helper captures existing upward inertia; PostPhysics caps further positive-speed
 growth while preserving natural decay and unrestricted descent, including below
-the configured minimum Collective. Releasing Ctrl clears the cap. Once neutral
+the configured minimum Collective. Releasing the descend action clears the cap.
+Once neutral
 height control becomes eligible, it selects braking from the current physical
 vertical-speed sign before acquiring exact hold. Delayed threshold recovery
 therefore retains descent inertia for braking. [Altitude control](ALTITUDE-CONTROL.md)
 owns the formulas, eligibility and reset boundaries.
+
+## Flight action input
+
+The altitude helpers read the stock `IA_GyroCopterThrottleUp` and
+`IA_GyroCopterThrottleDown` actions. Pitch reset reads the mod-owned
+`IAV_GyroPitchReset`. Space, Ctrl and X are default mappings; runtime decisions
+use the owning Gyro's Enhanced Input values and therefore follow remapped keys.
+Up and Down remain independent, with Down taking precedence when both are active.
+
+The replacement's pure `GetFlightActionValues` graph contains three standard
+action-value accessors. The Blueprint compiler generates their value bindings
+on the Gyro's input component, including when it recompiles during cooking.
+The helpers query `EnhancedInputLibrary.GetBoundActionValue` on that Gyro and
+convert each value to a nonzero boolean. They do not create their own input
+components, mapping contexts or consuming action events. Cargo keeps its
+separate event bindings.
+
+The PrePhysics pitch helper derives reset from a rising edge using transient
+`ResetActionWasActive`. It updates the latch after writing the integrated and
+native pitch, so holding reset does not repeat the reset or block later pitch
+integration. Disabled pitch, invalid ownership, controller changes and EndPlay
+clear the latch. The existing pitch-enable gate also controls the reset hint.
 
 ## Independent flight-control settings
 

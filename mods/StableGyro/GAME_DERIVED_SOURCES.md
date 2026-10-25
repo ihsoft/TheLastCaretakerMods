@@ -85,10 +85,20 @@ Together, these sources establish:
 - `/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard` contains the stock
   mouse, E, T, Space, LeftControl, arrow, W/S/A/D, and F mappings and has no X
   mapping;
+- stock throttle actions are `/Game/Game/Input/Vehicle/IA_GyroCopterThrottleUp`
+  and `IA_GyroCopterThrottleDown`, with player-mappable names
+  `GyroCopterThrottleUp` and `GyroCopterThrottleDown`. The keyboard context's
+  fourteen entries inherit their settings from their actions and have no
+  mapping-owned player-mappable settings. Its MouseY Negate modifier and E/T
+  Pressed triggers use default parameters. The generated context preserves
+  these entries and appends `IAV_GyroPitchReset` on X with a Pressed trigger and
+  player-mappable name `GyroPitchReset`. The stock gamepad context uses the same
+  throttle actions on RightTriggerAxis/LeftTriggerAxis with no mapping triggers
+  or modifiers;
 - current stock `BP_GyroCopter_Possessable` has no Blueprint function override.
   The generated child overrides the inherited native
   `VoyageVehiclePawn.GetProvidedActionsBP`, calls that parent implementation to
-  preserve its actions, and appends the mod-owned X reset action. Steam build
+  preserve its actions, and appends the mod-owned pitch-reset action. Steam build
   `25982825` native inspection establishes that the Gyro provider calls this
   base path first and only then appends its native cargo action when the
   reflected `DropCargoAction` object property is non-null. The child therefore
@@ -180,6 +190,32 @@ the validity of `ConnectedToSocket`; cable assignment can therefore broadcast
 defers cleanup to the next tick so it does not disconnect reentrantly inside a
 native callback. This establishes event shape and callback ordering, not the end
 of save restoration or real-game cable cleanup behavior.
+
+## Enhanced Input value contracts
+
+In UE `5.8.2`, `EnhancedInputLibrary.GetBoundActionValue(AActor*, const UInputAction*)`
+reads the supplied actor's `EnhancedInputComponent`. The component requires an
+action-value binding; an event binding alone does not populate this value.
+`Conv_InputActionValueToBool` tests nonzero magnitude and accepts both boolean
+and scalar action values. For the stock throttle actions, the keyboard and
+gamepad mappings have no triggers or modifiers, and Enhanced Input's implicit
+trigger uses the same nonzero test.
+
+The Blueprint compiler rebuilds `DynamicBindingObjects` from compiled graph
+nodes. A manually appended class binding is therefore not a persistent source
+for cooking. Connected action-value accessor nodes generate the standard
+`EnhancedInputActionValueBinding` entries and must remain in the source graph.
+The generator uses the reflected editor class
+`/Script/InputBlueprintNodes.K2Node_InputActionValueAccessor`, its `InputAction`
+property and the actual getter signature. The packaged graph uses the Engine's
+value bindings and library calls; these editor nodes add no runtime native API.
+
+The UE `5.8.2` default for
+`EnhancedInput.bAlwaysGetRealValueFromActionInstanceData` is enabled. Bound
+values can remain active while held even when a mapping uses a Pressed trigger.
+StableGyro therefore derives the reset edge explicitly rather than treating a
+nonzero reset value as a pulse. It stores the previous-active flag after both
+pitch writes so pure-node reevaluation cannot consume the edge prematurely.
 
 ## Mooring registration, reeling and geometry findings
 

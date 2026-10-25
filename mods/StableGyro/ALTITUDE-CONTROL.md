@@ -370,6 +370,12 @@ readback or invent writable native flags.
 
 ## Shipped ownership and restoration
 
+The helpers read `IA_GyroCopterThrottleUp` and `IA_GyroCopterThrottleDown`
+through the owning Gyro's Enhanced Input value bindings. Space and Ctrl below
+refer to these actions' defaults, not runtime key tests. Down takes precedence
+when both actions are active. These input values express player commands;
+native changes to `Collective` or `CurrentThrottle` do not activate them.
+
 The generated pitch helper runs in `TG_PrePhysics`, before the native Gyro. At
 BeginPlay it caches its parent Gyro and the sibling PostPhysics stabilization
 helper through the owned child components; it does not rediscover them per tick.

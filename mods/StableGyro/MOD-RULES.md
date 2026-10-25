@@ -26,6 +26,14 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 [postphysics-pattern]: ../../docs/vehicle-and-hud-modding-patterns-knowledge.md#post-physics-kinematic-correction
 [action-ui-pattern]: ../../docs/vehicle-and-hud-modding-patterns-knowledge.md#discovering-voyages-standard-action-ui
 
+- Runtime flight input must use the exact `IA_GyroCopterThrottleUp`,
+  `IA_GyroCopterThrottleDown` and `IAV_GyroPitchReset` actions. Space/Ctrl/X
+  references below denote their defaults. Query bound action values on the
+  owning Gyro, never its helper or raw keyboard state. Keep Up/Down separate
+  and retain Down precedence. Generate the three value bindings from connected
+  Blueprint accessor nodes; validate that all three survive cooking alongside
+  the cargo event bindings. Preserve stock player-mappable identities,
+  triggers, modifiers and mapping settings.
 - The mod owns control and flight-stability improvements for the stock Gyro.
   It includes W/S integration of native TiltForwardInput, X reset and HUD
   hint, arcade altitude stabilization, and kinematic horizontal-velocity
@@ -117,7 +125,11 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   version-bound native formula and recovery boundary live in
   [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md).
 - When pitch correction is enabled, W increases, S decreases, and releasing
-  both leaves the integrated value unchanged. X writes exact zero immediately.
+  both leaves the integrated value unchanged. The reset action writes exact
+  zero once per press. Derive its edge from the current bound value and a
+  transient previous-active flag; update that flag only after both pitch writes.
+  Clear it on invalid ownership, disabled/uncontrolled paths, controller changes
+  and EndPlay. Do not assume a Pressed mapping's bound value is a one-frame pulse.
   Treat only exact native digital
   markers `-1`, `0`, and `1` as commands, clamp integrated pitch to
   `-0.9999..0.9999`, and reset helper plus native pitch state when the owning
@@ -145,7 +157,8 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   subclass is selected only through the item data asset's `DroppedActor` path.
 - Preserve every stock Gyro keyboard mapping when replacing
   `IMC_GyroCopter_Keyboard`; the only added mapping is the mod-owned reset
-  action on X. The child `GetProvidedActionsBP` must call the inherited native
+  action on X by default. The child `GetProvidedActionsBP` must call the
+  inherited native
   action provider and, only while pitch correction is enabled, append reset to
   its returned actions so base actions such as the conditional F cargo hint
   survive.

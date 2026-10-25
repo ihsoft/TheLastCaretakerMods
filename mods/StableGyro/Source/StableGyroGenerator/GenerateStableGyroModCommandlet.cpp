@@ -14,11 +14,12 @@
 #include "VoyageModSettingsGraph.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
+#include "EnhancedInputLibrary.h"
 #include "InputMappingContext.h"
+#include "InputAction.h"
 #include "InputModifiers.h"
 #include "InputTriggers.h"
 #include "GameFramework/Pawn.h"
-#include "GameFramework/PlayerController.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_DynamicCast.h"
 #include "K2Node_Event.h"
@@ -59,7 +60,6 @@ constexpr TCHAR Positive[] = TEXT("1.0");
 constexpr TCHAR Negative[] = TEXT("-1.0");
 constexpr TCHAR IntegratedMinimum[] = TEXT("-0.9999");
 constexpr TCHAR IntegratedMaximum[] = TEXT("0.9999");
-constexpr TCHAR ResetKey[] = TEXT("X");
 constexpr TCHAR FalseText[] = TEXT("false");
 constexpr TCHAR ZeroText[] = TEXT("0");
 constexpr TCHAR LoopPackage[] = TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros");
@@ -101,6 +101,9 @@ const FName LoopGraphName(TEXT("ForEachLoop"));
 const FName LoopArray(TEXT("Array"));
 const FName LoopElement(TEXT("Array Element"));
 const FName InputPath(TEXT("InPath"));
+const FName InputAction(TEXT("Action"));
+const FName InputActionValue(TEXT("InValue"));
+const FName ResetActionWasActive(StableGyroAssetNames::ResetActionWasActiveFieldName);
 
 template <typename NodeType>
 NodeType* AddNode(NodeType* Node, UEdGraph* Graph, int32 X, int32 Y)
@@ -163,6 +166,28 @@ bool Link(UEdGraphPin* From, UEdGraphPin* To)
 void Default(UEdGraphNode* Node, const FName Name, const TCHAR* Value)
 {
     GetDefault<UEdGraphSchema_K2>()->TrySetDefaultValue(*Pin(Node, Name), Value);
+}
+
+UK2Node_CallFunction* AddBoundActionBool(
+    UEdGraph* Graph,
+    UInputAction* Action,
+    UEdGraphPin* Actor,
+    const int32 X,
+    const int32 Y)
+{
+    if (!Graph || !Action || !Actor) return nullptr;
+    UK2Node_CallFunction* Value = Call(
+        Graph, UEnhancedInputLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UEnhancedInputLibrary, GetBoundActionValue), X, Y);
+    Pin(Value, InputAction)->DefaultObject = Action;
+    UK2Node_CallFunction* AsBool = Call(
+        Graph, UEnhancedInputLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UEnhancedInputLibrary, Conv_InputActionValueToBool),
+        X + 230, Y);
+    if (!Link(Actor, Pin(Value, P::Actor)) ||
+        !Link(Pin(Value, P::ReturnValue), Pin(AsBool, InputActionValue)))
+        return nullptr;
+    return AsBool;
 }
 
 bool SaveBlueprint(
@@ -392,8 +417,9 @@ bool AddBeginPlayGraph(UEdGraph* Graph, UBlueprint* Blueprint, const bool PitchO
     return Ok;
 }
 
-bool AddTickGraph(UEdGraph* Graph)
+bool AddTickGraph(UEdGraph* Graph, UInputAction* ResetAction)
 {
+    if (!Graph || !ResetAction) return false;
     UK2Node_Event* Tick = NewObject<UK2Node_Event>(Graph);
     Tick->EventReference.SetExternalMember(
         BlueprintGraphNames::Events::ActorReceiveTick, AActor::StaticClass());
@@ -412,9 +438,6 @@ bool AddTickGraph(UEdGraph* Graph)
         Graph, Settings::EnablePitchCorrection, nullptr, 910, -340);
     UK2Node_IfThenElse* EnabledBranch = AddNode(
         NewObject<UK2Node_IfThenElse>(Graph), Graph, 1140, 0);
-
-    UK2Node_CallFunction* Controller = Call(Graph, APawn::StaticClass(),
-        BlueprintGraphNames::ActorFunctions::GetController, 680, -180);
 
     UK2Node_VariableGet* Raw = Read(Graph, TiltForwardInput,
         AVoyageVehicleGyroCopter::StaticClass(), 680, 240);
@@ -447,13 +470,17 @@ bool AddTickGraph(UEdGraph* Graph)
     Default(Clamp, P::Min, IntegratedMinimum);
     Default(Clamp, P::Max, IntegratedMaximum);
 
-    UK2Node_DynamicCast* PlayerController = NewObject<UK2Node_DynamicCast>(Graph);
-    PlayerController->TargetType = APlayerController::StaticClass();
-    PlayerController->SetPurity(true);
-    AddNode(PlayerController, Graph, 1830, 80);
-    UK2Node_CallFunction* XPressed = Call(Graph, APlayerController::StaticClass(),
-        GET_FUNCTION_NAME_CHECKED(APlayerController, WasInputKeyJustPressed), 2060, 80);
-    Default(XPressed, P::Key, ResetKey);
+    UK2Node_CallFunction* ResetActive = AddBoundActionBool(
+        Graph, ResetAction, Cast->GetCastResultPin(), 1830, 80);
+    if (!ResetActive) return false;
+    UK2Node_VariableGet* ResetWasActive = Read(
+        Graph, ResetActionWasActive, nullptr, 2060, 80);
+    UK2Node_CallFunction* ResetWasInactive = Call(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, Not_PreBool), 2290, 80);
+    UK2Node_CallFunction* ResetEdge = Call(
+        Graph, UKismetMathLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, BooleanAND), 2520, 80);
     UK2Node_CallFunction* Reset = Call(Graph, UKismetMathLibrary::StaticClass(),
         BlueprintGraphNames::MathFunctions::SelectFloat, 2520, 330);
     Default(Reset, Select::WhenTrue, Neutral);
@@ -462,6 +489,8 @@ bool AddTickGraph(UEdGraph* Graph)
         AVoyageVehicleGyroCopter::StaticClass(), 2980, 0);
     UK2Node_VariableGet* StoredIntegrated = Read(
         Graph, IntegratedPitch, nullptr, 2980, 180);
+    UK2Node_VariableSet* StoreResetActive = Write(
+        Graph, ResetActionWasActive, nullptr, 3210, 0);
 
     UK2Node_VariableSet* ClearIntegrated = Write(Graph, IntegratedPitch, nullptr, 1140, -220);
     Default(ClearIntegrated, IntegratedPitch, Neutral);
@@ -471,21 +500,33 @@ bool AddTickGraph(UEdGraph* Graph)
     UK2Node_VariableSet* ClearDisabledIntegrated = Write(
         Graph, IntegratedPitch, nullptr, 1370, -400);
     Default(ClearDisabledIntegrated, IntegratedPitch, Neutral);
+    UK2Node_VariableSet* ClearInvalidReset = Write(
+        Graph, ResetActionWasActive, nullptr, 680, -520);
+    Default(ClearInvalidReset, ResetActionWasActive, FalseText);
+    UK2Node_VariableSet* ClearUncontrolledReset = Write(
+        Graph, ResetActionWasActive, nullptr, 1600, -220);
+    Default(ClearUncontrolledReset, ResetActionWasActive, FalseText);
+    UK2Node_VariableSet* ClearDisabledReset = Write(
+        Graph, ResetActionWasActive, nullptr, 1600, -400);
+    Default(ClearDisabledReset, ResetActionWasActive, FalseText);
     bool Ok = true;
     Ok &= Link(Pin(Tick, P::Then), Pin(Cast, P::Execute));
     Ok &= Link(Pin(GetParent, P::ReturnValue), Cast->GetCastSourcePin());
     Ok &= Link(Cast->GetValidCastPin(), Pin(EnabledBranch, P::Execute));
-    Ok &= Link(Cast->GetCastResultPin(), Pin(Controller, P::FunctionTarget));
+    Ok &= Link(Cast->GetInvalidCastPin(), Pin(ClearInvalidReset, P::Execute));
     Ok &= Link(Pin(Enabled, Settings::EnablePitchCorrection),
         Pin(EnabledBranch, P::Condition));
     Ok &= Link(Pin(EnabledBranch, P::Then), Pin(Branch, P::Execute));
     Ok &= Link(Pin(EnabledBranch, P::Else), Pin(ClearDisabledIntegrated, P::Execute));
+    Ok &= Link(Pin(ClearDisabledIntegrated, P::Then), Pin(ClearDisabledReset, P::Execute));
     Ok &= Link(Cast->GetCastResultPin(), Pin(Controlled, P::FunctionTarget));
     Ok &= Link(Pin(Controlled, P::ReturnValue), Pin(Branch, P::Condition));
     Ok &= Link(Pin(Branch, P::Then), Pin(SetIntegrated, P::Execute));
     Ok &= Link(Pin(SetIntegrated, P::Then), Pin(SetNative, P::Execute));
+    Ok &= Link(Pin(SetNative, P::Then), Pin(StoreResetActive, P::Execute));
     Ok &= Link(Pin(Branch, P::Else), Pin(ClearIntegrated, P::Execute));
     Ok &= Link(Pin(ClearIntegrated, P::Then), Pin(ClearNative, P::Execute));
+    Ok &= Link(Pin(ClearNative, P::Then), Pin(ClearUncontrolledReset, P::Execute));
     Ok &= Link(Cast->GetCastResultPin(), Pin(Raw, P::FunctionTarget));
     Ok &= Link(Cast->GetCastResultPin(), Pin(SetNative, P::FunctionTarget));
     Ok &= Link(Cast->GetCastResultPin(), Pin(ClearNative, P::FunctionTarget));
@@ -502,12 +543,16 @@ bool AddTickGraph(UEdGraph* Graph)
     Ok &= Link(Pin(Current, IntegratedPitch), Pin(Add, Binary::LeftOperand));
     Ok &= Link(Pin(PerFrame, P::ReturnValue), Pin(Add, Binary::RightOperand));
     Ok &= Link(Pin(Add, P::ReturnValue), Pin(Clamp, P::Value));
-    Ok &= Link(Pin(Controller, P::ReturnValue), PlayerController->GetCastSourcePin());
-    Ok &= Link(PlayerController->GetCastResultPin(), Pin(XPressed, P::FunctionTarget));
+    Ok &= Link(Pin(ResetActive, P::ReturnValue), Pin(ResetEdge, Binary::LeftOperand));
+    Ok &= Link(Pin(ResetWasActive, ResetActionWasActive),
+        Pin(ResetWasInactive, Binary::LeftOperand));
+    Ok &= Link(Pin(ResetWasInactive, P::ReturnValue), Pin(ResetEdge, Binary::RightOperand));
     Ok &= Link(Pin(Clamp, P::ReturnValue), Pin(Reset, Select::WhenFalse));
-    Ok &= Link(Pin(XPressed, P::ReturnValue), Pin(Reset, Select::Condition));
+    Ok &= Link(Pin(ResetEdge, P::ReturnValue), Pin(Reset, Select::Condition));
     Ok &= Link(Pin(Reset, P::ReturnValue), Pin(SetIntegrated, IntegratedPitch));
     Ok &= Link(Pin(StoredIntegrated, IntegratedPitch), Pin(SetNative, TiltForwardInput));
+    Ok &= Link(Pin(ResetActive, P::ReturnValue),
+        Pin(StoreResetActive, ResetActionWasActive));
     return Ok;
 }
 
@@ -557,6 +602,8 @@ int32 UGenerateStableGyroModCommandlet::Main(const FString& Params)
     FEdGraphPinType DoubleType;
     DoubleType.PinCategory = UEdGraphSchema_K2::PC_Real;
     DoubleType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
+    FEdGraphPinType BoolType;
+    BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
     UEdGraph* StabilizationGraph = FBlueprintEditorUtils::FindEventGraph(StabilizationBlueprint);
     if (!StabilizationGraph || !AddSettingMembers(StabilizationBlueprint, false) ||
         !AddSettingsFunction(StabilizationBlueprint, false))
@@ -575,11 +622,20 @@ int32 UGenerateStableGyroModCommandlet::Main(const FString& Params)
         FName(PitchGeneratorName));
     if (!PitchBlueprint || !AddSettingMembers(PitchBlueprint, true) ||
         !FBlueprintEditorUtils::AddMemberVariable(
-            PitchBlueprint, IntegratedPitch, DoubleType, Neutral))
+            PitchBlueprint, IntegratedPitch, DoubleType, Neutral) ||
+        !FBlueprintEditorUtils::AddMemberVariable(
+            PitchBlueprint, ResetActionWasActive, BoolType, FalseText))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to add Gyro pitch state"));
         return 1;
     }
+    FBPVariableDescription* ResetState = PitchBlueprint->NewVariables.FindByPredicate(
+        [](const FBPVariableDescription& Candidate)
+        {
+            return Candidate.VarName == ResetActionWasActive;
+        });
+    if (!ResetState) return 1;
+    ResetState->PropertyFlags |= CPF_Transient;
     UEdGraph* PitchGraph = FBlueprintEditorUtils::FindEventGraph(PitchBlueprint);
     if (!PitchGraph)
     {
@@ -589,7 +645,7 @@ int32 UGenerateStableGyroModCommandlet::Main(const FString& Params)
     if (!AddSettingsFunction(PitchBlueprint, true)) return 1;
     if (PitchBlueprint->Status == BS_Error ||
         !AddBeginPlayGraph(PitchGraph, PitchBlueprint, true) ||
-        !AddTickGraph(PitchGraph) ||
+        !AddTickGraph(PitchGraph, ResetAction) ||
         !SaveBlueprint(PitchPackageObject, PitchBlueprint, TG_PrePhysics))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to generate Gyro pitch helper"));
