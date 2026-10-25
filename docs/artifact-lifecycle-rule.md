@@ -59,14 +59,14 @@ relocating, or removing retained output, consult the family registry in
 [`artifacts/ARTIFACT-FAMILIES.md`](../artifacts/ARTIFACT-FAMILIES.md) and its local
 [`AGENTS.md`](../artifacts/AGENTS.md). A family needs an owner and continuing
 consumer; individual run directories inherit that contract. The standard
-release installer may retain a selected candidate in the existing
+release installer may retain a published package in the existing
 `installations/<Mod>-V<N>/` family under the [release workflow](release-and-installation-rule.md)
 without a separate artifact-registry read. This applies only to that public
 installer path: manual changes and cleanup still require consulting the owner.
 Do not delete content whose value or dependencies are unknown.
 
-Selected release candidates and published release packages must remain usable
-without `Tmp/`. Working builds and transient installation
+Published release packages must remain usable without `Tmp/`. Selected but
+unpublished release candidates, working builds, and transient installation
 recovery state remain in `Tmp/`. Keep temporary state only through the active
 install operation and any coupled settings change. The
 [release workflow](release-and-installation-rule.md) governs

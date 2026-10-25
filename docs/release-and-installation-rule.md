@@ -103,9 +103,9 @@ for releases that predate the changelog.
 ## Game update and candidate builds
 
 The normal path is: run the public builder, install its candidate through the
-owning documented entry point, test that exact ZIP in the game, retain it as
-the next release candidate, then publish that same ZIP. Use the documented
-producer and installer commands; do not add
+owning documented entry point, test that exact ZIP in the game, keep that
+selected candidate under `Tmp/<Mod>/`, then publish that same ZIP. Use the
+documented producer and installer commands; do not add
 a separate game-version or installation-status preflight. The producer and
 installer own their process, fingerprint, and installed-file checks. A running
 game is a reported blocker for a phase that needs it closed, not a reason to
@@ -124,15 +124,18 @@ and current-state documentation that still await that test. Keep such changes
 uncommitted and record proposed documentation in the ignored owning backlog.
 After the game test passes, prepare the exact tested implementation and its
 durable documentation for review; commit them only with explicit user
-authorization. Update the pin for future default builds and retain the exact
-tested ZIP when selecting a release candidate. Changing the pin is metadata
-work; it must not silently
+authorization. Update the pin for future default builds and record the exact
+tested ZIP's existing `Tmp/` path in the active context or ignored backlog when
+it is selected for publication. Prefer a meaningful
+`release-candidate-V<N>` output name when the producer supports choosing it,
+but do not move or rebuild an existing candidate merely to rename it. Changing
+the pin is metadata work; it must not silently
 replace the tested package. Record the game-test result separately from build
 provenance: the candidate manifest must keep the source commit, game build ID,
 and ZIP hash from the original build. Do not rebuild or regenerate its manifest
-merely to update a tested-game version or other post-test metadata. Use the
-installer's retention-only mode to select an already installed and tested ZIP
-without installing it again. A temporary accepted build remains under `Tmp/`.
+merely to update a tested-game version or other post-test metadata. Selection
+does not promote the candidate into `artifacts/`: keep the exact ZIP and its
+original manifest in `Tmp/` until that ZIP is either published or rejected.
 
 ## Output lifetime
 
@@ -147,26 +150,29 @@ operation and any coupled settings edit have succeeded, those records are
 disposable. Temporary outputs do not become release artifacts merely because
 they were installed or tested in game.
 
-Only explicitly selected, game-tested release candidates and published releases
-belong in `artifacts/installations/`. Put the exact tested ZIP and release manifest under
+Only published releases belong in `artifacts/installations/`. After the exact
+ZIP is confirmed public on Nexus and `version.txt` has advanced to `N`, retain
+that ZIP and its original release manifest under
 `artifacts/installations/<Mod>-V<N>/`, for example
-`artifacts/installations/Railgun-V5/`. The directory identifies the proposed
+`artifacts/installations/Railgun-V5/`. The directory identifies the published
 release version, not a timestamp or installation run. Refuse to reuse an
 existing version directory for a different ZIP. Keep the selected ZIP there
-through publication and for later identification or recovery. The ZIP is the
-retained payload; loose `package/` copies are build intermediates and do not
-belong beside a complete candidate archive. The installer validates the
+for later identification or rollback. The ZIP is the retained payload; loose
+`package/` copies are build intermediates and do not belong beside a complete
+release archive. The installer validates the
 manifest records against the ZIP and reads the container files from it when
 the loose build intermediates have been removed. Historical
 timestamped directories may be read for existing restore dependencies; migrate
 or remove them only after their ownership and recovery value are established.
 
-`artifacts/installations/` is the trusted rollback collection. All mod versions
-already retained there, including historical timestamped versions, are
-game-tested and must be treated as known-good rollback versions. Do not require
-a separate chat, log, or gameplay-test record to establish that status. New
-untested builds stay in `Tmp/<Mod>/`; promote a package into this collection
-only after its real-game test passes. Normal manifest, hash, and supported-game
+`artifacts/installations/` is the published rollback collection. Canonical
+`<Mod>-V<N>` directories created under this rule are published and must be
+treated as known-good rollback versions without searching for a separate chat,
+log, or gameplay-test record. Historical noncanonical directories may predate
+this contract; audit their owner and consumers rather than inferring publication
+from location alone. Every unpublished build stays in `Tmp/<Mod>/`, including a
+game-tested candidate selected for the next release. Promote the exact ZIP only
+after publication is confirmed. Normal manifest, hash, and supported-game
 version checks still apply when reinstalling a retained package.
 
 `Voyage/Content/Paks` and `LogicMods` contain only files consumed by the game.

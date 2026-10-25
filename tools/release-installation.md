@@ -72,19 +72,24 @@ closed immediately before mutation, uses temporary recovery data, and reads
 back installed hashes. It selects Paks or LogicMods from the ZIP layout.
 Add `-ValidateOnly` when a read-only plan is specifically
 needed. If it reports `recovery-failed`, stop and preserve the reported files
-under `Tmp/` for diagnosis. After the installed
-candidate passes its real-game test, retain the same ZIP and its original
-manifest without another installation:
+under `Tmp/` for diagnosis. After the installed candidate passes its real-game
+test, keep the same ZIP and its original manifest under `Tmp/<Mod>/` while it
+awaits publication. After that exact ZIP is confirmed public and `version.txt`
+advances to the published number, retain it without another installation:
 
 ```powershell
 .\tools\Install-VoyageRelease.ps1 `
   -ReleaseManifest '.\Tmp\Example\V1-candidate\release-manifest.json' `
-  -RetainCandidateOnly
+  -RetainPublishedRelease
 ```
 
-This writes `artifacts/installations/<Mod>-V<N>/`. An existing version directory is a
-conflict, not an overwrite. Installed game directories contain only files the
-game consumes.
+This requires the manifest version to equal the integer in `version.txt` and
+writes `artifacts/installations/<Mod>-V<N>/`. An existing version directory is
+a conflict, not an overwrite. This publication-only mode validates and copies
+the archive without inspecting or changing the installed game.
+`-ReleaseCandidate` and `-RetainCandidateOnly` are obsolete because no
+unpublished candidate belongs in retained artifacts. Installed game directories
+contain only files the game consumes.
 
 For a failed gameplay test, reinstall the previous ready package. Use
 `Restore-VoyageReleaseInstallation.ps1` only for an interrupted or coupled

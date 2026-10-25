@@ -10,7 +10,8 @@ Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $testParent = Join-Path $repositoryRoot 'Tmp\tests\install-voyage-release'
-$testRoot = Join-Path $testParent ([Guid]::NewGuid().ToString('N'))
+$testId = [Guid]::NewGuid().ToString('N')
+$testRoot = Join-Path $testParent $testId
 $testPassed = $false
 $installer = Join-Path $PSScriptRoot 'Install-VoyageRelease.ps1'
 $steamApps = Join-Path $testRoot 'steamapps'
@@ -21,8 +22,13 @@ $steamManifest = Join-Path $steamApps 'appmanifest_1783560.acf'
 $evidenceParent = Join-Path $testRoot 'evidence'
 $restorer = Join-Path $PSScriptRoot 'Restore-VoyageReleaseInstallation.ps1'
 $buildId = '99999999'
-$modName = 'SyntheticVoyageMod'
+$modName = 'SyntheticVoyageMod-' + $testId.Substring(0, 8)
 $containerName = 'SyntheticVoyageMod_P'
+$syntheticModRoot = Join-Path $repositoryRoot "mods\$modName"
+$syntheticTmpRoot = Join-Path $repositoryRoot "Tmp\$modName"
+$publishedVersionPath = Join-Path $syntheticModRoot 'version.txt'
+$retainedReleaseRoot = Join-Path $repositoryRoot "artifacts\installations\$modName-V1"
+$publishedRetentionGameRoot = Join-Path $testRoot 'game-root-must-not-be-read'
 $fixtureExtensions = @('.pak', '.ucas', '.utoc')
 if ($WithAutoLoadSidecar) { $fixtureExtensions += '.autoload' }
 $expectedInstalledCount = $fixtureExtensions.Count +
@@ -201,6 +207,41 @@ try {
 
     $firstRelease = New-SyntheticRelease -Version 'V1' `
         -ContentMarker 'first'
+
+    Assert-Rejected -Action {
+        & $installer -ReleaseManifest $firstRelease.manifestPath `
+            -GameRoot $gameRoot -ReleaseCandidate
+    } -Pattern 'ReleaseCandidate is obsolete'
+    Assert-Rejected -Action {
+        & $installer -ReleaseManifest $firstRelease.manifestPath `
+            -GameRoot $gameRoot -RetainCandidateOnly
+    } -Pattern 'RetainCandidateOnly is obsolete'
+
+    [IO.Directory]::CreateDirectory($syntheticModRoot) | Out-Null
+    [IO.File]::WriteAllText(
+        $publishedVersionPath,
+        "0`n",
+        [Text.UTF8Encoding]::new($false))
+    Assert-Rejected -Action {
+        & $installer -ReleaseManifest $firstRelease.manifestPath `
+            -GameRoot $publishedRetentionGameRoot -RetainPublishedRelease
+    } -Pattern 'is not the published version'
+    [IO.File]::WriteAllText(
+        $publishedVersionPath,
+        "1`n",
+        [Text.UTF8Encoding]::new($false))
+    $retained = & $installer -ReleaseManifest $firstRelease.manifestPath `
+        -GameRoot $publishedRetentionGameRoot -RetainPublishedRelease
+    Assert-Hash -Path $retained.archivePath -Expected $firstRelease.archive.sha256 `
+        -Label 'Retained published archive'
+    Assert-Hash -Path $retained.releaseManifestPath `
+        -Expected (Get-FileHash -LiteralPath $firstRelease.manifestPath -Algorithm SHA256).Hash `
+        -Label 'Retained published manifest'
+    Assert-Rejected -Action {
+        & $installer -ReleaseManifest $firstRelease.manifestPath `
+            -GameRoot $publishedRetentionGameRoot -RetainPublishedRelease
+    } -Pattern 'already exists'
+
     $validationEvidence = Join-Path $testRoot 'validation-must-not-exist'
     $validationResult = & $installer -ReleaseManifest $firstRelease.manifestPath `
         -GameRoot $gameRoot -EvidenceRoot $validationEvidence -ValidateOnly
@@ -664,7 +705,10 @@ try {
         passed = $true
         autoLoadSidecar = [bool]$WithAutoLoadSidecar
         contentPluginDescriptor = [bool]$WithContentPluginDescriptor
-        checks = @('validate-only', 'fingerprint-rejection', 'archive-payload-rejection',
+        checks = @('obsolete-candidate-retention-rejection',
+            'published-version-gate', 'published-release-retention',
+            'published-release-collision', 'validate-only',
+            'fingerprint-rejection', 'archive-payload-rejection',
             'content-plugin-path-rejection',
             'directory-target-rejection', 'install-readback', 'predecessor-backup',
             'install-rollback', 'changed-file-rejection', 'damaged-backup-rejection',
@@ -676,6 +720,36 @@ try {
     }
 }
 finally {
+    if (Test-Path -LiteralPath $syntheticModRoot) {
+        $resolvedSyntheticModRoot = [IO.Path]::GetFullPath($syntheticModRoot)
+        $expectedSyntheticModRoot = [IO.Path]::GetFullPath(
+            (Join-Path $repositoryRoot "mods\$modName"))
+        if (-not [StringComparer]::OrdinalIgnoreCase.Equals(
+                $resolvedSyntheticModRoot, $expectedSyntheticModRoot)) {
+            throw "Refusing to remove unexpected synthetic mod path: $resolvedSyntheticModRoot"
+        }
+        Remove-Item -LiteralPath $resolvedSyntheticModRoot -Recurse -Force
+    }
+    if (Test-Path -LiteralPath $retainedReleaseRoot) {
+        $resolvedRetainedReleaseRoot = [IO.Path]::GetFullPath($retainedReleaseRoot)
+        $expectedRetainedReleaseRoot = [IO.Path]::GetFullPath(
+            (Join-Path $repositoryRoot "artifacts\installations\$modName-V1"))
+        if (-not [StringComparer]::OrdinalIgnoreCase.Equals(
+                $resolvedRetainedReleaseRoot, $expectedRetainedReleaseRoot)) {
+            throw "Refusing to remove unexpected retained test path: $resolvedRetainedReleaseRoot"
+        }
+        Remove-Item -LiteralPath $resolvedRetainedReleaseRoot -Recurse -Force
+    }
+    if (Test-Path -LiteralPath $syntheticTmpRoot) {
+        $resolvedSyntheticTmpRoot = [IO.Path]::GetFullPath($syntheticTmpRoot)
+        $expectedSyntheticTmpRoot = [IO.Path]::GetFullPath(
+            (Join-Path $repositoryRoot "Tmp\$modName"))
+        if (-not [StringComparer]::OrdinalIgnoreCase.Equals(
+                $resolvedSyntheticTmpRoot, $expectedSyntheticTmpRoot)) {
+            throw "Refusing to remove unexpected synthetic Tmp path: $resolvedSyntheticTmpRoot"
+        }
+        Remove-Item -LiteralPath $resolvedSyntheticTmpRoot -Recurse -Force
+    }
     if (-not $testPassed -and (Test-Path -LiteralPath $testRoot)) {
         Write-Warning "Failed installation test evidence retained: $testRoot"
     }

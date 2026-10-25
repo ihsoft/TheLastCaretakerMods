@@ -617,8 +617,8 @@ writer, then reopened and compared field-for-field.
 
 - Parser profile: `UE5_8`; authoring editor: `5.8.2`. The exact accepted
   source-build pin is in `game-build.json`.
-- Selected candidate ZIPs live under `artifacts/installations/Railgun-V<N>/`.
-  Temporary builds and their transient installation state stay in `Tmp/`;
+- Published ZIPs live under `artifacts/installations/Railgun-V<N>/`.
+  Unpublished candidates and their transient installation state stay in `Tmp/`;
   neither is a source dependency for rebuilding.
 
 ## Compatibility limits and deferred work

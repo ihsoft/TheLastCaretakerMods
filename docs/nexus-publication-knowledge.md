@@ -14,7 +14,7 @@ The release rule owns version identity and the exact ZIP to publish.
    the mod already has a Nexus page; `0` does not answer that question. Compare
    the proposed number with files already published on that page. If the
    repository value is stale or the proposed number is occupied, resolve the
-   target before retaining or publishing a numbered candidate. Check
+   target before publishing a numbered candidate. Check
    which game Updates the existing downloadable files support. When main and
    beta Updates coexist, decide whether the new file is parallel to an older
    supported file or replaces it before opening the upload form.
@@ -40,9 +40,11 @@ The release rule owns version identity and the exact ZIP to publish.
    is public. Opening a public-page tab alone is not verification: inspect the
    visible file listing and version. After publication, verify the public state
    or use the user's explicit report that he completed the final step. Only
-   then advance `version.txt` and finalize the matching changelog section under
-   the release rule; state when publication was reported by the user rather
-   than independently observed.
+   then advance `version.txt`, finalize the matching changelog section under
+   the release rule, and retain that same ZIP through the shared installer's
+   `-RetainPublishedRelease` mode. This is the first point at which the package
+   belongs in `artifacts/installations/`. State when publication was reported
+   by the user rather than independently observed.
 
 ## If the site behaves unexpectedly
 

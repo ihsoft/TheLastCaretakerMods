@@ -84,8 +84,9 @@ Use the wrappers listed in the [tool catalog](../tools/tool-catalog.md):
   `New-VoyageReleaseManifest.ps1`; give it the exact source scope and let its
   installer validation gate publish the immutable manifest;
 - validate or install an already-built standalone IoStore release through
-  `Install-VoyageRelease.ps1`, retaining a selected release ZIP outside the
-  game and using temporary transaction data during mutation; reinstall the
+  `Install-VoyageRelease.ps1`, retaining the exact ZIP under `Tmp/` until
+  publication and retaining the published ZIP under `artifacts/installations/`;
+  use temporary transaction data during mutation and reinstall the
   previous ready package if a game test fails;
 - install and remove unchanged runtime canaries only through the hash- and
   fingerprint-gated probe scripts.

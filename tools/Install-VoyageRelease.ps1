@@ -11,6 +11,7 @@ param(
     [string]$EvidenceRoot,
     [switch]$ReleaseCandidate,
     [switch]$RetainCandidateOnly,
+    [switch]$RetainPublishedRelease,
     [switch]$LogicMods,
     [switch]$KeepRecoveryEvidence,
 
@@ -25,8 +26,14 @@ $ErrorActionPreference = 'Stop'
 if ($RetainArchiveOnRestore) {
     throw 'RetainArchiveOnRestore is obsolete: ZIP archives are no longer installed in Paks.'
 }
-if ($RetainCandidateOnly -and ($ReleaseCandidate -or $ValidateOnly)) {
-    throw 'RetainCandidateOnly cannot be combined with ReleaseCandidate or ValidateOnly.'
+if ($ReleaseCandidate) {
+    throw 'ReleaseCandidate is obsolete: install unpublished candidates normally and keep them under Tmp.'
+}
+if ($RetainCandidateOnly) {
+    throw 'RetainCandidateOnly is obsolete: unpublished candidates remain under Tmp. Use RetainPublishedRelease only after publication.'
+}
+if ($RetainPublishedRelease -and $ValidateOnly) {
+    throw 'RetainPublishedRelease cannot be combined with ValidateOnly.'
 }
 Set-StrictMode -Version Latest
 
@@ -457,6 +464,69 @@ if ([string]::IsNullOrWhiteSpace($retainedArchiveRelativePath)) {
     $retainedArchiveRelativePath = $resolvedArchive.name
 }
 
+$safeMod = $mod -replace '[^0-9A-Za-z._-]', '_'
+$safeVersion = $artifactVersion -replace '[^0-9A-Za-z._-]', '_'
+if ($RetainPublishedRelease) {
+    $publishedVersionPath = Join-Path (Join-Path $repositoryRoot "mods\$mod") 'version.txt'
+    if (-not (Test-Path -LiteralPath $publishedVersionPath -PathType Leaf)) {
+        throw "Published-version file is missing: $publishedVersionPath"
+    }
+    $publishedVersionText = (Get-Content -LiteralPath $publishedVersionPath -Raw).Trim()
+    if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+        throw "Invalid published Nexus version: $publishedVersionPath"
+    }
+    if ($artifactVersion -cnotmatch '^V([1-9][0-9]*)$') {
+        throw "Published release version must use V<N> with N greater than zero: $artifactVersion"
+    }
+    $manifestVersion = [int]$Matches[1]
+    if ($manifestVersion -ne [int]$publishedVersionText) {
+        throw "Release $artifactVersion is not the published version in ${publishedVersionPath}: $publishedVersionText"
+    }
+    $releaseDirectory = Join-Path (Join-Path $repositoryRoot 'artifacts\installations') "$safeMod-$artifactVersion"
+    if (Test-Path -LiteralPath $releaseDirectory) {
+        throw "Release version directory already exists: $releaseDirectory"
+    }
+
+    $releaseParent = Split-Path -Parent $releaseDirectory
+    [IO.Directory]::CreateDirectory($releaseParent) | Out-Null
+    $stagingDirectory = Join-Path $releaseParent (
+        '.retaining-' + [Guid]::NewGuid().ToString('N'))
+    [IO.Directory]::CreateDirectory($stagingDirectory) | Out-Null
+    try {
+        $selectedArchive = Join-Path $stagingDirectory $retainedArchiveRelativePath
+        $selectedManifest = Join-Path $stagingDirectory 'release-manifest.json'
+        [IO.Directory]::CreateDirectory((Split-Path -Parent $selectedArchive)) | Out-Null
+        Copy-Item -LiteralPath $resolvedArchive.path -Destination $selectedArchive
+        Copy-Item -LiteralPath $manifestPath -Destination $selectedManifest
+        if ((Get-FileHash -LiteralPath $selectedArchive -Algorithm SHA256).Hash -cne
+            $resolvedArchive.sha256 -or
+            (Get-FileHash -LiteralPath $selectedManifest -Algorithm SHA256).Hash -cne
+            $releaseManifestSha256) {
+            throw 'Retained published ZIP or manifest hash mismatch.'
+        }
+        [IO.Directory]::Move($stagingDirectory, $releaseDirectory)
+    }
+    finally {
+        if (Test-Path -LiteralPath $stagingDirectory) {
+            Remove-Item -LiteralPath $stagingDirectory -Recurse -Force
+        }
+    }
+    $selectedArchive = Join-Path $releaseDirectory $retainedArchiveRelativePath
+    $selectedManifest = Join-Path $releaseDirectory 'release-manifest.json'
+    Write-Host "Published release retained without installation: $selectedArchive"
+    [pscustomobject][ordered]@{
+        retained = $true
+        installed = $false
+        mod = $mod
+        artifactVersion = $artifactVersion
+        sourceCommit = $sourceCommit
+        steamBuildId = $expectedBuildId
+        archivePath = $selectedArchive
+        releaseManifestPath = $selectedManifest
+    }
+    return
+}
+
 $fingerprintScript = Join-Path $PSScriptRoot 'Get-VoyageBuildFingerprint.ps1'
 $actualFingerprint = (& $fingerprintScript -GameRoot $GameRoot | ConvertFrom-Json)
 $actualBuildId = [string]$actualFingerprint.steam.buildId
@@ -485,8 +555,6 @@ else {
     Assert-SafeDestinationPath -GameRoot $resolvedGameRoot `
         -RelativePath $contentPluginPlan.installRelativePath
 }
-$safeMod = $mod -replace '[^0-9A-Za-z._-]', '_'
-$safeVersion = $artifactVersion -replace '[^0-9A-Za-z._-]', '_'
 $token = [Guid]::NewGuid().ToString('N')
 $defaultEvidenceRoot = [string]::IsNullOrWhiteSpace($EvidenceRoot)
 if ($defaultEvidenceRoot) {
@@ -504,67 +572,6 @@ $evidence = if ($defaultEvidenceRoot) {
 }
 else {
     Join-Path $evidenceParent "$safeMod\$safeVersion-$($token.Substring(0, 8))"
-}
-$releaseDirectory = $null
-if ($ReleaseCandidate -or $RetainCandidateOnly) {
-    $publishedVersionPath = Join-Path (Join-Path $repositoryRoot "mods\$mod") 'version.txt'
-    if (-not (Test-Path -LiteralPath $publishedVersionPath -PathType Leaf)) {
-        throw "Published-version file is missing: $publishedVersionPath"
-    }
-    $publishedVersionText = (Get-Content -LiteralPath $publishedVersionPath -Raw).Trim()
-    if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
-        throw "Invalid published Nexus version: $publishedVersionPath"
-    }
-    $nextVersion = [int]$publishedVersionText + 1
-    $releaseDirectory = Join-Path (Join-Path $repositoryRoot 'artifacts\installations') "$safeMod-V$nextVersion"
-    if (Test-Path -LiteralPath $releaseDirectory) {
-        throw "Release version directory already exists: $releaseDirectory"
-    }
-}
-function Save-ReleaseCandidate {
-    $releaseParent = Split-Path -Parent $releaseDirectory
-    [IO.Directory]::CreateDirectory($releaseParent) | Out-Null
-    $stagingDirectory = Join-Path $releaseParent (
-        '.selecting-' + [Guid]::NewGuid().ToString('N'))
-    [IO.Directory]::CreateDirectory($stagingDirectory) | Out-Null
-    try {
-        $selectedArchive = Join-Path $stagingDirectory $retainedArchiveRelativePath
-        $selectedManifest = Join-Path $stagingDirectory 'release-manifest.json'
-        [IO.Directory]::CreateDirectory((Split-Path -Parent $selectedArchive)) | Out-Null
-        Copy-Item -LiteralPath $resolvedArchive.path -Destination $selectedArchive
-        Copy-Item -LiteralPath $manifestPath -Destination $selectedManifest
-        if ((Get-FileHash -LiteralPath $selectedArchive -Algorithm SHA256).Hash -cne
-            $resolvedArchive.sha256 -or
-            (Get-FileHash -LiteralPath $selectedManifest -Algorithm SHA256).Hash -cne
-            $releaseManifestSha256) {
-            throw 'Retained candidate ZIP or manifest hash mismatch.'
-        }
-        [IO.Directory]::Move($stagingDirectory, $releaseDirectory)
-    }
-    finally {
-        if (Test-Path -LiteralPath $stagingDirectory) {
-            Remove-Item -LiteralPath $stagingDirectory -Recurse -Force
-        }
-    }
-    [pscustomobject][ordered]@{
-        archivePath = Join-Path $releaseDirectory $retainedArchiveRelativePath
-        manifestPath = Join-Path $releaseDirectory 'release-manifest.json'
-    }
-}
-if ($RetainCandidateOnly) {
-    $selected = Save-ReleaseCandidate
-    Write-Host "Game-tested release candidate retained without installation: $($selected.archivePath)"
-    [pscustomobject][ordered]@{
-        retained = $true
-        installed = $false
-        mod = $mod
-        artifactVersion = $artifactVersion
-        sourceCommit = $sourceCommit
-        steamBuildId = $actualBuildId
-        archivePath = $selected.archivePath
-        releaseManifestPath = $selected.manifestPath
-    }
-    return
 }
 if (Test-Path -LiteralPath $evidence) {
     throw "Installation evidence path already exists: $evidence"
@@ -640,7 +647,6 @@ if ($ValidateOnly) {
         gameRoot = $resolvedGameRoot
         steamBuildId = $actualBuildId
         paksDirectory = $paksDirectory
-        retainedArchivePath = $(if ($ReleaseCandidate) { Join-Path $releaseDirectory $retainedArchiveRelativePath } else { $null })
         files = @($installItems | Select-Object kind, name, size, sourceSha256,
             retainOnRestore)
     }
@@ -648,11 +654,6 @@ if ($ValidateOnly) {
 }
 
 [IO.Directory]::CreateDirectory($evidence) | Out-Null
-if ($ReleaseCandidate) {
-    $selected = Save-ReleaseCandidate
-    $retainedArchivePath = $selected.archivePath
-    $retainedManifestPath = $selected.manifestPath
-}
 
 $transaction = [ordered]@{
     schemaVersion = 1
@@ -790,11 +791,6 @@ try {
         steamBuildId = $actualBuildId
         paksDirectory = $paksDirectory
         installedAtUtc = $installedAtUtc
-        retainedManifestPath = $(if ($ReleaseCandidate) { $retainedManifestPath } else { $null })
-        retainedArchive = $(if ($ReleaseCandidate) { [ordered]@{
-            path = $retainedArchivePath
-            sha256 = $resolvedArchive.sha256
-        } } else { $null })
         files = $installItems
     }
     Write-JsonFile -Path $installManifestPath -Value $installationManifest
@@ -897,6 +893,5 @@ if ($KeepRecoveryEvidence) { Write-Host "Temporary recovery evidence: $installMa
     artifactVersion = $artifactVersion
     installManifestPath = $installManifestPath
     paksDirectory = $paksDirectory
-    retainedArchivePath = $(if ($ReleaseCandidate) { $retainedArchivePath } else { $null })
     fileCount = $installItems.Count
 }
