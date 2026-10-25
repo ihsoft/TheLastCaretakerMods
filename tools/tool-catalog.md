@@ -46,3 +46,4 @@ failure handling.
 | Stress-inspect GUI asset parsing | `UAssetGUI.exe stress-open` | [Toolchain maintenance](toolchain-maintenance.md) |
 | Run toolchain regressions | `Test-*.ps1` | [Toolchain validation](toolchain-validation.md) |
 | Coordinate Git mutations | `commit-repository-changes.ps1` | [Git coordination](repository-git-coordination.md) |
+| Start or finish an explicit agent-work measurement | `measure-agent-work.py` | [Agent work measurement](agent-work-measurement.md) |

@@ -17,3 +17,4 @@ rules remain in the [repository index](../AGENTS.md).
 | Repair a missing or invalid published binary, or change a toolchain | [Toolchain maintenance](toolchain-maintenance.md) |
 | Diagnose an unexpected native tool result or test a toolchain change | [Toolchain validation](toolchain-validation.md) |
 | Report tool use in a coding handoff | [Tool use and reporting](tool-use-and-reporting.md) |
+| Measure explicitly requested agent work | [Agent work measurement](agent-work-measurement.md) |

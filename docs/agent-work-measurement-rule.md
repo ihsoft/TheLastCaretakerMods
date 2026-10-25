@@ -4,6 +4,8 @@ Use this method only when the user explicitly requests process diagnostics.
 It is not a default reporting requirement. Keep measurement cheaper than the
 decision it informs; reuse available counters rather than building telemetry.
 Ordinary delegation decisions follow [the subagent workflow](subagent-workflow-rule.md).
+For an explicit session boundary, use the focused
+[agent work measurement tool](../tools/agent-work-measurement.md).
 
 ## Scope and attribution
 
