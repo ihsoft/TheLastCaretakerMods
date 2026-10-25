@@ -180,9 +180,13 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   disconnect path. Disabled mode keeps the native two-port action and hint.
 - Preserve the extracted mooring mesh's corner normals, UV channels, vertex
   colors and material override when splitting its two sides. Do not manually
-  remove zero-area triangles or invent tangents absent from the source. Keep
-  the derived detailed meshes as ordinary StaticMesh assets so automatic Nanite
-  import does not substitute a reduced fallback for the desired render geometry.
+  remove zero-area triangles or invent tangents absent from the source GLB.
+  Prepare runtime meshes through the shared StaticMesh producer with the
+  Nanite, fallback and ray-tracing policy in [architecture](ARCHITECTURE.md).
+  Keep editor reference meshes out of the runtime payload and preserve every
+  cooked companion emitted by the common producer. Validate the exact final
+  container's representations, source attributes and material references before
+  installation; geometry preservation and game appearance are separate gates.
 - Gameplay validation covers pitch in both directions, release hold, both
   limits, X, exit/re-entry, altitude braking/hold across partial and full
   throttle, Ctrl descent/reacquisition with positive and zero configured descent

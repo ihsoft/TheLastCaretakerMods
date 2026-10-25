@@ -40,12 +40,7 @@ public class StableGyroGenerator : ModuleRules
             "EnhancedInput",
             "InputBlueprintNodes",
             "InputCore",
-            "InterchangeCore",
-            "InterchangeEngine",
-            "InterchangePipelines",
             "KismetCompiler",
-            "MeshDescription",
-            "StaticMeshDescription",
             "UnrealEd",
             "Voyage"
         });

@@ -95,9 +95,23 @@ The stock `MooringPlate` is a separate decorative component whose mesh contains
 both sides together. It is not part of the frame mesh or two selectable material
 sections. The producer splits its full decoded Nanite leaf geometry into two
 side-specific meshes while preserving the original pivot. Four components reuse
-those halves with the stock component material override and no collision. They
-are cooked as ordinary static meshes containing the extracted detailed geometry.
+those halves with the stock component material override and no collision. The
+public producer delegates mesh import and cooking to the shared
+[StaticMesh tools](../../tools/static-mesh-assets.md). The meshes use native
+Nanite with all input triangles retained, zero trim error, position precision
+`4`, normal precision `8`, and implicit tangents. A separate 25% triangle
+fallback supplies the ray-tracing proxy. This reduces that representation's
+geometry budget without reducing the full-detail Nanite input.
 The inherited paired plate is hidden only in four-port mode.
+
+The Blueprint generator uses valid editor-only reference meshes at the final
+package identities. These dependencies are excluded from the mod cook; the
+common producer's cooked meshes and every emitted bulk companion supply the
+runtime packages. Staging checks their manifest hashes. Final-container
+validation checks Nanite, fallback, ray tracing, source attributes and the stock
+material reference before installation. The shared
+[cooking knowledge](../../docs/static-mesh-cooking-knowledge.md) defines the
+representation and validation boundaries.
 
 Sockets and bases move together along the frame tubes: the original pair moves
 5 cm forward and the added pair sits 40 cm behind the original positions. The

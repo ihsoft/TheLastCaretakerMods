@@ -23,7 +23,6 @@
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
-#include "InterchangeManager.h"
 #include "EnhancedInputActionDelegateBinding.h"
 #include "EnhancedInputLibrary.h"
 #include "GameFramework/GameUserSettings.h"
@@ -62,8 +61,6 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Materials/MaterialInstanceConstant.h"
-#include "MeshDescription.h"
-#include "PhysicsEngine/BodySetup.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "UObject/SavePackage.h"
@@ -181,9 +178,6 @@ namespace MooringLayout
 {
 constexpr TCHAR HookCableAssetName[] = TEXT("DA_Cable_Hook");
 constexpr TCHAR MaterialAssetName[] = TEXT("Gyrocopter_Seat_p1");
-constexpr TCHAR ImportDestination[] = TEXT("/Game/Mods/StableGyro");
-constexpr TCHAR PositiveGlbParameter[] = TEXT("MooringPositiveYGlb=");
-constexpr TCHAR NegativeGlbParameter[] = TEXT("MooringNegativeYGlb=");
 constexpr TCHAR MooringResourceEnum[] = TEXT("EModuleResourceType::Mooring");
 constexpr TCHAR StockPlateObjectName[] = TEXT("MooringPlate");
 constexpr TCHAR StockPositiveSocketObjectName[] = TEXT("MooringSocket");
@@ -211,9 +205,6 @@ const FName RotationPin(TEXT("Rotation"));
 const FName ScalePin(TEXT("Scale"));
 constexpr uint32 RearLeftSocketId = 2056977161u;
 constexpr uint32 RearRightSocketId = 2056977162u;
-constexpr int32 PositiveSourceTriangleCount = 6895;
-constexpr int32 NegativeSourceTriangleCount = 6895;
-constexpr int32 RuntimeTriangleCountPerSide = 6852;
 constexpr float IntegratedCableLength = 1000.0f;
 const FName PortProperty(TEXT("Port"));
 const FName UserConstructionScriptFunction(TEXT("UserConstructionScript"));
@@ -4208,82 +4199,37 @@ UMaterialInstanceConstant* CreateMooringMaterialReferenceStub()
     return UPackage::SavePackage(Package, Material, *Filename, Args) ? Material : nullptr;
 }
 
-UStaticMesh* ImportMooringHalf(
-    const FString& Source,
+UStaticMesh* CreateMooringMeshReferenceStub(
     const TCHAR* ExpectedPackage,
-    UMaterialInterface* StockMaterial,
-    const int32 ExpectedTriangles)
+    UMaterialInterface* StockMaterial)
 {
-    if (!FPaths::FileExists(Source) || FPackageName::DoesPackageExist(ExpectedPackage)) return nullptr;
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World) return nullptr;
-    TArray<UObject*> Imported;
-    FImportAssetParameters Parameters;
-    Parameters.bIsAutomated = true;
-    Parameters.bReplaceExisting = false;
-    Parameters.ImportLevel = World->PersistentLevel;
-    Parameters.OnAssetDoneNative.BindLambda([&Imported](UObject* Asset) { Imported.Add(Asset); });
-    auto& Manager = UInterchangeManager::GetInterchangeManager();
-    if (!Manager.ImportScene(MooringLayout::ImportDestination,
-        UInterchangeManager::CreateSourceData(Source), Parameters)) return nullptr;
-    TArray<UStaticMesh*> Meshes;
-    for (UObject* Asset : Imported)
-    {
-        if (auto* Mesh = Cast<UStaticMesh>(Asset)) Meshes.AddUnique(Mesh);
-    }
-    if (Meshes.Num() != 1)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Expected one imported mooring mesh, found %d"), Meshes.Num());
+    if (FPackageName::DoesPackageExist(ExpectedPackage)) return nullptr;
+    UStaticMesh* ReferenceSource = LoadObject<UStaticMesh>(
+        nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+    if (!ReferenceSource || ReferenceSource->GetNumSourceModels() < 1 ||
+        !ReferenceSource->GetMeshDescription(0)) return nullptr;
+    UPackage* Package = CreatePackage(ExpectedPackage);
+    const FString ObjectName = FPackageName::GetLongPackageAssetName(ExpectedPackage);
+    // A valid editor-only duplicate is required because dependency PostLoad
+    // rejects an empty UStaticMesh; common cooked output owns runtime geometry.
+    UStaticMesh* Mesh = DuplicateObject<UStaticMesh>(
+        ReferenceSource, Package, *ObjectName);
+    if (!Mesh || Mesh->GetOutermost() != Package ||
+        Mesh->GetPathName() != FString::Printf(TEXT("%s.%s"), ExpectedPackage, *ObjectName) ||
+        Mesh->GetNumSourceModels() < 1 || !Mesh->GetMeshDescription(0))
         return nullptr;
-    }
-    UStaticMesh* Mesh = Meshes[0];
-    if (Mesh->GetOutermost()->GetName() != ExpectedPackage ||
-        Mesh->GetNumUVChannels(0) < 4 || !Mesh->GetMeshDescription(0))
-    {
-        UE_LOG(LogTemp, Error,
-            TEXT("Mooring mesh contract: package=%s expected=%s uv=%d description=%d"),
-            *Mesh->GetOutermost()->GetName(), ExpectedPackage, Mesh->GetNumUVChannels(0),
-            Mesh->GetMeshDescription(0) ? 1 : 0);
-        return nullptr;
-    }
-    const FMeshDescription* Description = Mesh->GetMeshDescription(0);
-    if (Description->Triangles().Num() != ExpectedTriangles)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Mooring triangle count %d expected %d"),
-            Description->Triangles().Num(), ExpectedTriangles);
-        return nullptr;
-    }
-    FMeshBuildSettings& BuildSettings = Mesh->GetSourceModel(0).BuildSettings;
-    BuildSettings.bGenerateLightmapUVs = false;
-    BuildSettings.bRemoveDegenerates = false;
-    BuildSettings.bRecomputeNormals = false;
-    BuildSettings.bRecomputeTangents = true;
-    Mesh->GetNaniteSettings().bEnabled = false;
-    Mesh->Build(false);
-    if (Mesh->GetNaniteSettings().bEnabled ||
-        Mesh->GetNumTriangles(0) != MooringLayout::RuntimeTriangleCountPerSide ||
-        Mesh->GetNumUVChannels(0) < 4)
-    {
-        UE_LOG(LogTemp, Error,
-            TEXT("Mooring runtime mesh contract: package=%s triangles=%d expected=%d uv=%d nanite=%d"),
-            *Mesh->GetOutermost()->GetName(), Mesh->GetNumTriangles(0),
-            MooringLayout::RuntimeTriangleCountPerSide, Mesh->GetNumUVChannels(0),
-            Mesh->GetNaniteSettings().bEnabled ? 1 : 0);
-        return nullptr;
-    }
+    Mesh->SetFlags(RF_Public | RF_Standalone);
     Mesh->GetStaticMaterials().Reset();
     Mesh->GetStaticMaterials().Add(FStaticMaterial(
         StockMaterial, MooringLayout::MaterialSlotName, MooringLayout::MaterialSlotName));
-    if (!Mesh->GetBodySetup()) Mesh->CreateBodySetup();
-    Mesh->GetBodySetup()->RemoveSimpleCollision();
-    Mesh->GetBodySetup()->CollisionTraceFlag = CTF_UseDefault;
     Mesh->MarkPackageDirty();
     const FString Filename = FPackageName::LongPackageNameToFilename(
-        Mesh->GetOutermost()->GetName(), FPackageName::GetAssetPackageExtension());
+        ExpectedPackage, FPackageName::GetAssetPackageExtension());
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(Filename), true);
     FSavePackageArgs Args;
     Args.TopLevelFlags = RF_Public | RF_Standalone;
     Args.SaveFlags = SAVE_NoError;
-    return UPackage::SavePackage(Mesh->GetOutermost(), Mesh, *Filename, Args) ? Mesh : nullptr;
+    return UPackage::SavePackage(Package, Mesh, *Filename, Args) ? Mesh : nullptr;
 }
 
 bool AddMooringPlate(
@@ -5366,16 +5312,8 @@ UGenerateStableGyroInheritanceCommandlet::UGenerateStableGyroInheritanceCommandl
     ShowErrorCount = true;
 }
 
-int32 UGenerateStableGyroInheritanceCommandlet::Main(const FString& Params)
+int32 UGenerateStableGyroInheritanceCommandlet::Main(const FString&)
 {
-    FString PositiveMooringGlb;
-    FString NegativeMooringGlb;
-    if (!FParse::Value(*Params, MooringLayout::PositiveGlbParameter, PositiveMooringGlb) ||
-        !FParse::Value(*Params, MooringLayout::NegativeGlbParameter, NegativeMooringGlb))
-    {
-        UE_LOG(LogTemp, Error, TEXT("Both generated mooring-half GLB paths are required"));
-        return 1;
-    }
     if (FPackageName::DoesPackageExist(BasePackage) ||
         FPackageName::DoesPackageExist(ChildPackage))
     {
@@ -5403,12 +5341,10 @@ int32 UGenerateStableGyroInheritanceCommandlet::Main(const FString& Params)
     if (!HookCable || HookCable->GetPathName() != HookCableObjectPath) return 1;
     UMaterialInstanceConstant* MooringMaterial = CreateMooringMaterialReferenceStub();
     if (!MooringMaterial) return 1;
-    UStaticMesh* PositiveMooringMesh = ImportMooringHalf(
-        PositiveMooringGlb, PositiveMooringMeshPackage, MooringMaterial,
-        MooringLayout::PositiveSourceTriangleCount);
-    UStaticMesh* NegativeMooringMesh = ImportMooringHalf(
-        NegativeMooringGlb, NegativeMooringMeshPackage, MooringMaterial,
-        MooringLayout::NegativeSourceTriangleCount);
+    UStaticMesh* PositiveMooringMesh = CreateMooringMeshReferenceStub(
+        PositiveMooringMeshPackage, MooringMaterial);
+    UStaticMesh* NegativeMooringMesh = CreateMooringMeshReferenceStub(
+        NegativeMooringMeshPackage, MooringMaterial);
     if (!PositiveMooringMesh || !NegativeMooringMesh) return 1;
 
     UPackage* ParentPackage = CreatePackage(BasePackage);

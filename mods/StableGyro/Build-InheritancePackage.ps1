@@ -141,18 +141,36 @@ foreach ($meshName in @('StableGyroMooringPlatePositiveY', 'StableGyroMooringPla
     $meshSource = Join-Path $helperSource ($meshName + '\StaticMeshes')
     $meshStage = Join-Path $helperStage ($meshName + '\StaticMeshes')
     New-Item -ItemType Directory -Path $meshStage -Force | Out-Null
-    foreach ($extension in @('.uasset', '.uexp')) {
-        Copy-Item -LiteralPath (Join-Path $meshSource ($meshName + $extension)) -Destination $meshStage
+    $meshFiles = @(Get-ChildItem -LiteralPath $meshSource -File)
+    foreach ($requiredExtension in @('.uasset', '.uexp')) {
+        $requiredName = $meshName + $requiredExtension
+        if (@($meshFiles | Where-Object { $_.Name -ceq $requiredName }).Count -ne 1) {
+            throw "Expected one common-builder companion named $requiredName in $meshSource."
+        }
+    }
+    if ($meshFiles.Count -lt 2 -or
+        @($meshFiles | Where-Object { -not $_.Name.StartsWith($meshName + '.', [StringComparison]::Ordinal) }).Count -ne 0) {
+        throw "Unexpected common-builder mesh companion set in $meshSource."
+    }
+    foreach ($source in $meshFiles) {
+        Copy-Item -LiteralPath $source.FullName -Destination $meshStage
     }
 }
-& (Join-Path $modRoot 'Validate-StableGyroMooringTemplates.ps1') `
-    -RepositoryRoot $repoRoot `
-    -AssetPath (Join-Path $childStage 'BP_GyroCopter_StablePilot.uasset') `
-    -GeneratedParentAssetPath (Join-Path $modRoot 'Content\Blueprints\Vehicles\BP_GyroCopter_Possessable.uasset') `
-    -PitchHelperAssetPath (Join-Path $helperStage 'PitchInputActor.uasset') `
-    -StabilizationHelperAssetPath (Join-Path $helperStage 'ModActor.uasset') `
-    -MappingsPath $MappingsPath `
-    -EvidencePath (Join-Path $output 'mooring-template-validation.json') | Out-Null
+$validatorArguments = @(
+    '-NoProfile',
+    '-File', (Join-Path $modRoot 'Validate-StableGyroMooringTemplates.ps1'),
+    '-RepositoryRoot', $repoRoot,
+    '-AssetPath', (Join-Path $childStage 'BP_GyroCopter_StablePilot.uasset'),
+    '-GeneratedParentAssetPath', (Join-Path $modRoot 'Content\Blueprints\Vehicles\BP_GyroCopter_Possessable.uasset'),
+    '-PitchHelperAssetPath', (Join-Path $helperStage 'PitchInputActor.uasset'),
+    '-StabilizationHelperAssetPath', (Join-Path $helperStage 'ModActor.uasset'),
+    '-MappingsPath', $MappingsPath,
+    '-EvidencePath', (Join-Path $output 'mooring-template-validation.json')
+)
+& pwsh @validatorArguments | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "StableGyro mooring template validation failed with exit code $LASTEXITCODE."
+}
 foreach ($assetName in @('IAV_GyroPitchReset.uasset', 'IAV_GyroPitchReset.uexp')) {
     Copy-Item -LiteralPath (Join-Path $helperSource $assetName) -Destination $helperStage
 }

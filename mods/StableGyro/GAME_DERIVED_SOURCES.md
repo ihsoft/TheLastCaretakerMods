@@ -159,12 +159,14 @@ Together, these sources establish:
   faithfully retain some imported normals near degenerate geometry, so the
   bounded splitter restores the raw `NORMAL` accessor by complete
   triangle/corner position+UV identity after export. Source-absent tangents stay
-  absent from the split GLB and Unreal derives them while retaining imported
-  normals. Interchange enables Nanite on import and otherwise produces a reduced
-  fallback mesh, so the generator explicitly disables Nanite and builds these
-  two derived assets as ordinary static meshes. All 114
+  absent from the split GLB. The common StaticMesh producer retains imported
+  normals, builds Nanite with implicit tangents, and derives the fallback's
+  tangent basis. The split GLB names the `Gyrocopter_Seat_p1` material slot;
+  the common producer binds it to the existing stock material rather than
+  importing a replacement material. The mod owns the quality policy described
+  in [architecture](ARCHITECTURE.md). All 114
   exact-zero-area decoded faces reach the source GLB, though meter conversion
-  leaves 88 bit-exact zero in Blender and Unreal's standard StaticMesh build may
+  leaves 88 bit-exact zero in Blender and Unreal's native mesh builders may
   still discard coincident-position faces. Final cooked triangle counts and the
   resulting plate detail/material appearance remain explicit build and
   real-game visual validation boundaries. The child
@@ -257,7 +259,14 @@ positions do not imply identical normals or UVs, so deleting those faces as
 unconditionally irrelevant is not justified by their initial area alone.
 This proves possible vertex deformation, not visible contribution from every
 degenerate face. Extraction and splitting preserve all faces and corner data;
-Unreal's ordinary mesh builder may still discard coincident-position faces.
+Unreal's native mesh builders may still discard coincident-position faces.
+For this source, each 6,895-face split produces 6,852 decoded Nanite leaf faces;
+all 43 omitted faces per half have exactly zero source area. No nondegenerate
+source face is absent. The 25% fallback has 1,713 triangles per half and supplies
+one ray-tracing proxy LOD. The final-container validator compares positions,
+normals, UV0..3 and vertex colors to the split GLBs with the producer's explicit
+tolerances. These are geometry and serialization contracts, not GPU timing
+measurements or proof of the representation selected for an individual frame.
 
 These contracts can be revisited through the public
 [asset inspection](../../tools/asset-inspection.md),

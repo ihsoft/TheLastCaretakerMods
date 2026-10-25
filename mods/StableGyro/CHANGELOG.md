@@ -2,6 +2,7 @@
 
 ## Next
 
+- Added Nanite support for cable-port bases and reduced the geometry used for ray tracing.
 - Altitude stabilization and pitch reset now follow the game's remapped controls.
 - Added configurable descent braking for a smooth transition into altitude hold.
 - Added separate INI switches for altitude stabilization and horizontal speed control.

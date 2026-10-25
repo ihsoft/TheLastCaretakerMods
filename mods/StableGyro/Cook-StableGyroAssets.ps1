@@ -1,4 +1,4 @@
-# INTERNAL BUILD STAGE: cooks the seven generated production packages in one narrow
+# INTERNAL BUILD STAGE: cooks the five generated production packages in one narrow
 # Unreal invocation. It contains no extracted game data; its output is generated
 # and not committed.
 
@@ -34,16 +34,17 @@ $packages = @(
     '/Game/Mods/StableGyro/ModActor',
     '/Game/Mods/StableGyro/PitchInputActor',
     '/Game/Mods/StableGyro/IAV_GyroPitchReset',
-    '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY',
-    '/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY',
     '/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot',
     '/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard'
 )
+$requiredCookedExtensions = @('.uasset', '.uexp')
+$optionalCookedExtensions = @('.ubulk', '.uptnl', '.m.ubulk')
+$cookedExtensions = @($requiredCookedExtensions + $optionalCookedExtensions)
 
 foreach ($package in $packages) {
     $relativeAsset = $package.Substring('/Game/'.Length)
     $sourceBase = Join-Path $cookedContent $relativeAsset
-    foreach ($extension in @('.uasset', '.uexp')) {
+    foreach ($extension in $cookedExtensions) {
         $staleSource = $sourceBase + $extension
         if (Test-Path -LiteralPath $staleSource -PathType Leaf) {
             Remove-Item -LiteralPath $staleSource -Force
@@ -81,25 +82,48 @@ $process = Start-Process `
 if ($process.ExitCode -ne 0) {
     throw "Cook failed with exit code $($process.ExitCode)."
 }
+$badMeshDescriptionErrors = @()
+if (-not [string]::IsNullOrWhiteSpace($LogPath)) {
+    $badMeshDescriptionErrors = @(
+        Select-String -LiteralPath $log -SimpleMatch 'LogStaticMesh: Error: Bad MeshDescription' `
+            -ErrorAction SilentlyContinue
+    )
+}
+if ($badMeshDescriptionErrors.Count -ne 0) {
+    throw "Cook reported invalid reference StaticMesh packages despite exit code 0: $($badMeshDescriptionErrors.Line -join '; ')"
+}
 
 foreach ($package in $packages) {
     $relativeAsset = $package.Substring('/Game/'.Length)
     $sourceBase = Join-Path $cookedContent $relativeAsset
     $destinationBase = Join-Path $outputContent $relativeAsset
     New-Item -ItemType Directory -Path (Split-Path $destinationBase -Parent) -Force | Out-Null
-    foreach ($extension in @('.uasset', '.uexp')) {
+    foreach ($extension in $requiredCookedExtensions) {
         $source = $sourceBase + $extension
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
             throw "Expected cooked file was not produced: $source"
         }
         Copy-Item -LiteralPath $source -Destination ($destinationBase + $extension)
     }
+    foreach ($extension in $optionalCookedExtensions) {
+        $source = $sourceBase + $extension
+        if (Test-Path -LiteralPath $source -PathType Leaf) {
+            Copy-Item -LiteralPath $source -Destination ($destinationBase + $extension)
+        }
+    }
 }
 
 $files = @(Get-ChildItem -LiteralPath $outputContent -Recurse -File)
-$expectedFileCount = $packages.Count * 2
-if ($files.Count -ne $expectedFileCount) {
-    throw "Expected $expectedFileCount staged cooked files; found $($files.Count)."
+$minimumFileCount = $packages.Count * $requiredCookedExtensions.Count
+if ($files.Count -lt $minimumFileCount) {
+    throw "Expected at least $minimumFileCount staged cooked files; found $($files.Count)."
+}
+$unexpectedFiles = @($files | Where-Object {
+    $name = $_.Name
+    -not ($cookedExtensions | Where-Object { $name.EndsWith($_, [StringComparison]::OrdinalIgnoreCase) })
+})
+if ($unexpectedFiles.Count -ne 0) {
+    throw "Unexpected cooked companion files were staged: $($unexpectedFiles.FullName -join ', ')"
 }
 
 Write-Host "Cooked StableGyro production assets: $output"

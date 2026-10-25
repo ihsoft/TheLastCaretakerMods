@@ -301,6 +301,34 @@ def export_one(obj, output):
     require("FINISHED" in bpy.ops.export_scene.gltf(**options), "GLB export failed: " + str(output))
 
 
+def add_material_binding_metadata(path):
+    data = path.read_bytes()
+    require(struct.unpack_from("<4sII", data) == (b"glTF", 2, len(data)), "Invalid GLB header")
+    json_size, json_kind = struct.unpack_from("<II", data, 12)
+    require(json_kind == 0x4E4F534A, "Missing GLB JSON chunk")
+    document = json.loads(data[20:20 + json_size].decode("utf-8"))
+    primitives = [primitive for mesh in document["meshes"] for primitive in mesh["primitives"]]
+    require(len(primitives) == 1, "Material binding requires one GLB primitive")
+    require(not document.get("materials") and "material" not in primitives[0],
+            "Split GLB unexpectedly already contains material metadata")
+    document["materials"] = [{"name": "Gyrocopter_Seat_p1"}]
+    primitives[0]["material"] = 0
+    encoded = json.dumps(document, separators=(",", ":")).encode("utf-8")
+    encoded += b" " * ((4 - len(encoded) % 4) % 4)
+    preserved_chunks = data[20 + json_size:]
+    preserved_sha256 = hashlib.sha256(preserved_chunks).hexdigest().upper()
+    rebuilt = (struct.pack("<4sII", b"glTF", 2, 20 + len(encoded) + len(preserved_chunks)) +
+               struct.pack("<II", len(encoded), 0x4E4F534A) + encoded + preserved_chunks)
+    path.write_bytes(rebuilt)
+    require(hashlib.sha256(rebuilt[20 + len(encoded):]).hexdigest().upper() == preserved_sha256,
+            "Material metadata update changed non-JSON GLB chunks")
+    return {
+        "slot": "Gyrocopter_Seat_p1",
+        "primitiveMaterialIndex": 0,
+        "preservedNonJsonChunksSha256": preserved_sha256,
+    }
+
+
 def glb_attributes(path):
     data = path.read_bytes()
     require(struct.unpack_from("<4sII", data) == (b"glTF", 2, len(data)), "Invalid GLB header")
@@ -368,6 +396,10 @@ def main():
     args.positive_y.parent.mkdir(parents=True, exist_ok=True)
     export_one(positive, args.positive_y)
     export_one(negative, args.negative_y)
+    material_bindings = {
+        "positiveY": add_material_binding_metadata(args.positive_y),
+        "negativeY": add_material_binding_metadata(args.negative_y),
+    }
     restored_output_normals = {
         "positiveY": restore_exported_glb_normals(source, args.positive_y),
         "negativeY": restore_exported_glb_normals(source, args.negative_y),
@@ -378,6 +410,7 @@ def main():
                              (negative_evidence, negative_readback)):
         require(actual["triangles"] == expected["triangles"], "Export changed triangle count")
         require(actual["uvChannels"] == source_evidence["uvChannels"], "Export changed UV channels")
+        require(actual["materials"] == 1, "Split GLB lost the named material slot")
     source_attributes = glb_attributes(source)
     positive_attributes = glb_attributes(args.positive_y)
     negative_attributes = glb_attributes(args.negative_y)
@@ -415,6 +448,7 @@ def main():
                       "path": str(args.negative_y), "sha256": sha256(args.negative_y)},
         "originPreserved": True,
         "materialExport": "PLACEHOLDER",
+        "materialBindings": material_bindings,
         "pbrTexturesExported": False,
         "positiveYAttributes": positive_attributes,
         "negativeYAttributes": negative_attributes,

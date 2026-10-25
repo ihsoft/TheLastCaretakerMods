@@ -46,6 +46,22 @@ foreach ($name in @('Newtonsoft.Json.dll', 'ZstdSharp.dll', 'UAssetAPI.dll')) {
     }
     [Reflection.Assembly]::LoadFrom($path) | Out-Null
 }
+$uassetApiAssembly = [AppDomain]::CurrentDomain.GetAssemblies() |
+    Where-Object { $_.GetName().Name -ceq 'UAssetAPI' } |
+    Select-Object -First 1
+$newtonsoftAssembly = [AppDomain]::CurrentDomain.GetAssemblies() |
+    Where-Object { $_.GetName().Name -ceq 'Newtonsoft.Json' } |
+    Select-Object -First 1
+$usmapType = $uassetApiAssembly.GetType('UAssetAPI.Unversioned.Usmap', $true)
+$usmapPropertyType = $uassetApiAssembly.GetType('UAssetAPI.Unversioned.UsmapProperty', $true)
+$usmapPropertyDataType = $uassetApiAssembly.GetType('UAssetAPI.Unversioned.UsmapPropertyData', $true)
+$usmapPropertyKindType = $uassetApiAssembly.GetType('UAssetAPI.Unversioned.UsmapPropertyType', $true)
+$usmapSchemaType = $uassetApiAssembly.GetType('UAssetAPI.Unversioned.UsmapSchema', $true)
+$usmapStructKindType = $uassetApiAssembly.GetType('UAssetAPI.Unversioned.UsmapStructKind', $true)
+$propertyFlagsType = $uassetApiAssembly.GetType('UAssetAPI.UnrealTypes.EPropertyFlags', $true)
+$uassetType = $uassetApiAssembly.GetType('UAssetAPI.UAsset', $true)
+$engineVersionType = $uassetApiAssembly.GetType('UAssetAPI.UnrealTypes.EngineVersion', $true)
+$jsonFormattingType = $newtonsoftAssembly.GetType('Newtonsoft.Json.Formatting', $true)
 
 function Assert-NoRawExports([object]$Package, [string]$Label) {
     $raw = @($Package.Exports | Where-Object { $_.'$type' -like '*RawExport*' })
@@ -76,30 +92,30 @@ function Get-ClassContract([object]$Package, [string]$Name, [string]$Super) {
 }
 
 function Set-ExactSchema(
-    [UAssetAPI.Unversioned.Usmap]$Mappings,
+    [object]$Mappings,
     [object]$Contract
 ) {
-    $properties = [Collections.Concurrent.ConcurrentDictionary[int,UAssetAPI.Unversioned.UsmapProperty]]::new()
+    $dictionaryType = [Collections.Concurrent.ConcurrentDictionary``2].MakeGenericType(
+        [int], $usmapPropertyType)
+    $properties = $dictionaryType::new()
     $index = 0
     foreach ($field in @($Contract.Fields)) {
-        $type = [UAssetAPI.Unversioned.UsmapPropertyType][Enum]::Parse(
-            [UAssetAPI.Unversioned.UsmapPropertyType], [string]$field.Type)
-        $data = [UAssetAPI.Unversioned.UsmapPropertyData]::new($type)
-        $property = [UAssetAPI.Unversioned.UsmapProperty]::new(
+        $type = [Enum]::Parse($usmapPropertyKindType, [string]$field.Type)
+        $data = $usmapPropertyDataType::new($type)
+        $property = $usmapPropertyType::new(
             [string]$field.Name, $index, 0, 1, $data)
         if (-not [string]::IsNullOrWhiteSpace([string]$field.Flags)) {
-            $property.PropertyFlags = [UAssetAPI.UnrealTypes.EPropertyFlags][Enum]::Parse(
-                [UAssetAPI.UnrealTypes.EPropertyFlags], [string]$field.Flags)
+            $property.PropertyFlags = [Enum]::Parse($propertyFlagsType, [string]$field.Flags)
         }
         if (-not $properties.TryAdd($index, $property)) {
             throw "Could not add schema property $($Contract.Name)[$index]."
         }
         $index++
     }
-    $schema = [UAssetAPI.Unversioned.UsmapSchema]::new(
+    $schema = $usmapSchemaType::new(
         [string]$Contract.Name, [string]$Contract.Super, $index, $properties,
         $Mappings.AreFNamesCaseInsensitive, $null, $false)
-    $schema.StructKind = [UAssetAPI.Unversioned.UsmapStructKind]::UClass
+    $schema.StructKind = [Enum]::Parse($usmapStructKindType, 'UClass')
     if ($Mappings.Schemas.ContainsKey([string]$Contract.Name)) {
         $removed = $null
         if (-not $Mappings.Schemas.TryRemove([string]$Contract.Name, [ref]$removed)) {
@@ -112,17 +128,17 @@ function Set-ExactSchema(
 }
 
 function New-SupplementedMappings([object[]]$Contracts) {
-    $result = [UAssetAPI.Unversioned.Usmap]::new((Resolve-Path -LiteralPath $MappingsPath).Path)
+    $result = $usmapType::new((Resolve-Path -LiteralPath $MappingsPath).Path)
     foreach ($contract in $Contracts) { Set-ExactSchema $result $contract }
     $result
 }
 
-function Read-PackageJson([string]$Path, [UAssetAPI.Unversioned.Usmap]$Mappings) {
-    $asset = [UAssetAPI.UAsset]::new(
+function Read-PackageJson([string]$Path, [object]$Mappings) {
+    $asset = $uassetType::new(
         (Resolve-Path -LiteralPath $Path).Path,
-        [UAssetAPI.UnrealTypes.EngineVersion]::VER_UE5_8,
+        [Enum]::Parse($engineVersionType, 'VER_UE5_8'),
         $Mappings)
-    $asset.SerializeJson([Newtonsoft.Json.Formatting]::Indented) | ConvertFrom-Json
+    $asset.SerializeJson([Enum]::Parse($jsonFormattingType, 'Indented')) | ConvertFrom-Json
 }
 
 function Convert-PackageToJson([string]$Path, [string]$Label) {
@@ -137,12 +153,12 @@ function Convert-PackageToJson([string]$Path, [string]$Label) {
 function Write-PackageJson(
     [object]$Package,
     [string]$OutputPath,
-    [UAssetAPI.Unversioned.Usmap]$Mappings
+    [object]$Mappings
 ) {
     $json = $Package | ConvertTo-Json -Depth 100
-    $asset = [UAssetAPI.UAsset]::DeserializeJson($json)
+    $asset = $uassetType::DeserializeJson($json)
     $asset.Mappings = $Mappings
-    $asset.SetSerializationEngineVersion([UAssetAPI.UnrealTypes.EngineVersion]::VER_UE5_8)
+    $asset.SetSerializationEngineVersion([Enum]::Parse($engineVersionType, 'VER_UE5_8'))
     $asset.FilePath = $OutputPath + '.json'
     $asset.Write($OutputPath)
 }
