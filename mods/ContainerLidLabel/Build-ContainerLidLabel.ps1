@@ -4,7 +4,7 @@
 
 param(
     [ValidatePattern('^[0-9A-Za-z][0-9A-Za-z._-]*$')]
-    [string]$Version = 'v1-test',
+    [string]$Version,
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
     [string]$EngineRoot = 'K:\Epic Games\UE_5.8',
     [string]$OutputRoot,
@@ -23,6 +23,15 @@ $assetFilter = 'Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Large'
 
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
+$publishedVersionText = (Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw).Trim()
+if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+    throw 'ContainerLidLabel version.txt must contain a non-negative integer.'
+}
+$canonicalVersion = 'V' + ([int]$publishedVersionText + 1)
+if (-not [string]::IsNullOrWhiteSpace($Version) -and $Version -cne $canonicalVersion) {
+    throw "Version is derived from version.txt and must be $canonicalVersion. Use OutputRoot to label a temporary run."
+}
+$Version = $canonicalVersion
 $tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp\ContainerLidLabel'))
 $configSource = Join-Path $modRoot 'Assets\ContainerLidLabel.ini'
 $settingsSchema = Join-Path $modRoot 'Settings\ContainerLidLabel.settings.json'

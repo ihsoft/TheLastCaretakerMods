@@ -11,7 +11,7 @@ $publishedVersionText = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'vers
 if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
     throw 'ScopeFix published version must be a non-negative integer in version.txt.'
 }
-$candidateVersion = 'V' + ([int]$publishedVersionText + 1) + '-candidate'
+$candidateVersion = 'V' + ([int]$publishedVersionText + 1)
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $ownerTmp ('build-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 }

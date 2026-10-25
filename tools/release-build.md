@@ -22,6 +22,10 @@ insufficient for them.
 Keep the same ZIP and manifest for release selection; no post-test rebuild is
 needed for compatibility metadata. The [release rule](../docs/release-and-installation-rule.md)
 owns candidate and publication status.
+Each producer derives the next numbered version from its mod's `version.txt`
+and writes exactly `<Mod>-V<N>.zip`. Use the `Tmp/<Mod>/` output directory to
+label an experiment or attempt; do not pass a descriptive release version or
+rename the ZIP.
 
 | Mod | Candidate producer | Mod index |
 | --- | --- | --- |
@@ -30,7 +34,6 @@ owns candidate and publication status.
 | DonkLiftKeyboardControl | [Build-DonkLiftRelease.ps1](../mods/DonkLiftKeyboardControl/Build-DonkLiftRelease.ps1) | [Index](../mods/DonkLiftKeyboardControl/AGENTS.md) |
 | ElectrifiedBoat | [Build-ElectrifiedBoat.ps1](../mods/ElectrifiedBoat/Build-ElectrifiedBoat.ps1) | [Index](../mods/ElectrifiedBoat/AGENTS.md) |
 | MooringCable60m | [Build-MooringCable60m.ps1](../mods/MooringCable60m/Build-MooringCable60m.ps1) | [Index](../mods/MooringCable60m/AGENTS.md) |
-| PalletContainerSnap | [Build-PalletContainerSnap.ps1](../mods/PalletContainerSnap/Build-PalletContainerSnap.ps1) | [Index](../mods/PalletContainerSnap/AGENTS.md) |
 | Railgun | [Build-Railgun.ps1](../mods/Railgun/Build-Railgun.ps1) | [Index](../mods/Railgun/AGENTS.md) |
 | ScopeFix | [Build-ScopeFix.ps1](../mods/ScopeFix/Build-ScopeFix.ps1) | [Index](../mods/ScopeFix/AGENTS.md) |
 | StableGyro | [Build-StableGyro.ps1](../mods/StableGyro/Build-StableGyro.ps1) | [Index](../mods/StableGyro/AGENTS.md) |

@@ -33,6 +33,8 @@ creates `mods/<Mod>/` with only:
 - `README.md`: a short folder label, marked planned until the mod works. Add
   the command-line candidate build command when a public producer exists.
 - `version.txt`: `0`, because no numbered `V1` release has been published.
+- `CHANGELOG.md`: an empty `Next` section for future player-facing release
+  notes; it is publication input and never part of the release ZIP.
 
 The scaffold does not create `MOD-RULES.md`, `game-build.json`, provenance
 files, build scripts, an Unreal project, or a generic backlog. Add each only

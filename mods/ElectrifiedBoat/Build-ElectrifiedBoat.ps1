@@ -26,7 +26,7 @@ $publishedVersionText = (Get-Content -LiteralPath (Join-Path $modRoot 'version.t
 if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
     throw 'ElectrifiedBoat published version must be a non-negative integer in version.txt.'
 }
-$candidateVersion = 'V' + ([int]$publishedVersionText + 1) + '-candidate'
+$candidateVersion = 'V' + ([int]$publishedVersionText + 1)
 $ownerTmp = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp/ElectrifiedBoat'))
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $ownerTmp ('build-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))

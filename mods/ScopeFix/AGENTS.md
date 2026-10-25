@@ -8,3 +8,4 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
   reasoning, and supported game Updates.
 - [Candidate producer](Build-ScopeFix.ps1): prepares the standalone IoStore
   package; shared build and installation rules are in the repository index.
+- [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.

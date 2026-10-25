@@ -17,6 +17,11 @@ $itemDiscoveryRoot = '/Game/Data/Assets'
 $skillDiscoveryRoot = '/Game/Data/Assets/Skill'
 $ammoPickupPackage = '/Game/Mods/Railgun/Fabricator/AmmoCassette/BP_RailgunAmmoCassette'
 $ammoPickupClass = $ammoPickupPackage + '.BP_RailgunAmmoCassette_C'
+$publishedVersionText = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version.txt') -Raw).Trim()
+if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+    throw 'Railgun version.txt must contain a non-negative integer.'
+}
+$releaseVersion = 'V' + ([int]$publishedVersionText + 1)
 $defaultVersion = if ($ArtifactVersion) {
     if ($ArtifactVersion -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$') {
         throw 'ArtifactVersion must be a safe 1-80 character identity.'
@@ -36,7 +41,7 @@ if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase)
     throw 'OutputRoot must be a fresh directory below repository Tmp/Railgun.'
 }
 if (Test-Path -LiteralPath $output) { throw 'OutputRoot already exists.' }
-$version = $defaultVersion
+$version = $releaseVersion
 $null = New-Item -ItemType Directory -Path $output
 $releaseStaging = Join-Path $output 'candidate'
 $boundedToolRoot = Join-Path $output 'bounded-tool-runs'
@@ -931,7 +936,7 @@ $descriptorDirectory = Join-Path $payload 'Mods/RailgunCatalogue'
 $null = New-Item -ItemType Directory -Path $descriptorDirectory
 $descriptor = Join-Path $descriptorDirectory 'RailgunCatalogue.uplugin'
 Copy-Item -LiteralPath $descriptorSource -Destination $descriptor
-$archivePath = Join-Path $releaseStaging ('Railgun_' + $version + '.zip')
+$archivePath = Join-Path $releaseStaging ('Railgun-' + $version + '.zip')
 & (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') `
     -Container (Join-Path $payload 'Railgun.utoc') -Archive $archivePath `
     -AdditionalFile (Join-Path $payload 'Railgun.ini') `

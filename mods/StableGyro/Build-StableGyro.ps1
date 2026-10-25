@@ -38,10 +38,11 @@ $publishedVersionText = (Get-Content -LiteralPath (Join-Path $modRoot 'version.t
 if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
     throw 'StableGyro published version must be a non-negative integer in version.txt.'
 }
-$candidateModVersion = 'v' + ([int]$publishedVersionText + 1)
-if ([string]::IsNullOrWhiteSpace($Version)) {
-    $Version = $candidateModVersion + '-candidate'
+$candidateModVersion = 'V' + ([int]$publishedVersionText + 1)
+if (-not [string]::IsNullOrWhiteSpace($Version) -and $Version -cne $candidateModVersion) {
+    throw "Version is derived from version.txt and must be $candidateModVersion. Use OutputRoot to label a temporary run."
 }
+$Version = $candidateModVersion
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
 }

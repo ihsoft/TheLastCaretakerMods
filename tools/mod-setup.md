@@ -4,7 +4,8 @@
 
 Use [`New-ModSkeleton.ps1`](New-ModSkeleton.ps1) after choosing a mod directory
 name and one-sentence goal. It creates only `AGENTS.md`, `ARCHITECTURE.md`,
-`README.md`, and `version.txt` (`0`) under a new `mods/<Mod>/` directory.
+`README.md`, `CHANGELOG.md`, and `version.txt` (`0`) under a new
+`mods/<Mod>/` directory.
 It does not inspect the game, select an implementation, build, install, or
 overwrite an existing directory. The command emits a compact JSON result with
 the new path and files. See the [new-mod workflow](../docs/new-mod-rule.md)
@@ -18,6 +19,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\New-ModSkeleton.ps
 
 `Name` must be 1-64 ASCII letters or digits, starting with a letter; Windows
 device names are excluded. `Summary` is one line of 3-240 characters.
+The changelog starts with an empty `Next` section; fill it with player-facing
+changes before publication and never include it in the Vortex ZIP.
 
 ## Runtime INI preparation
 

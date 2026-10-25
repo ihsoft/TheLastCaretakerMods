@@ -469,15 +469,19 @@ $buildManifest = [ordered]@{
     (Join-Path $package 'build-manifest.json'),
     (($buildManifest | ConvertTo-Json -Depth 5) + [Environment]::NewLine))
 
-$archivePath = Join-Path $output 'BoatHUDTotalResources-candidate.zip'
+$publishedVersionText = (Get-Content -LiteralPath (
+    Join-Path $projectRoot 'version.txt') -Raw).Trim()
+if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+    throw 'BoatHUDTotalResources version.txt must contain a non-negative integer.'
+}
+$canonicalVersion = 'V' + ([int]$publishedVersionText + 1)
+if (-not [string]::IsNullOrWhiteSpace($Version) -and $Version -cne $canonicalVersion) {
+    throw "Version is derived from version.txt and must be $canonicalVersion. Use OutputRoot to label a temporary run."
+}
+$Version = $canonicalVersion
+$archivePath = Join-Path $output "BoatHUDTotalResources-$Version.zip"
 & (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
     -Container $utoc -Archive $archivePath | Out-Null
-
-if ([string]::IsNullOrWhiteSpace($Version)) {
-    $publishedVersion = [int](Get-Content -LiteralPath (
-        Join-Path $projectRoot 'version.txt') -Raw)
-    $Version = 'v' + ($publishedVersion + 1) + '-candidate'
-}
 $release = & (Join-Path $repoRoot 'tools/New-VoyageReleaseManifest.ps1') `
     -ReleaseRoot $output -Mod BoatHUDTotalResources -Version $Version `
     -Container $utoc -Archive $archivePath -SourcePath $projectRoot `

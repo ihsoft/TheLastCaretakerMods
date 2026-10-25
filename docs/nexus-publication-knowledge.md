@@ -24,17 +24,22 @@ The release rule owns version identity and the exact ZIP to publish.
    ZIP and build manifest as evidence, and identify both the tested candidate
    label and the actual release number. The retained directory must name the
    actual release; inspect version-bearing ZIP content before reusing its bytes.
-3. Create or update the mod page, then upload the ZIP as the main file. Enter
+3. Require the canonical archive name `<Mod>-V<N>.zip`. Read the mod's
+   `CHANGELOG.md`, review the `Next` section against the exact selected ZIP, and
+   use it as the Nexus file changelog. The changelog is publication input and
+   is not included in the ZIP.
+4. Create or update the mod page, then upload the ZIP as the main file. Enter
    the target release number as a plain integer in the Nexus file-version
    field, such as `1`, not `1.0`. Confirm the saved file's category, version,
    and identity before publication.
-4. Distinguish a prepared page, a saved file in a draft, and a public page.
+5. Distinguish a prepared page, a saved file in a draft, and a public page.
    A completed upload or enabled Publish control is not evidence that the mod
    is public. Opening a public-page tab alone is not verification: inspect the
    visible file listing and version. After publication, verify the public state
    or use the user's explicit report that he completed the final step. Only
-   then advance `version.txt` under the release rule; state when publication was reported
-   by the user rather than independently observed.
+   then advance `version.txt` and finalize the matching changelog section under
+   the release rule; state when publication was reported by the user rather
+   than independently observed.
 
 ## If the site behaves unexpectedly
 

@@ -7,7 +7,8 @@ Root `../../AGENTS.md` applies. This file owns only Railgun-specific contracts.
 - `Build-Railgun.ps1` is the only public producer. Requested builds use
   `-Install` by default unless the user explicitly asks for preparation only.
 - `-OutputRoot` selects a fresh directory below `Tmp/Railgun/`;
-  `-ArtifactVersion` gives the candidate a distinct safe identity. On a changed
+  `-ArtifactVersion` gives the temporary run directory a distinct safe identity;
+  it never changes the canonical `Railgun-V<N>.zip` name. On a changed
   Steam build, retry with `-IgnorePinnedGameVersion` and test the resulting
   candidate in game before updating `game-build.json`.
 - Never stop the game. Installation must retain the common closed-game,

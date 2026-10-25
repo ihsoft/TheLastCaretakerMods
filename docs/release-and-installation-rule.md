@@ -33,17 +33,24 @@ provenance.
 For a Nexus file belonging to that target release, enter the integer `N+1`
 as its version, without a `.0` suffix. Until publication, `version.txt` still
 contains `N` (or `0` before V1); it is not the candidate's Nexus file version.
-Candidate names may start with that next version and a distinguishing suffix;
-they must never imply that publication has occurred. A candidate promoted to
-a release keeps one exact ZIP identity. Publishing a different ZIP under the
-same version is a conflict to resolve explicitly, not a routine overwrite.
+The release ZIP name is exactly `<Mod>-V<N+1>.zip`, with the mod directory name
+and an uppercase `V`. Feature names, fix names, candidate labels, timestamps,
+and attempt numbers never belong in that filename. Distinguish temporary runs
+with their directory below `Tmp/<Mod>/`; multiple runs may contain ZIPs with
+the same canonical leaf name. Candidate status follows from `version.txt`, not
+from a filename suffix: while `version.txt` contains `N`, `<Mod>-V<N+1>.zip` is
+still a candidate. A candidate promoted to a release keeps one exact ZIP
+identity. Publishing a different ZIP under the same version is a conflict to
+resolve explicitly, not a routine overwrite.
+Do not rename or rebuild an already retained historical package merely to make
+its old name conform; the canonical rule applies when creating new candidates.
 If the user explicitly changes the target release number after a game test,
-keep the tested ZIP bytes and original build manifest. The manifest's candidate
-label remains build provenance, not proof of the eventual Nexus version. Name
-the retained release directory for the actual target, report both identities,
-and check whether any version-bearing content inside the ZIP makes that change
+keep the tested ZIP bytes and original build manifest. Rename the ZIP file to
+the canonical name for the actual target without recompressing it, and verify
+that its hash is unchanged. Name the retained release directory for that target
+and check whether any version-bearing content inside the ZIP makes the change
 unsafe. Do not leave a local selection under the old release number or rebuild
-solely to change a label.
+solely to change a filename.
 
 ## Release archive
 
@@ -63,6 +70,20 @@ in Vortex, then checking both required destinations and the absence of
 unexpected deployed files; claim gameplay compatibility only after the
 real-game test. A published ZIP remains immutable; packaging changes reach
 users through a new release.
+
+## Changelog
+
+Every mod owns `mods/<Mod>/CHANGELOG.md`. It is repository source for
+player-facing release notes, not payload: never put it inside the Vortex ZIP.
+Keep pending user-visible changes under `## Next`. Do not use build logs, Git
+history, architecture documents, or a descriptive ZIP filename as a substitute.
+
+When preparing publication, read `Next`, make it accurate and concise, and use
+that text for the Nexus file changelog. After the exact ZIP is publicly
+released and `version.txt` advances to `N`, rename that section to `## V<N>`
+and create a fresh empty `## Next` section. Do not invent history for releases
+that predate the changelog. Internal refactors, build-tool maintenance, and
+validation details belong there only when they affect players.
 
 ## Game update and candidate builds
 

@@ -74,6 +74,10 @@
   folder description. Do not maintain a second `README.txt` with a
   competing summary.
   If a release ZIP includes a README, package that same `README.md`.
+- Each mod's `CHANGELOG.md` is concise player-facing publication input. Keep
+  pending notes under `Next`, index it from the mod's `AGENTS.md`, and follow
+  the shared release rule when finalizing a numbered section. It is not an
+  architecture, knowledge, rule, work log, or release payload file.
 - Describe finished mods by their current behavior and necessary compatibility
   boundaries. Keep exact selected release packages with artifacts.
 - The repository-wide [release and installation workflow](../docs/release-and-installation-rule.md)

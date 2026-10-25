@@ -31,7 +31,7 @@ For a triplet built without a Vortex ZIP, call the shared archive producer:
 ```powershell
 .\tools\New-VoyageVortexArchive.ps1 `
   -Container '.\Tmp\Example\build\Example_P.utoc' `
-  -Archive '.\Tmp\Example\build\Example-candidate.zip'
+  -Archive '.\Tmp\Example\build\Example-V1.zip'
 ```
 
 Add `-AdditionalFile` for an INI or another payload file. Use
@@ -47,9 +47,9 @@ Create the release manifest for an already-built triplet and ZIP:
 ```powershell
 .\tools\New-VoyageReleaseManifest.ps1 `
   -ReleaseRoot '.\Tmp\Example\V1-candidate' `
-  -Mod 'Example' -Version 'V1-candidate' `
+  -Mod 'Example' -Version 'V1' `
   -Container '.\Tmp\Example\V1-candidate\package\Example_P.utoc' `
-  -Archive '.\Tmp\Example\V1-candidate\Example-V1-candidate.zip' `
+  -Archive '.\Tmp\Example\V1-candidate\Example-V1.zip' `
   -SourcePath '.\mods\Example'
 ```
 

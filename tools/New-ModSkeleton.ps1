@@ -42,6 +42,7 @@ knowledge. For a new mod, follow its
 - **Read first for every mod task:** [Architecture](ARCHITECTURE.md) records the
   current design and known game contracts; the initial state is explicitly
   unimplemented.
+- [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
 "@
 
 $architecture = @"
@@ -70,10 +71,19 @@ Planned mod: $goal
 No candidate build command is available yet.
 "@
 
+$changelog = @"
+# Changelog
+
+## Next
+
+<!-- Add concise player-facing changes for the next numbered release. -->
+"@
+
 $contents = [ordered]@{
     'AGENTS.md' = $index
     'ARCHITECTURE.md' = $architecture
     'README.md' = $readme
+    'CHANGELOG.md' = $changelog
     'version.txt' = '0'
 }
 

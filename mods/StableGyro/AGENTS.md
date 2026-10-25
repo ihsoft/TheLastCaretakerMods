@@ -13,6 +13,7 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
   reconstructed identities.
 - [Candidate producer](Build-StableGyro.ps1): complete build; use `-Install`
   when preparing a game candidate so the owned INI is merged and installed.
+- [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
 - [Shared INI recipe](../../docs/runtime-configuration-patterns-knowledge.md):
   schema-driven settings, entry reload, and user-value preservation.
 - [Vehicle and HUD patterns](../../docs/vehicle-and-hud-modding-patterns-knowledge.md):

@@ -10,6 +10,7 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
   reflected contracts.
 - [Candidate producer](Build-ElectrifiedBoat.ps1): prepares the DML ZIP and
   shared release manifest; the shared installer reads its layout.
+- [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
 - [Boat socket knowledge](../../docs/boat-resource-socket-architecture-knowledge.md):
   stock module and socket ownership.
 - [Cooked-asset knowledge](../../docs/voyage-cooked-asset-toolchain-knowledge.md):

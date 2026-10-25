@@ -195,14 +195,19 @@ if ($actualPaths.Count -ne $expectedPaths.Count -or
     throw "Packaged inventory is not the exact four-package loader: $($actualPaths -join ', ')"
 }
 
-$archive = Join-Path $output 'VoyageAutoLoader-candidate.zip'
+$publishedVersionText = (Get-Content -LiteralPath (
+    Join-Path $modRoot 'version.txt') -Raw).Trim()
+if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
+    throw 'VoyageAutoLoader version.txt must contain a non-negative integer.'
+}
+$canonicalVersion = 'V' + ([int]$publishedVersionText + 1)
+if (-not [string]::IsNullOrWhiteSpace($Version) -and $Version -cne $canonicalVersion) {
+    throw "Version is derived from version.txt and must be $canonicalVersion. Use OutputRoot to label a temporary run."
+}
+$Version = $canonicalVersion
+$archive = Join-Path $output "VoyageAutoLoader-$Version.zip"
 & (Join-Path $repoRoot 'tools\New-VoyageVortexArchive.ps1') `
     -Container $utoc -Archive $archive | Out-Null
-if ([string]::IsNullOrWhiteSpace($Version)) {
-    $publishedVersion = [int](Get-Content -LiteralPath (
-        Join-Path $modRoot 'version.txt') -Raw)
-    $Version = 'v' + ($publishedVersion + 1) + '-candidate'
-}
 $release = & (Join-Path $repoRoot 'tools\New-VoyageReleaseManifest.ps1') `
     -ReleaseRoot $output -Mod VoyageAutoLoader -Version $Version `
     -Container $utoc -Archive $archive -SourcePath $modRoot `

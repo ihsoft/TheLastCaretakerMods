@@ -199,7 +199,7 @@ try {
         $previousHashes[$name] = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash
     }
 
-    $firstRelease = New-SyntheticRelease -Version 'test-v1' `
+    $firstRelease = New-SyntheticRelease -Version 'V1' `
         -ContentMarker 'first'
     $validationEvidence = Join-Path $testRoot 'validation-must-not-exist'
     $validationResult = & $installer -ReleaseManifest $firstRelease.manifestPath `
@@ -211,14 +211,14 @@ try {
     }
 
     if (-not $WithContentPluginDescriptor) {
-    $logicRelease = New-SyntheticRelease -Version 'logicmods-layout' `
+    $logicRelease = New-SyntheticRelease -Version 'V2' `
         -ContentMarker 'logicmods'
     $logicStage = Join-Path $logicRelease.root 'logic-archive-stage'
     $logicStagePaks = Join-Path $logicStage 'LogicMods'
     [IO.Directory]::CreateDirectory($logicStagePaks) | Out-Null
     Copy-Item -Path (Join-Path $logicRelease.root 'container\package\*') `
         -Destination $logicStagePaks
-    $logicArchivePath = Join-Path $logicRelease.root "$modName-logicmods-layout.zip"
+    $logicArchivePath = Join-Path $logicRelease.root "$modName-V2.zip"
     Remove-Item -LiteralPath $logicArchivePath -Force
     Compress-Archive -Path (Join-Path $logicStage '*') -DestinationPath $logicArchivePath
     $logicManifest = Get-Content -LiteralPath $logicRelease.manifestPath -Raw | ConvertFrom-Json
@@ -237,14 +237,14 @@ try {
     }
     }
 
-    $wrongFingerprintRelease = New-SyntheticRelease -Version 'wrong-fingerprint' `
+    $wrongFingerprintRelease = New-SyntheticRelease -Version 'V3' `
         -ContentMarker 'wrong-fingerprint' -SteamBuildId '88888888'
     Assert-Rejected -Pattern 'fingerprint does not match' -Action {
         & $installer -ReleaseManifest $wrongFingerprintRelease.manifestPath `
             -GameRoot $gameRoot -ValidateOnly
     }
     if ($WithAutoLoadSidecar) {
-        $wrongSidecarRelease = New-SyntheticRelease -Version 'wrong-sidecar' `
+        $wrongSidecarRelease = New-SyntheticRelease -Version 'V4' `
             -ContentMarker 'wrong-sidecar'
         $wrongSidecarManifest = Get-Content -LiteralPath $wrongSidecarRelease.manifestPath -Raw | ConvertFrom-Json
         $wrongSidecarManifest.payload[-1].name = 'DifferentMod.autoload'
@@ -253,7 +253,7 @@ try {
             & $installer -ReleaseManifest $wrongSidecarRelease.manifestPath -GameRoot $gameRoot -ValidateOnly
         }
     }
-    $wrongArchiveRelease = New-SyntheticRelease -Version 'wrong-archive' `
+    $wrongArchiveRelease = New-SyntheticRelease -Version 'V5' `
         -ContentMarker 'archived-content'
     $wrongArchivePayloadPath = Join-Path $wrongArchiveRelease.root (
         'container\package\' + $containerName + '.pak')
@@ -269,7 +269,7 @@ try {
             -GameRoot $gameRoot -ValidateOnly
     }
     if ($WithContentPluginDescriptor) {
-        $unsafePluginRelease = New-SyntheticRelease -Version 'unsafe-plugin-path' `
+        $unsafePluginRelease = New-SyntheticRelease -Version 'V6' `
             -ContentMarker 'unsafe-plugin'
         $unsafePluginManifest = Get-Content -LiteralPath `
             $unsafePluginRelease.manifestPath -Raw | ConvertFrom-Json
@@ -360,7 +360,7 @@ try {
     }
 
     $secondEvidenceParent = Join-Path $testRoot 'failure-evidence'
-    $secondRelease = New-SyntheticRelease -Version 'test-v2' `
+    $secondRelease = New-SyntheticRelease -Version 'V7' `
         -ContentMarker 'second'
     $global:VoyageInstallerTestMoveCount = 0
     function Move-Item {
@@ -615,7 +615,7 @@ try {
         throw 'Successful ordinary installation retained historical recovery records.'
     }
 
-    $archiveOnlyRelease = New-SyntheticRelease -Version 'archive-only' `
+    $archiveOnlyRelease = New-SyntheticRelease -Version 'V8' `
         -ContentMarker 'archive-only'
     $archiveOnlyPackage = (Resolve-Path -LiteralPath (
         Join-Path $archiveOnlyRelease.root 'container\package')).Path

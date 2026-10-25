@@ -17,7 +17,7 @@ $publishedVersionText = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'vers
 if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
     throw 'version.txt must contain the integer published Nexus version.'
 }
-$version = 'V' + ([int]$publishedVersionText + 1) + '-candidate'
+$version = 'V' + ([int]$publishedVersionText + 1)
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $identity = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' +
         [Guid]::NewGuid().ToString('N').Substring(0, 8)

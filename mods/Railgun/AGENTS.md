@@ -10,6 +10,7 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
   failed build or test.
 - [Candidate producer](Build-Railgun.ps1): use `-Install` for a routine game
   candidate so the owned INI is installed with the container.
+- [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
 - [Shared INI recipe](../../docs/runtime-configuration-patterns-knowledge.md):
   canonical defaults, entry reload, and preservation of player settings.
 - [Projectile modeling rule](modeling-four-plane-cut-nose-rule.md): the shape

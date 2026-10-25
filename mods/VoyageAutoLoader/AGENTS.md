@@ -8,6 +8,7 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
   boundaries; read when changing the mod or diagnosing an unexpected result.
 - [Candidate producer](Build-VoyageAutoLoader.ps1): builds, generates, cooks,
   packages, and validates the four-package asset-only loader.
+- [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
 - [Descriptor contract](DESCRIPTOR.md): accepted fields and runtime limits.
 - [DML proposal](DML-PROPOSAL.md): external proposal context only; it is not
   an implementation or release contract.

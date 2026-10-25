@@ -10,6 +10,7 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
   Blueprint identities.
 - [Candidate producer](Build-DonkLiftRelease.ps1): runs the complete build;
   shared release and installation rules apply.
+- [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
 - [Vehicle and HUD patterns](../../docs/vehicle-and-hud-modding-patterns-knowledge.md):
   shared lifecycle and action presentation findings.
 - [Research pitfalls](../../docs/research-pitfalls-knowledge.md): control and

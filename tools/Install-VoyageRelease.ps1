@@ -372,6 +372,11 @@ try {
     if ($archiveReader.Entries.Count -lt 1) {
         throw "Release archive is empty: $($resolvedArchive.path)"
     }
+    if (@($archiveReader.Entries | Where-Object {
+            [IO.Path]::GetFileName($_.FullName) -ieq 'CHANGELOG.md'
+        }).Count -ne 0) {
+        throw 'CHANGELOG.md is publication input and must not be included in the release ZIP.'
+    }
     $archiveContainers = @($archiveReader.Entries | Where-Object {
         @('.pak', '.ucas', '.utoc', '.autoload') -contains [IO.Path]::GetExtension($_.Name).ToLowerInvariant()
     })

@@ -91,16 +91,16 @@ foreach ($extension in @('.pak', '.ucas', '.utoc', '.autoload')) {
         [Text.UTF8Encoding]::new($false))
     $payloadPaths += $path
 }
-$archivePath = Join-Path $releaseRoot 'SyntheticManifestMod-test-v1.zip'
+$archivePath = Join-Path $releaseRoot 'SyntheticManifestMod-V1.zip'
 Compress-Archive -LiteralPath $payloadPaths -DestinationPath $archivePath
 
 try {
     $result = & $producer -ReleaseRoot $releaseRoot `
-        -Mod 'SyntheticManifestMod' -Version 'test-v1' `
+        -Mod 'SyntheticManifestMod' -Version 'V1' `
         -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
         -Archive $archivePath -SourcePath (Join-Path $repositoryRoot 'README.md') `
-        -GameRoot $gameRoot -ModVersion '1.2.3' `
-        -InstalledArchiveName 'SyntheticManifestMod-test-v1.zip'
+        -GameRoot $gameRoot -ModVersion 'V1' `
+        -InstalledArchiveName 'SyntheticManifestMod-V1.zip'
     Add-Check -Name 'manifest-created-and-validated' `
         -Passed ($result.status -ceq 'created-and-validated') `
         -Evidence ([string]$result.manifestPath)
@@ -117,15 +117,47 @@ try {
             }).Count -eq 0) `
         -Evidence ((@($manifest.payload | ForEach-Object { $_.path })) -join ', ')
     Add-Check -Name 'optional-release-identity' `
-        -Passed ([string]$manifest.modVersion -ceq '1.2.3' -and
+        -Passed ([string]$manifest.modVersion -ceq 'V1' -and
             [string]$manifest.installedArchive.name -ceq
-                'SyntheticManifestMod-test-v1.zip') `
+                'SyntheticManifestMod-V1.zip') `
         -Evidence (([string]$manifest.modVersion) + ' / ' +
             [string]$manifest.installedArchive.name)
     Add-Check -Name 'source-scope-recorded' `
         -Passed (@($manifest.sourcePaths).Count -eq 1 -and
             [string]$manifest.sourcePaths[0].path -ceq 'README.md') `
         -Evidence ($manifest.sourcePaths | ConvertTo-Json -Compress)
+
+    Assert-Rejected -Name 'noncanonical-version-rejected' `
+        -Pattern 'canonical V<N>' -Action {
+        & $producer -ReleaseRoot $releaseRoot `
+            -Mod 'SyntheticManifestMod' -Version 'V1-fix' `
+            -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
+            -Archive $archivePath -SourcePath (Join-Path $repositoryRoot 'README.md') `
+            -GameRoot $gameRoot -OutputPath (Join-Path $releaseRoot 'bad-version.json')
+    }
+    $freeformArchive = Join-Path $releaseRoot 'SyntheticManifestMod-V1-fix.zip'
+    Copy-Item -LiteralPath $archivePath -Destination $freeformArchive
+    Assert-Rejected -Name 'noncanonical-archive-name-rejected' `
+        -Pattern 'canonical name SyntheticManifestMod-V1.zip' -Action {
+        & $producer -ReleaseRoot $releaseRoot `
+            -Mod 'SyntheticManifestMod' -Version 'V1' `
+            -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
+            -Archive $freeformArchive -SourcePath (Join-Path $repositoryRoot 'README.md') `
+            -GameRoot $gameRoot -OutputPath (Join-Path $releaseRoot 'bad-name.json')
+    }
+    $changelogPayload = Join-Path $releaseRoot 'CHANGELOG.md'
+    [IO.File]::WriteAllText($changelogPayload, "# Changelog`n", [Text.UTF8Encoding]::new($false))
+    $changelogArchive = Join-Path $releaseRoot 'SyntheticManifestMod-V2.zip'
+    Compress-Archive -LiteralPath (@($payloadPaths) + $changelogPayload) `
+        -DestinationPath $changelogArchive
+    Assert-Rejected -Name 'changelog-in-archive-rejected' `
+        -Pattern 'must not be included' -Action {
+        & $producer -ReleaseRoot $releaseRoot `
+            -Mod 'SyntheticManifestMod' -Version 'V2' `
+            -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
+            -Archive $changelogArchive -SourcePath (Join-Path $repositoryRoot 'README.md') `
+            -GameRoot $gameRoot -OutputPath (Join-Path $releaseRoot 'bad-changelog.json')
+    }
 
     $pluginReleaseRoot = Join-Path $testRoot 'plugin-release'
     $pluginPackageRoot = Join-Path $pluginReleaseRoot 'package'
@@ -142,13 +174,13 @@ try {
         ExplicitlyLoaded = $false
         Modules = @()
     } | ConvertTo-Json -Depth 4), [Text.UTF8Encoding]::new($false))
-    $pluginArchive = Join-Path $pluginReleaseRoot 'SyntheticPluginMod-test-v1.zip'
+    $pluginArchive = Join-Path $pluginReleaseRoot 'SyntheticPluginMod-V1.zip'
     & (Join-Path $PSScriptRoot 'New-VoyageVortexArchive.ps1') `
         -Container (Join-Path $pluginPackageRoot ($containerBase + '.utoc')) `
         -Archive $pluginArchive -ContentPluginDescriptor $pluginDescriptor `
         -AdditionalFile (Join-Path $pluginPackageRoot ($containerBase + '.autoload')) | Out-Null
     $pluginResult = & $producer -ReleaseRoot $pluginReleaseRoot `
-        -Mod 'SyntheticPluginMod' -Version 'test-v1' `
+        -Mod 'SyntheticPluginMod' -Version 'V1' `
         -Container (Join-Path $pluginPackageRoot ($containerBase + '.utoc')) `
         -Archive $pluginArchive -SourcePath (Join-Path $repositoryRoot 'README.md') `
         -GameRoot $gameRoot -ContentPluginDescriptor $pluginDescriptor
@@ -174,7 +206,7 @@ try {
     Assert-Rejected -Name 'unsafe-content-plugin-flags-rejected' `
         -Pattern 'must declare' -Action {
         & $producer -ReleaseRoot $pluginReleaseRoot `
-            -Mod 'SyntheticPluginMod' -Version 'invalid-plugin' `
+            -Mod 'SyntheticPluginMod' -Version 'V1' `
             -Container (Join-Path $pluginPackageRoot ($containerBase + '.utoc')) `
             -Archive $pluginArchive -SourcePath (Join-Path $repositoryRoot 'README.md') `
             -GameRoot $gameRoot -ContentPluginDescriptor $invalidDescriptor `
@@ -189,13 +221,13 @@ try {
     Assert-Rejected -Name 'dirty-source-needs-explicit-approval' `
         -Pattern 'declared release source has uncommitted changes' -Action {
         & $producer -ReleaseRoot $releaseRoot `
-            -Mod 'SyntheticManifestMod' -Version 'dirty-test' `
+            -Mod 'SyntheticManifestMod' -Version 'V1' `
             -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
             -Archive $archivePath -SourcePath $dirtySourcePath -GameRoot $gameRoot `
             -OutputPath $dirtyManifestPath
     }
     $dirtyResult = & $producer -ReleaseRoot $releaseRoot `
-        -Mod 'SyntheticManifestMod' -Version 'dirty-test' `
+        -Mod 'SyntheticManifestMod' -Version 'V1' `
         -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
         -Archive $archivePath -SourcePath $dirtySourcePath -GameRoot $gameRoot `
         -OutputPath $dirtyManifestPath -AllowDirtySource
@@ -207,7 +239,7 @@ try {
 
     $jsonManifestPath = Join-Path $releaseRoot 'json-result-manifest.json'
     $jsonText = & $producer -ReleaseRoot $releaseRoot `
-        -Mod 'SyntheticManifestMod' -Version 'json-test' `
+        -Mod 'SyntheticManifestMod' -Version 'V1' `
         -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
         -Archive $archivePath -SourcePath (Join-Path $repositoryRoot 'README.md') `
         -GameRoot $gameRoot -OutputPath $jsonManifestPath -AsJson
@@ -219,7 +251,7 @@ try {
 
     Assert-Rejected -Name 'immutable-output' -Pattern 'Refusing to overwrite' -Action {
         & $producer -ReleaseRoot $releaseRoot `
-            -Mod 'SyntheticManifestMod' -Version 'test-v1' `
+            -Mod 'SyntheticManifestMod' -Version 'V1' `
             -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
             -Archive $archivePath -SourcePath (Join-Path $repositoryRoot 'README.md') `
             -GameRoot $gameRoot
@@ -234,13 +266,13 @@ try {
         [IO.File]::WriteAllText($path, "before-$extension")
         $badPayload += $path
     }
-    $badArchive = Join-Path $badReleaseRoot 'BadArchiveMod.zip'
+    $badArchive = Join-Path $badReleaseRoot 'BadArchiveMod-V1.zip'
     Compress-Archive -LiteralPath $badPayload -DestinationPath $badArchive
     [IO.File]::WriteAllText($badPayload[0], 'after-archive')
     Assert-Rejected -Name 'zip-payload-mismatch-rejected' `
         -Pattern 'Release ZIP (does not match|content disagrees)' -Action {
         & $producer -ReleaseRoot $badReleaseRoot `
-            -Mod 'BadArchiveMod' -Version 'test-v1' `
+            -Mod 'BadArchiveMod' -Version 'V1' `
             -Container $badPayload[2] -Archive $badArchive `
             -SourcePath (Join-Path $repositoryRoot 'README.md') -GameRoot $gameRoot
     }
@@ -255,7 +287,7 @@ try {
     Assert-Rejected -Name 'archive-must-be-inside-release' `
         -Pattern 'Archive must be below' -Action {
         & $producer -ReleaseRoot $releaseRoot `
-            -Mod 'SyntheticManifestMod' -Version 'outside-test' `
+            -Mod 'SyntheticManifestMod' -Version 'V1' `
             -Container (Join-Path $packageRoot ($containerBase + '.utoc')) `
             -Archive $outsideArchive -SourcePath (Join-Path $repositoryRoot 'README.md') `
             -GameRoot $gameRoot -OutputPath $outsideOutput

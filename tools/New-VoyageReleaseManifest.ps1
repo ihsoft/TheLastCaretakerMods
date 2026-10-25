@@ -183,6 +183,9 @@ if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
 if ([string]::IsNullOrWhiteSpace($Mod) -or [string]::IsNullOrWhiteSpace($Version)) {
     throw 'Mod and Version must be non-empty.'
 }
+if ($Version -cnotmatch '^V[1-9][0-9]*$') {
+    throw 'Release Version must use the canonical V<N> form.'
+}
 
 $resolvedUtoc = (Resolve-Path -LiteralPath $Container).Path
 Assert-PathBelowRoot -Path $resolvedUtoc -Root $resolvedReleaseRoot -Label 'Container'
@@ -212,6 +215,40 @@ $resolvedArchive = (Resolve-Path -LiteralPath $Archive).Path
 Assert-PathBelowRoot -Path $resolvedArchive -Root $resolvedReleaseRoot -Label 'Archive'
 if ([IO.Path]::GetExtension($resolvedArchive) -cne '.zip') {
     throw "Archive must be an exact .zip file: $resolvedArchive"
+}
+$expectedArchiveName = "$Mod-$Version.zip"
+if ([IO.Path]::GetFileName($resolvedArchive) -cne $expectedArchiveName) {
+    throw "Release ZIP must use the canonical name $expectedArchiveName"
+}
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archiveReadback = [IO.Compression.ZipFile]::OpenRead($resolvedArchive)
+try {
+    if (@($archiveReadback.Entries | Where-Object {
+            [IO.Path]::GetFileName($_.FullName) -ieq 'CHANGELOG.md'
+        }).Count -ne 0) {
+        throw 'CHANGELOG.md is publication input and must not be included in the release ZIP.'
+    }
+}
+finally {
+    $archiveReadback.Dispose()
+}
+
+$changelogRecord = $null
+$modRoot = Join-Path (Join-Path $repositoryRoot 'mods') $Mod
+if (Test-Path -LiteralPath $modRoot -PathType Container) {
+    $changelogPath = Join-Path $modRoot 'CHANGELOG.md'
+    if (-not (Test-Path -LiteralPath $changelogPath -PathType Leaf)) {
+        throw "Mod changelog is missing: $changelogPath"
+    }
+    $changelogText = Get-Content -LiteralPath $changelogPath -Raw
+    if ($changelogText -cnotmatch '(?m)^## Next\s*$') {
+        throw "Mod changelog must contain a ## Next section: $changelogPath"
+    }
+    $changelogRecord = [ordered]@{
+        path = Get-RelativePath -Root $repositoryRoot -Path $changelogPath
+        sha256 = (Get-FileHash -LiteralPath $changelogPath -Algorithm SHA256).Hash
+    }
 }
 
 $resolvedOutputPath = if ([string]::IsNullOrWhiteSpace($OutputPath)) {
@@ -298,6 +335,9 @@ $manifest = [ordered]@{
     }
     payload = @($payloadPaths | ForEach-Object { New-ArtifactRecord -Path $_ })
     archive = New-ArtifactRecord -Path $resolvedArchive
+}
+if ($null -ne $changelogRecord) {
+    $manifest['changelog'] = $changelogRecord
 }
 if ($null -ne $contentPlugin) {
     $manifest['contentPlugin'] = $contentPlugin

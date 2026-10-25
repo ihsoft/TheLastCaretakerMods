@@ -10,5 +10,6 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
   revalidation boundaries.
 - [Candidate producer](Build-BoatHUDTotalResources.ps1): prepares fresh stock
   HUD input, builds the container, and validates the ZIP and release manifest.
+- [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
 - [Shared Boat socket knowledge](../../docs/boat-resource-socket-architecture-knowledge.md):
   resource-module and HUD data paths when investigating stock behavior.

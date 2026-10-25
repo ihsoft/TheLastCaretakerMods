@@ -36,9 +36,15 @@ $publishedVersionText = (Get-Content -LiteralPath (Join-Path $modRoot 'version.t
 if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
     throw 'DonkLift published version must be a non-negative integer in version.txt.'
 }
-$candidateModVersion = 'v' + ([int]$publishedVersionText + 1)
-if ([string]::IsNullOrWhiteSpace($Version)) {
-    $Version = $candidateModVersion + '-candidate'
+$candidateModVersion = 'V' + ([int]$publishedVersionText + 1)
+if (-not [string]::IsNullOrWhiteSpace($Version) -and $Version -cne $candidateModVersion) {
+    throw "Version is derived from version.txt and must be $candidateModVersion. Use OutputRoot to label a temporary run."
+}
+$Version = $candidateModVersion
+$changelogPath = Join-Path $modRoot 'CHANGELOG.md'
+if (-not (Test-Path -LiteralPath $changelogPath -PathType Leaf) -or
+    (Get-Content -LiteralPath $changelogPath -Raw) -cnotmatch '(?m)^## Next\s*$') {
+    throw 'DonkLiftKeyboardControl CHANGELOG.md must contain a ## Next section.'
 }
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
@@ -404,6 +410,10 @@ $manifest = [ordered]@{
         name = (Split-Path -Leaf $archivePath)
         size = (Get-Item -LiteralPath $archivePath).Length
         sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath).Hash
+    }
+    changelog = [ordered]@{
+        path = 'mods/DonkLiftKeyboardControl/CHANGELOG.md'
+        sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $changelogPath).Hash
     }
     timingsSeconds = $timings
     totalSeconds = $totalStopwatch.Elapsed.TotalSeconds
