@@ -11,13 +11,14 @@
 #include "DonkLiftAssetNames.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
+#include "Components/ActorComponent.h"
 #include "Components/ChildActorComponent.h"
-#include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/GameUserSettings.h"
 #include "K2Node_BreakStruct.h"
 #include "K2Node_CallFunction.h"
+#include "K2Node_CallParentFunction.h"
 #include "K2Node_DynamicCast.h"
 #include "K2Node_EnumEquality.h"
 #include "K2Node_FunctionEntry.h"
@@ -30,6 +31,7 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/PackageName.h"
 #include "UObject/SavePackage.h"
+#include "UObject/UnrealType.h"
 #include "VoyageGameUserSettings.h"
 #include "VoyageInputAction.h"
 #include "VoyageVehicleForkliftPawn.h"
@@ -43,8 +45,9 @@ constexpr TCHAR ForkliftAssetName[] = TEXT("BP_Forklift_Possesable");
 constexpr TCHAR HelperObjectPath[] = TEXT("/Game/Mods/DonkLiftKeyboardControl/ModActor.ModActor");
 const FName BaseBlueprintName(TEXT("GenerateDonkLiftInheritanceBase"));
 const FName ChildBlueprintName(TEXT("GenerateDonkLiftInheritanceChild"));
-const FName HelperComponentName(TEXT("DonkLiftKeyboardHelper"));
 const FName ProvidedActionsFunctionName(TEXT("GetProvidedActionsBP"));
+const FName& ReceiveBeginPlayFunctionName = BlueprintGraphNames::Events::ActorReceiveBeginPlay;
+const FName SetChildActorClassFunctionName(TEXT("SetChildActorClass"));
 
 namespace PinNames
 {
@@ -59,6 +62,14 @@ const FName Enabled(TEXT("bEnabled"));
 const FName Priority(TEXT("Priority"));
 const FName Type(TEXT("Type"));
 const FName LanguageType(TEXT("LanguageType"));
+const FName ManualAttachment(TEXT("bManualAttachment"));
+const FName RelativeTransform(TEXT("RelativeTransform"));
+const FName DeferredFinish(TEXT("bDeferredFinish"));
+const FName Component(TEXT("Component"));
+const FName ChildActorClass(TEXT("InClass"));
+const FName Location(TEXT("Location"));
+const FName Rotation(TEXT("Rotation"));
+const FName Scale(TEXT("Scale"));
 }
 namespace SelectPins = BlueprintGraphNames::Pins::Select;
 
@@ -68,6 +79,10 @@ constexpr TCHAR Enabled[] = TEXT("true");
 constexpr TCHAR Priority[] = TEXT("10");
 constexpr TCHAR Type[] = TEXT("EPlayerInputInterfaceActionType::Central");
 constexpr TCHAR RussianLanguage[] = TEXT("EVoyageLanguageType::Russian");
+constexpr TCHAR False[] = TEXT("false");
+constexpr TCHAR True[] = TEXT("true");
+constexpr TCHAR ZeroVector[] = TEXT("0.000000,0.000000,0.000000");
+constexpr TCHAR UnitVector[] = TEXT("1.000000,1.000000,1.000000");
 }
 
 template <typename NodeType>
@@ -303,13 +318,187 @@ bool AddProvidedActionsBpOverride(
     return true;
 }
 
-bool SaveBlueprint(UPackage* Package, UBlueprint* Blueprint)
+bool AddBeginPlayHelperOverride(UBlueprint* Blueprint, UClass* HelperClass)
+{
+    if (!Blueprint || !Blueprint->ParentClass || !HelperClass ||
+        !HelperClass->IsChildOf(AActor::StaticClass()))
+    {
+        return false;
+    }
+
+    UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(
+        Blueprint,
+        ReceiveBeginPlayFunctionName,
+        UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(
+        Blueprint,
+        Graph,
+        false,
+        AActor::StaticClass());
+
+    UK2Node_FunctionEntry* Entry = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        if (UK2Node_FunctionEntry* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+        {
+            Entry = Candidate;
+        }
+    }
+    if (!Entry)
+    {
+        UE_LOG(LogTemp, Error, TEXT("ReceiveBeginPlay entry node was not generated"));
+        return false;
+    }
+
+    UFunction* InheritedBeginPlay = Blueprint->ParentClass->FindFunctionByName(
+        ReceiveBeginPlayFunctionName);
+    if (!InheritedBeginPlay)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Inherited ReceiveBeginPlay function was not found"));
+        return false;
+    }
+
+    const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
+    UEdGraphPin* EntryThen = RequirePin(Entry, UEdGraphSchema_K2::PN_Then);
+    EntryThen->BreakAllPinLinks();
+
+    UK2Node_CallParentFunction* ParentBeginPlay = NewObject<UK2Node_CallParentFunction>(Graph);
+    ParentBeginPlay->SetFromFunction(InheritedBeginPlay);
+    FinishNode(ParentBeginPlay, Graph, 240, 0);
+
+    UK2Node_CallFunction* MakeTransform = NewObject<UK2Node_CallFunction>(Graph);
+    MakeTransform->SetFromFunction(UKismetMathLibrary::StaticClass()->FindFunctionByName(
+        GET_FUNCTION_NAME_CHECKED(UKismetMathLibrary, MakeTransform)));
+    FinishNode(MakeTransform, Graph, 480, 240);
+    Schema->TrySetDefaultValue(
+        *RequirePin(MakeTransform, PinNames::Location),
+        ProvidedActionDefaults::ZeroVector);
+    Schema->TrySetDefaultValue(
+        *RequirePin(MakeTransform, PinNames::Rotation),
+        ProvidedActionDefaults::ZeroVector);
+    Schema->TrySetDefaultValue(
+        *RequirePin(MakeTransform, PinNames::Scale),
+        ProvidedActionDefaults::UnitVector);
+
+    UK2Node_CallFunction* AddComponent = NewObject<UK2Node_CallFunction>(Graph);
+    AddComponent->SetFromFunction(AActor::StaticClass()->FindFunctionByName(
+        GET_FUNCTION_NAME_CHECKED(AActor, AddComponentByClass)));
+    FinishNode(AddComponent, Graph, 480, 0);
+    Schema->TrySetDefaultObject(
+        *RequirePin(AddComponent, BlueprintGraphNames::Pins::Class),
+        UChildActorComponent::StaticClass());
+    Schema->TrySetDefaultValue(
+        *RequirePin(AddComponent, PinNames::ManualAttachment),
+        ProvidedActionDefaults::False);
+    Schema->TrySetDefaultValue(
+        *RequirePin(AddComponent, PinNames::DeferredFinish),
+        ProvidedActionDefaults::True);
+
+    UK2Node_DynamicCast* CastComponent = NewObject<UK2Node_DynamicCast>(Graph);
+    CastComponent->TargetType = UChildActorComponent::StaticClass();
+    CastComponent->SetPurity(false);
+    FinishNode(CastComponent, Graph, 760, 0);
+
+    UK2Node_CallFunction* SetChildClass = NewObject<UK2Node_CallFunction>(Graph);
+    SetChildClass->SetFromFunction(UChildActorComponent::StaticClass()->FindFunctionByName(
+        SetChildActorClassFunctionName));
+    FinishNode(SetChildClass, Graph, 1040, 0);
+    Schema->TrySetDefaultObject(
+        *RequirePin(SetChildClass, PinNames::ChildActorClass),
+        HelperClass);
+
+    UK2Node_CallFunction* FinishComponent = NewObject<UK2Node_CallFunction>(Graph);
+    FinishComponent->SetFromFunction(AActor::StaticClass()->FindFunctionByName(
+        GET_FUNCTION_NAME_CHECKED(AActor, FinishAddComponent)));
+    FinishNode(FinishComponent, Graph, 1320, 0);
+    Schema->TrySetDefaultValue(
+        *RequirePin(FinishComponent, PinNames::ManualAttachment),
+        ProvidedActionDefaults::False);
+
+    if (!Schema->TryCreateConnection(
+            EntryThen,
+            RequirePin(ParentBeginPlay, UEdGraphSchema_K2::PN_Execute)) ||
+        !Schema->TryCreateConnection(
+            RequirePin(ParentBeginPlay, UEdGraphSchema_K2::PN_Then),
+            RequirePin(AddComponent, UEdGraphSchema_K2::PN_Execute)) ||
+        !Schema->TryCreateConnection(
+            RequirePin(MakeTransform, PinNames::ReturnValue),
+            RequirePin(AddComponent, PinNames::RelativeTransform)) ||
+        !Schema->TryCreateConnection(
+            RequirePin(AddComponent, UEdGraphSchema_K2::PN_Then),
+            RequirePin(CastComponent, UEdGraphSchema_K2::PN_Execute)) ||
+        !Schema->TryCreateConnection(
+            RequirePin(AddComponent, PinNames::ReturnValue),
+            CastComponent->GetCastSourcePin()) ||
+        !Schema->TryCreateConnection(
+            CastComponent->GetValidCastPin(),
+            RequirePin(SetChildClass, UEdGraphSchema_K2::PN_Execute)) ||
+        !Schema->TryCreateConnection(
+            CastComponent->GetCastResultPin(),
+            RequirePin(SetChildClass, UEdGraphSchema_K2::PN_Self)) ||
+        !Schema->TryCreateConnection(
+            RequirePin(SetChildClass, UEdGraphSchema_K2::PN_Then),
+            RequirePin(FinishComponent, UEdGraphSchema_K2::PN_Execute)) ||
+        !Schema->TryCreateConnection(
+            RequirePin(AddComponent, PinNames::ReturnValue),
+            RequirePin(FinishComponent, PinNames::Component)) ||
+        !Schema->TryCreateConnection(
+            RequirePin(MakeTransform, PinNames::ReturnValue),
+            RequirePin(FinishComponent, PinNames::RelativeTransform)))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to connect ReceiveBeginPlay helper creation graph"));
+        return false;
+    }
+    return true;
+}
+
+bool ValidateReplacementClass(UBlueprint* Blueprint)
+{
+    if (!Blueprint || !Blueprint->GeneratedClass || !Blueprint->SimpleConstructionScript)
+    {
+        return false;
+    }
+    if (Blueprint->UbergraphPages.Num() != 0)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Replacement Blueprint must not contain EventGraph execution"));
+        return false;
+    }
+    if (Blueprint->SimpleConstructionScript->GetAllNodes().Num() != 0)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Replacement Blueprint must not contain SCS components"));
+        return false;
+    }
+
+    int32 OwnPropertyCount = 0;
+    for (TFieldIterator<FProperty> Property(Blueprint->GeneratedClass, EFieldIteratorFlags::ExcludeSuper);
+         Property;
+         ++Property)
+    {
+        ++OwnPropertyCount;
+        UE_LOG(LogTemp, Error, TEXT("Unexpected replacement instance property: %s"),
+            *Property->GetName());
+    }
+    if (OwnPropertyCount != 0)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Replacement Blueprint has %d own instance properties"),
+            OwnPropertyCount);
+        return false;
+    }
+    return true;
+}
+
+bool SaveBlueprint(UPackage* Package, UBlueprint* Blueprint, const bool RequireZeroOwnProperties = false)
 {
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     FKismetEditorUtilities::CompileBlueprint(Blueprint);
     if (Blueprint->Status == BS_Error)
     {
         UE_LOG(LogTemp, Error, TEXT("Compilation failed for %s"), *Blueprint->GetPathName());
+        return false;
+    }
+    if (RequireZeroOwnProperties && !ValidateReplacementClass(Blueprint))
+    {
         return false;
     }
 
@@ -388,23 +577,25 @@ int32 UGenerateDonkLiftInheritanceCommandlet::Main(const FString& Params)
         return 1;
     }
 
-    USCS_Node* HelperNode = ChildBlueprint->SimpleConstructionScript->CreateNode(
-        UChildActorComponent::StaticClass(),
-        HelperComponentName);
-    UChildActorComponent* HelperTemplate = Cast<UChildActorComponent>(HelperNode->ComponentTemplate);
-    if (!HelperTemplate)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Failed to create the helper component template"));
-        return 1;
-    }
     UClass* HelperClass = Helper->GeneratedClass.Get();
     if (!HelperClass->IsChildOf(AActor::StaticClass()))
     {
         UE_LOG(LogTemp, Error, TEXT("Helper Blueprint is not an Actor class: %s"), *HelperClass->GetPathName());
         return 1;
     }
-    HelperTemplate->SetChildActorClass(TSubclassOf<AActor>(HelperClass));
-    ChildBlueprint->SimpleConstructionScript->AddNode(HelperNode);
+    for (UEdGraph* EventGraph : TArray<UEdGraph*>(ChildBlueprint->UbergraphPages))
+    {
+        FBlueprintEditorUtils::RemoveGraph(
+            ChildBlueprint,
+            EventGraph,
+            EGraphRemoveFlags::MarkTransient);
+    }
+
+    if (!AddBeginPlayHelperOverride(ChildBlueprint, HelperClass))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to add the BeginPlay helper lifecycle"));
+        return 1;
+    }
 
     if (!AddProvidedActionsBpOverride(ChildBlueprint, BrakeAction, CenterAction))
     {
@@ -412,7 +603,7 @@ int32 UGenerateDonkLiftInheritanceCommandlet::Main(const FString& Params)
         return 1;
     }
 
-    if (!SaveBlueprint(ChildPackage, ChildBlueprint))
+    if (!SaveBlueprint(ChildPackage, ChildBlueprint, true))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to save the child Blueprint"));
         return 1;

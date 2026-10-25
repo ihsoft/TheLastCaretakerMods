@@ -26,7 +26,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $expectedGameEngineVersion = '5.8.1'
 $expectedEditorEngineVersion = '5.8.2'
-$retocCompatibilityVersion = 'UE5_7'
+$sourceRetocEngineVersion = 'UE5_8'
+$targetRetocEngineVersion = 'UE5_7'
 $cookStorage = 'LooseCookedPackageWriter'
 
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
@@ -51,9 +52,11 @@ $buildBatch = Join-Path $EngineRoot 'Engine\Build\BatchFiles\Build.bat'
 $unrealEditor = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 $engineVersionPath = Join-Path $EngineRoot 'Engine\Build\Build.version'
 $fingerprinter = Join-Path $repoRoot 'tools\Get-VoyageBuildFingerprint.ps1'
+$mappingResolver = Join-Path $repoRoot 'tools\Get-VoyageMappings.ps1'
 $cookScript = Join-Path $modRoot 'Cook-DonkLiftAssets.ps1'
 $prepareScript = Join-Path $modRoot 'Prepare-DonkLiftOriginals.ps1'
 $packageScript = Join-Path $modRoot 'Build-InheritancePackage.ps1'
+$schemaValidator = Join-Path $modRoot 'Test-DonkLiftForkliftSchema.ps1'
 $containerName = 'DonkLiftKeyboardControl_P'
 $payloadNames = @(
     "$containerName.pak",
@@ -127,7 +130,7 @@ function Get-CleanOriginalInputs {
     param(
         [Parameter(Mandatory = $true)] [string]$Root,
         [Parameter(Mandatory = $true)] [string]$ExpectedBuild,
-        [Parameter(Mandatory = $true)] [string]$ExpectedRetocCompatibilityVersion,
+        [Parameter(Mandatory = $true)] [string]$ExpectedSourceRetocEngineVersion,
         [Parameter(Mandatory = $true)] [string]$ExpectedRetocHash
     )
 
@@ -140,10 +143,10 @@ function Get-CleanOriginalInputs {
     $manifest = Get-Content -LiteralPath $manifests[0].FullName -Raw | ConvertFrom-Json
     if ([string]$manifest.filter -cne 'Vehicles/BP_Forklift_Possesable' -or
         [string]$manifest.steamBuildId -cne $ExpectedBuild -or
-        [string]$manifest.retocEngineVersion -cne $ExpectedRetocCompatibilityVersion -or
+        [string]$manifest.retocEngineVersion -cne $ExpectedSourceRetocEngineVersion -or
         [string]$manifest.retocSha256 -cne $ExpectedRetocHash -or
         $manifest.allowAdditionalContainers -ne $false) {
-        throw "Originals manifest is not a clean extraction for the current validated game: $($manifests[0].FullName)"
+        throw "Originals manifest is not a clean UE5.8 extraction for the current game: $($manifests[0].FullName)"
     }
 
     $extractionRoot = $manifests[0].Directory.FullName
@@ -174,9 +177,11 @@ $buildBatch = Resolve-RequiredPath -Path $buildBatch -Label 'Unreal build script
 $unrealEditor = Resolve-RequiredPath -Path $unrealEditor -Label 'UnrealEditor-Cmd'
 $engineVersionPath = Resolve-RequiredPath -Path $engineVersionPath -Label 'Unreal build version'
 $fingerprinter = Resolve-RequiredPath -Path $fingerprinter -Label 'Voyage fingerprint tool'
+$mappingResolver = Resolve-RequiredPath -Path $mappingResolver -Label 'Voyage mapping resolver'
 $cookScript = Resolve-RequiredPath -Path $cookScript -Label 'DonkLift cook script'
 $prepareScript = Resolve-RequiredPath -Path $prepareScript -Label 'DonkLift original preparer'
 $packageScript = Resolve-RequiredPath -Path $packageScript -Label 'DonkLift package builder'
+$schemaValidator = Resolve-RequiredPath -Path $schemaValidator -Label 'DonkLift schema validator'
 $Retoc = Resolve-RequiredPath -Path $Retoc -Label 'retoc'
 $retocSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Retoc).Hash
 $GameRoot = Resolve-RequiredPath -Path $GameRoot -Label 'Voyage game root'
@@ -224,6 +229,11 @@ $gameBuild = & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') `
     -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
     -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 $expectedBuild = [string]$fingerprint.steam.buildId
+$mapping = & $mappingResolver -GameRoot $GameRoot
+if ([string]$mapping.steamBuildId -cne $expectedBuild -or
+    [string]$mapping.uassetApiEngineVersion -cne 'VER_UE5_8') {
+    throw 'Resolved Voyage mapping does not match the current DonkLift build contract.'
+}
 $phase.Stop()
 $timings.Fingerprint = $phase.Elapsed.TotalSeconds
 
@@ -276,19 +286,19 @@ $phase.Restart()
 if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
     Assert-GameClosed
     $OriginalsRoot = Join-Path $releaseRoot 'originals'
-    & $prepareScript -GameRoot $GameRoot -Retoc $Retoc -OutputRoot $OriginalsRoot
+    & $prepareScript -Filter 'Vehicles/BP_Forklift_Possesable' -GameRoot $GameRoot -Retoc $Retoc -SourceRetocEngineVersion $sourceRetocEngineVersion -OutputRoot $OriginalsRoot
 } else {
     $OriginalsRoot = Assert-UnderArtifacts -Path $OriginalsRoot -Label 'OriginalsRoot'
 }
 $originalInputs = Get-CleanOriginalInputs `
     -Root $OriginalsRoot `
     -ExpectedBuild $expectedBuild `
-    -ExpectedRetocCompatibilityVersion $retocCompatibilityVersion `
+    -ExpectedSourceRetocEngineVersion $sourceRetocEngineVersion `
     -ExpectedRetocHash $retocSha256
 $phase.Stop()
 $timings.Originals = $phase.Elapsed.TotalSeconds
 
-Write-Host '6/7 Building and verifying the six-asset IoStore container'
+Write-Host '6/7 Building and verifying the five-asset IoStore container'
 $phase.Restart()
 $containerRoot = Join-Path $releaseRoot 'container'
 if (@($originalInputs).Count -ne 1) {
@@ -298,11 +308,16 @@ $packageArguments = @{
     CookedRoot = [string]$cookedRoot
     OriginalForkliftDirectory = [string]$originalInputs.ForkliftDirectory
     ScriptObjects = [string]$originalInputs.ScriptObjects
+    Mappings = [string]$mapping.mappingsPath
     Retoc = [string]$Retoc
     OutputRoot = [string]$containerRoot
     ActualSteamBuildId = $expectedBuild
 }
 & $packageScript @packageArguments
+$schemaValidation = & $schemaValidator `
+    -Container (Join-Path $containerRoot 'package\DonkLiftKeyboardControl_P.utoc') `
+    -GameRoot $GameRoot `
+    -OutputRoot (Join-Path $releaseRoot 'schema-validation')
 $phase.Stop()
 $timings.Package = $phase.Elapsed.TotalSeconds
 
@@ -366,7 +381,8 @@ $manifest = [ordered]@{
     sourceStatus = $sourceStatus
     gameEngineVersion = $expectedGameEngineVersion
     editorEngineVersion = $actualEngineVersion
-    retocCompatibilityVersion = $retocCompatibilityVersion
+    sourceRetocEngineVersion = $sourceRetocEngineVersion
+    targetRetocEngineVersion = $targetRetocEngineVersion
     retocSha256 = $retocSha256
     cookStorage = $cookStorage
     gameFingerprint = [ordered]@{
@@ -374,6 +390,14 @@ $manifest = [ordered]@{
     }
     ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
     originalsManifest = $originalInputs.Manifest
+    schemaValidation = [ordered]@{
+        reportPath = [string]$schemaValidation.reportPath
+        reportSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $schemaValidation.reportPath).Hash
+        candidateJsonPath = [string]$schemaValidation.candidateJsonPath
+        stockJsonPath = [string]$schemaValidation.stockJsonPath
+        assemblyReportPath = (Join-Path $containerRoot 'assembly-report.json')
+        assemblyReportSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $containerRoot 'assembly-report.json')).Hash
+    }
     installed = $installed
     payload = $payloadEvidence
     archive = [ordered]@{

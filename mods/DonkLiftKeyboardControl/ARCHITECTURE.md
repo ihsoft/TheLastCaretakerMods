@@ -1,7 +1,7 @@
 # DonkLiftKeyboardControl architecture
 
-This loader-free mod replaces the stock forklift package with a generated
-child of a freshly relocated stock original. An owned helper attached to each
+This loader-free mod preserves the complete stock forklift package at its
+canonical path and appends two compiled functions. An owned helper attached to each
 forklift integrates the native digital throttle and steering commands into
 gradual control values, keeping the native movement and percentage display.
 It also supplies X/C reset actions through the game's standard provided-action
@@ -15,13 +15,34 @@ to game language, with English fallback. There is no external settings file.
 On exit the steering input clears; already turned wheels may remain visually
 turned until the forklift is entered again.
 
-The single `DonkLiftKeyboardControl_P` container replaces the stock forklift
-package. The complete original is relocated to
-`/Game/Mods/DonkLiftKeyboard/BP_Forklift_Original`; a child at the original
-address installs `ModActor_C` and adds localized X/C actions to the native
-provided-action list. Each helper acts only on its owning forklift while it
+The single `DonkLiftKeyboardControl_P` container overrides the stock forklift
+package while retaining its native superclass, fields, CDO, SCS and component
+template identities. `ReceiveBeginPlay` calls the inherited Actor function,
+creates a deferred `ChildActorComponent`, sets its class to `ModActor_C`, then
+finishes registration. This creates the helper without adding a reflected
+instance field. `GetProvidedActionsBP` supplies localized X/C actions through
+the native provided-action list. Each helper acts only on its owning forklift while it
 is controlled. Loss of control clears native inputs and internal integration
 state.
+
+## Streamed map compatibility
+
+Cooked map instances use numeric unversioned property indices. Adding even one
+own class field shifts inherited fields and misinterprets serialized map data.
+Retaining the property schema alone is insufficient: map components also
+import the original package's public template and CDO-subobject identities.
+Moving those exports to a parent package breaks these canonical references.
+The assembler therefore preserves both contracts and leaves all non-class
+original export payloads byte-identical.
+
+The mod-owned `Tools/DonkLiftPackageAssembler` uses the published UAssetAPI to
+append two function exports, remap their names and object references, and update
+the class's `Children`, `FuncMap` and dependency lists. Function creation precedes
+class serialization; owner-class creation precedes function creation. No
+reciprocal serialization dependency or UberGraphFrame is introduced. Stock and
+donor use separate mutable mapping contexts because their class names coincide.
+The producer checks the packaged class against stock through independent asset
+inspection and verifies the exact five-package container inventory.
 
 ## Control and standard HUD
 
@@ -34,7 +55,7 @@ C writes neutral steering and clears steering velocity. When the forklift is
 not player-controlled, the helper clears its integrated values and velocity
 and writes zero to the native fields.
 
-The child overrides `VoyageVehiclePawn.GetProvidedActionsBP`, the function's
+The appended override targets `VoyageVehiclePawn.GetProvidedActionsBP`, the function's
 declaring owner, to supply enabled `Central` actions for X/C. `Central` is the
 lower E/H row; `Context` is the center fork row. The visible lower row is
 `BP_DynamicPlayerInputHorizontalWidget_Bottom.ContextInputActionsRoot`, not
@@ -47,8 +68,10 @@ so action order can vary, including after pause. Labels use
 
 `Source/DonkLiftGenerator` is a hand-written Unreal commandlet module.
 `GenerateDonkLiftMod` creates the helper, X/C actions and replacement keyboard
-mapping; `GenerateDonkLiftInheritance` builds the relocated parent and child,
-installs the helper, and adds localized provided actions. Its `UCommandlet`
+mapping; `GenerateDonkLiftInheritance` compiles a donor child with the two
+standalone functions and no own instance fields. A temporary relocated original
+supplies donor parent context during assembly; neither that parent nor the donor
+class replaces the stock class in the shipped package. Its `UCommandlet`
 classes remain in the Unreal `Source` tree for Unreal Header Tool discovery.
 Shared engine-level generator names live in
 `../../tools/UnrealEditorGeneratorCommon/Public`.

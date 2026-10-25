@@ -11,6 +11,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ScriptObjects,
 
+    [Parameter(Mandatory = $true)]
+    [string]$Mappings,
+
     [string]$Retoc,
 
     [Parameter(Mandatory = $true)]
@@ -23,7 +26,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$retocCompatibilityVersion = 'UE5_7'
+$sourceRetocEngineVersion = 'UE5_8'
+$targetRetocEngineVersion = 'UE5_7'
 $expectedForkliftFilter = 'Vehicles/BP_Forklift_Possesable'
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
@@ -84,7 +88,7 @@ function Get-ExtractionEvidence {
     if ([string]$manifest.filter -cne $ExpectedFilter) {
         throw "$Label extraction used filter '$($manifest.filter)'; expected '$ExpectedFilter'."
     }
-    if ([string]$manifest.retocEngineVersion -cne $retocCompatibilityVersion -or
+    if ([string]$manifest.retocEngineVersion -cne $sourceRetocEngineVersion -or
         [string]$manifest.retocSha256 -cne $retocSha256) {
         throw "$Label extraction does not match the selected retoc compatibility contract."
     }
@@ -114,16 +118,12 @@ if ($scriptObjectsEvidence.ManifestPath -cne $forkliftEvidence.ManifestPath) {
 $stage = Join-Path $output 'stage'
 $package = Join-Path $output 'package'
 $childStage = Join-Path $stage 'Voyage\Content\Blueprints\Vehicles'
-$parentStage = Join-Path $stage 'Voyage\Content\Mods\DonkLiftKeyboard'
 $helperStage = Join-Path $stage 'Voyage\Content\Mods\DonkLiftKeyboardControl'
 $contextStage = Join-Path $stage 'Voyage\Content\Game\Input\Vehicle'
-New-Item -ItemType Directory -Path $childStage, $parentStage, $helperStage, $contextStage, $package -Force | Out-Null
+New-Item -ItemType Directory -Path $childStage, $helperStage, $contextStage, $package -Force | Out-Null
 
 $childSource = Join-Path $cooked 'Content\Blueprints\Vehicles'
 $helperSource = Join-Path $cooked 'Content\Mods\DonkLiftKeyboardControl'
-foreach ($assetName in @('BP_Forklift_Possesable.uasset', 'BP_Forklift_Possesable.uexp')) {
-    Copy-Item -LiteralPath (Join-Path $childSource $assetName) -Destination $childStage
-}
 foreach ($assetName in @(
     'ModActor.uasset',
     'ModActor.uexp',
@@ -206,17 +206,43 @@ function Copy-RelocatedAsset {
     Copy-Item -LiteralPath $sourceUexp -Destination (Join-Path $DestinationDirectory ($DestinationAssetName + '.uexp'))
 }
 
+$assemblerInput = Join-Path $output 'assembler-input'
+$donorParentDirectory = Join-Path $assemblerInput 'Voyage\Content\Mods\DonkLiftKeyboard'
+New-Item -ItemType Directory -Path $donorParentDirectory -Force | Out-Null
 Copy-RelocatedAsset `
     -SourceDirectory $originalDirectory `
     -SourceAssetName 'BP_Forklift_Possesable' `
-    -DestinationDirectory $parentStage `
+    -DestinationDirectory $donorParentDirectory `
     -DestinationAssetName 'BP_Forklift_Original' `
     -SourcePackageName $originalPackage `
     -DestinationPackageName $renamedPackage
+
+$assemblerProject = Join-Path $modRoot 'Tools\DonkLiftPackageAssembler\DonkLiftPackageAssembler.csproj'
+$assemblerTool = Join-Path $output 'assembler-tool'
+$assemblyReport = Join-Path $output 'assembly-report.json'
+$stockAsset = Join-Path $originalDirectory 'BP_Forklift_Possesable.uasset'
+$donorAsset = Join-Path $childSource 'BP_Forklift_Possesable.uasset'
+$donorParentAsset = Join-Path $donorParentDirectory 'BP_Forklift_Original.uasset'
+$mappingsPath = (Resolve-Path -LiteralPath $Mappings).Path
+& dotnet build $assemblerProject --configuration Release --output $assemblerTool
+if ($LASTEXITCODE -ne 0) {
+    throw "DonkLift package assembler build failed with exit code $LASTEXITCODE."
+}
+& dotnet (Join-Path $assemblerTool 'DonkLiftPackageAssembler.dll') `
+    --stock $stockAsset `
+    --donor $donorAsset `
+    --donor-parent $donorParentAsset `
+    --mappings $mappingsPath `
+    --output (Join-Path $childStage 'BP_Forklift_Possesable.uasset') `
+    --report $assemblyReport
+if ($LASTEXITCODE -ne 0) {
+    throw "DonkLift package assembly failed with exit code $LASTEXITCODE."
+}
+Remove-Item -LiteralPath $assemblerInput, $assemblerTool -Recurse -Force
 Copy-Item -LiteralPath $scriptObjectsPath -Destination (Join-Path $stage 'scriptobjects.bin')
 
 $utoc = Join-Path $package ($ContainerName + '.utoc')
-& $retocPath to-zen --version $retocCompatibilityVersion $stage $utoc
+& $retocPath to-zen --version $targetRetocEngineVersion $stage $utoc
 if ($LASTEXITCODE -ne 0) {
     throw "retoc to-zen failed with exit code $LASTEXITCODE"
 }
@@ -227,7 +253,6 @@ if ($LASTEXITCODE -ne 0) {
 $expectedAssetPaths = @(
     '../../../Voyage/Content/Blueprints/Vehicles/BP_Forklift_Possesable.uasset'
     '../../../Voyage/Content/Game/Input/Vehicle/IMC_Forklift_Keyboard.uasset'
-    '../../../Voyage/Content/Mods/DonkLiftKeyboard/BP_Forklift_Original.uasset'
     '../../../Voyage/Content/Mods/DonkLiftKeyboardControl/IAV_DonkLiftBrake.uasset'
     '../../../Voyage/Content/Mods/DonkLiftKeyboardControl/IAV_DonkLiftCenterSteering.uasset'
     '../../../Voyage/Content/Mods/DonkLiftKeyboardControl/ModActor.uasset'

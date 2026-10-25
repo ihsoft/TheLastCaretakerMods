@@ -7,11 +7,19 @@ archive, installation, and version identities.
 
 ## Stock package replacement
 
-- Relocate a freshly extracted, complete stock forklift package before creating
-  the replacement child at its original virtual path. Keep equal-length package
-  name substitution and exact occurrence-count checks as hard assertions. A
-  changed stock layout requires diagnosis, not a relaxed binary replacement.
-- Ship only the generated cooked assets in the single
+- Preserve the freshly extracted stock forklift at its original virtual path:
+  native parent, ordered instance fields, original export identities, CDO and
+  component templates. Append only the compiled standalone functions and their
+  required references. Do not add an instance field, SCS helper or UberGraphFrame
+  to the stock class; streamed map instances use its original unversioned schema.
+- Preserve all unchanged export payloads byte-for-byte. Validate the changed
+  class and functions, remapped references and dependency phases. An unchanged
+  opaque stock export is allowed only when its identity and bytes are preserved
+  and independent inspection agrees; it does not justify opaque changed exports.
+- The temporary relocated parent is a build-only donor dependency. Keep its
+  equal-length substitution and exact occurrence-count checks; never ship it
+  as a substitute for canonical component-template exports.
+- Ship only the assembled forklift and generated supporting cooked assets in the single
   `DonkLiftKeyboardControl_P` container. The editor-only `Source/Voyage` mirror
   and `Source/DonkLiftGenerator` module are build inputs, not runtime payload.
 
@@ -36,3 +44,5 @@ archive, installation, and version identities.
 Before accepting changed control or HUD behavior, check throttle and steering
 in both directions, their limits and native percentages, immediate X/C reset,
 localized X/C hints before and after pause, and exit followed by re-entry.
+For package/schema changes, also stream a POI containing a preplaced forklift
+from an existing save; testing only a freshly spawned forklift is insufficient.

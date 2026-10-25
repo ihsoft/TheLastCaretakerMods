@@ -3,16 +3,20 @@
 # additional IoStore container that could shadow the original.
 
 param(
+    [string]$Filter = 'Vehicles/BP_Forklift_Possesable',
+
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
     [string]$Retoc,
+
+    [ValidateSet('UE5_7', 'UE5_8')]
+    [string]$SourceRetocEngineVersion = 'UE5_8',
 
     [Parameter(Mandatory = $true)]
     [string]$OutputRoot
 )
 
 $ErrorActionPreference = 'Stop'
-$retocCompatibilityVersion = 'UE5_7'
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
@@ -71,10 +75,10 @@ try {
     }
 
     & $extractor `
-        -Filter 'Vehicles/BP_Forklift_Possesable' `
+        -Filter $Filter `
         -GameRoot $root `
         -Retoc $Retoc `
-        -RetocEngineVersion $retocCompatibilityVersion `
+        -RetocEngineVersion $SourceRetocEngineVersion `
         -OutputRoot $output
 }
 finally {
