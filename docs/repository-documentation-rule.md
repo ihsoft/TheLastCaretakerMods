@@ -3,17 +3,35 @@
 - Substantive shared documents under `docs/` end in `-rule.md` or
   `-knowledge.md`. A rule constrains repository work: follow it, or report a
   conflict or blocker to the user and obtain an explicit decision before
-  deviating. Knowledge records useful observations or reasoned inferences about
-  the game, engine, or established repository methods;
-  state uncertainty in the document heading and at the affected claim.
+  deviating. Knowledge records verified facts about the game, engine, or
+  established repository methods.
   Recheck or discard knowledge when new evidence conflicts with it. A report
   that cannot be independently reproduced or investigated is not established
   knowledge. Knowledge saves investigation effort but does not prevent a new
   investigation. `README.md`,
   source-provenance files, and other navigational or data files keep their own
   established names outside this shared-document naming pattern.
+- Do not commit guesses, assumptions or unverified hypotheses anywhere in the
+  repository, including documentation, comments and metadata such as
+  `VERSION.json`, unless the user explicitly requests committing those claims.
+  Labelling a claim uncertain or obtaining general commit approval does not
+  grant that exception. A reported symptom does not establish a defect, its
+  cause or a known limitation. Committed claims must be supported by evidence
+  at the level they assert and useful to a future reader.
+- Work history consumes time and context. Never commit session narratives,
+  investigation diaries, trial chronology, or statements that merely say what
+  was previously done or tested, including disguised history in JSON metadata
+  or comments. Keep such history only in a local Git-ignored file when a large
+  investigation or prolonged fix needs it to survive compaction or resume work.
+  Keep only the minimum restart context and discard it when the work ends.
+- Keep a durable fact only when it changes a concrete implementation,
+  compatibility, release-selection or recovery decision. State the current
+  contract and its applicability, without the story of discovering it. Give
+  each fact one owning source: do not duplicate artifact hashes, build labels,
+  test dates or results already owned by manifests or local evidence. Release
+  compatibility constraints may distinguish versions; they are not a work log.
 - Shared `docs/` content must have a concrete or reasonably expected use across
-  mods. Keep mod-only contracts and open questions under the owning `mods/<mod>/`.
+  mods. Keep mod-only contracts under the owning `mods/<mod>/`.
   Write reusable conclusions without tying them to one mod; link to a mod as an
   example when useful. Do not keep task histories or per-run measurements in the
   shared reading path. Explicitly requested diagnostics use the opt-in method
@@ -28,17 +46,14 @@
   tool first; inspect its diagnostics and implementation only when it fails or
   gives an unexpected result. Keep exact provenance in the tool's own checks
   and generated manifests when those identities matter.
-  Keep candidate IDs, experimental hypotheses, trial instructions and progress
-  history in an optional ignored owning backlog for a large investigation;
-  keep raw evidence in ignored storage, not in shared guidance.
   Promote validated conclusions as general contracts without candidate labels;
   retain version/fingerprint restrictions when they determine applicability.
   Durable documentation describes accepted repository state. Do not update it
   ahead of a pending runtime gate: when a behavior or presentation claim needs
-  a real-game test, keep the proposed documentation change in the ignored
-  owning backlog until that test passes. Build, structural, installation, and
-  clean-load evidence may be documented only for the narrower claim they prove;
-  they do not make the intended gameplay behavior current repository knowledge.
+  a real-game test, keep the proposed documentation change uncommitted until
+  that test passes. Describe capabilities only at the level supported by their
+  evidence; build, structural, installation and clean-load success do not
+  establish gameplay behavior.
 - Before committing documentation, make every link to a repository-local file
   resolve in the committed repository. Committed guidance must not depend on
   ignored or otherwise local-only files, including working backlogs and output
@@ -60,9 +75,7 @@
   competing summary.
   If a release ZIP includes a README, package that same `README.md`.
 - Describe finished mods by their current behavior and necessary compatibility
-  boundaries. The checked-in state is the accepted result; do not preserve who
-  confirmed it, trial chronology, test dates, or per-run proof in normal mod
-  documentation. Keep exact selected release packages with artifacts.
+  boundaries. Keep exact selected release packages with artifacts.
 - The repository-wide [release and installation workflow](../docs/release-and-installation-rule.md)
   owns published-version identity, candidate retention, installation evidence,
   and installed-file layout for every mod. Mod-local rules may add necessary

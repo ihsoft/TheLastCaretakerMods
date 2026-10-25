@@ -7,8 +7,7 @@ preparing a release does not imply permission to commit.
 
 All agents share one working tree and one Git index. Exact path ownership alone
 does not prevent another process from staging files between an index check and
-`git commit`. On 2026-09-05 that race created a local mixed commit containing
-20 paths from another task.
+`git commit`; the whole staging-and-commit transaction requires one lock.
 
 ## Normal commit
 

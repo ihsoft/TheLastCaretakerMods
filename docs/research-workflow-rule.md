@@ -34,7 +34,10 @@ backlog only when those pointers are insufficient.
    outcome. If observation can answer the question, an in-game experiment is
    unnecessary.
 
-Keep mod-specific evidence and open questions with the owning mod. Promote a
+Keep mod-specific evidence with the owning mod; preserve open hypotheses only
+when needed in its ignored backlog. The
+[documentation rule](repository-documentation-rule.md) prohibits committing
+unverified claims without an explicit user request for those claims. Promote a
 conclusion to shared `docs/` only when another mod can reasonably use it;
 describe the reusable contract without turning one mod's trial history into a
 general rule. Game-derived source inputs retained in Git follow the provenance
@@ -42,24 +45,25 @@ requirements in [the game-derived data rules](game-derived-data-rule.md).
 
 ## Working backlogs for large tasks
 
-Use a backlog when a task is large enough that its current state
-could be lost between work sessions or context resets. It is an optional local
-working note, not a required file for every question. Keep it with the owning
-mod, outside `Tmp/` so routine cleanup cannot remove it, and ignore it in Git.
-It is neither a retained generated artifact nor a document to commit.
+Work history is overhead. Use a backlog only for a large investigation or a
+prolonged fix that needs continuity across compaction or work sessions. Keep it
+local, with the owning mod, outside `Tmp/` so routine cleanup cannot remove it,
+and ignore it in Git. Never commit the backlog or turn it into repository
+documentation, including JSON metadata or a narrative of completed checks.
 
 Keep a short restart section with the current checkpoint, established evidence,
-open hypotheses, pending gates, next action, and links to the owning sources.
+pending gates, next action, and links to the owning sources. Include an open
+hypothesis only when it affects the next decision or is needed to resume work;
+do not log every suspicion or observation.
 Update it as the investigation changes; keep raw logs and full readbacks in
 their appropriate ignored storage instead of copying them into the backlog.
 Research commits must explain their own evidence and validation boundary
 without relying on this uncommitted note.
 
-When the task or investigation ends, review the backlog. Move durable conclusions to
-the mod's architecture or research documentation, general findings to shared
-docs, reusable failed approaches to research pitfalls, and recurring methods
-to their owning tools. Then delete the backlog. Do not keep the chronology as
-permanent project documentation.
+When the work ends, retain only verified contracts that change a future decision,
+in their owning documentation or tool. Rewrite them as current constraints;
+do not copy the investigation or duplicate its manifests and evidence. Delete
+the backlog rather than archiving its chronology in the repository.
 
 ## Choose the next investigation step
 
@@ -90,15 +94,16 @@ narrower step cannot answer the question or has already failed to do so.
 
 ## Record results and make research checkpoints
 
-- Record a useful conclusion with its evidence, exact applicability, and
-  validation level. State what remains unknown. Structural inspection, build,
-  cook, and clean load are not proof of gameplay behavior; a compatibility
-  claim needs the corresponding real-game test.
+- Match every conclusion to its evidence and exact applicability. Keep per-run
+  evidence in local output; preserve only the decision-relevant contract in
+  documentation. Structural inspection, build, cook, and clean load are not
+  proof of gameplay behavior; a compatibility claim needs the corresponding
+  real-game test.
 - Put stable mod-specific findings in its architecture or research notes and
-  reusable cross-mod findings in shared documentation. Record a failed or
-  misleading approach in [research pitfalls](research-pitfalls-knowledge.md) when it can
-  prevent repeated mistakes. One-off logs and measurements do not belong in
-  shared guidance.
+  reusable cross-mod findings in shared documentation. Record an
+  implementation constraint in [research pitfalls](research-pitfalls-knowledge.md)
+  when it can prevent repeated mistakes, without recounting the failed attempts.
+  One-off logs and measurements do not belong in committed guidance.
 - Research may use intermediate checkpoint commits that are not intended to
   remain as permanent history. A later authorized operation may revert them or
   combine them into a durable result. Before each checkpoint, show the user its
@@ -112,12 +117,12 @@ narrower step cannot answer the question or has already failed to do so.
   implementation, configuration, and producer changes uncommitted while their
   intended runtime behavior awaits a real-game test, unless the user explicitly
   authorizes that exact unvalidated checkpoint. Keep proposed current-state
-  documentation in the ignored owning backlog until the runtime gate passes.
+  documentation uncommitted until the runtime gate passes.
   A successful build, structural comparison, installation, clean load, or
   other lower gate authorizes the next test, not a commit. State every
   checkpoint's evidence and validation boundary and do not present it as a
   finished mod or release.
-- Combine minor observations at a natural checkpoint rather than proposing a
-  commit for each one. After explicit authorization, commit eligible source,
+- Do not create commits merely to preserve observations. After explicit
+  authorization, commit eligible source,
   methods, and documentation through the repository Git workflow; generated
   output follows the [artifact lifecycle](artifact-lifecycle-rule.md).
