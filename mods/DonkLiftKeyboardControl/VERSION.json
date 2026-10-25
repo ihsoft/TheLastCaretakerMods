@@ -4,6 +4,10 @@
   },
   "releaseCompatibility": [
     {
+      "modVersion": "v4",
+      "gameUpdate": "6"
+    },
+    {
       "modVersion": "v3",
       "gameUpdate": "6",
       "limitation": "Can crash when streaming preplaced forklifts on Steam build 25982825."
