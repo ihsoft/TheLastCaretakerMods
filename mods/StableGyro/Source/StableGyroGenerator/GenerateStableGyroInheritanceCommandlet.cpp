@@ -124,6 +124,8 @@ const FName CargoPressFired(TEXT("StableGyroCargoPressFired"));
 const FName CargoControllerChangedCallbackName(TEXT("HandleCargoControllerChanged"));
 const FName ReloadSettingsFunctionName(TEXT("ReloadSettings"));
 const FName ControllerChangedCallbackName(TEXT("HandleControllerChanged"));
+const FName ApplyFuelSettingsFunctionName(TEXT("ApplyFuelSettings"));
+const FName FuelSettingsGyroPin(TEXT("Gyro"));
 const FName CollisionHitCallbackName(TEXT("HandleCollisionHit"));
 const FName AltitudeLockActive(TEXT("AltitudeLockActive"));
 const FName AltitudeExactHoldActive(TEXT("AltitudeExactHoldActive"));
@@ -861,6 +863,15 @@ bool AddControllerChangedCallback(UBlueprint* Blueprint, const bool PitchHelper)
     }
     else
     {
+        UFunction* ApplyFuel = Blueprint->GeneratedClass
+            ? Blueprint->GeneratedClass->FindFunctionByName(
+                ApplyFuelSettingsFunctionName)
+            : nullptr;
+        if (!ApplyFuel || ApplyFuel->GetOuterUClass() != Blueprint->GeneratedClass)
+            return false;
+        UK2Node_CallFunction* ApplyFuelCall = AddCall(
+            Graph, Blueprint->GeneratedClass,
+            ApplyFuelSettingsFunctionName, 910, -400);
         UK2Node_VariableGet* AltitudeControlEnabled = AddRead(
             Graph, Settings::EnableAltitudeControl, nullptr, 910, -540);
         UK2Node_VariableGet* ConfiguredHoverPitchScale = AddRead(
@@ -872,6 +883,10 @@ bool AddControllerChangedCallback(UBlueprint* Blueprint, const bool PitchHelper)
             HoverPitchReset::SetDoublePropertyByName, 1140, -400);
         SetDefault(ResetScale, HoverPitchReset::PropertyName, *HoverPitchScale.ToString());
         Ok &= Connect(RequirePin(ReloadCall, P::Then),
+            RequirePin(ApplyFuelCall, P::Execute));
+        Ok &= Connect(RequirePin(Entry, BlueprintGraphNames::Pins::Pawn),
+            RequirePin(ApplyFuelCall, FuelSettingsGyroPin));
+        Ok &= Connect(RequirePin(ApplyFuelCall, P::Then),
             RequirePin(AltitudeControlBranch, P::Execute));
         Ok &= Connect(RequirePin(AltitudeControlEnabled, Settings::EnableAltitudeControl),
             RequirePin(AltitudeControlBranch, P::Condition));

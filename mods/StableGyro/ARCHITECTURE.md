@@ -67,6 +67,33 @@ or writing horizontal physics velocity, clears its prior XY sample, and
 continues into the independent altitude path. Altitude control and W/S pitch
 integration remain available.
 
+## Fuel settings
+
+The PostPhysics `ModActor` owns both fuel settings in the INI:
+
+| Setting | Default and meaning | Inclusive range |
+| --- | --- | --- |
+| `FuelCapacity` | `400` native resource units of Petrol | `0.001..1000000000` |
+| `FuelConsumptionPerMinute` | `1` native resource unit per minute at `CurrentThrottle=1` | `0..1000000` |
+
+Missing or invalid values use these defaults, which preserve the stock tank
+capacity and base engine consumption. Consumption is an absolute base rate,
+multiplied by the native engine's `CurrentThrottle`; it is not a scale factor
+or a rate derived from the displayed collective percentage. Zero disables the
+base Petrol request. Native resource units are not established liters.
+
+After reloading settings, `ApplyFuelSettings` applies them at helper BeginPlay
+and on genuine player entry, before the altitude-control branch. Editing the
+installed INI therefore takes effect on the next entry. Fuel settings are
+independent of pitch correction, altitude control, horizontal damping and the
+four-port option. There is no per-tick settings read or fuel write.
+
+The function updates only the owned custom module's Petrol capacity entry and
+the Gyro's base consumption property. It neither refills the tank nor removes
+stored fuel when capacity is lowered; other resource entries remain intact.
+The native defaults, field identities and rate conversion are documented in
+[altitude control](ALTITUDE-CONTROL.md#fuel-request-versus-observed-consumption).
+
 ## Four mooring ports
 
 `EnableFourMooringPorts=true` adds two Hook Cable ports, giving four usable
@@ -167,6 +194,8 @@ detail, and loading saved extra connections with the option disabled. That path
 disconnects extra cables and leaves the extra sockets hidden and unusable without
 the missing-endpoint loading delay. The removal of redundant Tick setup and
 component traversal also passed a game check.
+
+The fuel-capacity and base-consumption settings have also passed a game check.
 
 These checks do not establish repair of orphan attachment pads left by older
 packages, migration of saved stock Gyros, or compatibility after removing the

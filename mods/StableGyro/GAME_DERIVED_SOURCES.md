@@ -191,6 +191,23 @@ defers cleanup to the next tick so it does not disconnect reentrantly inside a
 native callback. This establishes event shape and callback ordering, not the end
 of save restoration or real-game cable cleanup behavior.
 
+## Fuel configuration contracts
+
+Steam build `25982825` native reflection and constructor inspection establish
+the Gyro's float `PetrolConsumption` owner, readonly access and default; stock
+`BP_GyroCopter_Possessable` JSON establishes the custom module and its Petrol
+capacity. Current mappings establish the component class chain and the
+`MaxResources` enum-to-double map. Exact defaults, field offsets, native entry
+addresses and the distinction between capacity and stored amount are owned by
+[altitude control](ALTITUDE-CONTROL.md#fuel-request-versus-observed-consumption).
+
+`VoyageModuleComponent.h` and `VoyageCustomModuleComponent.h` are minimal
+editor-only identity mirrors for the component lookup, cast and external map
+getter. They are not ordinal-complete serialization schemas: do not author
+native component instances or defaults from them. Generated runtime graphs
+reference the stock game classes and mutate the existing instance map; the
+mirror binaries and native component CDOs are not payload.
+
 ## Enhanced Input value contracts
 
 In UE `5.8.2`, `EnhancedInputLibrary.GetBoundActionValue(AActor*, const UInputAction*)`
@@ -299,6 +316,8 @@ revalidated for the current fingerprint and are not consumed by this build.
 - Source/Voyage/VoyageInputAction.h
 - Source/Voyage/VoyageGameUserSettings.h
 - Source/Voyage/VoyageModuleSocketViewComponent.h
+- Source/Voyage/VoyageModuleComponent.h
+- Source/Voyage/VoyageCustomModuleComponent.h
 - Source/Voyage/VoyageMiscBlueprintFunctionLibrary.h
 - both generator commandlets and Build-InheritancePackage.ps1
 - Validate-StableGyroMooringTemplates.ps1

@@ -306,6 +306,14 @@ load dependencies.
 
 ## Fuel request versus observed consumption
 
+For Steam build `25982825`, native float `PetrolConsumption` belongs to
+`VoyageVehicleGyroCopter` at `0x6ec` and is Blueprint-readonly. Constructor
+`0x145477fa0`, registered through the Gyro's default-constructor wrapper
+`0x1453c53c0`, initializes it to `0x3c888889`: the float representation of
+`1/60` resource unit per second. The stock Gyro Blueprint has no override.
+This establishes a stock base rate of one unit per minute at
+`CurrentThrottle=1`.
+
 The Gyro's base native Petrol request is:
 
 ```text
@@ -325,6 +333,33 @@ processing, availability and other consumers or transfers remain separate.
 `GetResourceAmount(Petrol)` measures the local stored quantity; a decrease can
 also include transfer or leakage, while refill/supply can mask consumption.
 Quantities use native resource units, not established liters.
+
+StableGyro converts its absolute per-minute setting before the native request:
+
+```text
+PetrolConsumption = float(FuelConsumptionPerMinute / 60)
+requestedPetrolPerMinute ~= FuelConsumptionPerMinute * CurrentThrottle
+```
+
+The conversion uses `KismetSystemLibrary.SetDoublePropertyByName`, whose
+native-float fallback preserves the property's reflected readonly flags. It
+does not write throttle, collective, stored fuel or `WorkloadPetrolPerSecond`.
+
+The stock Blueprint's `VoyageCustomModule_GEN_VARIABLE` component has native
+class `VoyageCustomModuleComponent`, derived from `VoyageModuleComponent` and
+then `ActorComponent`. Its writable `MaxResources` map is
+`TMap<EModuleResourceType, double>` at `0xec8`; the stock Petrol entry is `400`.
+This is capacity, distinct from the stored amount returned by
+`GetResourceAmount(Petrol)`.
+
+`ApplyFuelSettings` finds that component on the owned Gyro and passes its
+instance `MaxResources` property by reference to `BlueprintMapLibrary.Map_Add`
+with the Petrol key and configured `FuelCapacity`. It preserves the other map
+entries and the stored fuel amount, including an amount above a lowered
+capacity. `VoyageModuleComponent.SetCustomConsumption` is not this capacity
+path: its native body at `0x14555ccc0` writes three ConfigData fields rather
+than the custom module's map. Settings ownership and reload timing belong in
+[architecture](ARCHITECTURE.md#fuel-settings).
 
 ## Conflict with kinematic height support
 

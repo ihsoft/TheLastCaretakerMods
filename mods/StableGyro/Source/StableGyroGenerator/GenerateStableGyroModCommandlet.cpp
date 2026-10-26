@@ -30,15 +30,18 @@
 #include "K2Node_VariableGet.h"
 #include "K2Node_VariableSet.h"
 #include "Kismet/BlueprintPathsLibrary.h"
+#include "Kismet/BlueprintMapLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetStringLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/PackageName.h"
 #include "PlayerMappableKeySettings.h"
 #include "UObject/SavePackage.h"
 #include "VoyageEditorBlueprintFunctionLibrary.h"
+#include "VoyageCustomModuleComponent.h"
 #include "VoyageInputAction.h"
 #include "VoyageVehicleGyroCopter.h"
 
@@ -104,6 +107,24 @@ const FName InputPath(TEXT("InPath"));
 const FName InputAction(TEXT("Action"));
 const FName InputActionValue(TEXT("InValue"));
 const FName ResetActionWasActive(StableGyroAssetNames::ResetActionWasActiveFieldName);
+
+namespace FuelSettings
+{
+constexpr TCHAR PerMinuteDivisor[] = TEXT("60.0");
+constexpr TCHAR PetrolEnum[] = TEXT("EModuleResourceType::Petrol");
+const FName ApplyFunction(TEXT("ApplyFuelSettings"));
+const FName Gyro(TEXT("Gyro"));
+const FName SetDoublePropertyByName(TEXT("SetDoublePropertyByName"));
+const FName GetComponentByClass(TEXT("GetComponentByClass"));
+const FName PetrolConsumption(TEXT("PetrolConsumption"));
+const FName Object(TEXT("Object"));
+const FName PropertyName(TEXT("PropertyName"));
+const FName Value(TEXT("Value"));
+const FName ComponentClass(TEXT("ComponentClass"));
+const FName MaxResources(TEXT("MaxResources"));
+const FName TargetMap(TEXT("TargetMap"));
+const FName Key(TEXT("Key"));
+}
 
 template <typename NodeType>
 NodeType* AddNode(NodeType* Node, UEdGraph* Graph, int32 X, int32 Y)
@@ -364,6 +385,78 @@ bool AddSettingsFunction(UBlueprint* Blueprint, const bool PitchOnly)
         });
 }
 
+bool AddFuelSettingsFunction(UBlueprint* Blueprint)
+{
+    if (!Blueprint) return false;
+    UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(
+        Blueprint, FuelSettings::ApplyFunction, UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    FBlueprintEditorUtils::AddFunctionGraph(
+        Blueprint, Graph, false, static_cast<UClass*>(nullptr));
+    UK2Node_FunctionEntry* Entry = nullptr;
+    for (UEdGraphNode* Node : Graph->Nodes)
+        if (UK2Node_FunctionEntry* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+            Entry = Candidate;
+    if (!Entry) return false;
+    Entry->AddExtraFlags(FUNC_Public | FUNC_BlueprintCallable);
+    FEdGraphPinType ActorType;
+    ActorType.PinCategory = UEdGraphSchema_K2::PC_Object;
+    ActorType.PinSubCategoryObject = AActor::StaticClass();
+    UEdGraphPin* Gyro = Entry->CreateUserDefinedPin(
+        FuelSettings::Gyro, ActorType, EGPD_Output);
+    if (!Gyro) return false;
+
+    UK2Node_VariableGet* ConsumptionPerMinute = Read(
+        Graph, Settings::FuelConsumptionPerMinute, nullptr, 220, -280);
+    UK2Node_CallFunction* PerSecond = Call(
+        Graph, UKismetMathLibrary::StaticClass(),
+        DivideDouble, 450, -280);
+    Default(PerSecond, Binary::RightOperand, FuelSettings::PerMinuteDivisor);
+    UK2Node_CallFunction* SetConsumption = Call(
+        Graph, UKismetSystemLibrary::StaticClass(),
+        FuelSettings::SetDoublePropertyByName, 680, 0);
+    Default(SetConsumption, FuelSettings::PropertyName,
+        *FuelSettings::PetrolConsumption.ToString());
+
+    UK2Node_CallFunction* GetComponent = Call(
+        Graph, AActor::StaticClass(),
+        FuelSettings::GetComponentByClass, 910, -260);
+    Pin(GetComponent, FuelSettings::ComponentClass)->DefaultObject =
+        UVoyageCustomModuleComponent::StaticClass();
+    UK2Node_DynamicCast* CustomModule = NewObject<UK2Node_DynamicCast>(Graph);
+    CustomModule->TargetType = UVoyageCustomModuleComponent::StaticClass();
+    CustomModule->SetPurity(false);
+    AddNode(CustomModule, Graph, 1140, 0);
+    UK2Node_VariableGet* MaxResources = Read(
+        Graph, FuelSettings::MaxResources,
+        UVoyageCustomModuleComponent::StaticClass(), 1370, -260);
+    UK2Node_VariableGet* Capacity = Read(
+        Graph, Settings::FuelCapacity, nullptr, 1370, -420);
+    UK2Node_CallFunction* SetCapacity = Call(
+        Graph, UBlueprintMapLibrary::StaticClass(),
+        GET_FUNCTION_NAME_CHECKED(UBlueprintMapLibrary, Map_Add), 1600, 0);
+
+    bool Ok = true;
+    Ok &= Link(Pin(Entry, P::Then), Pin(SetConsumption, P::Execute));
+    Ok &= Link(Gyro, Pin(SetConsumption, FuelSettings::Object));
+    Ok &= Link(Pin(ConsumptionPerMinute, Settings::FuelConsumptionPerMinute),
+        Pin(PerSecond, Binary::LeftOperand));
+    Ok &= Link(Pin(PerSecond, P::ReturnValue),
+        Pin(SetConsumption, FuelSettings::Value));
+    Ok &= Link(Pin(SetConsumption, P::Then), Pin(CustomModule, P::Execute));
+    Ok &= Link(Gyro, Pin(GetComponent, P::FunctionTarget));
+    Ok &= Link(Pin(GetComponent, P::ReturnValue), CustomModule->GetCastSourcePin());
+    Ok &= Link(CustomModule->GetValidCastPin(), Pin(SetCapacity, P::Execute));
+    Ok &= Link(CustomModule->GetCastResultPin(),
+        Pin(MaxResources, P::FunctionTarget));
+    Ok &= Link(Pin(MaxResources, FuelSettings::MaxResources),
+        Pin(SetCapacity, FuelSettings::TargetMap));
+    Default(SetCapacity, FuelSettings::Key, FuelSettings::PetrolEnum);
+    Ok &= Link(Pin(Capacity, Settings::FuelCapacity),
+        Pin(SetCapacity, FuelSettings::Value));
+    return Ok;
+}
+
 bool AddBeginPlayGraph(UEdGraph* Graph, UBlueprint* Blueprint, const bool PitchOnly)
 {
     UFunction* ReloadFunction = Blueprint->GeneratedClass
@@ -405,7 +498,16 @@ bool AddBeginPlayGraph(UEdGraph* Graph, UBlueprint* Blueprint, const bool PitchO
     }
     else
     {
-        Ok &= Link(Gyro->GetValidCastPin(), Pin(GyroAfterHelper, P::Execute));
+        UFunction* ApplyFuel = Blueprint->GeneratedClass
+            ? Blueprint->GeneratedClass->FindFunctionByName(FuelSettings::ApplyFunction)
+            : nullptr;
+        if (!ApplyFuel || ApplyFuel->GetOuterUClass() != Blueprint->GeneratedClass)
+            return false;
+        UK2Node_CallFunction* ApplyFuelCall = Call(
+            Graph, Blueprint->GeneratedClass, FuelSettings::ApplyFunction, 910, -700);
+        Ok &= Link(Gyro->GetValidCastPin(), Pin(ApplyFuelCall, P::Execute));
+        Ok &= Link(Gyro->GetCastResultPin(), Pin(ApplyFuelCall, FuelSettings::Gyro));
+        Ok &= Link(Pin(ApplyFuelCall, P::Then), Pin(GyroAfterHelper, P::Execute));
         Ok &= Link(Gyro->GetCastResultPin(), Pin(GyroAfterHelper, P::PrerequisiteActor));
     }
     if (PitchOnly)
@@ -606,11 +708,14 @@ int32 UGenerateStableGyroModCommandlet::Main(const FString& Params)
     BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
     UEdGraph* StabilizationGraph = FBlueprintEditorUtils::FindEventGraph(StabilizationBlueprint);
     if (!StabilizationGraph || !AddSettingMembers(StabilizationBlueprint, false) ||
-        !AddSettingsFunction(StabilizationBlueprint, false))
+        !AddSettingsFunction(StabilizationBlueprint, false) ||
+        !AddFuelSettingsFunction(StabilizationBlueprint))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to generate StableGyro stabilization helper"));
         return 1;
     }
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(StabilizationBlueprint);
+    FKismetEditorUtilities::CompileBlueprint(StabilizationBlueprint);
     if (StabilizationBlueprint->Status == BS_Error ||
         !AddBeginPlayGraph(StabilizationGraph, StabilizationBlueprint, false) ||
         !SaveBlueprint(StabilizationPackageObject, StabilizationBlueprint)) return 1;

@@ -48,6 +48,24 @@
       "default": true
     },
     {
+      "id": "FuelCapacity",
+      "runtimeName": "FuelCapacity",
+      "key": "FuelCapacity",
+      "type": "number",
+      "default": 400.0,
+      "minimum": 0.001,
+      "maximum": 1000000000.0
+    },
+    {
+      "id": "FuelConsumptionPerMinute",
+      "runtimeName": "FuelConsumptionPerMinute",
+      "key": "FuelConsumptionPerMinute",
+      "type": "number",
+      "default": 1.0,
+      "minimum": 0.0,
+      "maximum": 1000000.0
+    },
+    {
       "id": "StabilizationMinimumPropellerVelocity",
       "runtimeName": "StabilizationMinimumPropellerVelocity",
       "key": "StabilizationMinimumPropellerVelocity",

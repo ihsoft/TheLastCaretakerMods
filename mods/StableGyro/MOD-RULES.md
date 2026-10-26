@@ -142,6 +142,15 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   lifecycle path and must not append the mod-owned X reset hint; inherited
   stock actions pass through. The independent PostPhysics horizontal damping
   path may still read the two native tilt axes as control intent.
+- `ModActor` owns `FuelCapacity` and `FuelConsumptionPerMinute`, with defaults,
+  units and ranges in [architecture](ARCHITECTURE.md#fuel-settings). Apply both
+  after settings reload at helper BeginPlay and genuine player entry, before
+  any flight-control enable gate. Change only the existing custom module's
+  Petrol capacity map entry and the Gyro's base consumption property; preserve
+  stored fuel and other resource entries. Do not refill, clamp stored fuel,
+  poll settings/components on Tick, or modify throttle or workload consumption
+  from this path. Keep the new native mirrors as graph-reference identities,
+  never serialization templates for authored component instances.
 - Build-StableGyro.ps1 is the only public producer. It owns fingerprinting,
   editor build, generation, cook, clean item-data extraction, surgical patching,
   packaging, verification, ZIP creation, and optional -Install.

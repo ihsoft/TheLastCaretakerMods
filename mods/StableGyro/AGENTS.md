@@ -4,7 +4,7 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
 
 - [Architecture](ARCHITECTURE.md):
   stock Gyro child, flight helpers, four-port layout, cargo action, saved
-  connections, settings ownership, and game-validation boundaries.
+  connections, fuel settings, settings ownership, and game-validation boundaries.
 - [Mod rules](MOD-RULES.md): flight-control, settings, source, and validation
   contracts; read when changing behavior or planning a targeted game test.
 - [Altitude control](ALTITUDE-CONTROL.md): native hover and vertical-control
