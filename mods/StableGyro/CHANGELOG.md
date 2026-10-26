@@ -2,6 +2,8 @@
 
 ## Next
 
+## V5
+
 - Added INI settings for fuel capacity and base fuel consumption, with stock game values as defaults.
 - Added Nanite support for cable-port bases and reduced the geometry used for ray tracing.
 - Altitude stabilization and pitch reset now follow the game's remapped controls.
