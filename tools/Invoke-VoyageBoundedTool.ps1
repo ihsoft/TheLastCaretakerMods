@@ -20,10 +20,6 @@ if (-not (Test-Path -LiteralPath $exe -PathType Leaf) -or [IO.Path]::GetExtensio
 $helper = Join-Path $PSScriptRoot 'BoundedProcess\WindowsJobRunner.cs'
 if (-not ('Voyage.Tools.WindowsJobRunner' -as [type])) {
     Add-Type -Path $helper
-    [AppDomain]::CurrentDomain.SetData('VoyageJobRunnerHash', $helperHash)
-}
-elseif ([AppDomain]::CurrentDomain.GetData('VoyageJobRunnerHash') -cne $helperHash) {
-    throw 'Runner source changed in this host. Start a fresh PowerShell process.'
 }
 $allowedOutputRoots = @(
     [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')),
