@@ -2,6 +2,8 @@
 
 ## Next
 
+## V6
+
 - Fixed abnormally low fuel consumption by restoring the stock default.
 - Replaced FuelConsumptionPerMinute with FuelConsumption, defaulting to 250.0 in StableGyro.ini.
 
