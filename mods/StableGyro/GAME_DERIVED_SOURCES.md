@@ -194,7 +194,10 @@ of save restoration or real-game cable cleanup behavior.
 ## Fuel configuration contracts
 
 Steam build `25982825` native reflection and constructor inspection establish
-the Gyro's float `PetrolConsumption` owner, readonly access and default; stock
+the Gyro's float `PetrolConsumption` owner, readonly access and `250.0` default.
+Its descriptor gives offset `0x6f0`; the adjacent `0x6ec` / `1/60` pair belongs
+to `RotorAudioRPMScale`. The setting writes the native fuel parameter directly,
+without asserting a conversion to liters per real minute. Stock
 `BP_GyroCopter_Possessable` JSON establishes the custom module and its Petrol
 capacity. Current mappings establish the component class chain and the
 `MaxResources` enum-to-double map. Exact defaults, field offsets, native entry

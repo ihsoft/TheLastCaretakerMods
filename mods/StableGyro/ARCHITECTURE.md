@@ -74,13 +74,16 @@ The PostPhysics `ModActor` owns both fuel settings in the INI:
 | Setting | Default and meaning | Inclusive range |
 | --- | --- | --- |
 | `FuelCapacity` | `400` native resource units of Petrol | `0.001..1000000000` |
-| `FuelConsumptionPerMinute` | `1` native resource unit per minute at `CurrentThrottle=1` | `0..1000000` |
+| `FuelConsumption` | `250`, the stock native `PetrolConsumption` parameter | `0..1000000` |
 
 Missing or invalid values use these defaults, which preserve the stock tank
-capacity and base engine consumption. Consumption is an absolute base rate,
-multiplied by the native engine's `CurrentThrottle`; it is not a scale factor
-or a rate derived from the displayed collective percentage. Zero disables the
-base Petrol request. Native resource units are not established liters.
+capacity and base engine consumption. `FuelConsumption` is passed directly to
+the native property without a time-unit conversion. It is not a scale factor
+or a fixed number of liters per real minute. The native request is multiplied
+by `CurrentThrottle`, not the displayed collective percentage; module processing
+determines the actual tank decrease. Zero disables this base Petrol request.
+The retired `FuelConsumptionPerMinute` key is ignored at runtime and removed
+by the local installer, which adds the new default if its key is missing.
 
 After reloading settings, `ApplyFuelSettings` applies them at helper BeginPlay
 and on genuine player entry, before the altitude-control branch. Editing the
@@ -195,7 +198,9 @@ disconnects extra cables and leaves the extra sockets hidden and unusable withou
 the missing-endpoint loading delay. The removal of redundant Tick setup and
 component traversal also passed a game check.
 
-The fuel-capacity and base-consumption settings have also passed a game check.
+The fuel-capacity setting and the corrected direct `FuelConsumption=250.0`
+default have passed game checks. This does not establish a fixed real-time
+liters-per-minute conversion or explain every previously observed tank change.
 
 These checks do not establish repair of orphan attachment pads left by older
 packages, migration of saved stock Gyros, or compatibility after removing the

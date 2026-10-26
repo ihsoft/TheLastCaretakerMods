@@ -307,18 +307,19 @@ load dependencies.
 ## Fuel request versus observed consumption
 
 For Steam build `25982825`, native float `PetrolConsumption` belongs to
-`VoyageVehicleGyroCopter` at `0x6ec` and is Blueprint-readonly. Constructor
+`VoyageVehicleGyroCopter` at `0x6f0` and is Blueprint-readonly. Constructor
 `0x145477fa0`, registered through the Gyro's default-constructor wrapper
-`0x1453c53c0`, initializes it to `0x3c888889`: the float representation of
-`1/60` resource unit per second. The stock Gyro Blueprint has no override.
-This establishes a stock base rate of one unit per minute at
-`CurrentThrottle=1`.
+`0x1453c53c0`, initializes it to `0x437a0000`: the float representation of
+`250.0`. The stock Gyro Blueprint has no override. The adjacent field at
+`0x6ec`, initialized to `1/60`, is `RotorAudioRPMScale`, not fuel consumption.
+For these float reflection descriptors the member offset is at byte `+50`
+from the descriptor's name pointer; preceding bytes belong to the previous
+descriptor and must not be used as this property's offset.
 
 The Gyro's base native Petrol request is:
 
 ```text
-requestedPetrolPerSecond = PetrolConsumption * CurrentThrottle
-requestedPetrolPerMinute = requestedPetrolPerSecond * 60
+basePetrolRequest = PetrolConsumption * CurrentThrottle
 ```
 
 Tick submits that value to the custom module's `TemporaryConsumptions[Petrol]`
@@ -328,27 +329,29 @@ work term occurs in this base request. At equal `CurrentThrottle`, changing
 scale does not directly change it. An indirect change remains possible when
 the governor changes throttle in response to pitch drag or rotor-speed error.
 
-Requested rate is not unconditional actual tank consumption. Module resource
+The request is not unconditional actual tank consumption. Module resource
 processing, availability and other consumers or transfers remain separate.
 `GetResourceAmount(Petrol)` measures the local stored quantity; a decrease can
 also include transfer or leakage, while refill/supply can mask consumption.
-Quantities use native resource units, not established liters.
+The request's conversion to liters per real second is not established here:
+temporary-request accumulation, module scheduling and resource multipliers
+must be accounted for. Do not label the native parameter as a real-time rate.
 
-StableGyro converts its absolute per-minute setting before the native request:
+StableGyro applies its native setting directly, defaulting to `250.0`:
 
 ```text
-PetrolConsumption = float(FuelConsumptionPerMinute / 60)
-requestedPetrolPerMinute ~= FuelConsumptionPerMinute * CurrentThrottle
+PetrolConsumption = float(FuelConsumption)
+basePetrolRequest = PetrolConsumption * CurrentThrottle
 ```
 
-The conversion uses `KismetSystemLibrary.SetDoublePropertyByName`, whose
+The write uses `KismetSystemLibrary.SetDoublePropertyByName`, whose
 native-float fallback preserves the property's reflected readonly flags. It
 does not write throttle, collective, stored fuel or `WorkloadPetrolPerSecond`.
 
 The stock Blueprint's `VoyageCustomModule_GEN_VARIABLE` component has native
 class `VoyageCustomModuleComponent`, derived from `VoyageModuleComponent` and
 then `ActorComponent`. Its writable `MaxResources` map is
-`TMap<EModuleResourceType, double>` at `0xec8`; the stock Petrol entry is `400`.
+`TMap<EModuleResourceType, double>`; the stock Petrol entry is `400`.
 This is capacity, distinct from the stored amount returned by
 `GetResourceAmount(Petrol)`.
 

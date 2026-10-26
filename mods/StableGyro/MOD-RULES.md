@@ -142,7 +142,7 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   lifecycle path and must not append the mod-owned X reset hint; inherited
   stock actions pass through. The independent PostPhysics horizontal damping
   path may still read the two native tilt axes as control intent.
-- `ModActor` owns `FuelCapacity` and `FuelConsumptionPerMinute`, with defaults,
+- `ModActor` owns `FuelCapacity` and `FuelConsumption`, with defaults,
   units and ranges in [architecture](ARCHITECTURE.md#fuel-settings). Apply both
   after settings reload at helper BeginPlay and genuine player entry, before
   any flight-control enable gate. Change only the existing custom module's

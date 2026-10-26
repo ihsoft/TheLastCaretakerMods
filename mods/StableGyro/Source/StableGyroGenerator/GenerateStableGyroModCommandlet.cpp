@@ -110,7 +110,6 @@ const FName ResetActionWasActive(StableGyroAssetNames::ResetActionWasActiveField
 
 namespace FuelSettings
 {
-constexpr TCHAR PerMinuteDivisor[] = TEXT("60.0");
 constexpr TCHAR PetrolEnum[] = TEXT("EModuleResourceType::Petrol");
 const FName ApplyFunction(TEXT("ApplyFuelSettings"));
 const FName Gyro(TEXT("Gyro"));
@@ -406,12 +405,8 @@ bool AddFuelSettingsFunction(UBlueprint* Blueprint)
         FuelSettings::Gyro, ActorType, EGPD_Output);
     if (!Gyro) return false;
 
-    UK2Node_VariableGet* ConsumptionPerMinute = Read(
-        Graph, Settings::FuelConsumptionPerMinute, nullptr, 220, -280);
-    UK2Node_CallFunction* PerSecond = Call(
-        Graph, UKismetMathLibrary::StaticClass(),
-        DivideDouble, 450, -280);
-    Default(PerSecond, Binary::RightOperand, FuelSettings::PerMinuteDivisor);
+    UK2Node_VariableGet* Consumption = Read(
+        Graph, Settings::FuelConsumption, nullptr, 220, -280);
     UK2Node_CallFunction* SetConsumption = Call(
         Graph, UKismetSystemLibrary::StaticClass(),
         FuelSettings::SetDoublePropertyByName, 680, 0);
@@ -439,9 +434,7 @@ bool AddFuelSettingsFunction(UBlueprint* Blueprint)
     bool Ok = true;
     Ok &= Link(Pin(Entry, P::Then), Pin(SetConsumption, P::Execute));
     Ok &= Link(Gyro, Pin(SetConsumption, FuelSettings::Object));
-    Ok &= Link(Pin(ConsumptionPerMinute, Settings::FuelConsumptionPerMinute),
-        Pin(PerSecond, Binary::LeftOperand));
-    Ok &= Link(Pin(PerSecond, P::ReturnValue),
+    Ok &= Link(Pin(Consumption, Settings::FuelConsumption),
         Pin(SetConsumption, FuelSettings::Value));
     Ok &= Link(Pin(SetConsumption, P::Then), Pin(CustomModule, P::Execute));
     Ok &= Link(Gyro, Pin(GetComponent, P::FunctionTarget));

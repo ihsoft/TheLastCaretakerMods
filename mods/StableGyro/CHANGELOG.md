@@ -2,6 +2,9 @@
 
 ## Next
 
+- Fixed abnormally low fuel consumption by restoring the stock default.
+- Replaced FuelConsumptionPerMinute with FuelConsumption, defaulting to 250.0 in StableGyro.ini.
+
 ## V5
 
 - Added INI settings for fuel capacity and base fuel consumption, with stock game values as defaults.

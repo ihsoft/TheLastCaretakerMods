@@ -119,7 +119,8 @@ function Update-StableGyroSettings {
         'CompensateTiltLift',
         'TiltLiftCompensationMultiplier',
         'StabilizationMinimumRotorSpeedPercent',
-        'EnableFuelDiagnostics'
+        'EnableFuelDiagnostics',
+        'FuelConsumptionPerMinute'
     )
     $retiredComments = @(
         '# Absolute delay after releasing Space at full throttle before exact altitude hold activates.',
@@ -129,7 +130,8 @@ function Update-StableGyroSettings {
         '# Percent of the stock rotor''s physical maximum speed (0 disables the gate).',
         '# Percent of the stock rotor''s normal 100% operating speed (0 disables the gate).',
         '# Temporary compact fuel/throttle diagnostics; set false to hide on the next Gyro entry.',
-        '# Valid range is 0.5..2.5; missing or invalid values fall back to 1.0.'
+        '# Valid range is 0.5..2.5; missing or invalid values fall back to 1.0.',
+        '# Base Petrol request at 100% engine throttle, in native resource units per minute.'
     )
     $temporary = $SettingsPath + '.stablegyro-' + [guid]::NewGuid().ToString('N') + '.tmp'
     $backup = $SettingsPath + '.stablegyro-' + [guid]::NewGuid().ToString('N') + '.bak'

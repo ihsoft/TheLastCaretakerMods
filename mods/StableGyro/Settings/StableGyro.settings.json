@@ -57,11 +57,11 @@
       "maximum": 1000000000.0
     },
     {
-      "id": "FuelConsumptionPerMinute",
-      "runtimeName": "FuelConsumptionPerMinute",
-      "key": "FuelConsumptionPerMinute",
+      "id": "FuelConsumption",
+      "runtimeName": "FuelConsumption",
+      "key": "FuelConsumption",
       "type": "number",
-      "default": 1.0,
+      "default": 250.0,
       "minimum": 0.0,
       "maximum": 1000000.0
     },
