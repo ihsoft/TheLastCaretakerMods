@@ -77,6 +77,12 @@ full/simplified views and top-to-bottom/left-to-right directions. Defaults are
 `-View simplified -Direction TB`; `-Graph` selects a graph when needed. No model,
 network, engine, or catalogue call is involved. Input is never rewritten.
 
+In HTML, click a node to highlight its incoming/outgoing links and immediate
+neighbors; unrelated elements dim and link colours retain their meaning.
+Click again, click the background, or press Escape to clear. Tab and Enter/Space
+also select nodes. Changing view or direction clears selection. Only visible
+links participate; use Full to include hidden technical nodes.
+
 Simplified view hides disabled and technical Self nodes, labels incoming hidden
 sources, and does not invent bypass connections. Full view retains all nodes.
 Hover reveals source fields. Execution colouring is based on known pin names;
@@ -87,6 +93,9 @@ including the earlier standalone `nodes`/`links` shape; it does not render `.t3d
 ## Checks
 
 Offline renderer checks: `python -B tools/BlueprintTextPrototype/test_render_graph.py`.
+With Node.js available, run `node tools/BlueprintTextPrototype/test_graph_interactions.js <division.html>`
+on HTML rendered from the division example to check selection and viewer controls
+with a DOM stand-in (not a browser UI test).
 The engine acceptance runner is
 `tools/BlueprintTextPrototype/Test-BlueprintTextPrototype.ps1 -OutputRoot <new directory below Tmp/BlueprintTextPrototype>`
 with optional `-EngineRoot`. It builds an isolated project, checks compact and

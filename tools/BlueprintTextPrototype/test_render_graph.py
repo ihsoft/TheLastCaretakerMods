@@ -63,6 +63,18 @@ class GraphRenderingTests(unittest.TestCase):
         self.assertNotIn('<script>', svg)
         ET.fromstring(svg)
 
+    def test_selection_metadata_preserves_exact_ids(self):
+        special_id = 'node."<&'
+        document = {'schema': 1, 'nodes': [
+            {'id': special_id, 'kind': 'event'}, {'id': 'next', 'kind': 'sequence'}],
+            'links': [{'from': special_id + '.then', 'to': 'next.exec'}]}
+        svg = ET.fromstring(render(document)[0])
+        nodes = svg.findall('.//{*}g[@class="graph-node"]')
+        edges = svg.findall('.//{*}g[@class="graph-edge"]')
+        self.assertEqual({n.attrib['data-node-id'] for n in nodes}, {special_id, 'next'})
+        self.assertEqual([(e.attrib['data-source'], e.attrib['data-target']) for e in edges],
+                         [(special_id, 'next')])
+
     def test_cli_outputs_all_variants_and_preserves_input(self):
         owner = ROOT.parents[1] / 'Tmp/BlueprintTextPrototype/render-tests'
         owner.mkdir(parents=True, exist_ok=True)
@@ -77,6 +89,8 @@ class GraphRenderingTests(unittest.TestCase):
             report = json.loads(result.stdout)
             self.assertEqual((report['nodes'], report['links']), (4, 3))
             page = output.with_suffix('.html').read_text(encoding='utf-8')
+            self.assertIn('<html lang="en">', page)
+            self.assertNotRegex(page, r'[\u0400-\u04ff]')
             for view in ('simplified', 'full'):
                 for direction in ('TB', 'LR'):
                     self.assertIn(f'id="{view}-{direction}"', page)

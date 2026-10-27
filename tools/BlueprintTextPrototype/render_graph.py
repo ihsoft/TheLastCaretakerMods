@@ -248,14 +248,14 @@ def render(document, selection=None, view="simplified", direction="TB"):
             lx, ly = (sx + ex) / 2, lane - 5
         style, color = ("exec", "#b36b13") if execution else ("data", "#317b9b")
         dash = '' if execution else ' stroke-dasharray="6 4"'
-        pieces.append(f'<g><title>{escape(source+"."+output+" → "+target+"."+input_pin)}</title><path d="{path}" fill="none" stroke="{color}" stroke-width="2"{dash} marker-end="url(#{marker_prefix}{style})"/>')
+        pieces.append(f'<g class="graph-edge" data-source="{escape(source)}" data-target="{escape(target)}"><title>{escape(source+"."+output+" → "+target+"."+input_pin)}</title><path d="{path}" fill="none" stroke="{color}" stroke-width="2"{dash} marker-end="url(#{marker_prefix}{style})"/>')
         pieces.append(f'<text class="label" x="{lx}" y="{ly}" text-anchor="middle"{transform}>{escape(output+" → "+input_pin)}</text></g>')
     for node in nodes:
         x, y, w, h = boxes[node["id"]]
         kind = node.get("kind", "unknown")
         color = "#dce9fc" if kind in ("event", "customEvent") else "#f7e9d7" if kind in ("setVariable", "variableSet", "branch") else "#e0efea" if kind == "sequence" else "#e8edf4"
         opacity = ' opacity="0.55"' if node.get("enabled") is False else ''
-        pieces.append(f'<g{opacity}><title>{escape(json.dumps(node, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="#8b9bae" stroke-width="1.5"/>')
+        pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}"{opacity}><title>{escape(json.dumps(node, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="#8b9bae" stroke-width="1.5"/>')
         for row, line in enumerate(lines_by_id[node["id"]]):
             size = 16 if row == 0 else 12
             weight = ' font-weight="600"' if row == 0 else ''
@@ -287,16 +287,47 @@ def main():
         sections = ''.join(f'<section id="{view}-{direction}"' +
                            ('' if (view, direction) == (args.view, args.direction) else ' hidden') +
                            '>' + result[0] + '</section>' for (view, direction), result in variants.items())
-        page = '''<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>''' + escape(title) + '''</title>
+        page = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>''' + escape(title) + '''</title>
 <style>body{margin:0;background:#f8fafc;font:14px 'Segoe UI',sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr}nav{padding:10px 18px;background:#fff;border-bottom:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,select{padding:6px 10px}main{overflow:auto;min-height:0}svg{display:block}</style>
-<nav><label>Вид <select id="view" onchange="choose()"><option value="simplified">Упрощённый</option><option value="full">Полный</option></select></label>
-<label>Направление <select id="direction" onchange="choose()"><option value="TB">Сверху вниз</option><option value="LR">Слева направо</option></select></label>
-<button onclick="zoom(.8)">−</button><button onclick="zoom(1.25)">+</button><button onclick="fit()">По ширине</button><button onclick="fit(true)">Весь граф</button></nav><main>''' + sections + '''</main>
-<script>const box=document.querySelector('main'),view=document.getElementById('view'),direction=document.getElementById('direction');let svg,scale=1;
+<style>.graph-node{cursor:pointer}.graph-node:focus-visible{outline:none}.graph-node:focus-visible>rect{stroke:#1d4ed8;stroke-width:3}.muted{opacity:.16}.graph-node.selected,.graph-node.neighbor{opacity:1}.graph-node.selected>rect{stroke:#1d4ed8;stroke-width:4}.graph-node.neighbor>rect{stroke-width:2.5}.graph-edge.related>path{stroke-width:3.5}.hint{color:#52657a;font-size:12px}</style>
+<nav><label>View <select id="view" onchange="choose()"><option value="simplified">Simplified</option><option value="full">Full</option></select></label>
+<label>Direction <select id="direction" onchange="choose()"><option value="TB">Top to bottom</option><option value="LR">Left to right</option></select></label>
+<button onclick="zoom(.8)" aria-label="Zoom out">−</button><button onclick="zoom(1.25)" aria-label="Zoom in">+</button><button onclick="fit()">Fit width</button><button onclick="fit(true)">Fit graph</button>
+<span class="hint">Click a node to highlight its connections. Click again, click the background, or press Escape to clear.</span></nav><main>''' + sections + '''</main>
+<script>const box=document.querySelector('main'),view=document.getElementById('view'),direction=document.getElementById('direction');let svg,scale=1,selectedId=null;
 function show(){const v=svg.viewBox.baseVal;svg.style.width=v.width*scale+'px';svg.style.height=v.height*scale+'px'}
 function zoom(f){scale=Math.max(.05,Math.min(4,scale*f));show()}
 function fit(all=false){const v=svg.viewBox.baseVal;scale=Math.min(1,Math.max(1,box.clientWidth-20)/v.width,all?box.clientHeight/v.height:1);show()}
-function choose(){const id=view.value+'-'+direction.value;document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==id);svg=document.getElementById(id).querySelector('svg');box.scrollTop=0;box.scrollLeft=0;fit()}
+function highlight(id){
+    selectedId=id;
+    const neighbors=new Set(id===null?[]:[id]);
+    svg.querySelectorAll('.graph-edge').forEach(edge=>{
+        const related=id!==null&&(edge.dataset.source===id||edge.dataset.target===id);
+        edge.classList.toggle('related',related);edge.classList.toggle('muted',id!==null&&!related);
+        if(related){neighbors.add(edge.dataset.source);neighbors.add(edge.dataset.target)}
+    });
+    svg.querySelectorAll('.graph-node').forEach(node=>{
+        const selected=node.dataset.nodeId===id,neighbor=!selected&&neighbors.has(node.dataset.nodeId);
+        node.classList.toggle('selected',selected);node.classList.toggle('neighbor',neighbor);
+        node.classList.toggle('muted',id!==null&&!neighbors.has(node.dataset.nodeId));
+        node.setAttribute('aria-pressed',String(selected));
+    });
+}
+function toggleNode(node){highlight(selectedId===node.dataset.nodeId?null:node.dataset.nodeId)}
+box.addEventListener('click',event=>{
+    const node=event.target.closest('.graph-node');
+    if(node&&svg.contains(node)){toggleNode(node)}else{highlight(null)}
+});
+document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){highlight(null);return}
+    const node=event.target.closest('.graph-node');
+    if(node&&svg.contains(node)&&(event.key==='Enter'||event.key===' ')){event.preventDefault();toggleNode(node)}
+});
+document.querySelectorAll('.graph-node').forEach(node=>{
+    node.setAttribute('tabindex','0');node.setAttribute('role','button');
+    node.setAttribute('aria-label','Highlight connections for '+node.dataset.nodeId);
+});
+function choose(){const id=view.value+'-'+direction.value;document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==id);svg=document.getElementById(id).querySelector('svg');highlight(null);box.scrollTop=0;box.scrollLeft=0;fit()}
 ''' + f'view.value="{args.view}";direction.value="{args.direction}";' + '''choose();</script></html>'''
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(svg, encoding="utf-8")
