@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "asset": "/Game/BP_DivisionExample",
+  "parent": "/Script/Engine.Actor",
+  "variables": [
+    {
+      "name": "Result",
+      "type": "float"
+    }
+  ],
+  "graphs": [
+    {
+      "name": "EventGraph",
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "begin",
+            "kind": "event",
+            "event": "/Script/Engine.Actor::ReceiveBeginPlay"
+          },
+          {
+            "id": "divide",
+            "kind": "call",
+            "operation": "/Script/Engine.KismetMathLibrary::Divide_DoubleDouble",
+            "arguments": {
+              "left": "12000",
+              "right": "2"
+            }
+          },
+          {
+            "id": "sequence",
+            "kind": "sequence",
+            "outputs": 2
+          },
+          {
+            "id": "set.result",
+            "kind": "setVariable",
+            "variable": "Result"
+          }
+        ],
+        "links": [
+          {
+            "from": "begin.then",
+            "to": "sequence.exec"
+          },
+          {
+            "from": "sequence.then0",
+            "to": "set.result.exec"
+          },
+          {
+            "from": "divide.result",
+            "to": "set.result.value"
+          }
+        ]
+      }
+    }
+  ]
+}

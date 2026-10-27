@@ -5,6 +5,8 @@ failure handling.
 
 | Intent | Public entry point | Guide |
 | --- | --- | --- |
+| Import/export prototype Blueprint text or discover operations | `BlueprintTextPrototype/Invoke-BlueprintTextPrototype.ps1` | [Blueprint text prototype](blueprint-text-prototype.md) |
+| Render a compact Blueprint graph offline | `BlueprintTextPrototype/Render-BlueprintGraph.ps1` | [Blueprint text prototype](blueprint-text-prototype.md) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
 | Generate a settings header and INI | `New-VoyageModSettings.ps1` | [Mod setup](mod-setup.md) |
 | Merge an existing user INI | `Merge-VoyageModIni.ps1` | [Mod setup](mod-setup.md) |
