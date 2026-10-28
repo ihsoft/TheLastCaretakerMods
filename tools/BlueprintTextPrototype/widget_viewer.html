@@ -1,0 +1,209 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Widget layout preview</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#111a24;color:#dce6f2;font:14px system-ui}header{padding:16px 22px;background:#1b2938;border-bottom:1px solid #41546a}h1{font-size:20px;margin:0 0 8px}p{margin:7px 0;color:#b7c7d8;line-height:1.5}.controls{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:12px}button,select{background:#263d52;color:#fff;border:1px solid #688198;border-radius:5px;padding:6px 10px}main{display:grid;grid-template-columns:270px minmax(450px,1fr) 320px;gap:14px;padding:14px}aside{background:#1b2938;border:1px solid #364b60;border-radius:8px;padding:12px;max-height:78vh;overflow:auto}.tree button{text-align:left;display:block;font-size:12px;width:100%;border:0;background:none;padding:6px 3px;overflow-wrap:anywhere;color:#c9d8e7}.tree button.selected{background:#35566f;color:white}.tag{color:#e7af68;font-size:11px}#stage{width:100%;height:auto;background:radial-gradient(ellipse,#293e50,#0c141e);border:1px solid #688198}#stage .hit{fill:transparent;pointer-events:all;cursor:pointer}#stage .bounds{stroke:#7897ae;stroke-width:1;stroke-dasharray:4 4;fill:none;pointer-events:none}#stage .chosen{stroke:#ffcf70;stroke-width:3;fill:none;pointer-events:none}#stage text{font-family:Arial,sans-serif;pointer-events:none}.hidden-note{color:#e7af68}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;line-height:1.5}h2{font-size:14px;margin-top:0}#selection{color:#ffe1a3;overflow-wrap:anywhere}#metrics{font-size:12px;color:#a8c2d5;padding:8px 0}.key{display:inline-block;border:1px dashed #7897ae;padding:4px 8px;margin-right:8px}details{margin-top:12px}summary{cursor:pointer}@media(max-width:1100px){main{grid-template-columns:220px 1fr}aside:last-child{grid-column:1/-1;max-height:300px}}
+.tree-row{display:flex;align-items:center;gap:5px}.tree-row input{flex:none;cursor:pointer}.tree-row button{min-width:0}.tree-row.not-rendered button{color:#8193a5}
+#stage{touch-action:none}#stage .hit{cursor:grab}#stage .move-handle{fill:#ffcf70;stroke:#111a24;cursor:move;pointer-events:all}fieldset{border:1px solid #41546a;border-radius:6px;margin:12px 0;padding:10px}fieldset label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}input[type=color]{width:54px;height:30px;background:none;border:0}input[type=range]{width:145px}button:disabled{opacity:.45}textarea{width:100%;min-height:140px;background:#111a24;color:#dce6f2;border:1px solid #41546a;font:11px monospace;resize:vertical}#review-status{font-size:12px}#move-info{font-size:12px}output{min-width:42px}#review-editor:disabled{opacity:.5}
+</style>
+<style>#edit-text{min-height:64px;font:13px system-ui}#edit-text:disabled{opacity:.45}</style>
+<header><h1>HUD · widget-tree preview</h1><p id="asset"></p>
+<p>Approximate exported layout, not gameplay. Texture images exported from editor assets are embedded with brush UV cropping and tint. Fonts, automatic sizing, ScaleBox and RadialSlider remain approximations. Blueprint logic, bindings, DPI rules and animations are not executed.</p>
+<div class="controls"><label>Viewport <select id="viewport"><option value="1920,1080">1920 × 1080</option><option value="2560,1440">2560 × 1440</option><option value="2560,1080">2560 × 1080</option><option value="1280,720">1280 × 720</option></select></label><label><input id="textures" type="checkbox" checked>Original textures</label><label><input id="guides" type="checkbox" checked>Layout outlines</label><button id="reset-visibility">Reset visibility</button><button id="clear">Clear selection</button></div></header>
+<main><aside><h2>Widget tree</h2><p>Checkboxes show or hide widgets. A hidden parent hides its descendants without changing their checkboxes. Click a name to inspect; selection does not change visibility.</p><div class="tree" id="tree"></div></aside>
+<section><svg id="stage" xmlns="http://www.w3.org/2000/svg" aria-label="HUD layout preview"></svg><div id="metrics"></div><p><span class="key">Dashed: layout bounds</span><span style="color:#ffcf70">Gold: selection</span></p><p class="hidden-note">Hidden widgets may overlap: they can represent alternative runtime states. Empty text has no runtime value in this export.</p></section>
+<aside><h2 id="selection">Select a widget</h2><p id="summary"></p>
+<fieldset id="review-editor" disabled><legend>Review adjustments</legend>
+<label for="edit-text">Preview text</label><textarea id="edit-text" rows="3" placeholder="Sample text for layout review"></textarea>
+<label>Widget tint <input id="edit-color" type="color" aria-label="Widget tint"></label>
+<label>Opacity <input id="edit-opacity" type="range" min="0" max="1" step="0.01"><output id="opacity-value"></output></label>
+<p id="move-info"></p><button id="reset-widget">Reset this widget</button></fieldset>
+<p>Drag an element to move it. The gold corner handle moves the selected container with its children. Escape cancels a drag. Tint changes apply to images and text; image brush tint and alpha still multiply the result.</p>
+<details open><summary id="review-count">Review notes · 0 widgets</summary><p>Local adjustments only; refresh discards them. Copy these notes for the agent. Visibility checkboxes are viewing aids and are excluded.</p><button id="copy-review">Copy review notes</button> <button id="reset-review">Reset all adjustments</button><p id="review-status" role="status"></p><textarea id="review-output" readonly aria-label="Review notes for the agent"></textarea></details>
+<details><summary>Source properties</summary><pre id="details"></pre></details><details><summary>Preview limitations</summary><p>Canvas anchors, offsets, alignment and box padding are read from slots. Image brush sizes set texture bounds; exported UV regions crop the PNG images. Missing inherited defaults use approximate browser values. Custom widgets are labelled placeholders. Materials, transforms and non-default clipping are not reproduced. PNGs are extracted from editor Texture2D source data; they do not reproduce runtime compression, material effects or texture streaming.</p><pre id="warnings"></pre></details></aside></main>
+<script>
+const data=__DATA__;
+const widgets=new Map(data.widgets.map(w=>[w.id,w])),stage=document.getElementById('stage');
+const ns='http://www.w3.org/2000/svg';let selected=null,boxes=new Map();const visibilityOverrides=new Map(),treeRows=new Map();
+const adjustments=new Map();let drag=null;
+document.getElementById('asset').textContent=data.asset;
+document.getElementById('warnings').textContent=data.warnings.join('\n');
+function el(tag,attrs={},text){const n=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n}
+function xy(v){return {X:0,Y:0,...v}}function pad(v){return {Left:0,Top:0,Right:0,Bottom:0,...v}}
+function exportedVisible(w){return !['Collapsed','Hidden'].includes(w.props.Visibility)}
+function visibility(w){return visibilityOverrides.has(w.id)?(visibilityOverrides.get(w.id)?'Visible':'Collapsed'):(w.props.Visibility??'Visible')}
+function hidden(w){return ['Collapsed','Hidden'].includes(visibility(w))}
+function setVisible(id,value){
+ const w=widgets.get(id);if(value===exportedVisible(w))visibilityOverrides.delete(id);else visibilityOverrides.set(id,value);
+ render();
+}
+function children(w){return w.children.map(id=>widgets.get(id))}
+function textOf(w){return adjustments.get(w.id)?.text??w.props.Text??''}
+function setText(id,value){const w=widgets.get(id);if(w.kind!=='TextBlock')return;
+ updateAdjustment(id,'text',value===String(w.props.Text??'')?undefined:value);}
+function tintOf(w){return {R:1,G:1,B:1,A:1,...(w.props.ColorAndOpacity?.SpecifiedColor??w.props.ColorAndOpacity??{})}}
+function effectiveProps(w){const edit=adjustments.get(w.id);if(!edit?.rgb)return w.props;
+ const tint={...tintOf(w),...edit.rgb};return {...w.props,ColorAndOpacity:w.kind==='TextBlock'?{SpecifiedColor:tint}:tint};}
+function linearToSrgb(v){v=Math.max(0,Math.min(1,v));return v<=.0031308?v*12.92:1.055*Math.pow(v,1/2.4)-.055}
+function srgbToLinear(v){return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)}
+function tintHex(tint){return '#'+['R','G','B'].map(k=>Math.round(linearToSrgb(tint[k])*255).toString(16).padStart(2,'0')).join('')}
+function opacityOf(w){let opacity=1;for(let item=w;item;item=widgets.get(item.parent))opacity*=adjustments.get(item.id)?.opacity??item.props.RenderOpacity??1;return opacity}
+function updateAdjustment(id,key,value){
+ const edit={...adjustments.get(id)};if(value===undefined)delete edit[key];else edit[key]=value;
+ if(Object.keys(edit).length)adjustments.set(id,edit);else adjustments.delete(id);
+ document.getElementById('review-status').textContent='';render();
+}
+function setTint(id,hex){const w=widgets.get(id),rgb=Object.fromEntries(['R','G','B'].map((k,i)=>[k,srgbToLinear(parseInt(hex.slice(1+i*2,3+i*2),16)/255)]));
+ updateAdjustment(id,'rgb',hex.toLowerCase()===tintHex(tintOf(w))?undefined:rgb);}
+function setOpacity(id,value){const base=widgets.get(id).props.RenderOpacity??1,valueClamped=Math.max(0,Math.min(1,Number(value)));
+ if(Number.isFinite(valueClamped))updateAdjustment(id,'opacity',valueClamped===base?undefined:valueClamped);}
+function setMove(id,x,y){const dx=Math.round(x*10)/10,dy=Math.round(y*10)/10;
+ updateAdjustment(id,'move',dx||dy?{dx,dy,viewport:document.getElementById('viewport').value.split(',').map(Number)}:undefined);}
+function reviewNotes(){const changes=[];
+ for(const w of data.widgets){const edit=adjustments.get(w.id);if(!edit)continue;
+  const change={widgetId:w.id,name:w.name,parent:w.parent,properties:[]};
+  if(edit.text!==undefined)change.previewText={before:w.props.Text??'',example:edit.text,
+   intent:'Layout sample only. Preserve dynamic text/bindings; do not replace runtime text with this example.'};
+  if(edit.rgb){const path=w.kind==='TextBlock'?'ColorAndOpacity.SpecifiedColor':'ColorAndOpacity';
+   change.properties.push({path,before:tintOf(w),after:{...tintOf(w),...edit.rgb},colorSpace:'linear RGBA'});
+   if(w.kind==='TextBlock'&&w.props.ColorAndOpacity?.ColorUseRule&&w.props.ColorAndOpacity.ColorUseRule!=='UseColor_Specified')
+    change.properties.push({path:'ColorAndOpacity.ColorUseRule',before:w.props.ColorAndOpacity.ColorUseRule,after:'UseColor_Specified'});
+  }
+  if(edit.opacity!==undefined)change.properties.push({path:'RenderOpacity',before:w.props.RenderOpacity??1,after:edit.opacity});
+  if(edit.move)change.move={...edit.move,units:'preview layout units; +x right, +y down',relativeTo:'original layout, excluding ancestor adjustments',
+   intent:'Move this widget and its descendants, preserving size and anchors. Adapt its slot/layout in Unreal; this is a review delta, not a serialized slot edit.',sourceSlot:w.slot};
+  changes.push(change);
+ }
+ return {asset:data.asset,source:data.source??null,purpose:'HUD review requests; source unchanged. Verify against the current asset before applying.',changes};
+}
+function syncReview(){const w=widgets.get(selected),edit=adjustments.get(selected);
+ document.getElementById('review-editor').disabled=!w;
+ const textInput=document.getElementById('edit-text');textInput.disabled=!w||w.kind!=='TextBlock';
+ const textValue=w?.kind==='TextBlock'?String(textOf(w)):'';if(textInput.value!==textValue)textInput.value=textValue;
+ const tintInput=document.getElementById('edit-color');tintInput.disabled=!w||!['Image','TextBlock'].includes(w.kind);
+ tintInput.value=w?tintHex({...tintOf(w),...edit?.rgb}):'#ffffff';
+ const opacity=edit?.opacity??w?.props.RenderOpacity??1;
+ document.getElementById('edit-opacity').value=opacity;document.getElementById('opacity-value').textContent=Math.round(opacity*100)+'%';
+ document.getElementById('move-info').textContent=w?`Move: Δx ${edit?.move?.dx??0}, Δy ${edit?.move?.dy??0} layout units`:'Select a widget to adjust';
+ document.getElementById('reset-widget').disabled=!edit;
+ const notes=reviewNotes();document.getElementById('review-output').value=JSON.stringify(notes,null,2);
+ document.getElementById('review-count').textContent=`Review notes · ${notes.changes.length} widgets`;
+ document.getElementById('copy-review').disabled=!notes.changes.length;document.getElementById('reset-review').disabled=!notes.changes.length;
+}
+function stagePoint(event){const point=stage.createSVGPoint();point.x=event.clientX;point.y=event.clientY;return point.matrixTransform(stage.getScreenCTM().inverse())}
+function startDrag(event,id){if(event.button!==0||drag)return;event.preventDefault();event.stopPropagation();
+ const point=stagePoint(event),move=adjustments.get(id)?.move;
+ drag={id,pointer:event.pointerId,start:point,clientX:event.clientX,clientY:event.clientY,before:move,moved:false};
+ stage.setPointerCapture(event.pointerId);selected=id;render();
+}
+function moveDrag(event){if(!drag||event.pointerId!==drag.pointer)return;
+ if(!drag.moved&&Math.hypot(event.clientX-drag.clientX,event.clientY-drag.clientY)<3)return;
+ drag.moved=true;const point=stagePoint(event);setMove(drag.id,(drag.before?.dx??0)+point.x-drag.start.x,(drag.before?.dy??0)+point.y-drag.start.y);
+}
+function endDrag(event,cancel=false){if(!drag||(event&&event.pointerId!==drag.pointer))return;
+ const previous=drag;drag=null;
+ if(stage.hasPointerCapture(previous.pointer))stage.releasePointerCapture(previous.pointer);
+ if(cancel)updateAdjustment(previous.id,'move',previous.before);
+}
+function desired(w){
+ if(hidden(w))return {w:0,h:0};const p=w.props;
+ if(w.kind==='Image'){const s=xy(p.Brush?.ImageSize);return {w:s.X||32,h:s.Y||32}}
+ if(w.kind==='TextBlock'){const size=p.Font?.Size??24,lines=String(textOf(w)).split('\n');return {w:Math.max(1,...lines.map(line=>line.length*size*.56)),h:size*1.25*lines.length}}
+ const kids=children(w).filter(c=>!hidden(c));
+ if(kids.length){const sizes=kids.map(c=>{const s=desired(c),p=pad(c.slot.Padding);return {w:s.w+p.Left+p.Right,h:s.h+p.Top+p.Bottom}});
+ return {w:w.kind==='HorizontalBox'?sizes.reduce((s,c)=>s+c.w,0):Math.max(...sizes.map(s=>s.w)),h:w.kind==='VerticalBox'?sizes.reduce((s,c)=>s+c.h,0):Math.max(...sizes.map(s=>s.h))}}
+ return w.kind==='RadialSlider'?{w:150,h:150}:{w:240,h:36};
+}
+function place(w,x,y,width,height){
+ const move=adjustments.get(w.id)?.move;x+=move?.dx??0;y+=move?.dy??0;
+ if(hidden(w))return;boxes.set(w.id,{x,y,w:Math.max(1,width),h:Math.max(1,height)});
+ const kids=children(w);let cursor=0;
+ for(const c of kids){if(hidden(c))continue;const s=c.slot,p=pad(s.Padding),d=desired(c);
+ if(w.kind==='CanvasPanel'){
+  const l=s.LayoutData??{},o=pad(l.Offsets),a=xy(l.Anchors?.Minimum),b=xy(l.Anchors?.Maximum),align=xy(l.Alignment);
+  const cw=a.X===b.X?(s.bAutoSize?d.w:o.Right):width*(b.X-a.X)-o.Left-o.Right;
+  const ch=a.Y===b.Y?(s.bAutoSize?d.h:o.Bottom):height*(b.Y-a.Y)-o.Top-o.Bottom;
+  place(c,x+width*a.X+o.Left-(a.X===b.X?cw*align.X:0),y+height*a.Y+o.Top-(a.Y===b.Y?ch*align.Y:0),cw,ch);
+ }else if(w.kind==='HorizontalBox'||w.kind==='VerticalBox'){
+  const vertical=w.kind==='VerticalBox',space=vertical?width-p.Left-p.Right:height-p.Top-p.Bottom;
+  const alignment=vertical?s.HorizontalAlignment:s.VerticalAlignment;
+  const cross=alignment?.endsWith('Fill')||!alignment?space:Math.min(space,vertical?d.w:d.h);
+  const offset=alignment?.endsWith('Center')?(space-cross)/2:alignment?.endsWith('Right')||alignment?.endsWith('Bottom')?space-cross:0;
+  place(c,x+p.Left+(vertical?offset:cursor),y+p.Top+(vertical?cursor:offset),vertical?cross:d.w,vertical?d.h:cross);
+  cursor+=(vertical?d.h+p.Top+p.Bottom:d.w+p.Left+p.Right);
+ }else if(w.kind==='ScaleBox'){
+  const k=Math.min(width/d.w,height/d.h);place(c,x+(width-d.w*k)/2,y+(height-d.h*k)/2,d.w*k,d.h*k);
+ }else place(c,x+p.Left,y+p.Top,width-p.Left-p.Right,height-p.Top-p.Bottom);
+ }
+}
+function color(p){const c=p?.SpecifiedColor??p??{R:1,G:1,B:1,A:1};return `rgba(${Math.round(linearToSrgb(c.R??1)*255)},${Math.round(linearToSrgb(c.G??1)*255)},${Math.round(linearToSrgb(c.B??1)*255)},${c.A??1})`}
+function drawTexture(g,w,b,index){
+ const p=effectiveProps(w),brush=p.Brush??{},texture=data.textures[brush.ResourceObject];
+ if(!texture||!document.getElementById('textures').checked)return false;
+ const uv=brush.UVRegion,lo=uv?.bIsValid?uv.Min:{X:0,Y:0},hi=uv?.bIsValid?uv.Max:{X:1,Y:1};
+ const x=lo.X*texture.width,y=lo.Y*texture.height,width=(hi.X-lo.X)*texture.width,height=(hi.Y-lo.Y)*texture.height;
+ const tint=brush.TintColor?.SpecifiedColor??{},color=p.ColorAndOpacity??{};
+ const [r,green,blue,a]=['R','G','B','A'].map(k=>(tint[k]??1)*(color[k]??1));
+ const filterId='tint-'+index,filter=el('filter',{id:filterId,x:0,y:0,width:1,height:1,'color-interpolation-filters':'linearRGB'});
+ filter.append(el('feColorMatrix',{type:'matrix',values:`${r} 0 0 0 0  0 ${green} 0 0 0  0 0 ${blue} 0 0  0 0 0 ${a} 0`}));
+ const defs=el('defs');defs.append(filter);g.append(defs);
+ const crop=el('svg',{x:b.x,y:b.y,width:b.w,height:b.h,viewBox:`${x} ${y} ${width} ${height}`,preserveAspectRatio:'none',overflow:'hidden'});
+ crop.append(el('image',{href:texture.src,x:0,y:0,width:texture.width,height:texture.height,preserveAspectRatio:'none',filter:`url(#${filterId})`}));g.append(crop);return true;
+}
+function select(id){selected=id;render()}
+function drawText(g,w,b,p){
+ const size=p.Font?.Size??24,alignment=p.Justification,x=b.x+(alignment==='Center'?b.w/2:alignment==='Right'?b.w:0);
+ const text=el('text',{x,y:b.y+size,fill:color(p.ColorAndOpacity),'font-size':size,'font-weight':p.Font?.TypefaceFontName==='Bold'?700:400,'text-anchor':alignment==='Center'?'middle':alignment==='Right'?'end':'start'});
+ String(textOf(w)).split('\n').forEach((line,index)=>text.append(el('tspan',{x,y:b.y+size+index*size*1.25},line)));
+ g.append(text);
+}
+function render(){
+ const [W,H]=document.getElementById('viewport').value.split(',').map(Number);
+ boxes=new Map();place(widgets.get(data.root),0,0,W,H);stage.replaceChildren();stage.setAttribute('viewBox',`0 0 ${W} ${H}`);
+ stage.append(el('path',{d:`M${W/2},0 V${H} M0,${H/2} H${W}`,stroke:'#5c788d','stroke-width':1,'stroke-dasharray':'5 10',opacity:.4}));
+ const guide=document.getElementById('guides').checked;
+ for(const w of data.widgets){const b=boxes.get(w.id);if(!b)continue;const p=effectiveProps(w),group=el('g',{'data-widget':w.id}),g=el('g',{opacity:opacityOf(w)});group.append(g);group.append(el('title',{},w.name+' · '+w.kind+' · '+visibility(w)));
+  if(w.kind==='TextBlock')drawText(g,w,b,p);
+  else if(w.kind==='Image'&&!drawTexture(g,w,b,data.widgets.indexOf(w))){
+   g.append(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,fill:color(p.ColorAndOpacity??{R:.4,G:.8,B:1,A:.18}),stroke:'#7897ae','stroke-dasharray':'5 3'}));
+   if(b.w>100)g.append(el('text',{x:b.x+b.w/2,y:b.y+b.h/2,fill:'#c9e4f2','font-size':Math.min(18,b.h*.3),'text-anchor':'middle'},w.name));
+  }else if(w.kind==='RadialSlider')g.append(el('circle',{cx:b.x+b.w/2,cy:b.y+b.h/2,r:Math.min(b.w,b.h)/2-5,fill:'none',stroke:color(p.SliderBarColor),'stroke-width':8}));
+  else if(!w.children.length&&!['TextBlock','Image'].includes(w.kind)){g.append(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,fill:'#5b452d',stroke:'#d5a96f','stroke-dasharray':'5 3'}));g.append(el('text',{x:b.x+6,y:b.y+22,fill:'#ffdaab','font-size':14},'Custom widget (not expanded)'))}
+  if(guide)group.append(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,class:'bounds'}));
+  group.append(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,class:'hit'}));group.addEventListener('pointerdown',event=>startDrag(event,w.id));stage.append(group);
+ }
+ const w=widgets.get(selected),b=boxes.get(selected);
+ if(b){stage.append(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,class:'chosen'}));
+ const handle=el('rect',{x:b.x+b.w-14,y:b.y,width:14,height:14,rx:3,class:'move-handle'});handle.append(el('title',{},'Drag selected widget and its children'));
+ handle.addEventListener('pointerdown',event=>startDrag(event,w.id));stage.append(handle);}
+ document.getElementById('selection').textContent=w?w.name:'Select a widget';
+ document.getElementById('summary').textContent=w?`${w.kind} · preview: ${visibility(w)} · exported: ${w.props.Visibility??'Visible'}${!b&&!hidden(w)?' · hidden by ancestor':''}`:'';
+ document.getElementById('details').textContent=w?JSON.stringify({bounds:b,slot:w.slot,properties:w.raw},null,2):'Select a widget in the tree or canvas to inspect its placement and source properties.';
+ document.getElementById('metrics').textContent=`${W} × ${H} layout units · ${boxes.size} / ${data.widgets.length} widgets laid out · manual visibility overrides: ${visibilityOverrides.size}`;
+ for(const [id,entry] of treeRows){
+ const w=widgets.get(id);entry.check.checked=!hidden(w);entry.row.classList.toggle('not-rendered',!boxes.has(id));
+ entry.button.classList.toggle('selected',id===selected);
+ entry.button.title=w.kind+' · '+visibility(w)+(hidden(w)?'':!boxes.has(id)?' · hidden by ancestor':'')+' · exported: '+(w.props.Visibility??'Visible');
+ }
+ syncReview();
+}
+function tree(id,depth=0){
+ const w=widgets.get(id),row=document.createElement('div'),check=document.createElement('input'),button=document.createElement('button');
+ row.className='tree-row';row.style.paddingLeft=(depth*12)+'px';check.type='checkbox';check.setAttribute('aria-label','Show '+w.name);
+ check.onchange=()=>setVisible(id,check.checked);button.dataset.pick=id;button.textContent=w.name;button.onclick=()=>select(id);
+ row.append(check,button);document.getElementById('tree').append(row);treeRows.set(id,{row,check,button});w.children.forEach(c=>tree(c,depth+1));
+}
+tree(data.root);for(const id of ['viewport','guides','textures'])document.getElementById(id).onchange=render;
+document.getElementById('reset-visibility').onclick=()=>{visibilityOverrides.clear();render()};
+document.getElementById('edit-color').oninput=event=>{if(selected)setTint(selected,event.target.value)};
+document.getElementById('edit-text').oninput=event=>{if(selected)setText(selected,event.target.value)};
+document.getElementById('edit-opacity').oninput=event=>{if(selected)setOpacity(selected,event.target.value)};
+document.getElementById('reset-widget').onclick=()=>{adjustments.delete(selected);document.getElementById('review-status').textContent='';render()};
+document.getElementById('reset-review').onclick=()=>{adjustments.clear();document.getElementById('review-status').textContent='';render()};
+document.getElementById('copy-review').onclick=async()=>{const output=document.getElementById('review-output'),status=document.getElementById('review-status');
+ try{await navigator.clipboard.writeText(output.value);status.textContent='Review notes copied. Paste them into the agent chat.'}
+ catch{output.focus();output.select();status.textContent='Clipboard unavailable. Notes selected: press Ctrl+C to copy.'}};
+stage.addEventListener('pointermove',moveDrag);stage.addEventListener('pointerup',event=>endDrag(event));stage.addEventListener('pointercancel',event=>endDrag(event,true));
+stage.addEventListener('lostpointercapture',event=>endDrag(event,true));
+document.addEventListener('keydown',event=>{if(event.key==='Escape')endDrag(null,true)});
+document.getElementById('clear').onclick=()=>{selected=null;render()};render();
+</script></html>

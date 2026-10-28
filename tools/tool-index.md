@@ -19,3 +19,4 @@ rules remain in the [repository index](../AGENTS.md).
 | Report tool use in a coding handoff | [Tool use and reporting](tool-use-and-reporting.md) |
 | Measure explicitly requested agent work | [Agent work measurement](agent-work-measurement.md) |
 | Experiment with declarative Blueprint text or render its graph | [Blueprint text prototype](blueprint-text-prototype.md) |
+| Preview and annotate an exported HUD widget layout | [HUD preview](blueprint-text-prototype.md#hud-widget-preview) |

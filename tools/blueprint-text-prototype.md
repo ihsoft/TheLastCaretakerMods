@@ -376,6 +376,69 @@ then `python -B tools/BlueprintTextPrototype/function_labels.py <export.json>
 command launches Unreal; the second validates and deterministically publishes
 the snapshot. Normal rendering reads the snapshot locally.
 
+## HUD widget preview
+
+[Render-WidgetPreview.ps1](BlueprintTextPrototype/Render-WidgetPreview.ps1) builds
+a standalone HTML preview from an existing widget-tree export and a PNG resource
+bundle. It requires Python 3.9+ and does not launch Unreal, modify source assets,
+or import review changes. First use the [widget export](#widget-trees-interfaces-and-resources)
+command with `-PreviewResources` to produce the compact source and images in one
+headless Unreal invocation; rendering the resulting HTML is entirely offline.
+
+```powershell
+& ./tools/BlueprintTextPrototype/Render-WidgetPreview.ps1 `
+  -InputPath ./Tmp/BlueprintTextPrototype/HUD.json `
+  -OutputPath ./Tmp/BlueprintTextPrototype/HUD.html
+```
+
+The default resource manifest is `HUD.resources/manifest.json` next to `HUD.json`.
+Use `-ResourcesPath <manifest.json>` to override it and `-PythonPath <python.exe>`
+to select an interpreter. The result reports the HTML path, widget/texture counts
+and warnings. The HTML embeds its data and images; it needs no server or network.
+After editor changes, regenerate the export and resource bundle, rebuild the HTML,
+and reload it. The viewer does not watch assets or merge concurrent changes.
+
+The exported tree's `RootWidget`, panel `Slots` and slot `Content` references
+define the hierarchy. Object IDs retain the Blueprint name, for example
+`HUD:WidgetTree.Root`; references can also use their full Unreal object paths.
+Graphs and animations are not needed for layout rendering.
+
+Use the resource manifest produced by the exporter for the same `asset`.
+An empty texture map is valid. Missing referenced images and unsupported widgets
+produce placeholders and warnings. Invalid references, cycles, duplicate object
+IDs, a mismatched asset, invalid PNG dimensions or paths outside the resource
+bundle fail rendering. Correct the reported input or regenerate its export before
+retrying; do not substitute an unrelated resource bundle.
+
+In the viewer:
+
+- Select a widget in the hierarchy or canvas. Hierarchy checkboxes show/hide it;
+  hiding a parent preserves its children's individual choices. Selection does
+  not reveal hidden widgets.
+- Adjust image/text tint, widget opacity and sample text in the inspector.
+  Multiline samples update approximate automatic sizing. Drag an element to
+  move it; the gold corner handle moves the selected container and its children.
+  Escape cancels a drag. Reset controls discard one widget's or all adjustments.
+- **Copy review notes** copies widget IDs, original/requested values and movement
+  deltas for the agent. If clipboard access is unavailable, the notes are selected
+  for Ctrl+C. Tint values are linear RGBA converted from the browser's sRGB picker.
+  Movement is recorded in preview layout units with its viewport and source slot;
+  the agent must adapt it to the actual Unreal layout. Text samples are explicitly
+  for layout review, not requests to replace dynamic text or bindings. Visibility
+  checkboxes are viewing aids and are excluded from review notes.
+
+Adjustments live only in the open page and disappear on reload. No modified asset
+or compact source is saved. The review notes are a handoff for the agent, not an
+automatically applicable patch.
+
+The preview approximates CanvasPanel anchors/offsets/alignment, horizontal and
+vertical boxes, InvalidationBox, ScaleBox, TextBlock, Image and RadialSlider.
+Images use exported UV regions and tint. Font metrics, automatic sizing, box fill,
+ScaleBox and radial rendering are approximate. Custom widgets are not expanded;
+materials, transforms, non-default clipping, DPI rules, Blueprint bindings and
+animations are not executed. This is a layout review aid, not a runtime HUD render
+or proof of arbitrary widget support.
+
 ## Checks
 
 Offline renderer checks: `python -B tools/BlueprintTextPrototype/test_render_graph.py`.
@@ -383,6 +446,10 @@ Review overlay checks: `python -B tools/BlueprintTextPrototype/test_review_graph
 Details comparison checks: `python -B tools/BlueprintTextPrototype/test_review_details.py`.
 Codec checks: `python -B tools/BlueprintTextPrototype/test_asset_text_codec.py`.
 Label checks: `python -B tools/BlueprintTextPrototype/test_function_labels.py`.
+HUD input/resource checks: `python -B tools/BlueprintTextPrototype/test_render_widget.py`.
+HUD interaction checks: `node tools/BlueprintTextPrototype/test_widget_viewer.js`
+(synthetic DOM checks for visibility, tint/opacity/text, dragging, review copying
+and source isolation; no Unreal or browser is launched).
 With Node.js available, run `node tools/BlueprintTextPrototype/test_graph_interactions.js <division.html>`
 on HTML rendered from the division example to check selection, details, copying and viewer controls
 with a DOM stand-in (not a browser UI test).
