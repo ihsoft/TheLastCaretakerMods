@@ -12,6 +12,7 @@ import re
 import textwrap
 from collections import defaultdict
 from pathlib import Path
+from function_labels import lookup as lookup_function_label
 
 
 def escape(value):
@@ -19,8 +20,8 @@ def escape(value):
 
 
 def load_graph(document, selection=None):
-    if document.get("schema") != 1:
-        raise ValueError("Expected compact schema 1.")
+    if document.get("schema") not in (1, 2):
+        raise ValueError("Expected compact schema 1 or 2.")
     if "graphs" in document:
         graphs = [g for g in document["graphs"] if not selection or g["name"] == selection]
         if len(graphs) != 1:
@@ -39,6 +40,8 @@ def load_graph(document, selection=None):
     ids = [node["id"] for node in nodes]
     if any(not isinstance(i, str) or not i for i in ids) or len(set(ids)) != len(ids):
         raise ValueError("Node IDs must be nonempty unique strings.")
+    by_id = {node['id']: node for node in nodes}
+    templates = document.get('pinTemplates', {})
     edges = []
     for link in body["links"]:
         endpoints = []
@@ -48,9 +51,14 @@ def load_graph(document, selection=None):
                 raise ValueError(f"Unresolved {key} endpoint: {link[key]!r}")
             endpoints.append((node_id, pin))
         (source, output), (target, input_pin) = endpoints
+        output_type = pin_category(by_id[source], output if output.startswith('out:') else 'out:' + output, templates)
+        input_type = pin_category(by_id[target], input_pin if input_pin.startswith('in:') else 'in:' + input_pin, templates)
         output, input_pin = output.removeprefix("out:"), input_pin.removeprefix("in:")
-        # Known execution aliases only. Everything else is explicitly data/other.
-        execution = input_pin in ("exec", "execute") or bool(re.fullmatch(r"then(?:_?\d+)?|else", output))
+        # Native pin types take precedence; schema 1 falls back to standard aliases.
+        if output_type or input_type:
+            execution = output_type == 'exec' or input_type == 'exec'
+        else:
+            execution = input_pin in ("exec", "execute") or bool(re.fullmatch(r"then(?:_?\d+)?|else", output))
         edges.append((source, output, target, input_pin, execution))
     owner = document.get("asset", document.get("owner", "Blueprint"))
     return sorted(nodes, key=lambda n: n["id"]), sorted(edges), str(owner), str(name)
@@ -98,11 +106,241 @@ def layers(nodes, edges):
     return {node: rank[membership[node]] for node in adjacent}
 
 
-def node_lines(node, connected_inputs, hidden_inputs=()):
+def native_string(value):
+    return json.loads(value) if value.startswith('"') else value
+
+
+def pin_category(node, alias, templates):
+    pin = node.get('pins', {}).get(alias, {})
+    return native_string(templates.get(pin.get('type'), {}).get('PinType.PinCategory', '""'))
+
+
+def node_fill(node, templates, execution_nodes):
+    kind = node.get('kind', 'unknown')
+    if kind in ('event', 'customEvent', 'FunctionEntry'):
+        return '#dce9fc'
+    if (any(pin_category(node, alias, templates) == 'exec' for alias in node.get('pins', {}))
+            or node['id'] in execution_nodes
+            or kind in ('setVariable', 'variableSet', 'branch', 'sequence', 'FunctionResult')):
+        return '#f7e9d7'
+    return '#e8edf4'
+
+
+def readable_name(value):
+    value = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', value)
+    return re.sub(r'([A-Z])([A-Z][a-z])', r'\1 \2', value).replace('_', ' ')
+
+
+def object_label(value):
+    return native_string(value).rstrip("'").rsplit('.', 1)[-1]
+
+
+def member_name(node, field="FunctionReference"):
+    match = re.search(r'MemberName="([^"]+)"', node.get("properties", {}).get(field, ""))
+    return match.group(1) if match else ""
+
+
+def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data'):
+    """Contract linear data or execution edges; retain original nodes and boundaries."""
+    by_id = {n['id']: n for n in nodes}
+    incoming, outgoing = defaultdict(list), defaultdict(list)
+    for edge in original_edges:
+        outgoing[edge[0]].append(edge)
+        incoming[edge[2]].append(edge)
+
+    def eligible(node):
+        if mode == 'action':
+            if node.get('kind') not in ('call', 'setVariable', 'variableSet', 'AddDelegate', 'RemoveDelegate', 'ClearDelegate', 'CallDelegate'):
+                return False
+            execution = {alias for alias in node.get('pins', {}) if pin_category(node, alias, templates) == 'exec'}
+            # Require a declared straight-through signature, not merely one wired arm.
+            return execution == {'in:exec', 'out:then'} and len([e for e in incoming[node['id']] if e[4]]) <= 1
+        if node.get('kind') in ('getVariable', 'variableGet'):
+            return not any(e[4] for e in incoming[node['id']] + outgoing[node['id']])
+        if node.get('kind') != 'call' or node.get('properties', {}).get('bDefaultsToPureFunc') != 'True':
+            return False
+        categories = [pin_category(node, p, templates) for p in node.get('pins', {})]
+        return bool(categories) and all(c and c != 'exec' for c in categories)
+
+    successor, predecessor = {}, {}
+    for node in nodes:
+        outputs = [e for e in outgoing[node['id']] if e[4]] if mode == 'action' else outgoing[node['id']]
+        if not eligible(node) or len(outputs) != 1:
+            continue
+        edge = outputs[0]
+        target = by_id.get(edge[2])
+        inputs = [e for e in incoming[edge[2]] if e[4]] if mode == 'action' else incoming[edge[2]]
+        if edge[4] == (mode == 'action') and target and eligible(target) and len(inputs) == 1:
+            successor[node['id']] = target['id']
+            predecessor[target['id']] = node['id']
+    removed, replacements, remap = set(), {}, {}
+    for start in nodes:
+        if start['id'] in predecessor:  # Cycles have no root, so remain explicit.
+            continue
+        chain = [start]
+        while chain[-1]['id'] in successor:
+            chain.append(by_id[successor[chain[-1]['id']]])
+        if len(chain) < 2:
+            continue
+        last = chain[-1]['id']
+        ids = {n['id'] for n in chain}
+        links = [e for e in original_edges if e[0] in ids and e[2] in ids]
+        steps = [node_lines(n, {e[3] for e in incoming[n['id']]}, pin_templates=templates, parent=parent)
+                 for n in chain]
+        if mode == 'action':
+            steps = [[line for line in step if line != 'No data outputs'] for step in steps]
+        replacement = dict(chain[-1], _foldedNodes=chain, _foldedLinks=links, _foldedSteps=steps, _chainKind=mode)
+        if mode == 'action':
+            step_by_id = {n['id']: i for i, n in enumerate(chain)}
+            for source, output, target, input_pin, execution in links:
+                if not execution:
+                    step = steps[step_by_id[target]]
+                    index = next((i for i, line in enumerate(step) if line.startswith(('Returns:', 'Output '))), len(step))
+                    step.insert(index, f'Input: {input_pin} ← Step {step_by_id[source]+1}: {output}')
+        variable = start.get('variable') or member_name(start, 'VariableReference')
+        if (mode == 'data' and start.get('kind') in ('getVariable', 'variableGet') and not incoming[start['id']] and variable
+                and all(member_name(n) == 'Not_PreBool' for n in chain[1:])
+                and all(e[3] not in ('target', 'self') for e in links)
+                and all(len([p for p in n.get('pins', {}) if p.startswith('in:') and p != 'in:target']) == 1 for n in chain[1:])):
+            expression = variable
+            for _ in chain[1:]:
+                expression = 'NOT (' + expression + ')'
+            replacement['_expression'] = expression
+        replacements[last] = replacement
+        removed.update(ids - {last})
+        for i, n in enumerate(chain):
+            remap[n['id']] = (last, i + 1)
+    result_edges = []
+    for source, output, target, input_pin, execution in edges:
+        new_source, source_step = remap.get(source, (source, 0))
+        new_target, step = remap.get(target, (target, 0))
+        if new_source == new_target and source != target:
+            continue
+        if mode == 'action' and source in remap and not execution:
+            output = f'Step {source_step}: {output}'
+        if mode == 'action' and target in remap and not execution:
+            input_pin = f'Step {step}: {input_pin}'
+        elif target != new_target:
+            input_pin = f'Step {step}: {input_pin}'
+        result_edges.append((new_source, output, new_target, input_pin, execution))
+    # Tooltip includes exact pre-fold boundary endpoints as well as internal links.
+    for last, node in replacements.items():
+        ids = {n['id'] for n in node['_foldedNodes']}
+        node['_boundaryLinks'] = [e for e in original_edges if (e[0] in ids) != (e[2] in ids)]
+    return ([replacements.get(n['id'], n) for n in nodes if n['id'] not in removed],
+            result_edges, len(removed))
+
+
+def fold_data_chains(nodes, edges, original_edges, templates, parent=None):
+    return fold_chains(nodes, edges, original_edges, templates, parent, 'data')
+
+
+def pin_type_label(metadata):
+    category = native_string(metadata.get("PinType.PinCategory", '"unknown"'))
+    subtype = native_string(metadata.get("PinType.PinSubCategory", '""'))
+    obj = native_string(metadata.get("PinType.PinSubCategoryObject", '""'))
+    object_name = obj.rstrip("'").rsplit('.', 1)[-1] if obj and obj != "None" else ""
+    if category == "real":
+        label = subtype or "real"
+    elif category in ("object", "softobject"):
+        label = (object_name or "Object") + (" soft reference" if category == "softobject" else " reference")
+    elif category in ("class", "softclass"):
+        label = category + "<" + (object_name or "Object") + ">"
+    elif object_name and category in ("struct", "enum", "byte"):
+        label = object_name
+    else:
+        label = category
+    container = native_string(metadata.get("PinType.ContainerType", "None"))
+    if container in ("Array", "Set"):
+        label = container.lower() + "<" + label + ">"
+    elif container == "Map":
+        # Map values use FEdGraphTerminalType rather than FEdGraphPinType.
+        terminal = metadata.get("PinType.PinValueType", "")
+        value = {"PinType." + name: raw for name, raw in re.findall(
+            r'Terminal(Category|SubCategory|SubCategoryObject)=("(?:\\.|[^"\\])*"|[^,)]+)', terminal)}
+        value = {key.replace("PinType.", "PinType.Pin", 1): raw for key, raw in value.items()}
+        label = "map<" + label + ", " + pin_type_label(value) + ">"
+    return label
+
+
+def output_lines(node, pin_templates):
+    if "pins" not in node:
+        return []  # Schema 1 has no complete signature; do not infer a return type.
+    lines = []
+    for alias, pin in node["pins"].items():
+        if not alias.startswith("out:"):
+            continue
+        metadata = pin_templates.get(pin.get("type"), {})
+        if native_string(metadata.get("PinType.PinCategory", '""')) == "exec":
+            continue
+        name = pin.get("name", alias[4:])
+        prefix = "Returns" if name == "ReturnValue" or alias == "out:result" else "Output " + name
+        lines.append(prefix + ": " + pin_type_label(metadata))
+    return lines or ["No data outputs"]
+
+
+def edge_output_type(node, output, pin_templates):
+    """Resolve the producing pin, including an earlier step of an action chain."""
+    if '_foldedNodes' in node:
+        match = re.fullmatch(r'Step (\d+): (.+)', output)
+        if match:
+            index = int(match.group(1)) - 1
+            if not 0 <= index < len(node['_foldedNodes']):
+                return None
+            node, output = node['_foldedNodes'][index], match.group(2)
+    pin = node.get('pins', {}).get('out:' + output, {})
+    metadata = pin_templates.get(pin.get('type'), {})
+    if not metadata.get('PinType.PinCategory'):
+        return None  # Unknown legacy signature: do not infer a type from the consumer.
+    return pin_type_label(metadata)
+
+
+def unconnected_outputs(node, connected, pin_templates):
+    """Declared visible pins only; count original links, including folded/hidden ones."""
+    if 'pins' in node:
+        outputs = [alias[4:] for alias, pin in node['pins'].items() if alias.startswith('out:')
+                   and pin_templates.get(pin.get('type'), {}).get('bHidden') != 'True']
+        execution_outputs = [alias[4:] for alias in node['pins'] if alias.startswith('out:')
+                             and pin_category(node, alias, pin_templates) == 'exec']
+    elif node.get('kind') == 'sequence':
+        outputs = [f'then{i}' for i in range(node.get('outputs', 2))]
+        execution_outputs = outputs
+    else:
+        outputs = []  # No complete signature in older call declarations: do not guess.
+        execution_outputs = []
+    # An unwired sole execution output simply ends this path; retain data and branch warnings.
+    terminal = set(execution_outputs) if len(execution_outputs) == 1 else set()
+    return [name for name in outputs if name not in connected and name not in terminal]
+
+
+def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, parent=None,
+               step_inputs=(), step_outputs=()):
+    if '_expression' in node and not any(step_outputs):
+        lines = [node['_expression'], f"Expression · {len(node['_foldedNodes'])} nodes (Details / Full)"]
+        lines.extend(output_lines(node, pin_templates or {}))
+        return [part for i, line in enumerate(lines) for part in (textwrap.wrap(line, 25 if i == 0 else 42) or [''])]
+    if '_foldedSteps' in node:
+        label = 'Action chain' if node.get('_chainKind') == 'action' else 'Data chain'
+        lines = [f"{label} · {len(node['_foldedNodes'])} nodes"]
+        for i, step in enumerate(node['_foldedSteps'], 1):
+            step = list(step)
+            if i <= len(step_inputs):
+                index = next((j for j, line in enumerate(step[1:], 1)
+                              if line.startswith(('Input:', 'Returns:', 'Output ', 'No data outputs'))), len(step))
+                step[index:index] = ['Input: ' + hint for hint in step_inputs[i-1]]
+            lines.extend([f'{i}. {step[0]}'] + step[1:])
+            if i <= len(step_outputs):
+                lines.extend(step_outputs[i-1])
+        return [part for i, line in enumerate(lines) for part in (textwrap.wrap(line, 25 if i == 0 else 42) or [''])]
     kind = node.get("kind", "unknown")
     reference = node.get("operation", node.get("event", node.get("ref", kind)))
+    properties = node.get("properties", {})
+    member = re.search(r'MemberName="([^"]+)"', properties.get("FunctionReference", properties.get("VariableReference", properties.get("EventReference", ""))))
+    if member:
+        reference = member.group(1)
     short = reference.rsplit("::", 1)[-1].rsplit(".", 1)[-1]
     variable = node.get("variable", short)
+    details = []
     if kind in ("setVariable", "variableSet"):
         title = "Set " + variable
     elif kind in ("getVariable", "variableGet"):
@@ -110,26 +348,71 @@ def node_lines(node, connected_inputs, hidden_inputs=()):
     elif kind in ("event", "customEvent"):
         title = "Event " + short.removeprefix("Receive")
     elif kind == "sequence":
-        title = f"Sequence · {node.get('outputs', 2)} outputs"
+        outputs = node.get('outputs', len([p for p in node.get('pins', {}) if p.startswith('out:then')]) or 2)
+        title = f"Sequence · {outputs} outputs"
     elif kind == "branch":
         title = "Branch"
+    elif kind in ("cast", "DynamicCast"):
+        title = "Cast to " + object_label(properties.get("TargetType", '"unknown type"'))
+        details.append("Check type; return typed reference")
+    elif kind == "CreateDelegate":
+        title = "Create callback"
+        details.append("Function: " + native_string(properties.get("SelectedFunctionName", '"unknown"')))
+        details.append("Creates a reference; does not call it")
+    elif kind in ("AddDelegate", "RemoveDelegate", "ClearDelegate", "CallDelegate"):
+        title = {"AddDelegate": "Bind event handler", "RemoveDelegate": "Unbind event handler",
+                 "ClearDelegate": "Unbind all event handlers", "CallDelegate": "Broadcast event"}[kind]
+        delegate = re.search(r'MemberName="([^"]+)"', properties.get("DelegateReference", ""))
+        details.append("Event: " + (delegate.group(1) if delegate else "unknown"))
+    elif kind == "MacroInstance":
+        macro = re.search(r'MacroGraph="([^"]+)"', properties.get("MacroGraphReference", ""))
+        title = "Macro: " + (readable_name(macro.group(1).rstrip("'").rsplit(':', 1)[-1]) if macro else "unknown")
+    elif kind in ("FunctionEntry", "FunctionResult"):
+        title = "Function entry" if kind == "FunctionEntry" else "Return from function"
+        if member:
+            details.append("Function: " + short)
     else:
-        title = short
-    lines = [title, node["id"]]
-    lines.extend(hidden_inputs)
+        title = readable_name(short)
+    if kind == "call":
+        label = lookup_function_label(node, pin_templates, parent)
+        title = label['title'] if label else ("NOT" if short == "Not_PreBool" else readable_name(title))
+    # All IDs remain in the tooltip and link identity, not the visible node label.
+    lines = [title] + details
+    lines.extend('Input: ' + hint for hint in hidden_inputs)
     values = node.get("arguments", node.get("defaults", {}))
     for key, value in sorted(values.items()):
-        if key.removeprefix("in:") in connected_inputs:
+        metadata = (pin_templates or {}).get(node.get("pins", {}).get(key, {}).get("type"), {})
+        if key.startswith("out:") or key.removeprefix("in:") in connected_inputs or metadata.get("bDefaultValueIsIgnored") == "True":
             continue
-        lines.append(f"{key.removeprefix('in:')} = {json.dumps(value, ensure_ascii=False)}")
-    if node.get("enabled") is False:
+        lines.append(f"Input: {key.removeprefix('in:')} = {json.dumps(value, ensure_ascii=False)}")
+    if kind == "call":
+        lines.extend(output_lines(node, pin_templates or {}))
+    if is_disabled(node):
         lines.append("DISABLED")
     if node.get("developmentOnly"):
         lines.append("DEVELOPMENT ONLY")
     if node.get("comment"):
         lines.append("Comment: " + node["comment"])
     return [part for row, line in enumerate(lines)
-            for part in (textwrap.wrap(line, 29 if row == 0 else 42) or [""])]
+            for part in (textwrap.wrap(line, 25 if row == 0 else 42) or [""])]
+
+
+def is_disabled(node):
+    return node.get("enabled") is False or node.get("properties", {}).get("EnabledState") == "Disabled"
+
+
+def variable_label(variable):
+    if "name" in variable:
+        return variable["name"] + ": " + variable["type"]
+    name = variable.get("VarName", '"?"')
+    name = json.loads(name) if name.startswith('"') else name
+    native_type = variable.get("VarType", "")
+    category = re.search(r'PinCategory="([^"]+)"', native_type)
+    subtype = re.search(r'PinSubCategory="([^"]+)"', native_type)
+    kind = category.group(1) if category else "?"
+    if kind == "real" and subtype:
+        kind = subtype.group(1)
+    return name + ": " + kind
 
 
 def render(document, selection=None, view="simplified", direction="TB"):
@@ -139,25 +422,42 @@ def render(document, selection=None, view="simplified", direction="TB"):
     hidden = {}
     if view == "simplified":
         for node in all_nodes:
-            if node.get("enabled") is False:
-                hidden[node["id"]] = "disabled " + node["id"]
+            if is_disabled(node):
+                hidden[node["id"]] = "disabled node"
             elif node.get("kind") == "self" or node.get("ref") == "/Script/BlueprintGraph.K2Node_Self":
                 hidden[node["id"]] = "Self"
     nodes = [node for node in all_nodes if node["id"] not in hidden]
     edges = [edge for edge in all_edges if edge[0] not in hidden and edge[2] not in hidden]
+    hidden_links, folded = len(all_edges) - len(edges), 0
+    if view == "simplified":
+        nodes, edges, folded = fold_data_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"))
+        nodes, edges, actions_folded = fold_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"), 'action')
+        folded += actions_folded
     rank = layers(nodes, edges)
     groups = defaultdict(list)
     for node in nodes:
         groups[rank[node["id"]]].append(node)
     boxes, lines_by_id = {}, {}
-    connected, hidden_inputs = defaultdict(set), defaultdict(list)
-    for source, _, target, pin, _ in all_edges:
+    connected, connected_outputs, hidden_inputs = defaultdict(set), defaultdict(set), defaultdict(list)
+    for source, output, target, pin, _ in all_edges:
         connected[target].add(pin)
+        connected_outputs[source].add(output)
         if source in hidden and target not in hidden:
             hidden_inputs[target].append(f"{pin} ← {hidden[source]} (hidden)")
     for node in nodes:
         node_id = node["id"]
-        lines_by_id[node_id] = node_lines(node, connected[node_id], hidden_inputs[node_id])
+        parts = node.get('_foldedNodes', [node])
+        notes = [[f'○ {output} — unconnected' for output in
+                  unconnected_outputs(part, connected_outputs[part['id']], document.get('pinTemplates', {}))]
+                 for part in parts]
+        if '_foldedNodes' in node:
+            lines_by_id[node_id] = node_lines(node, connected[node_id], pin_templates=document.get('pinTemplates', {}),
+                                             parent=document.get('parent'), step_inputs=[hidden_inputs[p['id']] for p in parts],
+                                             step_outputs=notes)
+        else:
+            lines_by_id[node_id] = node_lines(node, connected[node_id], hidden_inputs[node_id], document.get("pinTemplates", {}), document.get("parent"))
+            for note in notes[0]:
+                lines_by_id[node_id].extend(textwrap.wrap(note, 42))
     rows, row_bottom = {}, {}
     y, row = 210, 0
     max_columns = min(3, max((len(m) for m in groups.values()), default=1))
@@ -190,26 +490,34 @@ def render(document, selection=None, view="simplified", direction="TB"):
     title = owner.rsplit("/", 1)[-1] + " / " + graph
     marker_prefix = view + direction
     pieces = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="{escape(title)}">',
-              '<style>text{font-family:Segoe UI,Arial,sans-serif;fill:#20334b} .label{font-size:11px;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}</style>',
+              '<style>text{font-family:Segoe UI,Arial,sans-serif;fill:#20334b} .label{font-size:11px;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}.graph-edge:hover>.edge-line{stroke-width:3.5}.graph-edge:hover{opacity:1}</style>',
               '<rect width="100%" height="100%" fill="#f8fafc"/>']
     for name, color in (("exec", "#b36b13"), ("data", "#317b9b")):
         pieces.append(f'<defs><marker id="{marker_prefix}{name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{color}"/></marker></defs>')
     pieces.append(f'<text x="40" y="34" font-size="22" font-weight="600">{escape(title)}</text>')
     pieces.append(f'<text x="40" y="59" font-size="12">{view} · {direction} · {len(nodes)} / {len(all_nodes)} nodes · {len(edges)} / {len(all_edges)} links · source unchanged</text>')
-    pieces.append('<text x="40" y="82" font-size="12">Solid amber: execution (standard pin names). Dashed blue: data / other links.</text>')
-    pieces.append('<text x="40" y="103" font-size="12">Structural view only. Timers / indirect calls are not inferred. Hover for exact details.</text>')
-    pieces.append('<text x="40" y="124" font-size="12">Defaults of connected inputs are omitted; hover shows the original node fields.</text>')
-    pieces.append(f'<text x="40" y="145" font-size="12">Hidden: {len(hidden)} disabled / Self nodes, {len(all_edges) - len(edges)} incident links. No bypass links are invented.</text>')
+    pieces.append('<text x="40" y="82" font-size="12">Nodes: blue entry, amber execution, grey data/other. Links: solid amber execution, dashed blue data/other.</text>')
+    pieces.append('<text x="40" y="103" font-size="12">Structural view only. Timers / indirect calls are not inferred. Details button: node data. Hover arrows: pin details.</text>')
+    pieces.append('<text x="40" y="124" font-size="12">Only unconnected input defaults are shown. Output defaults are not computed results; Details retains raw fields.</text>')
+    pieces.append(f'<text x="40" y="145" font-size="12">Hidden: {len(hidden)} disabled / Self nodes, {hidden_links} incident links. Folded: {folded} nodes into chains; see Details / Full.</text>')
     declarations = document.get("variables", [])
     if declarations:
-        pieces.append(f'<text x="40" y="166" font-size="12">{escape("Variables: " + ", ".join(v["name"] + ": " + v["type"] for v in declarations))}</text>')
+        declaration_text = "Variables: " + ", ".join(variable_label(v) for v in declarations)
+        visible_text = textwrap.shorten(declaration_text, width=max(30, int((width - 80) / 7)), placeholder=" …")
+        pieces.append(f'<text x="40" y="166" font-size="12"><title>{escape(declaration_text)}</title>{escape(visible_text)}</text>')
     incoming, outgoing = defaultdict(list), defaultdict(list)
     for i, edge in enumerate(edges):
         outgoing[edge[0]].append(i)
         incoming[edge[2]].append(i)
-    # Match endpoint order to the visible neighbors (e.g. both branch arms).
-    for indices in outgoing.values():
-        indices.sort(key=lambda i: (boxes[edges[i][2]][0 if direction == "TB" else 1], i))
+    nodes_by_id = {node['id']: node for node in nodes}
+    node_kinds = {node['id']: node.get('kind') for node in nodes}
+    # Branch choices have stable ports: then left / else right in TB (top / bottom in LR).
+    for source, indices in outgoing.items():
+        choices = {edges[i][1] for i in indices if edges[i][4]}
+        if node_kinds[source] == 'branch' and {'then', 'else'} <= choices:
+            indices.sort(key=lambda i: ({'then': 0, 'else': 1}.get(edges[i][1], 2), i))
+        else:
+            indices.sort(key=lambda i: (boxes[edges[i][2]][0 if direction == "TB" else 1], i))
     for indices in incoming.values():
         indices.sort(key=lambda i: (boxes[edges[i][0]][0 if direction == "TB" else 1], i))
     routed_index = 0
@@ -246,20 +554,42 @@ def render(document, selection=None, view="simplified", direction="TB"):
             routed_index += 1
             path = f'M{sx},{sy} L{sx+20},{sy} L{sx+20},{lane} L{ex-20},{lane} L{ex-20},{ey} L{ex},{ey}'
             lx, ly = (sx + ex) / 2, lane - 5
+        label_text, anchor = output + ' → ' + ('' if execution else 'Input: ') + input_pin, 'middle'
+        branch_choice = execution and node_kinds[source] == 'branch' and output in ('then', 'else')
+        if branch_choice:
+            # Branch choice belongs at the originating pin, not on a distant routing lane.
+            label_text, transform = output, ''
+            if direction == 'TB':
+                lx, ly = sx, sy + 13
+            else:
+                lx, ly, anchor = sx + 10, sy - 7, 'start'
         style, color = ("exec", "#b36b13") if execution else ("data", "#317b9b")
         dash = '' if execution else ' stroke-dasharray="6 4"'
-        pieces.append(f'<g class="graph-edge" data-source="{escape(source)}" data-target="{escape(target)}"><title>{escape(source+"."+output+" → "+target+"."+input_pin)}</title><path d="{path}" fill="none" stroke="{color}" stroke-width="2"{dash} marker-end="url(#{marker_prefix}{style})"/>')
-        pieces.append(f'<text class="label" x="{lx}" y="{ly}" text-anchor="middle"{transform}>{escape(output+" → "+input_pin)}</text></g>')
+        tooltip = source + '.' + output + ' → ' + target + '.' + input_pin
+        if not execution:
+            output_type = edge_output_type(nodes_by_id[source], output, document.get('pinTemplates', {}))
+            typed_output = output + (f' ({output_type})' if output_type else '')
+            tooltip = f'Output: {typed_output}\nInput: {input_pin}\nFrom: {source}\nTo: {target}'
+        pieces.append(f'<g class="graph-edge" data-source="{escape(source)}" data-target="{escape(target)}"><title>{escape(tooltip)}</title><path class="edge-line" d="{path}" fill="none" stroke="{color}" stroke-width="2"{dash} marker-end="url(#{marker_prefix}{style})"/>')
+        # A solid transparent hit area covers gaps in dashed lines and stays usable at any zoom.
+        pieces.append(f'<path class="edge-hit" d="{path}" fill="none" stroke="transparent" stroke-width="14" vector-effect="non-scaling-stroke" pointer-events="stroke"/>')
+        if branch_choice:
+            pieces.append(f'<text class="label" x="{lx}" y="{ly}" text-anchor="{anchor}"{transform}>{escape(label_text)}</text>')
+        pieces.append('</g>')
+    execution_nodes = {endpoint for source, _, target, _, execution in all_edges if execution for endpoint in (source, target)}
     for node in nodes:
         x, y, w, h = boxes[node["id"]]
-        kind = node.get("kind", "unknown")
-        color = "#dce9fc" if kind in ("event", "customEvent") else "#f7e9d7" if kind in ("setVariable", "variableSet", "branch") else "#e0efea" if kind == "sequence" else "#e8edf4"
+        color = node_fill(node, document.get('pinTemplates', {}), execution_nodes)
         opacity = ' opacity="0.55"' if node.get("enabled") is False else ''
-        pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}"{opacity}><title>{escape(json.dumps(node, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="#8b9bae" stroke-width="1.5"/>')
+        ids = [n['id'] for n in node.get('_foldedNodes', [node])]
+        pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}" data-node-ids="{escape(json.dumps(ids))}"{opacity}><title>{escape(json.dumps(node, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="#8b9bae" stroke-width="1.5"/>')
         for row, line in enumerate(lines_by_id[node["id"]]):
             size = 16 if row == 0 else 12
             weight = ' font-weight="600"' if row == 0 else ''
             pieces.append(f'<text x="{x+14}" y="{y+24+row*19}" font-size="{size}"{weight}>{escape(line)}</text>')
+        copy_label = 'Copy node ID' if len(ids) == 1 else f'Copy all {len(ids)} node IDs'
+        pieces.append(f'<g class="copy-node-id" role="button" tabindex="0" aria-label="{copy_label}" transform="translate({x+w-27},{y+5})"><title>{copy_label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M6 6h9v11H6z M9 3h9v11" fill="none" stroke="#334155" stroke-width="1.5"/></g>')
+        pieces.append(f'<g class="node-info" role="button" tabindex="0" aria-label="Show node details" transform="translate({x+w-53},{y+5})"><title>Show node details</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><text x="11" y="16" text-anchor="middle" font-size="16" font-weight="600">i</text></g>')
         pieces.append('</g>')
     pieces.append('</svg>')
     return '\n'.join(pieces), title, len(nodes), len(edges)
@@ -288,46 +618,14 @@ def main():
                            ('' if (view, direction) == (args.view, args.direction) else ' hidden') +
                            '>' + result[0] + '</section>' for (view, direction), result in variants.items())
         page = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>''' + escape(title) + '''</title>
-<style>body{margin:0;background:#f8fafc;font:14px 'Segoe UI',sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr}nav{padding:10px 18px;background:#fff;border-bottom:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,select{padding:6px 10px}main{overflow:auto;min-height:0}svg{display:block}</style>
-<style>.graph-node{cursor:pointer}.graph-node:focus-visible{outline:none}.graph-node:focus-visible>rect{stroke:#1d4ed8;stroke-width:3}.muted{opacity:.16}.graph-node.selected,.graph-node.neighbor{opacity:1}.graph-node.selected>rect{stroke:#1d4ed8;stroke-width:4}.graph-node.neighbor>rect{stroke-width:2.5}.graph-edge.related>path{stroke-width:3.5}.hint{color:#52657a;font-size:12px}</style>
+<style>body{margin:0;background:#f8fafc;font:14px 'Segoe UI',sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr}nav{padding:10px 18px;background:#fff;border-bottom:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,select{padding:6px 10px}main{overflow:auto;min-height:0;position:relative}svg{display:block}</style>
+<style>.graph-node{cursor:pointer}.graph-node:focus-visible{outline:none}.graph-node:focus-visible>rect{stroke:#1d4ed8;stroke-width:3}.muted{opacity:.16}.graph-node.selected,.graph-node.neighbor{opacity:1}.graph-node.selected>rect{stroke:#1d4ed8;stroke-width:4}.graph-node.neighbor>rect{stroke-width:2.5}.graph-edge.related>.edge-line,.graph-edge.inspected>.edge-line{stroke-width:3.5}.graph-edge.inspected{opacity:1}.hint{color:#52657a;font-size:12px}.copy-node-id{cursor:copy}.node-info{cursor:pointer}.copy-node-id:hover>rect,.copy-node-id:focus>rect,.node-info:hover>rect,.node-info:focus>rect{fill:#dbeafe;stroke:#1d4ed8}.copy-node-id:focus,.node-info:focus{outline:none}#edge-tooltip{position:fixed;z-index:30;max-width:min(440px,calc(100vw - 24px));max-height:60vh;overflow:auto;padding:10px 12px;border:1px solid #94a3b8;border-radius:6px;background:#fff;box-shadow:0 4px 18px #20334b33;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.5 Consolas,monospace}#copy-status{font-size:12px;color:#17614b}#node-details{position:absolute;z-index:20;width:min(520px,calc(100vw - 24px));max-height:70vh;overflow:auto;background:#fff;border:1px solid #94a3b8;border-radius:8px;box-shadow:0 6px 28px #20334b44;user-select:text}#node-details[hidden]{display:none}.detail-toolbar{position:sticky;top:0;display:flex;gap:6px;background:#f1f5f9;padding:8px;border-bottom:1px solid #cbd5e1}#close-details{margin-left:auto}#detail-ids{padding:10px 12px 0;overflow-wrap:anywhere;font-weight:600}#detail-text{margin:0;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 Consolas,monospace;cursor:text}</style>
 <nav><label>View <select id="view" onchange="choose()"><option value="simplified">Simplified</option><option value="full">Full</option></select></label>
 <label>Direction <select id="direction" onchange="choose()"><option value="TB">Top to bottom</option><option value="LR">Left to right</option></select></label>
 <button onclick="zoom(.8)" aria-label="Zoom out">−</button><button onclick="zoom(1.25)" aria-label="Zoom in">+</button><button onclick="fit()">Fit width</button><button onclick="fit(true)">Fit graph</button>
-<span class="hint">Click a node to highlight its connections. Click again, click the background, or press Escape to clear.</span></nav><main>''' + sections + '''</main>
-<script>const box=document.querySelector('main'),view=document.getElementById('view'),direction=document.getElementById('direction');let svg,scale=1,selectedId=null;
-function show(){const v=svg.viewBox.baseVal;svg.style.width=v.width*scale+'px';svg.style.height=v.height*scale+'px'}
-function zoom(f){scale=Math.max(.05,Math.min(4,scale*f));show()}
-function fit(all=false){const v=svg.viewBox.baseVal;scale=Math.min(1,Math.max(1,box.clientWidth-20)/v.width,all?box.clientHeight/v.height:1);show()}
-function highlight(id){
-    selectedId=id;
-    const neighbors=new Set(id===null?[]:[id]);
-    svg.querySelectorAll('.graph-edge').forEach(edge=>{
-        const related=id!==null&&(edge.dataset.source===id||edge.dataset.target===id);
-        edge.classList.toggle('related',related);edge.classList.toggle('muted',id!==null&&!related);
-        if(related){neighbors.add(edge.dataset.source);neighbors.add(edge.dataset.target)}
-    });
-    svg.querySelectorAll('.graph-node').forEach(node=>{
-        const selected=node.dataset.nodeId===id,neighbor=!selected&&neighbors.has(node.dataset.nodeId);
-        node.classList.toggle('selected',selected);node.classList.toggle('neighbor',neighbor);
-        node.classList.toggle('muted',id!==null&&!neighbors.has(node.dataset.nodeId));
-        node.setAttribute('aria-pressed',String(selected));
-    });
-}
-function toggleNode(node){highlight(selectedId===node.dataset.nodeId?null:node.dataset.nodeId)}
-box.addEventListener('click',event=>{
-    const node=event.target.closest('.graph-node');
-    if(node&&svg.contains(node)){toggleNode(node)}else{highlight(null)}
-});
-document.addEventListener('keydown',event=>{
-    if(event.key==='Escape'){highlight(null);return}
-    const node=event.target.closest('.graph-node');
-    if(node&&svg.contains(node)&&(event.key==='Enter'||event.key===' ')){event.preventDefault();toggleNode(node)}
-});
-document.querySelectorAll('.graph-node').forEach(node=>{
-    node.setAttribute('tabindex','0');node.setAttribute('role','button');
-    node.setAttribute('aria-label','Highlight connections for '+node.dataset.nodeId);
-});
-function choose(){const id=view.value+'-'+direction.value;document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==id);svg=document.getElementById(id).querySelector('svg');highlight(null);box.scrollTop=0;box.scrollLeft=0;fit()}
+<span class="hint">Click node: highlight. Click arrow: details. Copy icon: node IDs. Info button: selectable details. Escape: clear.</span><span id="copy-status" role="status" aria-live="polite"></span></nav><main>''' + sections + '''
+<aside id="node-details" hidden aria-label="Node details"><div class="detail-toolbar"><button id="copy-detail-ids">Copy IDs</button><button id="copy-details">Copy contents</button><button id="close-details" aria-label="Close details">×</button></div><div id="detail-ids"></div><pre id="detail-text" tabindex="0"></pre></aside></main><div id="edge-tooltip" role="tooltip" hidden></div>
+<script>''' + (Path(__file__).with_name('graph_viewer.js').read_text(encoding='utf-8')) + '''
 ''' + f'view.value="{args.view}";direction.value="{args.direction}";' + '''choose();</script></html>'''
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(svg, encoding="utf-8")

@@ -6,6 +6,7 @@ failure handling.
 | Intent | Public entry point | Guide |
 | --- | --- | --- |
 | Import/export prototype Blueprint text or discover operations | `BlueprintTextPrototype/Invoke-BlueprintTextPrototype.ps1` | [Blueprint text prototype](blueprint-text-prototype.md) |
+| Export/rebuild a supported Actor Blueprint as schema-2 text, or export Engine UI labels | `BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1` | [Blueprint text prototype](blueprint-text-prototype.md#schema-2-existing-actor-blueprint-experiments) |
 | Render a compact Blueprint graph offline | `BlueprintTextPrototype/Render-BlueprintGraph.ps1` | [Blueprint text prototype](blueprint-text-prototype.md) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
 | Generate a settings header and INI | `New-VoyageModSettings.ps1` | [Mod setup](mod-setup.md) |
