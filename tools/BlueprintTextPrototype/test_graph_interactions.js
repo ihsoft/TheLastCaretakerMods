@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const page = fs.readFileSync(process.argv[2], 'utf8');
+let forbidGraphScan=false;
+let mutations=0;
 function element(dataset = {}) {
     const classes = new Set(), attributes = {};
     return {dataset, attributes, style: {}, handlers: {}, hovered:false,
@@ -11,9 +13,9 @@ function element(dataset = {}) {
         contains(node){return node===this}, matches(){return this.hovered},
         getBoundingClientRect(){return {left:50,right:380,top:100,bottom:220}},
         closest(){return null}, focus(){document.activeElement=this},
-        classList: {toggle(name, on) {if (on) classes.add(name); else classes.delete(name)},
+        classList: {toggle(name, on) {mutations++;if (on) classes.add(name); else classes.delete(name)},
                     contains(name) {return classes.has(name)}},
-        setAttribute(name, value) {attributes[name] = value}};
+        setAttribute(name, value) {mutations++;attributes[name] = value}};
 }
 function decode(text){return text.replace(/&quot;/g,'"').replace(/&#x27;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')}
 const sections = [...page.matchAll(/<section id="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g)].map(([, id, html]) => {
@@ -34,14 +36,18 @@ const sections = [...page.matchAll(/<section id="([^"]+)"[^>]*>([\s\S]*?)<\/sect
     });
     const svg = element();
     svg.viewBox = {baseVal: {width: 1400, height: 2200}};
-    svg.querySelectorAll = selector => selector === '.graph-node' ? nodes : edges;
+    svg.querySelectorAll = selector => {
+        assert.equal(forbidGraphScan,false,'Highlight must use the cached index, not scan SVG elements');
+        return selector === '.graph-node' ? nodes : edges;
+    };
     svg.contains = node => nodes.includes(node)||edges.includes(node);
     nodes.forEach(node => {node.closest = selector => selector==='.graph-node'?node:null});
     return {id, nodes, edges, svg, querySelector: () => svg};
 });
 assert.equal(sections.length, 4);
 const handlers = {}, view = {value: ''}, direction = {value: ''};
-const ui=Object.fromEntries(['nodes-per-row','detail-version','node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
+const ui=Object.fromEntries(['unconnected','nodes-per-row','detail-version','node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
+ui['unconnected'].checked=true;
 const edgeTip=ui['edge-tooltip'];edgeTip.hidden=true;edgeTip.offsetWidth=400;edgeTip.offsetHeight=120;
 const tip=ui['node-details'];tip.hidden=true;tip.offsetWidth=520;tip.offsetHeight=400;
 tip.contains=node=>Object.values(ui).includes(node);
@@ -64,6 +70,7 @@ const context = vm.createContext({document,window:{addEventListener(){}},innerWi
 vm.runInContext(page.match(/<script>([\s\S]*?)<\/script>/)[1], context);
 const background = {closest: () => null};
 function cleared(section) {
+    assert.equal(section.svg.classList.contains('has-selection'),false);
     for (const item of [...section.nodes, ...section.edges]) {
         for (const name of ['muted', 'selected', 'neighbor', 'related']) assert.equal(item.classList.contains(name), false);
     }
@@ -72,6 +79,12 @@ function cleared(section) {
 for (const section of sections) {
     [view.value, direction.value] = section.id.split('-');
     context.choose();
+    forbidGraphScan=true;
+    ui['unconnected'].checked=false;context.changeUnconnected();
+    assert.equal(section.svg.classList.contains('hide-unconnected'),true);
+    context.choose();assert.equal(section.svg.classList.contains('hide-unconnected'),true);
+    ui['unconnected'].checked=true;context.changeUnconnected();
+    assert.equal(section.svg.classList.contains('hide-unconnected'),false);
     assert.equal(ui['nodes-per-row'].disabled,direction.value!=='TB');
     cleared(section);
     const node = section.nodes.find(n => n.dataset.nodeId === 'sequence');
@@ -79,7 +92,18 @@ for (const section of sections) {
     handlers.click({target: node});
     assert.equal(node.classList.contains('selected'), true);
     assert.equal(node.attributes['aria-pressed'], 'true');
-    assert.equal(section.nodes.find(n => n.dataset.nodeId === 'divide').classList.contains('muted'), true);
+    const selectedWidth=section.svg.style.width;
+    box.scrollLeft=800;box.scrollTop=1000;
+    ui['unconnected'].checked=false;context.changeUnconnected();
+    assert.equal(box.scrollLeft,555,'Center selected node horizontally after reflow');
+    assert.equal(box.scrollTop,750,'Center selected node vertically after reflow');
+    assert.equal(section.svg.style.width,selectedWidth,'Retain zoom for selected node');
+    assert.equal(node.classList.contains('selected'),true);
+    ui['unconnected'].checked=true;context.changeUnconnected();
+    assert.equal(section.svg.classList.contains('has-selection'),true);
+    const unrelated=section.nodes.find(n => n.dataset.nodeId === 'divide');
+    assert.equal(unrelated.classList.contains('selected')||unrelated.classList.contains('neighbor'),false);
+    assert.match(page,/svg\.has-selection \.graph-node:not\(\.selected\):not\(\.neighbor\)/);
     for (const id of ['begin', 'set.result']) assert.equal(section.nodes.find(n => n.dataset.nodeId === id).classList.contains('neighbor'), true);
     assert.deepEqual(section.edges.filter(e => e.classList.contains('related')).map(e => [e.dataset.source, e.dataset.target]),
                      [['begin', 'sequence'], ['sequence', 'set.result']]);
@@ -100,8 +124,32 @@ for (const section of sections) {
     const width = parseFloat(section.svg.style.width);
     context.zoom(1.25); assert.ok(parseFloat(section.svg.style.width) > width);
     context.fit(true); assert.ok(parseFloat(section.svg.style.height) <= box.clientHeight);
+    forbidGraphScan=false;
 }
 console.log('Passed: incoming/outgoing links, immediate neighbors, all clear actions, keyboard, view reset, zoom/fit in all four variants (DOM stand-in).');
+// A large sparse graph must touch only the selected neighborhood after indexing.
+{
+    const nodes=Array.from({length:5000},(_,i)=>element({nodeId:String(i)}));
+    const edges=nodes.slice(1,-1).map((_,i)=>element({source:String(i),target:String(i+1)}));
+    edges.push(element({source:'20',target:'20'}),element({source:'20',target:'21'}));
+    const graph=element();let scans=0;
+    graph.querySelectorAll=selector=>{assert.equal(forbidGraphScan,false);scans++;return selector==='.graph-node'?nodes:edges};
+    const previous=vm.runInContext('svg',context);context.largeGraph=graph;
+    vm.runInContext('svg=largeGraph;highlight(null)',context);
+    assert.equal(scans,2);forbidGraphScan=true;mutations=0;
+    context.highlight('20');context.highlight('30');
+    assert.ok(mutations<40,`Local selections made ${mutations} DOM mutations`);
+    assert.equal(nodes[20].classList.contains('selected'),false);
+    assert.equal(nodes[21].classList.contains('neighbor'),false);
+    context.highlight('20');
+    assert.equal(nodes[20].classList.contains('neighbor'),false,'Self-loop must not mark selected node as neighbor');
+    assert.equal(edges.filter(e=>e.classList.contains('related')).length,4,'Both parallel links and self-loop retained');
+    context.highlight('4999');
+    assert.equal(edges.some(e=>e.classList.contains('related')),false,'Isolated node has no related edges');
+    context.highlight(null);assert.equal(graph.classList.contains('has-selection'),false);
+    forbidGraphScan=false;context.previousGraph=previous;vm.runInContext('svg=previousGraph',context);
+    console.log('Passed: 5000-node indexed selection, bounded DOM updates, parallel links, self-loop and isolated node.');
+}
 for(const [value,expected] of [['6','6'],['0','1'],['30','12'],['','3']]){
     ui['nodes-per-row'].value=value;context.changeColumns();
     assert.equal(ui['nodes-per-row'].value,expected);

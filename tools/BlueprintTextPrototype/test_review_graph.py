@@ -115,8 +115,8 @@ class ReviewTests(unittest.TestCase):
         after['pinTemplates']['value'] = {'PinType.PinCategory': '"int"'}
         svg = ET.fromstring(render(after, review={'changed': ['old']}, before=self.before)[0])
         changed = svg.findall('.//{*}text[@class="review-changed-line"]')
-        self.assertEqual([n.text for n in changed], ['Returns: int'])
-        self.assertEqual(changed[0].find('{*}title').text, 'Previously: Returns: bool')
+        self.assertEqual([n.text for n in changed], ['Output: int'])
+        self.assertEqual(changed[0].find('{*}title').text, 'Previously: Output: bool')
 
 
 if __name__ == '__main__':

@@ -5,6 +5,18 @@ const detailIds=document.getElementById('detail-ids'),status=document.getElement
 const edgeTip=document.getElementById('edge-tooltip');
 const detailVersion=document.getElementById('detail-version');
 const rowCapacity=document.getElementById('nodes-per-row');
+const showUnconnected=document.getElementById('unconnected');
+function changeUnconnected(){
+    const selected=graphIndex(svg).selected;
+    closeDetails();svg.classList.toggle('hide-unconnected',!showUnconnected.checked);
+    applyRowLayout(svg,rowCapacity.value,showUnconnected.checked);
+    if(selected){
+        show(); // Keep the user's zoom while centering the node in the new layout.
+        const node=selected.getBoundingClientRect(),viewport=box.getBoundingClientRect();
+        box.scrollLeft=Math.max(0,box.scrollLeft+(node.left+node.right)/2-viewport.left-box.clientWidth/2);
+        box.scrollTop=Math.max(0,box.scrollTop+(node.top+node.bottom)/2-viewport.top-box.clientHeight/2);
+    }else{box.scrollTop=0;box.scrollLeft=0;fit()}
+}
 let detailCopyText='';
 let svg,scale=1,selectedId=null,detailNode=null,detailEdge=null,detailEdgeTitle=null;
 const details=new WeakMap();
@@ -70,20 +82,34 @@ async function copyNodeIds(node){
 function show(){const v=svg.viewBox.baseVal;svg.style.width=v.width*scale+'px';svg.style.height=v.height*scale+'px'}
 function zoom(f){closeDetails();scale=Math.max(.05,Math.min(4,scale*f));show()}
 function fit(all=false){closeDetails();const v=svg.viewBox.baseVal;scale=Math.min(1,Math.max(1,box.clientWidth-20)/v.width,all?box.clientHeight/v.height:1);show()}
+const graphIndexes=new WeakMap();
+function graphIndex(graph){
+    if(graphIndexes.has(graph))return graphIndexes.get(graph);
+    const nodes=new Map([...graph.querySelectorAll('.graph-node')].map(node=>
+        [node.dataset.nodeId,{node,incoming:[],outgoing:[],neighbors:new Set()}]));
+    for(const edge of graph.querySelectorAll('.graph-edge')){
+        const from=nodes.get(edge.dataset.source),to=nodes.get(edge.dataset.target);
+        from.outgoing.push(edge);to.incoming.push(edge);
+        if(from!==to){from.neighbors.add(to.node);to.neighbors.add(from.node)}
+    }
+    const index={nodes,selected:null,edges:new Set(),neighbors:new Set()};
+    graphIndexes.set(graph,index);return index;
+}
 function highlight(id){
-    selectedId=id;
-    const neighbors=new Set(id===null?[]:[id]);
-    svg.querySelectorAll('.graph-edge').forEach(edge=>{
-        const related=id!==null&&(edge.dataset.source===id||edge.dataset.target===id);
-        edge.classList.toggle('related',related);edge.classList.toggle('muted',id!==null&&!related);
-        if(related){neighbors.add(edge.dataset.source);neighbors.add(edge.dataset.target)}
-    });
-    svg.querySelectorAll('.graph-node').forEach(node=>{
-        const selected=node.dataset.nodeId===id,neighbor=!selected&&neighbors.has(node.dataset.nodeId);
-        node.classList.toggle('selected',selected);node.classList.toggle('neighbor',neighbor);
-        node.classList.toggle('muted',id!==null&&!neighbors.has(node.dataset.nodeId));
-        node.setAttribute('aria-pressed',String(selected));
-    });
+    const state=graphIndex(svg);
+    if(state.selected){state.selected.classList.toggle('selected',false);state.selected.setAttribute('aria-pressed','false')}
+    for(const edge of state.edges)edge.classList.toggle('related',false);
+    for(const node of state.neighbors)node.classList.toggle('neighbor',false);
+    state.edges.clear();state.neighbors=new Set();state.selected=null;
+    const entry=state.nodes.get(id);
+    selectedId=entry?id:null;
+    svg.classList.toggle('has-selection',!!entry);
+    if(!entry)return;
+    state.selected=entry.node;state.neighbors=entry.neighbors;
+    state.edges=new Set([...entry.incoming,...entry.outgoing]);
+    entry.node.classList.toggle('selected',true);entry.node.setAttribute('aria-pressed','true');
+    for(const edge of state.edges)edge.classList.toggle('related',true);
+    for(const node of state.neighbors)node.classList.toggle('neighbor',true);
 }
 function toggleNode(node){highlight(selectedId===node.dataset.nodeId?null:node.dataset.nodeId)}
 box.addEventListener('click',event=>{
@@ -114,19 +140,21 @@ document.addEventListener('keydown',event=>{
 document.querySelectorAll('.graph-node').forEach(node=>{
     const title=node.querySelector('title');details.set(node,title.textContent);title.remove();
     node.setAttribute('tabindex','0');node.setAttribute('role','button');
+    node.setAttribute('aria-pressed','false');
     node.setAttribute('aria-label','Highlight connections for '+JSON.parse(node.dataset.nodeIds).join(', '));
 });
 function choose(){
+    if(svg)highlight(null);
     closeDetails();const id=view.value+'-'+direction.value;
     document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==id);
     svg=document.getElementById(id).querySelector('svg');
     rowCapacity.disabled=direction.value!=='TB';
-    if(!rowCapacity.disabled)applyRowLayout(svg,rowCapacity.value);
+    changeUnconnected();
     highlight(null);box.scrollTop=0;box.scrollLeft=0;fit();
 }
 function changeColumns(){
     rowCapacity.value=String(normalizeColumns(rowCapacity.value));
     closeDetails();
-    if(direction.value==='TB')applyRowLayout(svg,rowCapacity.value);
+    applyRowLayout(svg,rowCapacity.value,showUnconnected.checked);
     box.scrollTop=0;box.scrollLeft=0;fit();
 }

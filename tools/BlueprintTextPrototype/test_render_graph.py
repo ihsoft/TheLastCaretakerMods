@@ -9,12 +9,125 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from render_graph import render, node_lines, pin_type_label, fold_data_chains, fold_chains, unconnected_outputs, edge_output_type
+from render_graph import render, node_lines, pin_type_label, fold_data_chains, fold_chains, unconnected_outputs, edge_output_type, layers
 
 ROOT = Path(__file__).resolve().parent
 
 
 class GraphRenderingTests(unittest.TestCase):
+    def test_folded_step_titles_wrap_once_at_body_width(self):
+        templates = {'number': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'}}
+        nodes = [{'id': 'read', 'kind': 'getVariable', 'variable': 'RailgunFullChargeEnergyKWh',
+                  'pins': {'out:result': {'type': 'number'}}},
+                 {'id': 'multiply', 'kind': 'call', 'operation': 'Multiply',
+                  'properties': {'bDefaultsToPureFunc': 'True'},
+                  'pins': {'in:value': {'type': 'number'}, 'out:result': {'type': 'number'}}}]
+        edges = [('read', 'result', 'multiply', 'value', False)]
+        folded, _, count = fold_data_chains(nodes, edges, edges, templates)
+        self.assertEqual(count, 1)
+        lines = node_lines(folded[0], set(), pin_templates=templates)
+        self.assertIn('1. Get Railgun Full Charge Energy K Wh', lines)
+        self.assertNotIn('Energy K Wh', lines)
+
+    def test_control_and_event_nodes_do_not_gain_function_signatures(self):
+        templates = {'exec': {'PinType.PinCategory': '"exec"'}, 'double': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'}}
+        for kind in ('branch', 'sequence', 'event', 'EnhancedInputAction', 'FunctionEntry'):
+            with self.subTest(kind=kind):
+                node = {'id': 'n', 'kind': kind, 'pins': {'out:then': {'type': 'exec'}}}
+                self.assertNotIn('No data outputs', node_lines(node, set(), pin_templates=templates))
+                node['pins']['out:Value'] = {'type': 'double'}
+                lines = node_lines(node, set(), pin_templates=templates)
+                self.assertFalse(any(line.startswith('Output:') for line in lines))
+                node['defaults'] = {'out:Value': '0.0'}
+                self.assertIn('Output: Value = "0.0" (default; double)', node_lines(node, set(), pin_templates=templates))
+
+    def test_all_unconnected_output_rows_compact_including_execution(self):
+        doc = {'schema': 2, 'pinTemplates': {'exec': {'PinType.PinCategory': '"exec"'},
+                                             'bool': {'PinType.PinCategory': '"bool"'}},
+               'nodes': [{'id': 'n', 'kind': 'call', 'operation': 'Example',
+                          'pins': {'out:result': {'type': 'bool'}, 'out:then': {'type': 'exec'}, 'out:else': {'type': 'exec'}}}],
+               'links': []}
+        root = ET.fromstring(render(doc, view='full')[0])
+        rows = root.find('.//{*}g[@data-node-id="n"]').findall('{*}text')
+        hidden = 0
+        for row in rows:
+            self.assertIn(f'--compact-dy:{-19 * hidden}px;', row.get('style'))
+            if 'then —' in (row.text or '') or 'else —' in (row.text or ''):
+                self.assertEqual(row.get('data-unconnected-output'), 'true')
+            hidden += bool(row.get('data-unconnected-output'))
+        self.assertEqual(hidden, 4)
+
+    def test_connected_types_remain_and_all_unconnected_outputs_are_optional(self):
+        templates = {'double': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'},
+                     'exec': {'PinType.PinCategory': '"exec"'}, 'bool': {'PinType.PinCategory': '"bool"'},
+                     'object': {'PinType.PinCategory': '"object"'}}
+        read = {'id': 'read', 'kind': 'getVariable', 'variable': 'Pitch',
+                'pins': {'out:Pitch': {'type': 'double'}}, 'defaults': {'out:Pitch': '0.0'}}
+        action = {'id': 'input', 'kind': 'EnhancedInputAction',
+                  'pins': {f'out:{p}': {'type': t} for p,t in
+                           [('then','exec'), ('else','exec'), ('ActionValue','bool'), ('InputAction','object'), ('Unused','double')]},
+                  'defaults': {'out:ActionValue': 'false', 'out:InputAction': 'IA_PrimaryAction'}}
+        empty = {'id': 'empty', 'kind': 'call', 'pins': {'in:exec': {'type': 'exec'}}}
+        doc = {'schema': 2, 'nodes': [read, action, empty, {'id': 'consumer', 'kind': 'branch'}],
+               'pinTemplates': templates, 'links': [{'from':'read.out:Pitch', 'to':'consumer.in:value'}]}
+        svg = ET.fromstring(render(doc, view='full')[0])
+        getter = svg.find('.//{*}g[@data-node-id="read"]')
+        self.assertIn('Output: double', [n.text for n in getter.findall('{*}text')])
+        self.assertFalse(getter.findall('{*}text[@data-unconnected-output="true"]'))
+        event = svg.find('.//{*}g[@data-node-id="input"]')
+        always = ' '.join(n.text or '' for n in event.findall('{*}text') if not n.get('data-unconnected-output'))
+        optional = ' '.join(n.text or '' for n in event.findall('{*}text[@data-unconnected-output="true"]'))
+        for label in ('Branch: then — unconnected', 'Branch: else — unconnected', 'Output: ActionValue = "false"', 'Output: InputAction = "IA_PrimaryAction"', '(default;'):
+            self.assertIn(label, optional)
+        self.assertIn('Output: Unused — unconnected', optional)
+        self.assertNotIn('ActionValue — unconnected', always + optional)
+        self.assertNotIn('No data outputs', ''.join(svg.itertext()))
+        unconnected_getter = node_lines(read, set(), pin_templates=templates)
+        self.assertTrue(all(line.unconnected_output for line in unconnected_getter if line.startswith('Output:')))
+        ignored = copy.deepcopy(action)
+        templates['bool']['bDefaultValueIsIgnored'] = 'True'
+        lines = node_lines(ignored, set(), pin_templates=templates, connected_outputs={'InputAction'}, wrap=False)
+        self.assertFalse(any(line.startswith('Output:') and ' = ' in line for line in lines))
+
+    def test_data_moves_near_consumers_without_moving_execution(self):
+        nodes = [{'id': f'a{i}', 'kind': 'call'} for i in range(8)]
+        nodes += [{'id': name, 'kind': 'getVariable'} for name in ('value', 'shared', 'unused', 'upstream')]
+        edges = [(f'a{i}', 'then', f'a{i+1}', 'exec', True) for i in range(7)]
+        edges += [('value', 'result', 'a7', 'value', False),
+                  ('upstream', 'result', 'value', 'input', False),
+                  ('shared', 'result', 'a3', 'left', False),
+                  ('shared', 'result', 'a6', 'right', False)]
+        ranks = layers(nodes, edges)
+        self.assertEqual([ranks[f'a{i}'] for i in range(8)], list(range(8)))
+        self.assertEqual((ranks['upstream'], ranks['value'], ranks['shared'], ranks['unused']), (5, 6, 2, 0))
+        self.assertTrue(all(ranks[a] < ranks[b] for a, _, b, _, _ in edges))
+
+    def test_data_cycle_moves_together_but_unwired_execution_pin_stays(self):
+        nodes = [{'id': f'a{i}', 'kind': 'call'} for i in range(5)]
+        nodes += [{'id': 'x'}, {'id': 'y'}, {'id': 'action', 'pins': {'in:exec': {'type': 'exec'}}}]
+        edges = [(f'a{i}', 'then', f'a{i+1}', 'exec', True) for i in range(4)]
+        edges += [('x', 'result', 'y', 'input', False), ('y', 'result', 'x', 'input', False),
+                  ('y', 'result', 'a4', 'value', False), ('action', 'result', 'a4', 'other', False)]
+        ranks = layers(nodes, edges, {'exec': {'PinType.PinCategory': '"exec"'}})
+        self.assertEqual((ranks['x'], ranks['y'], ranks['action'], ranks['a4']), (3, 3, 0, 4))
+
+    def test_deep_dependency_chains_and_cycles_do_not_use_recursion(self):
+        nodes = [{'id': str(i)} for i in range(5000)]
+        edges = [(str(i), 'then', str(i+1), 'exec', True) for i in range(4999)]
+        self.assertEqual(layers(nodes, edges), {str(i): i for i in range(5000)})
+        # One large cycle with an outgoing tail must collapse to a single layer.
+        edges.append(('4998', 'then', '0', 'exec', True))
+        ranks = layers(nodes, edges)
+        self.assertTrue(all(ranks[str(i)] == 0 for i in range(4999)))
+        self.assertEqual(ranks['4999'], 1)
+
+    def test_render_and_review_allow_more_than_500_nodes(self):
+        document = {'schema': 1, 'nodes': [{'id': f'n{i}', 'kind': 'call'} for i in range(600)], 'links': []}
+        self.assertEqual(render(document, view='full')[2], 600)
+        before = copy.deepcopy(document)
+        before['nodes'].append({'id': 'removed', 'kind': 'call'})
+        self.assertEqual(render(document, view='full', review={'removed': ['removed']}, before=before)[2], 601)
+
     def setUp(self):
         self.example = json.loads((ROOT / 'Examples/division.json').read_text())
 
@@ -52,7 +165,7 @@ class GraphRenderingTests(unittest.TestCase):
                               'PinType.PinSubCategoryObject': '"/Script/CoreUObject.Class\'/Script/Engine.Actor\'"'},
                      'exec': {'PinType.PinCategory': '"exec"'}}
         self.assertEqual(node_lines(node, set(), pin_templates=templates),
-                         ['Get Parent Actor', 'Returns: Actor reference'])
+                         ['Get Parent Actor', 'Output: Actor reference'])
         document = {'schema': 2, 'nodes': [node], 'links': [], 'pinTemplates': templates}
         original = copy.deepcopy(document)
         svg = ET.fromstring(render(document)[0])
@@ -65,13 +178,13 @@ class GraphRenderingTests(unittest.TestCase):
         templates = {'bool': {'PinType.PinCategory': '"bool"'}, 'exec': {'PinType.PinCategory': '"exec"'}}
         node = {'id': 'ReadSettings', 'kind': 'call', 'operation': 'ReadSettings',
                 'pins': {'out:Success': {'type': 'bool'}, 'out:then': {'type': 'exec'}}}
-        self.assertIn('Output Success: bool', node_lines(node, set(), pin_templates=templates))
+        self.assertIn('Output: Success — bool', node_lines(node, set(), pin_templates=templates))
         del node['pins']['out:Success']
-        self.assertIn('No data outputs', node_lines(node, set(), pin_templates=templates))
+        self.assertNotIn('No data outputs', node_lines(node, set(), pin_templates=templates))
         node['pins']['out:result'] = {'type': 'missing'}
-        self.assertIn('Returns: unknown', node_lines(node, set(), pin_templates=templates))
+        self.assertIn('Output: unknown', node_lines(node, set(), pin_templates=templates))
         del node['pins']
-        self.assertFalse(any(line.startswith('Returns:') for line in node_lines(node, set())))
+        self.assertFalse(any(line.startswith('Output:') for line in node_lines(node, set())))
         self.assertEqual(pin_type_label({'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"',
                                         'PinType.ContainerType': 'Array'}), 'array<double>')
         self.assertEqual(pin_type_label({'PinType.PinCategory': '"name"', 'PinType.ContainerType': 'Map',
@@ -186,9 +299,9 @@ class GraphRenderingTests(unittest.TestCase):
             svg = ET.fromstring(text)
             seq = svg.find('.//{*}g[@data-node-id="seq"]')
             labels = [n.text for n in seq.findall('{*}text')]
-            self.assertIn('○ then1 — unconnected', labels)
-            self.assertNotIn('○ then0 — unconnected', labels)
-            self.assertIn('○ result — unconnected', text)
+            self.assertIn('Branch: then1 — unconnected', labels)
+            self.assertNotIn('Branch: then0 — unconnected', labels)
+            self.assertIn('Output: result — unconnected', text)
             self.assertEqual(links, 0 if view == 'simplified' else 1)
 
     def test_input_parameters_precede_output_types(self):
@@ -196,8 +309,8 @@ class GraphRenderingTests(unittest.TestCase):
                 'defaults': {'in:left': '3', 'in:right': '2', 'out:result': '0'},
                 'pins': {'out:result': {'type': 'double', 'name': 'ReturnValue'}}}
         templates = {'double': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'}}
-        lines = node_lines(node, set(), ['target ← Self (hidden)'], templates)
-        output_index = lines.index('Returns: double')
+        lines = node_lines(node, set(), ['target ← Self (hidden)'], templates, connected_outputs={'result'})
+        output_index = lines.index('Output: double')
         for label in ('Input: left = "3"', 'Input: right = "2"', 'Input: target ← Self (hidden)'):
             self.assertLess(lines.index(label), output_index)
 
@@ -214,7 +327,7 @@ class GraphRenderingTests(unittest.TestCase):
         self.assertIsNone(edge.find('{*}text'))
         self.assertIn('Input: Condition', edge.find('{*}title').text)
 
-    def test_nonbranch_labels_are_hover_only_with_full_path_hit_targets(self):
+    def test_every_execution_edge_has_source_label_and_data_is_hover_only(self):
         for view in ('simplified', 'full'):
             for direction in ('TB', 'LR'):
                 svg = ET.fromstring(render(self.example, view=view, direction=direction)[0])
@@ -235,7 +348,7 @@ class GraphRenderingTests(unittest.TestCase):
                         self.assertIn('From: divide', tooltip)
                         self.assertIn('To: set.result', tooltip)
                     else:
-                        self.assertIsNone(edge.find('{*}text'))
+                        self.assertIsNotNone(edge.find('{*}text'))
                         self.assertIn(' → ', edge.find('{*}title').text)
 
     def test_edge_output_type_comes_from_producing_pin_and_chain_step(self):
@@ -391,12 +504,17 @@ class GraphRenderingTests(unittest.TestCase):
         self.assertEqual(json.loads(composite.attrib['data-node-ids']), ['first', 'second'])
         self.assertEqual(composite.find('{*}rect').attrib['fill'], '#f7e9d7')
         labels = [n.text for n in composite.findall('{*}text')]
-        self.assertIn('○ result — unconnected', labels)
-        self.assertNotIn('○ then — unconnected', labels)
-        self.assertLess(labels.index('○ Unused — unconnected'), labels.index('2. second'))
-        self.assertGreater(labels.index('○ result — unconnected'), labels.index('2. second'))
+        self.assertIn('Output: result — unconnected', labels)
+        self.assertNotIn('Branch: then — unconnected', labels)
+        self.assertLess(labels.index('Output: Unused — unconnected'), labels.index('2. second'))
+        self.assertGreater(labels.index('Output: result — unconnected'), labels.index('2. second'))
         self.assertFalse(any('○ Step ' in label for label in labels))
         self.assertIn('Input: value ← Step 1: result', labels)
+        optional = [n.text for n in composite.findall('{*}text[@data-unconnected-output="true"]')]
+        self.assertIn('Output: Unused — unconnected', optional)
+        self.assertIn('Output: result — unconnected', optional)
+        self.assertIn('Output: bool', optional)
+        self.assertNotIn('Input: value ← Step 1: result', optional)
         self.assertEqual(render(document, view='full')[2:], (5, 6))
         # Merges, multiple execution outputs (even unwired), and cycles are boundaries.
         merge = edges + [('event', 'then', 'second', 'exec', True)]

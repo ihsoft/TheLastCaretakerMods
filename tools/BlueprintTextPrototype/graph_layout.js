@@ -11,6 +11,7 @@ function pinOrder(pin){
 }
 function layoutRows(data, columns) {
     columns=normalizeColumns(columns);
+    const horizontal=data.direction==='LR';
     const groups=new Map(),boxes=new Map();
     for(const n of data.nodes){if(!groups.has(n.rank))groups.set(n.rank,[]);groups.get(n.rank).push(n)}
     const capacity=Math.min(columns,Math.max(1,...[...groups.values()].map(g=>g.length)));
@@ -20,13 +21,18 @@ function layoutRows(data, columns) {
         const all=parents.get(node.id),execution=all.filter(e=>e[4]);
         const available=(execution.length?execution:all).filter(e=>boxes.has(e[0]));
         if(!available.length)return [Infinity,2,'',node.id];
-        const center=available.reduce((sum,e)=>{const b=boxes.get(e[0]);return sum+b.x+b.w/2},0)/available.length;
+        const center=available.reduce((sum,e)=>{const b=boxes.get(e[0]);return sum+(horizontal?b.y+b.h/2:b.x+b.w/2)},0)/available.length;
         const pin=available.map(e=>pinOrder(e[1])).sort(compareKeys)[0];
         return [center,...pin,node.id];
     }
-    let y=210;
-    for(const [,members] of [...groups].sort((a,b)=>a[0]-b[0])){
+    let y=240;
+    for(const [rank,members] of [...groups].sort((a,b)=>a[0]-b[0])){
         members.sort((a,b)=>compareKeys(parentOrder(a),parentOrder(b)));
+        if(horizontal){
+            y=240;
+            for(const n of members){boxes.set(n.id,{x:40+rank*500,y,w:n.w,h:n.h,kind:n.kind});y+=n.h+60}
+            continue;
+        }
         for(let start=0;start<members.length;start+=columns){
             const row=members.slice(start,start+columns),offset=(capacity-row.length)*190;
             row.forEach((n,i)=>boxes.set(n.id,{x:40+offset+i*380,y,w:n.w,h:n.h,kind:n.kind}));
@@ -41,24 +47,34 @@ function layoutRows(data, columns) {
     const edges=data.edges.map((e,i)=>{
         const [source,output,target,,execution]=e,a=boxes.get(source),b=boxes.get(target);
         const outs=outgoing.get(source),ins=incoming.get(target);
-        const sx=a.x+a.w*(outs.indexOf(i)+1)/(outs.length+1),sy=a.y+a.h;
-        const ex=b.x+b.w*(ins.indexOf(i)+1)/(ins.length+1),ey=b.y;
+        const sx=horizontal?a.x+a.w:a.x+a.w*(outs.indexOf(i)+1)/(outs.length+1),
+              sy=horizontal?a.y+a.h*(outs.indexOf(i)+1)/(outs.length+1):a.y+a.h;
+        const ex=horizontal?b.x:b.x+b.w*(ins.indexOf(i)+1)/(ins.length+1),
+              ey=horizontal?b.y+b.h*(ins.indexOf(i)+1)/(ins.length+1):b.y;
         const bend=Math.max(35,(ey-sy)/2);
         let path=`M${sx},${sy} C${sx},${sy+bend} ${ex},${ey-bend} ${ex},${ey}`;
         if(source===target){const side=a.x+a.w+55;path=`M${sx},${sy} C${side},${sy+40} ${side},${ey-40} ${ex},${ey}`}
-        return {path,label:execution&&a.kind==='branch'&&['then','else'].includes(output)?{x:sx,y:sy+13}:null};
+        if(horizontal){
+            const bend=Math.max(35,(ex-sx)/2);
+            path=`M${sx},${sy} C${sx+bend},${sy} ${ex-bend},${ey} ${ex},${ey}`;
+            if(source===target){const side=a.y+a.h+55;path=`M${sx},${sy} C${sx+40},${side} ${ex-40},${side} ${ex},${ey}`}
+        }
+        return {path,label:execution?(horizontal?{x:sx+10,y:sy-7}:{x:sx,y:sy+13}):null};
     });
     return {columns,boxes,edges,width:Math.max(950,...[...boxes.values()].map(b=>b.x+b.w+80)),
-            height:Math.max(210,...[...boxes.values()].map(b=>b.y+b.h))+90};
+            height:Math.max(240,...[...boxes.values()].map(b=>b.y+b.h))+90};
 }
 
-function applyRowLayout(svg, columns) {
-    if(!svg.dataset.layout)return; // Horizontal layout retains its own geometry.
-    const data=JSON.parse(svg.dataset.layout),result=layoutRows(data,columns);
+function applyRowLayout(svg, columns, showUnconnected=true) {
+    if(!svg.dataset.layout)return;
+    const data=JSON.parse(svg.dataset.layout);
+    if(!showUnconnected)for(const n of data.nodes)n.h=n.compactH??n.h;
+    const result=layoutRows(data,columns);
     const nodes=new Map([...svg.querySelectorAll('.graph-node')].map(n=>[n.dataset.nodeId,n]));
     for(const n of data.nodes){
         const b=result.boxes.get(n.id);
         nodes.get(n.id).setAttribute('transform',`translate(${b.x-n.x},${b.y-n.y})`);
+        nodes.get(n.id).querySelector('rect').setAttribute('height',b.h);
     }
     svg.querySelectorAll('.graph-edge').forEach((edge,i)=>{
         const geometry=result.edges[i];

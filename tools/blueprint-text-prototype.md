@@ -158,7 +158,9 @@ is retained between Full and Simplified views. Horizontal views disable this
 control. Standalone SVGs retain the default row capacity.
 
 Nodes follow their upstream parents, prioritizing execution dependencies for
-action chains. Edges curve directly between ports; joins, cycles and wrapped
+action chains. Data computations sit near their earliest consumer rather than
+at the top of the graph; shared values remain single nodes. Cycles move together.
+Edges curve directly between ports; joins, cycles and wrapped
 rows can still cross. Incoming and outgoing ports place data left of execution
 in vertical views (above execution in horizontal views), with stable pin order.
 
@@ -168,6 +170,12 @@ Click again, click the background, or press Escape to clear. Tab and Enter/Space
 also select nodes. Changing view or direction clears selection. Only visible
 links participate; use Full to include hidden technical nodes.
 
+**Show unconnected** controls unconnected output descriptions on every node,
+including execution branches, data types and output defaults, also inside folded
+steps. Connected outputs and input defaults remain visible. Toggling it resizes
+cards and reroutes links in both directions. A selected node is centered with
+the current zoom retained; without a selection the view resets and fits its width.
+
 Simplified view hides disabled and technical Self nodes, labels incoming hidden
 sources, and folds exclusive data chains and linear action chains into numbered
 steps. It does not combine repeated computations or invent bypass connections.
@@ -175,22 +183,32 @@ Full view retains all nodes. Folded steps preserve their inputs, internal data
 dependencies and unconnected-output notes. A sole unused execution output is
 treated as a terminal path; unused alternatives remain visible.
 
-Nodes describe operations, input values and known output types. Amber identifies
-execution nodes using available pin metadata; blue identifies entries/events.
+Nodes describe operations and input values; function calls and variable getters
+also show known output types. The header legend uses colored node cards and arrow
+samples: blue entries/events, amber execution steps, grey data/other nodes;
+solid amber execution links and dashed blue data links.
+`Branch:` identifies execution outputs; `Output:` identifies data outputs.
+Nodes without data outputs do not receive an extra placeholder label.
 Display titles split identifiers into readable words and wrap at word boundaries;
 continued titles retain their heading style. Original identifiers remain in details.
-Output-pin default metadata is not shown as a computed result. The copy icon
+Stored defaults on unconnected output pins are labelled `Output: name = value
+(default; type)`, not presented as computed results. Connected or ignored output
+defaults are omitted. The copy icon
 copies the original node ID, or all IDs in a folded chain. The info icon opens
 selectable source details below the node; the panel also offers copy controls.
 
 Hover anywhere along an edge for its endpoints, pin names and known source
-output type. Click for immediate selectable details. Only Branch choices keep
-permanent edge labels near their source: `then` is left of `else` in vertical
+output type. Click for immediate selectable details. Every connected execution
+output has a permanent label near its source; data labels stay in tooltips.
+For Branch choices, `then` is left of `else` in vertical
 view (above it in horizontal view). Unknown types are not guessed. These are
 explicit graph links, not inferred timer callbacks or runtime behaviour.
 
-The viewer accepts both compact schemas (up to 500 nodes per graph), including
-the earlier standalone `nodes`/`links` shape; it does not render `.t3d`.
+The viewer accepts both compact schemas, including the earlier standalone
+`nodes`/`links` shape; it does not render `.t3d`. There is no fixed node-count cap.
+Traversal is iterative and selection uses a cached connection index. Large graphs
+still require browser memory and rendering work; HTML contains all four
+view/direction variants.
 
 ### Review mode
 
@@ -221,8 +239,8 @@ stop rendering with a diagnostic; correct the lists or selected source/graph.
 Green `+`, purple `~` and red dashed `−` borders mark added, changed and removed
 nodes; existing fill colours retain their execution/data meaning. Marked nodes
 stay visible and separate in Simplified view. Removed nodes and their original
-connections to displayed endpoints appear as translucent ghosts. The combined
-review must fit the 500-node limit. Changes remain a display overlay; neither
+connections to displayed endpoints appear as translucent ghosts.
+Changes remain a display overlay; neither
 source is rewritten or imported into Unreal.
 
 On changed nodes, modified description fields are purple; hover shows the
@@ -268,7 +286,7 @@ on HTML rendered from the division example to check selection, details, copying 
 with a DOM stand-in (not a browser UI test).
 Run `node tools/BlueprintTextPrototype/test_graph_layout.js <generated.html>`
 to check Python/browser geometry agreement, row capacities, port ordering and
-reversible layout updates on any generated preview.
+reversible hide/show layout updates in both directions on any generated preview.
 The schema-1 engine acceptance runner is
 `tools/BlueprintTextPrototype/Test-BlueprintTextPrototype.ps1 -OutputRoot <new directory below Tmp/BlueprintTextPrototype>`
 with optional `-EngineRoot`. It builds an isolated project, checks compact and

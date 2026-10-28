@@ -37,8 +37,6 @@ def load_graph(document, selection=None):
         if selection and selection != name:
             raise ValueError(f"Graph {selection!r} was not found.")
     nodes = body["nodes"]
-    if len(nodes) > 500:
-        raise ValueError("This simple viewer supports at most 500 nodes per graph.")
     ids = [node["id"] for node in nodes]
     if any(not isinstance(i, str) or not i for i in ids) or len(set(ids)) != len(ids):
         raise ValueError("Node IDs must be nonempty unique strings.")
@@ -49,7 +47,7 @@ def load_graph(document, selection=None):
         endpoints = []
         for key in ("from", "to"):
             node_id, separator, pin = link[key].rpartition(".")
-            if not separator or node_id not in ids or not pin:
+            if not separator or node_id not in by_id or not pin:
                 raise ValueError(f"Unresolved {key} endpoint: {link[key]!r}")
             endpoints.append((node_id, pin))
         (source, output), (target, input_pin) = endpoints
@@ -141,41 +139,52 @@ def review_document(document, before, review, selection=None):
             node['_reviewDetails'] = {'Status': marked[node_id],
                                      'Before': snapshot(node_id, old_by_id, old_edges),
                                      'After': snapshot(node_id, current_by_id, edges)}
-    if len(result['nodes']) > 500:
-        raise ValueError('Review including removed nodes exceeds the 500-node limit.')
     return result
 
 
-def layers(nodes, edges):
-    """Collapse cycles before assigning dependency layers."""
+def layers(nodes, edges, templates=None):
+    """Keep execution layers stable; place data near its earliest consumer."""
     adjacent = {node["id"]: [] for node in nodes}
     for source, _, target, _, _ in edges:
         adjacent[source].append(target)
     indices, low, stack, active, components = {}, {}, [], set(), []
 
-    def visit(node):
+    adjacent = {node: sorted(set(targets)) for node, targets in adjacent.items()}
+
+    def enter(node):
         indices[node] = low[node] = len(indices)
         stack.append(node)
         active.add(node)
-        for target in sorted(set(adjacent[node])):
-            if target not in indices:
-                visit(target)
-                low[node] = min(low[node], low[target])
-            elif target in active:
-                low[node] = min(low[node], indices[target])
-        if low[node] == indices[node]:
-            component = []
-            while True:
-                member = stack.pop()
-                active.remove(member)
-                component.append(member)
-                if member == node:
-                    break
-            components.append(sorted(component))
 
-    for node in adjacent:
-        if node not in indices:
-            visit(node)
+    # Explicit DFS frames preserve Tarjan's traversal order without Python recursion.
+    for root in adjacent:
+        if root in indices:
+            continue
+        enter(root)
+        frames = [(root, iter(adjacent[root]))]
+        while frames:
+            node, targets = frames[-1]
+            target = next(targets, None)
+            if target is not None:
+                if target not in indices:
+                    enter(target)
+                    frames.append((target, iter(adjacent[target])))
+                elif target in active:
+                    low[node] = min(low[node], indices[target])
+                continue
+            frames.pop()
+            if low[node] == indices[node]:
+                component = []
+                while True:
+                    member = stack.pop()
+                    active.remove(member)
+                    component.append(member)
+                    if member == node:
+                        break
+                components.append(sorted(component))
+            if frames:
+                parent = frames[-1][0]
+                low[parent] = min(low[parent], low[node])
     membership = {node: i for i, component in enumerate(components) for node in component}
     rank = [0] * len(components)
     # Tarjan emits sink components first, so reverse order is topological.
@@ -185,6 +194,24 @@ def layers(nodes, edges):
                 j = membership[target]
                 if i != j:
                     rank[j] = max(rank[j], rank[i] + 1)
+    execution_nodes = {endpoint for source, _, target, _, execution in edges
+                       if execution for endpoint in (source, target)}
+    for node in nodes:
+        if (node.get('_chainKind') == 'action'
+                or node.get('kind') in ('event', 'customEvent', 'FunctionEntry', 'FunctionResult',
+                                        'sequence', 'branch', 'setVariable', 'variableSet')
+                or any(pin_category(part, alias, templates or {}) == 'exec'
+                       for part in node.get('_foldedNodes', [node]) for alias in part.get('pins', {}))):
+            execution_nodes.add(node['id'])
+    # SCCs are already in consumer-first order. Move data components together,
+    # stopping before their earliest consumer; never move an execution component.
+    for i, component in enumerate(components):
+        if any(node in execution_nodes for node in component):
+            continue
+        consumers = {membership[target] for node in component for target in adjacent[node]
+                     if membership[target] != i}
+        if consumers:
+            rank[i] = min(rank[j] for j in consumers) - 1
     return {node: rank[membership[node]] for node in adjacent}
 
 
@@ -278,17 +305,16 @@ def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data
         last = chain[-1]['id']
         ids = {n['id'] for n in chain}
         links = [e for e in original_edges if e[0] in ids and e[2] in ids]
-        steps = [node_lines(n, {e[3] for e in incoming[n['id']]}, pin_templates=templates, parent=parent)
+        steps = [node_lines(n, {e[3] for e in incoming[n['id']]}, pin_templates=templates, parent=parent,
+                            connected_outputs={e[1] for e in outgoing[n['id']]}, wrap=False)
                  for n in chain]
-        if mode == 'action':
-            steps = [[line for line in step if line != 'No data outputs'] for step in steps]
         replacement = dict(chain[-1], _foldedNodes=chain, _foldedLinks=links, _foldedSteps=steps, _chainKind=mode)
         if mode == 'action':
             step_by_id = {n['id']: i for i, n in enumerate(chain)}
             for source, output, target, input_pin, execution in links:
                 if not execution:
                     step = steps[step_by_id[target]]
-                    index = next((i for i, line in enumerate(step) if line.startswith(('Returns:', 'Output '))), len(step))
+                    index = next((i for i, line in enumerate(step) if line.startswith('Output:')), len(step))
                     step.insert(index, f'Input: {input_pin} ← Step {step_by_id[source]+1}: {output}')
         variable = start.get('variable') or member_name(start, 'VariableReference')
         if (mode == 'data' and start.get('kind') in ('getVariable', 'variableGet') and not incoming[start['id']] and variable
@@ -356,20 +382,46 @@ def pin_type_label(metadata):
     return label
 
 
-def output_lines(node, pin_templates):
+class CardLine(str):
+    """Keep display semantics through wrapping and folded-step descriptions."""
+    def __new__(cls, text, unconnected_output=False):
+        line = super().__new__(cls, text)
+        line.unconnected_output = unconnected_output
+        return line
+
+
+def wrap_card_line(line, title=False):
+    return [CardLine(part, getattr(line, 'unconnected_output', False))
+            for part in wrap_node_line(line, title)]
+
+
+def output_default(node, alias, templates):
+    metadata = templates.get(node.get('pins', {}).get(alias, {}).get('type'), {})
+    if metadata.get('bDefaultValueIsIgnored') == 'True':
+        return None
+    return node.get('defaults', {}).get(alias)
+
+
+def output_lines(node, pin_templates, connected=()):
     if "pins" not in node:
         return []  # Schema 1 has no complete signature; do not infer a return type.
     lines = []
+    show_signature = node.get('kind') in ('call', 'getVariable', 'variableGet')
     for alias, pin in node["pins"].items():
         if not alias.startswith("out:"):
             continue
         metadata = pin_templates.get(pin.get("type"), {})
-        if native_string(metadata.get("PinType.PinCategory", '""')) == "exec":
+        if native_string(metadata.get("PinType.PinCategory", '""')) == "exec" or metadata.get('bHidden') == 'True':
             continue
         name = pin.get("name", alias[4:])
-        prefix = "Returns" if name == "ReturnValue" or alias == "out:result" else "Output " + name
-        lines.append(prefix + ": " + pin_type_label(metadata))
-    return lines or ["No data outputs"]
+        prefix = "Output: " if name == "ReturnValue" or alias == "out:result" or node.get('kind') in ('getVariable', 'variableGet') else "Output: " + name + " — "
+        default = output_default(node, alias, pin_templates)
+        if alias[4:] not in connected and default is not None:
+            # Stored pin defaults are not evaluated runtime output values.
+            lines.append(CardLine(f'Output: {name} = {json.dumps(default, ensure_ascii=False)} (default; {pin_type_label(metadata)})', True))
+        elif show_signature:
+            lines.append(CardLine(prefix + pin_type_label(metadata), alias[4:] not in connected))
+    return lines
 
 
 def edge_output_type(node, output, pin_templates):
@@ -403,15 +455,16 @@ def unconnected_outputs(node, connected, pin_templates):
         execution_outputs = []
     # An unwired sole execution output simply ends this path; retain data and branch warnings.
     terminal = set(execution_outputs) if len(execution_outputs) == 1 else set()
-    return [name for name in outputs if name not in connected and name not in terminal]
+    return [name for name in outputs if name not in connected and name not in terminal
+            and (name in execution_outputs or output_default(node, 'out:' + name, pin_templates) is None)]
 
 
 def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, parent=None,
-               step_inputs=(), step_outputs=(), wrap=True):
+               step_inputs=(), step_outputs=(), wrap=True, connected_outputs=()):
     if '_expression' in node and not any(step_outputs):
         lines = [node['_expression'], f"Expression · {len(node['_foldedNodes'])} nodes (Details / Full)"]
-        lines.extend(output_lines(node, pin_templates or {}))
-        return [part for i, line in enumerate(lines) for part in wrap_node_line(line, i == 0)]
+        lines.extend(output_lines(node, pin_templates or {}, connected_outputs))
+        return [part for i, line in enumerate(lines) for part in wrap_card_line(line, i == 0)]
     if '_foldedSteps' in node:
         label = 'Action chain' if node.get('_chainKind') == 'action' else 'Data chain'
         lines = [f"{label} · {len(node['_foldedNodes'])} nodes"]
@@ -419,12 +472,12 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
             step = list(step)
             if i <= len(step_inputs):
                 index = next((j for j, line in enumerate(step[1:], 1)
-                              if line.startswith(('Input:', 'Returns:', 'Output ', 'No data outputs'))), len(step))
+                              if line.startswith(('Input:', 'Output:'))), len(step))
                 step[index:index] = ['Input: ' + hint for hint in step_inputs[i-1]]
-            lines.extend([f'{i}. {step[0]}'] + step[1:])
+            lines.extend([f'{i}. {readable_name(step[0])}'] + step[1:])
             if i <= len(step_outputs):
                 lines.extend(step_outputs[i-1])
-        return [part for i, line in enumerate(lines) for part in wrap_node_line(line, i == 0)]
+        return [part for i, line in enumerate(lines) for part in wrap_card_line(line, i == 0)]
     kind = node.get("kind", "unknown")
     reference = node.get("operation", node.get("event", node.get("ref", kind)))
     properties = node.get("properties", {})
@@ -478,8 +531,7 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
         if key.startswith("out:") or key.removeprefix("in:") in connected_inputs or metadata.get("bDefaultValueIsIgnored") == "True":
             continue
         lines.append(f"Input: {key.removeprefix('in:')} = {json.dumps(value, ensure_ascii=False)}")
-    if kind == "call":
-        lines.extend(output_lines(node, pin_templates or {}))
+    lines.extend(output_lines(node, pin_templates or {}, connected_outputs))
     if is_disabled(node):
         lines.append("DISABLED")
     if node.get("developmentOnly"):
@@ -489,15 +541,17 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
     if not wrap:
         return lines
     return [part for row, line in enumerate(lines)
-            for part in wrap_node_line(line, row == 0)]
+            for part in wrap_card_line(line, row == 0)]
 
 
 def description_key(line, index):
     """Match semantic fields before wrapping, independent of ordering and links."""
     if index == 0:
         return 'title'
-    if line.startswith('Input: ') and ' = ' in line:
+    if line.startswith(('Input: ', 'Output: ')) and ' = ' in line:
         return line.partition(' = ')[0]
+    if line.startswith('Output: ') and ' — ' in line:
+        return line.partition(' — ')[0]
     if ':' in line:
         return line.partition(':')[0]
     return line
@@ -569,7 +623,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         nodes, edges, folded = fold_data_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"))
         nodes, edges, actions_folded = fold_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"), 'action')
         folded += actions_folded
-    rank = layers(nodes, edges)
+    rank = layers(nodes, edges, document.get('pinTemplates', {}))
     groups = defaultdict(list)
     for node in nodes:
         groups[rank[node["id"]]].append(node)
@@ -583,17 +637,19 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     for node in nodes:
         node_id = node["id"]
         parts = node.get('_foldedNodes', [node])
-        notes = [[f'○ {output} — unconnected' for output in
+        notes = [[CardLine(('Branch: ' if pin_category(part, 'out:' + output, document.get('pinTemplates', {})) == 'exec'
+                           or part.get('kind') == 'sequence' else 'Output: ') + f'{output} — unconnected', True) for output in
                   unconnected_outputs(part, connected_outputs[part['id']], document.get('pinTemplates', {}))]
                  for part in parts]
         if '_foldedNodes' in node:
             lines_by_id[node_id] = node_lines(node, connected[node_id], pin_templates=document.get('pinTemplates', {}),
                                              parent=document.get('parent'), step_inputs=[hidden_inputs[p['id']] for p in parts],
-                                             step_outputs=notes)
+                                             step_outputs=notes, connected_outputs=connected_outputs[node_id])
             title_rows[node_id] = len(wrap_node_line(node['_expression'], True)) if '_expression' in node and not any(notes) else 1
         else:
             templates, parent = document.get('pinTemplates', {}), document.get('parent')
-            raw_lines = node_lines(node, connected[node_id], hidden_inputs[node_id], templates, parent, wrap=False)
+            raw_lines = node_lines(node, connected[node_id], hidden_inputs[node_id], templates, parent, wrap=False,
+                                   connected_outputs=connected_outputs[node_id])
             title_rows[node_id] = len(wrap_node_line(raw_lines[0], True))
             previous = node.get('_reviewPreviousDescription', {})
             current = description_fields(node, templates, parent) if previous else {}
@@ -601,12 +657,12 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             for index, line in enumerate(raw_lines):
                 key = description_key(line, index)
                 changed = key in current and current[key] != previous.get(key)
-                for part in wrap_node_line(line, index == 0):
+                for part in wrap_card_line(line, index == 0):
                     if changed:
                         changed_lines[node_id][len(lines_by_id[node_id])] = previous.get(key, '(not present)')
                     lines_by_id[node_id].append(part)
             for note in notes[0]:
-                lines_by_id[node_id].extend(textwrap.wrap(note, 42))
+                lines_by_id[node_id].extend(CardLine(part, note.unconnected_output) for part in textwrap.wrap(note, 42))
         if node.get('_reviewStatus'):
             status = node['_reviewStatus']
             badge_row = title_rows[node_id]
@@ -615,12 +671,12 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     parent_edges = defaultdict(list)
     for edge in edges:
         parent_edges[edge[2]].append(edge)
-    y = 210
+    y = 240
     max_columns = min(3, max((len(m) for m in groups.values()), default=1))
     for column, members in sorted(groups.items()):
         members = order_layer(members, parent_edges, boxes, direction)
         if direction == "LR":
-            y = 210
+            y = 240
             for node in members:
                 height = 28 + 19 * len(lines_by_id[node["id"]])
                 boxes[node["id"]] = (40 + column * 500, y, 330, height)
@@ -638,7 +694,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                 y += row_height + 110
     right = max((x + w for x, y, w, h in boxes.values()), default=720)
     width = max(950, right + 80)
-    bottom = max((y + h for x, y, w, h in boxes.values()), default=210)
+    bottom = max((y + h for x, y, w, h in boxes.values()), default=240)
     height = bottom + 90
     title = owner.rsplit("/", 1)[-1] + " / " + graph
     marker_prefix = view + direction
@@ -649,23 +705,27 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         pieces.append(f'<defs><marker id="{marker_prefix}{name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{color}"/></marker></defs>')
     pieces.append(f'<text x="40" y="34" font-size="22" font-weight="600">{escape(title)}</text>')
     pieces.append(f'<text x="40" y="59" font-size="12">{view} · {direction} · {len(nodes)} / {len(all_nodes)} nodes · {len(edges)} / {len(all_edges)} links · source unchanged</text>')
-    pieces.append('<text x="40" y="82" font-size="12">Nodes: blue entry, amber execution, grey data/other. Links: solid amber execution, dashed blue data/other.</text>')
-    pieces.append('<text x="40" y="103" font-size="12">Structural view only. Timers / indirect calls are not inferred. Details button: node data. Hover arrows: pin details.</text>')
-    pieces.append('<text x="40" y="124" font-size="12">Only unconnected input defaults are shown. Output defaults are not computed results; Details retains raw fields.</text>')
-    pieces.append(f'<text x="40" y="145" font-size="12">Hidden: {len(hidden)} disabled / Self nodes, {hidden_links} incident links. Folded: {folded} nodes into chains; see Details / Full.</text>')
+    pieces.append('<g class="graph-legend" role="group" aria-label="Node and link legend">')
+    for x, label, color in ((40, 'Entry / event', '#dce9fc'), (197, 'Execution step', '#f7e9d7'), (354, 'Data / other', '#e8edf4')):
+        pieces.append(f'<rect x="{x}" y="73" width="145" height="36" rx="8" fill="{color}" stroke="#8b9bae" stroke-width="1.5"/><text x="{x+72.5}" y="96" text-anchor="middle" font-size="13" font-weight="600">{label}</text>')
+    for x, label, style, color, dash in ((525, 'Execution', 'exec', '#b36b13', ''), (727, 'Data', 'data', '#317b9b', ' stroke-dasharray="6 4"')):
+        pieces.append(f'<path d="M{x},91 H{x+52}" fill="none" stroke="{color}" stroke-width="2.5"{dash} marker-end="url(#{marker_prefix}{style})"/><text x="{x+65}" y="96" font-size="13" font-weight="600">{label}</text>')
+    pieces.append('</g>')
+    pieces.append('<text x="40" y="133" font-size="12">Structural view only. Timers / indirect calls are not inferred. Details button: node data. Hover arrows: pin details.</text>')
+    pieces.append('<text x="40" y="154" font-size="12">Unconnected pin defaults are marked as defaults, not runtime results. Details retains raw fields.</text>')
+    pieces.append(f'<text x="40" y="175" font-size="12">Hidden: {len(hidden)} disabled / Self nodes, {hidden_links} incident links. Folded: {folded} nodes into chains; see Details / Full.</text>')
     declarations = document.get("variables", [])
     if declarations:
         declaration_text = "Variables: " + ", ".join(variable_label(v) for v in declarations)
         visible_text = textwrap.shorten(declaration_text, width=max(30, int((width - 80) / 7)), placeholder=" …")
-        pieces.append(f'<text x="40" y="166" font-size="12"><title>{escape(declaration_text)}</title>{escape(visible_text)}</text>')
+        pieces.append(f'<text x="40" y="196" font-size="12"><title>{escape(declaration_text)}</title>{escape(visible_text)}</text>')
     if document.get('_review'):
-        pieces.append('<text x="40" y="187" font-size="12">REVIEW · + green: added · ~ purple: changed · − red dashed: removed · Details: Before / After · explicit marks only</text>')
+        pieces.append('<text x="40" y="217" font-size="12">REVIEW · + green: added · ~ purple: changed · − red dashed: removed · Details: Before / After · explicit marks only</text>')
     incoming, outgoing = defaultdict(list), defaultdict(list)
     for i, edge in enumerate(edges):
         outgoing[edge[0]].append(i)
         incoming[edge[2]].append(i)
     nodes_by_id = {node['id']: node for node in nodes}
-    node_kinds = {node['id']: node.get('kind') for node in nodes}
     # Data precedes execution at both ends; geometry never changes pin order.
     for indices in outgoing.values():
         indices.sort(key=lambda i: (edges[i][4], pin_order(edges[i][1]), edges[i][2], edges[i][3], i))
@@ -695,7 +755,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                 path = f'M{sx},{sy} C{sx+40},{side} {ex-40},{side} {ex},{ey}'
             lx, ly = (sx + ex) / 2, (sy + ey) / 2 - 7
         label_text, anchor = output + ' → ' + ('' if execution else 'Input: ') + input_pin, 'middle'
-        branch_choice = execution and node_kinds[source] == 'branch' and output in ('then', 'else')
+        branch_choice = execution
         if branch_choice:
             # Branch choice belongs at the originating pin, not on a distant routing lane.
             label_text, transform = output, ''
@@ -738,6 +798,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             review_html = ' data-review-details="' + escape(render_details(details['Before'], details['After'])) + '"'
         ids = [n['id'] for n in node.get('_foldedNodes', [node])]
         pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}" data-node-ids="{escape(json.dumps(ids))}" data-review-status="{status}"{review_html}{opacity}><title>{escape(json.dumps(details, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="{stroke}" stroke-width="{3 if status else 1.5}"{dash}/>')
+        hidden_rows = 0
         for row, line in enumerate(lines_by_id[node["id"]]):
             header = row < title_rows[node['id']]
             size = 16 if header else 12
@@ -748,16 +809,25 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             if previous is not None:
                 decoration = ' class="review-changed-line" style="fill:#7c3aed;font-weight:600"'
                 tooltip = '<title>' + escape('Previously: ' + previous) + '</title>'
-            pieces.append(f'<text x="{x+14}" y="{y+24+row*19}" font-size="{size}"{weight}{fit}{decoration}>{escape(line)}{tooltip}</text>')
+            compact_style = f'--compact-dy:{-19 * hidden_rows}px;'
+            if 'style="' in decoration:
+                decoration = decoration.replace('style="', 'style="' + compact_style)
+            else:
+                decoration += f' style="{compact_style}"'
+            output_flag = ' data-unconnected-output="true"' if getattr(line, 'unconnected_output', False) else ''
+            pieces.append(f'<text data-card-row="{row}"{output_flag} x="{x+14}" y="{y+24+row*19}" font-size="{size}"{weight}{fit}{decoration}>{escape(line)}{tooltip}</text>')
+            hidden_rows += bool(output_flag)
         copy_label = 'Copy node ID' if len(ids) == 1 else f'Copy all {len(ids)} node IDs'
         pieces.append(f'<g class="copy-node-id" role="button" tabindex="0" aria-label="{copy_label}" transform="translate({x+w-27},{y+5})"><title>{copy_label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M6 6h9v11H6z M9 3h9v11" fill="none" stroke="#334155" stroke-width="1.5"/></g>')
         pieces.append(f'<g class="node-info" role="button" tabindex="0" aria-label="Show node details" transform="translate({x+w-53},{y+5})"><title>Show node details</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><text x="11" y="16" text-anchor="middle" font-size="16" font-weight="600">i</text></g>')
         pieces.append('</g>')
     pieces.append('</svg>')
-    if direction == 'TB':
-        layout = {'nodes': [dict(id=n['id'], rank=rank[n['id']], kind=n.get('kind'),
+    if direction in ('TB', 'LR'):
+        layout = {'direction': direction, 'nodes': [dict(id=n['id'], rank=rank[n['id']], kind=n.get('kind'),
                                 x=boxes[n['id']][0], y=boxes[n['id']][1],
-                                w=boxes[n['id']][2], h=boxes[n['id']][3]) for n in nodes],
+                                w=boxes[n['id']][2], h=boxes[n['id']][3],
+                                compactH=boxes[n['id']][3] - 19 * sum(bool(getattr(line, 'unconnected_output', False))
+                                    for line in lines_by_id[n['id']])) for n in nodes],
                   'edges': edges}
         pieces[0] = pieces[0].replace('<svg ', '<svg data-layout="' + escape(json.dumps(layout, separators=(',', ':'))) + '" ', 1)
     return '\n'.join(pieces), title, len(nodes), len(edges)
@@ -796,12 +866,14 @@ def main():
                            '>' + result[0] + '</section>' for (view, direction), result in variants.items())
         page = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>''' + escape(title) + '''</title>
 <style>body{margin:0;background:#f8fafc;font:14px 'Segoe UI',sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr}nav{padding:10px 18px;background:#fff;border-bottom:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,select{padding:6px 10px}main{overflow:auto;min-height:0;position:relative}svg{display:block}</style>
-<style>.graph-node{cursor:pointer}.graph-node:focus-visible{outline:none}.graph-node:focus-visible>rect{stroke:#1d4ed8;stroke-width:3}.muted{opacity:.16}.graph-node.selected,.graph-node.neighbor{opacity:1}.graph-node.selected>rect{stroke:#1d4ed8;stroke-width:4}.graph-node.neighbor>rect{stroke-width:2.5}.graph-edge.related>.edge-line,.graph-edge.inspected>.edge-line{stroke-width:3.5}.graph-edge.inspected{opacity:1}.hint{color:#52657a;font-size:12px}.copy-node-id{cursor:copy}.node-info{cursor:pointer}.copy-node-id:hover>rect,.copy-node-id:focus>rect,.node-info:hover>rect,.node-info:focus>rect{fill:#dbeafe;stroke:#1d4ed8}.copy-node-id:focus,.node-info:focus{outline:none}#edge-tooltip{position:fixed;z-index:30;max-width:min(440px,calc(100vw - 24px));max-height:60vh;overflow:auto;padding:10px 12px;border:1px solid #94a3b8;border-radius:6px;background:#fff;box-shadow:0 4px 18px #20334b33;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.5 Consolas,monospace}#copy-status{font-size:12px;color:#17614b}#node-details{position:absolute;z-index:20;width:min(520px,calc(100vw - 24px));max-height:70vh;overflow:auto;background:#fff;border:1px solid #94a3b8;border-radius:8px;box-shadow:0 6px 28px #20334b44;user-select:text}#node-details[hidden]{display:none}.detail-toolbar{position:sticky;top:0;display:flex;gap:6px;background:#f1f5f9;padding:8px;border-bottom:1px solid #cbd5e1}#close-details{margin-left:auto}#detail-ids{padding:10px 12px 0;overflow-wrap:anywhere;font-weight:600}#detail-text{margin:0;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 Consolas,monospace;cursor:text}</style>
+<style>.graph-node{cursor:pointer}.graph-node:focus-visible{outline:none}.graph-node:focus-visible>rect{stroke:#1d4ed8;stroke-width:3}svg.has-selection .graph-node:not(.selected):not(.neighbor),svg.has-selection .graph-edge:not(.related):not(.inspected):not(:hover){opacity:.16}.graph-node.selected,.graph-node.neighbor{opacity:1}.graph-node.selected>rect{stroke:#1d4ed8;stroke-width:4}.graph-node.neighbor>rect{stroke-width:2.5}.graph-edge.related>.edge-line,.graph-edge.inspected>.edge-line{stroke-width:3.5}.graph-edge.inspected{opacity:1}.hint{color:#52657a;font-size:12px}.copy-node-id{cursor:copy}.node-info{cursor:pointer}.copy-node-id:hover>rect,.copy-node-id:focus>rect,.node-info:hover>rect,.node-info:focus>rect{fill:#dbeafe;stroke:#1d4ed8}.copy-node-id:focus,.node-info:focus{outline:none}#edge-tooltip{position:fixed;z-index:30;max-width:min(440px,calc(100vw - 24px));max-height:60vh;overflow:auto;padding:10px 12px;border:1px solid #94a3b8;border-radius:6px;background:#fff;box-shadow:0 4px 18px #20334b33;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.5 Consolas,monospace}#copy-status{font-size:12px;color:#17614b}#node-details{position:absolute;z-index:20;width:min(520px,calc(100vw - 24px));max-height:70vh;overflow:auto;background:#fff;border:1px solid #94a3b8;border-radius:8px;box-shadow:0 6px 28px #20334b44;user-select:text}#node-details[hidden]{display:none}.detail-toolbar{position:sticky;top:0;display:flex;gap:6px;background:#f1f5f9;padding:8px;border-bottom:1px solid #cbd5e1}#close-details{margin-left:auto}#detail-ids{padding:10px 12px 0;overflow-wrap:anywhere;font-weight:600}#detail-text{margin:0;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 Consolas,monospace;cursor:text}</style>
 <style>.detail-row{display:block;min-height:1.5em}.detail-mark{display:inline-block;width:1.5em;user-select:none}.detail-changed{color:#7c3aed}.detail-added{color:#15803d}.detail-removed{color:#b42318;text-decoration:line-through}.detail-technical{color:#64748b}</style>
 <nav><label>View <select id="view" onchange="choose()"><option value="simplified">Simplified</option><option value="full">Full</option></select></label>
 <label>Direction <select id="direction" onchange="choose()"><option value="TB">Top to bottom</option><option value="LR">Left to right</option></select></label>
 <button onclick="zoom(.8)" aria-label="Zoom out">−</button><button onclick="zoom(1.25)" aria-label="Zoom in">+</button><button onclick="fit()">Fit width</button><button onclick="fit(true)">Fit graph</button>
 <label>Nodes per row <input id="nodes-per-row" type="number" min="1" max="12" step="1" value="3" style="width:4em;padding:6px" onchange="changeColumns()" title="Maximum nodes per row in top-to-bottom view"></label>
+<label title="Show unconnected outputs on every node, including execution branches and output defaults."><input id="unconnected" type="checkbox" checked onchange="changeUnconnected()">Show unconnected</label>
+<style>svg.hide-unconnected [data-unconnected-output="true"]{display:none}svg.hide-unconnected [data-card-row]{transform:translateY(var(--compact-dy,0px))}</style>
 <span class="hint">Click node: highlight. Click arrow: details. Copy icon: node IDs. Info button: selectable details. Escape: clear.</span><span id="copy-status" role="status" aria-live="polite"></span></nav><main>''' + sections + '''
 <aside id="node-details" hidden aria-label="Node details"><div class="detail-toolbar"><select id="detail-version" aria-label="Details version" hidden><option>After</option><option>Before</option></select><button id="copy-detail-ids">Copy IDs</button><button id="copy-details">Copy contents</button><button id="close-details" aria-label="Close details">×</button></div><div id="detail-ids"></div><pre id="detail-text" tabindex="0"></pre></aside></main><div id="edge-tooltip" role="tooltip" hidden></div>
 <script>''' + (Path(__file__).with_name('graph_layout.js').read_text(encoding='utf-8')) + '\n' + (Path(__file__).with_name('graph_viewer.js').read_text(encoding='utf-8')) + '''
