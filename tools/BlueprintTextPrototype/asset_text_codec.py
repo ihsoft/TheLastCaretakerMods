@@ -17,7 +17,7 @@ KINDS = {'K2Node_CallFunction': 'call', 'K2Node_Event': 'event',
          'K2Node_Self': 'self', 'K2Node_DynamicCast': 'cast'}
 PIN_SEPARATE = {'PinId', 'PinName', 'Direction', 'LinkedTo',
                 'DefaultValue', 'DefaultObject', 'DefaultTextValue'}
-FIELDS = {'schema', 'format', 'asset', 'parent', 'properties', 'variables', 'defaults', 'graphs', 'dependencies', 'root', 'components', 'interfaces', 'widget'}
+FIELDS = {'schema', 'format', 'asset', 'objectName', 'parent', 'properties', 'variables', 'defaults', 'graphs', 'dependencies', 'root', 'components', 'interfaces', 'widget'}
 
 
 def check_keys(obj, allowed, context):

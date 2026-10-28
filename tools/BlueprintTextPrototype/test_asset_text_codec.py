@@ -42,6 +42,16 @@ def fixture():
 
 
 class AssetTextTests(unittest.TestCase):
+    def test_object_name_independent_of_package_is_preserved(self):
+        source = fixture()
+        source['asset'] = '/Game/RelocatedPackage'
+        source['objectName'] = 'BP_Test'
+        restored = native(compact(source))
+        self.assertEqual(restored['asset'], source['asset'])
+        self.assertEqual(restored['objectName'], 'BP_Test')
+        self.assertEqual(compare(compact(source), compact(restored)), [])
+        self.assertNotIn('objectName', native(compact(fixture())))
+
     def test_widget_tree_slots_and_properties_round_trip(self):
         source = fixture()
         del source['root']

@@ -75,6 +75,7 @@ constexpr TCHAR ValueTimelines[] = TEXT("Timelines");
 constexpr TCHAR ValueUbergraphPages[] = TEXT("UbergraphPages");
 constexpr TCHAR ValueVariable[] = TEXT("Variable");
 constexpr TCHAR Valueasset[] = TEXT("asset");
+constexpr TCHAR ValueobjectName[] = TEXT("objectName");
 constexpr TCHAR Valuedefaults[] = TEXT("defaults");
 constexpr TCHAR Valueevent[] = TEXT("event");
 constexpr TCHAR Valueformat[] = TEXT("format");
@@ -384,11 +385,25 @@ bool Supported(const UBlueprint* BP)
 }
 bool Export(const FString& Asset, const FString& Path, const FString& PreviewResources=FString())
 {
-    UBlueprint* BP=LoadObject<UBlueprint>(nullptr,*(Asset+ATNames::Value_+FPackageName::GetLongPackageAssetName(Asset)));
+    UPackage* Package=LoadPackage(nullptr,*Asset,LOAD_None);
+    UBlueprint* BP=nullptr;
+    if(Package)
+    {
+        TArray<UObject*> ObjectsInPackage;GetObjectsWithOuter(Package,ObjectsInPackage,EGetObjectsFlags::None);
+        for(UObject* Object:ObjectsInPackage)
+            if(auto* Candidate=Cast<UBlueprint>(Object))
+            {
+                if(BP){UE_LOG(LogTemp,Error,TEXT("Multiple Blueprints in package are unsupported: %s"),*Asset);return false;}
+                BP=Candidate;
+            }
+    }
+    if(!BP){UE_LOG(LogTemp,Error,TEXT("No Blueprint found in package: %s"),*Asset);return false;}
     if(!Supported(BP) || !BP->GeneratedClass)return false;
     auto Root=MakeShared<FJsonObject>();
     Root->SetNumberField(ATNames::Valueschema,2);Root->SetStringField(ATNames::Valueformat,ATNames::Valuenative_asset);
     Root->SetStringField(ATNames::Valueasset,Asset);Root->SetStringField(ATNames::Valueparent,BP->ParentClass->GetPathName());
+    if(BP->GetName()!=FPackageName::GetLongPackageAssetName(Asset))
+        Root->SetStringField(ATNames::ValueobjectName,BP->GetName());
     Root->SetObjectField(ATNames::Valueproperties,Properties(BP,BP->GetClass()->GetDefaultObject(),BlueprintOwned));
     if(const auto* Widget=Cast<UWidgetBlueprint>(BP))
     {
@@ -491,10 +506,15 @@ struct GraphFactory final : FCustomizableTextObjectFactory
 };
 UBlueprint* CreateImport(const FJsonObject& Root)
 {
-    if(!Keys(Root,{ATNames::Valueschema,ATNames::Valueformat,ATNames::Valueasset,ATNames::Valueparent,ATNames::Valueproperties,ATNames::Valuevariables,ATNames::Valuedefaults,ATNames::Valuegraphs,Dependencies,RootState,Components,Interfaces,WidgetState}) ||
+    if(!Keys(Root,{ATNames::Valueschema,ATNames::Valueformat,ATNames::Valueasset,ATNames::ValueobjectName,ATNames::Valueparent,ATNames::Valueproperties,ATNames::Valuevariables,ATNames::Valuedefaults,ATNames::Valuegraphs,Dependencies,RootState,Components,Interfaces,WidgetState}) ||
        Root.GetIntegerField(ATNames::Valueschema)!=2 || Root.GetStringField(ATNames::Valueformat)!=ATNames::Valuenative_asset)return nullptr;
     const FString Asset=Root.GetStringField(ATNames::Valueasset);
     if(!Asset.StartsWith(ATNames::Value_Game_) || !FPackageName::IsValidLongPackageName(Asset))return nullptr;
+    FString ObjectName=FPackageName::GetLongPackageAssetName(Asset);
+    if(Root.HasField(ATNames::ValueobjectName) && !Root.TryGetStringField(ATNames::ValueobjectName,ObjectName))return nullptr;
+    FText NameError;
+    if(ObjectName.IsEmpty() || ObjectName.Len()>=NAME_SIZE || FName(*ObjectName).IsNone() || !FName(*ObjectName).IsValidObjectName(NameError))
+    {UE_LOG(LogTemp,Error,TEXT("Invalid Blueprint objectName for %s"),*Asset);return nullptr;}
     // First implementation rebuilds absent assets only. No existing asset is overwritten.
     if(FPackageName::DoesPackageExist(Asset))
     {UE_LOG(LogTemp,Error,TEXT("Import requires an absent target asset; preserve/move the test baseline first: %s"),*Asset);return nullptr;}
@@ -503,7 +523,7 @@ UBlueprint* CreateImport(const FJsonObject& Root)
     if(!Parent || !(IsWidget?Parent->IsChildOf(UUserWidget::StaticClass()):Parent->IsChildOf(AActor::StaticClass())))
     {UE_LOG(LogTemp,Error,TEXT("Missing or incompatible parent class for %s: %s"),*Asset,*Root.GetStringField(ATNames::Valueparent));return nullptr;}
     UPackage* Package=CreatePackage(*Asset);
-    return FKismetEditorUtilities::CreateBlueprint(Parent,Package,*FPackageName::GetLongPackageAssetName(Asset),BPTYPE_Normal,
+    return FKismetEditorUtilities::CreateBlueprint(Parent,Package,*ObjectName,BPTYPE_Normal,
         IsWidget?UWidgetBlueprint::StaticClass():UBlueprint::StaticClass(),
         IsWidget?UWidgetBlueprintGeneratedClass::StaticClass():UBlueprintGeneratedClass::StaticClass(),ATNames::ValueBlueprintAssetText);
 }

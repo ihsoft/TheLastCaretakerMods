@@ -76,6 +76,13 @@ native node properties and typed pins. Original object names and GUIDs are retai
 aliases and shared pin templates reduce repetition without replacing the native
 property values. Some fields deliberately remain Unreal property text.
 
+`asset` identifies the package, not the object's full path. Export locates the
+single Blueprint inside that package and rejects missing or ambiguous Blueprint
+objects. When its name differs from the package basename, optional `objectName`
+preserves that name; import recreates it without renaming the package. Omit
+`objectName` when both names match. This also preserves generated-class identities
+used by dependent Blueprints.
+
 The import/export boundary is an ordinary Actor-derived or Widget Blueprint with
 a native or available Blueprint parent. Component trees include SCS nodes, component templates and
 their owned objects, including child-actor templates. Inherited component
@@ -85,6 +92,11 @@ are described below. Required parent classes, native classes
 and external asset dependencies must already
 exist in the prepared project. A blank prototype project does not supply game
 classes or assets. This is an uncooked editor-asset workflow.
+
+Editor dependency placeholders are not the full stock game assets. A successful
+round-trip of a placeholder or function donor does not validate replacement of
+the cooked stock package. Maps, fonts, textures, Input Actions and Input Mappings
+are dependencies or separate asset types, not Blueprint conversion targets.
 
 The `components` section contains `objects`, the `scs` root identity, and
 `templates` / `generatedTemplates` reference lists. Each object declares `id`,
