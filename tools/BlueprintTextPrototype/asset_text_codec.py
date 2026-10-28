@@ -17,7 +17,7 @@ KINDS = {'K2Node_CallFunction': 'call', 'K2Node_Event': 'event',
          'K2Node_Self': 'self', 'K2Node_DynamicCast': 'cast'}
 PIN_SEPARATE = {'PinId', 'PinName', 'Direction', 'LinkedTo',
                 'DefaultValue', 'DefaultObject', 'DefaultTextValue'}
-FIELDS = {'schema', 'format', 'asset', 'parent', 'properties', 'variables', 'defaults', 'graphs', 'dependencies', 'root', 'components'}
+FIELDS = {'schema', 'format', 'asset', 'parent', 'properties', 'variables', 'defaults', 'graphs', 'dependencies', 'root', 'components', 'interfaces', 'widget'}
 
 
 def check_keys(obj, allowed, context):
@@ -26,15 +26,26 @@ def check_keys(obj, allowed, context):
         raise ValueError(f'Unknown {context} fields: {sorted(extra)}')
 
 
-def validate_components(document):
-    if 'components' not in document:
-        return
-    if 'root' in document:
-        raise ValueError('Use components or the legacy root, not both')
-    data = document['components']
-    check_keys(data, {'objects', 'scs', 'templates', 'generatedTemplates'}, 'components')
+def validate_interfaces(document):
+    classes, owned = set(), set()
+    graphs = {g['name'] for g in document['graphs'] if g['kind'] == 'interface'}
+    for interface in document.get('interfaces', []):
+        check_keys(interface, {'class', 'graphs'}, 'interface')
+        cls = interface['class']
+        if not isinstance(cls, str) or not cls or cls in classes:
+            raise ValueError('Duplicate or invalid interface class')
+        classes.add(cls)
+        for name in interface['graphs']:
+            if name not in graphs or name in owned:
+                raise ValueError('Unresolved or duplicate interface graph')
+            owned.add(name)
+    if owned != graphs:
+        raise ValueError('Interface graph requires an owning interface')
+
+
+def validate_object_tree(rows):
     objects = {}
-    for row in data['objects']:
+    for row in rows:
         check_keys(row, {'id', 'name', 'class', 'outer', 'flags', 'properties'}, 'component object')
         if any(not isinstance(row[k], str) or not row[k] for k in ('id', 'name', 'class', 'outer')):
             raise ValueError('Component object identities must be nonempty strings')
@@ -52,12 +63,93 @@ def validate_components(document):
             raise ValueError('Unresolved or cyclic component object owners')
         resolved.update(ready)
         pending.difference_update(ready)
+    return objects
+
+
+def validate_components(document):
+    if sum(key in document for key in ('root', 'components', 'widget')) > 1:
+        raise ValueError('Use exactly one of root, components or widget')
+    if 'widget' in document:
+        data = document['widget']
+        check_keys(data, {'tree', 'objects', 'animations'}, 'widget')
+        objects = validate_object_tree(data['objects'])
+        if data['tree'] not in objects:
+            raise ValueError('Unresolved WidgetTree root')
+        animations = data.get('animations', [])
+        if not isinstance(animations, list) or len(set(animations)) != len(animations) or any(a not in objects for a in animations):
+            raise ValueError('Invalid widget animation references')
+        validate_widget_links(document, objects)
+    if 'components' not in document:
+        return
+    data = document['components']
+    check_keys(data, {'objects', 'scs', 'templates', 'generatedTemplates'}, 'components')
+    objects = validate_object_tree(data['objects'])
     if data['scs'] not in objects:
         raise ValueError('Unresolved component SCS root')
     for field in ('templates', 'generatedTemplates'):
         refs = data[field]
         if not isinstance(refs, list) or len(set(refs)) != len(refs) or any(r not in objects for r in refs):
             raise ValueError('Invalid component template references')
+
+
+def validate_widget_links(document, objects):
+    """Check declared panel/slot references before Unreal recursively visits the tree."""
+    prefix = document['asset'] + '.'
+    def resolve(value):
+        if value in ('None', ''):
+            return None
+        if value.startswith('"'):
+            value = json.loads(value)
+        if "'" in value and value.endswith("'"):
+            value = value.split("'", 1)[1][:-1]
+        key = value[len(prefix):] if value.startswith(prefix) else value
+        if key not in objects:
+            raise ValueError(f'Unresolved widget hierarchy reference: {value}')
+        return key
+    tree = document['widget']['tree']
+    resolve(objects[tree]['properties'].get('RootWidget', 'None'))
+    edges, parents = {}, {}
+    for key, obj in objects.items():
+        props = obj['properties']
+        for field in ('RootWidget', 'Parent', 'Slot', 'Content'):
+            if field in props:
+                resolve(props[field])
+        if 'Slots' not in props:
+            continue
+        slots = props['Slots']
+        if not (slots.startswith('(') and slots.endswith(')')):
+            raise ValueError(f'Invalid widget Slots: {key}')
+        seen = set()
+        for value in split_fields(slots[1:-1]):
+            slot = resolve(value)
+            if not slot or slot in seen:
+                raise ValueError(f'Duplicate or empty widget slot: {key}')
+            seen.add(slot)
+            slot_props = objects[slot]['properties']
+            if 'Parent' in slot_props and resolve(slot_props['Parent']) != key:
+                raise ValueError(f'Widget slot parent mismatch: {slot}')
+            child = resolve(slot_props.get('Content', 'None'))
+            if not child:
+                continue
+            if child in parents:
+                raise ValueError(f'Widget has multiple slots: {child}')
+            parents[child] = key
+            if 'Slot' in objects[child]['properties'] and resolve(objects[child]['properties']['Slot']) != slot:
+                raise ValueError(f'Widget slot/content mismatch: {child}')
+            edges.setdefault(key, []).append(child)
+    # Iterate, rather than recursively walking potentially malformed input.
+    active, finished = set(), set()
+    for start in edges:
+        pending = [(start, False)]
+        while pending:
+            key, leaving = pending.pop()
+            if leaving:
+                active.remove(key); finished.add(key)
+            elif key in active:
+                raise ValueError(f'Cyclic widget hierarchy: {key}')
+            elif key not in finished:
+                active.add(key); pending.append((key, True))
+                pending.extend((child, False) for child in edges.get(key, []))
 
 
 def split_fields(text, separator=','):
@@ -161,6 +253,7 @@ def pin_alias(node, pin):
 def compact(document):
     check_keys(document, FIELDS, 'native envelope')
     validate_components(document)
+    validate_interfaces(document)
     if document['schema'] != 2 or document['format'] != 'native-asset':
         raise ValueError('Expected schema 2 native-asset')
     result = copy.deepcopy(document)
@@ -238,6 +331,7 @@ def compact(document):
 def native(document):
     check_keys(document, FIELDS | {'classes', 'pinTemplates'}, 'compact envelope')
     validate_components(document)
+    validate_interfaces(document)
     if document['schema'] != 2 or document['format'] != 'compact-asset':
         raise ValueError('Expected schema 2 compact-asset')
     result = copy.deepcopy(document)
@@ -385,9 +479,52 @@ def compare(expected, actual):
     return differences
 
 
+def register_widget(document, name):
+    """Allocate editor identity for a newly declared widget/animation; keep all existing GUIDs."""
+    result = copy.deepcopy(document)
+    validate_components(result)
+    widget = result['widget']
+    objects = [o for o in widget['objects'] if o['name'] == name and
+               (o['outer'] == widget['tree'] or o['id'] in widget.get('animations', []))]
+    if len(objects) != 1:
+        raise ValueError('Select one declared source widget or animation by name')
+    field = 'WidgetVariableNameToGuidMap'
+    value = result.setdefault('properties', {}).get(field, '()')
+    entries = split_fields(value[1:-1]) if value != '()' else []
+    for entry in entries:
+        pair = split_fields(entry[1:-1])
+        if len(pair) != 2:
+            raise ValueError('Invalid widget GUID map')
+        if json.loads(pair[0]) == name:
+            return result
+    entries.append('(' + json.dumps(name, ensure_ascii=False) + ', ' + uuid.uuid4().hex.upper() + ')')
+    result['properties'][field] = '(' + ','.join(entries) + ')'
+    return result
+
+
+def batch_sources(manifest, folder):
+    check_keys(manifest, {'assets'}, 'batch manifest')
+    if not isinstance(manifest['assets'], list) or not manifest['assets']:
+        raise ValueError('Batch assets must be a nonempty list of compact source paths')
+    sources, identities = [], set()
+    for path in manifest['assets']:
+        if not isinstance(path, str) or not path:
+            raise ValueError('Batch source paths must be nonempty strings')
+        source = json.loads((folder / path).read_text(encoding='utf-8-sig'))
+        if source['asset'] in identities:
+            raise ValueError('Duplicate batch asset identity')
+        identities.add(source['asset'])
+        sources.append(source)
+    for source in sources:
+        parent_package = source['parent'].split('.', 1)[0]
+        if parent_package in identities:
+            raise ValueError('Batch parent classes must already exist; import the parent first: ' + parent_package)
+    return sources
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('compact', 'native', 'template', 'add-call', 'compare'))
+    parser.add_argument('mode', choices=('compact', 'native', 'template', 'add-call', 'compare', 'batch-native', 'batch-compare', 'register-widget'))
     parser.add_argument('input', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--operation')
@@ -401,12 +538,30 @@ def main():
             raise ValueError('template/add-call require --operation and --id')
         if args.mode == 'add-call' and args.catalog is None:
             raise ValueError('add-call requires --catalog')
-        if args.mode == 'compare' and args.actual is None:
+        if args.mode in ('compare', 'batch-compare') and args.actual is None:
             raise ValueError('compare requires --actual')
         if args.input.resolve() == args.output.resolve():
             raise ValueError('Output must not overwrite input')
         data = json.loads(args.input.read_text(encoding='utf-8-sig'))
-        if args.mode == 'add-call':
+        if args.mode == 'register-widget':
+            if not args.id:
+                raise ValueError('register-widget requires --id NAME')
+            output = register_widget(data, args.id)
+        elif args.mode.startswith('batch-'):
+            if any((args.input.parent / path).resolve() == args.output.resolve() for path in data.get('assets', [])):
+                raise ValueError('Output must not overwrite a batch source')
+            sources = batch_sources(data, args.input.parent)
+            if args.mode == 'batch-native':
+                output = {'assets': [native(source) for source in sources]}
+            else:
+                rows = []
+                for index, source in enumerate(sources):
+                    actual = compact(json.loads((args.actual / f'{index}.native.json').read_text(encoding='utf-8-sig')))
+                    diffs = compare(source, actual)
+                    rows.append({'asset': source['asset'], 'equal': not diffs, 'differences': diffs})
+                    (args.actual / f'{index}.json').write_text(json.dumps(actual,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+                output = {'equal': all(row['equal'] for row in rows), 'assets': rows}
+        elif args.mode == 'add-call':
             output = add_call(data, json.loads(args.catalog.read_text(encoding='utf-8-sig')), args.operation, args.id, args.graph)
         elif args.mode == 'compare':
             diffs = compare(data, json.loads(args.actual.read_text(encoding='utf-8-sig')))
@@ -418,6 +573,8 @@ def main():
         print(json.dumps({'output': str(args.output.resolve())}))
         if args.mode == 'compare' and output['differences']:
             parser.exit(1, f'{len(output["differences"])} asset-text differences; see {args.output}\n')
+        if args.mode == 'batch-compare' and not output['equal']:
+            parser.exit(1, f'Batch asset-text differences; see {args.output}\n')
     except (ValueError, KeyError, TypeError, OSError) as error:
         parser.exit(2, f'Cannot convert asset text: {error}\n')
 

@@ -1,8 +1,11 @@
 """Offline schema-2 preservation and rejection checks; synthetic native text only."""
 import copy
+import json
+import tempfile
+from pathlib import Path
 import unittest
 
-from asset_text_codec import add_call, compact, compare, native, parse_nodes, split_fields
+from asset_text_codec import add_call, batch_sources, compact, compare, native, parse_nodes, register_widget, split_fields
 from render_graph import render
 
 
@@ -39,6 +42,83 @@ def fixture():
 
 
 class AssetTextTests(unittest.TestCase):
+    def test_widget_tree_slots_and_properties_round_trip(self):
+        source = fixture()
+        del source['root']
+        source['parent'] = '/Script/UMG.UserWidget'
+        source['widget'] = {'tree': 'BP_Test:WidgetTree', 'objects': [
+            {'id': 'BP_Test:WidgetTree', 'name': 'WidgetTree', 'class': '/Script/UMG.WidgetTree',
+             'outer': '$blueprint', 'flags': 8, 'properties': {'RootWidget': 'BP_Test:WidgetTree.Canvas'}},
+            {'id': 'BP_Test:WidgetTree.Canvas', 'name': 'Canvas', 'class': '/Script/UMG.CanvasPanel',
+             'outer': 'BP_Test:WidgetTree', 'flags': 8, 'properties': {'Slots': '(BP_Test:WidgetTree.Canvas.Slot)'}},
+            {'id': 'BP_Test:WidgetTree.Canvas.Slot', 'name': 'Slot', 'class': '/Script/UMG.CanvasPanelSlot',
+             'outer': 'BP_Test:WidgetTree.Canvas', 'flags': 8,
+             'properties': {'LayoutData': '(Offsets=(Left=0,Top=15,Right=0,Bottom=0))'}}]}
+        self.assertEqual(native(compact(source))['widget'], source['widget'])
+        original = copy.deepcopy(source)
+        registered = register_widget(source, 'Canvas')
+        self.assertEqual(source, original)
+        self.assertEqual(register_widget(registered, 'Canvas'), registered)
+        self.assertRegex(registered['properties']['WidgetVariableNameToGuidMap'], r'^\(\("Canvas", [A-F0-9]{32}\)\)$')
+        with self.assertRaises(ValueError):
+            register_widget(source, 'Slot')
+        for field, value in [('tree', 'missing'), ('unknown', [])]:
+            broken = copy.deepcopy(source)
+            broken['widget'][field] = value
+            with self.assertRaises(ValueError):
+                compact(broken)
+        broken = copy.deepcopy(source)
+        broken['widget']['objects'][2]['properties']['Content'] = 'MissingWidget'
+        with self.assertRaisesRegex(ValueError, 'Unresolved widget hierarchy'):
+            native(compact(broken))
+        broken['widget']['objects'][2]['properties']['Content'] = 'BP_Test:WidgetTree.Canvas'
+        with self.assertRaisesRegex(ValueError, 'Cyclic widget hierarchy'):
+            compact(broken)
+        broken = copy.deepcopy(source)
+        broken['widget']['objects'][2]['properties']['Parent'] = 'BP_Test:WidgetTree'
+        with self.assertRaisesRegex(ValueError, 'parent mismatch'):
+            compact(broken)
+        broken = copy.deepcopy(source)
+        broken['widget']['objects'][1]['properties']['Slots'] = '(BP_Test:WidgetTree.Canvas.Slot,BP_Test:WidgetTree.Canvas.Slot)'
+        with self.assertRaisesRegex(ValueError, 'Duplicate or empty widget slot'):
+            compact(broken)
+        broken = copy.deepcopy(source)
+        broken['components'] = {}
+        with self.assertRaises(ValueError):
+            compact(broken)
+
+    def test_batch_manifest_resolves_sources_and_rejects_duplicate_assets(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = compact(fixture())
+            (root/'one.json').write_text(json.dumps(source))
+            self.assertEqual(batch_sources({'assets': ['one.json']}, root), [source])
+            for manifest in ({'assets': []}, {'assets': ['one.json', 'one.json']},
+                             {'assets': ['one.json'], 'ignored': True}, {'assets': [42]}):
+                with self.assertRaises(ValueError):
+                    batch_sources(manifest, root)
+            child = copy.deepcopy(source)
+            child['asset'] = '/Game/BP_Child'
+            child['parent'] = '/Game/BP_Test.BP_Test_C'
+            (root/'child.json').write_text(json.dumps(child))
+            for sources in (['one.json', 'child.json'], ['child.json', 'one.json']):
+                with self.assertRaisesRegex(ValueError, 'parent classes must already exist'):
+                    batch_sources({'assets': sources}, root)
+
+    def test_interface_graph_ownership_and_preservation(self):
+        source = fixture()
+        source['graphs'][0]['kind'] = 'interface'
+        source['interfaces'] = [{'class': '/Script/Test.Calculator', 'graphs': ['Calculate']}]
+        self.assertEqual(native(compact(source))['interfaces'], source['interfaces'])
+        self.assertEqual(native(compact(source))['graphs'][0]['kind'], 'interface')
+        for interfaces in ([], source['interfaces'] * 2,
+                           [{'class': '/Script/Test.Calculator', 'graphs': ['Missing']}],
+                           [{'class': '/Script/Test.Calculator', 'graphs': ['Calculate', 'Calculate']}]):
+            broken = copy.deepcopy(source)
+            broken['interfaces'] = interfaces
+            with self.assertRaises(ValueError):
+                compact(broken)
+
     def test_component_tree_preservation_and_invalid_owners(self):
         source = fixture()
         del source['root']

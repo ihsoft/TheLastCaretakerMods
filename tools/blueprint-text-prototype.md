@@ -66,7 +66,7 @@ saving and reports errors with log paths. On failure inspect that diagnostic;
 do not bypass an unsupported-state rejection. `-Action Help` shows parameters
 and the node skeletons. The `Simulate*` actions are test fixtures only.
 
-## Schema 2: existing Actor Blueprint experiments
+## Schema 2: existing Blueprint experiments
 
 [Invoke-BlueprintAssetText.ps1](BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1)
 exports a complete supported Blueprint as compact JSON. It carries event and
@@ -76,11 +76,12 @@ native node properties and typed pins. Original object names and GUIDs are retai
 aliases and shared pin templates reduce repetition without replacing the native
 property values. Some fields deliberately remain Unreal property text.
 
-The current boundary is an ordinary Actor-derived Blueprint with a native or
-Blueprint parent. Component trees include SCS nodes, component templates and
+The import/export boundary is an ordinary Actor-derived or Widget Blueprint with
+a native or available Blueprint parent. Component trees include SCS nodes, component templates and
 their owned objects, including child-actor templates. Inherited component
-overrides, interfaces, macro definitions, timelines, extensions, nested graphs
-and nested node objects are rejected. Required parent classes, native classes
+overrides, macro definitions, timelines, extensions, nested graphs
+and nested node objects are rejected. Widget trees and implemented interfaces
+are described below. Required parent classes, native classes
 and external asset dependencies must already
 exist in the prepared project. A blank prototype project does not supply game
 classes or assets. This is an uncooked editor-asset workflow.
@@ -139,6 +140,103 @@ edit the new node's defaults and links in the resulting complete source.
 `template` produces a standalone insertion fragment. `compact`, `native` and
 `compare` perform offline conversion and comparison; use `--help` for arguments.
 New operations belong in shared discovery/serialization, not a per-mod builder.
+
+## Widget trees, interfaces and resources
+
+`Invoke-BlueprintAssetText.ps1 -Action Export` reads ordinary uncooked Widget
+Blueprints, their widget/slot object trees and animation-owned objects. The
+`widget` section declares the `tree` object ID, `objects`, and optional `animations`
+IDs. Objects retain their names, classes, owners, flags and native-text properties,
+using the same object representation as component trees. `widget`, `components`
+and the legacy `root` are mutually exclusive.
+
+Implemented interfaces are exported as `interfaces` entries containing a `class`
+path and owned `graphs` names; corresponding graphs use kind `interface`.
+The offline compact/native codec preserves these sections and validates their
+references. `-Action Import` reconstructs these same widget and interface sections,
+compiles/saves the Blueprint, and compares a fresh-process export with the source.
+This verifies represented state; it does not establish runtime equivalence or general lossless
+Blueprint support. Existing export exclusions still apply to macros, timelines,
+extensions, nested graphs and inherited component overrides.
+
+To add a widget or animation, declare its objects and hierarchy in the complete
+source, then allocate its missing editor identity without changing existing GUIDs:
+
+```powershell
+python -B ./tools/BlueprintTextPrototype/asset_text_codec.py register-widget `
+  ./Tmp/BlueprintTextPrototype/HUD-edited.json --id NewLabel `
+  --output ./Tmp/BlueprintTextPrototype/HUD-ready.json
+```
+
+`--id` is the declared widget/animation's `name`, not its full object ID. Repeating
+registration for an existing name preserves its GUID. The importer rejects missing,
+invalid or duplicated active widget identities; repair existing conflicts in the
+source GUID map. Object owners, hierarchy references, reciprocal panel/slot links
+and cycles are checked before Unreal traverses the widget tree. Animation objects
+retain native property text; the shared importer handles Unreal's frame-range text
+without weakening full-source comparison.
+
+### Mutually referencing Blueprints
+
+Use `-Action ImportBatch` when Blueprints reference each other. Its input manifest
+is `{"assets":["Actor.json","Operator.json","HUD.json"]}`; paths are resolved
+relative to the manifest, and absolute source paths are also accepted.
+
+```powershell
+& ./tools/BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1 `
+  -Action ImportBatch -ProjectFile <prepared-project.uproject> `
+  -InputPath ./Tmp/BlueprintTextPrototype/batch.json `
+  -OutputPath ./Tmp/BlueprintTextPrototype/batch-comparison.json
+```
+
+Every target asset must be absent and occur only once. The importer allocates all
+Blueprint classes before populating their objects/graphs and compiling them as a
+group. Parent classes must already exist outside the batch: rebuilding a parent
+and its child together is explicitly rejected; import the parent first. Other
+external dependencies, including textures and native class mirrors, must be
+available in the project.
+
+All members must compile and accept their defaults/templates before any package
+is saved. The operation is not a filesystem transaction: save-time or I/O failures
+can still leave partial output. Preserve the input and inspect the returned
+evidence directory on failure. On success, the wrapper reopens all assets in a
+fresh Unreal process and writes an overall/per-asset comparison report to
+`-OutputPath`; reopened sources are retained beside it. Any represented-field
+difference fails the operation. Import does not merge with existing assets.
+
+### Preview resources
+
+For HUD images, add `-PreviewResources` to the same export invocation:
+
+```powershell
+& ./tools/BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1 `
+  -Action Export -ProjectFile <prepared-project.uproject> `
+  -Asset /Game/UI/HUD -OutputPath ./Tmp/BlueprintTextPrototype/HUD.json `
+  -PreviewResources
+```
+
+This requires a Widget Blueprint. Warn before launching headless Unreal and use
+a prepared project under `Tmp/BlueprintTextPrototype/` with its dependencies.
+The command reads asset data without saving the source assets. It writes compact
+JSON plus `<output stem>.resources/manifest.json` and PNGs in one engine process;
+no mod-specific source-image paths are used. Re-export after editor changes.
+The PNG bundle is preview output; Blueprint import resolves the referenced texture
+assets already present in the project and does not recreate textures from PNGs.
+
+The resource manifest has `schema: 1`, `asset`, `engine`, a `textures` map keyed
+by Unreal object path, and an `unsupported` list. Texture entries contain a PNG
+`file` relative to the manifest and pixel `width`/`height`. Repeated brush references
+share one image. Reflected brushes include nested styles and containers, but
+external custom-widget/material object graphs are not expanded. Only ordinary
+single-block, single-layer, single-slice Texture2D editor source images are exported.
+Materials, render targets, named resources without a loaded asset, and textures
+without readable source pixels are reported as unsupported with a reason. PNGs
+represent source mip 0, not cooked compression or runtime material effects.
+
+Unsupported resources do not fail the Blueprint export; inspect the manifest to
+understand missing preview images. File-write and conversion failures do fail the
+command and retain diagnostic evidence. Use only output from a successful run;
+failed runs can leave partial files. Keep generated exports and images under `Tmp/`.
 
 ## Visual review without Unreal
 
@@ -300,3 +398,30 @@ It writes `result.json` and logs in that directory. This is compilation and
 serialization evidence, not GUI interaction, cooking, game behaviour, or a
 token-cost measurement. Schema-2 imports perform their own fresh-process
 round-trip comparison; they are not covered by the schema-1 acceptance runner.
+
+For schema-2 engine acceptance, use the generic fixture runner on a disposable
+prepared project and existing compact sources:
+
+```powershell
+python -B ./tools/BlueprintTextPrototype/test_asset_text_roundtrip.py `
+  --project ./Tmp/BlueprintTextPrototype/demo/Project/BlueprintTextPrototype.uproject `
+  --input ./Tmp/BlueprintTextPrototype/batch.json `
+  --output ./Tmp/BlueprintTextPrototype/acceptance-new
+```
+
+Warn before running it and close Unreal Editor: it invokes the public importer
+and a fresh-process re-export. Python 3.9+, Windows PowerShell and the configured
+Unreal engine are required. The project and a new output directory must be below
+`Tmp/BlueprintTextPrototype/`. The project must already contain all external
+dependencies and the current prototype module. The runner temporarily moves only
+the target `.uasset` files, retains rebuilt candidates and logs, then restores
+originals and checks their bytes even after an import failure. It accepts ordinary
+uncooked Blueprint packages without `.uexp`/`.ubulk` sidecars. Never use it on a
+production project.
+
+Use `--single` with one compact source instead of a batch manifest. For a negative
+case, `--expect-error "diagnostic text"` requires a nonzero result, the named
+diagnostic and no saved candidate. `--keep-existing` is restricted to negative
+cases testing refusal to overwrite a target. A successful result is reported in
+`result.json`; on failure inspect `worker.log` and the wrapper's engine/comparison
+evidence. These checks validate serialization and compilation, not gameplay.

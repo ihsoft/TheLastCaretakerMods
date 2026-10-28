@@ -1,18 +1,25 @@
 <#
 .SYNOPSIS
-Export/rebuild schema-2 Actor Blueprints in an isolated editor project.
+Export/rebuild supported schema-2 Actor/Widget Blueprints in an isolated editor project.
 Export writes a complete compact source. Import requires an absent target asset,
 compiles/saves it, then exports it in a fresh process and compares every represented field.
+ImportBatch takes {"assets":["relative/source.json",...]} and reconstructs mutually
+referencing Blueprints together. OutputPath receives their comparison report;
+reopened compact sources are kept in the adjacent evidence directory.
 ExportLabels reads English Engine function UI metadata without changing assets.
+Export -PreviewResources also extracts widget brush Texture2D source images to
+<output stem>.resources/manifest.json and PNGs during the same engine invocation.
+Materials and unavailable source images are listed as unsupported in the manifest.
 Warn the user before any action: all launch headless Unreal. No cooking or installation.
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Export','Import','ExportLabels')][string]$Action,
+    [Parameter(Mandatory)][ValidateSet('Export','Import','ImportBatch','ExportLabels')][string]$Action,
     [Parameter(Mandatory)][string]$ProjectFile,
     [Parameter(Mandatory)][string]$OutputPath,
     [string]$InputPath,
     [string]$Asset,
+    [switch]$PreviewResources,
     [string]$EngineRoot='K:\Epic Games\UE_5.8',
     [string]$PythonPath
 )
@@ -21,6 +28,7 @@ Set-StrictMode -Version Latest
 $owner=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../Tmp/BlueprintTextPrototype')).TrimEnd('\')+'\'
 $project=(Resolve-Path -LiteralPath $ProjectFile).Path
 $output=[IO.Path]::GetFullPath($OutputPath)
+if($PreviewResources -and $Action -ne 'Export'){throw 'PreviewResources requires Export'}
 foreach($path in @($project,$output)){
     if(-not $path.StartsWith($owner,[StringComparison]::OrdinalIgnoreCase)){throw 'Project and output must stay below Tmp/BlueprintTextPrototype.'}
 }
@@ -41,7 +49,7 @@ function RunEngine([string]$name,[string[]]$arguments){
     $log=Join-Path $evidence ($name+'-unreal.log')
     & (Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe') $project '-run=BlueprintAssetText' '-unattended' '-nop4' '-nosplash' '-nullrhi' ('-abslog='+$log) @arguments *> (Join-Path $evidence ($name+'.log'))
     if($LASTEXITCODE -ne 0){
-        $errors=@(Select-String -LiteralPath $log -Pattern 'LogTemp: Error:' | Select-Object -Last 3 | ForEach-Object {$_.Line})
+        $errors=@(Select-String -LiteralPath $log -Pattern 'LogTemp: Error:|LogBlueprint: Error:|Ensure condition failed:' | Select-Object -Last 3 | ForEach-Object {$_.Line})
         throw "Asset text $name failed ($LASTEXITCODE): $($errors -join ' | '). Evidence: $evidence"
     }
 }
@@ -50,8 +58,20 @@ if($Action -eq 'ExportLabels'){
 }elseif($Action -eq 'Export'){
     if([string]::IsNullOrWhiteSpace($Asset)){throw 'Export requires Asset'}
     $native=Join-Path $evidence 'export.native.json'
-    RunEngine 'export' @('-Mode=Export',('-Asset='+$Asset),('-Output='+$native))
+    $arguments=@('-Mode=Export',('-Asset='+$Asset),('-Output='+$native))
+    if($PreviewResources){$arguments+=('-PreviewResources='+[IO.Path]::ChangeExtension($output,'resources'))}
+    RunEngine 'export' $arguments
     ConvertText @('compact',$native,'--output',$output)
+}elseif($Action -eq 'ImportBatch'){
+    $sourceManifest=(Resolve-Path -LiteralPath $InputPath).Path
+    if($sourceManifest -eq $output){throw 'Output must not overwrite source'}
+    $native=Join-Path $evidence 'batch.native.json'
+    ConvertText @('batch-native',$sourceManifest,'--output',$native)
+    RunEngine 'import' @('-Mode=ImportBatch',('-Input='+$native))
+    $reopened=Join-Path $evidence 'reopened'
+    [void](New-Item -ItemType Directory -Path $reopened)
+    RunEngine 'reopen' @('-Mode=ExportBatch',('-Input='+$native),('-Output='+$reopened))
+    ConvertText @('batch-compare',$sourceManifest,'--actual',$reopened,'--output',$output)
 }else{
     $input=(Resolve-Path -LiteralPath $InputPath).Path
     if($input -eq $output){throw 'Output must not overwrite source'}

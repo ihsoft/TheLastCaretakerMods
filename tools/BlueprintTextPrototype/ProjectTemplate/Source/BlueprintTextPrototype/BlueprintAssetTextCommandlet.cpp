@@ -9,12 +9,20 @@
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/SCS_Node.h"
 #include "Components/SceneComponent.h"
+#include "WidgetBlueprint.h"
+#include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetTree.h"
+#include "Blueprint/WidgetBlueprintGeneratedClass.h"
+#include "Animation/WidgetAnimation.h"
 #include "Factories.h"
 #include "GameFramework/Actor.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
+#include "Misc/Paths.h"
+#include "Misc/DefaultValueHelper.h"
+#include "MovieSceneFrameMigration.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
@@ -22,9 +30,11 @@
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectIterator.h"
 #include "UObject/UObjectHash.h"
+#include "BlueprintCompilationManager.h"
 #include "Misc/EngineVersion.h"
 #include "Internationalization/Internationalization.h"
 #include "Internationalization/Culture.h"
+#include "WidgetPreviewResources.h"
 
 namespace ATNames
 {
@@ -89,6 +99,13 @@ constexpr TCHAR Dependencies[] = TEXT("dependencies");
 constexpr TCHAR RootState[] = TEXT("root");
 constexpr TCHAR RootNodeState[] = TEXT("node");
 constexpr TCHAR RootTemplateState[] = TEXT("template");
+constexpr TCHAR Interfaces[] = TEXT("interfaces");
+constexpr TCHAR InterfaceKind[] = TEXT("interface");
+constexpr TCHAR WidgetState[] = TEXT("widget");
+constexpr TCHAR WidgetRoot[] = TEXT("tree");
+constexpr TCHAR WidgetTreeProperty[] = TEXT("WidgetTree");
+constexpr TCHAR WidgetAnimationsProperty[] = TEXT("Animations");
+constexpr TCHAR WidgetAnimations[] = TEXT("animations");
 const TSet<FName> RootOwned = {TEXT("ComponentTemplate"),TEXT("ChildNodes")};
 
 // Graph/variable ownership is explicit; compiler products and editor session state
@@ -100,7 +117,7 @@ const TSet<FName> BlueprintOwned = {
     ATNames::ValueComponentTemplates, ATNames::ValueTimelines, ATNames::ValueInheritableComponentHandler,
     ATNames::ValueGeneratedVariables, ATNames::ValueImplementedInterfaces, ATNames::ValueComponentClassOverrides,
     ATNames::ValueExtensions, ATNames::ValueLastEditedDocuments, ATNames::ValueThumbnailInfo,
-    ATNames::ValueStatus, ATNames::ValueCrcLastCompiledCDO, ATNames::ValueCrcLastCompiledSignature};
+    ATNames::ValueStatus, ATNames::ValueCrcLastCompiledCDO, ATNames::ValueCrcLastCompiledSignature, WidgetTreeProperty, WidgetAnimationsProperty};
 const TSet<FName> GraphOwned = {ATNames::ValueNodes, ATNames::ValueSubGraphs, ATNames::ValueSchema};
 const TSet<FName> DefaultOwned = {ATNames::ValueRootComponent, ATNames::ValueDefaultSceneRoot};
 constexpr TCHAR LabelsMode[] = TEXT("Labels");
@@ -180,6 +197,26 @@ bool Apply(UObject* Object, const FJsonObject& Map, const TSet<FName>& Excluded)
         FString Text;
         if(!P || Excluded.Contains(P->GetFName()) || !Pair.Value->TryGetString(Text))
         { UE_LOG(LogTemp,Error,TEXT("Unsupported property %s"),*Pair.Key);return false; }
+        if(const auto* Struct=CastField<FStructProperty>(P);Struct && Struct->Struct==FMovieSceneFrameRange::StaticStruct())
+        {
+            // UE's native range importer does not advance Buffer. Parse its exact
+            // exported representation here instead of relaxing full-text validation.
+            TArray<FString> Fields;Text.ParseIntoArray(Fields,TEXT(":"),false);
+            if(Fields.Num()!=4)return false;
+            TRangeBound<FFrameNumber> Bounds[2];
+            for(int32 I=0;I<2;++I)
+            {
+                int32 Frame;
+                if(!FDefaultValueHelper::ParseInt(Fields[I*2+1],Frame))return false;
+                const FString& Kind=Fields[I*2];
+                if(Kind==TEXT("Open"))Bounds[I]=TRangeBound<FFrameNumber>::Open();
+                else if(Kind==TEXT("Inclusive"))Bounds[I]=TRangeBound<FFrameNumber>::Inclusive(FFrameNumber(Frame));
+                else if(Kind==TEXT("Exclusive"))Bounds[I]=TRangeBound<FFrameNumber>::Exclusive(FFrameNumber(Frame));
+                else return false;
+            }
+            P->ContainerPtrToValuePtr<FMovieSceneFrameRange>(Object)->Value=TRange<FFrameNumber>(Bounds[0],Bounds[1]);
+            continue;
+        }
         const TCHAR* End=P->ImportText_Direct(*Text,P->ContainerPtrToValuePtr<void>(Object),Object,PPF_None,GWarn);
         if(!End || *End!=0){UE_LOG(LogTemp,Error,TEXT("Cannot import property %s"),*Pair.Key);return false;}
     }
@@ -212,7 +249,7 @@ bool LegacyRoot(const UBlueprint* BP)
         !CastChecked<UBlueprintGeneratedClass>(BP->GeneratedClass)->ComponentTemplates.Num() && Nodes.Num()==1 &&
         Nodes[0]->GetVariableName()==ATNames::ValueDefaultSceneRoot && Nodes[0]->ComponentClass==USceneComponent::StaticClass();
 }
-Json ExportComponents(const UBlueprint* BP)
+Values ExportObjectTree(const UBlueprint* BP,const TArray<UObject*>& Roots)
 {
     TSet<UObject*> Owned;
     TFunction<void(UObject*)> Collect=[&](UObject* Object)
@@ -222,10 +259,7 @@ Json ExportComponents(const UBlueprint* BP)
         TArray<UObject*> Children;GetObjectsWithOuter(Object,Children,EGetObjectsFlags::None);
         for(UObject* Child:Children)Collect(Child);
     };
-    Collect(BP->SimpleConstructionScript);
-    for(const USCS_Node* Node:BP->SimpleConstructionScript->GetAllNodes())Collect(Node->ComponentTemplate);
-    for(UActorComponent* Template:BP->ComponentTemplates)Collect(Template);
-    for(UActorComponent* Template:CastChecked<UBlueprintGeneratedClass>(BP->GeneratedClass)->ComponentTemplates)Collect(Template);
+    for(UObject* Object:Roots)Collect(Object);
     // The hidden default-root node can own a template outside the SCS itself.
     TArray<UObject*> Initial=Owned.Array();
     for(UObject* Object:Initial)if(auto* Node=Cast<USCS_Node>(Object))Collect(Node->ComponentTemplate);
@@ -242,7 +276,15 @@ Json ExportComponents(const UBlueprint* BP)
         Row->SetObjectField(ATNames::Valueproperties,Properties(Object,Object->GetClass()->GetDefaultObject(),{},false,true));
         Rows.Add(MakeShared<FJsonValueObject>(Row));
     }
-    auto Data=MakeShared<FJsonObject>();Data->SetArrayField(Objects,Rows);
+    return Rows;
+}
+Json ExportComponents(const UBlueprint* BP)
+{
+    TArray<UObject*> Roots={BP->SimpleConstructionScript};
+    for(const USCS_Node* Node:BP->SimpleConstructionScript->GetAllNodes())Roots.Add(Node->ComponentTemplate);
+    for(UActorComponent* Template:BP->ComponentTemplates)Roots.Add(Template);
+    for(UActorComponent* Template:CastChecked<UBlueprintGeneratedClass>(BP->GeneratedClass)->ComponentTemplates)Roots.Add(Template);
+    auto Data=MakeShared<FJsonObject>();Data->SetArrayField(Objects,ExportObjectTree(BP,Roots));
     Data->SetStringField(ScriptRoot,ObjectKey(BP->SimpleConstructionScript,BP));
     Values References;for(UActorComponent* Template:BP->ComponentTemplates)References.Add(MakeShared<FJsonValueString>(ObjectKey(Template,BP)));
     Data->SetArrayField(Templates,References);
@@ -250,17 +292,11 @@ Json ExportComponents(const UBlueprint* BP)
     for(UActorComponent* Template:CastChecked<UBlueprintGeneratedClass>(BP->GeneratedClass)->ComponentTemplates)References.Add(MakeShared<FJsonValueString>(ObjectKey(Template,BP)));
     Data->SetArrayField(GeneratedTemplates,References);return Data;
 }
-bool ImportComponents(UBlueprint* BP,const FJsonObject& Data)
+bool ImportObjectTree(UBlueprint* BP,const Values& Rows,TMap<FString,UObject*>& Allocated)
 {
-    if(!Keys(Data,{Objects,ScriptRoot,Templates,GeneratedTemplates}))return false;
-    // Remove only the factory's disposable automatic root, before allocating source identities.
-    for(USCS_Node* Node:BP->SimpleConstructionScript->GetAllNodes())
-        if(Node->ComponentTemplate)Node->ComponentTemplate->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
-    BP->SimpleConstructionScript->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
-    BP->SimpleConstructionScript=nullptr;BP->ComponentTemplates.Empty();
-    TMap<FString,UObject*> Allocated;Allocated.Add(BlueprintOwner,BP);Allocated.Add(ClassOwner,BP->GeneratedClass);
+    Allocated.Add(BlueprintOwner,BP);Allocated.Add(ClassOwner,BP->GeneratedClass);
     TMap<FString,TSharedPtr<FJsonObject>> Pending;
-    for(const auto& Value:Data.GetArrayField(Objects))
+    for(const auto& Value:Rows)
     {
         auto Row=Value->AsObject();
         if(!Row || !Keys(*Row,{ObjectId,ATNames::Valuename,ObjectClass,ObjectOuter,ObjectFlags,ATNames::Valueproperties}))return false;
@@ -288,11 +324,23 @@ bool ImportComponents(UBlueprint* BP,const FJsonObject& Data)
         }
         if(!Progress){UE_LOG(LogTemp,Error,TEXT("Unresolved component object owners."));return false;}
     }
-    for(const auto& Value:Data.GetArrayField(Objects))
+    for(const auto& Value:Rows)
     {
         auto Row=Value->AsObject();
         if(!Apply(Allocated.FindChecked(Row->GetStringField(ObjectId)),*Row->GetObjectField(ATNames::Valueproperties),{}))return false;
     }
+    return true;
+}
+bool ImportComponents(UBlueprint* BP,const FJsonObject& Data)
+{
+    if(!Keys(Data,{Objects,ScriptRoot,Templates,GeneratedTemplates}))return false;
+    // Remove only the factory's disposable automatic root before allocating source identities.
+    for(USCS_Node* Node:BP->SimpleConstructionScript->GetAllNodes())
+        if(Node->ComponentTemplate)Node->ComponentTemplate->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
+    BP->SimpleConstructionScript->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
+    BP->SimpleConstructionScript=nullptr;BP->ComponentTemplates.Empty();
+    TMap<FString,UObject*> Allocated;
+    if(!ImportObjectTree(BP,Data.GetArrayField(Objects),Allocated))return false;
     BP->SimpleConstructionScript=Cast<USimpleConstructionScript>(Allocated.FindRef(Data.GetStringField(ScriptRoot)));
     if(!BP->SimpleConstructionScript)return false;
     for(const auto& Value:Data.GetArrayField(Templates))
@@ -309,20 +357,32 @@ bool ImportComponents(UBlueprint* BP,const FJsonObject& Data)
 }
 bool Supported(const UBlueprint* BP)
 {
-    if(!BP || (!BP->ParentClass || !BP->ParentClass->IsChildOf(AActor::StaticClass())) || BP->BlueprintType!=BPTYPE_Normal ||
+    const auto* Widget=Cast<UWidgetBlueprint>(BP);
+    if(!BP || !BP->ParentClass ||
+       !(Widget?BP->ParentClass->IsChildOf(UUserWidget::StaticClass()):BP->ParentClass->IsChildOf(AActor::StaticClass())) || BP->BlueprintType!=BPTYPE_Normal ||
        BP->MacroGraphs.Num() || BP->DelegateSignatureGraphs.Num() || BP->Timelines.Num() ||
        BP->ComponentClassOverrides.Num() ||
-       BP->ImplementedInterfaces.Num() || BP->GetExtensions().Num() || BP->GeneratedVariables.Num() || BP->InheritableComponentHandler)
-    {UE_LOG(LogTemp,Error,TEXT("Schema 2 currently supports Actor Blueprints without component overrides, interfaces, macro definitions, extensions or timelines."));return false;}
-    if(!BP->SimpleConstructionScript)return false;
+       BP->GetExtensions().Num() || (!Widget && BP->GeneratedVariables.Num()) || BP->InheritableComponentHandler)
+    {
+        UE_LOG(LogTemp,Error,TEXT("Unsupported Blueprint state: %s parent=%s type=%d macros=%d delegates=%d timelines=%d overrides=%d extensions=%d generatedVariables=%d inheritedOverrides=%d"),
+            *GetNameSafe(BP),BP?*GetPathNameSafe(BP->ParentClass):TEXT("None"),BP?int32(BP->BlueprintType):-1,
+            BP?BP->MacroGraphs.Num():0,BP?BP->DelegateSignatureGraphs.Num():0,BP?BP->Timelines.Num():0,
+            BP?BP->ComponentClassOverrides.Num():0,BP?BP->GetExtensions().Num():0,BP?BP->GeneratedVariables.Num():0,BP&&BP->InheritableComponentHandler?1:0);
+        return false;
+    }
+    if(Widget && !Widget->WidgetTree)
+    {UE_LOG(LogTemp,Error,TEXT("Widget export requires a WidgetTree."));return false;}
+    if(!Widget && !BP->SimpleConstructionScript)return false;
     TArray<UEdGraph*> Graphs;BP->GetAllGraphs(Graphs);
-    if(Graphs.Num()!=BP->UbergraphPages.Num()+BP->FunctionGraphs.Num())
+    int32 InterfaceGraphs=0;
+    for(const auto& Description:BP->ImplementedInterfaces)InterfaceGraphs+=Description.Graphs.Num();
+    if(Graphs.Num()!=BP->UbergraphPages.Num()+BP->FunctionGraphs.Num()+InterfaceGraphs)
     {UE_LOG(LogTemp,Error,TEXT("Nested graphs are outside schema 2."));return false;}
     for(const UEdGraph* Graph:Graphs)
         if(Graph->GetSchema()->GetClass()!=UEdGraphSchema_K2::StaticClass())return false;
     return true;
 }
-bool Export(const FString& Asset, const FString& Path)
+bool Export(const FString& Asset, const FString& Path, const FString& PreviewResources=FString())
 {
     UBlueprint* BP=LoadObject<UBlueprint>(nullptr,*(Asset+ATNames::Value_+FPackageName::GetLongPackageAssetName(Asset)));
     if(!Supported(BP) || !BP->GeneratedClass)return false;
@@ -330,7 +390,21 @@ bool Export(const FString& Asset, const FString& Path)
     Root->SetNumberField(ATNames::Valueschema,2);Root->SetStringField(ATNames::Valueformat,ATNames::Valuenative_asset);
     Root->SetStringField(ATNames::Valueasset,Asset);Root->SetStringField(ATNames::Valueparent,BP->ParentClass->GetPathName());
     Root->SetObjectField(ATNames::Valueproperties,Properties(BP,BP->GetClass()->GetDefaultObject(),BlueprintOwned));
-    if(LegacyRoot(BP))
+    if(const auto* Widget=Cast<UWidgetBlueprint>(BP))
+    {
+        auto Data=MakeShared<FJsonObject>();
+        Data->SetStringField(WidgetRoot,ObjectKey(Widget->WidgetTree,BP));
+        TArray<UObject*> Roots={Widget->WidgetTree};
+        Values Animations;
+        for(UWidgetAnimation* Animation:Widget->Animations)
+        {
+            Roots.Add(Animation);Animations.Add(MakeShared<FJsonValueString>(ObjectKey(Animation,BP)));
+        }
+        if(Animations.Num())Data->SetArrayField(WidgetAnimations,Animations);
+        Data->SetArrayField(Objects,ExportObjectTree(BP,Roots));
+        Root->SetObjectField(WidgetState,Data);
+    }
+    else if(LegacyRoot(BP))
     {
     const USCS_Node* RootNode=BP->SimpleConstructionScript->GetAllNodes()[0];
     auto RootData=MakeShared<FJsonObject>();
@@ -380,11 +454,27 @@ bool Export(const FString& Asset, const FString& Path)
     };
     for(UEdGraph* Graph:BP->UbergraphPages)ExportGraph(Graph,ATNames::Valueevent);
     for(UEdGraph* Graph:BP->FunctionGraphs)ExportGraph(Graph,ATNames::Valuefunction);
+    if(BP->ImplementedInterfaces.Num())
+    {
+        Values Descriptions;
+        for(const auto& Description:BP->ImplementedInterfaces)
+        {
+            auto Item=MakeShared<FJsonObject>();Item->SetStringField(ObjectClass,Description.Interface->GetPathName());
+            Values Names;
+            for(UEdGraph* Graph:Description.Graphs)
+            {
+                ExportGraph(Graph,InterfaceKind);
+                Names.Add(MakeShared<FJsonValueString>(Graph->GetName()));
+            }
+            Item->SetArrayField(ATNames::Valuegraphs,Names);Descriptions.Add(MakeShared<FJsonValueObject>(Item));
+        }
+        Root->SetArrayField(Interfaces,Descriptions);
+    }
     Root->SetArrayField(ATNames::Valuegraphs,Graphs);
     TArray<FString> SortedDependencies=DependencyPaths.Array();SortedDependencies.Sort();
     Values DependencyValues;for(const FString& Dependency:SortedDependencies)DependencyValues.Add(MakeShared<FJsonValueString>(Dependency));
     Root->SetArrayField(Dependencies,DependencyValues);
-    return Write(Path,Root);
+    return Write(Path,Root) && (PreviewResources.IsEmpty() || WidgetPreviewResources::Export(BP,PreviewResources));
 }
 struct GraphFactory final : FCustomizableTextObjectFactory
 {
@@ -399,22 +489,62 @@ struct GraphFactory final : FCustomizableTextObjectFactory
         Node->GetGraph()->Nodes.Add(Node);Nodes.Add(Node);
     }
 };
-bool Import(const FString& Path)
+UBlueprint* CreateImport(const FJsonObject& Root)
 {
-    TSharedPtr<FJsonObject> Root;
-    if(!Read(Path,Root) || !Keys(*Root,{ATNames::Valueschema,ATNames::Valueformat,ATNames::Valueasset,ATNames::Valueparent,ATNames::Valueproperties,ATNames::Valuevariables,ATNames::Valuedefaults,ATNames::Valuegraphs,Dependencies,RootState,Components}) ||
-       Root->GetIntegerField(ATNames::Valueschema)!=2 || Root->GetStringField(ATNames::Valueformat)!=ATNames::Valuenative_asset)return false;
-    const FString Asset=Root->GetStringField(ATNames::Valueasset);
-    if(!Asset.StartsWith(ATNames::Value_Game_) || !FPackageName::IsValidLongPackageName(Asset))return false;
+    if(!Keys(Root,{ATNames::Valueschema,ATNames::Valueformat,ATNames::Valueasset,ATNames::Valueparent,ATNames::Valueproperties,ATNames::Valuevariables,ATNames::Valuedefaults,ATNames::Valuegraphs,Dependencies,RootState,Components,Interfaces,WidgetState}) ||
+       Root.GetIntegerField(ATNames::Valueschema)!=2 || Root.GetStringField(ATNames::Valueformat)!=ATNames::Valuenative_asset)return nullptr;
+    const FString Asset=Root.GetStringField(ATNames::Valueasset);
+    if(!Asset.StartsWith(ATNames::Value_Game_) || !FPackageName::IsValidLongPackageName(Asset))return nullptr;
     // First implementation rebuilds absent assets only. No existing asset is overwritten.
     if(FPackageName::DoesPackageExist(Asset))
-    {UE_LOG(LogTemp,Error,TEXT("Import requires an absent target asset; preserve/move the test baseline first: %s"),*Asset);return false;}
-    UClass* Parent=LoadObject<UClass>(nullptr,*Root->GetStringField(ATNames::Valueparent));
-    if(!Parent || !Parent->IsChildOf(AActor::StaticClass()))return false;
+    {UE_LOG(LogTemp,Error,TEXT("Import requires an absent target asset; preserve/move the test baseline first: %s"),*Asset);return nullptr;}
+    UClass* Parent=LoadObject<UClass>(nullptr,*Root.GetStringField(ATNames::Valueparent));
+    const bool IsWidget=Root.HasField(WidgetState);
+    if(!Parent || !(IsWidget?Parent->IsChildOf(UUserWidget::StaticClass()):Parent->IsChildOf(AActor::StaticClass())))
+    {UE_LOG(LogTemp,Error,TEXT("Missing or incompatible parent class for %s: %s"),*Asset,*Root.GetStringField(ATNames::Valueparent));return nullptr;}
     UPackage* Package=CreatePackage(*Asset);
-    UBlueprint* BP=FKismetEditorUtilities::CreateBlueprint(Parent,Package,*FPackageName::GetLongPackageAssetName(Asset),BPTYPE_Normal,UBlueprint::StaticClass(),UBlueprintGeneratedClass::StaticClass(),ATNames::ValueBlueprintAssetText);
+    return FKismetEditorUtilities::CreateBlueprint(Parent,Package,*FPackageName::GetLongPackageAssetName(Asset),BPTYPE_Normal,
+        IsWidget?UWidgetBlueprint::StaticClass():UBlueprint::StaticClass(),
+        IsWidget?UWidgetBlueprintGeneratedClass::StaticClass():UBlueprintGeneratedClass::StaticClass(),ATNames::ValueBlueprintAssetText);
+}
+bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
+{
+    const bool IsWidget=Root->HasField(WidgetState);
     if(!BP || !Apply(BP,*Root->GetObjectField(ATNames::Valueproperties),BlueprintOwned))return false;
-    if(Root->HasField(Components))
+    if(IsWidget)
+    {
+        if(Root->HasField(Components) || Root->HasField(RootState))return false;
+        auto* Widget=CastChecked<UWidgetBlueprint>(BP);
+        auto Data=Root->GetObjectField(WidgetState);
+        if(!Keys(*Data,{WidgetRoot,Objects,WidgetAnimations}))return false;
+        if(Widget->WidgetTree)Widget->WidgetTree->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
+        TMap<FString,UObject*> Allocated;
+        if(!ImportObjectTree(BP,Data->GetArrayField(Objects),Allocated))return false;
+        Widget->WidgetTree=Cast<UWidgetTree>(Allocated.FindRef(Data->GetStringField(WidgetRoot)));
+        if(!Widget->WidgetTree)return false;
+        Widget->Animations.Empty();
+        if(Data->HasField(WidgetAnimations))for(const auto& Value:Data->GetArrayField(WidgetAnimations))
+        {
+            auto* Animation=Cast<UWidgetAnimation>(Allocated.FindRef(Value->AsString()));
+            if(!Animation)return false;Widget->Animations.Add(Animation);
+        }
+        bool MissingIdentity=false;
+        TSet<FGuid> WidgetIdentities;
+        auto CheckIdentity=[&](const UObject* Object)
+        {
+            const FGuid* Identity=Widget->WidgetVariableNameToGuidMap.Find(Object->GetFName());
+            if(!Identity || !Identity->IsValid() || WidgetIdentities.Contains(*Identity))
+            {
+                UE_LOG(LogTemp,Error,TEXT("Widget/animation %s has a missing, invalid or duplicate editor GUID. Add missing entries with asset_text_codec.py register-widget --id %s; repair existing conflicts in the source GUID map."),*Object->GetName(),*Object->GetName());
+                MissingIdentity=true;
+            }
+            else WidgetIdentities.Add(*Identity);
+        };
+        Widget->ForEachSourceWidget([&](UWidget* Object){CheckIdentity(Object);});
+        for(UWidgetAnimation* Animation:Widget->Animations)CheckIdentity(Animation);
+        if(MissingIdentity)return false;
+    }
+    else if(Root->HasField(Components))
     {
         if(Root->HasField(RootState) || !ImportComponents(BP,*Root->GetObjectField(Components)))return false;
     }
@@ -446,6 +576,23 @@ bool Import(const FString& Path)
     BP->UbergraphPages.Empty();BP->FunctionGraphs.Empty();
     for(UEdGraph* Graph:OldGraphs)Graph->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
     TArray<TPair<UEdGraph*,TSharedPtr<FJsonObject>>> Pending;
+    TMap<FString,int32> InterfaceOwners;
+    BP->ImplementedInterfaces.Empty();
+    if(Root->HasField(Interfaces))for(const auto& Value:Root->GetArrayField(Interfaces))
+    {
+        auto Item=Value->AsObject();
+        if(!Item || !Keys(*Item,{ObjectClass,ATNames::Valuegraphs}))return false;
+        UClass* Class=LoadObject<UClass>(nullptr,*Item->GetStringField(ObjectClass));
+        if(!Class || !Class->HasAnyClassFlags(CLASS_Interface))return false;
+        for(const auto& Existing:BP->ImplementedInterfaces)if(Existing.Interface==Class)return false;
+        FBPInterfaceDescription Description;Description.Interface=Class;
+        const int32 Index=BP->ImplementedInterfaces.Add(Description);
+        for(const auto& Name:Item->GetArrayField(ATNames::Valuegraphs))
+        {
+            if(InterfaceOwners.Contains(Name->AsString()))return false;
+            InterfaceOwners.Add(Name->AsString(),Index);
+        }
+    }
     TSet<FString> Names;
     for(const auto& Value:Root->GetArrayField(ATNames::Valuegraphs))
     {
@@ -458,9 +605,15 @@ bool Import(const FString& Path)
         const FString Kind=G->GetStringField(ATNames::Valuekind);
         if(Kind==ATNames::Valueevent)BP->UbergraphPages.Add(Graph);
         else if(Kind==ATNames::Valuefunction)BP->FunctionGraphs.Add(Graph);
+        else if(Kind==InterfaceKind && InterfaceOwners.Contains(Name))
+        {
+            BP->ImplementedInterfaces[InterfaceOwners.FindChecked(Name)].Graphs.Add(Graph);
+            InterfaceOwners.Remove(Name);
+        }
         else return false;
         Pending.Add({Graph,G});
     }
+    if(InterfaceOwners.Num())return false;
     for(const auto& Pair:Pending)
     {
         GraphFactory Factory;Factory.ProcessBuffer(Pair.Key,RF_Transactional,Pair.Value->GetStringField(ATNames::Valuetext));
@@ -468,8 +621,10 @@ bool Import(const FString& Path)
         if(Pair.Key->Nodes.Num()!=Pair.Value->GetIntegerField(ATNames::ValuenodeCount))
         {UE_LOG(LogTemp,Error,TEXT("Native node count mismatch in %s"),*Pair.Key->GetName());return false;}
     }
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
-    FKismetEditorUtilities::CompileBlueprint(BP);
+    return true;
+}
+bool FinalizeImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
+{
     if(BP->Status==BS_Error || !BP->GeneratedClass)
     {UE_LOG(LogTemp,Error,TEXT("Rebuilt Blueprint failed compilation."));return false;}
     if(Root->HasField(Components))
@@ -489,10 +644,72 @@ bool Import(const FString& Path)
         }
     }
     if(!Apply(BP->GeneratedClass->GetDefaultObject(),*Root->GetObjectField(ATNames::Valuedefaults),DefaultOwned))return false;
-    if(!Supported(BP))return false;
+    return Supported(BP);
+}
+bool SaveImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
+{
     FSavePackageArgs Args;Args.TopLevelFlags=RF_Public|RF_Standalone;Args.SaveFlags=SAVE_NoError;
-    const FString Filename=FPackageName::LongPackageNameToFilename(Asset,FPackageName::GetAssetPackageExtension());
-    return UPackage::SavePackage(Package,BP,*Filename,Args);
+    const FString Filename=FPackageName::LongPackageNameToFilename(Root->GetStringField(ATNames::Valueasset),FPackageName::GetAssetPackageExtension());
+    if(UPackage::SavePackage(BP->GetOutermost(),BP,*Filename,Args))return true;
+    UE_LOG(LogTemp,Error,TEXT("Cannot save imported Blueprint: %s"),*Filename);return false;
+}
+constexpr TCHAR ImportBatchMode[] = TEXT("ImportBatch");
+constexpr TCHAR ExportBatchMode[] = TEXT("ExportBatch");
+constexpr TCHAR Assets[] = TEXT("assets");
+bool Import(const FString& Path,bool Batch=false)
+{
+    TSharedPtr<FJsonObject> Input;
+    if(!Read(Path,Input))return false;
+    TArray<TSharedPtr<FJsonObject>> Sources;
+    if(Batch)
+    {
+        if(!Keys(*Input,{Assets}))return false;
+        for(const auto& Value:Input->GetArrayField(Assets))Sources.Add(Value->AsObject());
+    }
+    else Sources.Add(Input);
+    if(!Sources.Num())return false;
+    // All targets must be absent; allocate every class before importing references.
+    TSet<FString> Identities;
+    for(const auto& Root:Sources)
+    {
+        if(!Root)return false;
+        const FString Asset=Root->GetStringField(ATNames::Valueasset);
+        if(Identities.Contains(Asset) || FPackageName::DoesPackageExist(Asset))
+        {UE_LOG(LogTemp,Error,TEXT("Duplicate or existing import target: %s"),*Asset);return false;}
+        Identities.Add(Asset);
+    }
+    for(const auto& Root:Sources)
+    {
+        const FString ParentPackage=FPackageName::ObjectPathToPackageName(Root->GetStringField(ATNames::Valueparent));
+        if(Identities.Contains(ParentPackage))
+        {UE_LOG(LogTemp,Error,TEXT("Batch parent classes must already exist; import the parent first: %s"),*ParentPackage);return false;}
+    }
+    TArray<UBlueprint*> Blueprints;
+    for(const auto& Root:Sources)
+    {
+        auto* BP=CreateImport(*Root);if(!BP)return false;Blueprints.Add(BP);
+    }
+    for(int32 I=0;I<Sources.Num();++I)if(!PopulateImport(Blueprints[I],Sources[I]))return false;
+    for(UBlueprint* BP:Blueprints)FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    for(UBlueprint* BP:Blueprints)FBlueprintCompilationManager::QueueForCompilation(BP);
+    FBlueprintCompilationManager::FlushCompilationQueueAndReinstance();
+    for(UBlueprint* BP:Blueprints)if(BP->Status==BS_Error || !BP->GeneratedClass)
+    {UE_LOG(LogTemp,Error,TEXT("Rebuilt Blueprint failed compilation: %s"),*BP->GetPathName());return false;}
+    // Validate every post-compile default/template before saving any package.
+    for(int32 I=0;I<Sources.Num();++I)if(!FinalizeImport(Blueprints[I],Sources[I]))return false;
+    for(int32 I=0;I<Sources.Num();++I)if(!SaveImport(Blueprints[I],Sources[I]))return false;
+    return true;
+}
+bool ExportBatch(const FString& Path,const FString& Folder)
+{
+    TSharedPtr<FJsonObject> Input;
+    if(!Read(Path,Input) || !Keys(*Input,{Assets}))return false;
+    int32 Index=0;
+    for(const auto& Value:Input->GetArrayField(Assets))
+    {
+        if(!Export(Value->AsObject()->GetStringField(ATNames::Valueasset),Folder/FString::Printf(TEXT("%d.native.json"),Index++)))return false;
+    }
+    return Index>0;
 }
 }
 
@@ -502,8 +719,11 @@ int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
     FString Mode,Input,Output,Asset;
     FParse::Value(*Params,ATNames::ValueMode_,Mode);FParse::Value(*Params,ATNames::ValueInput_,Input);
     FParse::Value(*Params,ATNames::ValueOutput_,Output);FParse::Value(*Params,ATNames::ValueAsset_,Asset);
-    if(Mode==ATNames::ValueExport)return AssetText::Export(Asset,Output)?0:2;
+    FString PreviewResources;FParse::Value(*Params,WidgetPreviewResources::ResourcesArgument,PreviewResources);
+    if(Mode==ATNames::ValueExport)return AssetText::Export(Asset,Output,PreviewResources)?0:2;
     if(Mode==ATNames::ValueImport)return AssetText::Import(Input)?0:3;
+    if(Mode==AssetText::ImportBatchMode)return AssetText::Import(Input,true)?0:3;
+    if(Mode==AssetText::ExportBatchMode)return AssetText::ExportBatch(Input,Output)?0:2;
     if(Mode==AssetText::LabelsMode)return AssetText::ExportLabels(Output)?0:4;
     return 1;
 }
