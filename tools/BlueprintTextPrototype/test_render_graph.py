@@ -478,23 +478,23 @@ class GraphRenderingTests(unittest.TestCase):
         def action(id):
             return {'id': id, 'kind': 'call', 'operation': id,
                     'pins': {'in:exec': {'type': 'exec'}, 'out:then': {'type': 'exec'},
-                             'in:value': {'type': 'data'}, 'out:result': {'type': 'data'}},
+                             'in:value': {'type': 'data'}, 'in:target': {'type': 'data', 'name': 'self'},
+                             'out:result': {'type': 'data'}},
                     'defaults': {'in:value': 'false'}}
         nodes = [{'id': 'event', 'kind': 'event'}, action('first'), action('second'),
                  {'id': 'consumer', 'kind': 'branch'}, {'id': 'value', 'kind': 'getVariable'}]
         nodes[1]['pins']['out:Unused'] = {'type': 'data'}
         edges = [('event', 'then', 'first', 'exec', True), ('first', 'then', 'second', 'exec', True),
-                 ('second', 'then', 'consumer', 'exec', True), ('value', 'value', 'first', 'value', False),
-                 ('first', 'result', 'second', 'value', False), ('first', 'result', 'consumer', 'Condition', False)]
+                 ('second', 'then', 'consumer', 'exec', True),
+                 ('first', 'result', 'consumer', 'Condition', False)]
         original = copy.deepcopy(nodes)
         result, links, count = fold_chains(nodes, edges, edges, templates, mode='action')
         self.assertEqual(count, 1)
         group = next(n for n in result if '_foldedNodes' in n)
         self.assertEqual([n['id'] for n in group['_foldedNodes']], ['first', 'second'])
         self.assertIn('Action chain', ' '.join(node_lines(group, set())))
-        self.assertIn('value ← Step 1: result', ' '.join(node_lines(group, set())))
+        self.assertIn('Input: value = "false"', node_lines(group, set()))
         self.assertEqual(links, [edges[0][:2] + ('second', 'Step 1: exec', True), edges[2],
-                               ('value', 'value', 'second', 'Step 1: value', False),
                                ('second', 'Step 1: result', 'consumer', 'Condition', False)])
         self.assertEqual(nodes, original)
         document = {'schema': 2, 'nodes': nodes, 'pinTemplates': templates, 'links': [
@@ -508,14 +508,29 @@ class GraphRenderingTests(unittest.TestCase):
         self.assertNotIn('Branch: then — unconnected', labels)
         self.assertLess(labels.index('Output: Unused — unconnected'), labels.index('2. second'))
         self.assertGreater(labels.index('Output: result — unconnected'), labels.index('2. second'))
-        self.assertFalse(any('○ Step ' in label for label in labels))
-        self.assertIn('Input: value ← Step 1: result', labels)
+        self.assertFalse(any('← Step ' in label for label in labels))
+        self.assertEqual(labels.count('Input: value = "false"'), 2)
         optional = [n.text for n in composite.findall('{*}text[@data-unconnected-output="true"]')]
         self.assertIn('Output: Unused — unconnected', optional)
         self.assertIn('Output: result — unconnected', optional)
         self.assertIn('Output: bool', optional)
         self.assertNotIn('Input: value ← Step 1: result', optional)
-        self.assertEqual(render(document, view='full')[2:], (5, 6))
+        self.assertEqual(render(document, view='full')[2:], (5, 4))
+        # Both external and internal wired data inputs keep actions separate.
+        for source, target, pin in [('value', 'first', 'value'), ('value', 'second', 'value'),
+                                    ('first', 'second', 'value'), ('value', 'second', 'target')]:
+            wired = edges + [(source, 'result', target, pin, False)]
+            self.assertEqual(fold_chains(nodes, wired, wired, templates, mode='action')[2], 0)
+        # Explicit technical Self wiring is allowed only for the target/self pin.
+        self_nodes = nodes + [{'id': 'self', 'kind': 'self'}]
+        for pin, expected in [('target', 1), ('self', 1), ('value', 0)]:
+            wired = edges + [('self', 'result', 'first', pin, False)]
+            self.assertEqual(fold_chains(self_nodes, wired, wired, templates,
+                                        mode='action', self_ids={'self'})[2], expected)
+        self_doc = copy.deepcopy(document)
+        self_doc['nodes'] = self_nodes
+        self_doc['links'].append({'from': 'self.out:result', 'to': 'first.in:target'})
+        self.assertEqual(render(self_doc)[2], 4)  # Self hidden, two actions folded.
         # Merges, multiple execution outputs (even unwired), and cycles are boundaries.
         merge = edges + [('event', 'then', 'second', 'exec', True)]
         self.assertEqual(fold_chains(nodes, merge, merge, templates, mode='action')[2], 0)

@@ -179,9 +179,13 @@ the current zoom retained; without a selection the view resets and fits its widt
 Simplified view hides disabled and technical Self nodes, labels incoming hidden
 sources, and folds exclusive data chains and linear action chains into numbered
 steps. It does not combine repeated computations or invent bypass connections.
-Full view retains all nodes. Folded steps preserve their inputs, internal data
-dependencies and unconnected-output notes. A sole unused execution output is
-treated as a terminal path; unused alternatives remain visible.
+An action with a connected data input stays separate, including when that input
+comes from the preceding action. Unconnected defaults and technical Self target
+inputs do not prevent folding; a target supplied by another object does.
+Full view retains all nodes. Folded steps preserve defaults, output connections
+and unconnected-output notes; data chains retain their internal dependencies.
+A sole unused execution output is treated as a terminal path; unused alternatives
+remain visible.
 
 Nodes describe operations and input values; function calls and variable getters
 also show known output types. The header legend uses colored node cards and arrow

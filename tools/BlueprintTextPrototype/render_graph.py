@@ -258,7 +258,7 @@ def member_name(node, field="FunctionReference"):
     return match.group(1) if match else ""
 
 
-def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data'):
+def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data', self_ids=()):
     """Contract linear data or execution edges; retain original nodes and boundaries."""
     by_id = {n['id']: n for n in nodes}
     incoming, outgoing = defaultdict(list), defaultdict(list)
@@ -270,6 +270,10 @@ def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data
         if node.get('_reviewStatus') or node.get('_reviewBoundary'):
             return False
         if mode == 'action':
+            # Defaults and a technical Self target do not introduce data dependencies.
+            if any(not e[4] and not (e[0] in self_ids and e[3] in ('target', 'self'))
+                   for e in incoming[node['id']]):
+                return False
             if node.get('kind') not in ('call', 'setVariable', 'variableSet', 'AddDelegate', 'RemoveDelegate', 'ClearDelegate', 'CallDelegate'):
                 return False
             execution = {alias for alias in node.get('pins', {}) if pin_category(node, alias, templates) == 'exec'}
@@ -309,13 +313,6 @@ def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data
                             connected_outputs={e[1] for e in outgoing[n['id']]}, wrap=False)
                  for n in chain]
         replacement = dict(chain[-1], _foldedNodes=chain, _foldedLinks=links, _foldedSteps=steps, _chainKind=mode)
-        if mode == 'action':
-            step_by_id = {n['id']: i for i, n in enumerate(chain)}
-            for source, output, target, input_pin, execution in links:
-                if not execution:
-                    step = steps[step_by_id[target]]
-                    index = next((i for i, line in enumerate(step) if line.startswith('Output:')), len(step))
-                    step.insert(index, f'Input: {input_pin} ← Step {step_by_id[source]+1}: {output}')
         variable = start.get('variable') or member_name(start, 'VariableReference')
         if (mode == 'data' and start.get('kind') in ('getVariable', 'variableGet') and not incoming[start['id']] and variable
                 and all(member_name(n) == 'Not_PreBool' for n in chain[1:])
@@ -337,9 +334,7 @@ def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data
             continue
         if mode == 'action' and source in remap and not execution:
             output = f'Step {source_step}: {output}'
-        if mode == 'action' and target in remap and not execution:
-            input_pin = f'Step {step}: {input_pin}'
-        elif target != new_target:
+        if target != new_target:
             input_pin = f'Step {step}: {input_pin}'
         result_edges.append((new_source, output, new_target, input_pin, execution))
     # Tooltip includes exact pre-fold boundary endpoints as well as internal links.
@@ -621,7 +616,8 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     hidden_links, folded = len(all_edges) - len(edges), 0
     if view == "simplified":
         nodes, edges, folded = fold_data_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"))
-        nodes, edges, actions_folded = fold_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"), 'action')
+        self_ids = {n['id'] for n in all_nodes if n.get('kind') == 'self' or n.get('ref') == '/Script/BlueprintGraph.K2Node_Self'}
+        nodes, edges, actions_folded = fold_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"), 'action', self_ids)
         folded += actions_folded
     rank = layers(nodes, edges, document.get('pinTemplates', {}))
     groups = defaultdict(list)
