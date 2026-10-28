@@ -20,3 +20,4 @@ rules remain in the [repository index](../AGENTS.md).
 | Measure explicitly requested agent work | [Agent work measurement](agent-work-measurement.md) |
 | Experiment with declarative Blueprint text or render its graph | [Blueprint text prototype](blueprint-text-prototype.md) |
 | Preview and annotate an exported HUD widget layout | [HUD preview](blueprint-text-prototype.md#hud-widget-preview) |
+| Browse exported Blueprints or review an explicitly marked set of changes | [Batch preview index](blueprint-text-prototype.md#browse-a-set-of-blueprints) |

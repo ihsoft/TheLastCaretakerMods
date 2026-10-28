@@ -9,6 +9,7 @@ failure handling.
 | Import/export supported Actor/Widget Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1` | [Blueprint text prototype](blueprint-text-prototype.md#schema-2-existing-blueprint-experiments) |
 | Check asset-text round trips in a disposable prepared project | `BlueprintTextPrototype/test_asset_text_roundtrip.py` | [Blueprint checks](blueprint-text-prototype.md#checks) |
 | Render a compact Blueprint graph offline | `BlueprintTextPrototype/Render-BlueprintGraph.ps1` | [Blueprint text prototype](blueprint-text-prototype.md) |
+| Generate graph/widget previews and a browse or review index for a set of exports | `BlueprintTextPrototype/Render-BlueprintPreviews.ps1` | [Batch preview index](blueprint-text-prototype.md#browse-a-set-of-blueprints) |
 | Preview an exported HUD layout and copy review adjustments | `BlueprintTextPrototype/Render-WidgetPreview.ps1` | [HUD preview](blueprint-text-prototype.md#hud-widget-preview) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
 | Generate a settings header and INI | `New-VoyageModSettings.ps1` | [Mod setup](mod-setup.md) |

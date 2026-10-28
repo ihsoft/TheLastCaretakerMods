@@ -252,6 +252,71 @@ failed runs can leave partial files. Keep generated exports and images under `Tm
 
 ## Visual review without Unreal
 
+### Browse a set of Blueprints
+
+[Render-BlueprintPreviews.ps1](BlueprintTextPrototype/Render-BlueprintPreviews.ps1)
+generates all compact graphs, available widget previews, and a common HTML index
+from one JSON manifest. It is offline and does not modify source exports:
+
+```powershell
+& ./tools/BlueprintTextPrototype/Render-BlueprintPreviews.ps1 `
+  -InputPath ./Tmp/BlueprintTextPrototype/review/previews.json `
+  -OutputPath ./Tmp/BlueprintTextPrototype/review/site
+```
+
+Output must be a new or empty directory. Open its `index.html`. The directory
+contains source snapshots, individual viewers and `summary.json`. On failure,
+inspect the reported source/graph or resource diagnostic and use a new output
+directory after correcting the input; a partial directory is not a finished preview.
+
+The manifest accepts source paths or explicit records, in display order:
+
+```json
+{
+  "title": "Blueprint previews",
+  "description": "Exported editor assets",
+  "assets": [
+    "exports/Actor.json",
+    {"source": "exports/Parent.json", "placeholder": true}
+  ]
+}
+```
+
+Paths are relative to the manifest. Package identity comes from each source;
+duplicate identities are rejected. `placeholder: true` gives the card a yellow
+background and a red italic warning. The tool does not infer placeholders from
+names. Optional `note` adds plain text to a card.
+
+With no changes, the index is a browser: no status badges, review legend or diff
+explanations. Any `added`, `changed` or `removed` record enables review mode with
+badges and colored borders. Use these record shapes:
+
+- Added: `{"source":"after/New.json","status":"added"}`.
+- Changed: `{"source":"after/Actor.json","before":"before/Actor.json","status":"changed"}`.
+- Removed: `{"before":"before/Old.json","status":"removed"}`.
+- Unchanged: a source path, or a record with `source` and optional
+  `"status":"unchanged"`; do not supply `before`.
+
+Changed snapshots must have the same asset identity. A changed record may also
+provide `reviews`, keyed by graph name, using the existing [node review lists](#review-mode):
+`"reviews":{"EventGraph":{"changed":["SetLimit"]}}`. Use actual exported node
+IDs. Without a list, the card still has its status and graph Before links; node
+changes are not inferred. Added and removed graphs show all their nodes marked
+accordingly, including graphs removed from a changed Blueprint. Removed content
+is rendered from the Before snapshot. `"demo":true` marks the index explicitly
+as a fictional review. None of these annotations becomes Blueprint source state.
+
+Each graph row shows full source node/link counts, independent of viewer folding
+or hidden disconnected nodes. Deleted graphs use Before counts. Widget previews
+use the adjacent `.resources/manifest.json`; optional `resources` and
+`beforeResources` override it for the corresponding snapshot. An empty widget
+tree or missing resource manifest is explained in the index instead of creating
+a misleading layout. Supplied widget resources use the same validation and
+rendering limits as the [HUD preview](#hud-widget-preview). Stock layouts absent
+from editor placeholders and runtime-created widgets are not reconstructed.
+
+### View one graph
+
 ```powershell
 ./tools/BlueprintTextPrototype/Render-BlueprintGraph.ps1 -InputPath './tools/BlueprintTextPrototype/Examples/division.json' -OutputPath './Tmp/BlueprintTextPrototype/division.svg'
 ```
@@ -454,6 +519,7 @@ or proof of arbitrary widget support.
 ## Checks
 
 Offline renderer checks: `python -B tools/BlueprintTextPrototype/test_render_graph.py`.
+Batch index checks: `python -B tools/BlueprintTextPrototype/test_preview_index.py`.
 Review overlay checks: `python -B tools/BlueprintTextPrototype/test_review_graph.py`.
 Details comparison checks: `python -B tools/BlueprintTextPrototype/test_review_details.py`.
 Codec checks: `python -B tools/BlueprintTextPrototype/test_asset_text_codec.py`.

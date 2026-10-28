@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>__TITLE__</title>
+<style>
+:root{--placeholder:#fff3d8;--added:#15803d;--changed:#7c3aed;--removed:#b42318}
+body{max-width:1100px;margin:36px auto;padding:0 24px;background:#f8fafc;color:#19324d;font:16px/1.5 'Segoe UI',sans-serif}
+h1{margin-bottom:8px}h2{font-size:20px;margin:0 0 8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.blueprint{background:white;border:1px solid #cbd5e1;border-left:6px solid #cbd5e1;border-radius:12px;padding:22px;margin:20px 0}
+.blueprint.placeholder,.notice{background:var(--placeholder)}
+.placeholder-warning{font-style:italic;color:#a3332b}
+.blueprint.added{border-left-color:var(--added)}.blueprint.changed{border-left-color:var(--changed)}.blueprint.removed{border-left-color:var(--removed)}
+.badge{display:inline-block;font-size:13px;font-weight:600;padding:3px 10px;border-radius:5px;background:#e2e8f0;color:#475569}
+.badge.added{background:#dcfce7;color:var(--added)}.badge.changed{background:#ede9fe;color:var(--changed)}.badge.removed{background:#fee2e2;color:var(--removed)}
+.notice,.demo{padding:14px 18px;border-radius:8px}.demo{background:#ede9fe;border:1px solid #a78bfa;color:#5b21b6;font-weight:600}
+nav{display:flex;gap:8px;flex-wrap:wrap}a{color:#175ba4}li{padding:7px 0;border-bottom:1px solid #94a3b833}ul{padding:0;list-style:none}code{overflow-wrap:anywhere}p:empty{display:none}footer{font-size:13px;color:#52657a;margin:30px 0}
+</style>
+<style>li{display:flex;justify-content:space-between;align-items:baseline;gap:8px 20px;flex-wrap:wrap}.graph-stats{color:#52657a;font-size:14px;white-space:nowrap}</style>
+<h1>__TITLE__</h1><p>__DESCRIPTION__</p>__DEMO__
+__LEGEND__
+<p class="notice">Yellow cards are editor placeholders for game dependencies.__REVIEW_NOTICE__</p>
+__CARDS__
+<footer>Offline structural preview.__REVIEW_FOOTER__ Blueprint code, bindings and animations are not executed.</footer>
+</html>
