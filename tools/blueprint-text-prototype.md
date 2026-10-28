@@ -160,6 +160,54 @@ explicit graph links, not inferred timer callbacks or runtime behaviour.
 The viewer accepts both compact schemas (up to 500 nodes per graph), including
 the earlier standalone `nodes`/`links` shape; it does not render `.t3d`.
 
+### Review mode
+
+Supply the current compact source, an original source and a JSON file of explicit
+node IDs for the selected graph:
+
+```json
+{
+  "added": ["NewDivision"],
+  "changed": ["SetLimit"],
+  "removed": ["OldConstant"]
+}
+```
+
+```powershell
+./tools/BlueprintTextPrototype/Render-BlueprintGraph.ps1 -InputPath ./Tmp/BlueprintTextPrototype/review/after.json -BeforePath ./Tmp/BlueprintTextPrototype/review/before.json -ReviewPath ./Tmp/BlueprintTextPrototype/review/review.json -Graph EventGraph -OutputPath ./Tmp/BlueprintTextPrototype/review/EventGraph.svg
+```
+
+The author supplies the lists; the tool does not discover changes or verify that
+the lists are complete. For connection-only edits, mark both endpoint nodes as
+changed. IDs must be unique across lists and match their declared state: added
+exists in current (and must be absent from original when supplied), removed only
+in original, changed in both. Original and
+current must identify the same asset and graph. `-BeforePath` is required for
+changed/removed nodes; it is optional for an additions-only review. Invalid marks
+stop rendering with a diagnostic; correct the lists or selected source/graph.
+
+Green `+`, purple `~` and red dashed `−` borders mark added, changed and removed
+nodes; existing fill colours retain their execution/data meaning. Marked nodes
+stay visible and separate in Simplified view. Removed nodes and their original
+connections to displayed endpoints appear as translucent ghosts. The combined
+review must fit the 500-node limit. Changes remain a display overlay; neither
+source is rewritten or imported into Unreal.
+
+On changed nodes, modified description fields are purple; hover shows the
+previous value. Comparison precedes text wrapping and matches named inputs and
+outputs. Connection-only edits do not highlight unchanged description fields.
+Only fields represented in the description can be highlighted there.
+
+Details opens After by default (Before for a removed node), with a version
+selector. Changed-node After marks individual fields by key, including nested
+object headings; hover shows prior values. Added fields use `+`; removed fields
+use `−` and strikethrough. GUID and position changes use neutral grey. Incident
+links are compared by endpoint pair, ignoring order; other arrays are marked as
+whole fields without an element diff. Before shows the original snapshot.
+Copy contents returns clean JSON of the selected snapshot, without review
+markers or deleted-field overlays. Keep review lists and generated previews with
+temporary review output; they are not Blueprint source requirements.
+
 ### Function names
 
 [Metadata/function-labels.json](BlueprintTextPrototype/Metadata/function-labels.json)
@@ -179,6 +227,8 @@ the snapshot. Normal rendering reads the snapshot locally.
 ## Checks
 
 Offline renderer checks: `python -B tools/BlueprintTextPrototype/test_render_graph.py`.
+Review overlay checks: `python -B tools/BlueprintTextPrototype/test_review_graph.py`.
+Details comparison checks: `python -B tools/BlueprintTextPrototype/test_review_details.py`.
 Codec checks: `python -B tools/BlueprintTextPrototype/test_asset_text_codec.py`.
 Label checks: `python -B tools/BlueprintTextPrototype/test_function_labels.py`.
 With Node.js available, run `node tools/BlueprintTextPrototype/test_graph_interactions.js <division.html>`

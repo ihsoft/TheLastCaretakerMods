@@ -3,6 +3,8 @@ const box=document.querySelector('main'),view=document.getElementById('view'),di
 const tip=document.getElementById('node-details'),detailText=document.getElementById('detail-text');
 const detailIds=document.getElementById('detail-ids'),status=document.getElementById('copy-status');
 const edgeTip=document.getElementById('edge-tooltip');
+const detailVersion=document.getElementById('detail-version');
+let detailCopyText='';
 let svg,scale=1,selectedId=null,detailNode=null,detailEdge=null,detailEdgeTitle=null;
 const details=new WeakMap();
 function closeEdgeDetails(){
@@ -12,7 +14,11 @@ function closeEdgeDetails(){
 function closeDetails(){tip.hidden=true;detailNode=null;closeEdgeDetails()}
 function showDetails(node){
     closeEdgeDetails();
-    detailNode=node;detailText.textContent=details.get(node);
+    detailNode=node;
+    const data=JSON.parse(details.get(node));
+    detailVersion.hidden=!['added','changed','removed'].includes(data.Status);
+    detailVersion.value=data.Status==='removed'?'Before':'After';
+    renderDetailContents();
     detailIds.textContent=JSON.parse(node.dataset.nodeIds).join(' → ');
     tip.hidden=false;
     const r=node.getBoundingClientRect(),container=box.getBoundingClientRect();
@@ -20,6 +26,17 @@ function showDetails(node){
     tip.style.left=(r.left-container.left+box.scrollLeft)+'px';
     tip.style.top=(r.bottom-container.top+box.scrollTop+6)+'px';
 }
+function renderDetailContents(){
+    if(!detailNode)return;
+    const raw=details.get(detailNode),data=JSON.parse(raw);
+    const snapshot=detailVersion.hidden?data:data[detailVersion.value];
+    detailCopyText=detailVersion.hidden?raw:JSON.stringify(snapshot,null,2);
+    if(!detailVersion.hidden&&detailVersion.value==='After'&&detailNode.dataset.reviewDetails){
+        // This markup is generated with escaped text by the offline renderer.
+        detailText.innerHTML=detailNode.dataset.reviewDetails;
+    }else detailText.textContent=detailCopyText;
+}
+detailVersion.addEventListener('change',renderDetailContents);
 function toggleDetails(node){if(detailNode===node&&!tip.hidden)closeDetails();else showDetails(node)}
 function showEdgeDetails(edge,event){
     if(detailEdge===edge&&!edgeTip.hidden){closeEdgeDetails();return}
@@ -81,7 +98,7 @@ box.addEventListener('click',event=>{
 window.addEventListener('resize',closeDetails);
 box.addEventListener('scroll',closeEdgeDetails);
 document.getElementById('copy-detail-ids').addEventListener('click',()=>{if(detailNode)copyNodeIds(detailNode)});
-document.getElementById('copy-details').addEventListener('click',()=>copyText(detailText.textContent,'Node details copied'));
+document.getElementById('copy-details').addEventListener('click',()=>copyText(detailCopyText,'Node details copied'));
 document.getElementById('close-details').addEventListener('click',closeDetails);
 document.addEventListener('keydown',event=>{
     if(event.key==='Escape'){highlight(null);closeDetails();return}

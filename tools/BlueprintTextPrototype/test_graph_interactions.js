@@ -41,7 +41,7 @@ const sections = [...page.matchAll(/<section id="([^"]+)"[^>]*>([\s\S]*?)<\/sect
 });
 assert.equal(sections.length, 4);
 const handlers = {}, view = {value: ''}, direction = {value: ''};
-const ui=Object.fromEntries(['node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
+const ui=Object.fromEntries(['detail-version','node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
 const edgeTip=ui['edge-tooltip'];edgeTip.hidden=true;edgeTip.offsetWidth=400;edgeTip.offsetHeight=120;
 const tip=ui['node-details'];tip.hidden=true;tip.offsetWidth=520;tip.offsetHeight=400;
 tip.contains=node=>Object.values(ui).includes(node);
@@ -133,6 +133,21 @@ console.log('Passed: incoming/outgoing links, immediate neighbors, all clear act
     clipboardFails=false;fallbackFails=false;
     context.showDetails(node);ui['copy-details'].handlers.click();
     await Promise.resolve();assert.equal(clipboard,ui['detail-text'].textContent);
+    // Review uses annotated After, raw Before, and clean JSON for copying.
+    context.reviewTestNode=node;
+    context.reviewTestData={Status:'changed',Before:{node:{value:1}},After:{node:{value:2}}};
+    vm.runInContext('details.set(reviewTestNode,JSON.stringify(reviewTestData))',context);
+    node.dataset.reviewDetails='<span class="detail-changed">value: 2</span>';
+    context.showDetails(node);
+    assert.equal(ui['detail-version'].hidden,false);
+    assert.equal(ui['detail-version'].value,'After');
+    assert.equal(ui['detail-text'].innerHTML,node.dataset.reviewDetails);
+    ui['copy-details'].handlers.click();await Promise.resolve();
+    assert.deepEqual(JSON.parse(clipboard),context.reviewTestData.After);
+    ui['detail-version'].value='Before';ui['detail-version'].handlers.change();
+    assert.deepEqual(JSON.parse(ui['detail-text'].textContent),context.reviewTestData.Before);
+    ui['copy-details'].handlers.click();await Promise.resolve();
+    assert.deepEqual(JSON.parse(clipboard),context.reviewTestData.Before);
     handlers.keydown({key:'Escape',target:node});assert.equal(tip.hidden,true);
     context.showDetails(node);context.choose();assert.equal(tip.hidden,true);
     const edge=sections[0].edges.find(e=>e.dataset.source==='divide');

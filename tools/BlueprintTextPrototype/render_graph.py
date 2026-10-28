@@ -6,6 +6,7 @@ This is a structural view, not an Unreal compiler or a behavior simulator.
 """
 
 import argparse
+import copy
 import html
 import json
 import re
@@ -13,6 +14,7 @@ import textwrap
 from collections import defaultdict
 from pathlib import Path
 from function_labels import lookup as lookup_function_label
+from review_details import render_details
 
 
 def escape(value):
@@ -62,6 +64,86 @@ def load_graph(document, selection=None):
         edges.append((source, output, target, input_pin, execution))
     owner = document.get("asset", document.get("owner", "Blueprint"))
     return sorted(nodes, key=lambda n: n["id"]), sorted(edges), str(owner), str(name)
+
+
+def review_document(document, before, review, selection=None):
+    """Overlay explicit review marks; never infer a complete diff or mutate source."""
+    if not isinstance(review, dict) or set(review) - {'added', 'changed', 'removed'}:
+        raise ValueError('Review must contain only added, changed and removed ID lists.')
+    marked = {}
+    for status, ids in review.items():
+        if not isinstance(ids, list):
+            raise ValueError(f'Review {status} must be an ID list.')
+        for node_id in ids:
+            if not isinstance(node_id, str) or not node_id or node_id in marked:
+                raise ValueError('Review IDs must be nonempty strings, unique across all lists.')
+            marked[node_id] = status
+    current, edges, owner, name = load_graph(document, selection)
+    old, old_edges = [], []
+    if before is not None:
+        old, old_edges, old_owner, old_name = load_graph(before, selection)
+        if (old_owner, old_name) != (owner, name):
+            raise ValueError('Before and current sources must identify the same asset and graph.')
+    elif any(s in ('changed', 'removed') for s in marked.values()):
+        raise ValueError('Changed and removed nodes require --before source.')
+    current_by_id, old_by_id = ({n['id']: n for n in ns} for ns in (current, old))
+    for node_id, status in marked.items():
+        if status == 'removed':
+            valid = node_id in old_by_id and node_id not in current_by_id
+        elif status == 'added':
+            valid = node_id in current_by_id and node_id not in old_by_id
+        else:
+            valid = node_id in current_by_id and node_id in old_by_id
+        if not valid:
+            raise ValueError(f'Review {status} ID does not match the sources: {node_id}')
+    result = copy.deepcopy(document)
+    result.pop('graphs', None)
+    result.update(graph=name, nodes=copy.deepcopy(current), links=[], _review=True)
+    templates = result.setdefault('pinTemplates', {})
+    old_templates = {}
+    for key, value in (before or {}).get('pinTemplates', {}).items():
+        mapped = 'before:' + key
+        while mapped in templates:
+            mapped = 'before:' + mapped
+        templates[mapped] = copy.deepcopy(value)
+        old_templates[key] = mapped
+    removed = {i for i, s in marked.items() if s == 'removed'}
+    for node_id in sorted(removed):
+        node = copy.deepcopy(old_by_id[node_id])
+        for pin in node.get('pins', {}).values():
+            if pin.get('type') in old_templates:
+                pin['type'] = old_templates[pin['type']]
+        result['nodes'].append(node)
+    visible = {n['id'] for n in result['nodes']}
+    ghosts = [e for e in old_edges if (e[0] in removed or e[2] in removed)
+              and e[0] in visible and e[2] in visible]
+    boundary = {i for e in ghosts for i in (e[0], e[2])}
+    result['_reviewRemovedLinks'] = ghosts
+    for source, output, target, input_pin, _ in edges + ghosts:
+        result['links'].append({'from': source + '.out:' + output, 'to': target + '.in:' + input_pin})
+
+    def snapshot(node_id, by_id, links):
+        if node_id not in by_id:
+            return None
+        return {'node': copy.deepcopy(by_id[node_id]),
+                'links': [{'from': e[0] + '.' + e[1], 'to': e[2] + '.' + e[3]}
+                          for e in links if node_id in (e[0], e[2])]}
+
+    for node in result['nodes']:
+        node_id = node['id']
+        if node_id in boundary:
+            node['_reviewBoundary'] = True
+        if node_id in marked:
+            node['_reviewStatus'] = marked[node_id]
+            if marked[node_id] == 'changed':
+                node['_reviewPreviousDescription'] = description_fields(
+                    old_by_id[node_id], before.get('pinTemplates', {}), before.get('parent'))
+            node['_reviewDetails'] = {'Status': marked[node_id],
+                                     'Before': snapshot(node_id, old_by_id, old_edges),
+                                     'After': snapshot(node_id, current_by_id, edges)}
+    if len(result['nodes']) > 500:
+        raise ValueError('Review including removed nodes exceeds the 500-node limit.')
+    return result
 
 
 def layers(nodes, edges):
@@ -149,6 +231,8 @@ def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data
         incoming[edge[2]].append(edge)
 
     def eligible(node):
+        if node.get('_reviewStatus') or node.get('_reviewBoundary'):
+            return False
         if mode == 'action':
             if node.get('kind') not in ('call', 'setVariable', 'variableSet', 'AddDelegate', 'RemoveDelegate', 'ClearDelegate', 'CallDelegate'):
                 return False
@@ -314,7 +398,7 @@ def unconnected_outputs(node, connected, pin_templates):
 
 
 def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, parent=None,
-               step_inputs=(), step_outputs=()):
+               step_inputs=(), step_outputs=(), wrap=True):
     if '_expression' in node and not any(step_outputs):
         lines = [node['_expression'], f"Expression · {len(node['_foldedNodes'])} nodes (Details / Full)"]
         lines.extend(output_lines(node, pin_templates or {}))
@@ -393,8 +477,28 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
         lines.append("DEVELOPMENT ONLY")
     if node.get("comment"):
         lines.append("Comment: " + node["comment"])
+    if not wrap:
+        return lines
     return [part for row, line in enumerate(lines)
             for part in (textwrap.wrap(line, 25 if row == 0 else 42) or [""])]
+
+
+def description_key(line, index):
+    """Match semantic fields before wrapping, independent of ordering and links."""
+    if index == 0:
+        return 'title'
+    if line.startswith('Input: ') and ' = ' in line:
+        return line.partition(' = ')[0]
+    if ':' in line:
+        return line.partition(':')[0]
+    return line
+
+
+def description_fields(node, templates, parent):
+    # Include stored defaults regardless of wiring, so a link-only edit does not
+    # turn an unchanged default into a changed description when it becomes visible.
+    return {description_key(line, i): line for i, line in enumerate(
+        node_lines(node, set(), pin_templates=templates, parent=parent, wrap=False))}
 
 
 def is_disabled(node):
@@ -415,13 +519,17 @@ def variable_label(variable):
     return name + ": " + kind
 
 
-def render(document, selection=None, view="simplified", direction="TB"):
+def render(document, selection=None, view="simplified", direction="TB", review=None, before=None):
+    if review is not None:
+        document = review_document(document, before, review, selection)
     if view not in ("simplified", "full") or direction not in ("TB", "LR"):
         raise ValueError("Expected view simplified/full and direction TB/LR.")
     all_nodes, all_edges, owner, graph = load_graph(document, selection)
     hidden = {}
     if view == "simplified":
         for node in all_nodes:
+            if node.get('_reviewStatus') or node.get('_reviewBoundary'):
+                continue
             if is_disabled(node):
                 hidden[node["id"]] = "disabled node"
             elif node.get("kind") == "self" or node.get("ref") == "/Script/BlueprintGraph.K2Node_Self":
@@ -437,7 +545,7 @@ def render(document, selection=None, view="simplified", direction="TB"):
     groups = defaultdict(list)
     for node in nodes:
         groups[rank[node["id"]]].append(node)
-    boxes, lines_by_id = {}, {}
+    boxes, lines_by_id, changed_lines = {}, {}, {}
     connected, connected_outputs, hidden_inputs = defaultdict(set), defaultdict(set), defaultdict(list)
     for source, output, target, pin, _ in all_edges:
         connected[target].add(pin)
@@ -455,9 +563,24 @@ def render(document, selection=None, view="simplified", direction="TB"):
                                              parent=document.get('parent'), step_inputs=[hidden_inputs[p['id']] for p in parts],
                                              step_outputs=notes)
         else:
-            lines_by_id[node_id] = node_lines(node, connected[node_id], hidden_inputs[node_id], document.get("pinTemplates", {}), document.get("parent"))
+            templates, parent = document.get('pinTemplates', {}), document.get('parent')
+            raw_lines = node_lines(node, connected[node_id], hidden_inputs[node_id], templates, parent, wrap=False)
+            previous = node.get('_reviewPreviousDescription', {})
+            current = description_fields(node, templates, parent) if previous else {}
+            lines_by_id[node_id], changed_lines[node_id] = [], {}
+            for index, line in enumerate(raw_lines):
+                key = description_key(line, index)
+                changed = key in current and current[key] != previous.get(key)
+                for part in textwrap.wrap(line, 25 if index == 0 else 42) or ['']:
+                    if changed:
+                        changed_lines[node_id][len(lines_by_id[node_id])] = previous.get(key, '(not present)')
+                    lines_by_id[node_id].append(part)
             for note in notes[0]:
                 lines_by_id[node_id].extend(textwrap.wrap(note, 42))
+        if node.get('_reviewStatus'):
+            status = node['_reviewStatus']
+            lines_by_id[node_id].insert(1, {'added': '+ Added', 'changed': '~ Changed', 'removed': '− Removed'}[status])
+            changed_lines[node_id] = {i + (i >= 1): value for i, value in changed_lines.get(node_id, {}).items()}
     rows, row_bottom = {}, {}
     y, row = 210, 0
     max_columns = min(3, max((len(m) for m in groups.values()), default=1))
@@ -492,7 +615,7 @@ def render(document, selection=None, view="simplified", direction="TB"):
     pieces = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="{escape(title)}">',
               '<style>text{font-family:Segoe UI,Arial,sans-serif;fill:#20334b} .label{font-size:11px;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}.graph-edge:hover>.edge-line{stroke-width:3.5}.graph-edge:hover{opacity:1}</style>',
               '<rect width="100%" height="100%" fill="#f8fafc"/>']
-    for name, color in (("exec", "#b36b13"), ("data", "#317b9b")):
+    for name, color in (("exec", "#b36b13"), ("data", "#317b9b"), ("removed", "#b42318")):
         pieces.append(f'<defs><marker id="{marker_prefix}{name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{color}"/></marker></defs>')
     pieces.append(f'<text x="40" y="34" font-size="22" font-weight="600">{escape(title)}</text>')
     pieces.append(f'<text x="40" y="59" font-size="12">{view} · {direction} · {len(nodes)} / {len(all_nodes)} nodes · {len(edges)} / {len(all_edges)} links · source unchanged</text>')
@@ -505,6 +628,8 @@ def render(document, selection=None, view="simplified", direction="TB"):
         declaration_text = "Variables: " + ", ".join(variable_label(v) for v in declarations)
         visible_text = textwrap.shorten(declaration_text, width=max(30, int((width - 80) / 7)), placeholder=" …")
         pieces.append(f'<text x="40" y="166" font-size="12"><title>{escape(declaration_text)}</title>{escape(visible_text)}</text>')
+    if document.get('_review'):
+        pieces.append('<text x="40" y="187" font-size="12">REVIEW · + green: added · ~ purple: changed · − red dashed: removed · Details: Before / After · explicit marks only</text>')
     incoming, outgoing = defaultdict(list), defaultdict(list)
     for i, edge in enumerate(edges):
         outgoing[edge[0]].append(i)
@@ -565,11 +690,17 @@ def render(document, selection=None, view="simplified", direction="TB"):
                 lx, ly, anchor = sx + 10, sy - 7, 'start'
         style, color = ("exec", "#b36b13") if execution else ("data", "#317b9b")
         dash = '' if execution else ' stroke-dasharray="6 4"'
+        removed_link = (source, output, target, input_pin, execution) in document.get('_reviewRemovedLinks', [])
+        if removed_link:
+            color, dash = '#b42318', ' stroke-dasharray="4 5" opacity="0.55"'
+            style = 'removed'
         tooltip = source + '.' + output + ' → ' + target + '.' + input_pin
         if not execution:
             output_type = edge_output_type(nodes_by_id[source], output, document.get('pinTemplates', {}))
             typed_output = output + (f' ({output_type})' if output_type else '')
             tooltip = f'Output: {typed_output}\nInput: {input_pin}\nFrom: {source}\nTo: {target}'
+        if removed_link:
+            tooltip = 'Removed connection (Before)\n' + tooltip
         pieces.append(f'<g class="graph-edge" data-source="{escape(source)}" data-target="{escape(target)}"><title>{escape(tooltip)}</title><path class="edge-line" d="{path}" fill="none" stroke="{color}" stroke-width="2"{dash} marker-end="url(#{marker_prefix}{style})"/>')
         # A solid transparent hit area covers gaps in dashed lines and stays usable at any zoom.
         pieces.append(f'<path class="edge-hit" d="{path}" fill="none" stroke="transparent" stroke-width="14" vector-effect="non-scaling-stroke" pointer-events="stroke"/>')
@@ -581,12 +712,26 @@ def render(document, selection=None, view="simplified", direction="TB"):
         x, y, w, h = boxes[node["id"]]
         color = node_fill(node, document.get('pinTemplates', {}), execution_nodes)
         opacity = ' opacity="0.55"' if node.get("enabled") is False else ''
+        status = node.get('_reviewStatus', '')
+        stroke = {'added': '#15803d', 'changed': '#7c3aed', 'removed': '#b42318'}.get(status, '#8b9bae')
+        dash = ' stroke-dasharray="7 4"' if status == 'removed' else ''
+        if status == 'removed':
+            opacity = ' opacity="0.6"'
+        details = node.get('_reviewDetails', node)
+        review_html = ''
+        if status == 'changed':
+            review_html = ' data-review-details="' + escape(render_details(details['Before'], details['After'])) + '"'
         ids = [n['id'] for n in node.get('_foldedNodes', [node])]
-        pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}" data-node-ids="{escape(json.dumps(ids))}"{opacity}><title>{escape(json.dumps(node, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="#8b9bae" stroke-width="1.5"/>')
+        pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}" data-node-ids="{escape(json.dumps(ids))}" data-review-status="{status}"{review_html}{opacity}><title>{escape(json.dumps(details, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="{stroke}" stroke-width="{3 if status else 1.5}"{dash}/>')
         for row, line in enumerate(lines_by_id[node["id"]]):
             size = 16 if row == 0 else 12
             weight = ' font-weight="600"' if row == 0 else ''
-            pieces.append(f'<text x="{x+14}" y="{y+24+row*19}" font-size="{size}"{weight}>{escape(line)}</text>')
+            previous = changed_lines.get(node['id'], {}).get(row)
+            decoration, tooltip = '', ''
+            if previous is not None:
+                decoration = ' class="review-changed-line" style="fill:#7c3aed;font-weight:600"'
+                tooltip = '<title>' + escape('Previously: ' + previous) + '</title>'
+            pieces.append(f'<text x="{x+14}" y="{y+24+row*19}" font-size="{size}"{weight}{decoration}>{escape(line)}{tooltip}</text>')
         copy_label = 'Copy node ID' if len(ids) == 1 else f'Copy all {len(ids)} node IDs'
         pieces.append(f'<g class="copy-node-id" role="button" tabindex="0" aria-label="{copy_label}" transform="translate({x+w-27},{y+5})"><title>{copy_label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M6 6h9v11H6z M9 3h9v11" fill="none" stroke="#334155" stroke-width="1.5"/></g>')
         pieces.append(f'<g class="node-info" role="button" tabindex="0" aria-label="Show node details" transform="translate({x+w-53},{y+5})"><title>Show node details</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><text x="11" y="16" text-anchor="middle" font-size="16" font-weight="600">i</text></g>')
@@ -600,6 +745,8 @@ def main():
     parser.add_argument("input", type=Path)
     parser.add_argument("--output", type=Path, required=True, help="Output .svg; adjacent .html is also written")
     parser.add_argument("--graph", help="Graph name when the envelope has several graphs")
+    parser.add_argument('--review', type=Path, help='Explicit added/changed/removed node ID lists')
+    parser.add_argument('--before', type=Path, help='Original compact source for review Before details and removed nodes')
     parser.add_argument("--view", choices=("simplified", "full"), default="simplified")
     parser.add_argument("--direction", choices=("TB", "LR"), default="TB", help="Top-to-bottom (default) or left-to-right")
     args = parser.parse_args()
@@ -608,9 +755,16 @@ def main():
             raise ValueError("--output must end in .svg")
         html_path = args.output.with_suffix(".html")
         full_path = args.output.with_name(args.output.stem + ".full.svg")
-        if args.input.resolve() in (args.output.resolve(), html_path.resolve(), full_path.resolve()):
+        if any(p and p.resolve() in (args.output.resolve(), html_path.resolve(), full_path.resolve())
+               for p in (args.input, args.review, args.before)):
             raise ValueError("Output must not overwrite the input.")
         document = json.loads(args.input.read_text(encoding="utf-8-sig"))
+        if args.before and not args.review:
+            raise ValueError('--before requires --review.')
+        if args.review:
+            review = json.loads(args.review.read_text(encoding='utf-8-sig'))
+            before = json.loads(args.before.read_text(encoding='utf-8-sig')) if args.before else None
+            document = review_document(document, before, review, args.graph)
         variants = {(view, direction): render(document, args.graph, view, direction)
                     for view in ("simplified", "full") for direction in ("TB", "LR")}
         svg, title, nodes, links = variants[args.view, args.direction]
@@ -620,11 +774,12 @@ def main():
         page = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>''' + escape(title) + '''</title>
 <style>body{margin:0;background:#f8fafc;font:14px 'Segoe UI',sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr}nav{padding:10px 18px;background:#fff;border-bottom:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,select{padding:6px 10px}main{overflow:auto;min-height:0;position:relative}svg{display:block}</style>
 <style>.graph-node{cursor:pointer}.graph-node:focus-visible{outline:none}.graph-node:focus-visible>rect{stroke:#1d4ed8;stroke-width:3}.muted{opacity:.16}.graph-node.selected,.graph-node.neighbor{opacity:1}.graph-node.selected>rect{stroke:#1d4ed8;stroke-width:4}.graph-node.neighbor>rect{stroke-width:2.5}.graph-edge.related>.edge-line,.graph-edge.inspected>.edge-line{stroke-width:3.5}.graph-edge.inspected{opacity:1}.hint{color:#52657a;font-size:12px}.copy-node-id{cursor:copy}.node-info{cursor:pointer}.copy-node-id:hover>rect,.copy-node-id:focus>rect,.node-info:hover>rect,.node-info:focus>rect{fill:#dbeafe;stroke:#1d4ed8}.copy-node-id:focus,.node-info:focus{outline:none}#edge-tooltip{position:fixed;z-index:30;max-width:min(440px,calc(100vw - 24px));max-height:60vh;overflow:auto;padding:10px 12px;border:1px solid #94a3b8;border-radius:6px;background:#fff;box-shadow:0 4px 18px #20334b33;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.5 Consolas,monospace}#copy-status{font-size:12px;color:#17614b}#node-details{position:absolute;z-index:20;width:min(520px,calc(100vw - 24px));max-height:70vh;overflow:auto;background:#fff;border:1px solid #94a3b8;border-radius:8px;box-shadow:0 6px 28px #20334b44;user-select:text}#node-details[hidden]{display:none}.detail-toolbar{position:sticky;top:0;display:flex;gap:6px;background:#f1f5f9;padding:8px;border-bottom:1px solid #cbd5e1}#close-details{margin-left:auto}#detail-ids{padding:10px 12px 0;overflow-wrap:anywhere;font-weight:600}#detail-text{margin:0;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 Consolas,monospace;cursor:text}</style>
+<style>.detail-row{display:block;min-height:1.5em}.detail-mark{display:inline-block;width:1.5em;user-select:none}.detail-changed{color:#7c3aed}.detail-added{color:#15803d}.detail-removed{color:#b42318;text-decoration:line-through}.detail-technical{color:#64748b}</style>
 <nav><label>View <select id="view" onchange="choose()"><option value="simplified">Simplified</option><option value="full">Full</option></select></label>
 <label>Direction <select id="direction" onchange="choose()"><option value="TB">Top to bottom</option><option value="LR">Left to right</option></select></label>
 <button onclick="zoom(.8)" aria-label="Zoom out">−</button><button onclick="zoom(1.25)" aria-label="Zoom in">+</button><button onclick="fit()">Fit width</button><button onclick="fit(true)">Fit graph</button>
 <span class="hint">Click node: highlight. Click arrow: details. Copy icon: node IDs. Info button: selectable details. Escape: clear.</span><span id="copy-status" role="status" aria-live="polite"></span></nav><main>''' + sections + '''
-<aside id="node-details" hidden aria-label="Node details"><div class="detail-toolbar"><button id="copy-detail-ids">Copy IDs</button><button id="copy-details">Copy contents</button><button id="close-details" aria-label="Close details">×</button></div><div id="detail-ids"></div><pre id="detail-text" tabindex="0"></pre></aside></main><div id="edge-tooltip" role="tooltip" hidden></div>
+<aside id="node-details" hidden aria-label="Node details"><div class="detail-toolbar"><select id="detail-version" aria-label="Details version" hidden><option>After</option><option>Before</option></select><button id="copy-detail-ids">Copy IDs</button><button id="copy-details">Copy contents</button><button id="close-details" aria-label="Close details">×</button></div><div id="detail-ids"></div><pre id="detail-text" tabindex="0"></pre></aside></main><div id="edge-tooltip" role="tooltip" hidden></div>
 <script>''' + (Path(__file__).with_name('graph_viewer.js').read_text(encoding='utf-8')) + '''
 ''' + f'view.value="{args.view}";direction.value="{args.direction}";' + '''choose();</script></html>'''
         args.output.parent.mkdir(parents=True, exist_ok=True)
