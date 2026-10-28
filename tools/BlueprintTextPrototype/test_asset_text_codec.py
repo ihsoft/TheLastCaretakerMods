@@ -39,6 +39,33 @@ def fixture():
 
 
 class AssetTextTests(unittest.TestCase):
+    def test_component_tree_preservation_and_invalid_owners(self):
+        source = fixture()
+        del source['root']
+        source['parent'] = '/Game/BP_Parent.BP_Parent_C'
+        source['components'] = {'scs': 'BP_Test_C:SCS', 'templates': [],
+            'generatedTemplates': ['BP_Test_C:Mesh'], 'objects': [
+                {'id': 'BP_Test_C:SCS', 'name': 'SCS', 'class': '/Script/Engine.SimpleConstructionScript',
+                 'outer': '$class', 'flags': 1, 'properties': {'RootNodes': '()'}},
+                {'id': 'BP_Test_C:Mesh', 'name': 'Mesh', 'class': '/Script/Engine.StaticMeshComponent',
+                 'outer': '$class', 'flags': 1, 'properties': {'RelativeLocation': '(X=0,Y=1,Z=0)'}}]}
+        result = native(compact(source))
+        self.assertEqual(result['components'], source['components'])
+        self.assertEqual(result['parent'], source['parent'])
+        for key, value in [('outer', 'missing'), ('outer', 'BP_Test_C:Mesh'), ('flags', -1)]:
+            broken = copy.deepcopy(source)
+            broken['components']['objects'][1][key] = value
+            with self.assertRaises(ValueError):
+                compact(broken)
+        broken = copy.deepcopy(source)
+        broken['components']['generatedTemplates'].append('unknown')
+        with self.assertRaises(ValueError):
+            compact(broken)
+        broken = copy.deepcopy(source)
+        broken['root'] = {}
+        with self.assertRaises(ValueError):
+            compact(broken)
+
     def test_preserves_native_fields_and_function_signature(self):
         source = fixture()
         output = native(compact(source))

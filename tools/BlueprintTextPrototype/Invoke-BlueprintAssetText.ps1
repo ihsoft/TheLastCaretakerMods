@@ -55,8 +55,9 @@ if($Action -eq 'ExportLabels'){
 }else{
     $input=(Resolve-Path -LiteralPath $InputPath).Path
     if($input -eq $output){throw 'Output must not overwrite source'}
-    $source=Get-Content -LiteralPath $input -Raw | ConvertFrom-Json
-    $Asset=$source.asset
+    # Native pin names are case-sensitive; PowerShell JSON objects are not.
+    $Asset=& $PythonPath -c "import json,sys; print(json.load(open(sys.argv[1], encoding='utf-8-sig'))['asset'])" $input
+    if($LASTEXITCODE -ne 0){throw "Cannot read asset identity; source: $input"}
     $native=Join-Path $evidence 'import.native.json'
     ConvertText @('native',$input,'--output',$native)
     RunEngine 'import' @('-Mode=Import',('-Input='+$native))

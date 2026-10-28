@@ -3,6 +3,7 @@
 #include "Dom/JsonObject.h"
 #include "EdGraphUtilities.h"
 #include "EdGraphSchema_K2.h"
+#include "K2Node_EditablePinBase.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -20,6 +21,7 @@
 #include "UObject/SavePackage.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectIterator.h"
+#include "UObject/UObjectHash.h"
 #include "Misc/EngineVersion.h"
 #include "Internationalization/Internationalization.h"
 #include "Internationalization/Culture.h"
@@ -153,18 +155,19 @@ bool Keys(const FJsonObject& Value, std::initializer_list<const TCHAR*> Allowed)
     { UE_LOG(LogTemp,Error,TEXT("Unknown asset-text field %s"),*Pair.Key);return false; }
     return true;
 }
-Json Properties(const UObject* Object, const UObject* Baseline, const TSet<FName>& Excluded, bool IncludeTransient=false)
+Json Properties(const UObject* Object, const UObject* Baseline, const TSet<FName>& Excluded, bool IncludeTransient=false, bool IncludeDuplicateTransient=false)
 {
     auto Result=MakeShared<FJsonObject>();
     for(TFieldIterator<FProperty> It(Object->GetClass());It;++It)
     {
         const FProperty* P=*It;
         if(Excluded.Contains(P->GetFName()) || P->HasAnyPropertyFlags(CPF_Deprecated) ||
-           (!IncludeTransient && P->HasAnyPropertyFlags(CPF_Transient|CPF_DuplicateTransient)))continue;
+           (!IncludeTransient && P->HasAnyPropertyFlags(CPF_Transient)) ||
+           (!IncludeDuplicateTransient && P->HasAnyPropertyFlags(CPF_DuplicateTransient)))continue;
         if(Baseline && P->GetOwnerClass()->IsChildOf(Baseline->GetClass()) && P->GetOwnerClass()!=Baseline->GetClass())continue;
         if(Baseline && P->Identical_InContainer(Object,Baseline))continue;
         FString Text;
-        P->ExportTextItem_Direct(Text,P->ContainerPtrToValuePtr<void>(Object),nullptr,const_cast<UObject*>(Object),PPF_None);
+        P->ExportTextItem_Direct(Text,P->ContainerPtrToValuePtr<void>(Object),P->ContainerPtrToValuePtr<void>(Object),const_cast<UObject*>(Object),PPF_None);
         Result->SetStringField(P->GetName(),Text);
     }
     return Result;
@@ -182,18 +185,136 @@ bool Apply(UObject* Object, const FJsonObject& Map, const TSet<FName>& Excluded)
     }
     return true;
 }
+// Component object identities are relative to their owning package. All objects
+// are allocated before importing properties so cross-references can resolve.
+constexpr TCHAR Components[] = TEXT("components");
+constexpr TCHAR Objects[] = TEXT("objects");
+constexpr TCHAR ObjectId[] = TEXT("id");
+constexpr TCHAR ObjectClass[] = TEXT("class");
+constexpr TCHAR ObjectOuter[] = TEXT("outer");
+constexpr TCHAR ObjectFlags[] = TEXT("flags");
+constexpr TCHAR ScriptRoot[] = TEXT("scs");
+constexpr TCHAR GeneratedTemplates[] = TEXT("generatedTemplates");
+constexpr TCHAR Templates[] = TEXT("templates");
+constexpr TCHAR BlueprintOwner[] = TEXT("$blueprint");
+constexpr TCHAR ClassOwner[] = TEXT("$class");
+constexpr EObjectFlags StoredFlags = EObjectFlags(RF_Public|RF_Transactional|RF_ArchetypeObject|RF_DefaultSubObject);
+FString ObjectKey(const UObject* Object,const UBlueprint* BP)
+{
+    if(Object==BP)return BlueprintOwner;
+    if(Object==BP->GeneratedClass)return ClassOwner;
+    return Object->GetPathName(BP->GetOutermost());
+}
+bool LegacyRoot(const UBlueprint* BP)
+{
+    const auto& Nodes=BP->SimpleConstructionScript->GetAllNodes();
+    return BP->ParentClass==AActor::StaticClass() && !BP->ComponentTemplates.Num() &&
+        !CastChecked<UBlueprintGeneratedClass>(BP->GeneratedClass)->ComponentTemplates.Num() && Nodes.Num()==1 &&
+        Nodes[0]->GetVariableName()==ATNames::ValueDefaultSceneRoot && Nodes[0]->ComponentClass==USceneComponent::StaticClass();
+}
+Json ExportComponents(const UBlueprint* BP)
+{
+    TSet<UObject*> Owned;
+    TFunction<void(UObject*)> Collect=[&](UObject* Object)
+    {
+        if(!Object || Owned.Contains(Object) || Object->HasAnyFlags(RF_Transient))return;
+        Owned.Add(Object);
+        TArray<UObject*> Children;GetObjectsWithOuter(Object,Children,EGetObjectsFlags::None);
+        for(UObject* Child:Children)Collect(Child);
+    };
+    Collect(BP->SimpleConstructionScript);
+    for(const USCS_Node* Node:BP->SimpleConstructionScript->GetAllNodes())Collect(Node->ComponentTemplate);
+    for(UActorComponent* Template:BP->ComponentTemplates)Collect(Template);
+    for(UActorComponent* Template:CastChecked<UBlueprintGeneratedClass>(BP->GeneratedClass)->ComponentTemplates)Collect(Template);
+    // The hidden default-root node can own a template outside the SCS itself.
+    TArray<UObject*> Initial=Owned.Array();
+    for(UObject* Object:Initial)if(auto* Node=Cast<USCS_Node>(Object))Collect(Node->ComponentTemplate);
+    TArray<UObject*> Sorted=Owned.Array();Sorted.Sort([&](const UObject& A,const UObject& B){return ObjectKey(&A,BP)<ObjectKey(&B,BP);});
+    Values Rows;
+    for(UObject* Object:Sorted)
+    {
+        auto Row=MakeShared<FJsonObject>();
+        Row->SetStringField(ObjectId,ObjectKey(Object,BP));
+        Row->SetStringField(ATNames::Valuename,Object->GetName());
+        Row->SetStringField(ObjectClass,Object->GetClass()->GetPathName());
+        Row->SetStringField(ObjectOuter,ObjectKey(Object->GetOuter(),BP));
+        Row->SetNumberField(ObjectFlags,uint32(Object->GetFlags()&StoredFlags));
+        Row->SetObjectField(ATNames::Valueproperties,Properties(Object,Object->GetClass()->GetDefaultObject(),{},false,true));
+        Rows.Add(MakeShared<FJsonValueObject>(Row));
+    }
+    auto Data=MakeShared<FJsonObject>();Data->SetArrayField(Objects,Rows);
+    Data->SetStringField(ScriptRoot,ObjectKey(BP->SimpleConstructionScript,BP));
+    Values References;for(UActorComponent* Template:BP->ComponentTemplates)References.Add(MakeShared<FJsonValueString>(ObjectKey(Template,BP)));
+    Data->SetArrayField(Templates,References);
+    References.Empty();
+    for(UActorComponent* Template:CastChecked<UBlueprintGeneratedClass>(BP->GeneratedClass)->ComponentTemplates)References.Add(MakeShared<FJsonValueString>(ObjectKey(Template,BP)));
+    Data->SetArrayField(GeneratedTemplates,References);return Data;
+}
+bool ImportComponents(UBlueprint* BP,const FJsonObject& Data)
+{
+    if(!Keys(Data,{Objects,ScriptRoot,Templates,GeneratedTemplates}))return false;
+    // Remove only the factory's disposable automatic root, before allocating source identities.
+    for(USCS_Node* Node:BP->SimpleConstructionScript->GetAllNodes())
+        if(Node->ComponentTemplate)Node->ComponentTemplate->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
+    BP->SimpleConstructionScript->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
+    BP->SimpleConstructionScript=nullptr;BP->ComponentTemplates.Empty();
+    TMap<FString,UObject*> Allocated;Allocated.Add(BlueprintOwner,BP);Allocated.Add(ClassOwner,BP->GeneratedClass);
+    TMap<FString,TSharedPtr<FJsonObject>> Pending;
+    for(const auto& Value:Data.GetArrayField(Objects))
+    {
+        auto Row=Value->AsObject();
+        if(!Row || !Keys(*Row,{ObjectId,ATNames::Valuename,ObjectClass,ObjectOuter,ObjectFlags,ATNames::Valueproperties}))return false;
+        const FString Id=Row->GetStringField(ObjectId);
+        if(Allocated.Contains(Id) || Pending.Contains(Id))return false;
+        Pending.Add(Id,Row);
+    }
+    while(Pending.Num())
+    {
+        bool Progress=false;
+        for(auto It=Pending.CreateIterator();It;++It)
+        {
+            const auto& Row=It.Value();UObject** Outer=Allocated.Find(Row->GetStringField(ObjectOuter));
+            if(!Outer)continue;
+            UClass* Class=LoadObject<UClass>(nullptr,*Row->GetStringField(ObjectClass));
+            const FString Name=Row->GetStringField(ATNames::Valuename);
+            if(!Class || Name.IsEmpty() || Class->IsChildOf(UClass::StaticClass()))return false;
+            const uint32 Flags=uint32(Row->GetIntegerField(ObjectFlags));
+            if(Flags&~uint32(StoredFlags)){UE_LOG(LogTemp,Error,TEXT("Unsupported component object flags."));return false;}
+            UObject* Object=FindObject<UObject>(*Outer,*Name);
+            if(Object && Object->GetClass()!=Class)return false;
+            if(!Object)Object=NewObject<UObject>(*Outer,Class,*Name,EObjectFlags(Flags));
+            if(!Object || ObjectKey(Object,BP)!=It.Key())return false;
+            Allocated.Add(It.Key(),Object);It.RemoveCurrent();Progress=true;
+        }
+        if(!Progress){UE_LOG(LogTemp,Error,TEXT("Unresolved component object owners."));return false;}
+    }
+    for(const auto& Value:Data.GetArrayField(Objects))
+    {
+        auto Row=Value->AsObject();
+        if(!Apply(Allocated.FindChecked(Row->GetStringField(ObjectId)),*Row->GetObjectField(ATNames::Valueproperties),{}))return false;
+    }
+    BP->SimpleConstructionScript=Cast<USimpleConstructionScript>(Allocated.FindRef(Data.GetStringField(ScriptRoot)));
+    if(!BP->SimpleConstructionScript)return false;
+    for(const auto& Value:Data.GetArrayField(Templates))
+    {
+        auto* Template=Cast<UActorComponent>(Allocated.FindRef(Value->AsString()));
+        if(!Template)return false;BP->ComponentTemplates.Add(Template);
+    }
+    for(const auto& Value:Data.GetArrayField(GeneratedTemplates))
+    {
+        auto* Template=Cast<UActorComponent>(Allocated.FindRef(Value->AsString()));
+        if(!Template)return false;BP->ComponentTemplates.AddUnique(Template);
+    }
+    return true;
+}
 bool Supported(const UBlueprint* BP)
 {
-    if(!BP || BP->ParentClass!=AActor::StaticClass() || BP->BlueprintType!=BPTYPE_Normal ||
+    if(!BP || (!BP->ParentClass || !BP->ParentClass->IsChildOf(AActor::StaticClass())) || BP->BlueprintType!=BPTYPE_Normal ||
        BP->MacroGraphs.Num() || BP->DelegateSignatureGraphs.Num() || BP->Timelines.Num() ||
-       BP->ComponentTemplates.Num() || BP->ComponentClassOverrides.Num() ||
+       BP->ComponentClassOverrides.Num() ||
        BP->ImplementedInterfaces.Num() || BP->GetExtensions().Num() || BP->GeneratedVariables.Num() || BP->InheritableComponentHandler)
-    {UE_LOG(LogTemp,Error,TEXT("Schema 2 currently supports ordinary Actor Blueprints without custom components, interfaces, macro definitions, extensions or timelines."));return false;}
-    if(!BP->SimpleConstructionScript || BP->SimpleConstructionScript->GetAllNodes().Num()!=1)
-    {UE_LOG(LogTemp,Error,TEXT("Schema 2 requires the automatic scene root."));return false;}
-    for(const USCS_Node* Node:BP->SimpleConstructionScript->GetAllNodes())
-        if(Node->GetVariableName()!=ATNames::ValueDefaultSceneRoot || Node->ComponentClass!=USceneComponent::StaticClass())
-        {UE_LOG(LogTemp,Error,TEXT("Custom SCS nodes are outside schema 2."));return false;}
+    {UE_LOG(LogTemp,Error,TEXT("Schema 2 currently supports Actor Blueprints without component overrides, interfaces, macro definitions, extensions or timelines."));return false;}
+    if(!BP->SimpleConstructionScript)return false;
     TArray<UEdGraph*> Graphs;BP->GetAllGraphs(Graphs);
     if(Graphs.Num()!=BP->UbergraphPages.Num()+BP->FunctionGraphs.Num())
     {UE_LOG(LogTemp,Error,TEXT("Nested graphs are outside schema 2."));return false;}
@@ -209,11 +330,15 @@ bool Export(const FString& Asset, const FString& Path)
     Root->SetNumberField(ATNames::Valueschema,2);Root->SetStringField(ATNames::Valueformat,ATNames::Valuenative_asset);
     Root->SetStringField(ATNames::Valueasset,Asset);Root->SetStringField(ATNames::Valueparent,BP->ParentClass->GetPathName());
     Root->SetObjectField(ATNames::Valueproperties,Properties(BP,BP->GetClass()->GetDefaultObject(),BlueprintOwned));
+    if(LegacyRoot(BP))
+    {
     const USCS_Node* RootNode=BP->SimpleConstructionScript->GetAllNodes()[0];
     auto RootData=MakeShared<FJsonObject>();
     RootData->SetObjectField(RootNodeState,Properties(RootNode,RootNode->GetClass()->GetDefaultObject(),RootOwned));
     RootData->SetObjectField(RootTemplateState,Properties(RootNode->ComponentTemplate,RootNode->ComponentClass->GetDefaultObject(),{}));
     Root->SetObjectField(RootState,RootData);
+    }
+    else Root->SetObjectField(Components,ExportComponents(BP));
     Values Variables;
     for(const FBPVariableDescription& Var:BP->NewVariables)
     {
@@ -229,7 +354,7 @@ bool Export(const FString& Asset, const FString& Path)
     {
         const FProperty* P=FindFProperty<FProperty>(BP->GeneratedClass,Var.VarName);
         if(!P)return false;
-        FString Text;P->ExportTextItem_Direct(Text,P->ContainerPtrToValuePtr<void>(CDO),nullptr,CDO,PPF_None);
+        FString Text;P->ExportTextItem_Direct(Text,P->ContainerPtrToValuePtr<void>(CDO),P->ContainerPtrToValuePtr<void>(CDO),CDO,PPF_None);
         Defaults->SetStringField(Var.VarName.ToString(),Text);
     }
     Root->SetObjectField(ATNames::Valuedefaults,Defaults);
@@ -242,6 +367,8 @@ bool Export(const FString& Asset, const FString& Path)
         TSet<UObject*> Selection;
         for(UEdGraphNode* Node:Graph->Nodes)
         {
+            // Match the engine's save-time normalization of user-pin metadata.
+            if(auto* Editable=Cast<UK2Node_EditablePinBase>(Node))Editable->UpdateUserDefinedPinDefaultValues();
             Selection.Add(Node);
             for(const UEdGraphPin* Pin:Node->Pins)
                 if(Pin->DefaultObject && Pin->DefaultObject->GetOutermost()!=BP->GetOutermost())
@@ -275,7 +402,7 @@ struct GraphFactory final : FCustomizableTextObjectFactory
 bool Import(const FString& Path)
 {
     TSharedPtr<FJsonObject> Root;
-    if(!Read(Path,Root) || !Keys(*Root,{ATNames::Valueschema,ATNames::Valueformat,ATNames::Valueasset,ATNames::Valueparent,ATNames::Valueproperties,ATNames::Valuevariables,ATNames::Valuedefaults,ATNames::Valuegraphs,Dependencies,RootState}) ||
+    if(!Read(Path,Root) || !Keys(*Root,{ATNames::Valueschema,ATNames::Valueformat,ATNames::Valueasset,ATNames::Valueparent,ATNames::Valueproperties,ATNames::Valuevariables,ATNames::Valuedefaults,ATNames::Valuegraphs,Dependencies,RootState,Components}) ||
        Root->GetIntegerField(ATNames::Valueschema)!=2 || Root->GetStringField(ATNames::Valueformat)!=ATNames::Valuenative_asset)return false;
     const FString Asset=Root->GetStringField(ATNames::Valueasset);
     if(!Asset.StartsWith(ATNames::Value_Game_) || !FPackageName::IsValidLongPackageName(Asset))return false;
@@ -283,16 +410,23 @@ bool Import(const FString& Path)
     if(FPackageName::DoesPackageExist(Asset))
     {UE_LOG(LogTemp,Error,TEXT("Import requires an absent target asset; preserve/move the test baseline first: %s"),*Asset);return false;}
     UClass* Parent=LoadObject<UClass>(nullptr,*Root->GetStringField(ATNames::Valueparent));
-    if(Parent!=AActor::StaticClass())return false;
+    if(!Parent || !Parent->IsChildOf(AActor::StaticClass()))return false;
     UPackage* Package=CreatePackage(*Asset);
     UBlueprint* BP=FKismetEditorUtilities::CreateBlueprint(Parent,Package,*FPackageName::GetLongPackageAssetName(Asset),BPTYPE_Normal,UBlueprint::StaticClass(),UBlueprintGeneratedClass::StaticClass(),ATNames::ValueBlueprintAssetText);
     if(!BP || !Apply(BP,*Root->GetObjectField(ATNames::Valueproperties),BlueprintOwned))return false;
+    if(Root->HasField(Components))
+    {
+        if(Root->HasField(RootState) || !ImportComponents(BP,*Root->GetObjectField(Components)))return false;
+    }
+    else
+    {
     if(!BP->SimpleConstructionScript || BP->SimpleConstructionScript->GetAllNodes().Num()!=1)return false;
     USCS_Node* RootNode=BP->SimpleConstructionScript->GetAllNodes()[0];
     auto RootData=Root->GetObjectField(RootState);
     if(!Keys(*RootData,{RootNodeState,RootTemplateState}) ||
        !Apply(RootNode,*RootData->GetObjectField(RootNodeState),RootOwned) ||
        !Apply(RootNode->ComponentTemplate,*RootData->GetObjectField(RootTemplateState),{}))return false;
+    }
     for(const auto& Value:Root->GetArrayField(Dependencies))
     {
         FString Dependency;
@@ -338,6 +472,22 @@ bool Import(const FString& Path)
     FKismetEditorUtilities::CompileBlueprint(BP);
     if(BP->Status==BS_Error || !BP->GeneratedClass)
     {UE_LOG(LogTemp,Error,TEXT("Rebuilt Blueprint failed compilation."));return false;}
+    if(Root->HasField(Components))
+    {
+        auto Data=Root->GetObjectField(Components);
+        BP->ComponentTemplates.Empty();
+        auto* GC=CastChecked<UBlueprintGeneratedClass>(BP->GeneratedClass);GC->ComponentTemplates.Empty();
+        for(const TCHAR* List:{Templates,GeneratedTemplates})for(const auto& Value:Data->GetArrayField(List))
+        {
+            auto* Template=FindObject<UActorComponent>(BP->GetOutermost(),*Value->AsString());
+            if(!Template){UE_LOG(LogTemp,Error,TEXT("Component template missing after compilation: %s"),*Value->AsString());return false;}
+            // Pre-save migration/compilation takes its templates from the Blueprint.
+            // Post-load pruning may remove these editor entries; the generated class
+            // must still retain every template used by name at runtime.
+            BP->ComponentTemplates.AddUnique(Template);
+            if(List==GeneratedTemplates)GC->ComponentTemplates.Add(Template);
+        }
+    }
     if(!Apply(BP->GeneratedClass->GetDefaultObject(),*Root->GetObjectField(ATNames::Valuedefaults),DefaultOwned))return false;
     if(!Supported(BP))return false;
     FSavePackageArgs Args;Args.TopLevelFlags=RF_Public|RF_Standalone;Args.SaveFlags=SAVE_NoError;

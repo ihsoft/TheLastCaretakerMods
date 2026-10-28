@@ -17,13 +17,47 @@ KINDS = {'K2Node_CallFunction': 'call', 'K2Node_Event': 'event',
          'K2Node_Self': 'self', 'K2Node_DynamicCast': 'cast'}
 PIN_SEPARATE = {'PinId', 'PinName', 'Direction', 'LinkedTo',
                 'DefaultValue', 'DefaultObject', 'DefaultTextValue'}
-FIELDS = {'schema', 'format', 'asset', 'parent', 'properties', 'variables', 'defaults', 'graphs', 'dependencies', 'root'}
+FIELDS = {'schema', 'format', 'asset', 'parent', 'properties', 'variables', 'defaults', 'graphs', 'dependencies', 'root', 'components'}
 
 
 def check_keys(obj, allowed, context):
     extra = set(obj) - set(allowed)
     if extra:
         raise ValueError(f'Unknown {context} fields: {sorted(extra)}')
+
+
+def validate_components(document):
+    if 'components' not in document:
+        return
+    if 'root' in document:
+        raise ValueError('Use components or the legacy root, not both')
+    data = document['components']
+    check_keys(data, {'objects', 'scs', 'templates', 'generatedTemplates'}, 'components')
+    objects = {}
+    for row in data['objects']:
+        check_keys(row, {'id', 'name', 'class', 'outer', 'flags', 'properties'}, 'component object')
+        if any(not isinstance(row[k], str) or not row[k] for k in ('id', 'name', 'class', 'outer')):
+            raise ValueError('Component object identities must be nonempty strings')
+        if row['id'] in objects or row['id'] in ('$blueprint', '$class'):
+            raise ValueError('Duplicate or reserved component object identity')
+        if type(row['flags']) is not int or row['flags'] < 0:
+            raise ValueError('Component flags must be a nonnegative integer')
+        if not isinstance(row['properties'], dict) or any(not isinstance(v, str) for v in row['properties'].values()):
+            raise ValueError('Component properties must contain native text values')
+        objects[row['id']] = row
+    resolved, pending = {'$blueprint', '$class'}, set(objects)
+    while pending:
+        ready = {key for key in pending if objects[key]['outer'] in resolved}
+        if not ready:
+            raise ValueError('Unresolved or cyclic component object owners')
+        resolved.update(ready)
+        pending.difference_update(ready)
+    if data['scs'] not in objects:
+        raise ValueError('Unresolved component SCS root')
+    for field in ('templates', 'generatedTemplates'):
+        refs = data[field]
+        if not isinstance(refs, list) or len(set(refs)) != len(refs) or any(r not in objects for r in refs):
+            raise ValueError('Invalid component template references')
 
 
 def split_fields(text, separator=','):
@@ -126,6 +160,7 @@ def pin_alias(node, pin):
 
 def compact(document):
     check_keys(document, FIELDS, 'native envelope')
+    validate_components(document)
     if document['schema'] != 2 or document['format'] != 'native-asset':
         raise ValueError('Expected schema 2 native-asset')
     result = copy.deepcopy(document)
@@ -202,6 +237,7 @@ def compact(document):
 
 def native(document):
     check_keys(document, FIELDS | {'classes', 'pinTemplates'}, 'compact envelope')
+    validate_components(document)
     if document['schema'] != 2 or document['format'] != 'compact-asset':
         raise ValueError('Expected schema 2 compact-asset')
     result = copy.deepcopy(document)

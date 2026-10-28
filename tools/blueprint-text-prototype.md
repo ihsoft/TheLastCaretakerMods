@@ -71,17 +71,37 @@ and the node skeletons. The `Simulate*` actions are test fixtures only.
 [Invoke-BlueprintAssetText.ps1](BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1)
 exports a complete supported Blueprint as compact JSON. It carries event and
 function graphs (including construction logic), native variable descriptions,
-CDO defaults, Blueprint/graph properties, the automatic scene root, native node
-properties and typed pins. Original object names and GUIDs are retained. Class
+CDO defaults, Blueprint/graph properties, component object trees and templates,
+native node properties and typed pins. Original object names and GUIDs are retained. Class
 aliases and shared pin templates reduce repetition without replacing the native
 property values. Some fields deliberately remain Unreal property text.
 
-The current boundary is a Blueprint whose direct parent is `/Script/Engine.Actor`,
-with an automatic scene root only. Blueprint inheritance, custom component trees,
-interfaces, macro definitions, timelines, extensions, nested graphs and nested node objects are
-rejected. Required native classes and external asset dependencies must already
+The current boundary is an ordinary Actor-derived Blueprint with a native or
+Blueprint parent. Component trees include SCS nodes, component templates and
+their owned objects, including child-actor templates. Inherited component
+overrides, interfaces, macro definitions, timelines, extensions, nested graphs
+and nested node objects are rejected. Required parent classes, native classes
+and external asset dependencies must already
 exist in the prepared project. A blank prototype project does not supply game
 classes or assets. This is an uncooked editor-asset workflow.
+
+The `components` section contains `objects`, the `scs` root identity, and
+`templates` / `generatedTemplates` reference lists. Each object declares `id`,
+`name`, `class`, `outer`, `flags` and native-text `properties`. IDs are package-relative;
+`$blueprint` and `$class` identify the owning Blueprint and generated class.
+Edit properties directly; to add a component, provide its objects and update the
+appropriate SCS/template references in the complete source. Objects are allocated
+before their properties are imported, allowing cross-references. The codec rejects
+duplicate IDs, unresolved/cyclic owners and invalid template references.
+Simple direct-Actor assets can retain the legacy `root` section instead;
+`root` and `components` are mutually exclusive. Component data is preserved by
+the codec but is not a separate diagram in the graph viewer.
+
+Changed properties include their complete nested values, including zero-valued
+fields. Saved component references marked DuplicateTransient are retained;
+transient component properties are excluded. Export normalizes user-defined pin
+default metadata using Unreal's save-time method. JSON pin names remain
+case-sensitive, including in the PowerShell entry point.
 
 Use a disposable prepared project containing the prototype editor module and
 the asset's dependencies. All actions below launch headless Unreal; warn first
