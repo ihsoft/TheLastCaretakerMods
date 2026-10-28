@@ -1,6 +1,7 @@
 """Offline regression checks; no Unreal, catalogue, or external packages."""
 import copy
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -16,6 +17,31 @@ ROOT = Path(__file__).resolve().parent
 class GraphRenderingTests(unittest.TestCase):
     def setUp(self):
         self.example = json.loads((ROOT / 'Examples/division.json').read_text())
+
+    def test_parent_order_and_data_before_execution_ports(self):
+        # IDs and cross-branch data deliberately disagree with execution order.
+        pairs = [('root.then', 'zLeft.exec'), ('root.else', 'aRight.exec'),
+                 ('zLeft.then', 'aChild.exec'), ('aRight.then', 'zChild.exec'),
+                 ('zLeft.result', 'zChild.value'), ('aRight.result', 'aChild.value')]
+        document = {'schema': 1, 'nodes': [{'id': name, 'kind': 'branch' if name == 'root' else 'call'}
+                    for name in ('root', 'zLeft', 'aRight', 'aChild', 'zChild')],
+                    'links': [{'from': a, 'to': b} for a, b in pairs]}
+        for direction, axis in [('TB', 'x'), ('LR', 'y')]:
+            svg = ET.fromstring(render(document, view='full', direction=direction)[0])
+            positions = {n.attrib['data-node-id']: float(n.find('{*}rect').attrib[axis])
+                         for n in svg.findall('.//{*}g[@class="graph-node"]')}
+            self.assertLess(positions['zLeft'], positions['aRight'])
+            self.assertLess(positions['aChild'], positions['zChild'])
+            incoming, outgoing = {}, {}
+            for edge in svg.findall('.//{*}g[@class="graph-edge"]'):
+                path = edge.find('{*}path')
+                numbers = list(map(float, re.findall(r'-?\d+(?:\.\d+)?', path.attrib['d'])))
+                is_data = 'stroke-dasharray' in path.attrib
+                outgoing.setdefault(edge.attrib['data-source'], {})[is_data] = numbers[0 if axis == 'x' else 1]
+                incoming.setdefault(edge.attrib['data-target'], {})[is_data] = numbers[-2 if axis == 'x' else -1]
+            for ports in [*incoming.values(), *outgoing.values()]:
+                if len(ports) == 2:
+                    self.assertLess(ports[True], ports[False])
 
     def test_native_call_label_shows_return_type_and_keeps_identity_in_tooltip(self):
         node = {'id': 'K2Node_CallFunction_1', 'kind': 'call',

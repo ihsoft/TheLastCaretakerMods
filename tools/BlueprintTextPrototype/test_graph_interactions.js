@@ -41,7 +41,7 @@ const sections = [...page.matchAll(/<section id="([^"]+)"[^>]*>([\s\S]*?)<\/sect
 });
 assert.equal(sections.length, 4);
 const handlers = {}, view = {value: ''}, direction = {value: ''};
-const ui=Object.fromEntries(['detail-version','node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
+const ui=Object.fromEntries(['nodes-per-row','detail-version','node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
 const edgeTip=ui['edge-tooltip'];edgeTip.hidden=true;edgeTip.offsetWidth=400;edgeTip.offsetHeight=120;
 const tip=ui['node-details'];tip.hidden=true;tip.offsetWidth=520;tip.offsetHeight=400;
 tip.contains=node=>Object.values(ui).includes(node);
@@ -72,6 +72,7 @@ function cleared(section) {
 for (const section of sections) {
     [view.value, direction.value] = section.id.split('-');
     context.choose();
+    assert.equal(ui['nodes-per-row'].disabled,direction.value!=='TB');
     cleared(section);
     const node = section.nodes.find(n => n.dataset.nodeId === 'sequence');
     assert.ok(node, 'Use the division example fixture');
@@ -101,6 +102,10 @@ for (const section of sections) {
     context.fit(true); assert.ok(parseFloat(section.svg.style.height) <= box.clientHeight);
 }
 console.log('Passed: incoming/outgoing links, immediate neighbors, all clear actions, keyboard, view reset, zoom/fit in all four variants (DOM stand-in).');
+for(const [value,expected] of [['6','6'],['0','1'],['30','12'],['','3']]){
+    ui['nodes-per-row'].value=value;context.changeColumns();
+    assert.equal(ui['nodes-per-row'].value,expected);
+}
 
 (async()=>{
     view.value='simplified';direction.value='TB';context.choose();

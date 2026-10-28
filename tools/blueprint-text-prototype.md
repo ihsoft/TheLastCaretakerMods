@@ -132,6 +132,16 @@ full/simplified views and top-to-bottom/left-to-right directions. Defaults are
 `-View simplified -Direction TB`; `-Graph` selects a graph when needed. No model,
 network, engine, or catalogue call is involved. Input is never rewritten.
 
+In vertical HTML views, **Nodes per row** selects 1–12 nodes (default 3).
+Changing it rearranges the current graph locally and fits its width; the value
+is retained between Full and Simplified views. Horizontal views disable this
+control. Standalone SVGs retain the default row capacity.
+
+Nodes follow their upstream parents, prioritizing execution dependencies for
+action chains. Edges curve directly between ports; joins, cycles and wrapped
+rows can still cross. Incoming and outgoing ports place data left of execution
+in vertical views (above execution in horizontal views), with stable pin order.
+
 In HTML, click a node to highlight its incoming/outgoing links and immediate
 neighbors; unrelated elements dim and link colours retain their meaning.
 Click again, click the background, or press Escape to clear. Tab and Enter/Space
@@ -147,6 +157,8 @@ treated as a terminal path; unused alternatives remain visible.
 
 Nodes describe operations, input values and known output types. Amber identifies
 execution nodes using available pin metadata; blue identifies entries/events.
+Display titles split identifiers into readable words and wrap at word boundaries;
+continued titles retain their heading style. Original identifiers remain in details.
 Output-pin default metadata is not shown as a computed result. The copy icon
 copies the original node ID, or all IDs in a folded chain. The info icon opens
 selectable source details below the node; the panel also offers copy controls.
@@ -234,6 +246,9 @@ Label checks: `python -B tools/BlueprintTextPrototype/test_function_labels.py`.
 With Node.js available, run `node tools/BlueprintTextPrototype/test_graph_interactions.js <division.html>`
 on HTML rendered from the division example to check selection, details, copying and viewer controls
 with a DOM stand-in (not a browser UI test).
+Run `node tools/BlueprintTextPrototype/test_graph_layout.js <generated.html>`
+to check Python/browser geometry agreement, row capacities, port ordering and
+reversible layout updates on any generated preview.
 The schema-1 engine acceptance runner is
 `tools/BlueprintTextPrototype/Test-BlueprintTextPrototype.ps1 -OutputRoot <new directory below Tmp/BlueprintTextPrototype>`
 with optional `-EngineRoot`. It builds an isolated project, checks compact and

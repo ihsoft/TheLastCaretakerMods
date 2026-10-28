@@ -213,6 +213,15 @@ def readable_name(value):
     return re.sub(r'([A-Z])([A-Z][a-z])', r'\1 \2', value).replace('_', ' ')
 
 
+def wrap_node_line(line, header=False):
+    # Display identifiers as words before wrapping; never split a title word
+    # into an arbitrary suffix. SVG constrains exceptional unsplittable titles.
+    if header:
+        line = readable_name(line)
+    return textwrap.wrap(line, 25 if header else 42,
+                         break_long_words=not header, break_on_hyphens=not header) or ['']
+
+
 def object_label(value):
     return native_string(value).rstrip("'").rsplit('.', 1)[-1]
 
@@ -402,7 +411,7 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
     if '_expression' in node and not any(step_outputs):
         lines = [node['_expression'], f"Expression · {len(node['_foldedNodes'])} nodes (Details / Full)"]
         lines.extend(output_lines(node, pin_templates or {}))
-        return [part for i, line in enumerate(lines) for part in (textwrap.wrap(line, 25 if i == 0 else 42) or [''])]
+        return [part for i, line in enumerate(lines) for part in wrap_node_line(line, i == 0)]
     if '_foldedSteps' in node:
         label = 'Action chain' if node.get('_chainKind') == 'action' else 'Data chain'
         lines = [f"{label} · {len(node['_foldedNodes'])} nodes"]
@@ -415,7 +424,7 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
             lines.extend([f'{i}. {step[0]}'] + step[1:])
             if i <= len(step_outputs):
                 lines.extend(step_outputs[i-1])
-        return [part for i, line in enumerate(lines) for part in (textwrap.wrap(line, 25 if i == 0 else 42) or [''])]
+        return [part for i, line in enumerate(lines) for part in wrap_node_line(line, i == 0)]
     kind = node.get("kind", "unknown")
     reference = node.get("operation", node.get("event", node.get("ref", kind)))
     properties = node.get("properties", {})
@@ -480,7 +489,7 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
     if not wrap:
         return lines
     return [part for row, line in enumerate(lines)
-            for part in (textwrap.wrap(line, 25 if row == 0 else 42) or [""])]
+            for part in wrap_node_line(line, row == 0)]
 
 
 def description_key(line, index):
@@ -519,6 +528,25 @@ def variable_label(variable):
     return name + ": " + kind
 
 
+def pin_order(pin):
+    # Natural numeric order also handles Sequence then_2 / then_10 and folded steps.
+    name = re.sub(r'\d+', lambda match: match[0].zfill(12), pin)
+    return ({'then': 0, 'else': 1}.get(pin, 2), name)
+
+
+def order_layer(members, parent_edges, boxes, direction):
+    def key(node):
+        parents = parent_edges[node['id']]
+        execution = [edge for edge in parents if edge[4]]
+        available = [edge for edge in (execution or parents) if edge[0] in boxes]
+        if not available:
+            return (float('inf'), (2, ''), node['id'])
+        axis = 0 if direction == 'TB' else 1
+        center = sum(boxes[e[0]][axis] + boxes[e[0]][axis + 2] / 2 for e in available) / len(available)
+        return (center, min(pin_order(e[1]) for e in available), node['id'])
+    return sorted(members, key=key)
+
+
 def render(document, selection=None, view="simplified", direction="TB", review=None, before=None):
     if review is not None:
         document = review_document(document, before, review, selection)
@@ -545,7 +573,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     groups = defaultdict(list)
     for node in nodes:
         groups[rank[node["id"]]].append(node)
-    boxes, lines_by_id, changed_lines = {}, {}, {}
+    boxes, lines_by_id, changed_lines, title_rows = {}, {}, {}, {}
     connected, connected_outputs, hidden_inputs = defaultdict(set), defaultdict(set), defaultdict(list)
     for source, output, target, pin, _ in all_edges:
         connected[target].add(pin)
@@ -562,16 +590,18 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             lines_by_id[node_id] = node_lines(node, connected[node_id], pin_templates=document.get('pinTemplates', {}),
                                              parent=document.get('parent'), step_inputs=[hidden_inputs[p['id']] for p in parts],
                                              step_outputs=notes)
+            title_rows[node_id] = len(wrap_node_line(node['_expression'], True)) if '_expression' in node and not any(notes) else 1
         else:
             templates, parent = document.get('pinTemplates', {}), document.get('parent')
             raw_lines = node_lines(node, connected[node_id], hidden_inputs[node_id], templates, parent, wrap=False)
+            title_rows[node_id] = len(wrap_node_line(raw_lines[0], True))
             previous = node.get('_reviewPreviousDescription', {})
             current = description_fields(node, templates, parent) if previous else {}
             lines_by_id[node_id], changed_lines[node_id] = [], {}
             for index, line in enumerate(raw_lines):
                 key = description_key(line, index)
                 changed = key in current and current[key] != previous.get(key)
-                for part in textwrap.wrap(line, 25 if index == 0 else 42) or ['']:
+                for part in wrap_node_line(line, index == 0):
                     if changed:
                         changed_lines[node_id][len(lines_by_id[node_id])] = previous.get(key, '(not present)')
                     lines_by_id[node_id].append(part)
@@ -579,12 +609,16 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                 lines_by_id[node_id].extend(textwrap.wrap(note, 42))
         if node.get('_reviewStatus'):
             status = node['_reviewStatus']
-            lines_by_id[node_id].insert(1, {'added': '+ Added', 'changed': '~ Changed', 'removed': '− Removed'}[status])
-            changed_lines[node_id] = {i + (i >= 1): value for i, value in changed_lines.get(node_id, {}).items()}
-    rows, row_bottom = {}, {}
-    y, row = 210, 0
+            badge_row = title_rows[node_id]
+            lines_by_id[node_id].insert(badge_row, {'added': '+ Added', 'changed': '~ Changed', 'removed': '− Removed'}[status])
+            changed_lines[node_id] = {i + (i >= badge_row): value for i, value in changed_lines.get(node_id, {}).items()}
+    parent_edges = defaultdict(list)
+    for edge in edges:
+        parent_edges[edge[2]].append(edge)
+    y = 210
     max_columns = min(3, max((len(m) for m in groups.values()), default=1))
     for column, members in sorted(groups.items()):
+        members = order_layer(members, parent_edges, boxes, direction)
         if direction == "LR":
             y = 210
             for node in members:
@@ -601,15 +635,11 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                     node_id = node["id"]
                     height = 28 + 19 * len(lines_by_id[node_id])
                     boxes[node_id] = (40 + offset + index * 380, y, 330, height)
-                    rows[node_id] = row
-                row_bottom[row] = y + row_height
                 y += row_height + 110
-                row += 1
     right = max((x + w for x, y, w, h in boxes.values()), default=720)
-    width = max(950, right + (320 if direction == "TB" else 80))
+    width = max(950, right + 80)
     bottom = max((y + h for x, y, w, h in boxes.values()), default=210)
-    routed_count = sum(rank[target] != rank[source] + 1 for source, _, target, _, _ in edges)
-    height = bottom + 90 + (routed_count * 25 if direction == "LR" else 0)
+    height = bottom + 90
     title = owner.rsplit("/", 1)[-1] + " / " + graph
     marker_prefix = view + direction
     pieces = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="{escape(title)}">',
@@ -636,16 +666,11 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         incoming[edge[2]].append(i)
     nodes_by_id = {node['id']: node for node in nodes}
     node_kinds = {node['id']: node.get('kind') for node in nodes}
-    # Branch choices have stable ports: then left / else right in TB (top / bottom in LR).
-    for source, indices in outgoing.items():
-        choices = {edges[i][1] for i in indices if edges[i][4]}
-        if node_kinds[source] == 'branch' and {'then', 'else'} <= choices:
-            indices.sort(key=lambda i: ({'then': 0, 'else': 1}.get(edges[i][1], 2), i))
-        else:
-            indices.sort(key=lambda i: (boxes[edges[i][2]][0 if direction == "TB" else 1], i))
+    # Data precedes execution at both ends; geometry never changes pin order.
+    for indices in outgoing.values():
+        indices.sort(key=lambda i: (edges[i][4], pin_order(edges[i][1]), edges[i][2], edges[i][3], i))
     for indices in incoming.values():
-        indices.sort(key=lambda i: (boxes[edges[i][0]][0 if direction == "TB" else 1], i))
-    routed_index = 0
+        indices.sort(key=lambda i: (edges[i][4], pin_order(edges[i][3]), edges[i][0], edges[i][1], i))
     for i, (source, output, target, input_pin, execution) in enumerate(edges):
         x, y, w, h = boxes[source]
         tx, ty, tw, th = boxes[target]
@@ -653,32 +678,22 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         if direction == "TB":
             sx, sy = x + w * (outgoing[source].index(i) + 1) / (len(outgoing[source]) + 1), y + h
             ex, ey = tx + tw * (incoming[target].index(i) + 1) / (len(incoming[target]) + 1), ty
-            start_y = row_bottom[rows[source]] + 16 + (i % 5) * 8
-            if rows[target] == rows[source] + 1:
-                mid = (start_y + ey) / 2
-                path = f'M{sx},{sy} L{sx},{start_y} C{sx},{mid} {ex},{mid} {ex},{ey}'
-                lx, ly = (sx + ex) / 2, mid - 7
-            else:
-                lane = right + 30 + (routed_index % 8) * 25
-                routed_index += 1
-                end_y = ey - 20 - (i % 5) * 8
-                path = f'M{sx},{sy} L{sx},{start_y} L{lane},{start_y} L{lane},{end_y} L{ex},{end_y} L{ex},{ey}'
-                lx, ly = lane + 6, (start_y + ey) / 2
-                transform = f' transform="rotate(90 {lx} {ly})"'
-        elif rank[target] == rank[source] + 1:
-            sx, sy = x + w, y + h * (outgoing[source].index(i) + 1) / (len(outgoing[source]) + 1)
-            ex, ey = tx, ty + th * (incoming[target].index(i) + 1) / (len(incoming[target]) + 1)
-            mid = (sx + ex) / 2
-            path = f'M{sx},{sy} C{mid},{sy} {mid},{ey} {ex},{ey}'
-            lx, ly = mid, (sy + ey) / 2 - 7
+            bend = max(35, (ey - sy) / 2)
+            path = f'M{sx},{sy} C{sx},{sy+bend} {ex},{ey-bend} {ex},{ey}'
+            if source == target:
+                # Keep a self-loop visible beside its own node, not at a graph-wide lane.
+                side = x + w + 55
+                path = f'M{sx},{sy} C{side},{sy+40} {side},{ey-40} {ex},{ey}'
+            lx, ly = (sx + ex) / 2, (sy + ey) / 2 - 7
         else:
             sx, sy = x + w, y + h * (outgoing[source].index(i) + 1) / (len(outgoing[source]) + 1)
             ex, ey = tx, ty + th * (incoming[target].index(i) + 1) / (len(incoming[target]) + 1)
-            # Route skipped layers and cycles below the graph, never behind a node.
-            lane = bottom + 30 + routed_index * 25
-            routed_index += 1
-            path = f'M{sx},{sy} L{sx+20},{sy} L{sx+20},{lane} L{ex-20},{lane} L{ex-20},{ey} L{ex},{ey}'
-            lx, ly = (sx + ex) / 2, lane - 5
+            bend = max(35, (ex - sx) / 2)
+            path = f'M{sx},{sy} C{sx+bend},{sy} {ex-bend},{ey} {ex},{ey}'
+            if source == target:
+                side = y + h + 55
+                path = f'M{sx},{sy} C{sx+40},{side} {ex-40},{side} {ex},{ey}'
+            lx, ly = (sx + ex) / 2, (sy + ey) / 2 - 7
         label_text, anchor = output + ' → ' + ('' if execution else 'Input: ') + input_pin, 'middle'
         branch_choice = execution and node_kinds[source] == 'branch' and output in ('then', 'else')
         if branch_choice:
@@ -724,19 +739,27 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         ids = [n['id'] for n in node.get('_foldedNodes', [node])]
         pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}" data-node-ids="{escape(json.dumps(ids))}" data-review-status="{status}"{review_html}{opacity}><title>{escape(json.dumps(details, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="{stroke}" stroke-width="{3 if status else 1.5}"{dash}/>')
         for row, line in enumerate(lines_by_id[node["id"]]):
-            size = 16 if row == 0 else 12
-            weight = ' font-weight="600"' if row == 0 else ''
+            header = row < title_rows[node['id']]
+            size = 16 if header else 12
+            weight = ' font-weight="600"' if header else ''
+            fit = f' textLength="{w-70 if row == 0 else w-28}" lengthAdjust="spacingAndGlyphs"' if header and len(line) > 25 else ''
             previous = changed_lines.get(node['id'], {}).get(row)
             decoration, tooltip = '', ''
             if previous is not None:
                 decoration = ' class="review-changed-line" style="fill:#7c3aed;font-weight:600"'
                 tooltip = '<title>' + escape('Previously: ' + previous) + '</title>'
-            pieces.append(f'<text x="{x+14}" y="{y+24+row*19}" font-size="{size}"{weight}{decoration}>{escape(line)}{tooltip}</text>')
+            pieces.append(f'<text x="{x+14}" y="{y+24+row*19}" font-size="{size}"{weight}{fit}{decoration}>{escape(line)}{tooltip}</text>')
         copy_label = 'Copy node ID' if len(ids) == 1 else f'Copy all {len(ids)} node IDs'
         pieces.append(f'<g class="copy-node-id" role="button" tabindex="0" aria-label="{copy_label}" transform="translate({x+w-27},{y+5})"><title>{copy_label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M6 6h9v11H6z M9 3h9v11" fill="none" stroke="#334155" stroke-width="1.5"/></g>')
         pieces.append(f'<g class="node-info" role="button" tabindex="0" aria-label="Show node details" transform="translate({x+w-53},{y+5})"><title>Show node details</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><text x="11" y="16" text-anchor="middle" font-size="16" font-weight="600">i</text></g>')
         pieces.append('</g>')
     pieces.append('</svg>')
+    if direction == 'TB':
+        layout = {'nodes': [dict(id=n['id'], rank=rank[n['id']], kind=n.get('kind'),
+                                x=boxes[n['id']][0], y=boxes[n['id']][1],
+                                w=boxes[n['id']][2], h=boxes[n['id']][3]) for n in nodes],
+                  'edges': edges}
+        pieces[0] = pieces[0].replace('<svg ', '<svg data-layout="' + escape(json.dumps(layout, separators=(',', ':'))) + '" ', 1)
     return '\n'.join(pieces), title, len(nodes), len(edges)
 
 
@@ -778,9 +801,10 @@ def main():
 <nav><label>View <select id="view" onchange="choose()"><option value="simplified">Simplified</option><option value="full">Full</option></select></label>
 <label>Direction <select id="direction" onchange="choose()"><option value="TB">Top to bottom</option><option value="LR">Left to right</option></select></label>
 <button onclick="zoom(.8)" aria-label="Zoom out">−</button><button onclick="zoom(1.25)" aria-label="Zoom in">+</button><button onclick="fit()">Fit width</button><button onclick="fit(true)">Fit graph</button>
+<label>Nodes per row <input id="nodes-per-row" type="number" min="1" max="12" step="1" value="3" style="width:4em;padding:6px" onchange="changeColumns()" title="Maximum nodes per row in top-to-bottom view"></label>
 <span class="hint">Click node: highlight. Click arrow: details. Copy icon: node IDs. Info button: selectable details. Escape: clear.</span><span id="copy-status" role="status" aria-live="polite"></span></nav><main>''' + sections + '''
 <aside id="node-details" hidden aria-label="Node details"><div class="detail-toolbar"><select id="detail-version" aria-label="Details version" hidden><option>After</option><option>Before</option></select><button id="copy-detail-ids">Copy IDs</button><button id="copy-details">Copy contents</button><button id="close-details" aria-label="Close details">×</button></div><div id="detail-ids"></div><pre id="detail-text" tabindex="0"></pre></aside></main><div id="edge-tooltip" role="tooltip" hidden></div>
-<script>''' + (Path(__file__).with_name('graph_viewer.js').read_text(encoding='utf-8')) + '''
+<script>''' + (Path(__file__).with_name('graph_layout.js').read_text(encoding='utf-8')) + '\n' + (Path(__file__).with_name('graph_viewer.js').read_text(encoding='utf-8')) + '''
 ''' + f'view.value="{args.view}";direction.value="{args.direction}";' + '''choose();</script></html>'''
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(svg, encoding="utf-8")

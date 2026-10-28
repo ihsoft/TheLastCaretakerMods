@@ -4,6 +4,7 @@ const tip=document.getElementById('node-details'),detailText=document.getElement
 const detailIds=document.getElementById('detail-ids'),status=document.getElementById('copy-status');
 const edgeTip=document.getElementById('edge-tooltip');
 const detailVersion=document.getElementById('detail-version');
+const rowCapacity=document.getElementById('nodes-per-row');
 let detailCopyText='';
 let svg,scale=1,selectedId=null,detailNode=null,detailEdge=null,detailEdgeTitle=null;
 const details=new WeakMap();
@@ -118,5 +119,14 @@ document.querySelectorAll('.graph-node').forEach(node=>{
 function choose(){
     closeDetails();const id=view.value+'-'+direction.value;
     document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==id);
-    svg=document.getElementById(id).querySelector('svg');highlight(null);box.scrollTop=0;box.scrollLeft=0;fit();
+    svg=document.getElementById(id).querySelector('svg');
+    rowCapacity.disabled=direction.value!=='TB';
+    if(!rowCapacity.disabled)applyRowLayout(svg,rowCapacity.value);
+    highlight(null);box.scrollTop=0;box.scrollLeft=0;fit();
+}
+function changeColumns(){
+    rowCapacity.value=String(normalizeColumns(rowCapacity.value));
+    closeDetails();
+    if(direction.value==='TB')applyRowLayout(svg,rowCapacity.value);
+    box.scrollTop=0;box.scrollLeft=0;fit();
 }
