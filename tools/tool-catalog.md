@@ -6,6 +6,7 @@ failure handling.
 | Intent | Public entry point | Guide |
 | --- | --- | --- |
 | Import/export prototype Blueprint text or discover operations | `BlueprintTextPrototype/Invoke-BlueprintTextPrototype.ps1` | [Blueprint text prototype](blueprint-text-prototype.md) |
+| Operate a Blueprint JSON workspace in an existing project | `BlueprintTextPrototype/Invoke-BlueprintWorkspace.ps1` | [Blueprint workspace](blueprint-workspace.md) |
 | Import/export supported Actor/Widget Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1` | [Blueprint text prototype](blueprint-text-prototype.md#schema-2-existing-blueprint-experiments) |
 | Check asset-text round trips in a disposable prepared project | `BlueprintTextPrototype/test_asset_text_roundtrip.py` | [Blueprint checks](blueprint-text-prototype.md#checks) |
 | Render a compact Blueprint graph offline | `BlueprintTextPrototype/Render-BlueprintGraph.ps1` | [Blueprint text prototype](blueprint-text-prototype.md) |

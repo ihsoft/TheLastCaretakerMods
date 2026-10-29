@@ -1,5 +1,8 @@
 # Blueprint text prototype
 
+For routine editing in an existing project, use the [workspace workflow](blueprint-workspace.md).
+The interfaces below describe the format, lower-level tools and focused research.
+
 An experimental workflow for editing a Blueprint as declarative text and
 mechanically creating its uncooked `.uasset`. The shared builder is independent
 of any mod. Compact JSON and native Unreal graph text are both available; the
