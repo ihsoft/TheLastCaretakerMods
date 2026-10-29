@@ -19,7 +19,8 @@ rules remain in the [repository index](../AGENTS.md).
 | Diagnose an unexpected native tool result or test a toolchain change | [Toolchain validation](toolchain-validation.md) |
 | Report tool use in a coding handoff | [Tool use and reporting](tool-use-and-reporting.md) |
 | Measure explicitly requested agent work | [Agent work measurement](agent-work-measurement.md) |
-| Author declarative Blueprint text or render its graph | [BlueprintText](blueprint-text.md) |
-| Export, edit JSON, rebuild and preview Blueprints in an existing Unreal project | [Blueprint workspace](blueprint-workspace.md) |
+| Create or edit Blueprints for new and existing mods (requires a prepared Unreal project with the needed dependencies) | [Blueprint workspace](blueprint-workspace.md) |
+| Look up BlueprintText formats, schemas and lower-level interfaces | [BlueprintText reference](blueprint-text.md) |
+| View or render one exported Blueprint graph offline | [Graph preview](blueprint-text.md#view-one-graph) |
 | Preview and annotate an exported HUD widget layout | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Browse exported Blueprints or review an explicitly marked set of changes | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |
