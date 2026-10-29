@@ -42,6 +42,17 @@ def fixture():
 
 
 class AssetTextTests(unittest.TestCase):
+    def test_editor_stub_role_survives_both_directions_and_rejects_unknown_role(self):
+        document = fixture()
+        document['editorRole'] = 'stub'
+        reopened = native(compact(document))
+        self.assertEqual('stub', reopened['editorRole'])
+        self.assertFalse(compare(compact(document), compact(reopened)))
+        for role in ('runtime', False, None):
+            document['editorRole'] = role
+            with self.assertRaisesRegex(ValueError, 'editorRole'):
+                compact(document)
+
     def test_object_name_independent_of_package_is_preserved(self):
         source = fixture()
         source['asset'] = '/Game/RelocatedPackage'

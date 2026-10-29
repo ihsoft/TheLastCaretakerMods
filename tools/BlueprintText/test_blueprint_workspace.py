@@ -41,7 +41,17 @@ class WorkspaceTests(unittest.TestCase):
         bw.write(self.ws.manifest, dict(schema=1, project=str(self.project), assets=[dict(source='blueprints/BP_Test.json')]))
 
     def tearDown(self):
-        self.temp.cleanup()
+        # Windows may briefly report a directory nonempty while its deleted
+        # children are still closing. Retry only that transient cleanup error;
+        # never suppress test failures or persistent filesystem errors.
+        for attempt in range(4):
+            try:
+                self.temp.cleanup()
+                return
+            except OSError as exc:
+                if getattr(exc, 'winerror', None) != 145 or attempt == 3:
+                    raise
+                time.sleep(0.1)
 
     def changed(self):
         source = copy.deepcopy(self.document)
@@ -289,16 +299,12 @@ except ValueError:
         self.assertEqual(7, run('crash').returncode)
         self.assertEqual(0, run('normal').returncode)
 
-    def test_engine_actions_use_queue_but_preview_is_offline(self):
+    def test_engine_actions_including_preview_use_queue(self):
         with patch.object(bw,'OWNER',self.root), patch.object(bw,'LEGACY_OWNER',self.root/'legacy'), patch.object(bw,'closed'):
-            for action,method in [('Prepare','prepare'),('Export','export'),('Apply','apply'),('Recover','recover')]:
+            for action,method in [('Prepare','prepare'),('Export','export'),('Apply','apply'),('Recover','recover'),('Preview','preview')]:
                 with patch.object(bw,'engine_slot',return_value=nullcontext()) as queue, patch.object(bw.Workspace,method,return_value={'status':'test'}) as dispatch, patch.object(sys,'argv',['workspace',action,'--workspace',str(self.ws.root),'--project',str(self.project)]),redirect_stdout(io.StringIO()):
                     self.assertEqual(0,bw.main());dispatch.assert_called_once()
                     self.assertEqual(1,queue.call_count)
-            with patch.object(bw, 'engine_slot') as queue, patch.object(bw.Workspace, 'preview', return_value={'status': 'previewed'}) as preview, patch.object(sys, 'argv', ['workspace', 'Preview', '--workspace', str(self.ws.root)]), redirect_stdout(io.StringIO()):
-                self.assertEqual(0, bw.main())
-                preview.assert_called_once()
-                queue.assert_not_called()
             self.assert_waits_for_lock(self.project.parent/'Saved/BlueprintTextWorkspace.lock')
 
     def test_same_workspace_blocks_preview_before_dispatch(self):
@@ -307,6 +313,79 @@ except ValueError:
                  patch.object(bw.Workspace, 'preview') as preview, redirect_stdout(io.StringIO()):
                 self.assertEqual(1, bw.main())
                 preview.assert_not_called()
+
+    def catalog_fixture(self):
+        selected = self.document['asset']
+        rows = [dict(asset=selected, role='unclassified', dependencies=[dict(asset='/Game/Parent', missing=False)]),
+                dict(asset='/Game/Parent', role='stub', dependencies=[dict(asset=selected, missing=False)]),
+                dict(asset='/Game/Item', role='unclassified', dependencies=[dict(asset='/Game/Generator', missing=False)]),
+                dict(asset='/Game/Generator', role='stub', dependencies=[], reason='Unsupported UObject Blueprint'),
+                dict(asset='/Game/Other', role='unclassified', dependencies=[dict(asset='/Game/Missing', missing=True)])]
+        for row in rows:
+            row['class'] = 'Blueprint' if row['asset'] != '/Game/Item' else 'DataAsset'
+            row.setdefault('reason', 'Informational dependency')
+        parent = copy.deepcopy(self.document)
+        parent.update(asset='/Game/Parent', editorRole='stub')
+        native = self.ws.run / 'catalog/parent.native.json'
+        bw.write(native, bw.codec.native(parent))
+        rows[1]['native'] = str(native)
+        rows[1].pop('reason')
+        return dict(schema=1, assets=rows)
+
+    def test_preview_discovers_dataasset_dependency_and_preserves_edit_selection(self):
+        original = self.ws.manifest.read_bytes(), self.ws.baseline(), self.file.read_bytes()
+        catalog = self.catalog_fixture()
+        def engine(mode, name, **fields):
+            self.assertEqual(mode, 'PreviewCatalog')
+            self.assertEqual(bw.read(fields['Input'])['selected'], [self.document['asset']])
+            bw.write(fields['Output'], catalog)
+        with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'engine_run', side_effect=engine):
+            result = self.ws.preview()
+        summary = bw.read(Path(result['preview']).parent / 'summary.json')
+        items = {r['asset']: r for r in summary['items']}
+        self.assertEqual(6, result['assets'])
+        self.assertEqual(2, result['stubs'])
+        self.assertEqual(1, result['missingDependencies'])
+        self.assertIn('/Game/Generator', result['unsupportedBlueprints'])
+        self.assertTrue(items['/Game/Generator']['placeholder'])
+        self.assertEqual(['/Game/Item'], items['/Game/Generator']['context']['referencedBy'])
+        self.assertEqual(0, items['/Game/Generator']['graphs'])
+        self.assertEqual(0, items['/Game/Parent']['graphs'])
+        self.assertFalse(items['/Game/Parent']['displayed'])
+        self.assertEqual(1, result['editableAssets'])
+        self.assertEqual(5, result['listedAssets'])
+        self.assertIn('Unsupported UObject', items['/Game/Generator']['context']['reason'])
+        self.assertEqual(original, (self.ws.manifest.read_bytes(), self.ws.baseline(), self.file.read_bytes()))
+
+    def test_preview_rejects_failed_or_incomplete_discovery(self):
+        with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'engine_run', side_effect=RuntimeError('catalog failed')):
+            with self.assertRaisesRegex(RuntimeError, 'catalog failed'):
+                self.ws.preview()
+        with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'preview_catalog', return_value={}):
+            with self.assertRaisesRegex(ValueError, 'omitted selected asset'):
+                self.ws.preview()
+        self.assertFalse((self.ws.run / 'preview/index.html').exists())
+
+    def test_preview_rejects_stale_selected_asset_before_engine(self):
+        self.file.write_bytes(b'changed in editor')
+        with patch.object(self.ws, 'prepare') as prepare:
+            with self.assertRaisesRegex(ValueError, 'changed since export'):
+                self.ws.preview()
+            prepare.assert_not_called()
+
+    def test_mark_stubs_restores_asset_after_failed_reopen(self):
+        dependency = bw.target(self.project, '/Game/Dependency')
+        dependency.write_bytes(b'original dependency')
+        def engine(*args, **kwargs):
+            dependency.write_bytes(b'partial metadata write')
+        with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'engine_run', side_effect=engine), \
+             patch.object(self.ws, 'preview_catalog', return_value={}):
+            with self.assertRaisesRegex(ValueError, 'did not survive'):
+                self.ws.mark_stubs(['/Game/Dependency'])
+        self.assertEqual(b'original dependency', dependency.read_bytes())
+        self.assertFalse((self.ws.internal / 'recovery.json').exists())
+        with self.assertRaisesRegex(ValueError, 'cannot change selected'):
+            self.ws.mark_stubs([self.document['asset']])
 
 
 if __name__ == '__main__':

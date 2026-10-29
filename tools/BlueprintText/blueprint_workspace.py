@@ -373,12 +373,105 @@ class Workspace:
         write(self.manifest, dict(schema=1, project=str(self.project), assets=records))
         return dict(status='exported', assets=len(records))
 
+    def preview_catalog(self, selected):
+        request, output = self.run / 'catalog-request.json', self.run / 'catalog/catalog.json'
+        write(request, dict(selected=selected))
+        self.engine_run('PreviewCatalog', 'preview-catalog', Input=request, Output=output)
+        catalog = read(output)
+        if catalog.get('schema') != 1 or not isinstance(catalog.get('assets'), list):
+            raise ValueError('Invalid project preview catalog')
+        rows, identities = {}, set()
+        for row in catalog['assets']:
+            asset = row['asset']
+            if asset.casefold() in identities or row.get('role') not in ('stub', 'unclassified'):
+                raise ValueError('Duplicate asset or unknown role in preview catalog: ' + asset)
+            identities.add(asset.casefold())
+            rows[asset] = row
+        return rows
+
+    def mark_stubs(self, assets):
+        # Explicit migration for existing dependency assets. Future creators must
+        # set BlueprintText.Role on creation; preview never guesses this role.
+        _, entries = self.load()
+        selected = {d['asset'] for _, _, d in entries}
+        if not assets or len({a.casefold() for a in assets}) != len(assets):
+            raise ValueError('MarkStubs requires unique existing dependency assets')
+        if selected.intersection(assets):
+            raise ValueError('MarkStubs cannot change selected workspace assets; use editorRole in their BPT source and Apply')
+        files = [(a, target(self.project, a)) for a in assets]
+        if any(not p.is_file() for _, p in files):
+            raise ValueError('MarkStubs requires existing project assets')
+        self.prepare(self.project)
+        records = []
+        for asset, file in files:
+            backup = self.run / 'original' / (asset[6:] + '.uasset')
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(file, backup)
+            if file.read_bytes() != backup.read_bytes():
+                raise RuntimeError('Stub metadata backup verification failed')
+            records.append(dict(asset=asset, backup=str(backup.relative_to(self.internal))))
+        journal = self.internal / 'recovery.json'
+        write(journal, dict(project=str(self.project), assets=records, baseline=self.baseline()))
+        request = self.run / 'mark-stubs.json'
+        write(request, dict(assets=assets))
+        try:
+            self.engine_run('MarkStubs', 'mark-stubs', Input=request)
+            rows = self.preview_catalog(sorted(selected))
+            if any(rows.get(a, {}).get('role') != 'stub' for a in assets):
+                raise ValueError('Stub metadata did not survive fresh-process reopen')
+            journal.unlink()
+        except BaseException:
+            self.recover()
+            raise
+        return dict(status='stubs-marked', assets=len(assets))
+
     def preview(self):
         from render_preview_index import generate
         data, entries = self.load()
+        self.check(entries)
+        self.prepare(self.project)
+        catalog = self.preview_catalog([d['asset'] for _, _, d in entries])
         baseline, records = self.baseline(), []
+        selected = {d['asset'] for _, _, d in entries}
+        referenced_by = {a: [] for a in catalog}
+        missing = {}
+        for asset, row in catalog.items():
+            for dependency in row['dependencies']:
+                name = dependency['asset']
+                referenced_by.setdefault(name, []).append(asset)
+                if dependency['missing']:
+                    if name in catalog:
+                        raise ValueError('Catalog reports an existing asset as missing: ' + name)
+                    missing[name] = dict(asset=name, role='unclassified', **{'class': ''}, dependencies=[],
+                                         reason='Missing dependency package in this editor project.')
+        catalog.update(missing)
+
+        def context(asset):
+            row = catalog[asset]
+            return dict(placeholder=row['role'] == 'stub', context=dict(
+                asset=asset, assetClass=row['class'], role=row['role'],
+                reason=row.get('reason', ''), selected=asset in selected,
+                dependencies=[r['asset'] for r in row['dependencies']],
+                referencedBy=sorted(set(referenced_by.get(asset, [])))))
+
         for item, source, document in entries:
             record = dict(item, source=str(source))
+            asset = document['asset']
+            if asset not in catalog:
+                if asset in baseline or target(self.project, asset).exists():
+                    raise ValueError('Project catalog omitted selected asset: ' + asset)
+                # Proposed, not yet applied assets are explicitly distinguished.
+                catalog[asset] = dict(asset=asset, role=document.get('editorRole', 'unclassified'),
+                                     **{'class': 'Proposed Blueprint'}, dependencies=[], reason='Not yet applied to the project.')
+            record.update(context(asset))
+            proposed_role = document.get('editorRole', 'unclassified')
+            if proposed_role != record['context']['role']:
+                project_role = record['context']['role']
+                record['placeholder'] = proposed_role == 'stub'
+                record['context'].update(role=proposed_role,
+                    reason=f'Editor role change proposed in workspace; current project role: {project_role}.')
+            if item.get('placeholder', False) and not record['placeholder']:
+                raise ValueError('Workspace placeholder disagrees with project metadata; mark the actual asset as a stub: ' + asset)
             old = baseline.get(document['asset'])
             before = inside(self.internal, old['before']) if old and old.get('before') else None
             if before and codec.compare(read(before), document):
@@ -386,10 +479,29 @@ class Workspace:
             elif not before:
                 record['status'] = 'added'
             records.append(record)
+        for asset, row in sorted(catalog.items()):
+            if asset in selected:
+                continue
+            record = context(asset)
+            if row.get('native'):
+                native = inside(self.run / 'catalog', row['native'])
+                source = native.with_suffix('.compact.json')
+                write(source, codec.compact(read(native)))
+                record['source'] = str(source)
+                resources = native.with_suffix('.resources') / 'manifest.json'
+                if resources.is_file():
+                    record['resources'] = str(resources)
+            records.append(record)
         preview_manifest = self.run / 'preview.json'
         write(preview_manifest, dict(title=data.get('title', 'Blueprint workspace'), description=data.get('description', ''), assets=records))
         result = generate(preview_manifest, self.run / 'preview')
-        return dict(status='previewed', preview=result['index'], previewUrl=Path(result['index']).as_uri(), assets=result['assets'], graphs=result['graphs'])
+        return dict(status='previewed', preview=result['index'], previewUrl=Path(result['index']).as_uri(),
+                    assets=result['assets'], graphs=result['graphs'], selectedAssets=len(entries),
+                    editableAssets=result['editableAssets'], listedAssets=result['listedAssets'],
+                    stubs=sum(r['placeholder'] for r in records), missingDependencies=len(missing),
+                    informationalAssets=sum('source' not in r for r in records),
+                    unsupportedBlueprints=[a for a, row in catalog.items()
+                                           if row['class'].endswith('Blueprint') and row.get('reason') and a not in selected])
 
     def refresh_module(self, module):
         """Refresh only the shared module, retaining its complete previous tree."""
@@ -465,7 +577,7 @@ class Workspace:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'Recover'])
+    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'MarkStubs', 'Recover'])
     parser.add_argument('--workspace', required=True)
     parser.add_argument('--project')
     parser.add_argument('--asset', action='append')
@@ -486,10 +598,9 @@ def main():
                 workspace.project = Path(read(workspace.manifest)['project']).resolve()
             else:
                 workspace.load()
-            if args.action != 'Preview':
-                stack.enter_context(project_operation(workspace.project))
+            stack.enter_context(project_operation(workspace.project))
             if args.action != 'Recover' and (workspace.internal / 'recovery.json').exists():
-                raise ValueError('Interrupted Apply requires Recover before another operation')
+                raise ValueError('Interrupted asset write requires Recover before another operation')
             if args.action == 'Prepare':
                 result = workspace.prepare(args.project)
             elif args.action == 'Export':
@@ -498,6 +609,8 @@ def main():
                 result = workspace.apply()
             elif args.action == 'Preview':
                 result = workspace.preview()
+            elif args.action == 'MarkStubs':
+                result = workspace.mark_stubs(args.asset)
             else:
                 restored = workspace.recover()
                 result = dict(status='recovered' if restored else 'no-recovery-needed',

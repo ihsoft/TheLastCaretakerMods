@@ -15,6 +15,7 @@ from collections import defaultdict
 from pathlib import Path
 from function_labels import lookup as lookup_function_label
 from review_details import render_details
+from preview_references import node_references, package as reference_package, label as reference_label
 
 
 def escape(value):
@@ -379,14 +380,15 @@ def pin_type_label(metadata):
 
 class CardLine(str):
     """Keep display semantics through wrapping and folded-step descriptions."""
-    def __new__(cls, text, unconnected_output=False):
+    def __new__(cls, text, unconnected_output=False, reference=None):
         line = super().__new__(cls, text)
         line.unconnected_output = unconnected_output
+        line.reference = reference
         return line
 
 
 def wrap_card_line(line, title=False):
-    return [CardLine(part, getattr(line, 'unconnected_output', False))
+    return [CardLine(part, getattr(line, 'unconnected_output', False), getattr(line, 'reference', None))
             for part in wrap_node_line(line, title)]
 
 
@@ -596,7 +598,8 @@ def order_layer(members, parent_edges, boxes, direction):
     return sorted(members, key=key)
 
 
-def render(document, selection=None, view="simplified", direction="TB", review=None, before=None):
+def render(document, selection=None, view="simplified", direction="TB", review=None, before=None, asset_context=None):
+    asset_context = asset_context or {}
     if review is not None:
         document = review_document(document, before, review, selection)
     if view not in ("simplified", "full") or direction not in ("TB", "LR"):
@@ -659,6 +662,19 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                     lines_by_id[node_id].append(part)
             for note in notes[0]:
                 lines_by_id[node_id].extend(CardLine(part, note.unconnected_output) for part in textwrap.wrap(note, 42))
+        # Keep each target at its actual node/pin/property, including folded steps.
+        seen_references = set()
+        for part in node.get('_foldedNodes', [node]):
+            for field, target in node_references(part, document.get('pinTemplates', {})):
+                if reference_package(target) == owner or (part['id'], field, target) in seen_references:
+                    continue
+                seen_references.add((part['id'], field, target))
+                location = field.replace('pins / ', '').replace(' / DefaultObject', '').replace('defaults / ', '').replace('properties / ', '')
+                if '_foldedNodes' in node:
+                    location = part['id'] + ' / ' + location
+                info = dict(target=target, field=field, **asset_context.get(reference_package(target), {}))
+                line = CardLine(location + ' → ' + reference_label(target, asset_context), reference=info)
+                lines_by_id[node_id].extend(wrap_card_line(line))
         if node.get('_reviewStatus'):
             status = node['_reviewStatus']
             badge_row = title_rows[node_id]
@@ -811,7 +827,13 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             else:
                 decoration += f' style="{compact_style}"'
             output_flag = ' data-unconnected-output="true"' if getattr(line, 'unconnected_output', False) else ''
-            pieces.append(f'<text data-card-row="{row}"{output_flag} x="{x+14}" y="{y+24+row*19}" font-size="{size}"{weight}{fit}{decoration}>{escape(line)}{tooltip}</text>')
+            reference = getattr(line, 'reference', None)
+            if reference:
+                tooltip += '<title>' + escape(reference['field'] + '\n' + reference['target']) + '</title>'
+            text = f'<text data-card-row="{row}"{output_flag} x="{x+14}" y="{y+24+row*19}" font-size="{size}"{weight}{fit}{decoration}>{escape(line)}{tooltip}</text>'
+            if reference and reference.get('href'):
+                text = '<a class="asset-reference" href="' + escape(reference['href']) + '">' + text + '</a>'
+            pieces.append(text)
             hidden_rows += bool(output_flag)
         copy_label = 'Copy node ID' if len(ids) == 1 else f'Copy all {len(ids)} node IDs'
         pieces.append(f'<g class="copy-node-id" role="button" tabindex="0" aria-label="{copy_label}" transform="translate({x+w-27},{y+5})"><title>{copy_label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M6 6h9v11H6z M9 3h9v11" fill="none" stroke="#334155" stroke-width="1.5"/></g>')
@@ -836,6 +858,7 @@ def main():
     parser.add_argument("--graph", help="Graph name when the envelope has several graphs")
     parser.add_argument('--review', type=Path, help='Explicit added/changed/removed node ID lists')
     parser.add_argument('--before', type=Path, help='Original compact source for review Before details and removed nodes')
+    parser.add_argument('--asset-context', type=Path, help='Tool-owned asset roles and preview links; never part of editable BPT')
     parser.add_argument("--view", choices=("simplified", "full"), default="simplified")
     parser.add_argument("--direction", choices=("TB", "LR"), default="TB", help="Top-to-bottom (default) or left-to-right")
     args = parser.parse_args()
@@ -848,13 +871,14 @@ def main():
                for p in (args.input, args.review, args.before)):
             raise ValueError("Output must not overwrite the input.")
         document = json.loads(args.input.read_text(encoding="utf-8-sig"))
+        asset_context = json.loads(args.asset_context.read_text(encoding='utf-8')) if args.asset_context else {}
         if args.before and not args.review:
             raise ValueError('--before requires --review.')
         if args.review:
             review = json.loads(args.review.read_text(encoding='utf-8-sig'))
             before = json.loads(args.before.read_text(encoding='utf-8-sig')) if args.before else None
             document = review_document(document, before, review, args.graph)
-        variants = {(view, direction): render(document, args.graph, view, direction)
+        variants = {(view, direction): render(document, args.graph, view, direction, asset_context=asset_context)
                     for view in ("simplified", "full") for direction in ("TB", "LR")}
         svg, title, nodes, links = variants[args.view, args.direction]
         sections = ''.join(f'<section id="{view}-{direction}"' +

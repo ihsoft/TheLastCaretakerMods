@@ -1,5 +1,6 @@
 // Schema 2: editor-owned property text and complete K2 graphs, not clipboard paste.
 #include "BlueprintAssetTextCommandlet.h"
+#include "BlueprintPreviewNames.h"
 #include "Dom/JsonObject.h"
 #include "EdGraphUtilities.h"
 #include "EdGraphSchema_K2.h"
@@ -27,6 +28,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "UObject/SavePackage.h"
+#include "UObject/MetaData.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectIterator.h"
 #include "UObject/UObjectHash.h"
@@ -356,7 +358,7 @@ bool ImportComponents(UBlueprint* BP,const FJsonObject& Data)
     }
     return true;
 }
-bool Supported(const UBlueprint* BP)
+FString UnsupportedReason(const UBlueprint* BP)
 {
     const auto* Widget=Cast<UWidgetBlueprint>(BP);
     if(!BP || !BP->ParentClass ||
@@ -365,22 +367,27 @@ bool Supported(const UBlueprint* BP)
        BP->ComponentClassOverrides.Num() ||
        BP->GetExtensions().Num() || (!Widget && BP->GeneratedVariables.Num()) || BP->InheritableComponentHandler)
     {
-        UE_LOG(LogTemp,Error,TEXT("Unsupported Blueprint state: %s parent=%s type=%d macros=%d delegates=%d timelines=%d overrides=%d extensions=%d generatedVariables=%d inheritedOverrides=%d"),
+        return FString::Printf(TEXT("Unsupported Blueprint state: %s parent=%s type=%d macros=%d delegates=%d timelines=%d overrides=%d extensions=%d generatedVariables=%d inheritedOverrides=%d"),
             *GetNameSafe(BP),BP?*GetPathNameSafe(BP->ParentClass):TEXT("None"),BP?int32(BP->BlueprintType):-1,
             BP?BP->MacroGraphs.Num():0,BP?BP->DelegateSignatureGraphs.Num():0,BP?BP->Timelines.Num():0,
             BP?BP->ComponentClassOverrides.Num():0,BP?BP->GetExtensions().Num():0,BP?BP->GeneratedVariables.Num():0,BP&&BP->InheritableComponentHandler?1:0);
-        return false;
     }
     if(Widget && !Widget->WidgetTree)
-    {UE_LOG(LogTemp,Error,TEXT("Widget export requires a WidgetTree."));return false;}
-    if(!Widget && !BP->SimpleConstructionScript)return false;
+        return TEXT("Widget export requires a WidgetTree.");
+    if(!Widget && !BP->SimpleConstructionScript)return TEXT("Blueprint export requires a SimpleConstructionScript.");
     TArray<UEdGraph*> Graphs;BP->GetAllGraphs(Graphs);
     int32 InterfaceGraphs=0;
     for(const auto& Description:BP->ImplementedInterfaces)InterfaceGraphs+=Description.Graphs.Num();
     if(Graphs.Num()!=BP->UbergraphPages.Num()+BP->FunctionGraphs.Num()+InterfaceGraphs)
-    {UE_LOG(LogTemp,Error,TEXT("Nested graphs are outside schema 2."));return false;}
+        return TEXT("Nested graphs are outside schema 2.");
     for(const UEdGraph* Graph:Graphs)
-        if(Graph->GetSchema()->GetClass()!=UEdGraphSchema_K2::StaticClass())return false;
+        if(Graph->GetSchema()->GetClass()!=UEdGraphSchema_K2::StaticClass())return TEXT("Only K2 graph schemas are supported.");
+    return FString();
+}
+bool Supported(const UBlueprint* BP)
+{
+    const FString Reason=UnsupportedReason(BP);
+    if(!Reason.IsEmpty()){UE_LOG(LogTemp,Error,TEXT("%s"),*Reason);return false;}
     return true;
 }
 bool Export(const FString& Asset, const FString& Path, const FString& PreviewResources=FString())
@@ -402,6 +409,8 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
     auto Root=MakeShared<FJsonObject>();
     Root->SetNumberField(ATNames::Valueschema,2);Root->SetStringField(ATNames::Valueformat,ATNames::Valuenative_asset);
     Root->SetStringField(ATNames::Valueasset,Asset);Root->SetStringField(ATNames::Valueparent,BP->ParentClass->GetPathName());
+    const FString Role=BP->GetOutermost()->GetMetaData().GetValue(BP,BlueprintPreviewNames::RoleMetadata);
+    if(!Role.IsEmpty())Root->SetStringField(BlueprintPreviewNames::EditorRole,Role);
     if(BP->GetName()!=FPackageName::GetLongPackageAssetName(Asset))
         Root->SetStringField(ATNames::ValueobjectName,BP->GetName());
     Root->SetObjectField(ATNames::Valueproperties,Properties(BP,BP->GetClass()->GetDefaultObject(),BlueprintOwned));
@@ -506,7 +515,7 @@ struct GraphFactory final : FCustomizableTextObjectFactory
 };
 UBlueprint* CreateImport(const FJsonObject& Root)
 {
-    if(!Keys(Root,{ATNames::Valueschema,ATNames::Valueformat,ATNames::Valueasset,ATNames::ValueobjectName,ATNames::Valueparent,ATNames::Valueproperties,ATNames::Valuevariables,ATNames::Valuedefaults,ATNames::Valuegraphs,Dependencies,RootState,Components,Interfaces,WidgetState}) ||
+    if(!Keys(Root,{ATNames::Valueschema,ATNames::Valueformat,ATNames::Valueasset,ATNames::ValueobjectName,ATNames::Valueparent,ATNames::Valueproperties,ATNames::Valuevariables,ATNames::Valuedefaults,ATNames::Valuegraphs,Dependencies,RootState,Components,Interfaces,WidgetState,BlueprintPreviewNames::EditorRole}) ||
        Root.GetIntegerField(ATNames::Valueschema)!=2 || Root.GetStringField(ATNames::Valueformat)!=ATNames::Valuenative_asset)return nullptr;
     const FString Asset=Root.GetStringField(ATNames::Valueasset);
     if(!Asset.StartsWith(ATNames::Value_Game_) || !FPackageName::IsValidLongPackageName(Asset))return nullptr;
@@ -523,9 +532,13 @@ UBlueprint* CreateImport(const FJsonObject& Root)
     if(!Parent || !(IsWidget?Parent->IsChildOf(UUserWidget::StaticClass()):Parent->IsChildOf(AActor::StaticClass())))
     {UE_LOG(LogTemp,Error,TEXT("Missing or incompatible parent class for %s: %s"),*Asset,*Root.GetStringField(ATNames::Valueparent));return nullptr;}
     UPackage* Package=CreatePackage(*Asset);
-    return FKismetEditorUtilities::CreateBlueprint(Parent,Package,*ObjectName,BPTYPE_Normal,
+    FString Role;
+    if(Root.HasField(BlueprintPreviewNames::EditorRole) && (!Root.TryGetStringField(BlueprintPreviewNames::EditorRole,Role) || Role!=BlueprintPreviewNames::Stub))return nullptr;
+    auto* BP=FKismetEditorUtilities::CreateBlueprint(Parent,Package,*ObjectName,BPTYPE_Normal,
         IsWidget?UWidgetBlueprint::StaticClass():UBlueprint::StaticClass(),
         IsWidget?UWidgetBlueprintGeneratedClass::StaticClass():UBlueprintGeneratedClass::StaticClass(),ATNames::ValueBlueprintAssetText);
+    if(BP && !Role.IsEmpty())Package->GetMetaData().SetValue(BP,BlueprintPreviewNames::RoleMetadata,*Role);
+    return BP;
 }
 bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
 {
@@ -733,6 +746,8 @@ bool ExportBatch(const FString& Path,const FString& Folder)
 }
 }
 
+#include "BlueprintPreviewCatalog.h"
+
 UBlueprintAssetTextCommandlet::UBlueprintAssetTextCommandlet(){IsClient=false;IsServer=false;IsEditor=true;LogToConsole=true;}
 int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
 {
@@ -740,6 +755,8 @@ int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
     FParse::Value(*Params,ATNames::ValueMode_,Mode);FParse::Value(*Params,ATNames::ValueInput_,Input);
     FParse::Value(*Params,ATNames::ValueOutput_,Output);FParse::Value(*Params,ATNames::ValueAsset_,Asset);
     FString PreviewResources;FParse::Value(*Params,WidgetPreviewResources::ResourcesArgument,PreviewResources);
+    if(Mode==BlueprintPreviewNames::CatalogMode)return BlueprintPreview::Catalog(Input,Output)?0:5;
+    if(Mode==BlueprintPreviewNames::MarkStubsMode)return BlueprintPreview::MarkStubs(Input)?0:5;
     if(Mode==ATNames::ValueExport)return AssetText::Export(Asset,Output,PreviewResources)?0:2;
     if(Mode==ATNames::ValueImport)return AssetText::Import(Input)?0:3;
     if(Mode==AssetText::ImportBatchMode)return AssetText::Import(Input,true)?0:3;

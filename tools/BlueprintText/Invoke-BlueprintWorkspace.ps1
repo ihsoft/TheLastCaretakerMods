@@ -1,12 +1,13 @@
 <#
 .SYNOPSIS
 Prepare, export, safely apply, or preview complete compact Blueprint JSON in an existing project.
-Engine actions: Prepare, Export, Apply. Warn before starting; close Unreal Editor.
-Edit workspace.json and blueprints/*.json. Preview is offline. Recover restores interrupted Apply.
+Preview refreshes project dependencies in Unreal, then renders offline. MarkStubs
+persists an explicit role on existing unselected dependencies. Warn before engine work.
+Edit workspace.json and blueprints/*.json. Recover restores interrupted asset writes.
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Prepare','Export','Apply','Preview','Recover')][string]$Action,
+    [Parameter(Mandatory)][ValidateSet('Prepare','Export','Apply','Preview','MarkStubs','Recover')][string]$Action,
     [Parameter(Mandatory)][string]$WorkspaceRoot,
     [string]$ProjectFile,
     [string[]]$Asset,

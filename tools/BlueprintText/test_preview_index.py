@@ -27,6 +27,66 @@ class PreviewIndexTests(unittest.TestCase):
         path.write_text(json.dumps(value), encoding='utf-8')
         return path
 
+    def test_informational_stub_is_visible_without_fake_graph_and_escapes_text(self):
+        context = dict(asset='/Game/Stub', assetClass='UObject', role='stub', selected=False,
+                       reason='Unsupported <script> graph', dependencies=['/Script/CoreUObject'], referencedBy=['/Game/Item'])
+        manifest = self.save('context.json', dict(assets=[dict(context=context)]))
+        result = generate(manifest, self.root / 'context-preview')
+        page = Path(result['index']).read_text(encoding='utf-8')
+        self.assertEqual(0, result['graphs'])
+        self.assertTrue(result['items'][0]['placeholder'])
+        self.assertIn('STUB', page)
+        self.assertIn('Unsupported &lt;script&gt; graph', page)
+        self.assertNotIn('/Game/Item', page)
+        self.assertEqual(0, result['editableAssets'])
+        self.assertEqual(1, result['listedAssets'])
+        self.assertNotIn('<section id="asset-', page)
+        context['reason'] = ''
+        self.save('context.json', dict(assets=[dict(context=context)]))
+        with self.assertRaisesRegex(ValueError, 'explicit reason'):
+            plan(manifest)
+
+    def test_source_editor_role_marks_stub_without_manifest_hint(self):
+        source = fixture()
+        source['editorRole'] = 'stub'
+        self.save('stub.json', source)
+        manifest = self.save('manifest.json', dict(assets=['stub.json']))
+        self.assertTrue(plan(manifest)[1][0]['item']['placeholder'])
+
+    def test_editable_graphs_and_property_references_replace_flat_dependencies(self):
+        source = fixture()
+        source['parent'] = '/Game/Stub.Stub_C'
+        source['defaults'] = {'Mesh': '/Game/Mesh.Mesh'}
+        source['graphs'][0]['body']['nodes'][0]['pins'] = {
+            'in:Asset': {'DefaultObject': '/Game/Stub.Stub'}}
+        stub = fixture('/Game/Stub')
+        self.save('editable.json', source)
+        self.save('stub.json', stub)
+        def context(asset, role, **kwargs):
+            return dict(asset=asset, assetClass='Blueprint', role=role, selected=False,
+                        reason='', dependencies=[], referencedBy=[], **kwargs)
+        parent = context('/Game/Stub', 'stub')
+        data = context('/Game/Item', 'unclassified')
+        data.update(assetClass='DataAsset', reason='No BPT editor', dependencies=['/Game/Noise'] * 19)
+        manifest = self.save('manifest.json', dict(assets=[dict(source='editable.json'),
+            dict(source='stub.json', context=parent), dict(context=data)]))
+        original = (self.root / 'editable.json').read_bytes()
+        result = generate(manifest, self.root / 'out')
+        page = Path(result['index']).read_text(encoding='utf-8')
+        self.assertEqual((1, 2, 1), (result['editableAssets'], result['listedAssets'], result['graphs']))
+        self.assertNotIn('/Game/Noise', page)
+        self.assertNotIn('Referenced by', page)
+        self.assertIn('parent</code>', page)
+        self.assertIn('defaults / Mesh', page)
+        self.assertIn('Stub_C [STUB]', page)
+        self.assertFalse((self.root / 'out/blueprint-001').exists())
+        self.assertGreater(page.index('Other assets (2)'), page.index('graph-000.html'))
+        svg = (self.root / 'out/blueprint-000/graph-000.svg').read_text(encoding='utf-8')
+        self.assertIn('in:Asset', svg)
+        self.assertIn('[STUB]', svg)
+        self.assertIn('href="../index.html#asset-001"', svg)
+        self.assertEqual(original, (self.root / 'editable.json').read_bytes())
+
     def test_all_statuses_placeholder_style_and_node_review(self):
         before = fixture()
         after = copy.deepcopy(before)

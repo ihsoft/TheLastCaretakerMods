@@ -93,6 +93,12 @@ preserves that name; import recreates it without renaming the package. Omit
 `objectName` when both names match. This also preserves generated-class identities
 used by dependent Blueprints.
 
+Optional `editorRole: "stub"` preserves the asset's `BlueprintText.Role` editor
+metadata through export/import. No other role value is currently supported;
+absence means unclassified. This is a declaration by the asset creator, not an
+inference about the asset's completeness or release ownership. See the
+[workspace stub workflow](blueprint-workspace.md#editor-stub-identity).
+
 The import/export boundary is an ordinary Actor-derived or Widget Blueprint with
 a native or available Blueprint parent. Component trees include SCS nodes, component templates and
 their owned objects, including child-actor templates. Inherited component
@@ -268,6 +274,10 @@ failed runs can leave partial files. Keep generated exports and images under `Tm
 generates all compact graphs, available widget previews, and a common HTML index
 from one JSON manifest. It is offline and does not modify source exports:
 
+Routine agent work uses the workspace's single `Preview` action, which owns
+engine discovery and this rendering manifest. Use the lower-level renderer
+directly only for an explicitly supplied set of exports or tool development.
+
 ```powershell
 & ./tools/BlueprintText/Render-BlueprintPreviews.ps1 `
   -InputPath ./Tmp/BlueprintText/review/previews.json `
@@ -295,7 +305,22 @@ The manifest accepts source paths or explicit records, in display order:
 Paths are relative to the manifest. Package identity comes from each source;
 duplicate identities are rejected. `placeholder: true` gives the card a yellow
 background and a red italic warning. The tool does not infer placeholders from
-names. Optional `note` adds plain text to a card.
+names. Source `editorRole: "stub"` also supplies the marker. Optional `note` adds
+plain text to a card.
+
+Workspace-generated records also carry project `context`: asset identity,
+class, role, selection, diagnostic reason, dependencies and referencers. A
+record without source snapshots requires an explicit reason and unchanged
+status. Such records and unselected stubs go into the compact inventory at the
+bottom, not graph cards. A supported non-stub Blueprint can have a card even
+when it is not selected for Apply. Catalog dependency/referencer lists are not
+displayed as editable functionality.
+
+Asset references in editable source are displayed at their node/pin or named
+Blueprint property, with exact paths in tooltips and links to preview entries
+when available. Stub markers come from the supplied project context. Viewer
+role/link metadata stays separate from BPT source. The summary distinguishes
+`editableAssets`, `listedAssets` and displayed `graphs` from total `assets`.
 
 With no changes, the index is a browser: no status badges, review legend or diff
 explanations. Any `added`, `changed` or `removed` record enables review mode with

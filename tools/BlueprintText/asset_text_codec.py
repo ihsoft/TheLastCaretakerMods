@@ -17,7 +17,7 @@ KINDS = {'K2Node_CallFunction': 'call', 'K2Node_Event': 'event',
          'K2Node_Self': 'self', 'K2Node_DynamicCast': 'cast'}
 PIN_SEPARATE = {'PinId', 'PinName', 'Direction', 'LinkedTo',
                 'DefaultValue', 'DefaultObject', 'DefaultTextValue'}
-FIELDS = {'schema', 'format', 'asset', 'objectName', 'parent', 'properties', 'variables', 'defaults', 'graphs', 'dependencies', 'root', 'components', 'interfaces', 'widget'}
+FIELDS = {'schema', 'format', 'asset', 'objectName', 'parent', 'properties', 'variables', 'defaults', 'graphs', 'dependencies', 'root', 'components', 'interfaces', 'widget', 'editorRole'}
 
 
 def check_keys(obj, allowed, context):
@@ -252,6 +252,8 @@ def pin_alias(node, pin):
 
 def compact(document):
     check_keys(document, FIELDS, 'native envelope')
+    if 'editorRole' in document and document['editorRole'] != 'stub':
+        raise ValueError('editorRole must be stub when present')
     validate_components(document)
     validate_interfaces(document)
     if document['schema'] != 2 or document['format'] != 'native-asset':
@@ -330,6 +332,8 @@ def compact(document):
 
 def native(document):
     check_keys(document, FIELDS | {'classes', 'pinTemplates'}, 'compact envelope')
+    if 'editorRole' in document and document['editorRole'] != 'stub':
+        raise ValueError('editorRole must be stub when present')
     validate_components(document)
     validate_interfaces(document)
     if document['schema'] != 2 or document['format'] != 'compact-asset':

@@ -15,6 +15,22 @@ ROOT = Path(__file__).resolve().parent
 
 
 class GraphRenderingTests(unittest.TestCase):
+    def test_asset_reference_uses_pin_site_and_role_in_both_views(self):
+        document = {'schema': 1, 'asset': '/Game/Test', 'nodes': [dict(id='spawn', kind='call', operation='Spawn',
+            pins={'in:Class': {'DefaultObject': '/Game/Gyro.Gyro_C'}})], 'links': []}
+        original = copy.deepcopy(document)
+        context = {'/Game/Gyro': dict(stub=True, href='../index.html#asset-001')}
+        for view in ('full', 'simplified'):
+            svg = render(document, view=view, asset_context=context)[0]
+            root = ET.fromstring(svg)
+            links = root.findall('.//{http://www.w3.org/2000/svg}a')
+            self.assertTrue(links)
+            self.assertEqual('../index.html#asset-001', links[0].get('href'))
+            self.assertIn('in:Class', svg)
+            self.assertIn('[STUB]', svg)
+            self.assertIn('/Game/Gyro.Gyro_C', svg)
+        self.assertEqual(original, document)
+
     def test_folded_step_titles_wrap_once_at_body_width(self):
         templates = {'number': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'}}
         nodes = [{'id': 'read', 'kind': 'getVariable', 'variable': 'RailgunFullChargeEnergyKWh',

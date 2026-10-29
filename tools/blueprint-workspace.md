@@ -102,13 +102,13 @@ is not supported; removing a baseline entry or losing a source file must not be
 used as a delete operation.
 
 Use a separate workspace for each independent task. All commands hold an OS lock
-on their workspace. Prepare, Export, Apply and Recover also lock the project and
+on their workspace. Prepare, Export, Apply, Preview, MarkStubs and Recover also lock the project and
 join the [shared Unreal queue](unreal-coordination.md) for their entire operation,
 including rollback. Engine work waits its turn even for different projects.
 Project and older engine gates also wait for their owners to finish; never delete
 their lock files. A conflicting command in the same workspace still fails to
 protect task ownership. The OS releases locks when their owning process exits.
-Offline preview and direct JSON editing in separate workspaces can proceed independently of engine work.
+Direct JSON editing in separate workspaces can proceed independently of engine work.
 Direct file edits are outside these locks; follow the task ownership rules above.
 Other Unreal producers must use the shared queue wrapper. Asset conflict checks still apply when sequential
 tasks touch the same exported asset.
@@ -141,18 +141,53 @@ needed. Do not move backup files by hand.
 
 ## Hand off the preview
 
-Preview is offline. It generates the [common browse/review index](blueprint-text.md#browse-a-set-of-blueprints)
-and returns `previewUrl`. Send that link to the user without opening or parsing
-the generated page. Blueprint status is compared with the original export, so
-successful Apply operations do not erase the review. Conflict detection uses the
-most recently accepted project state separately. Optional
-`reviews` in a manifest asset entry supplies known node IDs by graph, using
-`added`, `changed` and `removed` lists. `placeholder` and `note` describe editor
-dependencies and their role. These annotations do not alter the Blueprint.
+Run `Preview` once and return its `previewUrl`. The command checks selected
+assets for changes since export/apply, prepares the shared tooling and gathers
+current project assets and references in Unreal before rendering offline.
+Warn before this engine action. Do not manually enumerate dependencies, inspect
+the catalog, refresh the module separately, or assemble a preview manifest.
+The compact result reports editable cards, listed assets, graphs, stubs, missing
+local dependencies and unsupported Blueprints. A collection failure is an error,
+not permission to present an incomplete preview as successful.
+
+The preview shows what can be changed through BPT. Supported Blueprint sources
+have graph/widget cards. References appear at their actual graph node, pin or
+named Blueprint property, with stub or missing-local-asset labels when known.
+Other assets, including DataAssets and unselected editor stubs, appear only in
+a compact reference list at the bottom. Their presence is not a claim of BPT
+editing support. In particular, a stub's empty graphs are not the original game
+implementation. An explicitly selected stub can still be reviewed as an editor
+contract. Discovered assets do not expand the workspace's Apply selection.
+
+Blueprint status is compared with the original export, so successful Apply
+operations do not erase the review. Optional `reviews` in a manifest asset entry
+supplies known node IDs by graph, using `added`, `changed` and `removed` lists.
+Optional `note` adds explanatory text. These annotations do not alter the Blueprint.
 
 Read diagnostics only on failure: start with the returned short reason and
 diagnostic path, then inspect the relevant evidence. A successful render does not
 require screenshot inspection, link crawling or a second comparison by the agent.
+
+## Editor stub identity
+
+Stub creators must set asset metadata `BlueprintText.Role` to `stub`. Supported
+BPT exports preserve it as optional `editorRole: "stub"`, and Apply restores it
+on the project asset. The preview does not guess this role from asset names,
+empty graphs or absence from a release package. An unmarked asset is unclassified.
+
+For a one-time migration of verified existing stubs outside the workspace's
+editing selection, use the common action below. It backs up the selected asset
+packages, saves the marker, verifies it in a fresh process and restores originals
+on failure. This is not a prerequisite to repeat before every preview.
+
+```powershell
+& $tool -Action MarkStubs -WorkspaceRoot $work -Asset @('/Game/Dependencies/ParentStub')
+```
+
+For a supported Blueprint already selected for editing, set `editorRole` in its
+BPT source and use Apply instead. A manual workspace `placeholder` hint cannot
+override contradictory project/source metadata. Marking an asset does not create
+it, reconstruct its game implementation or determine whether it ships in a mod.
 
 ## Tool maintenance checks
 
