@@ -16,6 +16,7 @@ from test_asset_text_codec import fixture
 
 class WorkspaceTests(unittest.TestCase):
     def setUp(self):
+        bw.OWNER.mkdir(parents=True, exist_ok=True)
         self.temp = tempfile.TemporaryDirectory(dir=bw.OWNER)
         self.root = Path(self.temp.name)
         self.project = self.root / 'Project/Test.uproject'
@@ -45,9 +46,9 @@ class WorkspaceTests(unittest.TestCase):
         return source
 
     def test_prepare_refresh_preserves_existing_module_and_reuses_current(self):
-        module = self.project.parent / 'Source/BlueprintTextPrototype'
+        module = self.project.parent / 'Source/BlueprintText'
         module.mkdir(parents=True)
-        (module / 'BlueprintTextPrototype.Build.cs').write_text('previous shared module')
+        (module / 'BlueprintText.Build.cs').write_text('previous shared module')
         (module / 'RemovedOldSource.cpp').write_bytes(b'previous customized source')
         native = self.project.parent / 'Source/ExistingNative/ExistingNative.Build.cs'
         native.parent.mkdir(parents=True)
@@ -57,11 +58,11 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(result['reusedModule'])
         self.assertTrue(result['refreshedModule'])
         backup = Path(result['moduleBackup'])
-        self.assertEqual('previous shared module', (backup / 'BlueprintTextPrototype.Build.cs').read_text())
+        self.assertEqual('previous shared module', (backup / 'BlueprintText.Build.cs').read_text())
         self.assertEqual(b'previous customized source', (backup / 'RemovedOldSource.cpp').read_bytes())
         self.assertFalse((module / 'RemovedOldSource.cpp').exists())
         self.assertEqual(b'preserve unrelated native mirror', native.read_bytes())
-        template = bw.HERE / 'ProjectTemplate/Source/BlueprintTextPrototype'
+        template = bw.HERE / 'ProjectTemplate/Source/BlueprintText'
         self.assertEqual({p.relative_to(template): p.read_bytes() for p in template.rglob('*') if p.is_file()},
                          {p.relative_to(module): p.read_bytes() for p in module.rglob('*') if p.is_file()})
         with patch.object(self.ws, 'command'):
@@ -69,6 +70,56 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(repeated['reusedModule'])
         self.assertFalse(repeated['refreshedModule'])
         self.assertIsNone(repeated['moduleBackup'])
+
+    def test_prepare_refreshes_legacy_identity_without_duplicate_provider(self):
+        identity = bw.MODULE_NAMES[1]
+        module = self.project.parent / 'Source' / identity
+        module.mkdir(parents=True)
+        (module / (identity + '.Build.cs')).write_bytes(b'previous legacy module')
+        (module / 'Old.cpp').write_bytes(b'custom old source')
+        with patch.object(self.ws, 'command'):
+            result = self.ws.prepare(self.project)
+        self.assertEqual(identity, result['moduleIdentity'])
+        self.assertTrue(result['refreshedModule'])
+        self.assertEqual(b'custom old source', (Path(result['moduleBackup']) / 'Old.cpp').read_bytes())
+        self.assertFalse((module.parent / 'BlueprintText').exists())
+        expected = bw.module_template(identity)
+        self.assertEqual(expected, {p.relative_to(module): p.read_bytes() for p in module.rglob('*') if p.is_file()})
+        self.assertIn(('class ' + identity + ' : ModuleRules').encode(), expected[Path(identity + '.Build.cs')])
+        self.assertIn(('IMPLEMENT_MODULE(FDefaultModuleImpl, ' + identity + ')').encode(), expected[Path(identity + '.cpp')])
+        self.assertIn(b'UBlueprintTextCommandlet', expected[Path('BlueprintTextCommandlet.h')])
+
+    def test_prepare_refuses_both_module_identities_before_mutation(self):
+        for identity in bw.MODULE_NAMES:
+            module = self.project.parent / 'Source' / identity
+            module.mkdir(parents=True)
+            (module / (identity + '.Build.cs')).write_bytes(b'preserve')
+        with patch.object(self.ws, 'command') as build:
+            with self.assertRaisesRegex(ValueError, 'Multiple Blueprint text module providers'):
+                self.ws.prepare(self.project)
+            build.assert_not_called()
+        with patch.object(bw, 'OWNER', self.root / 'CurrentGate'), patch.object(bw, 'LEGACY_OWNER', self.root / 'LegacyGate'):
+            with self.assertRaisesRegex(ValueError, 'Multiple Blueprint text module providers'):
+                with bw.project_operation(self.project):
+                    self.fail('Duplicate commandlet providers accepted for engine work')
+        for identity in bw.MODULE_NAMES:
+            self.assertEqual(b'preserve', (self.project.parent / 'Source' / identity / (identity + '.Build.cs')).read_bytes())
+
+    def test_legacy_workspace_apply_recover_and_shared_engine_gate(self):
+        legacy_owner, current_owner = self.root / 'PreviousOwner', self.root / 'CurrentOwner'
+        legacy_root = legacy_owner / 'Session'
+        bw.shutil.copytree(self.ws.root, legacy_root)
+        with patch.object(bw, 'OWNER', current_owner), patch.object(bw, 'LEGACY_OWNER', legacy_owner), patch.object(bw, 'closed'):
+            for action, status in [('Apply', 'unchanged'), ('Recover', 'no-recovery-needed')]:
+                output = io.StringIO()
+                with patch.object(sys, 'argv', ['workspace', action, '--workspace', str(legacy_root)]), redirect_stdout(output):
+                    self.assertEqual(0, bw.main())
+                self.assertEqual(status, json.loads(output.getvalue().splitlines()[-1])['status'])
+            # A previous-version engine owner holds only this legacy lock.
+            with bw.lock(legacy_owner / '.engine-operation.lock'):
+                with self.assertRaisesRegex(ValueError, 'engine-operation.lock'):
+                    with bw.project_operation(self.project):
+                        self.fail('Legacy engine gate bypassed')
 
     def test_noop_and_conflict(self):
         self.assertEqual('unchanged', self.ws.apply()['status'])

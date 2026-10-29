@@ -1,33 +1,47 @@
-# Edit Blueprint JSON in an existing project
+# BlueprintText workspace workflow
 
-Use [Invoke-BlueprintWorkspace.ps1](BlueprintTextPrototype/Invoke-BlueprintWorkspace.ps1)
-for the ordinary export/edit/apply/preview cycle. The Unreal project remains the
+Use [Invoke-BlueprintWorkspace.ps1](BlueprintText/Invoke-BlueprintWorkspace.ps1)
+for the recommended Blueprint authoring workflow for new and existing mods:
+export, edit JSON, apply and preview. The Unreal project remains the
 home of resources, native classes, dependency placeholders and rebuilt assets.
 This workflow does not generate stubs, cook, install or run the game. Supported
-Blueprint state is defined by the [format guide](blueprint-text-prototype.md#schema-2-existing-blueprint-experiments).
+Blueprint state is defined by the [format guide](blueprint-text.md#schema-2-blueprints).
 
-Follow the [routine agent rules](BlueprintTextPrototype/AGENTS.md#routine-agent-work).
+Follow the [routine agent rules](BlueprintText/AGENTS.md#routine-agent-work).
 Successful command results are the acceptance signal for mechanical work.
 Generated HTML, images, native intermediates and full logs are not agent inputs.
 
 ## Start a workspace
 
+For an existing mod, export its uncooked Blueprints, generating the initial assets
+with its current C++ producer when needed. For a new mod, first prepare the Unreal
+project with the required parents, native modules and resources. Create complete
+schema-2 Blueprint JSON, then add it to a workspace's source list as described
+below; new assets use the same shared Apply path. The current Export entry point
+starts from at least one existing Blueprint, so an empty project's first
+Blueprint must be created in the editor before that first export. Subsequent
+Blueprints can be added directly through JSON.
+
 Use an existing Unreal project with its required resources and native modules.
 Warn the user before engine actions and close Unreal Editor first. `Prepare`
 provides/builds the shared editor tooling; it does not run a mod generator.
 It installs the shared editor plugin when absent, or refreshes an existing
-`BlueprintTextPrototype` module from the current shared template. Before replacing
+`BlueprintText` module from the current shared template. Before replacing
 different module files it preserves their complete previous contents in the
 returned `moduleBackup`; other project modules are not replaced.
-Keep workspaces under `Tmp/BlueprintTextPrototype/`.
+Keep workspaces under `Tmp/BlueprintText/`.
+Existing workspaces and installed shared modules using the previous names remain
+supported by the current entry points. Run Prepare to refresh their module; do
+not rename generated projects or move existing preview output just to match the
+new tool directory. New projects and workspaces use the current names.
 The current implementation selects ordinary uncooked Actor/Widget Blueprint
 packages under `/Game/`; split packages are rejected. Use `-EngineRoot` when the
 project uses an engine outside the wrapper's default installation.
 
 ```powershell
-$tool = './tools/BlueprintTextPrototype/Invoke-BlueprintWorkspace.ps1'
+$tool = './tools/BlueprintText/Invoke-BlueprintWorkspace.ps1'
 $project = 'R:/path/to/Project.uproject'
-$work = './Tmp/BlueprintTextPrototype/edit-example'
+$work = './Tmp/BlueprintText/edit-example'
 & $tool -Action Prepare -ProjectFile $project -WorkspaceRoot $work
 & $tool -Action Export -ProjectFile $project -WorkspaceRoot $work `
   -Asset @('/Game/Mods/Example/ModActor', '/Game/UI/ExampleHUD')
@@ -97,7 +111,7 @@ needed. Do not move backup files by hand.
 
 ## Hand off the preview
 
-Preview is offline. It generates the [common browse/review index](blueprint-text-prototype.md#browse-a-set-of-blueprints)
+Preview is offline. It generates the [common browse/review index](blueprint-text.md#browse-a-set-of-blueprints)
 and returns `previewUrl`. Send that link to the user without opening or parsing
 the generated page. Blueprint status is compared with the original export, so
 successful Apply operations do not erase the review. Conflict detection uses the
@@ -115,7 +129,7 @@ require screenshot inspection, link crawling or a second comparison by the agent
 The offline transaction and concurrency tests do not launch Unreal:
 
 ```powershell
-python -B tools/BlueprintTextPrototype/test_blueprint_workspace.py
+python -B tools/BlueprintText/test_blueprint_workspace.py
 ```
 
 Engine acceptance requires a disposable project with the relevant dependencies.

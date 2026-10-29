@@ -2,10 +2,10 @@
 param([Parameter(Mandatory)][string]$OutputRoot,[string]$PreparedProjectRoot,[string]$EngineRoot='K:\Epic Games\UE_5.8')
 $ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$owner=[IO.Path]::GetFullPath((Join-Path $repo 'Tmp/BlueprintTextPrototype')).TrimEnd('\')+'\'
+$owner=[IO.Path]::GetFullPath((Join-Path $repo 'Tmp/BlueprintText')).TrimEnd('\')+'\'
 $root=[IO.Path]::GetFullPath($OutputRoot)
 if(-not $root.StartsWith($owner,[StringComparison]::OrdinalIgnoreCase)){throw "OutputRoot must be below $owner"}
-$tool=Join-Path $PSScriptRoot 'Invoke-BlueprintTextPrototype.ps1'
+$tool=Join-Path $PSScriptRoot 'Invoke-BlueprintText.ps1'
 if([string]::IsNullOrWhiteSpace($PreparedProjectRoot)){
     if(Test-Path $root){throw "OutputRoot must be new: $root"}
     $project=(&$tool -Action Prepare -OutputRoot $root -EngineRoot $EngineRoot).projectRoot
@@ -95,7 +95,7 @@ $badDefault=ReadJson $desiredPath;(@($badDefault.variables)[0])|Add-Member -Note
 try{&$tool -Action Import -ProjectRoot $project -InputPath $badDefaultPath -EngineRoot $EngineRoot|Out-Null}catch{if($_.Exception.Message.Contains("Unsupported variables[0] field 'default'")){$defaultRejected=$true}else{throw}}
 if(-not$defaultRejected){throw 'Variable default silently accepted'}
 [void](&$tool -Action SimulateUnsupportedGraph -ProjectRoot $project -Asset /Game/BP_AlternateMath -EngineRoot $EngineRoot);$savedRejected=$false
-try{&$tool -Action Export -ProjectRoot $project -Asset /Game/BP_AlternateMath -Format compact -OutputPath (Join-Path $root 'bad-export.json') -EngineRoot $EngineRoot|Out-Null}catch{if($_.Exception.Message-like'*outside the prototype subset*'){$savedRejected=$true}else{throw}}
+try{&$tool -Action Export -ProjectRoot $project -Asset /Game/BP_AlternateMath -Format compact -OutputPath (Join-Path $root 'bad-export.json') -EngineRoot $EngineRoot|Out-Null}catch{if($_.Exception.Message-like'*outside the schema-1 subset*'){$savedRejected=$true}else{throw}}
 if(-not$savedRejected){throw 'Unsupported saved graph exported'}
 
 # Check saved engine state, not merely unsupported fields in an input document.

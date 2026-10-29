@@ -5,13 +5,13 @@ failure handling.
 
 | Intent | Public entry point | Guide |
 | --- | --- | --- |
-| Import/export prototype Blueprint text or discover operations | `BlueprintTextPrototype/Invoke-BlueprintTextPrototype.ps1` | [Blueprint text prototype](blueprint-text-prototype.md) |
-| Operate a Blueprint JSON workspace in an existing project | `BlueprintTextPrototype/Invoke-BlueprintWorkspace.ps1` | [Blueprint workspace](blueprint-workspace.md) |
-| Import/export supported Actor/Widget Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1` | [Blueprint text prototype](blueprint-text-prototype.md#schema-2-existing-blueprint-experiments) |
-| Check asset-text round trips in a disposable prepared project | `BlueprintTextPrototype/test_asset_text_roundtrip.py` | [Blueprint checks](blueprint-text-prototype.md#checks) |
-| Render a compact Blueprint graph offline | `BlueprintTextPrototype/Render-BlueprintGraph.ps1` | [Blueprint text prototype](blueprint-text-prototype.md) |
-| Generate graph/widget previews and a browse or review index for a set of exports | `BlueprintTextPrototype/Render-BlueprintPreviews.ps1` | [Batch preview index](blueprint-text-prototype.md#browse-a-set-of-blueprints) |
-| Preview an exported HUD layout and copy review adjustments | `BlueprintTextPrototype/Render-WidgetPreview.ps1` | [HUD preview](blueprint-text-prototype.md#hud-widget-preview) |
+| Import/export Blueprint text or discover operations | `BlueprintText/Invoke-BlueprintText.ps1` | [BlueprintText](blueprint-text.md) |
+| Operate a Blueprint JSON workspace in an existing project | `BlueprintText/Invoke-BlueprintWorkspace.ps1` | [Blueprint workspace](blueprint-workspace.md) |
+| Import/export supported Actor/Widget Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintText/Invoke-BlueprintAssetText.ps1` | [BlueprintText](blueprint-text.md#schema-2-blueprints) |
+| Check asset-text round trips in a disposable prepared project | `BlueprintText/test_asset_text_roundtrip.py` | [Blueprint checks](blueprint-text.md#checks) |
+| Render a compact Blueprint graph offline | `BlueprintText/Render-BlueprintGraph.ps1` | [BlueprintText](blueprint-text.md) |
+| Generate graph/widget previews and a browse or review index for a set of exports | `BlueprintText/Render-BlueprintPreviews.ps1` | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |
+| Preview an exported HUD layout and copy review adjustments | `BlueprintText/Render-WidgetPreview.ps1` | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
 | Generate a settings header and INI | `New-VoyageModSettings.ps1` | [Mod setup](mod-setup.md) |
 | Merge an existing user INI | `Merge-VoyageModIni.ps1` | [Mod setup](mod-setup.md) |

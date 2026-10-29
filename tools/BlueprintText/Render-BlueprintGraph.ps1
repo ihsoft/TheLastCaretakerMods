@@ -7,7 +7,7 @@ Optional ReviewPath JSON lists added/changed/removed IDs for the selected graph.
 BeforePath supplies the original source for changed/removed nodes. Review marks
 are explicit, not an automatic diff; details include Before/After nodes and links.
 .EXAMPLE
-.\tools\BlueprintTextPrototype\Render-BlueprintGraph.ps1 -InputPath blueprint.json -OutputPath Tmp/BlueprintTextPrototype/diagram.svg
+.\tools\BlueprintText\Render-BlueprintGraph.ps1 -InputPath blueprint.json -OutputPath Tmp/BlueprintText/diagram.svg
 #>
 [CmdletBinding()]
 param(

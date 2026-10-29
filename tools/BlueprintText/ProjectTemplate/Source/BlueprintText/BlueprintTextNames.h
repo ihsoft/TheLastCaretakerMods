@@ -1,6 +1,6 @@
 #pragma once
 
-// Shared text contract and engine identities for the prototype commandlet.
+// Shared text contract and engine identities for the Blueprint text commandlet.
 namespace BlueprintTextNames
 {
 inline constexpr TCHAR AliasExec[] = TEXT("exec");
@@ -18,10 +18,10 @@ inline constexpr TCHAR ArgumentOutput[] = TEXT("Output=");
 inline constexpr TCHAR ArgumentVariable[] = TEXT("Variable=");
 inline constexpr TCHAR BinaryLeftPin[] = TEXT("A");
 inline constexpr TCHAR BinaryRightPin[] = TEXT("B");
-inline constexpr TCHAR CatalogBlueprint[] = TEXT("BlueprintTextPrototypeCatalog");
-inline constexpr TCHAR CatalogPackage[] = TEXT("/Temp/BlueprintTextPrototypeCatalog");
+inline constexpr TCHAR CatalogBlueprint[] = TEXT("BlueprintTextCatalog");
+inline constexpr TCHAR CatalogPackage[] = TEXT("/Temp/BlueprintTextCatalog");
 inline constexpr TCHAR ConstructionScript[] = TEXT("UserConstructionScript");
-inline constexpr TCHAR CreationContext[] = TEXT("BlueprintTextPrototype");
+inline constexpr TCHAR CreationContext[] = TEXT("BlueprintText");
 inline constexpr TCHAR DefaultSceneRoot[] = TEXT("DefaultSceneRoot");
 inline constexpr TCHAR DirectionInput[] = TEXT("input");
 inline constexpr TCHAR DirectionOutput[] = TEXT("output");

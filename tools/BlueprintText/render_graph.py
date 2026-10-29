@@ -1,7 +1,7 @@
 """Render compact Blueprint JSON to offline SVG + HTML; Python standard library only.
 
 Usage: python render_graph.py blueprint.json --output diagram.svg [--view full] [--direction LR]
-Accepts the shared prototype envelope or the earlier standalone nodes/links JSON.
+Accepts the shared Blueprint text envelope or the earlier standalone nodes/links JSON.
 This is a structural view, not an Unreal compiler or a behavior simulator.
 """
 

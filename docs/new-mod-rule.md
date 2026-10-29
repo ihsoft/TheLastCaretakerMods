@@ -46,6 +46,17 @@ investigation may use an ignored backlog under the mod, following the
 
 ## Advance the mod
 
+For mods that author Blueprints, use the shared
+[BlueprintText workflow](../tools/blueprint-workspace.md) as the recommended
+authoring path. Agents edit complete declarative JSON; shared tools rebuild,
+validate and generate user-facing previews. Prepare required resources, parents
+and native dependencies in the Unreal project first. Do not introduce a per-mod
+C++ graph builder merely to create or update Blueprint graphs. A procedural
+step can remain appropriate when the supported declarative format cannot express
+the needed state or would be disproportionately complex; keep that exception
+bounded and explicit. This authoring choice does not replace the mod's packaging,
+installation or game-validation requirements.
+
 Keep the architecture and README honest about what exists. A planned skeleton
 does not claim a working mod, a supported game Update, or a release. When a
 public producer exists, follow the [release workflow](release-and-installation-rule.md):

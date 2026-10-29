@@ -553,7 +553,7 @@ class GraphRenderingTests(unittest.TestCase):
                          [(special_id, 'next')])
 
     def test_cli_outputs_all_variants_and_preserves_input(self):
-        owner = ROOT.parents[1] / 'Tmp/BlueprintTextPrototype/render-tests'
+        owner = ROOT.parents[1] / 'Tmp/BlueprintText/render-tests'
         owner.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='case-', dir=owner) as directory:
             self.assertEqual(Path(directory).resolve().parent, owner.resolve())

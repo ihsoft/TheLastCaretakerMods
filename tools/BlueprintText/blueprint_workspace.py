@@ -13,7 +13,33 @@ import uuid
 import asset_text_codec as codec
 
 HERE = Path(__file__).resolve().parent
-OWNER = HERE.parents[1] / 'Tmp' / 'BlueprintTextPrototype'
+OWNER = HERE.parents[1] / 'Tmp' / 'BlueprintText'
+# Existing workspaces/projects keep their original identity; new providers use BlueprintText.
+LEGACY_OWNER = HERE.parents[1] / 'Tmp' / 'BlueprintTextPrototype'
+MODULE_NAMES = ('BlueprintText', 'BlueprintTextPrototype')
+
+
+def module_template(identity):
+    """Current shared source, adapted only at the legacy Unreal module boundary."""
+    if identity not in MODULE_NAMES:
+        raise ValueError('Unknown shared Blueprint module identity')
+    template = HERE / 'ProjectTemplate/Source/BlueprintText'
+    files = {p.relative_to(template): p.read_bytes() for p in template.rglob('*') if p.is_file()}
+    if identity != 'BlueprintText':
+        build = files.pop(Path('BlueprintText.Build.cs')).decode('utf-8')
+        build = build.replace('class BlueprintText :', 'class ' + identity + ' :').replace('public BlueprintText(', 'public ' + identity + '(')
+        files[Path(identity + '.Build.cs')] = build.encode('utf-8')
+        implementation = files.pop(Path('BlueprintText.cpp')).decode('utf-8')
+        implementation = implementation.replace('IMPLEMENT_MODULE(FDefaultModuleImpl, BlueprintText)', 'IMPLEMENT_MODULE(FDefaultModuleImpl, ' + identity + ')')
+        files[Path(identity + '.cpp')] = implementation.encode('utf-8')
+    return files
+
+
+def write_tree(root, files):
+    for relative, content in files.items():
+        path = inside(root, relative)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
 
 
 def read(path):
@@ -76,14 +102,26 @@ def closed():
             raise ValueError('Close Unreal Editor and UnrealEditor-Cmd before this operation')
 
 
+def shared_module_providers(project):
+    providers = []
+    for identity in MODULE_NAMES:
+        providers.extend((project.parent / 'Source').glob('*/' + identity + '.Build.cs'))
+        providers.extend((project.parent / 'Plugins').glob('*/Source/' + identity + '/' + identity + '.Build.cs'))
+    return providers
+
+
 @contextmanager
 def project_operation(project):
     # closed() observes all editor processes, so serialize entire engine cycles,
     # including the gaps between subprocesses and rollback after a failed import.
-    with lock(OWNER / '.engine-operation.lock'):
-        with lock(project.parent / 'Saved/BlueprintTextWorkspace.lock'):
-            closed()
-            yield
+    # Fixed order also coordinates with older tools still using the legacy gate.
+    with lock(LEGACY_OWNER / '.engine-operation.lock'):
+        with lock(OWNER / '.engine-operation.lock'):
+            with lock(project.parent / 'Saved/BlueprintTextWorkspace.lock'):
+                if len(shared_module_providers(project)) > 1:
+                    raise ValueError('Multiple Blueprint text module providers; resolve before engine work')
+                closed()
+                yield
 
 
 def groups(sources):
@@ -111,8 +149,8 @@ def groups(sources):
 class Workspace:
     def __init__(self, root, engine):
         self.root = Path(root).resolve()
-        if not self.root.is_relative_to(OWNER.resolve()) or self.root == OWNER.resolve():
-            raise ValueError('Workspace must be below Tmp/BlueprintTextPrototype')
+        if not any(self.root.is_relative_to(owner.resolve()) and self.root != owner.resolve() for owner in (OWNER, LEGACY_OWNER)):
+            raise ValueError('Workspace must be below Tmp/BlueprintText')
         self.manifest = self.root / 'workspace.json'
         self.internal = inside(self.root, '.workspace')
         self.engine = Path(engine).resolve()
@@ -348,27 +386,25 @@ class Workspace:
     def refresh_module(self, module):
         """Refresh only the shared module, retaining its complete previous tree."""
         module = module.resolve()
-        if module.name != 'BlueprintTextPrototype' or not module.is_relative_to(self.project.parent.resolve()):
+        if module.name not in MODULE_NAMES or not module.is_relative_to(self.project.parent.resolve()):
             raise ValueError('Shared module must be inside the selected project: ' + str(module))
-        template = HERE / 'ProjectTemplate/Source/BlueprintTextPrototype'
-
         def snapshot(folder):
             entries = list(folder.rglob('*'))
             if any(p.is_symlink() or getattr(p, 'is_junction', lambda: False)() for p in entries):
                 raise ValueError('Shared module contains linked paths; resolve before Prepare: ' + str(folder))
             return {p.relative_to(folder): p.read_bytes() for p in entries if p.is_file()}
 
-        current, desired = snapshot(module), snapshot(template)
+        current, desired = snapshot(module), module_template(module.name)
         if current == desired:
             return None
-        backup = self.run / 'module-before' / 'BlueprintTextPrototype'
+        backup = self.run / 'module-before' / module.name
         shutil.copytree(module, backup)
         if snapshot(backup) != current:
             raise RuntimeError('Shared module backup verification failed; module unchanged')
         saved = inside(self.project.parent, 'Saved')
         staging = inside(saved, 'BlueprintTextWorkspace-prepare-' + uuid.uuid4().hex)
         replacement, previous = staging / 'replacement', staging / 'previous'
-        shutil.copytree(template, replacement)
+        write_tree(replacement, desired)
         if snapshot(replacement) != desired:
             raise RuntimeError('Shared module staging verification failed; module unchanged')
         module.rename(previous)
@@ -390,21 +426,20 @@ class Workspace:
         self.project = Path(project).resolve()
         if self.project.suffix != '.uproject' or not self.project.is_file():
             raise ValueError('ProjectFile must be an existing .uproject')
-        modules = list((self.project.parent / 'Source').glob('*/BlueprintTextPrototype.Build.cs'))
-        plugins = list((self.project.parent / 'Plugins').glob('*/Source/BlueprintTextPrototype/BlueprintTextPrototype.Build.cs'))
-        if len(modules + plugins) > 1:
-            raise ValueError('Multiple BlueprintTextPrototype module providers; resolve before Prepare')
+        providers = shared_module_providers(self.project)
+        if len(providers) > 1:
+            raise ValueError('Multiple Blueprint text module providers; resolve before Prepare')
         project_data = read(self.project)
         if any(p.get('Name') == 'BlueprintTextWorkspace' and p.get('Enabled') is False for p in project_data.get('Plugins', [])):
             raise ValueError('Project explicitly disables BlueprintTextWorkspace; enable it before Prepare')
-        if not modules and not plugins:
+        if not providers:
             plugin = self.project.parent / 'Plugins' / 'BlueprintTextWorkspace'
             if plugin.exists():
                 raise ValueError('Plugin directory already exists without expected module: ' + str(plugin))
-            shutil.copytree(HERE / 'ProjectTemplate/Source/BlueprintTextPrototype', plugin / 'Source/BlueprintTextPrototype')
+            shutil.copytree(HERE / 'ProjectTemplate/Source/BlueprintText', plugin / 'Source/BlueprintText')
             write(plugin / 'BlueprintTextWorkspace.uplugin', dict(FileVersion=3, Version=1, VersionName='1', FriendlyName='Blueprint text workspace',
-                  CanContainContent=False, EnabledByDefault=True, Modules=[dict(Name='BlueprintTextPrototype', Type='Editor', LoadingPhase='Default')]))
-        module = (modules + plugins)[0].parent if modules or plugins else plugin / 'Source/BlueprintTextPrototype'
+                  CanContainContent=False, EnabledByDefault=True, Modules=[dict(Name='BlueprintText', Type='Editor', LoadingPhase='Default')]))
+        module = providers[0].parent if providers else plugin / 'Source/BlueprintText'
         module_backup = self.refresh_module(module)
         editor_targets = []
         for path in (self.project.parent / 'Source').glob('*.Target.cs'):
@@ -416,8 +451,8 @@ class Workspace:
             raise ValueError('Ambiguous Editor target; use the project convention <Project>Editor')
         self.command(['cmd.exe', '/d', '/c', str(self.engine / 'Engine/Build/BatchFiles/Build.bat'), selected,
                       'Win64', 'Development', '-Project=' + str(self.project), '-WaitMutex', '-NoHotReloadFromIDE'], 'prepare-build')
-        return dict(status='prepared', project=str(self.project), reusedModule=bool(modules or plugins),
-                    refreshedModule=module_backup is not None, moduleBackup=str(module_backup) if module_backup else None)
+        return dict(status='prepared', project=str(self.project), reusedModule=bool(providers),
+                    refreshedModule=module_backup is not None, moduleBackup=str(module_backup) if module_backup else None, moduleIdentity=module.name)
 
 
 def main():

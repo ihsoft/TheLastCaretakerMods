@@ -1,9 +1,0 @@
-{
-  "FileVersion": 3,
-  "EngineAssociation": "5.8",
-  "Category": "Tools",
-  "Description": "Bounded declarative Blueprint text prototype",
-  "Modules": [
-    { "Name": "BlueprintTextPrototype", "Type": "Editor", "LoadingPhase": "Default" }
-  ]
-}

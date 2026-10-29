@@ -1,0 +1,19 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Tools",
+  "Description": "Bounded declarative Blueprint text tool",
+  "Modules": [
+    {
+      "Name": "BlueprintText",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "Fab",
+      "Enabled": false
+    }
+  ]
+}

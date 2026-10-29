@@ -1,14 +1,15 @@
-# Blueprint text prototype
+# BlueprintText format and tools
 
-For routine editing in an existing project, use the [workspace workflow](blueprint-workspace.md).
-The interfaces below describe the format, lower-level tools and focused research.
+For new and existing mods, use the [workspace workflow](blueprint-workspace.md).
+The interfaces below describe the format, lower-level tools and validation.
 
-An experimental workflow for editing a Blueprint as declarative text and
-mechanically creating its uncooked `.uasset`. The shared builder is independent
-of any mod. Compact JSON and native Unreal graph text are both available; the
-final production source format is still undecided. This is not a release or
-installation tool. An existing C++ generator can supply the initial uncooked
-asset in an isolated project; the prototype exports that asset, not the C++.
+BlueprintText is the recommended workflow for authoring mod Blueprints as
+declarative JSON and mechanically creating their uncooked `.uasset` files.
+The shared builder is independent of any mod. Compact JSON and native Unreal
+graph text are both available. Release packaging and installation remain separate.
+An existing C++ generator can supply the initial uncooked asset; BlueprintText
+exports that asset, not the C++ source. New mods use the same shared tools and
+describe their Blueprints directly rather than adding a per-mod graph builder.
 
 ## Schema 1: small examples
 
@@ -17,7 +18,7 @@ Currently it supports one `/Game` Blueprint, one `EventGraph`, and baseline
 scalar declarations (`float`, `double`, `int`, `bool`, with zero defaults).
 Compact factories are `event`, `call`, `sequence`, `getVariable`, and
 `setVariable`. Links use `nodeId.pinAlias`; ordinary reflected calls use their
-owner/function identity. See the complete [division example](BlueprintTextPrototype/Examples/division.json).
+owner/function identity. See the complete [division example](BlueprintText/Examples/division.json).
 
 Native mode uses the same envelope with an adjacent editable `.t3d` graph body
 referenced by `bodyFile`. It preserves native node text more broadly, but does
@@ -29,7 +30,8 @@ Schema 1 rejects known unsupported state (including user functions, macros, time
 components, nonzero variable defaults and modified construction logic).
 Compact mode additionally rejects unsupported node classes and
 disabled nodes. Other Unreal metadata is not comprehensively represented or
-audited. Work only on disposable prototype assets until that boundary expands.
+audited. Use schema 2 for the ordinary workspace workflow; use schema 1 only
+for Blueprints whose complete state fits its narrower supported envelope.
 
 The text is the full desired supported state: omitting a node deletes it.
 Export editor changes before editing/importing text again. Import does not merge
@@ -46,12 +48,12 @@ export launch UnrealEditor-Cmd. Warn the user before engine work.** Close any
 open Unreal editor before these actions; they do not open the graphical editor.
 
 ```powershell
-$tool = './tools/BlueprintTextPrototype/Invoke-BlueprintTextPrototype.ps1'
-$run = './Tmp/BlueprintTextPrototype/demo' # must be a new directory
+$tool = './tools/BlueprintText/Invoke-BlueprintText.ps1'
+$run = './Tmp/BlueprintText/demo' # must be a new directory
 $project = (& $tool -Action Prepare -OutputRoot $run).projectRoot
 & $tool -Action RefreshCatalog -ProjectRoot $project -Force
 & $tool -Action SearchCatalog -Query divide -Limit 10 | ConvertTo-Json -Depth 12
-& $tool -Action Import -ProjectRoot $project -InputPath './tools/BlueprintTextPrototype/Examples/division.json'
+& $tool -Action Import -ProjectRoot $project -InputPath './tools/BlueprintText/Examples/division.json'
 & $tool -Action Export -ProjectRoot $project -Asset /Game/BP_DivisionExample -Format compact -OutputPath "$run/export.json"
 & $tool -Action Export -ProjectRoot $project -Asset /Game/BP_DivisionExample -Format native -OutputPath "$run/native.json"
 ```
@@ -63,15 +65,15 @@ insertion text instead. The initial catalogue covers callable/pure functions in
 the engine version; refresh after changing engines. Discovery does not guarantee
 that every catalogued function works in every graph context.
 
-Prepared projects, exports and engine logs stay below `Tmp/BlueprintTextPrototype/`.
+Prepared projects, exports and engine logs stay below `Tmp/BlueprintText/`.
 Assets are saved under the prepared project's `Content`. Import compiles before
 saving and reports errors with log paths. On failure inspect that diagnostic;
 do not bypass an unsupported-state rejection. `-Action Help` shows parameters
 and the node skeletons. The `Simulate*` actions are test fixtures only.
 
-## Schema 2: existing Blueprint experiments
+## Schema 2: Blueprints
 
-[Invoke-BlueprintAssetText.ps1](BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1)
+[Invoke-BlueprintAssetText.ps1](BlueprintText/Invoke-BlueprintAssetText.ps1)
 exports a complete supported Blueprint as compact JSON. It carries event and
 function graphs (including construction logic), native variable descriptions,
 CDO defaults, Blueprint/graph properties, component object trees and templates,
@@ -93,7 +95,7 @@ overrides, macro definitions, timelines, extensions, nested graphs
 and nested node objects are rejected. Widget trees and implemented interfaces
 are described below. Required parent classes, native classes
 and external asset dependencies must already
-exist in the prepared project. A blank prototype project does not supply game
+exist in the prepared project. A blank project does not supply game
 classes or assets. This is an uncooked editor-asset workflow.
 
 Editor dependency placeholders are not the full stock game assets. A successful
@@ -119,14 +121,14 @@ transient component properties are excluded. Export normalizes user-defined pin
 default metadata using Unreal's save-time method. JSON pin names remain
 case-sensitive, including in the PowerShell entry point.
 
-Use a disposable prepared project containing the prototype editor module and
+Use a prepared project containing the BlueprintText editor module and
 the asset's dependencies. All actions below launch headless Unreal; warn first
 and close the editor. Project and output paths must be below
-`Tmp/BlueprintTextPrototype/`.
+`Tmp/BlueprintText/`.
 
 ```powershell
-$assetTool = './tools/BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1'
-$projectFile = Join-Path $project 'BlueprintTextPrototype.uproject'
+$assetTool = './tools/BlueprintText/Invoke-BlueprintAssetText.ps1'
+$projectFile = Join-Path $project 'BlueprintText.uproject'
 $source = "$run/actor.json"
 & $assetTool -Action Export -ProjectFile $projectFile -Asset /Game/BP_Example -OutputPath $source
 # Edit the source. Use a rebuild project with dependencies but no target asset.
@@ -141,13 +143,13 @@ Failure reports an adjacent evidence directory; inspect its logs and
 Numeric property spellings are compared strictly. This check does not establish
 runtime equivalence or preservation of state outside the supported envelope.
 Export editor changes before the next text edit; there is no concurrent-edit
-merge. Keep experiments separate from production assets.
+merge. Use the workspace workflow for transactional updates to existing assets.
 
-The offline [codec](BlueprintTextPrototype/asset_text_codec.py) converts schema-2
+The offline [codec](BlueprintText/asset_text_codec.py) converts schema-2
 compact/native envelopes and creates call nodes from the engine catalogue:
 
 ```powershell
-python -B tools/BlueprintTextPrototype/asset_text_codec.py add-call $source --catalog tools/BlueprintTextPrototype/.cache/catalog.json --operation /Script/Engine.KismetMathLibrary::Divide_DoubleDouble --id Division --graph Calculate --output "$run/edited.json"
+python -B tools/BlueprintText/asset_text_codec.py add-call $source --catalog tools/BlueprintText/.cache/catalog.json --operation /Script/Engine.KismetMathLibrary::Divide_DoubleDouble --id Division --graph Calculate --output "$run/edited.json"
 ```
 
 Use an existing graph name. The command allocates IDs and merges pin metadata;
@@ -178,9 +180,9 @@ To add a widget or animation, declare its objects and hierarchy in the complete
 source, then allocate its missing editor identity without changing existing GUIDs:
 
 ```powershell
-python -B ./tools/BlueprintTextPrototype/asset_text_codec.py register-widget `
-  ./Tmp/BlueprintTextPrototype/HUD-edited.json --id NewLabel `
-  --output ./Tmp/BlueprintTextPrototype/HUD-ready.json
+python -B ./tools/BlueprintText/asset_text_codec.py register-widget `
+  ./Tmp/BlueprintText/HUD-edited.json --id NewLabel `
+  --output ./Tmp/BlueprintText/HUD-ready.json
 ```
 
 `--id` is the declared widget/animation's `name`, not its full object ID. Repeating
@@ -198,10 +200,10 @@ is `{"assets":["Actor.json","Operator.json","HUD.json"]}`; paths are resolved
 relative to the manifest, and absolute source paths are also accepted.
 
 ```powershell
-& ./tools/BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1 `
+& ./tools/BlueprintText/Invoke-BlueprintAssetText.ps1 `
   -Action ImportBatch -ProjectFile <prepared-project.uproject> `
-  -InputPath ./Tmp/BlueprintTextPrototype/batch.json `
-  -OutputPath ./Tmp/BlueprintTextPrototype/batch-comparison.json
+  -InputPath ./Tmp/BlueprintText/batch.json `
+  -OutputPath ./Tmp/BlueprintText/batch-comparison.json
 ```
 
 Every target asset must be absent and occur only once. The importer allocates all
@@ -224,14 +226,14 @@ difference fails the operation. Import does not merge with existing assets.
 For HUD images, add `-PreviewResources` to the same export invocation:
 
 ```powershell
-& ./tools/BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1 `
+& ./tools/BlueprintText/Invoke-BlueprintAssetText.ps1 `
   -Action Export -ProjectFile <prepared-project.uproject> `
-  -Asset /Game/UI/HUD -OutputPath ./Tmp/BlueprintTextPrototype/HUD.json `
+  -Asset /Game/UI/HUD -OutputPath ./Tmp/BlueprintText/HUD.json `
   -PreviewResources
 ```
 
 This requires a Widget Blueprint. Warn before launching headless Unreal and use
-a prepared project under `Tmp/BlueprintTextPrototype/` with its dependencies.
+a prepared project under `Tmp/BlueprintText/` with its dependencies.
 The command reads asset data without saving the source assets. It writes compact
 JSON plus `<output stem>.resources/manifest.json` and PNGs in one engine process;
 no mod-specific source-image paths are used. Re-export after editor changes.
@@ -257,14 +259,14 @@ failed runs can leave partial files. Keep generated exports and images under `Tm
 
 ### Browse a set of Blueprints
 
-[Render-BlueprintPreviews.ps1](BlueprintTextPrototype/Render-BlueprintPreviews.ps1)
+[Render-BlueprintPreviews.ps1](BlueprintText/Render-BlueprintPreviews.ps1)
 generates all compact graphs, available widget previews, and a common HTML index
 from one JSON manifest. It is offline and does not modify source exports:
 
 ```powershell
-& ./tools/BlueprintTextPrototype/Render-BlueprintPreviews.ps1 `
-  -InputPath ./Tmp/BlueprintTextPrototype/review/previews.json `
-  -OutputPath ./Tmp/BlueprintTextPrototype/review/site
+& ./tools/BlueprintText/Render-BlueprintPreviews.ps1 `
+  -InputPath ./Tmp/BlueprintText/review/previews.json `
+  -OutputPath ./Tmp/BlueprintText/review/site
 ```
 
 Output must be a new or empty directory. Open its `index.html`. The directory
@@ -321,7 +323,7 @@ from editor placeholders and runtime-created widgets are not reconstructed.
 ### View one graph
 
 ```powershell
-./tools/BlueprintTextPrototype/Render-BlueprintGraph.ps1 -InputPath './tools/BlueprintTextPrototype/Examples/division.json' -OutputPath './Tmp/BlueprintTextPrototype/division.svg'
+./tools/BlueprintText/Render-BlueprintGraph.ps1 -InputPath './tools/BlueprintText/Examples/division.json' -OutputPath './Tmp/BlueprintText/division.svg'
 ```
 
 Requires Python 3.9+ (bundled runtime or `python`; override with `-PythonPath`).
@@ -406,7 +408,7 @@ node IDs for the selected graph:
 ```
 
 ```powershell
-./tools/BlueprintTextPrototype/Render-BlueprintGraph.ps1 -InputPath ./Tmp/BlueprintTextPrototype/review/after.json -BeforePath ./Tmp/BlueprintTextPrototype/review/before.json -ReviewPath ./Tmp/BlueprintTextPrototype/review/review.json -Graph EventGraph -OutputPath ./Tmp/BlueprintTextPrototype/review/EventGraph.svg
+./tools/BlueprintText/Render-BlueprintGraph.ps1 -InputPath ./Tmp/BlueprintText/review/after.json -BeforePath ./Tmp/BlueprintText/review/before.json -ReviewPath ./Tmp/BlueprintText/review/review.json -Graph EventGraph -OutputPath ./Tmp/BlueprintText/review/EventGraph.svg
 ```
 
 The author supplies the lists; the tool does not discover changes or verify that
@@ -442,7 +444,7 @@ temporary review output; they are not Blueprint source requirements.
 
 ### Function names
 
-[Metadata/function-labels.json](BlueprintTextPrototype/Metadata/function-labels.json)
+[Metadata/function-labels.json](BlueprintText/Metadata/function-labels.json)
 is a versioned English snapshot of native Engine function display names and
 compact titles. Lookup uses owner/function identity and native ancestry, with a
 readable fallback for unknown functions. It covers loaded `/Script/Engine`
@@ -451,14 +453,14 @@ the ignored insertion catalogue or a catalogue of every editor action.
 
 To refresh after changing engines, run `Invoke-BlueprintAssetText.ps1
 -Action ExportLabels -ProjectFile <prepared.uproject> -OutputPath <Tmp output>`,
-then `python -B tools/BlueprintTextPrototype/function_labels.py <export.json>
---output tools/BlueprintTextPrototype/Metadata/function-labels.json`. The first
+then `python -B tools/BlueprintText/function_labels.py <export.json>
+--output tools/BlueprintText/Metadata/function-labels.json`. The first
 command launches Unreal; the second validates and deterministically publishes
 the snapshot. Normal rendering reads the snapshot locally.
 
 ## HUD widget preview
 
-[Render-WidgetPreview.ps1](BlueprintTextPrototype/Render-WidgetPreview.ps1) builds
+[Render-WidgetPreview.ps1](BlueprintText/Render-WidgetPreview.ps1) builds
 a standalone HTML preview from an existing widget-tree export and a PNG resource
 bundle. It requires Python 3.9+ and does not launch Unreal, modify source assets,
 or import review changes. First use the [widget export](#widget-trees-interfaces-and-resources)
@@ -466,9 +468,9 @@ command with `-PreviewResources` to produce the compact source and images in one
 headless Unreal invocation; rendering the resulting HTML is entirely offline.
 
 ```powershell
-& ./tools/BlueprintTextPrototype/Render-WidgetPreview.ps1 `
-  -InputPath ./Tmp/BlueprintTextPrototype/HUD.json `
-  -OutputPath ./Tmp/BlueprintTextPrototype/HUD.html
+& ./tools/BlueprintText/Render-WidgetPreview.ps1 `
+  -InputPath ./Tmp/BlueprintText/HUD.json `
+  -OutputPath ./Tmp/BlueprintText/HUD.html
 ```
 
 The default resource manifest is `HUD.resources/manifest.json` next to `HUD.json`.
@@ -521,24 +523,24 @@ or proof of arbitrary widget support.
 
 ## Checks
 
-Offline renderer checks: `python -B tools/BlueprintTextPrototype/test_render_graph.py`.
-Batch index checks: `python -B tools/BlueprintTextPrototype/test_preview_index.py`.
-Review overlay checks: `python -B tools/BlueprintTextPrototype/test_review_graph.py`.
-Details comparison checks: `python -B tools/BlueprintTextPrototype/test_review_details.py`.
-Codec checks: `python -B tools/BlueprintTextPrototype/test_asset_text_codec.py`.
-Label checks: `python -B tools/BlueprintTextPrototype/test_function_labels.py`.
-HUD input/resource checks: `python -B tools/BlueprintTextPrototype/test_render_widget.py`.
-HUD interaction checks: `node tools/BlueprintTextPrototype/test_widget_viewer.js`
+Offline renderer checks: `python -B tools/BlueprintText/test_render_graph.py`.
+Batch index checks: `python -B tools/BlueprintText/test_preview_index.py`.
+Review overlay checks: `python -B tools/BlueprintText/test_review_graph.py`.
+Details comparison checks: `python -B tools/BlueprintText/test_review_details.py`.
+Codec checks: `python -B tools/BlueprintText/test_asset_text_codec.py`.
+Label checks: `python -B tools/BlueprintText/test_function_labels.py`.
+HUD input/resource checks: `python -B tools/BlueprintText/test_render_widget.py`.
+HUD interaction checks: `node tools/BlueprintText/test_widget_viewer.js`
 (synthetic DOM checks for visibility, tint/opacity/text, dragging, review copying
 and source isolation; no Unreal or browser is launched).
-With Node.js available, run `node tools/BlueprintTextPrototype/test_graph_interactions.js <division.html>`
+With Node.js available, run `node tools/BlueprintText/test_graph_interactions.js <division.html>`
 on HTML rendered from the division example to check selection, details, copying and viewer controls
 with a DOM stand-in (not a browser UI test).
-Run `node tools/BlueprintTextPrototype/test_graph_layout.js <generated.html>`
+Run `node tools/BlueprintText/test_graph_layout.js <generated.html>`
 to check Python/browser geometry agreement, row capacities, port ordering and
 reversible hide/show layout updates in both directions on any generated preview.
 The schema-1 engine acceptance runner is
-`tools/BlueprintTextPrototype/Test-BlueprintTextPrototype.ps1 -OutputRoot <new directory below Tmp/BlueprintTextPrototype>`
+`tools/BlueprintText/Test-BlueprintText.ps1 -OutputRoot <new directory below Tmp/BlueprintText>`
 with optional `-EngineRoot`. It builds an isolated project, checks compact and
 native round trips, adds and removes nodes, preserves a headless simulated
 editor change, exercises another asset and rejects selected unsupported state.
@@ -551,17 +553,17 @@ For schema-2 engine acceptance, use the generic fixture runner on a disposable
 prepared project and existing compact sources:
 
 ```powershell
-python -B ./tools/BlueprintTextPrototype/test_asset_text_roundtrip.py `
-  --project ./Tmp/BlueprintTextPrototype/demo/Project/BlueprintTextPrototype.uproject `
-  --input ./Tmp/BlueprintTextPrototype/batch.json `
-  --output ./Tmp/BlueprintTextPrototype/acceptance-new
+python -B ./tools/BlueprintText/test_asset_text_roundtrip.py `
+  --project ./Tmp/BlueprintText/demo/Project/BlueprintText.uproject `
+  --input ./Tmp/BlueprintText/batch.json `
+  --output ./Tmp/BlueprintText/acceptance-new
 ```
 
 Warn before running it and close Unreal Editor: it invokes the public importer
 and a fresh-process re-export. Python 3.9+, Windows PowerShell and the configured
 Unreal engine are required. The project and a new output directory must be below
-`Tmp/BlueprintTextPrototype/`. The project must already contain all external
-dependencies and the current prototype module. The runner temporarily moves only
+`Tmp/BlueprintText/`. The project must already contain all external
+dependencies and the current BlueprintText module. The runner temporarily moves only
 the target `.uasset` files, retains rebuilt candidates and logs, then restores
 originals and checks their bytes even after an import failure. It accepts ordinary
 uncooked Blueprint packages without `.uexp`/`.ubulk` sidecars. Never use it on a

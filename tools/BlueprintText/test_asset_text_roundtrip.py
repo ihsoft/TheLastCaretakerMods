@@ -17,11 +17,12 @@ def diagnostics(output):
 
 def check(project, manifest, output, *, single=False, expect_error=None, keep_existing=False):
     repo = Path(__file__).resolve().parents[2]
-    owner = (repo / 'Tmp/BlueprintTextPrototype').resolve()
+    owner = (repo / 'Tmp/BlueprintText').resolve()
     project, manifest, output = (Path(p).resolve() for p in (project, manifest, output))
     content = (project.parent / 'Content').resolve()
-    if not project.is_relative_to(owner) or not output.is_relative_to(owner):
-        raise ValueError('Project and acceptance output must be below Tmp/BlueprintTextPrototype')
+    legacy_owner = (repo / 'Tmp/BlueprintTextPrototype').resolve()
+    if not any(project.is_relative_to(root) for root in (owner, legacy_owner)) or not output.is_relative_to(owner):
+        raise ValueError('Project and acceptance output must be below Tmp/BlueprintText')
     if project.suffix != '.uproject' or not project.is_file():
         raise ValueError('Project must be an existing prepared .uproject')
     if keep_existing and not expect_error:
@@ -35,7 +36,7 @@ def check(project, manifest, output, *, single=False, expect_error=None, keep_ex
             raise ValueError('Acceptance only handles /Game Blueprint targets')
         relative = Path(asset[6:] + '.uasset')
         target = (content / relative).resolve()
-        if not target.is_relative_to(content) or not target.is_relative_to(owner):
+        if not target.is_relative_to(content) or not any(target.is_relative_to(root) for root in (owner, legacy_owner)):
             raise ValueError('Target escapes the disposable project Content directory')
         if any(target.with_suffix(ext).exists() for ext in ('.uexp', '.ubulk')):
             raise ValueError('Acceptance expects ordinary uncooked Blueprint packages without sidecars')
@@ -53,7 +54,7 @@ def check(project, manifest, output, *, single=False, expect_error=None, keep_ex
                     backup.parent.mkdir(parents=True, exist_ok=True)
                     target.rename(backup); moved.append((target, backup))
         command = ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
-                   str(repo / 'tools/BlueprintTextPrototype/Invoke-BlueprintAssetText.ps1'),
+                   str(repo / 'tools/BlueprintText/Invoke-BlueprintAssetText.ps1'),
                    '-Action', 'Import' if single else 'ImportBatch', '-ProjectFile', str(project),
                    '-InputPath', str(manifest), '-OutputPath', str(output / ('reopened.json' if single else 'comparison.json'))]
         with (output / 'worker.log').open('w', encoding='utf-8') as log:
@@ -86,7 +87,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--project', required=True, type=Path)
     parser.add_argument('--input', required=True, type=Path, help='Batch manifest, or compact source with --single')
-    parser.add_argument('--output', required=True, type=Path, help='New run folder below Tmp/BlueprintTextPrototype')
+    parser.add_argument('--output', required=True, type=Path, help='New run folder below Tmp/BlueprintText')
     parser.add_argument('--single', action='store_true')
     parser.add_argument('--expect-error', help='Require failure, this diagnostic text, and no saved candidate')
     parser.add_argument('--keep-existing', action='store_true', help='Test refusal to overwrite existing targets')

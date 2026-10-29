@@ -1,12 +1,12 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
-public class BlueprintTextPrototypeTarget : TargetRules
+public class BlueprintTextTarget : TargetRules
 {
-    public BlueprintTextPrototypeTarget(TargetInfo Target) : base(Target)
+    public BlueprintTextTarget(TargetInfo Target) : base(Target)
     {
         Type = TargetType.Editor;
         DefaultBuildSettings = BuildSettingsVersion.V7;
         IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
-        ExtraModuleNames.Add("BlueprintTextPrototype");
+        ExtraModuleNames.Add("BlueprintText");
     }
 }

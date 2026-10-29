@@ -25,12 +25,12 @@ param(
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
-$owner=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../Tmp/BlueprintTextPrototype')).TrimEnd('\')+'\'
+$owners=@('BlueprintText','BlueprintTextPrototype') | ForEach-Object {[IO.Path]::GetFullPath((Join-Path $PSScriptRoot ('../../Tmp/'+$_))).TrimEnd('\')+'\'}
 $project=(Resolve-Path -LiteralPath $ProjectFile).Path
 $output=[IO.Path]::GetFullPath($OutputPath)
 if($PreviewResources -and $Action -ne 'Export'){throw 'PreviewResources requires Export'}
 foreach($path in @($project,$output)){
-    if(-not $path.StartsWith($owner,[StringComparison]::OrdinalIgnoreCase)){throw 'Project and output must stay below Tmp/BlueprintTextPrototype.'}
+    if(-not @($owners | Where-Object {$path.StartsWith($_,[StringComparison]::OrdinalIgnoreCase)}).Count){throw 'Project and output must stay below Tmp/BlueprintText.'}
 }
 if([IO.Path]::GetExtension($project) -ne '.uproject'){throw 'ProjectFile must be a prepared .uproject'}
 if(@(Get-Process UnrealEditor,UnrealEditor-Cmd -ErrorAction SilentlyContinue).Count){throw 'Close Unreal Editor before this operation'}

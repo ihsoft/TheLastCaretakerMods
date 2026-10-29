@@ -7,7 +7,7 @@ PNG resources come from editor Texture2D assets, never mod source-image paths.
 Visibility checkboxes affect only the preview; bindings/animations do not run.
 Unreal is not launched by this command. Requires Python 3.9+.
 .EXAMPLE
-.\tools\BlueprintTextPrototype\Render-WidgetPreview.ps1 -InputPath Tmp/BlueprintTextPrototype/HUD.json -OutputPath Tmp/BlueprintTextPrototype/HUD.html
+.\tools\BlueprintText\Render-WidgetPreview.ps1 -InputPath Tmp/BlueprintText/HUD.json -OutputPath Tmp/BlueprintText/HUD.html
 #>
 [CmdletBinding()]
 param(

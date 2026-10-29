@@ -278,14 +278,14 @@ bool ValidateRepresentableBlueprint(const UBlueprint* Blueprint)
         }
         if (FunctionGraph->Nodes.Num() != 1 || FunctionGraph->Nodes[0]->GetClass() != UK2Node_FunctionEntry::StaticClass())
         {
-            UE_LOG(LogTemp, Error, TEXT("Construction-script logic is outside the prototype subset; only the automatic entry node is supported."));
+            UE_LOG(LogTemp, Error, TEXT("Construction-script logic is outside the schema-1 subset; only the automatic entry node is supported."));
             return false;
         }
         for (const UEdGraphPin* Pin : FunctionGraph->Nodes[0]->Pins)
         {
             if (Pin->LinkedTo.Num() != 0)
             {
-                UE_LOG(LogTemp, Error, TEXT("Linked construction-script logic is outside the prototype subset."));
+                UE_LOG(LogTemp, Error, TEXT("Linked construction-script logic is outside the schema-1 subset."));
                 return false;
             }
         }
@@ -294,7 +294,7 @@ bool ValidateRepresentableBlueprint(const UBlueprint* Blueprint)
         !bOnlyAutomaticConstructionGraph || Blueprint->MacroGraphs.Num() != 0 ||
         Blueprint->DelegateSignatureGraphs.Num() != 0 || Blueprint->Timelines.Num() != 0)
     {
-        UE_LOG(LogTemp, Error, TEXT("Blueprint state is outside the prototype subset: exactly one EventGraph, only the automatic construction graph, and no user functions, macros, delegates, or timelines are supported."));
+        UE_LOG(LogTemp, Error, TEXT("Blueprint state is outside the schema-1 subset: exactly one EventGraph, only the automatic construction graph, and no user functions, macros, delegates, or timelines are supported."));
         return false;
     }
     if (Blueprint->SimpleConstructionScript)
@@ -303,7 +303,7 @@ bool ValidateRepresentableBlueprint(const UBlueprint* Blueprint)
         {
             if (!Node || Node->GetVariableName() != BlueprintTextNames::DefaultSceneRoot)
             {
-                UE_LOG(LogTemp, Error, TEXT("Blueprint components other than the automatic DefaultSceneRoot are outside the prototype subset."));
+                UE_LOG(LogTemp, Error, TEXT("Blueprint components other than the automatic DefaultSceneRoot are outside the schema-1 subset."));
                 return false;
             }
         }
@@ -334,7 +334,7 @@ bool ValidateRepresentableBlueprint(const UBlueprint* Blueprint)
         }
         if (bNonzeroDefault)
         {
-            UE_LOG(LogTemp, Error, TEXT("Variable '%s' has a nonzero saved CDO default, which is outside the prototype subset."), *Variable.VarName.ToString());
+            UE_LOG(LogTemp, Error, TEXT("Variable '%s' has a nonzero saved CDO default, which is outside the schema-1 subset."), *Variable.VarName.ToString());
             return false;
         }
     }
@@ -629,7 +629,7 @@ bool BuildCatalog(const FString& OutputPath)
     Root->SetNumberField(BlueprintTextNames::FieldSchema, 1);
     Root->SetStringField(BlueprintTextNames::FieldEngineVersion, FEngineVersion::Current().ToString());
     Root->SetStringField(BlueprintTextNames::FieldCoverage, TEXT("KismetMathLibrary BlueprintCallable/BlueprintPure reflection plus supported flow.sequence; not the full BlueprintActionDatabase"));
-    Root->SetStringField(BlueprintTextNames::FieldRefresh, TEXT("Invoke-BlueprintTextPrototype.ps1 -Action RefreshCatalog -ProjectRoot <prepared project> -Force"));
+    Root->SetStringField(BlueprintTextNames::FieldRefresh, TEXT("Invoke-BlueprintText.ps1 -Action RefreshCatalog -ProjectRoot <prepared project> -Force"));
     Root->SetArrayField(BlueprintTextNames::FieldEntries, Entries);
     return WriteJson(OutputPath, Root);
 }

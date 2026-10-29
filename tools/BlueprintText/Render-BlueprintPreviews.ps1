@@ -5,7 +5,7 @@ No Unreal launch. Input paths are relative to the manifest. Output must be new o
 Manifest assets accept source paths, or source/before records with placeholder,
 status (unchanged/added/changed/removed), note, and per-graph reviews ID lists.
 .EXAMPLE
-.\tools\BlueprintTextPrototype\Render-BlueprintPreviews.ps1 -InputPath previews.json -OutputPath Tmp/BlueprintTextPrototype/previews
+.\tools\BlueprintText\Render-BlueprintPreviews.ps1 -InputPath previews.json -OutputPath Tmp/BlueprintText/previews
 #>
 [CmdletBinding()]
 param(

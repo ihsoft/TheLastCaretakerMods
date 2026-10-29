@@ -1,10 +1,10 @@
-# Blueprint text prototype
+# BlueprintText
 
-For ordinary editing, start with the [workspace workflow](../blueprint-workspace.md).
-The [format guide](../blueprint-text-prototype.md) owns lower-level interfaces.
-This is a shared tool experiment, not a mod producer. Keep generated projects
-and results under `Tmp/BlueprintTextPrototype/`; keep the catalogue cache local
-and ignored.
+For new and existing mods, start with the [workspace workflow](../blueprint-workspace.md).
+The [format guide](../blueprint-text.md) owns lower-level interfaces.
+BlueprintText is the recommended Blueprint authoring workflow. Packaging and
+installation remain the mod producer's responsibility. Keep generated projects
+and results under `Tmp/BlueprintText/`; keep the catalogue cache local and ignored.
 
 The agent edits desired source directly. Extend shared factories and reflection
 when needed; do not introduce per-mod graph-building code. Unsupported state
