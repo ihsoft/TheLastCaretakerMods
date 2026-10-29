@@ -42,5 +42,7 @@ Blueprint preservation from the bounded tests.
   protect files edited directly by another agent. Coordinate ownership before
   sharing sources or the same selected assets. Use the public workflow for engine
   operations; do not bypass a busy lock with low-level scripts, direct Unreal
-  launches, or deleting lock files. Other engine tools and manual editor sessions
-  must be coordinated separately; they do not participate in this tool's locks.
+  launches, or deleting lock files. Engine contention waits in the
+  [shared Unreal queue](../unreal-coordination.md). Wrap other engine producers
+  and agent-launched editor sessions with its public entry point; a manual editor
+  keeps the queue waiting until its owner closes it.

@@ -53,7 +53,7 @@ Blueprint must be created in the editor before that first export. Subsequent
 Blueprints can be added directly through JSON.
 
 Use an existing Unreal project with its required resources and native modules.
-Warn the user before engine actions and close Unreal Editor first. `Prepare`
+Warn the user before engine actions; the shared queue waits for Unreal to be free. `Prepare`
 provides/builds the shared editor tooling; it does not run a mod generator.
 It installs the shared editor plugin when absent, or refreshes an existing
 `BlueprintText` module from the current shared template. Before replacing
@@ -103,14 +103,14 @@ used as a delete operation.
 
 Use a separate workspace for each independent task. All commands hold an OS lock
 on their workspace. Prepare, Export, Apply and Recover also lock the project and
-share a repository-wide engine gate for their entire operation, including
-rollback. This intentionally serializes engine work even for different projects:
-the current running-editor check is machine-wide. A competing command fails
-immediately before asset/module changes; retry after the owner finishes, without
-deleting lock files. The OS releases locks when their owning process exits.
-Preview and direct JSON editing in separate workspaces can proceed independently.
-Direct file edits and other Unreal entry points are outside these locks; follow
-the task ownership rules above. Asset conflict checks still apply when sequential
+join the [shared Unreal queue](unreal-coordination.md) for their entire operation,
+including rollback. Engine work waits its turn even for different projects.
+Project and older engine gates also wait for their owners to finish; never delete
+their lock files. A conflicting command in the same workspace still fails to
+protect task ownership. The OS releases locks when their owning process exits.
+Offline preview and direct JSON editing in separate workspaces can proceed independently of engine work.
+Direct file edits are outside these locks; follow the task ownership rules above.
+Other Unreal producers must use the shared queue wrapper. Asset conflict checks still apply when sequential
 tasks touch the same exported asset.
 
 ```powershell

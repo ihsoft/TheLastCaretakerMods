@@ -1,6 +1,6 @@
 """Offline transaction, conflict, recovery, grouping and input safety checks."""
 import copy
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, nullcontext
 import io
 import json
 import subprocess
@@ -8,6 +8,8 @@ import sys
 import tempfile
 from pathlib import Path
 import unittest
+import threading
+import time
 from unittest.mock import patch
 
 import blueprint_workspace as bw
@@ -19,6 +21,8 @@ class WorkspaceTests(unittest.TestCase):
         bw.OWNER.mkdir(parents=True, exist_ok=True)
         self.temp = tempfile.TemporaryDirectory(dir=bw.OWNER)
         self.root = Path(self.temp.name)
+        self.queue_mock=patch.object(bw,'engine_slot',return_value=nullcontext())
+        self.queue_mock.start();self.addCleanup(self.queue_mock.stop)
         self.project = self.root / 'Project/Test.uproject'
         bw.write(self.project, {})
         self.ws = bw.Workspace(self.root / 'Session', self.root / 'Engine')
@@ -115,11 +119,20 @@ class WorkspaceTests(unittest.TestCase):
                 with patch.object(sys, 'argv', ['workspace', action, '--workspace', str(legacy_root)]), redirect_stdout(output):
                     self.assertEqual(0, bw.main())
                 self.assertEqual(status, json.loads(output.getvalue().splitlines()[-1])['status'])
-            # A previous-version engine owner holds only this legacy lock.
-            with bw.lock(legacy_owner / '.engine-operation.lock'):
-                with self.assertRaisesRegex(ValueError, 'engine-operation.lock'):
-                    with bw.project_operation(self.project):
-                        self.fail('Legacy engine gate bypassed')
+            self.assert_waits_for_lock(legacy_owner / '.engine-operation.lock')
+
+    def assert_waits_for_lock(self, path):
+        release=self.root/'release-lock';release.unlink(missing_ok=True)
+        program='from pathlib import Path; import sys,time; from blueprint_workspace import lock\nwith lock(Path(sys.argv[1])):\n print("ready",flush=True)\n while not Path(sys.argv[2]).exists():time.sleep(.02)\n'
+        process=subprocess.Popen([sys.executable,'-B','-c',program,str(path),str(release)],cwd=bw.HERE,stdout=subprocess.PIPE,text=True)
+        try:
+            self.assertEqual('ready',process.stdout.readline().strip())
+            timer=threading.Timer(.2,release.touch);timer.start()
+            with bw.project_operation(self.project):self.assertTrue(release.exists())
+            timer.join();self.assertEqual(0,process.wait(timeout=10))
+        finally:
+            if process.poll() is None:process.kill();process.wait()
+            process.stdout.close()
 
     def test_noop_and_conflict(self):
         self.assertEqual('unchanged', self.ws.apply()['status'])
@@ -276,33 +289,17 @@ except ValueError:
         self.assertEqual(7, run('crash').returncode)
         self.assertEqual(0, run('normal').returncode)
 
-    def test_engine_gate_refuses_other_project_before_dispatch_but_allows_preview(self):
-        other = self.root / 'Other/Other.uproject'
-        bw.write(other, {})
-        output = io.StringIO()
-        with patch.object(bw, 'OWNER', self.root), patch.object(bw, 'closed'):
-            with bw.project_operation(other):
-                for action, method in [('Prepare', 'prepare'), ('Export', 'export'),
-                                       ('Apply', 'apply'), ('Recover', 'recover')]:
-                    args = ['workspace', action, '--workspace', str(self.ws.root),
-                            '--project', str(self.project)]
-                    with self.subTest(action=action), patch.object(sys, 'argv', args), \
-                         patch.object(bw.Workspace, method) as dispatch, redirect_stdout(output):
-                        self.assertEqual(1, bw.main())
-                        dispatch.assert_not_called()
-                    result = json.loads(output.getvalue().splitlines()[-1])
-                    self.assertIn('.engine-operation.lock', result['reason'])
-                    self.assertEqual(b'original', self.file.read_bytes())
-                with patch.object(sys, 'argv', ['workspace', 'Preview', '--workspace', str(self.ws.root)]), \
-                     patch.object(bw.Workspace, 'preview', return_value={'status': 'previewed'}) as preview, \
-                     redirect_stdout(output):
-                    self.assertEqual(0, bw.main())
-                    preview.assert_called_once()
-            # A different workspace using this project must still honor its lock.
-            with bw.lock(self.project.parent / 'Saved/BlueprintTextWorkspace.lock'):
-                with self.assertRaisesRegex(ValueError, 'BlueprintTextWorkspace.lock'):
-                    with bw.project_operation(self.project):
-                        self.fail('Project lock was bypassed')
+    def test_engine_actions_use_queue_but_preview_is_offline(self):
+        with patch.object(bw,'OWNER',self.root), patch.object(bw,'LEGACY_OWNER',self.root/'legacy'), patch.object(bw,'closed'):
+            for action,method in [('Prepare','prepare'),('Export','export'),('Apply','apply'),('Recover','recover')]:
+                with patch.object(bw,'engine_slot',return_value=nullcontext()) as queue, patch.object(bw.Workspace,method,return_value={'status':'test'}) as dispatch, patch.object(sys,'argv',['workspace',action,'--workspace',str(self.ws.root),'--project',str(self.project)]),redirect_stdout(io.StringIO()):
+                    self.assertEqual(0,bw.main());dispatch.assert_called_once()
+                    self.assertEqual(1,queue.call_count)
+            with patch.object(bw, 'engine_slot') as queue, patch.object(bw.Workspace, 'preview', return_value={'status': 'previewed'}) as preview, patch.object(sys, 'argv', ['workspace', 'Preview', '--workspace', str(self.ws.root)]), redirect_stdout(io.StringIO()):
+                self.assertEqual(0, bw.main())
+                preview.assert_called_once()
+                queue.assert_not_called()
+            self.assert_waits_for_lock(self.project.parent/'Saved/BlueprintTextWorkspace.lock')
 
     def test_same_workspace_blocks_preview_before_dispatch(self):
         with bw.lock(self.ws.root.parent / (self.ws.root.name + '.workspace.lock')):

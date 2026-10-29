@@ -5,6 +5,12 @@ resuming delegated work, together with the root and closest `AGENTS.md` and,
 when a local owning backlog exists, its restart section. It supplements, not
 replaces, runtime tool permissions, installation safeguards and Git coordination.
 
+For shared Unreal builds and processes, use the
+[execution queue](unreal-project-rule.md#shared-unreal-execution). A busy engine
+means waiting in the tool, not failed delegation or a request to stop another
+agent. Keep the lease through validation and recovery; file ownership remains
+separate.
+
 When the user explicitly requests resource or delegation diagnostics, use
 [agent work measurement](agent-work-measurement-rule.md). Do not collect per-task
 metrics routinely or put individual measurement results in shared documentation.

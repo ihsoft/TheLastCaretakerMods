@@ -9,8 +9,12 @@ import shutil
 import subprocess
 import sys
 import uuid
+import time
 
 import asset_text_codec as codec
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from unreal_coordination import engine_slot
 
 HERE = Path(__file__).resolve().parent
 OWNER = HERE.parents[1] / 'Tmp' / 'BlueprintText'
@@ -72,23 +76,27 @@ def target(project, asset):
 
 
 @contextmanager
-def lock(path):
+def lock(path, *, wait=False):
     """Kernel-held lock; a crashed owner releases it. Never delete another lock."""
     path.parent.mkdir(parents=True, exist_ok=True)
     stream = path.open('a+b')
     stream.seek(0)
     if path.stat().st_size == 0:
         stream.write(b' '); stream.flush(); stream.seek(0)
-    try:
-        if os.name == 'nt':
-            import msvcrt
-            msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
-        stream.close()
-        raise ValueError('Competing Blueprint workspace operation: ' + str(path))
+    while True:
+        try:
+            if os.name == 'nt':
+                import msvcrt
+                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except (BlockingIOError, PermissionError):
+            if not wait:
+                stream.close()
+                raise ValueError('Competing Blueprint workspace operation: ' + str(path))
+            time.sleep(1)
     try:
         yield
     finally:
@@ -115,9 +123,9 @@ def project_operation(project):
     # closed() observes all editor processes, so serialize entire engine cycles,
     # including the gaps between subprocesses and rollback after a failed import.
     # Fixed order also coordinates with older tools still using the legacy gate.
-    with lock(LEGACY_OWNER / '.engine-operation.lock'):
-        with lock(OWNER / '.engine-operation.lock'):
-            with lock(project.parent / 'Saved/BlueprintTextWorkspace.lock'):
+    with engine_slot('BlueprintText: '+str(project)), lock(LEGACY_OWNER / '.engine-operation.lock', wait=True):
+        with lock(OWNER / '.engine-operation.lock', wait=True):
+            with lock(project.parent / 'Saved/BlueprintTextWorkspace.lock', wait=True):
                 if len(shared_module_providers(project)) > 1:
                     raise ValueError('Multiple Blueprint text module providers; resolve before engine work')
                 closed()

@@ -18,6 +18,28 @@ as the bidirectional text editing and Git review interface for Blueprints.
 Commit its synchronized text representation alongside the corresponding project
 assets. BPT is an intentional duplicate, not a second source of truth.
 
+## Shared Unreal execution
+
+Agents share one Unreal execution resource across projects. Reserve the
+[Unreal queue](../tools/unreal-coordination.md) before an engine build, commandlet,
+cook, or editor session. BPT engine entry points reserve it automatically;
+wrap other producers with `tools/Invoke-UnrealQueued.ps1`. Keep the reservation
+through the whole operation, including subprocess gaps, validation and rollback.
+Do not launch background engine children that outlive the reserved operation.
+
+Contention is normal: let the script wait in its queue rather than treating a
+busy engine as task failure, retrying commands, or asking another agent to stop.
+Continue independent work while the queued process waits. Do not delete locks,
+bypass the queue, or cancel somebody else's editor. An editor opened outside
+the queue is observed as busy until its owner closes it; the queue cannot
+prevent a human or an old tool from launching another uncoordinated process.
+Warn the user before queuing an engine launch. Never close their editor without
+authorization. Process-detection errors remain errors, not permission to run.
+
+This reservation does not grant ownership of another task's source files.
+Keep independent working directories and coordinate shared edits separately.
+Same-workspace conflicts and changed-asset checks remain binding.
+
 Project ownership does not authorize committing extracted stock game content.
 The [game-derived data rule](game-derived-data-rule.md) still governs provenance
 and Git eligibility. Required stock dependencies may remain locally prepared;

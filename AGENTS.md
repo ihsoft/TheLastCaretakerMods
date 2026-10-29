@@ -21,7 +21,7 @@ do not load every document just because it is indexed here.
 - [Starting a new mod](docs/new-mod-rule.md): find related game knowledge and
   create a minimal, honest mod directory before selecting an implementation.
 - [Unreal project ownership](docs/unreal-project-rule.md): complete release asset
-  content, project authority, and focused update scripts.
+  content, project authority, focused update scripts, and the shared Unreal queue.
 - [BlueprintText](tools/blueprint-workspace.md): bidirectional Blueprint editing
   through JSON, with synchronized text committed for Git review.
 - [Research workflow](docs/research-workflow-rule.md): investigate, record

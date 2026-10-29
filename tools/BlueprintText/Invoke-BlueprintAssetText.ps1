@@ -25,6 +25,8 @@ param(
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
+Import-Module (Join-Path $PSScriptRoot '../unreal-coordination.psm1') -Force
+if(-not $env:CODEX_UNREAL_QUEUE_LEASE){Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation "Blueprint asset text: $Action";return}
 $owners=@('BlueprintText','BlueprintTextPrototype') | ForEach-Object {[IO.Path]::GetFullPath((Join-Path $PSScriptRoot ('../../Tmp/'+$_))).TrimEnd('\')+'\'}
 $project=(Resolve-Path -LiteralPath $ProjectFile).Path
 $output=[IO.Path]::GetFullPath($OutputPath)
