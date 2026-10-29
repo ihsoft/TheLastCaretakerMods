@@ -3,8 +3,11 @@
 For new and existing mods, use the [workspace workflow](blueprint-workspace.md).
 The interfaces below describe the format, lower-level tools and validation.
 
-BlueprintText is the recommended workflow for authoring mod Blueprints as
-declarative JSON and mechanically creating their uncooked `.uasset` files.
+BlueprintText (BPT) is the recommended bidirectional text interface for editing
+Blueprint assets in an authoritative Unreal project. Its synchronized JSON is
+committed alongside the assets for Git review, as defined by the
+[source-of-truth and Git contract](blueprint-workspace.md#source-of-truth-and-git).
+This document defines interchange capabilities, not a JSON-owned project model.
 The shared builder is independent of any mod. Compact JSON and native Unreal
 graph text are both available. Release packaging and installation remain separate.
 An existing C++ generator can supply the initial uncooked asset; BlueprintText
@@ -65,7 +68,9 @@ insertion text instead. The initial catalogue covers callable/pure functions in
 the engine version; refresh after changing engines. Discovery does not guarantee
 that every catalogued function works in every graph context.
 
-Prepared projects, exports and engine logs stay below `Tmp/BlueprintText/`.
+Disposable projects, working exports and engine logs for these lower-level
+examples stay below `Tmp/BlueprintText/`. This does not set the storage location
+of maintained mod projects or their committed synchronized BPT representations.
 Assets are saved under the prepared project's `Content`. Import compiles before
 saving and reports errors with log paths. On failure inspect that diagnostic;
 do not bypass an unsupported-state rejection. `-Action Help` shows parameters

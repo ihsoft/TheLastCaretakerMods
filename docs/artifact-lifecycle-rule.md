@@ -4,6 +4,13 @@ This policy applies to research, feature development, builds, releases, and
 installation work across the repository. It governs ignored generated output;
 Git source and documentation follow their owning rules.
 
+Maintained Unreal project assets and their intentionally duplicated,
+synchronized BPT representations are tracked source material, not disposable
+generated output. Follow [project ownership](unreal-project-rule.md) and the
+[BPT Git contract](../tools/blueprint-workspace.md#source-of-truth-and-git).
+BPT workspace baselines, backups, diagnostics and previews remain temporary
+tool output. Game-derived content remains subject to the Git restrictions below.
+
 An optional backlog for a large task is a local working note, not generated
 output or an artifact. Keep it outside `Tmp/`, ignore it in Git, and retire it
 as described in the [research workflow](research-workflow-rule.md#working-backlogs-for-large-tasks).

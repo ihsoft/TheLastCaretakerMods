@@ -20,9 +20,10 @@ do not load every document just because it is indexed here.
   in shared docs, mod docs, an ignored backlog, or generated storage.
 - [Starting a new mod](docs/new-mod-rule.md): find related game knowledge and
   create a minimal, honest mod directory before selecting an implementation.
-- [BlueprintText](tools/blueprint-workspace.md): recommended Blueprint authoring
-  workflow for new and existing mods; edit JSON and use shared tools to rebuild,
-  validate and preview assets.
+- [Unreal project ownership](docs/unreal-project-rule.md): complete release asset
+  content, project authority, and focused update scripts.
+- [BlueprintText](tools/blueprint-workspace.md): bidirectional Blueprint editing
+  through JSON, with synchronized text committed for Git review.
 - [Research workflow](docs/research-workflow-rule.md): investigate, record
   evidence, maintain a large-task backlog, and coordinate optional checkpoints.
 - [Generated-output lifecycle](docs/artifact-lifecycle-rule.md): choose `Tmp/`

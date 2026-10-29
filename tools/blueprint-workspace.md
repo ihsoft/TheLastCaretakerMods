@@ -2,14 +2,44 @@
 
 Use [Invoke-BlueprintWorkspace.ps1](BlueprintText/Invoke-BlueprintWorkspace.ps1)
 for the recommended Blueprint authoring workflow for new and existing mods:
-export, edit JSON, apply and preview. The Unreal project remains the
-home of resources, native classes, dependency placeholders and rebuilt assets.
+export, edit JSON, apply and preview. The Unreal project is the source of truth,
+under the [project ownership rule](../docs/unreal-project-rule.md).
 This workflow does not generate stubs, cook, install or run the game. Supported
 Blueprint state is defined by the [format guide](blueprint-text.md#schema-2-blueprints).
 
 Follow the [routine agent rules](BlueprintText/AGENTS.md#routine-agent-work).
 Successful command results are the acceptance signal for mechanical work.
 Generated HTML, images, native intermediates and full logs are not agent inputs.
+
+## Source of truth and Git
+
+BlueprintText (BPT) is a bidirectional editing interface, not a replacement for
+the Unreal project. Export snapshots supported Blueprint state into compact
+JSON; Apply writes proposed changes back to project assets. Unapplied JSON edits
+are pending changes. Changes may also originate in Unreal Editor; export the
+current saved project state before starting a new BPT editing cycle.
+
+Commit BPT JSON alongside its corresponding authored Blueprint assets. This is
+an intentional, meaningful duplicate: GitHub cannot expose binary asset changes
+as useful text diffs, while BPT makes their represented structure reviewable.
+At commit time, BPT must match the saved project asset. After editor changes,
+refresh the export. After JSON changes, successfully Apply and use the tool's
+fresh-process comparison as the synchronization check. Subsequent asset edits
+invalidate that check. Do not commit stale exports or unapplied proposals as a
+completed asset change. Preserve and reconcile both sides of any conflict.
+
+Keep the committed BPT representations in the owning mod's tracked source tree,
+with an unambiguous mapping to project asset paths. Working copies and manifests
+under `Tmp/BlueprintText/` remain temporary. Copy only synchronized Blueprint
+JSON into the tracked representation; baselines, backups, native intermediates,
+diagnostics, preview resources and rendered previews remain tool-owned output.
+This retention rule does not change the tool's workspace path requirements or
+authorize committing extracted stock game content.
+
+Adopting BPT replaces procedural graph authoring with export-edit-apply. Routine
+release builds use project assets; they must not recreate them from BPT exports
+or clear authored project content. Focused project-update scripts remain allowed
+under the project ownership rule.
 
 ## Start a workspace
 
@@ -53,8 +83,8 @@ type or turn the workspace into a standalone copy of the project.
 
 | Output | Role |
 | --- | --- |
-| `workspace.json` | Agent-facing source selection and optional review annotations. |
-| `blueprints/**/*.json` | Complete editable Blueprint descriptions. |
+| `workspace.json` | Selection of project assets and working JSON paths, plus optional review annotations. |
+| `blueprints/**/*.json` | Editable snapshots of supported Blueprint state. |
 | Adjacent `*.resources/` bundles | Tool-owned widget preview manifests and images, when exported. |
 | `.workspace/` | Tool-owned baselines, backups, diagnostics and generated previews. |
 
@@ -65,8 +95,8 @@ baseline, export into a new workspace.
 ## Edit and apply
 
 Read `workspace.json` for the selected Blueprint/source mapping, then edit the
-relevant files under `blueprints/`. They describe complete desired Blueprint
-state. Leave technical files to the tool. To add a Blueprint, add its compact
+relevant files under `blueprints/`. They describe complete proposed Blueprint
+state to apply to the project. Leave technical files to the tool. To add a Blueprint, add its compact
 JSON and a corresponding source entry to the manifest. Deletion of whole assets
 is not supported; removing a baseline entry or losing a source file must not be
 used as a delete operation.

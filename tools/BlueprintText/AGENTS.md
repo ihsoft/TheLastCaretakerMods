@@ -3,10 +3,14 @@
 For new and existing mods, start with the [workspace workflow](../blueprint-workspace.md).
 The [format guide](../blueprint-text.md) owns lower-level interfaces.
 BlueprintText is the recommended Blueprint authoring workflow. Packaging and
-installation remain the mod producer's responsibility. Keep generated projects
-and results under `Tmp/BlueprintText/`; keep the catalogue cache local and ignored.
+installation remain the mod producer's responsibility. Keep disposable tool-test
+projects and working results under `Tmp/BlueprintText/`; keep the catalogue cache
+local and ignored. Maintained mod projects are source asset stores, not temporary
+tool output. Follow the workflow's [source-of-truth and Git contract](../blueprint-workspace.md#source-of-truth-and-git):
+commit synchronized BPT alongside project assets, without making JSON an
+independent canonical store or a routine build-time replacement for those assets.
 
-The agent edits desired source directly. Extend shared factories and reflection
+The agent edits the exported working representation. Extend shared factories and reflection
 when needed; do not introduce per-mod graph-building code. Unsupported state
 must be diagnosed rather than silently discarded. Do not imply universal
 Blueprint preservation from the bounded tests.
@@ -15,7 +19,7 @@ Blueprint preservation from the bounded tests.
 
 - Use the shared workflow entry point and its compact result. Read the workspace
   manifest to find editable Blueprint JSON; inspect only source needed for the
-  requested change. Edit complete desired source, not generated native text.
+  requested change. Edit the complete proposed Blueprint state, not generated native text.
 - Generated previews are for the user. Supply review annotations to the renderer
   and return its index link. Do not open or analyze generated HTML, SVG, PNGs or
   screenshots to reconfirm a successful render or infer changes already known

@@ -48,8 +48,11 @@ investigation may use an ignored backlog under the mod, following the
 
 For mods that author Blueprints, use the shared
 [BlueprintText workflow](../tools/blueprint-workspace.md) as the recommended
-authoring path. Agents edit complete declarative JSON; shared tools rebuild,
-validate and generate user-facing previews. Prepare required resources, parents
+authoring path. Follow the [Unreal project ownership rule](unreal-project-rule.md):
+the project contains the complete release asset content and is the source of
+truth. Agents export, edit JSON and apply changes back to that project; commit
+synchronized BPT alongside Blueprint assets for Git review. Shared tools validate
+changes and generate user-facing previews. Prepare required resources, parents
 and native dependencies in the Unreal project first. Do not introduce a per-mod
 C++ graph builder merely to create or update Blueprint graphs. A procedural
 step can remain appropriate when the supported declarative format cannot express
