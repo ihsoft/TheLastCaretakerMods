@@ -1,13 +1,59 @@
 # StableGyro architecture
 
 The loader-free mod leaves the stock Gyro Blueprint at its original package
-identity and generates a child selected through the stock item data asset's
+identity and uses a child selected through the stock item data asset's
 `DroppedActor`. One helper handles pitch input before the stock physics tick;
 another applies eligible altitude and horizontal stabilization after physics.
 The child retains stock mappings and provided actions while adding an optional
 pitch-reset action whose default key is X. Tick prerequisites are established at
 BeginPlay and controller changes, not re-added every frame. The two flight helpers remain in
 their respective PrePhysics and PostPhysics groups.
+
+## Maintained project and editing
+
+`Voyage.uproject` is the Unreal project descriptor; `Content/` contains its
+authoritative editor assets, including every asset selected for release.
+The three gameplay Blueprints are `ModActor`, `PitchInputActor`, and
+`BP_GyroCopter_StablePilot`. Their synchronized JSON representations live directly
+in `BlueprintText/` for Git review. Use the shared
+[BPT workflow](../../tools/blueprint-workspace.md) to export, edit and apply them.
+A routine build neither imports these JSON files nor regenerates the graphs.
+
+`EditorSupport.json` declares the project's native editor dependencies. The
+mod's `EditorSupport/Source/Voyage/` contains the minimal game API declarations;
+the shared [item profile](../../tools/voyage-item-patch.md) supplies the item
+layout and updater. The shared
+[native-support tool](../../tools/unreal-editor-support.md) composes and builds
+them into ready plugins. The project itself has no C++ modules or build targets.
+Plugin binaries remain ignored and are never included in the mod container.
+Keep the `/Script/Voyage` identities and Runtime classification required to
+compile references to the game's native classes.
+
+The project also contains explicitly marked dependency stubs, including the
+stock Gyro parent, crafting-generator Blueprint, material, input actions and
+item references. They provide editor identities and required structure, not
+the game's implementations or shaders. Preview displays them in its supporting
+inventory and at reference use sites. Their presence does not make them release
+assets; runtime references resolve to the game originals.
+
+## Release preparation
+
+`Build-StableGyro.ps1` is the public producer. It validates the settings,
+refreshes both complete plate meshes from current stock geometry, and calls
+the shared item updater with `Build/Item.patch.json`. The recipe changes only
+`DroppedActor` to the mod child. The updater replaces the maintained DataAsset
+and its owned crafting-generator stub and validates the project-cooked item
+against the current original. Unsupported input or failed refresh stops the
+build; it does not fall back to old project output.
+
+The producer preserves the authored Blueprints and cooks eight explicit
+packages: the three gameplay Blueprints, reset input action, keyboard mapping
+context, Gyro item DataAsset and two plate meshes. Packaging validates the
+project-cooked item instead of patching cooked stock bytes. Dependency stubs
+are excluded. All intermediate extractions, split GLBs, cook output and reports
+remain ignored build output.
+
+## Altitude control
 
 The descend action (Ctrl by default) releases height support and ordinary
 vertical braking. The PrePhysics
@@ -126,18 +172,20 @@ both sides together. It is not part of the frame mesh or two selectable material
 sections. The producer splits its full decoded Nanite leaf geometry into two
 side-specific meshes while preserving the original pivot. Four components reuse
 those halves with the stock component material override and no collision. The
-public producer delegates mesh import and cooking to the shared
-[StaticMesh tools](../../tools/static-mesh-assets.md). The meshes use native
+public producer delegates mesh import to the shared
+[StaticMesh tools](../../tools/static-mesh-assets.md) with `-OutputKind Uncooked`,
+then replaces both complete packages in the maintained project. The mod's
+project cook supplies the runtime meshes. The meshes use native
 Nanite with all input triangles retained, zero trim error, position precision
 `4`, normal precision `8`, and implicit tangents. A separate 25% triangle
 fallback supplies the ray-tracing proxy. This reduces that representation's
 geometry budget without reducing the full-detail Nanite input.
 The inherited paired plate is hidden only in four-port mode.
 
-The Blueprint generator uses valid editor-only reference meshes at the final
-package identities. These dependencies are excluded from the mod cook; the
-common producer's cooked meshes and every emitted bulk companion supply the
-runtime packages. Staging checks their declared paths and sizes. Final-container
+Replacement keeps package identities and Blueprint references, with backup and
+copy verification; it does not merge previous LOD, collision or socket data.
+The project requires DX12/SM6 and ray tracing enabled to retain the requested
+representations during cook. Preserve every emitted bulk companion. Final-container
 validation checks Nanite, fallback, ray tracing, source attributes and the stock
 material reference before installation. The shared
 [cooking knowledge](../../docs/static-mesh-cooking-knowledge.md) defines the
@@ -149,7 +197,8 @@ positive-Y tube direction is approximately
 `(0.66015035, -0.72922620, 0.18008518)`, with Y mirrored on the other side.
 This direction comes from frame geometry; a port normal alone cannot determine
 it. Rotations and scales remain unchanged. Exact transforms and stable SocketIDs
-are owned by `MooringLayout` in the inheritance generator.
+are stored in the maintained child Blueprint's component templates and
+construction graph, represented in `BlueprintText/BP_GyroCopter_StablePilot.json`.
 
 ### Drop Cargo and hints
 

@@ -14,10 +14,11 @@ only their explicitly named build.
 
 ## Game contracts
 
-The public producer freshly extracts the stock cooked inputs and asserts the
-asset contracts consumed by each candidate build. Current mapping metadata
-independently revalidates the native owner and property types consumed by the
-stabilization and calibration-prevention graphs. Previously inspected access
+The public producer refreshes the item and plate geometry from current stock
+inputs and validates their supported contracts. The native owner and property
+types consumed by the stabilization and calibration-prevention graphs were
+revalidated against Steam build `25982825` mapping metadata. Resolving a mapping
+for a newer build alone does not revalidate every retained stub. Previously inspected access
 flags, CDO defaults and native details retain their explicit older game-version context
 unless independently revalidated below; they are not silently carried forward.
 
@@ -225,7 +226,7 @@ The Blueprint compiler rebuilds `DynamicBindingObjects` from compiled graph
 nodes. A manually appended class binding is therefore not a persistent source
 for cooking. Connected action-value accessor nodes generate the standard
 `EnhancedInputActionValueBinding` entries and must remain in the source graph.
-The generator uses the reflected editor class
+The maintained source graphs use the reflected editor class
 `/Script/InputBlueprintNodes.K2Node_InputActionValueAccessor`, its `InputAction`
 property and the actual getter signature. The packaged graph uses the Engine's
 value bindings and library calls; these editor nodes add no runtime native API.
@@ -310,28 +311,32 @@ the input integration rate. That fingerprint also established native defaults
 `PropellerVelocityScale=50` and `PropellerLift=75`. These details were not
 revalidated for the current fingerprint and are not consumed by this build.
 
-## Tracked reconstructed inputs
+## Maintained project inputs and reconstruction
 
-- Source/Voyage/VoyageVehiclePawn.h
-- Source/Voyage/VoyageVehicleGyroCopter.h
-- Source/Voyage/VoyageEditorBlueprintFunctionLibrary.h
-- Source/Voyage/PlayerInputInterfaceAction.h
-- Source/Voyage/VoyageInputAction.h
-- Source/Voyage/VoyageGameUserSettings.h
-- Source/Voyage/VoyageModuleSocketViewComponent.h
-- Source/Voyage/VoyageModuleComponent.h
-- Source/Voyage/VoyageCustomModuleComponent.h
-- Source/Voyage/VoyageMiscBlueprintFunctionLibrary.h
-- both generator commandlets and Build-InheritancePackage.ps1
-- Validate-StableGyroMooringTemplates.ps1
+The maintained editor assets use the contracts reviewed for Steam build
+`25982825`, UE `5.8.2` (parser target `5.8`). This section is their provenance
+registry because binary packages cannot carry a source header. It also covers
+the synchronized BPT representations and native editor declarations.
 
-The original Gyro item data asset, scriptobjects.bin, mappings, extracted JSON,
-cooked packages, containers, inventories, and build logs are game-derived and
-must remain below ignored `Tmp` or registered `artifacts` paths. The native
-owner and field types consumed by the altitude graphs were revalidated from
-current mapping metadata for the fingerprint above. Their mirror access flags
-retain the explicitly bounded older evidence. The public producer
-must freshly extract and assert every consumed stock asset contract for a
-candidate build. Older native implementation details remain historical unless
-stated otherwise. Build and static validation do not establish current runtime
-compatibility.
+| Source location | Reconstruction and role | Refresh or revalidation |
+| --- | --- | --- |
+| `Content/Mods/StableGyro/ModActor.uasset`, `PitchInputActor.uasset`, and `Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset` | Maintained authored gameplay graphs, initially materialized by the retired StableGyro commandlets using the game contracts above. `BlueprintText/` contains their synchronized shared-tool exports. | Edit the assets through BPT or Unreal Editor; do not regenerate them during a release. Revalidate consumed game APIs when the game build changes. |
+| `Content/Mods/StableGyro/IAV_GyroPitchReset.uasset` and `Content/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.uasset` | Authored reset action and reconstructed stock keyboard context with the reset mapping added. | Preserve all stock bindings and the exact action identities described above; revalidate the reconstruction on a game build change. |
+| `Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/` and `StableGyroMooringPlateNegativeY/` | Complete meshes derived from the stock mooring plate by the mod splitter and shared StaticMesh producer. | Each release exports current stock geometry and replaces both editor packages before project cook; unsupported geometry fails. Split GLBs are temporary. |
+| `Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset` | Shared VoyageItem profile reconstructs the current item; `Build/Item.patch.json` changes only `DroppedActor`. | Each release runs the shared updater and compares the project-cooked item with current stock. The profile rejects unsupported inputs. |
+| Other assets under `Content/` | Editor dependency stubs: stock Gyro parent, crafting-generator Blueprint, material, icon, input actions, item references and string tables. The initial parent/input stubs came from the retired commandlets; the shared item updater owns the crafting-generator stub and creates missing item dependencies. | Never ship these stubs. The updater refreshes its owned generator stub and reuses existing dependency stubs. Revalidate other required identities and layouts when the game build changes. Material fidelity is structural only; shaders and textures are not reconstructed. |
+| `EditorSupport/Source/Voyage/` | Minimal native game API declarations reconstructed from the reflection/mapping evidence above. Shared item-profile sources are composed by `EditorSupport.json`; no native implementation is shipped. | Keep original `/Script/Voyage` identities, field order and required metadata; revalidate on a game build change. Ready plugins are rebuilt by the shared support tool when their inputs change. |
+
+The eight release packages are selected explicitly by `Cook-StableGyroAssets.ps1`;
+all other project assets are editor support. `Build-InheritancePackage.ps1` and
+`Validate-StableGyroMooringTemplates.ps1` own package staging and structural
+checks. The [architecture](ARCHITECTURE.md#release-preparation) describes their
+release boundary; the [shared item tool](../../tools/voyage-item-patch.md) owns
+its bounded profile and complete-item comparison.
+
+Raw stock packages, scriptobjects.bin, extracted JSON, private mapping copies,
+cooked output, containers, inventories and logs remain in ignored local storage.
+Required maintained editor assets follow the shared project-input exception;
+they are not a reason to commit those intermediate dumps. Native mirror access
+flags retain their explicitly bounded older evidence. Build and structural
+validation do not establish runtime compatibility after a game update.

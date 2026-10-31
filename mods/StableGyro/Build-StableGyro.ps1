@@ -1,7 +1,7 @@
 # HAND-WRITTEN BUILD ORCHESTRATOR: the only public producer. It builds,
-# generates, cooks, packages, verifies, archives, and optionally installs
-# StableGyro. It creates only ignored local artifacts and
-# never publishes externally.
+# refreshes project meshes, cooks, packages, verifies, archives, and optionally installs
+# StableGyro. It refreshes the two maintained project meshes; build output stays
+# in ignored local storage. It never publishes externally.
 
 [CmdletBinding()]
 param(
@@ -10,7 +10,7 @@ param(
 
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
-    [string]$EngineRoot = 'K:\Epic Games\UE_5.8',
+    [string]$EngineRoot = 'P:\UnrealEngine\UE_5.8',
 
     [string]$BlenderPath = 'K:\Program Files\Blender Foundation\Blender 5.2\blender.exe',
 
@@ -51,7 +51,6 @@ $tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp'))
 $tmpOwnerRoot = Join-Path $tmpRoot 'StableGyro'
 $project = Join-Path $modRoot 'Voyage.uproject'
 $provenancePath = Join-Path $modRoot 'GAME_DERIVED_SOURCES.md'
-$buildBatch = Join-Path $EngineRoot 'Engine\Build\BatchFiles\Build.bat'
 $unrealEditor = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 $engineVersionPath = Join-Path $EngineRoot 'Engine\Build\Build.version'
 $fingerprinter = Join-Path $repoRoot 'tools\Get-VoyageBuildFingerprint.ps1'
@@ -60,7 +59,7 @@ $prepareScript = Join-Path $modRoot 'Prepare-StableGyroOriginals.ps1'
 $packageScript = Join-Path $modRoot 'Build-InheritancePackage.ps1'
 $settingsSchema = Join-Path $modRoot 'Settings\StableGyro.settings.json'
 $settingsDefaults = Join-Path $modRoot 'Assets\StableGyro.ini'
-$settingsGenerator = Join-Path $modRoot 'Build\New-StableGyroSettings.ps1'
+$settingsModule = Join-Path $repoRoot 'tools\VoyageModSettings\VoyageModSettings.psm1'
 $modelExporter = Join-Path $repoRoot 'tools\Export-VoyageModelGlb.ps1'
 $staticMeshBuilder = Join-Path $repoRoot 'tools\New-VoyageStaticMeshAssets.ps1'
 $staticMeshValidator = Join-Path $repoRoot 'tools\Test-VoyageStaticMesh.ps1'
@@ -169,42 +168,6 @@ function Update-StableGyroSettings {
         }
     }
 }
-function Invoke-UnrealGenerator {
-    param(
-        [Parameter(Mandatory = $true)] [string]$Commandlet,
-        [Parameter(Mandatory = $true)] [string]$LogDirectory,
-        [string[]]$ExtraArguments = @()
-    )
-
-    $stdout = Join-Path $LogDirectory "$Commandlet.stdout.log"
-    $stderr = Join-Path $LogDirectory "$Commandlet.stderr.log"
-    $arguments = @(
-        ('"{0}"' -f $project),
-        "-run=$Commandlet",
-        '-unattended',
-        '-nop4',
-        '-nosplash',
-        '-nullrhi',
-        '-ddc=NoZenLocalFallback',
-        ('-LocalDataCachePath="{0}"' -f (Join-Path $modRoot 'DerivedDataCache'))
-    )
-    $arguments += $ExtraArguments
-    $process = Start-Process `
-        -FilePath $unrealEditor `
-        -ArgumentList $arguments `
-        -Wait `
-        -PassThru `
-        -WindowStyle Hidden `
-        -RedirectStandardOutput $stdout `
-        -RedirectStandardError $stderr
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Last output from $Commandlet"
-        Get-Content -LiteralPath $stdout -Tail 40 -ErrorAction SilentlyContinue
-        Get-Content -LiteralPath $stderr -Tail 40 -ErrorAction SilentlyContinue
-        throw "$Commandlet failed with exit code $($process.ExitCode). Full logs: $LogDirectory"
-    }
-}
-
 function Get-CleanOriginalInputs {
     param(
         [Parameter(Mandatory = $true)] [string]$Root,
@@ -246,7 +209,6 @@ function Get-CleanOriginalInputs {
 
 $project = Resolve-RequiredPath -Path $project -Label 'Unreal project'
 $provenancePath = Resolve-RequiredPath -Path $provenancePath -Label 'StableGyro provenance registry'
-$buildBatch = Resolve-RequiredPath -Path $buildBatch -Label 'Unreal build script'
 $unrealEditor = Resolve-RequiredPath -Path $unrealEditor -Label 'UnrealEditor-Cmd'
 $engineVersionPath = Resolve-RequiredPath -Path $engineVersionPath -Label 'Unreal build version'
 $fingerprinter = Resolve-RequiredPath -Path $fingerprinter -Label 'Voyage fingerprint tool'
@@ -255,7 +217,7 @@ $prepareScript = Resolve-RequiredPath -Path $prepareScript -Label 'StableGyro or
 $packageScript = Resolve-RequiredPath -Path $packageScript -Label 'StableGyro package builder'
 $settingsSchema = Resolve-RequiredPath -Path $settingsSchema -Label 'StableGyro settings schema'
 $settingsDefaults = Resolve-RequiredPath -Path $settingsDefaults -Label 'StableGyro canonical settings INI'
-$settingsGenerator = Resolve-RequiredPath -Path $settingsGenerator -Label 'StableGyro settings generator'
+$settingsModule = Resolve-RequiredPath -Path $settingsModule -Label 'Settings validation module'
 $modelExporter = Resolve-RequiredPath -Path $modelExporter -Label 'Voyage model exporter'
 $staticMeshBuilder = Resolve-RequiredPath -Path $staticMeshBuilder -Label 'Voyage StaticMesh builder'
 $staticMeshValidator = Resolve-RequiredPath -Path $staticMeshValidator -Label 'Voyage StaticMesh validator'
@@ -301,26 +263,17 @@ if (Test-Path -LiteralPath $releaseRoot) {
 New-Item -ItemType Directory -Path $releaseRoot | Out-Null
 $logs = Join-Path $releaseRoot 'logs'
 New-Item -ItemType Directory -Path $logs | Out-Null
-$generatedSettingsDirectory = Join-Path $modRoot 'Intermediate\GeneratedSettings'
-$releaseGeneratedSettingsDirectory = Join-Path $releaseRoot 'generated-settings'
-$generatedSettingsHeader = Join-Path $generatedSettingsDirectory 'StableGyroSettings.generated.h'
-$generatedSettingsIni = Join-Path $generatedSettingsDirectory 'StableGyro.ini'
-& $settingsGenerator `
-    -SchemaPath $settingsSchema `
-    -DefaultIniPath $settingsDefaults `
-    -HeaderPath $generatedSettingsHeader `
-    -IniPath $generatedSettingsIni
-if ([IO.File]::ReadAllText($settingsDefaults) -cne [IO.File]::ReadAllText($generatedSettingsIni)) {
-    throw 'Generated settings INI differs from the canonical source INI.'
-}
-New-Item -ItemType Directory -Path $releaseGeneratedSettingsDirectory | Out-Null
-Copy-Item -LiteralPath $generatedSettingsHeader -Destination $releaseGeneratedSettingsDirectory
-Copy-Item -LiteralPath $generatedSettingsIni -Destination $releaseGeneratedSettingsDirectory
+Import-Module $settingsModule -Force
+$validatedSettings = @(Read-VoyageModSettingsSchema -SchemaPath $settingsSchema -DefaultIniPath $settingsDefaults)
+$releaseSettingsDirectory = Join-Path $releaseRoot 'validated-settings'
+New-Item -ItemType Directory -Path $releaseSettingsDirectory | Out-Null
+$generatedSettingsIni = Join-Path $releaseSettingsDirectory 'StableGyro.ini'
+Copy-Item -LiteralPath $settingsDefaults -Destination $generatedSettingsIni
 
 $totalStopwatch = [Diagnostics.Stopwatch]::StartNew()
 $timings = [ordered]@{}
 
-Write-Host '1/9 Validating game fingerprint'
+Write-Host '1/8 Validating game fingerprint'
 $phase = [Diagnostics.Stopwatch]::StartNew()
 $fingerprintPath = Join-Path $releaseRoot 'game-fingerprint.json'
 & $fingerprinter -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
@@ -337,7 +290,7 @@ if ([string]$mapping.steamBuildId -cne $expectedBuild -or
 $phase.Stop()
 $timings.Fingerprint = $phase.Elapsed.TotalSeconds
 
-Write-Host '2/9 Exporting and splitting the current stock mooring plate'
+Write-Host '2/8 Exporting and splitting the current stock mooring plate'
 $phase.Restart()
 Assert-GameClosed
 $mooringGeometryRoot = Join-Path $releaseRoot 'mooring-geometry'
@@ -400,7 +353,7 @@ if ($splitEvidence.status -cne 'passed' -or $splitEvidence.crossingTriangles -ne
 $phase.Stop()
 $timings.MooringGeometry = $phase.Elapsed.TotalSeconds
 
-Write-Host '3/9 Building the two cooked mooring meshes through the common producer'
+Write-Host '3/8 Building the two editor mooring meshes through the common producer'
 $phase.Restart()
 $staticMeshRequestPath = Join-Path $releaseRoot 'static-mesh-request.json'
 $staticMeshOutputRoot = Join-Path $releaseRoot 'static-mesh-assets'
@@ -496,7 +449,7 @@ $staticMeshRequest = [ordered]@{
 $staticMeshRequest | ConvertTo-Json -Depth 12 |
     Set-Content -LiteralPath $staticMeshRequestPath -Encoding utf8
 & $staticMeshBuilder -Manifest $staticMeshRequestPath -OutputRoot $staticMeshOutputRoot `
-    -EngineRoot (Join-Path $EngineRoot 'Engine') | Out-Null
+    -EngineRoot (Join-Path $EngineRoot 'Engine') -OutputKind Uncooked | Out-Null
 $staticMeshBuildResultPath = Resolve-RequiredPath `
     -Path (Join-Path $staticMeshOutputRoot 'build-result.json') `
     -Label 'Common StaticMesh build result'
@@ -525,90 +478,46 @@ if ([string]$staticMeshBuildResult.status -cne 'passed' -or
 $phase.Stop()
 $timings.StaticMeshBuild = $phase.Elapsed.TotalSeconds
 
-Write-Host '4/9 Building editor modules incrementally'
+Write-Host '4/8 Updating project mesh assets; preserving authored Blueprints'
 $phase.Restart()
-$buildOutput = @(& $buildBatch VoyageEditor Win64 Development $project -NoUBA 2>&1)
-$buildExitCode = $LASTEXITCODE
-$buildOutput | Set-Content -LiteralPath (Join-Path $logs 'editor-build.log') -Encoding utf8
-if ($buildExitCode -ne 0) {
-    $buildOutput | Select-Object -Last 60 | Write-Host
-    throw "VoyageEditor build failed with exit code $buildExitCode."
+$meshManifest = Get-Content -LiteralPath $staticMeshOutputManifestPath -Raw | ConvertFrom-Json
+$expectedMeshPaths = @($expectedStaticMeshObjectPaths | ForEach-Object {
+    'Content/' + (($_ -split '\.')[0]).Substring('/Game/'.Length) + '.uasset'
+})
+if ($meshManifest.kind -cne 'Voyage uncooked StaticMesh assets' -or
+    (@($meshManifest.files.path | Sort-Object) -join "`n") -cne
+    (($expectedMeshPaths | Sort-Object) -join "`n")) {
+    throw 'Unexpected editor mesh output; project was not changed.'
+}
+$meshBackup = Join-Path $releaseRoot 'project-mesh-backup'
+foreach ($file in $meshManifest.files) {
+    $source = Join-Path $staticMeshOutputRoot $file.path
+    $destination = Resolve-RequiredPath -Path (Join-Path $modRoot $file.path) -Label 'Maintained project mesh'
+    if ((Get-Item -LiteralPath $source).Length -ne $file.length) { throw "Mesh output size mismatch: $source" }
+    $backup = Join-Path $meshBackup $file.path
+    New-Item -ItemType Directory -Path (Split-Path $backup -Parent) -Force | Out-Null
+    Copy-Item -LiteralPath $destination -Destination $backup
+}
+try {
+    foreach ($file in $meshManifest.files) {
+        $source = Join-Path $staticMeshOutputRoot $file.path
+        $destination = Join-Path $modRoot $file.path
+        Copy-Item -LiteralPath $source -Destination $destination -Force
+        if ([Convert]::ToBase64String([IO.File]::ReadAllBytes($source)) -cne
+            [Convert]::ToBase64String([IO.File]::ReadAllBytes($destination))) {
+            throw "Project mesh copy mismatch: $destination"
+        }
+    }
+} catch {
+    foreach ($file in $meshManifest.files) {
+        Copy-Item -LiteralPath (Join-Path $meshBackup $file.path) -Destination (Join-Path $modRoot $file.path) -Force
+    }
+    throw
 }
 $phase.Stop()
-$timings.EditorBuild = $phase.Elapsed.TotalSeconds
+$timings.ProjectMeshUpdate = $phase.Elapsed.TotalSeconds
 
-Write-Host '5/9 Generating Blueprint source assets'
-$phase.Restart()
-$content = [IO.Path]::GetFullPath((Join-Path $modRoot 'Content'))
-$expectedContent = [IO.Path]::GetFullPath((Join-Path $modRoot 'Content'))
-if ($content -cne $expectedContent -or (Split-Path -Leaf $content) -cne 'Content') {
-    throw "Refusing to clear an unexpected generated directory: $content"
-}
-if (Test-Path -LiteralPath $content) {
-    $contentItem = Get-Item -LiteralPath $content -Force
-    if ($contentItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
-        throw "Refusing to clear reparse-point Content directory: $content"
-    }
-    Remove-Item -LiteralPath $content -Recurse -Force
-}
-New-Item -ItemType Directory -Path $content | Out-Null
-Invoke-UnrealGenerator -Commandlet 'GenerateStableGyroMod' -LogDirectory $logs
-Invoke-UnrealGenerator -Commandlet 'GenerateStableGyroInheritance' -LogDirectory $logs
-$phase.Stop()
-$timings.Generation = $phase.Elapsed.TotalSeconds
-
-Write-Host '6/9 Cooking five generated production packages and staging common meshes'
-$phase.Restart()
-$cookedRoot = Join-Path $releaseRoot 'cooked'
-& $cookScript `
-    -UnrealEditor $unrealEditor `
-    -Project $project `
-    -LocalDataCachePath (Join-Path $modRoot 'DerivedDataCache') `
-    -LogPath (Join-Path $logs 'cook.log') `
-    -OutputRoot $cookedRoot
-$staticMeshOutputManifest = Get-Content -LiteralPath $staticMeshOutputManifestPath -Raw |
-    ConvertFrom-Json
-$actualMeshObjects = @($staticMeshOutputManifest.assetObjectPaths | Sort-Object)
-if (($actualMeshObjects -join "`n") -cne (($expectedStaticMeshObjectPaths | Sort-Object) -join "`n")) {
-    throw 'Common StaticMesh output object identities differ from the exact StableGyro packages.'
-}
-$stagedStaticMeshFiles = @()
-foreach ($file in @($staticMeshOutputManifest.files)) {
-    $relativePath = ([string]$file.path).Replace('/', '\')
-    if (-not $relativePath.StartsWith('Content\Mods\StableGyro\', [StringComparison]::Ordinal) -or
-        $relativePath.Contains('..')) {
-        throw "Common StaticMesh output contains an unexpected path: $relativePath"
-    }
-    $source = Resolve-RequiredPath -Path (Join-Path $staticMeshOutputRoot $relativePath) `
-        -Label 'Common StaticMesh cooked companion'
-    if ((Get-Item -LiteralPath $source).Length -ne [long]$file.length) {
-        throw "Common StaticMesh cooked companion does not match its output manifest: $source"
-    }
-    $destination = Join-Path $cookedRoot $relativePath
-    if (Test-Path -LiteralPath $destination) {
-        throw "Reference-only placeholder was unexpectedly cooked: $destination"
-    }
-    New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
-    Copy-Item -LiteralPath $source -Destination $destination
-    if ((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash -cne
-        (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash) {
-        throw "Staged common StaticMesh companion copy mismatch: $destination"
-    }
-    $stagedStaticMeshFiles += [ordered]@{
-        path = $relativePath
-        length = (Get-Item -LiteralPath $destination).Length
-    }
-}
-if ($stagedStaticMeshFiles.Count -lt 4) {
-    throw 'Common StaticMesh output did not provide both required cooked packages.'
-}
-$staticMeshStagingReportPath = Join-Path $releaseRoot 'static-mesh-staging.json'
-([ordered]@{ files = $stagedStaticMeshFiles }) | ConvertTo-Json -Depth 5 |
-    Set-Content -LiteralPath $staticMeshStagingReportPath -Encoding utf8
-$phase.Stop()
-$timings.Cook = $phase.Elapsed.TotalSeconds
-
-Write-Host '7/9 Resolving the clean stock Gyro item data asset'
+Write-Host '5/8 Refreshing the maintained project item from clean stock data'
 $phase.Restart()
 if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
     Assert-GameClosed
@@ -624,7 +533,43 @@ $originalInputs = Get-CleanOriginalInputs `
 $phase.Stop()
 $timings.Originals = $phase.Elapsed.TotalSeconds
 
-Write-Host '8/9 Building and verifying the eight-asset IoStore container'
+$phase.Restart()
+& (Join-Path $repoRoot 'tools/Update-VoyageItemAsset.ps1') `
+    -Project $project -Recipe (Join-Path $modRoot 'Build/Item.patch.json') `
+    -EngineRoot $EngineRoot -GameRoot $GameRoot `
+    -OutputRoot (Join-Path $releaseRoot 'item-update')
+$phase.Stop()
+$timings.ItemUpdate = $phase.Elapsed.TotalSeconds
+
+Write-Host '6/8 Cooking eight maintained project packages'
+$phase.Restart()
+$cookedRoot = Join-Path $releaseRoot 'cooked'
+& $cookScript `
+    -UnrealEditor $unrealEditor `
+    -Project $project `
+    -LocalDataCachePath (Join-Path $modRoot 'DerivedDataCache') `
+    -LogPath (Join-Path $logs 'cook.log') `
+    -OutputRoot $cookedRoot
+$stagedStaticMeshFiles = @()
+foreach ($objectPath in $expectedStaticMeshObjectPaths) {
+    $relativeBase = 'Content/' + (($objectPath -split '\.')[0]).Substring('/Game/'.Length)
+    foreach ($extension in @('.uasset','.uexp','.ubulk','.uptnl','.m.ubulk')) {
+        $relativePath = $relativeBase + $extension
+        $candidate = Join-Path $cookedRoot $relativePath
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            $stagedStaticMeshFiles += [ordered]@{path=$relativePath;length=(Get-Item -LiteralPath $candidate).Length}
+        } elseif ($extension -in @('.uasset','.uexp')) {
+            throw "Missing project-cooked mesh companion: $candidate"
+        }
+    }
+}
+$staticMeshStagingReportPath = Join-Path $releaseRoot 'static-mesh-staging.json'
+([ordered]@{ files = $stagedStaticMeshFiles }) | ConvertTo-Json -Depth 5 |
+    Set-Content -LiteralPath $staticMeshStagingReportPath -Encoding utf8
+$phase.Stop()
+$timings.Cook = $phase.Elapsed.TotalSeconds
+
+Write-Host '7/8 Building and verifying the eight-asset IoStore container'
 $phase.Restart()
 $containerRoot = Join-Path $releaseRoot 'container'
 if (@($originalInputs).Count -ne 1) {
@@ -755,7 +700,7 @@ $materialValidation | ConvertTo-Json -Depth 5 |
 $phase.Stop()
 $timings.Package = $phase.Elapsed.TotalSeconds
 
-Write-Host '9/9 Creating the player-facing archive'
+Write-Host '8/8 Creating the player-facing archive'
 $phase.Restart()
 $payloadRoot = Join-Path $releaseRoot "payload\StableGyro-$Version"
 New-Item -ItemType Directory -Path $payloadRoot -Force | Out-Null

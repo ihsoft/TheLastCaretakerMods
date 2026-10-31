@@ -6,9 +6,19 @@
   output in ignored local storage selected by the lifecycle policy below; the
   fact that a file is reproducible does not determine whether it is temporary
   or worth retaining. Exceptions to the commit rule are the
-  explicitly reviewed `.usmap` registry under `mappings/Voyage/`. User-authored
+  explicitly reviewed `.usmap` registry under `mappings/Voyage/` and the
+  maintained project inputs described below. User-authored
   mod assets, including `mods/Railgun/Assets/Model/Railgun.glb`, are ordinary
-  source inputs; this does not authorize extracted game meshes or materials.
+  source inputs; this does not authorize retaining unrelated extracted game data.
+- A mod adopting the [maintained Unreal project workflow](unreal-project-rule.md)
+  may track the game-derived editor assets and compilation stubs required by its
+  implementation, including complete derived meshes and patched DataAssets.
+  Record their source build, engine, reconstruction method and revalidation
+  condition in the mod's provenance document. Keep intermediate extractions,
+  reports and cooked output ignored. A release must refresh its supported
+  game-derived inputs and reapply the owned patch, or fail; an old project asset
+  is not a fallback after an unsuccessful refresh. Editor stubs must remain
+  excluded from the release payload.
 - Apply the shared [generated-output lifecycle](../docs/artifact-lifecycle-rule.md):
   `Tmp/` holds one-cycle output by default, while ignored `artifacts/` is for
   generated output with a concrete use beyond the current research, feature,
@@ -37,7 +47,8 @@
   the path. Run `New-VoyageMappings.ps1` only after that resolver reports that
   no reviewed mapping matches a genuinely new Steam build ID, and ask the user to
   start the game before generation.
-- Except for the reviewed mapping registry, commit the method, not the snapshot.
+- Except for the reviewed mapping registry and maintained project inputs above,
+  commit the method, not the snapshot.
   Reusable game identification, extraction, inspection, patching, and disassembly
   logic belongs under `tools/`, with exact usage documented.
 - Treat `tools/tool-index.md` as the task router and `tools/tool-catalog.md` as

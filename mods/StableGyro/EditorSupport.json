@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "plugins": [
+    {
+      "source": "EditorSupport/StableGyroSupport.uplugin",
+      "overlays": [
+        {"source": "../../../tools/VoyageItemPatch/Profile", "destination": "Source/Voyage"},
+        {"source": "../../../tools/VoyageItemPatch/Source/VoyageItemPatchEditor", "destination": "Source/VoyageItemPatchEditor"}
+      ]
+    }
+  ]
+}

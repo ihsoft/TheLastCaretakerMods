@@ -1,4 +1,4 @@
-# INTERNAL BUILD STAGE: cooks the five generated production packages in one narrow
+# INTERNAL BUILD STAGE: cooks the eight maintained production packages in one narrow
 # Unreal invocation. It contains no extracted game data; its output is generated
 # and not committed.
 
@@ -31,11 +31,14 @@ $outputContent = Join-Path $output 'Content'
 New-Item -ItemType Directory -Path $outputContent -Force | Out-Null
 
 $packages = @(
+    '/Game/Data/Assets/Modules/DA_Item_Module_GyroCopter',
     '/Game/Mods/StableGyro/ModActor',
     '/Game/Mods/StableGyro/PitchInputActor',
     '/Game/Mods/StableGyro/IAV_GyroPitchReset',
     '/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot',
-    '/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard'
+    '/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard',
+    '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY',
+    '/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY'
 )
 $requiredCookedExtensions = @('.uasset', '.uexp')
 $optionalCookedExtensions = @('.ubulk', '.uptnl', '.m.ubulk')

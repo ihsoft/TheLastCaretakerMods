@@ -3,6 +3,7 @@
 Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
 
 - [Architecture](ARCHITECTURE.md):
+  maintained Unreal project, BPT editing, editor support, release refresh,
   stock Gyro child, flight helpers, four-port layout, cargo action, saved
   connections, fuel settings, settings ownership, and game-validation boundaries.
 - [Mod rules](MOD-RULES.md): flight-control, settings, source, and validation

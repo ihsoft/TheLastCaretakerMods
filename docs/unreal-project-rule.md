@@ -40,10 +40,12 @@ This reservation does not grant ownership of another task's source files.
 Keep independent working directories and coordinate shared edits separately.
 Same-workspace conflicts and changed-asset checks remain binding.
 
-Project ownership does not authorize committing extracted stock game content.
-The [game-derived data rule](game-derived-data-rule.md) still governs provenance
-and Git eligibility. Required stock dependencies may remain locally prepared;
-do not confuse them with authored mod assets or ship editor-only placeholders.
+The [game-derived data rule](game-derived-data-rule.md) governs provenance and
+Git eligibility for maintained game-derived project assets and compilation
+stubs. Retain required source assets in the project, with bounded refresh or
+revalidation, rather than treating all project content as disposable extraction
+output. Keep intermediate dumps ignored and exclude editor-only placeholders
+from the release payload.
 
 Existing procedural producers remain descriptions of the current implementation
 until their mod is explicitly migrated. Migration must establish the maintained

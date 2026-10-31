@@ -1,0 +1,12 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1",
+  "FriendlyName": "StableGyro editor support",
+  "CanContainContent": false,
+  "Modules": [
+    {"Name": "Voyage", "Type": "Runtime", "LoadingPhase": "Default"},
+    {"Name": "VoyageItemPatchEditor", "Type": "Editor", "LoadingPhase": "Default"}
+  ],
+  "Plugins": [{"Name": "EnhancedInput", "Enabled": true}]
+}

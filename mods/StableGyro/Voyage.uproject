@@ -2,19 +2,7 @@
   "FileVersion": 3,
   "EngineAssociation": "5.8",
   "Category": "Modding",
-  "Description": "Editor-only project for generating the Stable Gyro IoStore assets.",
-  "Modules": [
-    {
-      "Name": "Voyage",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "StableGyroGenerator",
-      "Type": "Editor",
-      "LoadingPhase": "Default"
-    }
-  ],
+  "Description": "Maintained StableGyro assets and editor-only game class mirrors.",
   "Plugins": [
     {
       "Name": "PythonScriptPlugin",
@@ -22,6 +10,14 @@
     },
     {
       "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    },
+    {
+      "Name": "StableGyroSupport",
+      "Enabled": true
+    },
+    {
+      "Name": "BlueprintTextWorkspace",
       "Enabled": true
     }
   ]

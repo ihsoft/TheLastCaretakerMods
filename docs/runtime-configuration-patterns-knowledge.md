@@ -58,9 +58,10 @@ describe it as a strict session snapshot without changing that ownership.
    INI and schema. Reject duplicate or malformed keys, unsupported values,
    missing defaults, nonfinite numbers, bad ranges, and invalid quoted strings.
    Reject duplicate keys in the repository INI. Copy
-   the validated INI without rewriting its comments or layout. Generate runtime
-   names/defaults from these inputs; never hand-edit generated headers or
-   cooked output.
+   the validated INI without rewriting its comments or layout. Procedural
+   producers generate runtime names/defaults from these inputs; maintained
+   Blueprints keep matching members and loaders through their authoring workflow.
+   Never hand-edit generated headers or cooked output.
 4. In the runtime loader, reset the owner to defined fallbacks before each
    read. The first `=` separates a case-sensitive key from its value. Trim both,
    and treat `#` as a comment only outside a quoted string. Numbers accept a
@@ -84,8 +85,10 @@ either schema shape, copies the default INI byte for byte, and emits one generic
 runtime table. The shared Blueprint graph generator in
 `tools/VoyageModSettings/Public` creates typed members and the parser/loader;
 each cooked mod contains its own generated graph and has no separately
-installed runtime dependency. Mod-local scripts retain existing public build
-interfaces. The shared
+installed runtime dependency. StableGyro maintains those graphs in its Unreal
+project and edits them through BPT; its producer uses the shared schema validator
+without generating headers or graphs. Mod-local scripts retain existing public
+build interfaces. The shared
 [INI merger](../tools/Merge-VoyageModIni.ps1) prepares a new file without
 changing the installed one: it keeps player values and comments, removes only
 explicitly retired keys/comments, and adds missing defaults. The owning
@@ -96,7 +99,7 @@ The current concrete inputs and thin adapters are
 [Railgun generator](../mods/Railgun/Build/New-RailgunSettings.ps1),
 [StableGyro INI](../mods/StableGyro/Assets/StableGyro.ini),
 [StableGyro schema](../mods/StableGyro/Settings/StableGyro.settings.json), and
-[StableGyro generator](../mods/StableGyro/Build/New-StableGyroSettings.ps1), plus
+[StableGyro settings contract](../mods/StableGyro/MOD-RULES.md#settings-contract), plus
 [ContainerLidLabel schema](../mods/ContainerLidLabel/Settings/ContainerLidLabel.settings.json)
 and [generator](../mods/ContainerLidLabel/Build/New-ContainerLidLabelSettings.ps1).
 The normal build entry points remain `Build-Railgun.ps1` and

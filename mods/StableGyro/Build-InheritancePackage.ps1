@@ -1,6 +1,5 @@
-# INTERNAL BUILD STAGE with game-derived DroppedActor patch contracts validated for
-# Steam build 25982825.
-# Revalidate per GAME_DERIVED_SOURCES.md after every game update.
+# INTERNAL BUILD STAGE: package validated project-cooked assets.
+# The stock item is a comparison input, never a replacement for project output.
 
 param(
     [string]$CookedRoot = "$PSScriptRoot\Saved\Cooked\Windows\Voyage",
@@ -33,14 +32,6 @@ if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
 }
 
-$stockDroppedActorPackage = '/Game/Blueprints/Vehicles/BP_GyroCopter_Possessable'
-$modDroppedActorPackage = '/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot'
-$stockDroppedActorObject = 'BP_GyroCopter_Possessable_C'
-$modDroppedActorObject = 'BP_GyroCopter_StablePilot_C'
-if ($stockDroppedActorPackage.Length -ne $modDroppedActorPackage.Length -or
-    $stockDroppedActorObject.Length -ne $modDroppedActorObject.Length) {
-    throw 'The stock and mod DroppedActor package/object identities must have equal component lengths.'
-}
 $cooked = (Resolve-Path -LiteralPath $CookedRoot).Path
 $originalDirectory = (Resolve-Path -LiteralPath $OriginalItemDirectory).Path
 $scriptObjectsPath = (Resolve-Path -LiteralPath $ScriptObjects).Path
@@ -176,94 +167,15 @@ $contextSource = Join-Path $cooked 'Content\Game\Input\Vehicle'
 foreach ($assetName in @('IMC_GyroCopter_Keyboard.uasset', 'IMC_GyroCopter_Keyboard.uexp')) {
     Copy-Item -LiteralPath (Join-Path $contextSource $assetName) -Destination $contextStage
 }
-function Find-ByteSequenceOffsets {
-    param(
-        [Parameter(Mandatory = $true)] [byte[]]$Bytes,
-        [Parameter(Mandatory = $true)] [byte[]]$Sequence
-    )
-
-    $matches = [Collections.Generic.List[int]]::new()
-    for ($offset = 0; $offset -le $Bytes.Length - $Sequence.Length; $offset++) {
-        $isMatch = $true
-        for ($index = 0; $index -lt $Sequence.Length; $index++) {
-            if ($Bytes[$offset + $index] -ne $Sequence[$index]) {
-                $isMatch = $false
-                break
-            }
-        }
-        if ($isMatch) {
-            $matches.Add($offset)
-            $offset += $Sequence.Length - 1
-        }
-    }
-    return $matches
+$itemSource = Join-Path $cooked 'Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset'
+& (Join-Path $repoRoot 'tools/Test-VoyageItemPatch.ps1') `
+    -Recipe (Join-Path $modRoot 'Build/Item.patch.json') `
+    -OriginalAsset (Join-Path $originalDirectory 'DA_Item_Module_GyroCopter.uasset') `
+    -CookedAsset $itemSource -MappingsPath $MappingsPath `
+    -OutputRoot (Join-Path $output 'item-validation')
+foreach ($extension in @('.uasset','.uexp')) {
+    Copy-Item -LiteralPath ([IO.Path]::ChangeExtension($itemSource,$extension)) -Destination $itemStage
 }
-
-function Copy-PatchedAsset {
-    param(
-        [Parameter(Mandatory = $true)] [string]$SourceDirectory,
-        [Parameter(Mandatory = $true)] [string]$AssetName,
-        [Parameter(Mandatory = $true)] [string]$DestinationDirectory,
-        [Parameter(Mandatory = $true)] [string[]]$SourceValues,
-        [Parameter(Mandatory = $true)] [string[]]$DestinationValues
-    )
-
-    $sourceUasset = Join-Path $SourceDirectory ($AssetName + '.uasset')
-    $sourceUexp = Join-Path $SourceDirectory ($AssetName + '.uexp')
-    if (-not (Test-Path -LiteralPath $sourceUasset -PathType Leaf) -or
-        -not (Test-Path -LiteralPath $sourceUexp -PathType Leaf)) {
-        throw "Original cooked asset is incomplete: $SourceDirectory\$AssetName"
-    }
-
-    $bytes = [IO.File]::ReadAllBytes($sourceUasset)
-    $exportBytes = [IO.File]::ReadAllBytes($sourceUexp)
-    if ($SourceValues.Count -ne $DestinationValues.Count) {
-        throw 'DroppedActor patch source/destination counts differ.'
-    }
-    for ($patchIndex = 0; $patchIndex -lt $SourceValues.Count; $patchIndex++) {
-        $find = [Text.Encoding]::ASCII.GetBytes($SourceValues[$patchIndex])
-        $replace = [Text.Encoding]::ASCII.GetBytes($DestinationValues[$patchIndex])
-        if ($find.Length -ne $replace.Length) {
-            throw "DroppedActor patch $patchIndex changes serialized byte length."
-        }
-        $preexistingDestinationCount =
-            @(Find-ByteSequenceOffsets -Bytes $bytes -Sequence $replace).Count +
-            @(Find-ByteSequenceOffsets -Bytes $exportBytes -Sequence $replace).Count
-        if ($preexistingDestinationCount -ne 0) {
-            throw "$AssetName already contains mod DroppedActor identity part $patchIndex."
-        }
-        $uassetMatches = @(Find-ByteSequenceOffsets -Bytes $bytes -Sequence $find)
-        $uexpMatches = @(Find-ByteSequenceOffsets -Bytes $exportBytes -Sequence $find)
-        if (($uassetMatches.Count + $uexpMatches.Count) -ne 1) {
-            throw "Expected one stock DroppedActor identity part $patchIndex in $AssetName; found $($uassetMatches.Count + $uexpMatches.Count)."
-        }
-        foreach ($offset in $uassetMatches) {
-            [Array]::Copy($replace, 0, $bytes, $offset, $replace.Length)
-        }
-        foreach ($offset in $uexpMatches) {
-            [Array]::Copy($replace, 0, $exportBytes, $offset, $replace.Length)
-        }
-        $remainingSourceCount =
-            @(Find-ByteSequenceOffsets -Bytes $bytes -Sequence $find).Count +
-            @(Find-ByteSequenceOffsets -Bytes $exportBytes -Sequence $find).Count
-        $writtenDestinationCount =
-            @(Find-ByteSequenceOffsets -Bytes $bytes -Sequence $replace).Count +
-            @(Find-ByteSequenceOffsets -Bytes $exportBytes -Sequence $replace).Count
-        if ($remainingSourceCount -ne 0 -or $writtenDestinationCount -ne 1) {
-            throw "DroppedActor patch postcondition failed for identity part $patchIndex in $AssetName."
-        }
-    }
-
-    [IO.File]::WriteAllBytes((Join-Path $DestinationDirectory ($AssetName + '.uasset')), $bytes)
-    [IO.File]::WriteAllBytes((Join-Path $DestinationDirectory ($AssetName + '.uexp')), $exportBytes)
-}
-
-Copy-PatchedAsset `
-    -SourceDirectory $originalDirectory `
-    -AssetName 'DA_Item_Module_GyroCopter' `
-    -DestinationDirectory $itemStage `
-    -SourceValues @($stockDroppedActorPackage, $stockDroppedActorObject) `
-    -DestinationValues @($modDroppedActorPackage, $modDroppedActorObject)
 Copy-Item -LiteralPath $scriptObjectsPath -Destination (Join-Path $stage 'scriptobjects.bin')
 
 $utoc = Join-Path $package ($ContainerName + '.utoc')

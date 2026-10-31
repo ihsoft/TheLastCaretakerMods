@@ -151,9 +151,15 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   poll settings/components on Tick, or modify throttle or workload consumption
   from this path. Keep the new native mirrors as graph-reference identities,
   never serialization templates for authored component instances.
+- `Voyage.uproject` and its maintained `Content/` assets own the mod. Edit the
+  three gameplay Blueprints through the shared BPT workflow and commit their
+  synchronized JSON alongside the assets. Do not restore C++ graph generation,
+  clear Content during a build, or treat BPT JSON as build-time source assets.
 - Build-StableGyro.ps1 is the only public producer. It owns fingerprinting,
-  editor build, generation, cook, clean item-data extraction, surgical patching,
-  packaging, verification, ZIP creation, and optional -Install.
+  native-support preparation through the shared item updater, focused project
+  mesh and item refresh, cook, packaging, verification, ZIP creation, and
+  optional -Install. Keep the native mirror sources under `EditorSupport/`;
+  ready plugins and their binaries are local tooling, never release payload.
 - `-Install` must preserve current values and comments in an existing
   `StableGyro.ini`, remove explicitly retired keys, append missing canonical
   keys, and read back the resulting settings file. Create it from canonical
@@ -161,8 +167,12 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 - Treat GAME_DERIVED_SOURCES.md as source provenance, not a mandatory manual
   audit before a candidate build. On a pin mismatch retry the public producer
   with `-IgnorePinnedGameVersion`. Extract and patch a fresh current
-  `DA_Item_Module_GyroCopter`; never commit extracted or cooked
-  data. Keep the stock Gyro Blueprint at its original package identity. The mod
+  `DA_Item_Module_GyroCopter` into the maintained project through
+  `Build/Item.patch.json` and the shared item updater. Keep the required editor
+  assets in Git with their provenance; raw extractions and cooked output remain
+  ignored. Refresh must succeed or stop the build. Keep the stock Gyro Blueprint
+  at its original package identity, represented locally by an editor stub that
+  is excluded from the release. The mod
   subclass is selected only through the item data asset's `DroppedActor` path.
 - Preserve every stock Gyro keyboard mapping when replacing
   `IMC_GyroCopter_Keyboard`; the only added mapping is the mod-owned reset
@@ -190,10 +200,11 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 - Preserve the extracted mooring mesh's corner normals, UV channels, vertex
   colors and material override when splitting its two sides. Do not manually
   remove zero-area triangles or invent tangents absent from the source GLB.
-  Prepare runtime meshes through the shared StaticMesh producer with the
+  Prepare complete editor meshes through the shared StaticMesh producer with the
   Nanite, fallback and ray-tracing policy in [architecture](ARCHITECTURE.md).
-  Keep editor reference meshes out of the runtime payload and preserve every
-  cooked companion emitted by the common producer. Validate the exact final
+  Replace the two maintained mesh packages at unchanged identities; do not merge
+  old mesh contents. Cook them with the mod project and preserve every emitted
+  cooked companion. Keep material stubs out of the payload. Validate the exact final
   container's representations, source attributes and material references before
   installation; geometry preservation and game appearance are separate gates.
 - Gameplay validation covers pitch in both directions, release hold, both
@@ -212,20 +223,20 @@ formatting. Inline `#` comments are supported.
 `Settings/StableGyro.settings.json` owns the flat-section binding, required
 schema fallbacks, and validation metadata. For each option:
 
-- `id` is the generated C++ symbol;
-- `runtimeName` is the generated Blueprint member and output-pin name;
+- `id` is the setting's schema identity;
+- `runtimeName` is the Blueprint member and value-pin name;
 - `key` is the exact name to the left of `=` in the INI;
-- `type` creates a `double`, `bool`, or string member on the generated owner;
+- `type` describes the corresponding number, boolean, or string member;
 - `default` is the fallback for missing or invalid runtime input; and
 - `minimum` and `maximum` are optional inclusive bounds. Out-of-range input
   uses the schema fallback and is never clamped.
 
 To add a setting, add the canonical value and adjacent comments to the INI,
-then add one schema entry with matching identities. Include
-`StableGyroSettings.h` and use the existing
-`namespace Settings = StableGyroSettings;` alias. The public producer creates
-the member, initializes it from the schema fallback, and builds the callable
-`ReloadSettings` loader. Both helpers call it at BeginPlay and synchronously on
+then add one schema entry with matching identities. Update the owning Blueprint
+through BPT: its member, fallback, parsing/range checks, loader and consumers
+must match the schema. The public producer validates the INI/schema pair; it
+does not create members or rewrite graphs. Both helpers call their maintained
+`ReloadSettings` function at BeginPlay and synchronously on
 player entry through the owning Pawn's controller-changed delegate, resetting
 their defaults before every read. `ModActor` owns the full settings set for
 PostPhysics stabilization, including both independent control-enable flags;
@@ -238,31 +249,13 @@ graph and action-hint gate. The replacement Gyro child alone owns
 CDO before parent construction and all of its layout, cargo-input and
 provided-action branches use that same cached value. Class unload/reload may
 read again, so changing this setting requires a game restart. Existing helper
-loaders must explicitly exclude it. Do not call `AddMemberVariable` separately for a schema
-setting and do not edit the generated header. A consuming graph reads its
-own generated self-member
-like this:
-
-```cpp
-UK2Node_VariableGet* Deceleration = AddRead(
-    Graph, Settings::AltitudeStabilizationVerticalDeceleration,
-    nullptr, X, Y);
-Ok &= Connect(
-    RequirePin(Deceleration,
-        Settings::AltitudeStabilizationVerticalDeceleration),
-    RequirePin(Consumer, ConsumerPin));
-```
-
-The null owner is required for helper-owned settings: each belongs to the helper
-whose graph consumes it. The child-owned four-port setting is the narrow
-exception and is read from the exact replacement-class CDO. `Settings::<id>` is an `FName`, not
-the configured numeric or boolean value; it names the self-member and its value
-pin, while the `VariableGet` output carries the runtime value. In the initial
-helper generator the equivalent helpers are named `Read`, `Pin`, and `Link`;
-the ownership and name contract is identical. After wiring the consumer, run
-only the public producer, `Build-StableGyro.ps1`. It generates
-`Intermediate/GeneratedSettings/StableGyroSettings.generated.h`,
-validates the exact INI/schema key set, and rejects malformed defaults.
+loaders must explicitly exclude it. A consuming graph reads its own helper's
+member; the four-port setting is the narrow exception read from the exact
+replacement-class CDO. Preserve the current self-member ownership when editing
+the graph. After Apply and synchronization of tracked BPT, use the public
+producer, `Build-StableGyro.ps1`, to validate and cook the maintained assets.
+It validates the exact INI/schema key set and rejects malformed defaults;
+runtime loader changes still require their own graph and game checks.
 
 To remove a setting, remove its INI entry, schema entry, and every consumer.
 If installed user files must be migrated, add only the exact old key and its

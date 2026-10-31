@@ -1,0 +1,38 @@
+// HAND-RECONSTRUCTED GAME API MIRROR: Steam build 25929985, UE 5.8.2
+// (parser target 5.8).
+// Consumed enum values and CustomSettings/LanguageType identities were
+// revalidated from current native reflection metadata. Revalidate on Steam build ID
+// change. Editor-only; never ship.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/GameUserSettings.h"
+#include "VoyageGameUserSettings.generated.h"
+
+UENUM(BlueprintType)
+enum class EVoyageLanguageType : uint8
+{
+    System = 0,
+    English = 1,
+    Russian = 11
+};
+
+USTRUCT(BlueprintType)
+struct VOYAGE_API FVoyageCustomGameUserSettings
+{
+    GENERATED_BODY()
+
+    UPROPERTY(Category="VoyageCustomGameUserSettings", EditAnywhere, BlueprintReadWrite)
+    EVoyageLanguageType LanguageType = EVoyageLanguageType::System;
+};
+
+UCLASS(BlueprintType)
+class VOYAGE_API UVoyageGameUserSettings : public UGameUserSettings
+{
+    GENERATED_BODY()
+
+public:
+    UPROPERTY(Category="VoyageGameUserSettings", BlueprintReadWrite)
+    FVoyageCustomGameUserSettings CustomSettings;
+};

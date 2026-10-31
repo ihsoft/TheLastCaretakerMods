@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "profile": "voyage-item-default-generator-v1",
+  "asset": "/Game/Data/Assets/Modules/DA_Item_Module_GyroCopter",
+  "patches": [
+    {
+      "property": "DroppedActor",
+      "expect": "/Game/Blueprints/Vehicles/BP_GyroCopter_Possessable.BP_GyroCopter_Possessable_C",
+      "value": "/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.BP_GyroCopter_StablePilot_C"
+    }
+  ]
+}

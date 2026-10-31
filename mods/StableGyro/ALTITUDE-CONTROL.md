@@ -402,8 +402,8 @@ function
 `KismetSystemLibrary.SetBoolPropertyByName(UObject, FName, bool)`. It resolves
 an `FBoolProperty` and writes it without treating BlueprintReadOnly as a setter
 restriction. StableGyro calls this real Engine function and keeps the mirror
-properties' actual readonly flags. The generator validates the exact function,
-property names and types; the shipped graph does not add a runtime setter
+properties' actual readonly flags. The maintained graphs retain that function
+and those property identities; the shipped graph does not add a runtime setter
 readback or invent writable native flags.
 
 ## Shipped ownership and restoration
@@ -414,7 +414,7 @@ refer to these actions' defaults, not runtime key tests. Down takes precedence
 when both actions are active. These input values express player commands;
 native changes to `Collective` or `CurrentThrottle` do not activate them.
 
-The generated pitch helper runs in `TG_PrePhysics`, before the native Gyro. At
+The pitch helper runs in `TG_PrePhysics`, before the native Gyro. At
 BeginPlay it caches its parent Gyro and the sibling PostPhysics stabilization
 helper through the owned child components; it does not rediscover them per tick.
 
