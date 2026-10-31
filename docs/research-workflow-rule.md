@@ -45,6 +45,19 @@ requirements in [the game-derived data rules](game-derived-data-rule.md).
 
 ## Working backlogs for large tasks
 
+Until the requested end state works and all required acceptance checks pass,
+record implementation mistakes, findings, decisions, and open checks in the
+local ignored backlog. Do not edit durable documentation to describe a proposed
+or partially working result, even as an uncommitted draft. A successful subtest
+is evidence for the backlog, not completion of the task. Routine implementation
+issues should be resolved by the agent; consult the user on process decisions,
+scope, ownership, and acceptance criteria when those remain unresolved.
+
+On completion, use the backlog to formulate the final durable documentation.
+Document the resulting verified contracts, not the investigation chronology.
+An explicit user request to establish a general process rule may be handled
+immediately; it does not authorize premature documentation of the implementation.
+
 Work history is overhead. Use a backlog only for a large investigation or a
 prolonged fix that needs continuity across compaction or work sessions. Keep it
 local, with the owning mod, outside `Tmp/` so routine cleanup cannot remove it,
@@ -117,7 +130,7 @@ narrower step cannot answer the question or has already failed to do so.
   implementation, configuration, and producer changes uncommitted while their
   intended runtime behavior awaits a real-game test, unless the user explicitly
   authorizes that exact unvalidated checkpoint. Keep proposed current-state
-  documentation uncommitted until the runtime gate passes.
+  contracts in the ignored backlog until the required acceptance gates pass.
   A successful build, structural comparison, installation, clean load, or
   other lower gate authorizes the next test, not a commit. State every
   checkpoint's evidence and validation boundary and do not present it as a

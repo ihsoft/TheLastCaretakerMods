@@ -49,10 +49,13 @@
   [hash rule](hash-usage-rule.md).
   Promote validated conclusions as general contracts without candidate labels;
   retain version/fingerprint restrictions when they determine applicability.
-  Durable documentation describes accepted repository state. Do not update it
-  ahead of a pending runtime gate: when a behavior or presentation claim needs
-  a real-game test, keep the proposed documentation change uncommitted until
-  that test passes. Describe capabilities only at the level supported by their
+  Durable documentation describes accepted repository state. Until the requested
+  end state and its required acceptance checks pass, keep findings and proposed
+  contracts in the ignored backlog, not in documentation edits, including
+  uncommitted drafts. Follow the
+  [research workflow](research-workflow-rule.md#working-backlogs-for-large-tasks)
+  for final documentation derived from that backlog. Describe capabilities only
+  at the level supported by their
   evidence; build, structural, installation and clean-load success do not
   establish gameplay behavior.
 - Before committing documentation, make every link to a repository-local file
