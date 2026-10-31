@@ -168,12 +168,14 @@ class SupportTests(unittest.TestCase):
         def fake_uat(command, log):
             supplied = Path(next(arg[8:] for arg in command if isinstance(arg, str) and arg.startswith('-Plugin=')))
             packaged = Path(next(arg[9:] for arg in command if isinstance(arg, str) and arg.startswith('-Package=')))
+            self.assertLess(len(str(packaged)), 100)
             support.write(supplied.parent / 'Config/FilterPlugin.ini', {'uat': 'creates this'})
             shutil.copytree(self.package, packaged)
         package = support.build_package(source / 'ExampleSupport.uplugin', self.engine, self.output, fake_uat)
         self.assertEqual(support.tree(source), original)
         self.assertTrue((package / support.MANIFEST).is_file())
         self.assertFalse((self.output / 'input-plugin').exists())
+        self.assertFalse((self.output / 'build-scratch.json').exists())
 
 
 if __name__ == '__main__':

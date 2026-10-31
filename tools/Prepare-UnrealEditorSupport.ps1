@@ -2,7 +2,7 @@
 .SYNOPSIS
 Build or reuse a native support plugin and attach editor binaries to an Unreal project.
 #>
-[CmdletBinding(DefaultParameterSetName='Package')]
+[CmdletBinding(DefaultParameterSetName='Project')]
 param(
     [Parameter(Mandatory)][string]$ProjectFile,
     [Parameter(Mandatory,ParameterSetName='Source')][string]$PluginSource,
@@ -18,5 +18,6 @@ $arguments=@('-B',(Join-Path $PSScriptRoot 'UnrealEditorSupport/editor_support.p
 if($PluginSource) { $arguments+=@('--source',[IO.Path]::GetFullPath($PluginSource)) }
 if($PluginPackage) { $arguments+=@('--package',[IO.Path]::GetFullPath($PluginPackage)) }
 if($Recover) { $arguments+='--recover' }
+if($PSCmdlet.ParameterSetName -eq 'Project') { $arguments+='--project-dependencies' }
 if($OutputRoot) { $arguments+=@('--output',[IO.Path]::GetFullPath($OutputRoot)) }
 & (Join-Path $PSScriptRoot 'Invoke-UnrealQueued.ps1') -Operation 'Prepare Unreal editor support' -FilePath $python -ArgumentList $arguments

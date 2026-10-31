@@ -23,6 +23,9 @@ class WorkspaceTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.queue_mock=patch.object(bw,'engine_slot',return_value=nullcontext())
         self.queue_mock.start();self.addCleanup(self.queue_mock.stop)
+        for name, value in [('prepare_project', []), ('prepare_provider', {'built': False})]:
+            mock = patch.object(bw, name, return_value=value)
+            mock.start(); self.addCleanup(mock.stop)
         self.project = self.root / 'Project/Test.uproject'
         bw.write(self.project, {})
         self.ws = bw.Workspace(self.root / 'Session', self.root / 'Engine')
@@ -58,6 +61,27 @@ class WorkspaceTests(unittest.TestCase):
         source['defaults']['Amount'] = '2.000000'
         bw.write(self.source, source)
         return source
+
+    def test_ready_provider_prepares_project_dependencies_without_project_build(self):
+        events = []
+        with patch.object(bw, 'prepare_project', side_effect=lambda *args: events.append('project') or []) as dependencies, \
+             patch.object(bw, 'prepare_provider', side_effect=lambda *args: events.append('bpt') or {'built': True}) as provider, \
+             patch.object(self.ws, 'command') as build:
+            result = self.ws.prepare(self.project)
+        self.assertEqual(events, ['project', 'bpt'])
+        self.assertTrue(result['binaryProvider']['built'])
+        self.assertEqual(provider.call_args.args[3].name, 'BlueprintTextWorkspace.uplugin')
+        build.assert_not_called()
+        self.assertFalse((self.project.parent / 'Source').exists())
+
+    def test_ready_provider_failure_prevents_export(self):
+        # Export must be a complete cold-start entry point, not require Prepare first.
+        self.ws = bw.Workspace(self.root / 'ColdExport', self.root / 'Engine')
+        with patch.object(bw, 'prepare_provider', side_effect=RuntimeError('provider failed')), \
+             patch.object(self.ws, 'export_one') as export:
+            with self.assertRaisesRegex(RuntimeError, 'provider failed'):
+                self.ws.export(self.project, [self.document['asset']])
+        export.assert_not_called()
 
     def test_prepare_refresh_preserves_existing_module_and_reuses_current(self):
         module = self.project.parent / 'Source/BlueprintText'

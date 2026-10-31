@@ -10,7 +10,50 @@ This mechanism is independent of BlueprintText and game-specific patching.
 The owner of a mod or tool supplies the plugin's source, reflected types and
 stub implementations. This tool supplies no game classes and does not infer
 schemas, edit assets, generate Blueprint graphs, cook a release or install a mod
-into the game. BPT and mod producers are not automatically integrated with it.
+into the game. BPT workspaces and the VoyageItem updater prepare declared project
+dependencies through this mechanism; other producers must call it explicitly.
+
+## Prepare declared project dependencies
+
+Place `EditorSupport.json` beside the `.uproject`. Each entry names an
+owner-maintained source plugin and optional additional source trees:
+
+```json
+{
+  "schema": 1,
+  "plugins": [{
+    "source": "EditorSupport/ExampleSupport.uplugin",
+    "overlays": [{
+      "source": "../../../tools/SharedSupport/Profile",
+      "destination": "Source/Game"
+    }]
+  }]
+}
+```
+
+The plugin source path is relative to the project. Overlay source paths are
+relative to that plugin descriptor; destinations must be below its `Source/`.
+They add files to a private build input, never overwrite an existing destination
+or write copies back into the owner sources. Duplicate plugin/module identities
+and file ownership collisions fail. This permits shared and mod-owned definitions
+to compile into one required `/Script/<Module>` without moving their ownership.
+
+```powershell
+./tools/Prepare-UnrealEditorSupport.ps1 -ProjectFile './mods/Example/Example.uproject'
+```
+
+This mode reads the declaration, builds missing/changed providers, installs them
+and checks loading. Identical source bytes and editor `BuildId` reuse the installed
+package without compilation, with a fresh load check. Exact input snapshots live
+under the project's ignored `Saved/UnrealEditorSupport/inputs/`; removing that
+cache causes a rebuild. An absent declaration means no declared dependencies.
+The result contains a `providers` list with each provider's status and `built` flag.
+
+Transactions apply to each plugin. A successfully prepared dependency can remain
+installed if a later provider fails; rerunning verifies and reuses it. No asset
+refresh is performed by dependency preparation. Project declarations, plugin
+descriptors and owned sources belong in Git; installed DLL packages and input
+caches do not.
 
 ## Build and attach
 
@@ -22,9 +65,11 @@ Provide an existing project and a buildable, owner-maintained source plugin:
   -PluginSource './mods/Example/EditorSupport/ExampleSupport.uplugin'
 ```
 
-The tool uses Unreal's `BuildPlugin -NoTargetPlatforms` in a private build
-directory. The returned `package` contains the plugin descriptor, Win64 editor
-DLLs, `UnrealEditor.modules`, and `editor-support.json`. It contains no C++ source,
+The tool uses Unreal's `BuildPlugin -NoTargetPlatforms` in a shallow private build
+directory below `Tmp/UnrealEditorSupport/`, independent of the evidence path's
+depth. This keeps compiler paths short enough for the covered providers under
+UBT's action-path length limit. The returned `package` contains the plugin
+descriptor, Win64 editor DLLs, `UnrealEditor.modules`, and `editor-support.json`. It contains no C++ source,
 build rules, targets, PDBs, import libraries or game assets. The private UAT build
 tree is removed after successful packaging; build and load diagnostics remain.
 
@@ -69,6 +114,8 @@ managed installation uses complete replacement at the same plugin identity.
   sources must satisfy Unreal's plugin compilation rules, including explicit
   categories for exposed properties/functions. Plugin modules use ordinary
   module registration, not primary-game registration.
+  When moving project definitions into a plugin, preserve their former default
+  categories explicitly; a new blanket category can change exported graph metadata.
 - Existing project/plugin modules with colliding names are rejected. Moving
   classes out of a project module is an explicit owner migration, not something
   this tool silently performs. An explicitly disabled plugin remains disabled.
@@ -79,7 +126,8 @@ managed installation uses complete replacement at the same plugin identity.
 The compact result reports `status` (`prepared`, `unchanged`, or `failed`),
 `project`, `plugin`, `package`, `built`, `engineBuildId`, `loadedModules`, and the
 `evidence` directory. Successful source/package calls also save `result.json`.
-Failure returns a nonzero exit and a diagnostic location; do not treat an
+Failure returns a nonzero exit and a diagnostic location. A failed compiler run
+retains `build-scratch.json` pointing to its private scratch. Do not treat an
 existing package or an old successful result as success for the failed call.
 
 The load check temporarily enables the engine's PythonScriptPlugin through the
@@ -110,7 +158,7 @@ transaction staging and backups.
 Offline transaction tests use synthetic binary bytes, not game data:
 
 ```powershell
-python -B tools/UnrealEditorSupport/tests/test_editor_support.py
+python -B -m unittest discover -s tools/UnrealEditorSupport/tests -p "test_*.py"
 ```
 
 The engine test uses the checked-in, game-independent `SupportFixture` plugin.

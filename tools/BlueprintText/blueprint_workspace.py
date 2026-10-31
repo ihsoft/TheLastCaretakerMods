@@ -15,6 +15,7 @@ import asset_text_codec as codec
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from unreal_coordination import engine_slot
+from UnrealEditorSupport.project_support import prepare_project, prepare_provider
 
 HERE = Path(__file__).resolve().parent
 OWNER = HERE.parents[1] / 'Tmp' / 'BlueprintText'
@@ -298,6 +299,7 @@ class Workspace:
             path = self.run / f'group-{i}.native.json'
             write(path, {'assets': [codec.native(d) for d in level]})
             inputs.append(path)
+        self.prepare(self.project)
         records = []
         for _, _, document in entries:
             file = target(self.project, document['asset'])
@@ -353,6 +355,7 @@ class Workspace:
         for asset in assets:
             if not target(self.project, asset).is_file():
                 raise ValueError('Selected asset is missing: ' + asset)
+        self.prepare(self.project)
         baseline, records = {}, []
         for i, asset in enumerate(assets):
             file = target(self.project, asset)
@@ -552,14 +555,16 @@ class Workspace:
         project_data = read(self.project)
         if any(p.get('Name') == 'BlueprintTextWorkspace' and p.get('Enabled') is False for p in project_data.get('Plugins', [])):
             raise ValueError('Project explicitly disables BlueprintTextWorkspace; enable it before Prepare')
+        support_results = prepare_project(self.project, self.engine, self.run / 'project-support')
         if not providers:
-            plugin = self.project.parent / 'Plugins' / 'BlueprintTextWorkspace'
-            if plugin.exists():
-                raise ValueError('Plugin directory already exists without expected module: ' + str(plugin))
-            shutil.copytree(HERE / 'ProjectTemplate/Source/BlueprintText', plugin / 'Source/BlueprintText')
-            write(plugin / 'BlueprintTextWorkspace.uplugin', dict(FileVersion=3, Version=1, VersionName='1', FriendlyName='Blueprint text workspace',
-                  CanContainContent=False, EnabledByDefault=True, Modules=[dict(Name='BlueprintText', Type='Editor', LoadingPhase='Default')]))
-        module = providers[0].parent if providers else plugin / 'Source/BlueprintText'
+            result = prepare_provider(self.project, self.engine, self.run / 'bpt-support',
+                                      HERE / 'EditorSupport/BlueprintTextWorkspace.uplugin',
+                                      [dict(source='../ProjectTemplate/Source/BlueprintText', destination='Source/BlueprintText')])
+            return dict(status='prepared', project=str(self.project), moduleIdentity='BlueprintText',
+                        binaryProvider=result, projectSupport=support_results)
+        # Preserve existing explicit source-module projects and their legacy identity.
+        # New consumers and migrated projects use the ready provider above.
+        module = providers[0].parent
         module_backup = self.refresh_module(module)
         editor_targets = []
         for path in (self.project.parent / 'Source').glob('*.Target.cs'):

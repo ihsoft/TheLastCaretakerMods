@@ -52,13 +52,25 @@ starts from at least one existing Blueprint, so an empty project's first
 Blueprint must be created in the editor before that first export. Subsequent
 Blueprints can be added directly through JSON.
 
-Use an existing Unreal project with its required resources and native modules.
-Warn the user before engine actions; the shared queue waits for Unreal to be free. `Prepare`
-provides/builds the shared editor tooling; it does not run a mod generator.
-It installs the shared editor plugin when absent, or refreshes an existing
-`BlueprintText` module from the current shared template. Before replacing
-different module files it preserves their complete previous contents in the
-returned `moduleBackup`; other project modules are not replaced.
+Use an existing Unreal project with its required resources. Declare native
+dependencies in [EditorSupport.json](unreal-editor-support.md#prepare-declared-project-dependencies)
+when it needs owner-supplied native classes. Warn before engine actions; the
+shared queue waits for Unreal to be free. Export, changed Apply and Preview
+prepare those dependencies and the BPT tooling themselves. No separate preparation,
+DLL selection or project build is needed before a normal workspace call.
+
+New consumers receive a ready `BlueprintTextWorkspace` plugin without C++ or
+build sources. Unchanged provider sources and editor identity reuse its binaries;
+changed inputs rebuild through the common support tool. This does not generate
+game assets or refresh a mod's DataAssets. `Prepare` remains available as an explicit
+dependency/tooling-only operation.
+
+Existing explicit source providers keep their supported path: preparation
+refreshes the `BlueprintText` module from the shared template and builds their
+project. Before replacing different module files it preserves their complete
+previous contents in `moduleBackup`; other project modules are not replaced.
+Moving an existing project's native definitions to a binary provider is an explicit
+owner migration, not automatic source deletion.
 Keep workspaces under `Tmp/BlueprintText/`.
 Existing workspaces and installed shared modules using the previous names remain
 supported by the current entry points. Run Prepare to refresh their module; do
@@ -72,7 +84,6 @@ project uses an engine outside the wrapper's default installation.
 $tool = './tools/BlueprintText/Invoke-BlueprintWorkspace.ps1'
 $project = 'R:/path/to/Project.uproject'
 $work = './Tmp/BlueprintText/edit-example'
-& $tool -Action Prepare -ProjectFile $project -WorkspaceRoot $work
 & $tool -Action Export -ProjectFile $project -WorkspaceRoot $work `
   -Asset @('/Game/Mods/Example/ModActor', '/Game/UI/ExampleHUD')
 ```

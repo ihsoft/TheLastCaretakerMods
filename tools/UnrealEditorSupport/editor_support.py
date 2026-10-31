@@ -33,7 +33,7 @@ def unlinked(path):
     path = Path(path).absolute()
     for candidate in (path, *path.parents):
         require(not candidate.is_symlink() and not candidate.is_junction(), f'Linked path is unsupported: {candidate}')
-    return path
+    return path.resolve()
 
 
 def tree(path):
@@ -115,10 +115,15 @@ def build_package(source, engine, output, runner=run):
     require(not output.is_relative_to(source.parent), 'Build output must be outside the source plugin tree')
     # UAT may create Config/FilterPlugin.ini beside its input. Give it a private
     # source copy as well as a private HostProject; never rewrite the owner's input.
-    private = output / 'input-plugin'
+    # UBT still rejects action paths over 260 characters. Keep compiler scratch
+    # shallow regardless of the caller's evidence/workspace directory depth.
+    scratch = ROOT / 'Tmp/UnrealEditorSupport' / ('b-' + uuid.uuid4().hex[:8])
+    scratch.mkdir(parents=True)
+    write(output / 'build-scratch.json', dict(path=str(scratch)))
+    private = scratch / 'input'
     shutil.copytree(source.parent, private, ignore=shutil.ignore_patterns('Binaries', 'Intermediate', 'Saved', '.git'))
     build_source = private / source.name
-    built = output / 'uat-package'
+    built = scratch / 'package'
     batch = engine / 'Engine/Build/BatchFiles/RunUAT.bat'
     for path in (build_source, batch, built):
         require(not any(c in str(path) for c in '&|<>^%!"\r\n'), 'Unsupported command-shell characters in build path')
@@ -136,8 +141,8 @@ def build_package(source, engine, output, runner=run):
                 files={name: len(data) for name, data in tree(package).items()})
     write(package / MANIFEST, info)
     package_info(package, engine_identity(engine))
-    remove_owned(built, output)
-    remove_owned(private, output)
+    remove_owned(scratch, ROOT / 'Tmp/UnrealEditorSupport')
+    (output / 'build-scratch.json').unlink()
     return package
 
 
@@ -257,6 +262,7 @@ def main():
     choice.add_argument('--source')
     choice.add_argument('--package')
     choice.add_argument('--recover', action='store_true')
+    choice.add_argument('--project-dependencies', action='store_true')
     parser.add_argument('--output')
     args = parser.parse_args()
     output = None
@@ -273,6 +279,14 @@ def main():
         output.mkdir(parents=True)
         created_output = True
         require(not recovery_path(project).exists(), 'Interrupted preparation requires -Recover')
+        if args.project_dependencies:
+            sys.path.insert(0, str(ROOT / 'tools'))
+            from UnrealEditorSupport.project_support import prepare_project
+            providers = prepare_project(project, engine, output)
+            result = dict(status='prepared', project=str(project), providers=providers, evidence=str(output))
+            write(output / 'result.json', result)
+            print(json.dumps(result))
+            return 0
         package = build_package(Path(args.source), engine, output) if args.source else unlinked(args.package)
         status = attach(project, package, engine, output)
         result = dict(status=status, project=str(project), plugin=read(package / MANIFEST)['plugin'],
