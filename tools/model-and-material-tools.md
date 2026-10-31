@@ -7,7 +7,7 @@ for that operation's syntax, result, and representation boundary:
 | --- | --- | --- |
 | Convert or preview an editable GLB | [GLB tools](glb-tools.md) | GLB or preview |
 | Export one stock mesh or Blueprint default assembly | [Model export](model-export.md) | Static geometry GLB |
-| Cook authored GLB geometry as Voyage StaticMesh assets | [StaticMesh tools](static-mesh-assets.md) | Loose cooked asset packages |
+| Build authored GLB geometry as Voyage StaticMesh assets | [StaticMesh tools](static-mesh-assets.md) | Editor packages or loose cooked packages |
 | Inspect or validate an exact cooked StaticMesh | [StaticMesh tools](static-mesh-assets.md) | Inspection and policy reports |
 | Export stock materials for visual reference | [Material export](material-export.md) | Material sample GLB |
 | Render material samples | [Material export](material-export.md) | PNG contact sheet |

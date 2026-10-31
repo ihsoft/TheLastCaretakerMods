@@ -1,15 +1,19 @@
 # PUBLIC TOOL: imports one or more GLB meshes through Unreal's native StaticMesh
-# pipeline, builds optional Nanite and ray-tracing data, cooks only the requested
-# /Game packages, and returns loose cooked files. It never packages or installs.
+# pipeline and builds optional Nanite and ray-tracing data. By default it cooks
+# the requested /Game packages; Uncooked returns editor mesh packages instead.
+# It never installs into a project or assembles a mod container.
 
 <#
 .SYNOPSIS
-Builds loose cooked Voyage StaticMesh assets from a strict JSON manifest.
+Builds cooked or uncooked Voyage StaticMesh assets from a strict JSON manifest.
 
 .DESCRIPTION
 Normal callers use the published UE 5.8 host. OutputRoot must be a new directory
 below this repository's Tmp directory. Relative source paths are resolved from
 the manifest directory. Only /Game destinations are supported in schema v1.
+OutputKind defaults to Cooked. Uncooked skips cook and emits only selected
+editor mesh packages; referenced materials must be supplied by the target
+project. This command does not install or validate a replacement in that project.
 
 .EXAMPLE
 .\tools\New-VoyageStaticMeshAssets.ps1 -ShowSchema
@@ -26,6 +30,7 @@ the manifest directory. Only /Game destinations are supported in schema v1.
 param(
     [Parameter(Mandatory=$true, ParameterSetName='Build')][string]$Manifest,
     [Parameter(Mandatory=$true, ParameterSetName='Build')][string]$OutputRoot,
+    [Parameter(ParameterSetName='Build')][ValidateSet('Cooked','Uncooked')][string]$OutputKind = 'Cooked',
     [Parameter(ParameterSetName='Build')][string]$EvidenceRoot,
     [Parameter(ParameterSetName='Build')][string]$EngineRoot = 'K:\Epic Games\UE_5.8\Engine',
     [Parameter(Mandatory=$true, ParameterSetName='Schema')]
@@ -163,7 +168,8 @@ if ($ShowSchema) {
         behavior=@(
             'Unknown fields fail before Unreal launches.',
             'Embedded GLB shader fidelity is unsupported and explicitly reported; materialMode controls replacement/reference behavior.',
-            'Outputs are loose cooked assets only; this tool never packages or installs.'
+            'OutputKind defaults to Cooked; Uncooked emits selected editor mesh packages without cooking. Neither mode installs into a project.',
+            'Uncooked output excludes external material stubs and other imported dependencies; the target project must supply referenced materials.'
         )
     } | ConvertTo-Json -Depth 12
     return
@@ -313,6 +319,48 @@ try {
         throw "Native import/build produced no summary ($($process.ExitCode)). Log: $generateLog"
     }
     if ($process.ExitCode -ne 0) { throw "Native import/build returned $($process.ExitCode) after a passed summary. Log: $generateLog" }
+
+    if ($OutputKind -eq 'Uncooked') {
+        $staged = Join-Path $evidence 'staged'
+        $fileRecords = @()
+        foreach ($asset in $assets) {
+            $relative = 'Content/' + $asset.packagePath.Substring('/Game/'.Length) + '.uasset'
+            $source = Join-Path $executionHost $relative
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+                throw "Editor build did not produce requested package: $source"
+            }
+            $destination = Join-Path $staged $relative
+            $null = New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force
+            Copy-Item -LiteralPath $source -Destination $destination
+            if ((Get-FileHash -LiteralPath $source).Hash -cne (Get-FileHash -LiteralPath $destination).Hash) {
+                throw "Editor package copy failed verification: $relative"
+            }
+            $fileRecords += [ordered]@{path=$relative;length=(Get-Item -LiteralPath $destination).Length}
+        }
+        foreach ($source in $sources) {
+            if ((Get-Item -LiteralPath $source.path).Length -ne $source.length -or
+                (Get-FileHash -LiteralPath $source.path -Algorithm SHA256).Hash -cne $source.operationDigest) {
+                throw "Input changed during build: $($source.path)"
+            }
+        }
+        Write-Utf8Json (Join-Path $staged 'build-result.json') ([ordered]@{
+            schemaVersion=1;status='passed';outputKind='Uncooked';engine=$builder.Engine
+            normalizedRequest=$normalized;assets=$editorSummary.assets
+            limitations=@('Selected editor mesh packages only; referenced materials must exist in the target project.',
+                'No target-project installation, reopen validation, cook, or runtime validation has been performed.')
+        })
+        Write-Utf8Json (Join-Path $staged 'output-manifest.json') ([ordered]@{
+            schemaVersion=1;kind='Voyage uncooked StaticMesh assets';files=$fileRecords
+            assetObjectPaths=@($assets | ForEach-Object { $_.packagePath + '.' + $_.objectName })
+        })
+        Move-Item -LiteralPath $staged -Destination $output
+        # Both paths were constrained to disjoint directories below repository Tmp.
+        Remove-Item -LiteralPath $evidence -Recurse -Force
+        [pscustomobject]@{status='passed';outputKind='Uncooked';outputRoot=$output
+            buildResultPath=(Join-Path $output 'build-result.json')
+            outputManifestPath=(Join-Path $output 'output-manifest.json');assetCount=$assets.Count} | ConvertTo-Json -Compress
+        return
+    }
 
     $cookLog = Join-Path $evidence 'cook.log'
     $packages = @($assets | ForEach-Object packagePath)

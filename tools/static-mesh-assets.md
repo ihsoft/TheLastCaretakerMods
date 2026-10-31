@@ -1,6 +1,6 @@
 # StaticMesh preparation and inspection
 
-Use these tools when authored GLB geometry must become cooked Voyage
+Use these tools when authored GLB geometry must become editor or cooked Voyage
 `StaticMesh` assets, or when an exact cooked mesh must be inspected. They are
 independent: inspection works on stock assets and containers produced by any
 builder.
@@ -8,13 +8,14 @@ builder.
 | Task | Public entry point | Result |
 | --- | --- | --- |
 | Import, build, and cook authored GLB meshes | `New-VoyageStaticMeshAssets.ps1` | Loose cooked packages and a build manifest |
+| Build complete editor mesh packages from authored GLB meshes | `New-VoyageStaticMeshAssets.ps1 -OutputKind Uncooked` | Selected `.uasset` packages and a build manifest |
 | Inspect cooked mesh data and evaluate explicit criteria | `Test-VoyageStaticMesh.ps1` | `inspection.json` and `validation.json` |
 
 Use [model export](model-export.md) instead when the desired result is an
 editable GLB representation of a stock asset. Neither StaticMesh tool assembles
 a mod container, installs files, or proves runtime rendering.
 
-## Build cooked StaticMesh assets
+## Build StaticMesh assets
 
 Create a JSON manifest. Relative source paths resolve from the manifest's
 directory. This minimal request uses the builder's documented defaults:
@@ -57,7 +58,7 @@ field reference. Important per-asset controls include:
 - `DefaultEngine` materials or exact `ExternalReferences` bindings;
 - optional triangle-count assertions owned by the caller.
 
-The output directory contains `Content/...` loose cooked companions,
+The default `-OutputKind Cooked` output contains `Content/...` loose cooked companions,
 `build-result.json`, and `output-manifest.json`. Preserve every emitted
 companion when packaging the asset. The compact command result gives these
 manifest paths and the output root. Internal Unreal workspace, DDC, and logs
@@ -68,13 +69,36 @@ Schema version 1 accepts GLB input and `/Game` destinations. An ambiguous GLB
 fails with its discovered mesh names; set `sourceMesh` to one exact name and
 retry.
 
-Schema version 1 does not cook materials or textures imported from the GLB.
+Neither output mode includes materials or textures imported from the GLB.
 It preserves the imported material-slot names, then replaces every slot with
 the engine default or an explicit reference to an existing Unreal material.
 That reference may identify a stock game or engine material, or a custom
 material supplied by another package. The builder serializes its identity but
 does not include the referenced material; the eventual container must provide
 every non-stock dependency separately.
+
+### Editor packages
+
+Add `-OutputKind Uncooked` to the same public call to skip cooking and return
+complete editor mesh packages under `Content/...`, plus `build-result.json`
+and `output-manifest.json`. The result identifies `outputKind: Uncooked`.
+The same import, Nanite, fallback, ray-tracing and material-binding controls
+apply. Only the requested mesh packages are emitted; temporary material stubs
+and other imported dependencies are excluded.
+
+The target project must supply referenced materials or suitable editor stubs.
+Bindings preserve material identity, not shader appearance. The producer does
+not install or merge assets into that project. A consumer that refreshes
+maintained assets owns complete package replacement at the declared paths,
+backup/recovery, and reopening to check existing references. It must keep
+unrelated project assets intact. Each tool call requires a fresh `OutputRoot`;
+an existing output directory is rejected rather than updated.
+
+Successful generation establishes the standalone editor packages, not their
+behavior after installation or cooking in another project. The target project's
+render settings affect cooked Nanite, fallback and ray-tracing data. Validate
+the final cooked representations using the consumer's explicit criteria; see
+[StaticMesh cooking and validation](../docs/static-mesh-cooking-knowledge.md).
 
 ## Inspect or validate a cooked StaticMesh
 
