@@ -649,14 +649,14 @@ if ((Test-Path -LiteralPath $jsonPath -PathType Leaf) -and
     $provenanceFailures = [Collections.Generic.List[string]]::new()
     if ([int](Get-OptionalPropertyValue -Object $manifest -Name 'cacheSchemaVersion') -ne $cacheSchemaVersion) { $provenanceFailures.Add('cacheSchemaVersion') }
     if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'source') -cne 'Game') { $provenanceFailures.Add('source') }
-    if ([string]$manifest.kind -cne 'Voyage cached asset JSON') { $provenanceFailures.Add('kind') }
-    if ([string]$manifest.steamBuildId -cne $steamBuildId) { $provenanceFailures.Add('steamBuildId') }
-    if ([string]$manifest.gameContainersSha256 -cne [string]$gameContainerSet.gameContainersSha256) { $provenanceFailures.Add('gameContainersSha256') }
-    if ([string]$manifest.virtualPath -cne $virtualPath) { $provenanceFailures.Add('virtualPath') }
-    if ([string]$manifest.mappingManifestUpdatedUtc -cne (Get-Item -LiteralPath $mapping.manifestPath).LastWriteTimeUtc.ToString('o')) { $provenanceFailures.Add('mappingManifestUpdatedUtc') }
-    if ([string]$manifest.inspectorPublication -cne $inspectorPublication) { $provenanceFailures.Add('inspectorPublication') }
-    if ([string]$manifest.jsonSha256 -cne $actualJsonHash) { $provenanceFailures.Add('jsonSha256') }
-    if ([long]$manifest.jsonLength -ne (Get-Item -LiteralPath $jsonPath).Length) { $provenanceFailures.Add('jsonLength') }
+    if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'kind') -cne 'Voyage cached asset JSON') { $provenanceFailures.Add('kind') }
+    if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'steamBuildId') -cne $steamBuildId) { $provenanceFailures.Add('steamBuildId') }
+    if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'gameContainersSha256') -cne [string]$gameContainerSet.gameContainersSha256) { $provenanceFailures.Add('gameContainersSha256') }
+    if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'virtualPath') -cne $virtualPath) { $provenanceFailures.Add('virtualPath') }
+    if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'mappingManifestUpdatedUtc') -cne (Get-Item -LiteralPath $mapping.manifestPath).LastWriteTimeUtc.ToString('o')) { $provenanceFailures.Add('mappingManifestUpdatedUtc') }
+    if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'inspectorPublication') -cne $inspectorPublication) { $provenanceFailures.Add('inspectorPublication') }
+    if ([string](Get-OptionalPropertyValue -Object $manifest -Name 'jsonSha256') -cne $actualJsonHash) { $provenanceFailures.Add('jsonSha256') }
+    if ([long](Get-OptionalPropertyValue -Object $manifest -Name 'jsonLength') -ne (Get-Item -LiteralPath $jsonPath).Length) { $provenanceFailures.Add('jsonLength') }
     if ($provenanceFailures.Count -gt 0) {
         Write-Warning "Discarding stale game asset JSON ($($provenanceFailures -join ', ')): $jsonPath"
         [IO.File]::Delete($jsonPath)
