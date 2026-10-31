@@ -6,6 +6,7 @@ failure handling.
 | Intent | Public entry point | Guide |
 | --- | --- | --- |
 | Wait for a shared Unreal execution slot and run a producer | `Invoke-UnrealQueued.ps1` | [Unreal coordination](unreal-coordination.md) |
+| Build or attach a native editor-support plugin, or recover its installation | `Prepare-UnrealEditorSupport.ps1` | [Unreal editor support](unreal-editor-support.md) |
 | Import/export Blueprint text or discover operations | `BlueprintText/Invoke-BlueprintText.ps1` | [BlueprintText](blueprint-text.md) |
 | Operate a Blueprint JSON workspace in an existing project | `BlueprintText/Invoke-BlueprintWorkspace.ps1` | [Blueprint workspace](blueprint-workspace.md) |
 | Import/export supported Actor/Widget Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintText/Invoke-BlueprintAssetText.ps1` | [BlueprintText](blueprint-text.md#schema-2-blueprints) |

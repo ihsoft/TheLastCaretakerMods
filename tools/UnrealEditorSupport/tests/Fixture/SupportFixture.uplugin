@@ -1,0 +1,9 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "test-1",
+  "FriendlyName": "Editor support test fixture",
+  "CanContainContent": false,
+  "SupportedTargetPlatforms": ["Win64"],
+  "Modules": [{"Name": "SupportFixture", "Type": "Runtime", "LoadingPhase": "Default"}]
+}
