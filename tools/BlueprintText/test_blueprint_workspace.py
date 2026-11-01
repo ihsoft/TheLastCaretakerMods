@@ -216,6 +216,118 @@ class WorkspaceTests(unittest.TestCase):
             self.ws.apply()
         self.assertEqual(b'editor modified', self.file.read_bytes())
 
+    def test_conflict_after_journal_preserves_project_and_proposal(self):
+        desired = self.changed()
+        new = copy.deepcopy(self.document)
+        new['asset'] = '/Game/BP_New'
+        new_source = self.ws.root / 'blueprints/New.json'
+        bw.write(new_source, new)
+        manifest = bw.read(self.ws.manifest)
+        manifest['assets'].append(dict(source='blueprints/New.json'))
+        bw.write(self.ws.manifest, manifest)
+        new_file = bw.target(self.project, new['asset'])
+        baseline_path = self.ws.internal / 'baseline.json'
+        baseline_bytes = baseline_path.read_bytes()
+        journal = self.ws.internal / 'recovery.json'
+        original_write = bw.write
+        for conflict in ('replace', 'remove', 'create'):
+            with self.subTest(conflict=conflict):
+                self.file.write_bytes(b'original')
+                new_file.unlink(missing_ok=True)
+                def write_with_conflict(path, data):
+                    original_write(path, data)
+                    if path == journal:
+                        # The backup and journal exist, but Apply has not written an asset.
+                        if conflict == 'replace':
+                            self.file.write_bytes(b'editor modified')
+                        elif conflict == 'remove':
+                            self.file.unlink()
+                        else:
+                            new_file.write_bytes(b'editor created')
+                with patch.object(bw, 'write', side_effect=write_with_conflict), \
+                     patch.object(self.ws, 'engine_run') as engine:
+                    with self.assertRaisesRegex(ValueError, 'changed since|overwrite an unselected'):
+                        self.ws.apply()
+                engine.assert_not_called()
+                if conflict == 'remove':
+                    self.assertFalse(self.file.exists())
+                else:
+                    self.assertEqual(b'editor modified' if conflict == 'replace' else b'original', self.file.read_bytes())
+                if conflict == 'create':
+                    self.assertTrue(new_file.exists())
+                    self.assertEqual(b'editor created', new_file.read_bytes())
+                else:
+                    self.assertFalse(new_file.exists())
+                self.assertEqual(baseline_bytes, baseline_path.read_bytes())
+                self.assertEqual(desired, bw.read(self.source))
+                self.assertEqual(new, bw.read(new_source))
+                self.assertEqual(manifest, bw.read(self.ws.manifest))
+                self.assertFalse(journal.exists())
+                self.assertIsNone(self.ws.recovery_candidates)
+                self.assertFalse(self.ws.recover())
+
+    def test_recover_before_mutation_preserves_external_changes(self):
+        new_asset = '/Game/BP_New'
+        new_file = bw.target(self.project, new_asset)
+        new_file.write_bytes(b'editor created')
+        self.file.write_bytes(b'editor modified')
+        baseline_path = self.ws.internal / 'baseline.json'
+        baseline_bytes = baseline_path.read_bytes()
+        journal = self.ws.internal / 'recovery.json'
+        bw.write(journal, dict(project=str(self.project), baseline=self.ws.baseline(), restoreRequired=False,
+                 assets=[dict(asset=self.document['asset'], backup='original.uasset'), dict(asset=new_asset, backup=None)]))
+        # A new process must see that the interrupted Apply never entered its write phase.
+        workspace = bw.Workspace(self.ws.root, self.ws.engine)
+        workspace.project = self.project
+        self.assertFalse(workspace.recover())
+        self.assertEqual(b'editor modified', self.file.read_bytes())
+        self.assertEqual(b'editor created', new_file.read_bytes())
+        self.assertEqual(baseline_bytes, baseline_path.read_bytes())
+        self.assertFalse(journal.exists())
+        self.assertIsNone(workspace.recovery_candidates)
+
+    def test_failure_to_record_write_phase_never_starts_asset_writes(self):
+        self.changed()
+        baseline = self.ws.baseline()
+        journal = self.ws.internal / 'recovery.json'
+        original_write = bw.write
+        def fail_transition(path, data):
+            if path == journal and data.get('restoreRequired') is True:
+                raise OSError('cannot record write phase')
+            original_write(path, data)
+        with patch.object(bw, 'write', side_effect=fail_transition), \
+             patch.object(self.ws, 'engine_run') as engine:
+            with self.assertRaisesRegex(OSError, 'cannot record write phase'):
+                self.ws.apply()
+        engine.assert_not_called()
+        self.assertEqual(b'original', self.file.read_bytes())
+        self.assertEqual(baseline, self.ws.baseline())
+        self.assertFalse(journal.exists())
+        self.assertIsNone(self.ws.recovery_candidates)
+
+    def test_recovery_refuses_invalid_write_phase(self):
+        self.file.write_bytes(b'preserve current')
+        journal = self.ws.internal / 'recovery.json'
+        bw.write(journal, dict(project=str(self.project), baseline=self.ws.baseline(), restoreRequired='false',
+                 assets=[dict(asset=self.document['asset'], backup='original.uasset')]))
+        with self.assertRaisesRegex(ValueError, 'Invalid recovery restoreRequired'):
+            self.ws.recover()
+        self.assertEqual(b'preserve current', self.file.read_bytes())
+        self.assertTrue(journal.exists())
+
+    def test_rollback_after_deletion_before_engine_launch(self):
+        self.changed()
+        baseline = self.ws.baseline()
+        def fail(*args, **kwargs):
+            self.assertFalse(self.file.exists())
+            raise KeyboardInterrupt('interrupted before engine launch')
+        with patch.object(self.ws, 'engine_run', side_effect=fail):
+            with self.assertRaisesRegex(KeyboardInterrupt, 'before engine launch'):
+                self.ws.apply()
+        self.assertEqual(b'original', self.file.read_bytes())
+        self.assertEqual(baseline, self.ws.baseline())
+        self.assertFalse((self.ws.internal / 'recovery.json').exists())
+
     def test_rollback_after_partial_save(self):
         self.changed()
         def fail(*args, **kw):

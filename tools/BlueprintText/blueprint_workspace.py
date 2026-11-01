@@ -282,6 +282,14 @@ class Workspace:
         journal = read(journal_path)
         if journal['project'] != str(self.project):
             raise ValueError('Recovery project mismatch')
+        # Older journals (including MarkStubs) describe an active write operation.
+        restore_required = journal.get('restoreRequired', True)
+        if not isinstance(restore_required, bool):
+            raise ValueError('Invalid recovery restoreRequired flag')
+        if not restore_required:
+            # Only preparation ran; current assets may belong to an external editor.
+            journal_path.unlink()
+            return False
         # Retain every current candidate before changing any selected path. These
         # may contain partial engine saves or post-interruption manual edits.
         candidates = self.run / 'recovery-candidates'
@@ -343,9 +351,14 @@ class Workspace:
                     raise RuntimeError('Backup verification failed')
             records.append(dict(asset=document['asset'], backup=str(backup.relative_to(self.internal)) if file.exists() else None))
         journal = self.internal / 'recovery.json'
-        write(journal, dict(project=str(self.project), assets=records, baseline=baseline))
+        recovery = dict(project=str(self.project), assets=records, baseline=baseline, restoreRequired=False)
+        write(journal, recovery)
         try:
             self.check(entries)
+            # Persist the write phase before the first deletion, so interruption
+            # requires recovery even if ImportBatch has not launched yet.
+            recovery['restoreRequired'] = True
+            write(journal, recovery)
             for record in records:
                 target(self.project, record['asset']).unlink(missing_ok=True)
             for i, path in enumerate(inputs):

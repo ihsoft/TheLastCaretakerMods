@@ -167,8 +167,10 @@ tasks touch the same exported asset.
 
 Apply checks for conflicting project edits, backs up selected packages, rebuilds
 and compiles them, then verifies a fresh-process export against the desired JSON.
-Failure restores selected original packages; unrelated project resources stay
-outside the selected write set. The command reports a no-op if nothing changed.
+A conflict detected before the selected-package write phase leaves those packages
+untouched. Failures in the write phase restore selected original packages;
+unrelated project resources stay outside the selected write set. The command
+reports a no-op if nothing changed.
 Inheritance ordering and compatible batches are tool-owned. Unsupported
 dependency arrangements produce a diagnostic rather than requiring an agent to
 invent a per-mod build procedure.
@@ -177,10 +179,14 @@ On a conflict, preserve both the JSON edits and the editor changes. Export the
 current project state into a separate workspace and reconcile the intended
 change; do not remove conflict checks or overwrite the newer asset manually.
 After an interrupted operation, use the tool's `Recover` action and its recovery
-diagnostic before continuing. Recovery restores the state before that operation;
-it first retains current selected files in `recoveredCandidates`, including any
-possible manual edits made after interruption. Reconcile those separately if
-needed. Do not move backup files by hand.
+diagnostic before continuing. If Apply's journal records preparation only,
+Recover clears it without changing packages or the accepted baseline and reports
+`no-recovery-needed`. Once Apply enters the write phase (before deleting selected
+packages), recovery restores the state before that operation; it first retains
+current selected files in `recoveredCandidates`, including any possible manual
+edits made after interruption. Older journals without a phase flag retain this
+restoration behavior. Reconcile retained candidates separately if needed. Do not
+move backup files by hand.
 
 ```powershell
 & $tool -Action Recover -WorkspaceRoot $work
