@@ -232,6 +232,8 @@ class WorkspaceTests(unittest.TestCase):
         original_write = bw.write
         for conflict in ('replace', 'remove', 'create'):
             with self.subTest(conflict=conflict):
+                self.ws = bw.Workspace(self.ws.root, self.ws.engine)
+                self.ws.project = self.project
                 self.file.write_bytes(b'original')
                 new_file.unlink(missing_ok=True)
                 def write_with_conflict(path, data):
@@ -341,21 +343,117 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_compare_failure_rolls_back(self):
         self.changed()
-        with patch.object(self.ws, 'engine_run'), patch.object(self.ws, 'export_one', return_value=self.document):
+        def engine(mode, name, **fields):
+            if mode == 'ExportBatch':
+                bw.write(fields['Output'] / '0.native.json', bw.codec.native(self.document))
+        with patch.object(self.ws, 'engine_run', side_effect=engine):
             with self.assertRaisesRegex(ValueError, 'fields differ'):
                 self.ws.apply()
         self.assertEqual(b'original', self.file.read_bytes())
 
     def test_success_and_second_noop(self):
         changed = self.changed()
-        def rebuild(*args, **kw):
-            self.file.write_bytes(b'rebuilt')
-        def export(asset, output, name, **kwargs):
-            bw.write(output, changed)
-            return changed
-        with patch.object(self.ws, 'engine_run', side_effect=rebuild), patch.object(self.ws, 'export_one', side_effect=export):
+        def engine(mode, name, **fields):
+            if mode == 'ImportBatch':
+                self.file.write_bytes(b'rebuilt')
+            elif mode == 'ExportBatch':
+                bw.write(fields['Output'] / '0.native.json', bw.codec.native(changed))
+        with patch.object(self.ws, 'engine_run', side_effect=engine):
             self.assertEqual(1, self.ws.apply()['changed'])
         self.assertEqual('unchanged', self.ws.apply()['status'])
+
+    def batch_fixture(self):
+        changed = self.changed()
+        child = copy.deepcopy(self.document)
+        child.update(asset='/Game/BP_Child', parent=self.document['asset'] + '.BP_Test_C')
+        child_source = self.ws.root / 'blueprints/Child.json'
+        bw.write(child_source, child)
+        child_file = bw.target(self.project, child['asset'])
+        child_file.write_bytes(b'original child')
+        (self.ws.internal / 'child.uasset').write_bytes(b'original child')
+        bw.write(self.ws.internal / 'child.json', child)
+        baseline = self.ws.baseline()
+        baseline[child['asset']] = dict(source='blueprints/Child.json', bytes='child.uasset',
+                                       before='child.json', accepted='child.json')
+        bw.write(self.ws.internal / 'baseline.json', baseline)
+        new = copy.deepcopy(self.document)
+        new['asset'] = '/Game/BP_New'
+        bw.write(self.ws.root / 'blueprints/New.json', new)
+        manifest = bw.read(self.ws.manifest)
+        # Verification order differs from parent-first import order.
+        manifest['assets'] = [dict(source='blueprints/Child.json'), *manifest['assets'], dict(source='blueprints/New.json')]
+        bw.write(self.ws.manifest, manifest)
+        return [child, changed, new]
+
+    def test_apply_exports_all_selected_assets_in_one_fresh_batch(self):
+        desired = self.batch_fixture()
+        imported, calls = [], []
+        def engine(mode, name, **fields):
+            calls.append(mode)
+            assets = bw.read(fields['Input'])['assets']
+            if mode == 'ImportBatch':
+                imported.append([d['asset'] for d in assets])
+                for document in assets:
+                    bw.target(self.project, document['asset']).write_bytes(b'rebuilt')
+            elif mode == 'ExportBatch':
+                self.assertEqual([[desired[1]['asset'], desired[2]['asset']], [desired[0]['asset']]], imported)
+                self.assertEqual([d['asset'] for d in desired], [d['asset'] for d in assets])
+                self.assertTrue(fields['Output'].is_dir())
+                for i, document in enumerate(desired):
+                    bw.write(fields['Output'] / f'{i}.native.json', bw.codec.native(document))
+            else:
+                self.fail('Unexpected engine action: ' + mode)
+        with patch.object(self.ws, 'engine_run', side_effect=engine):
+            self.assertEqual(dict(status='applied', assets=3, changed=1, added=1), self.ws.apply())
+        self.assertEqual(['ImportBatch', 'ImportBatch', 'ExportBatch'], calls)
+        for document in desired:
+            accepted = bw.read(bw.inside(self.ws.internal, self.ws.baseline()[document['asset']]['accepted']))
+            self.assertEqual([], bw.codec.compare(document, accepted))
+        with patch.object(self.ws, 'engine_run') as engine_mock:
+            self.assertEqual('unchanged', self.ws.apply()['status'])
+        engine_mock.assert_not_called()
+
+    def test_incomplete_or_incorrect_batch_verification_restores_entire_selection(self):
+        desired = self.batch_fixture()
+        baseline = self.ws.baseline()
+        errors = {'missing': FileNotFoundError, 'identity': ValueError, 'difference': ValueError,
+                  'invalid-json': json.JSONDecodeError, 'export-failed': RuntimeError}
+        for fault, error in errors.items():
+            with self.subTest(fault=fault):
+                self.ws = bw.Workspace(self.ws.root, self.ws.engine)
+                self.ws.project = self.project
+                def engine(mode, name, **fields):
+                    if mode == 'ImportBatch':
+                        for document in bw.read(fields['Input'])['assets']:
+                            bw.target(self.project, document['asset']).write_bytes(b'rebuilt')
+                    elif mode == 'ExportBatch':
+                        for i, document in enumerate(desired):
+                            exported = copy.deepcopy(document)
+                            # The first, unchanged asset must be checked too.
+                            if i == 0 and fault == 'difference':
+                                exported['defaults']['Amount'] = '99.000000'
+                            if i == 2:
+                                if fault == 'missing':
+                                    continue
+                                if fault == 'identity':
+                                    exported['asset'] = desired[0]['asset']
+                                if fault == 'invalid-json':
+                                    (fields['Output'] / f'{i}.native.json').write_text('{')
+                                    continue
+                                if fault == 'export-failed':
+                                    raise RuntimeError('batch export interrupted')
+                            bw.write(fields['Output'] / f'{i}.native.json', bw.codec.native(exported))
+                    else:
+                        self.fail('Unexpected engine action: ' + mode)
+                with patch.object(self.ws, 'engine_run', side_effect=engine):
+                    with self.assertRaises(error):
+                        self.ws.apply()
+                self.assertEqual(b'original', self.file.read_bytes())
+                self.assertEqual(b'original child', bw.target(self.project, desired[0]['asset']).read_bytes())
+                self.assertFalse(bw.target(self.project, desired[2]['asset']).exists())
+                self.assertEqual(baseline, self.ws.baseline())
+                self.assertEqual(desired, [d for _, _, d in self.ws.load()[1]])
+                self.assertFalse((self.ws.internal / 'recovery.json').exists())
 
     def test_recovery_removes_new_and_restores_existing(self):
         new_asset = '/Game/BP_New'
@@ -534,16 +632,16 @@ except ValueError:
             calls.append(mode)
             if mode == 'ImportBatch':
                 self.file.write_bytes(b'rebuilt widget')
-            elif mode == 'Export':
+            elif mode == 'ExportBatch':
                 if 'PreviewResources' in fields:
                     raise RuntimeError('PNG export unavailable')
-                bw.write(fields['Output'], bw.codec.native(changed))
+                bw.write(fields['Output'] / '0.native.json', bw.codec.native(changed))
             else:
                 self.fail('Unexpected engine action: ' + mode)
         with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'engine_run', side_effect=engine), \
              patch.object(bw.shutil, 'copytree', side_effect=OSError('preview copy unavailable')):
             self.assertEqual('applied', self.ws.apply()['status'])
-        self.assertEqual(['ImportBatch', 'Export'], calls)
+        self.assertEqual(['ImportBatch', 'ExportBatch'], calls)
         self.assertEqual(b'rebuilt widget', self.file.read_bytes())
         self.assertEqual(original_bundle, source_bundle.read_bytes())
         self.assertEqual('unchanged', self.ws.apply()['status'])

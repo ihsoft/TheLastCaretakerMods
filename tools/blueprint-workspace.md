@@ -166,7 +166,10 @@ tasks touch the same exported asset.
 ```
 
 Apply checks for conflicting project edits, backs up selected packages, rebuilds
-and compiles them, then verifies a fresh-process export against the desired JSON.
+and compiles them, then batch-exports all selected packages in one fresh process
+after all import levels finish. Every selected asset, including unchanged ones,
+is compared against its desired JSON. Missing, unreadable or mismatched exports
+fail the operation.
 A conflict detected before the selected-package write phase leaves those packages
 untouched. Failures in the write phase restore selected original packages;
 unrelated project resources stay outside the selected write set. The command

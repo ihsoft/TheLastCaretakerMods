@@ -339,6 +339,10 @@ class Workspace:
             path = self.run / f'group-{i}.native.json'
             write(path, {'assets': [codec.native(d) for d in level]})
             inputs.append(path)
+        reopen_request = self.run / 'reopen-request.json'
+        write(reopen_request, dict(assets=[dict(asset=d['asset']) for _, _, d in entries]))
+        reopened = self.run / 'reopened-native'
+        reopened.mkdir()
         self.prepare(self.project)
         records = []
         for _, _, document in entries:
@@ -363,8 +367,11 @@ class Workspace:
                 target(self.project, record['asset']).unlink(missing_ok=True)
             for i, path in enumerate(inputs):
                 self.engine_run('ImportBatch', f'import-{i}', Input=path)
+            # Reopen all saved packages in one new process, after all import levels.
+            self.engine_run('ExportBatch', 'reopen', Input=reopen_request, Output=reopened)
             for i, (_, _, document) in enumerate(entries):
-                actual = self.export_one(document['asset'], self.run / f'reopened-{i}.json', f'reopen-{i}')
+                actual = codec.compact(read(reopened / f'{i}.native.json'))
+                write(self.run / f'reopened-{i}.json', actual)
                 differences = codec.compare(document, actual)
                 if differences:
                     diagnostic = self.run / f'comparison-{i}.json'
