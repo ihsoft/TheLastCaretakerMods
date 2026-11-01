@@ -295,7 +295,7 @@ Json ExportComponents(const UBlueprint* BP)
     for(UActorComponent* Template:CastChecked<UBlueprintGeneratedClass>(BP->GeneratedClass)->ComponentTemplates)References.Add(MakeShared<FJsonValueString>(ObjectKey(Template,BP)));
     Data->SetArrayField(GeneratedTemplates,References);return Data;
 }
-bool ImportObjectTree(UBlueprint* BP,const Values& Rows,TMap<FString,UObject*>& Allocated)
+bool ImportObjectTree(UBlueprint* BP,const Values& Rows,TMap<FString,UObject*>& Allocated,const TSet<UClass*>& PendingClasses)
 {
     Allocated.Add(BlueprintOwner,BP);Allocated.Add(ClassOwner,BP->GeneratedClass);
     TMap<FString,TSharedPtr<FJsonObject>> Pending;
@@ -330,11 +330,15 @@ bool ImportObjectTree(UBlueprint* BP,const Values& Rows,TMap<FString,UObject*>& 
     for(const auto& Value:Rows)
     {
         auto Row=Value->AsObject();
-        if(!Apply(Allocated.FindChecked(Row->GetStringField(ObjectId)),*Row->GetObjectField(ATNames::Valueproperties),{}))return false;
+        UObject* Object=Allocated.FindChecked(Row->GetStringField(ObjectId));
+        // Peer Blueprint member fields do not exist yet. Validate and restore
+        // their explicit values in RestoreBatchObjectDefaults after compilation.
+        if(PendingClasses.Contains(Object->GetClass()))continue;
+        if(!Apply(Object,*Row->GetObjectField(ATNames::Valueproperties),{}))return false;
     }
     return true;
 }
-bool ImportComponents(UBlueprint* BP,const FJsonObject& Data)
+bool ImportComponents(UBlueprint* BP,const FJsonObject& Data,const TSet<UClass*>& PendingClasses)
 {
     if(!Keys(Data,{Objects,ScriptRoot,Templates,GeneratedTemplates}))return false;
     // Remove only the factory's disposable automatic root before allocating source identities.
@@ -343,7 +347,7 @@ bool ImportComponents(UBlueprint* BP,const FJsonObject& Data)
     BP->SimpleConstructionScript->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
     BP->SimpleConstructionScript=nullptr;BP->ComponentTemplates.Empty();
     TMap<FString,UObject*> Allocated;
-    if(!ImportObjectTree(BP,Data.GetArrayField(Objects),Allocated))return false;
+    if(!ImportObjectTree(BP,Data.GetArrayField(Objects),Allocated,PendingClasses))return false;
     BP->SimpleConstructionScript=Cast<USimpleConstructionScript>(Allocated.FindRef(Data.GetStringField(ScriptRoot)));
     if(!BP->SimpleConstructionScript)return false;
     for(const auto& Value:Data.GetArrayField(Templates))
@@ -540,7 +544,7 @@ UBlueprint* CreateImport(const FJsonObject& Root)
     if(BP && !Role.IsEmpty())Package->GetMetaData().SetValue(BP,BlueprintPreviewNames::RoleMetadata,*Role);
     return BP;
 }
-bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
+bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root,const TSet<UClass*>& PendingClasses)
 {
     const bool IsWidget=Root->HasField(WidgetState);
     if(!BP || !Apply(BP,*Root->GetObjectField(ATNames::Valueproperties),BlueprintOwned))return false;
@@ -552,7 +556,7 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
         if(!Keys(*Data,{WidgetRoot,Objects,WidgetAnimations}))return false;
         if(Widget->WidgetTree)Widget->WidgetTree->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
         TMap<FString,UObject*> Allocated;
-        if(!ImportObjectTree(BP,Data->GetArrayField(Objects),Allocated))return false;
+        if(!ImportObjectTree(BP,Data->GetArrayField(Objects),Allocated,PendingClasses))return false;
         Widget->WidgetTree=Cast<UWidgetTree>(Allocated.FindRef(Data->GetStringField(WidgetRoot)));
         if(!Widget->WidgetTree)return false;
         Widget->Animations.Empty();
@@ -579,7 +583,7 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
     }
     else if(Root->HasField(Components))
     {
-        if(Root->HasField(RootState) || !ImportComponents(BP,*Root->GetObjectField(Components)))return false;
+        if(Root->HasField(RootState) || !ImportComponents(BP,*Root->GetObjectField(Components),PendingClasses))return false;
     }
     else
     {
@@ -686,6 +690,37 @@ bool SaveImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
     if(UPackage::SavePackage(BP->GetOutermost(),BP,*Filename,Args))return true;
     UE_LOG(LogTemp,Error,TEXT("Cannot save imported Blueprint: %s"),*Filename);return false;
 }
+bool RestoreBatchObjectDefaults(UBlueprint* BP,const FJsonObject& Root,const TSet<UClass*>& BatchClasses)
+{
+    // Object rows are deltas against their class CDO. Objects allocated while a
+    // peer Blueprint is still being compiled can retain its provisional defaults.
+    // Rebase only instances of this batch's classes, after ALL final CDOs exist.
+    for(const TCHAR* Section:{Components,WidgetState})if(Root.HasField(Section))
+    {
+        for(const auto& Value:Root.GetObjectField(Section)->GetArrayField(Objects))
+        {
+            const auto Row=Value->AsObject();
+            UClass* Class=LoadObject<UClass>(nullptr,*Row->GetStringField(ObjectClass));
+            if(!Class)return false;
+            if(!BatchClasses.Contains(Class))continue;
+            UObject* Object=FindObject<UObject>(BP->GetOutermost(),*Row->GetStringField(ObjectId));
+            if(!Object || Object->GetClass()!=Class)
+            {UE_LOG(LogTemp,Error,TEXT("Batch object missing after compilation: %s"),*Row->GetStringField(ObjectId));return false;}
+            const auto Map=Row->GetObjectField(ATNames::Valueproperties);
+            UObject* CDO=Class->GetDefaultObject();
+            for(TFieldIterator<FProperty> It(Class);It;++It)
+            {
+                FProperty* P=*It;
+                // Match ExportObjectTree's represented fields, including
+                // DuplicateTransient. Explicit deltas are restored below.
+                if(P->HasAnyPropertyFlags(CPF_Deprecated|CPF_Transient) || Map->HasField(P->GetName()))continue;
+                P->CopyCompleteValue_InContainer(Object,CDO);
+            }
+            if(!Apply(Object,*Map,{}))return false;
+        }
+    }
+    return true;
+}
 constexpr TCHAR ImportBatchMode[] = TEXT("ImportBatch");
 constexpr TCHAR ExportBatchMode[] = TEXT("ExportBatch");
 constexpr TCHAR Assets[] = TEXT("assets");
@@ -722,7 +757,9 @@ bool Import(const FString& Path,bool Batch=false)
     {
         auto* BP=CreateImport(*Root);if(!BP)return false;Blueprints.Add(BP);
     }
-    for(int32 I=0;I<Sources.Num();++I)if(!PopulateImport(Blueprints[I],Sources[I]))return false;
+    TSet<UClass*> PendingClasses;
+    for(UBlueprint* BP:Blueprints)PendingClasses.Add(BP->GeneratedClass);
+    for(int32 I=0;I<Sources.Num();++I)if(!PopulateImport(Blueprints[I],Sources[I],PendingClasses))return false;
     for(UBlueprint* BP:Blueprints)FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     for(UBlueprint* BP:Blueprints)FBlueprintCompilationManager::QueueForCompilation(BP);
     FBlueprintCompilationManager::FlushCompilationQueueAndReinstance();
@@ -730,6 +767,9 @@ bool Import(const FString& Path,bool Batch=false)
     {UE_LOG(LogTemp,Error,TEXT("Rebuilt Blueprint failed compilation: %s"),*BP->GetPathName());return false;}
     // Validate every post-compile default/template before saving any package.
     for(int32 I=0;I<Sources.Num();++I)if(!FinalizeImport(Blueprints[I],Sources[I]))return false;
+    TSet<UClass*> BatchClasses;
+    for(UBlueprint* BP:Blueprints)BatchClasses.Add(BP->GeneratedClass);
+    for(int32 I=0;I<Sources.Num();++I)if(!RestoreBatchObjectDefaults(Blueprints[I],*Sources[I],BatchClasses))return false;
     for(int32 I=0;I<Sources.Num();++I)if(!SaveImport(Blueprints[I],Sources[I]))return false;
     return true;
 }
@@ -747,6 +787,7 @@ bool ExportBatch(const FString& Path,const FString& Folder)
 }
 
 #include "BlueprintPreviewCatalog.h"
+#include "BlueprintComponentDefaultsTests.h"
 
 UBlueprintAssetTextCommandlet::UBlueprintAssetTextCommandlet(){IsClient=false;IsServer=false;IsEditor=true;LogToConsole=true;}
 int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
@@ -755,6 +796,8 @@ int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
     FParse::Value(*Params,ATNames::ValueMode_,Mode);FParse::Value(*Params,ATNames::ValueInput_,Input);
     FParse::Value(*Params,ATNames::ValueOutput_,Output);FParse::Value(*Params,ATNames::ValueAsset_,Asset);
     FString PreviewResources;FParse::Value(*Params,WidgetPreviewResources::ResourcesArgument,PreviewResources);
+    if(Mode==BlueprintComponentDefaultsTests::FixtureMode)return BlueprintComponentDefaultsTests::Fixture()?0:6;
+    if(Mode==BlueprintComponentDefaultsTests::CheckMode)return BlueprintComponentDefaultsTests::Check()?0:6;
     if(Mode==BlueprintPreviewNames::CatalogMode)return BlueprintPreview::Catalog(Input,Output)?0:5;
     if(Mode==BlueprintPreviewNames::MarkStubsMode)return BlueprintPreview::MarkStubs(Input)?0:5;
     if(Mode==ATNames::ValueExport)return AssetText::Export(Asset,Output,PreviewResources)?0:2;
