@@ -32,7 +32,12 @@ Neither schema is a general lossless exporter for arbitrary Blueprints.
 Schema 1 rejects known unsupported state (including user functions, macros, timelines, custom
 components, nonzero variable defaults and modified construction logic).
 Compact mode additionally rejects unsupported node classes and
-disabled nodes. Other Unreal metadata is not comprehensively represented or
+disabled nodes. Compact export rejects pin `DefaultObject` and `DefaultTextValue`
+values that its string-only arguments cannot preserve, including values on hidden
+or connected pins. The exact automatic `self` object of a static call remains
+supported because Unreal recreates it. Use native graph format or schema 2 for
+explicit object/text defaults; a rejected compact export does not write a result.
+Other Unreal metadata is not comprehensively represented or
 audited. Use schema 2 for the ordinary workspace workflow; use schema 1 only
 for Blueprints whose complete state fits its narrower supported envelope.
 
@@ -609,6 +614,9 @@ The schema-1 engine acceptance runner is
 with optional `-EngineRoot`. It builds an isolated project, checks compact and
 native round trips, adds and removes nodes, preserves a headless simulated
 editor change, exercises another asset and rejects selected unsupported state.
+It also checks object/text pin defaults through native import/export and verifies
+that compact export refuses them without changing the saved package. The whole
+runner reserves the shared Unreal queue, including its expected-failure checks.
 It writes `result.json` and logs in that directory. This is compilation and
 serialization evidence, not GUI interaction, cooking, game behaviour, or a
 token-cost measurement. Schema-2 imports perform their own fresh-process

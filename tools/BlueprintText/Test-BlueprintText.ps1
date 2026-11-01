@@ -1,6 +1,10 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$OutputRoot,[string]$PreparedProjectRoot,[string]$EngineRoot='K:\Epic Games\UE_5.8')
 $ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
+Import-Module (Join-Path $PSScriptRoot '../unreal-coordination.psm1') -Force
+if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
+    Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation 'Blueprint text regression tests'; return
+}
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $owner=[IO.Path]::GetFullPath((Join-Path $repo 'Tmp/BlueprintText')).TrimEnd('\')+'\'
 $root=[IO.Path]::GetFullPath($OutputRoot)
@@ -126,4 +130,6 @@ foreach ($fixture in @(
 
 $result=[ordered]@{status='passed';projectRoot=$project;catalog=[ordered]@{path=$catalogRefresh.catalog;coverage=$divideSearch.coverage;refresh=$divideSearch.refresh;doubleDivide=$script:divideDouble.identity;intDivide=$divideInt[0].identity;sequence=$sequence[0].identity};sources=[ordered]@{compact=$desiredPath;nativeEnvelope=$nativePath;nativeBody=$nativeBody;other=$otherPath};outputs=[ordered]@{compactFirst=$compactExport;compactSecond=$compactSecond;nativeFirst=$nativeOne;nativeReexport=$nativeReexport;nativeSecond=$nativeTwo;engineEdit=$editOne;engineEditReopen=$editTwo;otherFirst=$otherOne;otherReopen=$otherTwo};checks=[ordered]@{compactSourceMatchesExport=$true;compactExportSecondImport=$true;nativeDirectTextInsertionMatchesSource=$true;nativeExportSecondImport=$true;omissionDeletes=$true;commentPreserved=$true;engineAddedVariablePreserved=$true;variableDefaultExplicitlyRejected=$defaultRejected;secondAssetExportReopen=$true;unknownFieldRejected=$unknownRejected;sequenceRangeRejected=$rangeRejected;unsupportedSavedGraphRejected=$savedRejected}}
 foreach ($key in $savedStateChecks.Keys) { $result.checks[$key] = $savedStateChecks[$key] }
+$pinDefaults = & (Join-Path $PSScriptRoot 'Test-Schema1PinDefaults.ps1') -OutputRoot (Join-Path $root 'pin-defaults') -PreparedProjectRoot $project -EngineRoot $EngineRoot
+$result.checks.pinDefaults = $pinDefaults.checks
 [IO.File]::WriteAllText((Join-Path $root 'result.json'),($result|ConvertTo-Json -Depth 20),[Text.UTF8Encoding]::new($false));[pscustomobject]$result

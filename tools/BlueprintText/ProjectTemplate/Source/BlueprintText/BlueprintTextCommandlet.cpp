@@ -527,6 +527,36 @@ TSharedRef<FJsonObject> ExportCompactGraph(UBlueprint* Blueprint)
             UE_LOG(LogTemp, Error, TEXT("Compact export does not support disabled nodes."));
             return MakeShared<FJsonObject>();
         }
+        // Compact arguments carry DefaultValue only. Inspect all pins, including
+        // hidden and connected ones, before discarding their other default fields.
+        const UObject* AutomaticSelf = nullptr;
+        if (const UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node))
+        {
+            if (UFunction* Function = Call->GetTargetFunction(); Function && Function->HasAllFunctionFlags(FUNC_Static))
+            {
+                UClass* Owner = Function->GetOuterUClass();
+                if (!Blueprint->SkeletonGeneratedClass || !Blueprint->SkeletonGeneratedClass->IsChildOf(Owner))
+                    AutomaticSelf = Owner->GetAuthoritativeClass()->GetDefaultObject();
+            }
+        }
+        for (const UEdGraphPin* Pin : Node->Pins)
+        {
+            // AllocateDefaultPins recreates this exact static-call target.
+            const bool bAutomaticSelf = Pin->PinName == UEdGraphSchema_K2::PN_Self &&
+                Pin->Direction == EGPD_Input && Pin->DefaultObject == AutomaticSelf;
+            if (Pin->DefaultObject && !bAutomaticSelf)
+            {
+                UE_LOG(LogTemp, Error, TEXT("Schema-1 compact export cannot preserve DefaultObject on node '%s' pin '%s'; use native format or schema 2."),
+                    *Ids.FindRef(Node), *Pin->PinName.ToString());
+                return MakeShared<FJsonObject>();
+            }
+            if (!Pin->DefaultTextValue.IdenticalTo(FText::GetEmpty()))
+            {
+                UE_LOG(LogTemp, Error, TEXT("Schema-1 compact export cannot preserve DefaultTextValue on node '%s' pin '%s'; use native format or schema 2."),
+                    *Ids.FindRef(Node), *Pin->PinName.ToString());
+                return MakeShared<FJsonObject>();
+            }
+        }
         const TSharedRef<FJsonObject> Item = MakeShared<FJsonObject>();
         Item->SetStringField(BlueprintTextNames::FieldId, Ids.FindRef(Node));
         if (Node->GetClass() == UK2Node_Event::StaticClass())
