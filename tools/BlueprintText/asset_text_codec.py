@@ -465,11 +465,15 @@ def add_call(document, catalog, operation, node_id, graph_name):
 
 
 def compare(expected, actual):
-    """Canonical graph/field comparison. Does not drop unknown fields or node order within pins."""
+    """Canonical field comparison; only node.pins mappings have significant key order."""
     expected, actual = compact(native(expected)), compact(native(actual))
     differences = []
     def visit(a, b, path):
         if isinstance(a, dict) and isinstance(b, dict):
+            # Native pin order can control execution (for example, Sequence outputs).
+            if (re.fullmatch(r'/graphs/\d+/body/nodes/\d+/pins', path) and
+                    a.keys() == b.keys() and list(a) != list(b)):
+                differences.append({'path': path, 'expected': list(a), 'actual': list(b)})
             for key in sorted(set(a) | set(b)):
                 if key not in a or key not in b:
                     differences.append({'path': path + '/' + key, 'expected': a.get(key), 'actual': b.get(key)})

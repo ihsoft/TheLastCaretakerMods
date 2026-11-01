@@ -42,6 +42,18 @@ def fixture():
                 'properties': {'GraphGuid': '4' * 32}, 'nodeCount': 2, 'text': text}]}
 
 
+def sequence_fixture():
+    document = fixture()
+    document['graphs'] = [{'name': 'EventGraph', 'kind': 'event', 'properties': {}, 'nodeCount': 1,
+                          'text': '\n'.join([
+        'Begin Object Class=/Script/BlueprintGraph.K2Node_ExecutionSequence Name="Sequence"',
+        f'CustomProperties Pin (PinId={"1" * 32},PinName="execute",PinType.PinCategory="exec",)',
+        f'CustomProperties Pin (PinId={"2" * 32},PinName="then_0",Direction="EGPD_Output",PinType.PinCategory="exec",)',
+        f'CustomProperties Pin (PinId={"3" * 32},PinName="then_1",Direction="EGPD_Output",PinType.PinCategory="exec",)',
+        'End Object'])}]
+    return document
+
+
 class AssetTextTests(unittest.TestCase):
     def test_pin_template_addition_and_removal_leave_other_references_unchanged(self):
         original = compact(fixture())
@@ -267,6 +279,35 @@ class AssetTextTests(unittest.TestCase):
         self.assertEqual(compare(source, reordered), [])
         reordered['defaults']['Amount'] = '9.000000'
         self.assertEqual(compare(source, reordered)[0]['path'], '/defaults/Amount')
+
+    def test_sequence_pin_order_survives_conversion_and_is_compared(self):
+        source = compact(sequence_fixture())
+        reordered = copy.deepcopy(source)
+        node = reordered['graphs'][0]['body']['nodes'][0]
+        order = ['in:exec', 'out:then1', 'out:then0']
+        node['pins'] = {alias: node['pins'][alias] for alias in order}
+        # Ordinary mapping equality misses this change; native emission preserves it.
+        self.assertEqual(source, reordered)
+        self.assertNotEqual(native(source), native(reordered))
+        self.assertEqual(list(compact(native(reordered))['graphs'][0]['body']['nodes'][0]['pins']), order)
+        self.assertEqual(compare(source, reordered), [{
+            'path': '/graphs/0/body/nodes/0/pins',
+            'expected': ['in:exec', 'out:then0', 'out:then1'], 'actual': order}])
+
+    def test_mapping_order_outside_node_pins_is_not_significant(self):
+        source = compact(sequence_fixture())
+        source['defaults']['Other'] = '0'
+        source['graphs'][0]['body']['nodes'][0]['properties'].update(NodePosX='0', NodePosY='10')
+        def reverse_mappings(value, path=()):
+            if isinstance(value, dict):
+                entries = list(value.items())
+                if path != ('graphs', 0, 'body', 'nodes', 0, 'pins'):
+                    entries.reverse()
+                return {key: reverse_mappings(item, path + (key,)) for key, item in entries}
+            if isinstance(value, list):
+                return [reverse_mappings(item, path + (i,)) for i, item in enumerate(value)]
+            return value
+        self.assertEqual(compare(source, reverse_mappings(source)), [])
 
     def test_unknown_envelope_field_is_rejected(self):
         source = fixture()

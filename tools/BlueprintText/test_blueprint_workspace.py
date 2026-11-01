@@ -13,7 +13,7 @@ import time
 from unittest.mock import patch
 
 import blueprint_workspace as bw
-from test_asset_text_codec import fixture
+from test_asset_text_codec import fixture, sequence_fixture
 
 
 class WorkspaceTests(unittest.TestCase):
@@ -361,6 +361,48 @@ class WorkspaceTests(unittest.TestCase):
         with patch.object(self.ws, 'engine_run', side_effect=engine):
             self.assertEqual(1, self.ws.apply()['changed'])
         self.assertEqual('unchanged', self.ws.apply()['status'])
+
+    def test_pin_order_only_edit_is_applied_and_reopen_order_is_verified(self):
+        original = bw.codec.compact(sequence_fixture())
+        desired = copy.deepcopy(original)
+        node = desired['graphs'][0]['body']['nodes'][0]
+        node['pins'] = {alias: node['pins'][alias] for alias in ['in:exec', 'out:then1', 'out:then0']}
+        for preserves_order in (False, True):
+            with self.subTest(preserves_order=preserves_order):
+                self.ws = bw.Workspace(self.ws.root, self.ws.engine)
+                self.ws.project = self.project
+                bw.write(self.ws.internal / 'before.json', original)
+                bw.write(self.source, desired)
+                baseline = self.ws.baseline()
+                calls = []
+                def engine(mode, name, **fields):
+                    calls.append(mode)
+                    if mode == 'ImportBatch':
+                        self.file.write_bytes(b'rebuilt with reordered pins')
+                    elif mode == 'ExportBatch':
+                        bw.write(fields['Output'] / '0.native.json', bw.codec.native(desired if preserves_order else original))
+                    else:
+                        self.fail('Unexpected engine action: ' + mode)
+                with patch.object(self.ws, 'engine_run', side_effect=engine):
+                    if preserves_order:
+                        self.assertEqual(1, self.ws.apply()['changed'])
+                    else:
+                        with self.assertRaisesRegex(ValueError, 'fields differ'):
+                            self.ws.apply()
+                        diagnostic = bw.read(self.ws.run / 'comparison-0.json')
+                        self.assertEqual(diagnostic, [{
+                            'path': '/graphs/0/body/nodes/0/pins',
+                            'expected': ['in:exec', 'out:then1', 'out:then0'],
+                            'actual': ['in:exec', 'out:then0', 'out:then1']}])
+                        self.assertEqual(b'original', self.file.read_bytes())
+                        self.assertEqual(baseline, self.ws.baseline())
+                        self.assertFalse((self.ws.internal / 'recovery.json').exists())
+                self.assertEqual(['ImportBatch', 'ExportBatch'], calls)
+                self.assertEqual(list(bw.read(self.source)['graphs'][0]['body']['nodes'][0]['pins']),
+                                 ['in:exec', 'out:then1', 'out:then0'])
+        with patch.object(self.ws, 'engine_run') as engine_mock:
+            self.assertEqual('unchanged', self.ws.apply()['status'])
+        engine_mock.assert_not_called()
 
     def batch_fixture(self):
         changed = self.changed()

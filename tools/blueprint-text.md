@@ -189,7 +189,11 @@ Import refuses an existing target asset. It reconstructs, compiles and saves,
 then exports in a fresh engine process and compares all represented fields.
 Failure reports an adjacent evidence directory; inspect its logs and
 `comparison.json`. A saved candidate can remain after a failed comparison.
-Numeric property spellings are compared strictly. This check does not establish
+Numeric property spellings are compared strictly. Entry order in each `node.pins`
+object is also significant: native text preserves it, and nodes such as `Sequence`
+use pin order for execution. Comparison reports a reordered pin list even when
+all per-pin values match; do not sort these keys when formatting JSON. Key order
+in other JSON objects is ignored. This check does not establish
 runtime equivalence or preservation of state outside the supported envelope.
 Export editor changes before the next text edit; there is no concurrent-edit
 merge. Use the workspace workflow for transactional updates to existing assets.
