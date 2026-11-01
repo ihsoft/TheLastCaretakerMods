@@ -1498,32 +1498,6 @@
             }
           },
           {
-            "id": "K2Node_ExecutionSequence_0",
-            "kind": "sequence",
-            "properties": {
-              "NodePosX": "100",
-              "NodePosY": "-900",
-              "NodeGuid": "576EA0594DC41A74FD6A829EB78DF3E6"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "2DC3315B4A0DDCA99BDFC9B744BC223A",
-                "type": "p61",
-                "name": "execute"
-              },
-              "out:then0": {
-                "id": "6953B0F44FD65BEAF00D06BF0D852FAB",
-                "type": "p61",
-                "name": "then_0"
-              },
-              "out:then1": {
-                "id": "D7A8474947E53B80150F7E84BA49D2D2",
-                "type": "p61",
-                "name": "then_1"
-              }
-            }
-          },
-          {
             "id": "K2Node_ExecutionSequence_1",
             "kind": "sequence",
             "properties": {
@@ -1546,32 +1520,11 @@
                 "id": "02EB514844589479A55C28969B560791",
                 "type": "p61",
                 "name": "then_1"
-              }
-            }
-          },
-          {
-            "id": "K2Node_ExecutionSequence_2",
-            "kind": "sequence",
-            "properties": {
-              "NodePosX": "680",
-              "NodePosY": "-2100",
-              "NodeGuid": "2A7B56E34E67F5445B1718AE1EFE7CB0"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "5115AF4E4AFC0C1D91106783C7797C32",
-                "type": "p61",
-                "name": "execute"
               },
-              "out:then0": {
-                "id": "7F5C4240447B84997BE81D8F61766901",
+              "out:then2": {
+                "id": "8E93E0481150475EB75D1F072930E646",
                 "type": "p61",
-                "name": "then_0"
-              },
-              "out:then1": {
-                "id": "E5169EF843DF311035D9D6A32F744F57",
-                "type": "p61",
-                "name": "then_1"
+                "name": "then_2"
               }
             }
           },
@@ -2649,26 +2602,6 @@
             "to": "K2Node_CallFunction_26.in:exec"
           },
           {
-            "from": "K2Node_ExecutionSequence_0.out:then0",
-            "to": "K2Node_CallFunction_0.in:exec"
-          },
-          {
-            "from": "K2Node_ExecutionSequence_0.out:then1",
-            "to": "K2Node_DynamicCast_2.in:exec"
-          },
-          {
-            "from": "K2Node_ExecutionSequence_1.out:then0",
-            "to": "K2Node_ExecutionSequence_0.in:exec"
-          },
-          {
-            "from": "K2Node_ExecutionSequence_1.out:then1",
-            "to": "K2Node_DynamicCast_3.in:exec"
-          },
-          {
-            "from": "K2Node_ExecutionSequence_2.out:then0",
-            "to": "K2Node_IfThenElse_2.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_0.out:else",
             "to": "K2Node_VariableSet_3.in:exec"
           },
@@ -2761,10 +2694,6 @@
             "to": "K2Node_MacroInstance_0.in:Exec"
           },
           {
-            "from": "K2Node_VariableSet_12.out:then",
-            "to": "K2Node_ExecutionSequence_2.in:exec"
-          },
-          {
             "from": "K2Node_VariableSet_3.out:then",
             "to": "K2Node_VariableSet_4.in:exec"
           },
@@ -2779,6 +2708,22 @@
           {
             "from": "K2Node_VariableSet_9.out:then",
             "to": "K2Node_VariableSet_10.in:exec"
+          },
+          {
+            "from": "K2Node_ExecutionSequence_1.out:then0",
+            "to": "K2Node_CallFunction_0.in:exec"
+          },
+          {
+            "from": "K2Node_ExecutionSequence_1.out:then1",
+            "to": "K2Node_DynamicCast_2.in:exec"
+          },
+          {
+            "from": "K2Node_ExecutionSequence_1.out:then2",
+            "to": "K2Node_DynamicCast_3.in:exec"
+          },
+          {
+            "from": "K2Node_VariableSet_12.out:then",
+            "to": "K2Node_IfThenElse_2.in:exec"
           }
         ]
       }

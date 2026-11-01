@@ -1528,32 +1528,6 @@
             }
           },
           {
-            "id": "K2Node_ExecutionSequence_0",
-            "kind": "sequence",
-            "properties": {
-              "NodePosX": "100",
-              "NodePosY": "-720",
-              "NodeGuid": "9608AE684C3031AE6FDB6A9BEAAF1159"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "03AD58074B5A140F5AB0A895361CAD96",
-                "type": "p109",
-                "name": "execute"
-              },
-              "out:then0": {
-                "id": "6C97CEF34E95A92BECCEBFB42112F5DF",
-                "type": "p109",
-                "name": "then_0"
-              },
-              "out:then1": {
-                "id": "4DE1553649150E046DE577A9E3FC2C44",
-                "type": "p109",
-                "name": "then_1"
-              }
-            }
-          },
-          {
             "id": "K2Node_ExecutionSequence_1",
             "kind": "sequence",
             "properties": {
@@ -1576,6 +1550,11 @@
                 "id": "131585704A5E2B5C7C8B92BCD2AB24A0",
                 "type": "p109",
                 "name": "then_1"
+              },
+              "out:then2": {
+                "id": "1C93A54ACD87458D99D25CD7A0F9843E",
+                "type": "p109",
+                "name": "then_2"
               }
             }
           },
@@ -2887,22 +2866,6 @@
             "to": "K2Node_CallParentFunction_2.in:exec"
           },
           {
-            "from": "K2Node_ExecutionSequence_0.out:then0",
-            "to": "K2Node_CallParentFunction_0.in:exec"
-          },
-          {
-            "from": "K2Node_ExecutionSequence_0.out:then1",
-            "to": "K2Node_RemoveDelegate_0.in:exec"
-          },
-          {
-            "from": "K2Node_ExecutionSequence_1.out:then0",
-            "to": "K2Node_ExecutionSequence_0.in:exec"
-          },
-          {
-            "from": "K2Node_ExecutionSequence_1.out:then1",
-            "to": "K2Node_CallFunction_14.in:exec"
-          },
-          {
             "from": "K2Node_ExecutionSequence_2.out:then0",
             "to": "K2Node_IfThenElse_10.in:exec"
           },
@@ -3081,6 +3044,18 @@
           {
             "from": "K2Node_VariableSet_5.out:then",
             "to": "K2Node_VariableSet_6.in:exec"
+          },
+          {
+            "from": "K2Node_ExecutionSequence_1.out:then0",
+            "to": "K2Node_CallParentFunction_0.in:exec"
+          },
+          {
+            "from": "K2Node_ExecutionSequence_1.out:then1",
+            "to": "K2Node_RemoveDelegate_0.in:exec"
+          },
+          {
+            "from": "K2Node_ExecutionSequence_1.out:then2",
+            "to": "K2Node_CallFunction_14.in:exec"
           }
         ]
       }

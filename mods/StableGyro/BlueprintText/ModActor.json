@@ -5486,32 +5486,6 @@
             }
           },
           {
-            "id": "K2Node_ExecutionSequence_0",
-            "kind": "sequence",
-            "properties": {
-              "NodePosX": "100",
-              "NodePosY": "-900",
-              "NodeGuid": "6C5466B8450E8BD4A5ADF69EBEF9F6F1"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "93FB1F184011D301C2886887B42ED9DB",
-                "type": "p68",
-                "name": "execute"
-              },
-              "out:then0": {
-                "id": "AD57AF0E465021F018BF8BB6C49DCE2A",
-                "type": "p68",
-                "name": "then_0"
-              },
-              "out:then1": {
-                "id": "81417C0F4188D3E41845938D66C67858",
-                "type": "p68",
-                "name": "then_1"
-              }
-            }
-          },
-          {
             "id": "K2Node_ExecutionSequence_1",
             "kind": "sequence",
             "properties": {
@@ -5534,6 +5508,11 @@
                 "id": "E307DB5049A80A4A3EDDAA949DF4E94B",
                 "type": "p68",
                 "name": "then_1"
+              },
+              "out:then2": {
+                "id": "7D3E4DBD0ABB437DA20333780A47BB7D",
+                "type": "p68",
+                "name": "then_2"
               }
             }
           },
@@ -10721,22 +10700,6 @@
             "to": "K2Node_DynamicCast_3.in:exec"
           },
           {
-            "from": "K2Node_ExecutionSequence_0.out:then0",
-            "to": "K2Node_CallFunction_0.in:exec"
-          },
-          {
-            "from": "K2Node_ExecutionSequence_0.out:then1",
-            "to": "K2Node_DynamicCast_1.in:exec"
-          },
-          {
-            "from": "K2Node_ExecutionSequence_1.out:then0",
-            "to": "K2Node_ExecutionSequence_0.in:exec"
-          },
-          {
-            "from": "K2Node_ExecutionSequence_1.out:then1",
-            "to": "K2Node_RemoveDelegate_1.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_0.out:else",
             "to": "K2Node_VariableSet_15.in:exec"
           },
@@ -11343,6 +11306,18 @@
           {
             "from": "K2Node_VariableSet_9.out:then",
             "to": "K2Node_VariableSet_10.in:exec"
+          },
+          {
+            "from": "K2Node_ExecutionSequence_1.out:then0",
+            "to": "K2Node_CallFunction_0.in:exec"
+          },
+          {
+            "from": "K2Node_ExecutionSequence_1.out:then1",
+            "to": "K2Node_DynamicCast_1.in:exec"
+          },
+          {
+            "from": "K2Node_ExecutionSequence_1.out:then2",
+            "to": "K2Node_RemoveDelegate_1.in:exec"
           }
         ]
       }
@@ -27158,79 +27133,29 @@
             }
           },
           {
-            "id": "K2Node_VariableSet_10",
-            "kind": "setVariable",
+            "id": "K2Node_CallFunction_3",
+            "kind": "call",
             "properties": {
-              "VariableReference": "(MemberName=\"DescentUpwardVelocityCapActive\",MemberGuid=BC512C0C4CFE7D74E5EA94A876530F09,bSelfContext=True)",
+              "FunctionReference": "(MemberName=\"ClearDescentUpwardVelocityCap\",MemberGuid=6C6304A64A0654F9ABF22BB5B12FAA26,bSelfContext=True)",
               "NodePosX": "220",
               "NodePosY": "600",
-              "NodeGuid": "22C07C8E46CAB9D30161798C2A54D842"
+              "NodeGuid": "6073BAAD58E342D6803BC90D45791E9F"
             },
             "pins": {
               "in:exec": {
-                "id": "2BC0430F453CA0F897996089AB71E985",
+                "id": "CAE94088A9F24A5D85F41F87AF67A52B",
                 "type": "p68",
                 "name": "execute"
               },
               "out:then": {
-                "id": "6833473342E7889EAF39309507780C19",
+                "id": "717A5DA11543456B9D2BD846EFE066ED",
                 "type": "p68"
               },
-              "in:DescentUpwardVelocityCapActive": {
-                "id": "6D9670B8483AEB781091E8B1534F7B6E",
-                "type": "p27"
-              },
-              "out:Output_Get": {
-                "id": "D7A2E72F4F2E7879D186FB8854FB5896",
-                "type": "p26"
-              },
               "in:target": {
-                "id": "B2C1A6144363B8C2085558AE346218CB",
-                "type": "p48",
+                "id": "F4FA5829C36349A4A7AC51E8F2E339DC",
+                "type": "p49",
                 "name": "self"
               }
-            },
-            "defaults": {
-              "in:DescentUpwardVelocityCapActive": "false",
-              "out:Output_Get": "false"
-            }
-          },
-          {
-            "id": "K2Node_VariableSet_11",
-            "kind": "setVariable",
-            "properties": {
-              "VariableReference": "(MemberName=\"DescentUpwardVelocityCap\",MemberGuid=36D7C7C44B8F55D99644E6A8D2831074,bSelfContext=True)",
-              "NodePosX": "220",
-              "NodePosY": "730",
-              "NodeGuid": "E85A262E4A0AF19B9B423285B3F1A698"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "59E7983E434E8AB5F9A9CF8B5E220E9B",
-                "type": "p68",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "7C31B5204ECB80D195268BBE15DA193D",
-                "type": "p68"
-              },
-              "in:DescentUpwardVelocityCap": {
-                "id": "BC61831448D8F6A969047AB3D077275F",
-                "type": "p13"
-              },
-              "out:Output_Get": {
-                "id": "EABF61C64A1583E04BC6478B99A15650",
-                "type": "p12"
-              },
-              "in:target": {
-                "id": "5A5D55BA479B92E84F703AA2815BD57A",
-                "type": "p48",
-                "name": "self"
-              }
-            },
-            "defaults": {
-              "in:DescentUpwardVelocityCap": "0.0",
-              "out:Output_Get": "0.0"
             }
           },
           {
@@ -27588,14 +27513,6 @@
             "to": "K2Node_VariableSet_2.in:exec"
           },
           {
-            "from": "K2Node_VariableSet_10.out:then",
-            "to": "K2Node_VariableSet_11.in:exec"
-          },
-          {
-            "from": "K2Node_VariableSet_11.out:then",
-            "to": "K2Node_DynamicCast_0.in:exec"
-          },
-          {
             "from": "K2Node_VariableSet_2.out:then",
             "to": "K2Node_VariableSet_3.in:exec"
           },
@@ -27625,7 +27542,11 @@
           },
           {
             "from": "K2Node_VariableSet_9.out:then",
-            "to": "K2Node_VariableSet_10.in:exec"
+            "to": "K2Node_CallFunction_3.in:exec"
+          },
+          {
+            "from": "K2Node_CallFunction_3.out:then",
+            "to": "K2Node_DynamicCast_0.in:exec"
           }
         ]
       }
@@ -28153,79 +28074,29 @@
             }
           },
           {
-            "id": "K2Node_VariableSet_8",
-            "kind": "setVariable",
+            "id": "K2Node_CallFunction_3",
+            "kind": "call",
             "properties": {
-              "VariableReference": "(MemberName=\"DescentUpwardVelocityCapActive\",MemberGuid=BC512C0C4CFE7D74E5EA94A876530F09,bSelfContext=True)",
+              "FunctionReference": "(MemberName=\"ClearDescentUpwardVelocityCap\",MemberGuid=6C6304A64A0654F9ABF22BB5B12FAA26,bSelfContext=True)",
               "NodePosX": "2520",
               "NodePosY": "-700",
-              "NodeGuid": "37ED160B4828931F420A9BAEE538B5EC"
+              "NodeGuid": "7ABB2E9A57D14A4E84B360B547C6D1D1"
             },
             "pins": {
               "in:exec": {
-                "id": "06D9F38D4342F77261C370B32CF8235B",
+                "id": "5492FF6143BC4FD7A03E2EA50115AAC1",
                 "type": "p68",
                 "name": "execute"
               },
               "out:then": {
-                "id": "2FE3779F425734A7681F25B0FA22679D",
+                "id": "6D01DFF97B004638BDA2FD560D369B24",
                 "type": "p68"
               },
-              "in:DescentUpwardVelocityCapActive": {
-                "id": "44EC1FC94700984612175095AD536855",
-                "type": "p27"
-              },
-              "out:Output_Get": {
-                "id": "822FF679427EE3FBCB7A51A9BE4FEF91",
-                "type": "p26"
-              },
               "in:target": {
-                "id": "7D5DBF7B4824CE8E025BC98F450E2A91",
-                "type": "p48",
+                "id": "E464362C6FAA426EB1C94E8C9F9B1957",
+                "type": "p49",
                 "name": "self"
               }
-            },
-            "defaults": {
-              "in:DescentUpwardVelocityCapActive": "false",
-              "out:Output_Get": "false"
-            }
-          },
-          {
-            "id": "K2Node_VariableSet_9",
-            "kind": "setVariable",
-            "properties": {
-              "VariableReference": "(MemberName=\"DescentUpwardVelocityCap\",MemberGuid=36D7C7C44B8F55D99644E6A8D2831074,bSelfContext=True)",
-              "NodePosX": "2750",
-              "NodePosY": "-700",
-              "NodeGuid": "C04B34154AEDC6712D73B8B74B728AD2"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "17F8BE6D4FEACBB79293668FB0BB90C2",
-                "type": "p68",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "EDD0E49748DB0C977974368404C6E991",
-                "type": "p68"
-              },
-              "in:DescentUpwardVelocityCap": {
-                "id": "EEA7F0CC47B4A72F586CC783CBE31AA6",
-                "type": "p13"
-              },
-              "out:Output_Get": {
-                "id": "2B37B3F840EE70FE4AC88AA2966E5EF4",
-                "type": "p12"
-              },
-              "in:target": {
-                "id": "DF1C559944DC61520D5AFC8172D9BB05",
-                "type": "p48",
-                "name": "self"
-              }
-            },
-            "defaults": {
-              "in:DescentUpwardVelocityCap": "0.0",
-              "out:Output_Get": "0.0"
             }
           }
         ],
@@ -28292,11 +28163,7 @@
           },
           {
             "from": "K2Node_VariableSet_7.out:then",
-            "to": "K2Node_VariableSet_8.in:exec"
-          },
-          {
-            "from": "K2Node_VariableSet_8.out:then",
-            "to": "K2Node_VariableSet_9.in:exec"
+            "to": "K2Node_CallFunction_3.in:exec"
           }
         ]
       }
