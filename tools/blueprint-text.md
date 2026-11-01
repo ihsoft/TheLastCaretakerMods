@@ -550,7 +550,9 @@ In the viewer:
 
 - Select a widget in the hierarchy or canvas. Hierarchy checkboxes show/hide it;
   hiding a parent preserves its children's individual choices. Selection does
-  not reveal hidden widgets.
+  not reveal hidden widgets. Exported `Hidden` widgets retain layout space but
+  are not drawn, including their descendants. `Collapsed` widgets are excluded
+  from layout. Reset visibility restores the exported states.
 - Adjust image/text tint, widget opacity and sample text in the inspector.
   Multiline samples update approximate automatic sizing. Drag an element to
   move it; the gold corner handle moves the selected container and its children.

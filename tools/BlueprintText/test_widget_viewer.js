@@ -9,10 +9,12 @@ const data={asset:'/Game/Test/HUD',root:'root',warnings:[],textures:{[texture]:{
  {id:'icon',name:'Icon',kind:'Image',props:{Brush:{ResourceObject:texture,ImageSize:{X:30,Y:30},
   UVRegion:{bIsValid:true,Min:{X:.2,Y:.3},Max:{X:.5,Y:.7}}}},raw:{},slot:{},parent:'panel',children:[]}
 ]};
-const html=fs.readFileSync(__dirname+'/widget_viewer.html','utf8').replace('__DATA__',JSON.stringify(data));
-const source=html.match(/<script>([\s\S]*?)<\/script>/)[1];
-function element(){return {dataset:{},style:{},children:[],attributes:{},classList:{toggle(){}},
+const html=fs.readFileSync(__dirname+'/widget_viewer.html','utf8');
+function element(){const classes=new Set();return {dataset:{},style:{},children:[],attributes:{},classList:{
+ toggle(name,on){if(on)classes.add(name);else classes.delete(name)},contains(name){return classes.has(name)}},
  setAttribute(k,v){this.attributes[k]=v},append(...v){this.children.push(...v)},replaceChildren(){this.children=[]},addEventListener(){}}}
+function createViewer(data){
+const source=html.replace('__DATA__',JSON.stringify(data)).match(/<script>([\s\S]*?)<\/script>/)[1];
 const ids=Object.fromEntries(['reset-visibility','stage','asset','viewport','guides','textures','tree','selection','summary','details','metrics','clear','warnings',
  'review-editor','edit-text','edit-color','edit-opacity','opacity-value','move-info','reset-widget','review-output','review-count','copy-review','reset-review','review-status'].map(k=>[k,element()]));
 ids.viewport.value='1920,1080';ids.guides.checked=true;ids.textures.checked=true;
@@ -24,6 +26,9 @@ let captured=null;
 ids.stage.setPointerCapture=id=>{captured=id};ids.stage.hasPointerCapture=id=>captured===id;ids.stage.releasePointerCapture=()=>{captured=null};
 const ctx=vm.createContext({document});vm.runInContext(source,ctx);
 const evaluate=expr=>vm.runInContext(expr,ctx);
+return {ctx,ids,evaluate,get captured(){return captured}};
+}
+const viewer=createViewer(data),{ctx,ids,evaluate}=viewer;
 assert.equal(evaluate('boxes.size'),1);
 assert.equal(ids.tree.children.length,3,'All widgets can be controlled, including hidden descendants');
 ctx.select('icon');assert.equal(evaluate('boxes.size'),1,'Selection does not reveal hidden widgets');
@@ -60,7 +65,7 @@ assert.equal(notes.changes[0].properties[1].before,1);
 assert.equal(evaluate('JSON.stringify(data)'),original,'Review edits never mutate exported source');
 const pointer=(x,y)=>({button:0,pointerId:7,clientX:x,clientY:y,preventDefault(){},stopPropagation(){}});
 ctx.startDrag(pointer(100,100),'panel');ctx.moveDrag(pointer(110,105));ctx.endDrag(pointer(110,105));
-assert.equal(captured,null);
+assert.equal(viewer.captured,null);
 assert.equal(evaluate("adjustments.get('panel').move.dx"),20,'Drag uses layout units, not screen pixels');
 assert.equal(evaluate("adjustments.get('panel').move.dy"),10);
 assert.equal(evaluate("boxes.get('panel').x"),30);
@@ -107,9 +112,68 @@ ids['reset-widget'].onclick();assert.equal(ids['edit-text'].value,'');
 assert.equal(evaluate("widgets.get('text').props.Text"),undefined);
 ctx.setText('text','Another example');
 ids['review-output'].focus=()=>{};let fallbackSelected=false;ids['review-output'].select=()=>{fallbackSelected=true};
+// Hidden consumes layout space, including nested children and padding; Collapsed does not.
+for(const kind of ['HorizontalBox','VerticalBox']){
+ const vertical=kind==='VerticalBox';
+ const widget=(id,kind,parent,children,props={},slot={})=>({id,name:id,kind,parent,children,props,slot,raw:{}});
+ const icon=(id,parent,width,height,Visibility='Visible')=>widget(id,'Image',parent,[],{Visibility,Brush:{ImageSize:{X:width,Y:height}}});
+ const fixture={asset:'/Game/Test/Visibility',root:'root',textures:{},warnings:[],widgets:[
+  widget('root',kind,null,['before','panel','after']),icon('before','root',10,8),
+  widget('panel',vertical?'HorizontalBox':'VerticalBox','root',['child','hiddenChild','collapsedChild'],{Visibility:'Hidden'},
+   {Padding:{Left:2,Right:3,Top:4,Bottom:5}}),
+  icon('child','panel',20,12),icon('hiddenChild','panel',30,18,'Hidden'),icon('collapsedChild','panel',99,99,'Collapsed'),
+  icon('after','root',40,10)
+ ]};
+ const v=createViewer(fixture),e=v.evaluate;
+ const source=e('JSON.stringify(data)'),axis=vertical?'y':'x',after=()=>e(`boxes.get('after').${axis}`);
+ const painted=()=>all(v.ids.stage).filter(n=>n.attributes['data-widget']).map(n=>n.attributes['data-widget']);
+ const selectionMarks=()=>all(v.ids.stage).filter(n=>['chosen','move-handle'].includes(n.attributes.class));
+ const expectedOffset=vertical?35:45;
+ assert.equal(after(),expectedOffset,kind+' reserves Hidden subtree size and padding');
+ assert.equal(e("desired(widgets.get('root'))."+(vertical?'h':'w')),vertical?45:85);
+ assert.equal(e("boxes.has('hiddenChild')"),true,'Hidden descendants participate in layout');
+ assert.equal(e("boxes.has('collapsedChild')"),false,'Collapsed descendants have no layout');
+ assert.deepEqual(painted(),['root','before','after'],'Hidden subtree has no shapes, outlines or hit targets');
+ assert.equal(e("treeRows.get('child').row.classList.contains('not-rendered')"),true);
+ v.ctx.select('child');assert.match(v.ids.summary.textContent,/hidden by ancestor/);
+ assert.equal(selectionMarks().length,0,'Selecting a hidden descendant does not reveal it');
+ v.ctx.select('panel');assert.equal(selectionMarks().length,0,'Hidden parent has no selection handle');
+ v.ctx.setVisible('panel',true);assert.equal(after(),expectedOffset);
+ assert.deepEqual(painted(),['root','before','panel','child','after']);
+ assert.equal(e("treeRows.get('child').row.classList.contains('not-rendered')"),false);
+ v.ctx.setVisible('hiddenChild',true);assert.ok(painted().includes('hiddenChild'));
+ assert.equal(after(),expectedOffset,'Showing Hidden does not shift its siblings');
+ v.ctx.setVisible('panel',false);assert.deepEqual(painted(),['root','before','after']);
+ assert.equal(e("treeRows.get('hiddenChild').check.checked"),true,'Parent preserves child override');
+ v.ctx.setVisible('panel',true);assert.ok(painted().includes('hiddenChild'));
+ v.ids['reset-visibility'].onclick();assert.equal(after(),expectedOffset);
+ assert.deepEqual(painted(),['root','before','after']);
+ assert.equal(e("visibility(widgets.get('panel'))"),'Hidden','Reset restores exported Hidden');
+ assert.equal(e('JSON.stringify(data)'),source,'Visibility controls do not change source');
+ assert.equal(v.ctx.reviewNotes().changes.length,0,'Visibility is not an authored review change');
+
+ fixture.widgets.find(w=>w.id==='panel').props.Visibility='Collapsed';
+ const collapsed=createViewer(fixture),ce=collapsed.evaluate;
+ assert.equal(ce(`boxes.get('after').${axis}`),vertical?8:10,kind+' excludes Collapsed subtree and padding');
+ assert.equal(ce('boxes.size'),3);
+ collapsed.ctx.setVisible('panel',true);assert.equal(ce(`boxes.get('after').${axis}`),expectedOffset);
+ collapsed.ids['reset-visibility'].onclick();assert.equal(ce('boxes.size'),3);
+
+ // An empty box has no synthetic size when all of its children are Collapsed.
+ fixture.widgets.find(w=>w.id==='panel').props.Visibility='Hidden';
+ for(const id of ['child','hiddenChild'])fixture.widgets.find(w=>w.id===id).props.Visibility='Collapsed';
+ const empty=createViewer(fixture);
+ assert.equal(empty.evaluate(`desired(widgets.get('panel')).${vertical?'h':'w'}`),0);
+ assert.equal(empty.evaluate(`boxes.get('after').${axis}`),vertical?17:15,'Only the empty panel slot padding remains');
+ fixture.widgets=fixture.widgets.filter(w=>!['before','after'].includes(w.id));
+ fixture.widgets[0].kind='ScaleBox';fixture.widgets[0].children=['panel'];
+ const scaledEmpty=createViewer(fixture);
+ assert.equal(scaledEmpty.evaluate("Object.values(boxes.get('panel')).every(Number.isFinite)"),true,
+  'An empty box inside ScaleBox has finite bounds');
+}
 (async()=>{
  await ids['copy-review'].onclick();assert.equal(fallbackSelected,true,'File-page clipboard fallback selects notes');
  let copied;ctx.navigator={clipboard:{writeText:async value=>{copied=value}}};
  await ids['copy-review'].onclick();assert.equal(JSON.parse(copied).changes.length,1);
- console.log('Widget viewer: visibility, textures, local tint/opacity/text, drag coordinates, nested moves, cancel/reset, source isolation and clipboard passed.');
+ console.log('Widget viewer: Hidden/Collapsed nested layout, visibility controls, textures, local tint/opacity/text, drag coordinates, nested moves, cancel/reset, source isolation and clipboard passed.');
 })().catch(error=>{console.error(error);process.exitCode=1});

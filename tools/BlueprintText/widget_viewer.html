@@ -9,7 +9,7 @@
 <header><h1>HUD · widget-tree preview</h1><p id="asset"></p>
 <p>Approximate exported layout, not gameplay. Texture images exported from editor assets are embedded with brush UV cropping and tint. Fonts, automatic sizing, ScaleBox and RadialSlider remain approximations. Blueprint logic, bindings, DPI rules and animations are not executed.</p>
 <div class="controls"><label>Viewport <select id="viewport"><option value="1920,1080">1920 × 1080</option><option value="2560,1440">2560 × 1440</option><option value="2560,1080">2560 × 1080</option><option value="1280,720">1280 × 720</option></select></label><label><input id="textures" type="checkbox" checked>Original textures</label><label><input id="guides" type="checkbox" checked>Layout outlines</label><button id="reset-visibility">Reset visibility</button><button id="clear">Clear selection</button></div></header>
-<main><aside><h2>Widget tree</h2><p>Checkboxes show or hide widgets. A hidden parent hides its descendants without changing their checkboxes. Click a name to inspect; selection does not change visibility.</p><div class="tree" id="tree"></div></aside>
+<main><aside><h2>Widget tree</h2><p>Checkboxes temporarily show or hide widgets. Exported Hidden widgets keep their layout space; Collapsed widgets take no space. A hidden parent hides its descendants without changing their checkboxes. Click a name to inspect; selection does not change visibility.</p><div class="tree" id="tree"></div></aside>
 <section><svg id="stage" xmlns="http://www.w3.org/2000/svg" aria-label="HUD layout preview"></svg><div id="metrics"></div><p><span class="key">Dashed: layout bounds</span><span style="color:#ffcf70">Gold: selection</span></p><p class="hidden-note">Hidden widgets may overlap: they can represent alternative runtime states. Empty text has no runtime value in this export.</p></section>
 <aside><h2 id="selection">Select a widget</h2><p id="summary"></p>
 <fieldset id="review-editor" disabled><legend>Review adjustments</legend>
@@ -32,6 +32,8 @@ function xy(v){return {X:0,Y:0,...v}}function pad(v){return {Left:0,Top:0,Right:
 function exportedVisible(w){return !['Collapsed','Hidden'].includes(w.props.Visibility)}
 function visibility(w){return visibilityOverrides.has(w.id)?(visibilityOverrides.get(w.id)?'Visible':'Collapsed'):(w.props.Visibility??'Visible')}
 function hidden(w){return ['Collapsed','Hidden'].includes(visibility(w))}
+function collapsed(w){return visibility(w)==='Collapsed'}
+function visibleInTree(w){for(let item=w;item;item=widgets.get(item.parent))if(hidden(item))return false;return true}
 function setVisible(id,value){
  const w=widgets.get(id);if(value===exportedVisible(w))visibilityOverrides.delete(id);else visibilityOverrides.set(id,value);
  render();
@@ -105,19 +107,20 @@ function endDrag(event,cancel=false){if(!drag||(event&&event.pointerId!==drag.po
  if(cancel)updateAdjustment(previous.id,'move',previous.before);
 }
 function desired(w){
- if(hidden(w))return {w:0,h:0};const p=w.props;
+ if(collapsed(w))return {w:0,h:0};const p=w.props;
  if(w.kind==='Image'){const s=xy(p.Brush?.ImageSize);return {w:s.X||32,h:s.Y||32}}
  if(w.kind==='TextBlock'){const size=p.Font?.Size??24,lines=String(textOf(w)).split('\n');return {w:Math.max(1,...lines.map(line=>line.length*size*.56)),h:size*1.25*lines.length}}
- const kids=children(w).filter(c=>!hidden(c));
+ const kids=children(w).filter(c=>!collapsed(c));
  if(kids.length){const sizes=kids.map(c=>{const s=desired(c),p=pad(c.slot.Padding);return {w:s.w+p.Left+p.Right,h:s.h+p.Top+p.Bottom}});
  return {w:w.kind==='HorizontalBox'?sizes.reduce((s,c)=>s+c.w,0):Math.max(...sizes.map(s=>s.w)),h:w.kind==='VerticalBox'?sizes.reduce((s,c)=>s+c.h,0):Math.max(...sizes.map(s=>s.h))}}
+ if(w.kind==='HorizontalBox'||w.kind==='VerticalBox')return {w:0,h:0};
  return w.kind==='RadialSlider'?{w:150,h:150}:{w:240,h:36};
 }
 function place(w,x,y,width,height){
  const move=adjustments.get(w.id)?.move;x+=move?.dx??0;y+=move?.dy??0;
- if(hidden(w))return;boxes.set(w.id,{x,y,w:Math.max(1,width),h:Math.max(1,height)});
+ if(collapsed(w))return;boxes.set(w.id,{x,y,w:Math.max(1,width),h:Math.max(1,height)});
  const kids=children(w);let cursor=0;
- for(const c of kids){if(hidden(c))continue;const s=c.slot,p=pad(s.Padding),d=desired(c);
+ for(const c of kids){if(collapsed(c))continue;const s=c.slot,p=pad(s.Padding),d=desired(c);
  if(w.kind==='CanvasPanel'){
   const l=s.LayoutData??{},o=pad(l.Offsets),a=xy(l.Anchors?.Minimum),b=xy(l.Anchors?.Maximum),align=xy(l.Alignment);
   const cw=a.X===b.X?(s.bAutoSize?d.w:o.Right):width*(b.X-a.X)-o.Left-o.Right;
@@ -131,7 +134,8 @@ function place(w,x,y,width,height){
   place(c,x+p.Left+(vertical?offset:cursor),y+p.Top+(vertical?cursor:offset),vertical?cross:d.w,vertical?d.h:cross);
   cursor+=(vertical?d.h+p.Top+p.Bottom:d.w+p.Left+p.Right);
  }else if(w.kind==='ScaleBox'){
-  const k=Math.min(width/d.w,height/d.h);place(c,x+(width-d.w*k)/2,y+(height-d.h*k)/2,d.w*k,d.h*k);
+  const scale=Math.min(d.w>0?width/d.w:Infinity,d.h>0?height/d.h:Infinity),k=Number.isFinite(scale)?scale:1;
+  place(c,x+(width-d.w*k)/2,y+(height-d.h*k)/2,d.w*k,d.h*k);
  }else place(c,x+p.Left,y+p.Top,width-p.Left-p.Right,height-p.Top-p.Bottom);
  }
 }
@@ -161,7 +165,7 @@ function render(){
  boxes=new Map();place(widgets.get(data.root),0,0,W,H);stage.replaceChildren();stage.setAttribute('viewBox',`0 0 ${W} ${H}`);
  stage.append(el('path',{d:`M${W/2},0 V${H} M0,${H/2} H${W}`,stroke:'#5c788d','stroke-width':1,'stroke-dasharray':'5 10',opacity:.4}));
  const guide=document.getElementById('guides').checked;
- for(const w of data.widgets){const b=boxes.get(w.id);if(!b)continue;const p=effectiveProps(w),group=el('g',{'data-widget':w.id}),g=el('g',{opacity:opacityOf(w)});group.append(g);group.append(el('title',{},w.name+' · '+w.kind+' · '+visibility(w)));
+ for(const w of data.widgets){const b=boxes.get(w.id);if(!b||!visibleInTree(w))continue;const p=effectiveProps(w),group=el('g',{'data-widget':w.id}),g=el('g',{opacity:opacityOf(w)});group.append(g);group.append(el('title',{},w.name+' · '+w.kind+' · '+visibility(w)));
   if(w.kind==='TextBlock')drawText(g,w,b,p);
   else if(w.kind==='Image'&&!drawTexture(g,w,b,data.widgets.indexOf(w))){
    g.append(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,fill:color(p.ColorAndOpacity??{R:.4,G:.8,B:1,A:.18}),stroke:'#7897ae','stroke-dasharray':'5 3'}));
@@ -172,17 +176,17 @@ function render(){
   group.append(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,class:'hit'}));group.addEventListener('pointerdown',event=>startDrag(event,w.id));stage.append(group);
  }
  const w=widgets.get(selected),b=boxes.get(selected);
- if(b){stage.append(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,class:'chosen'}));
+ if(b&&visibleInTree(w)){stage.append(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,class:'chosen'}));
  const handle=el('rect',{x:b.x+b.w-14,y:b.y,width:14,height:14,rx:3,class:'move-handle'});handle.append(el('title',{},'Drag selected widget and its children'));
  handle.addEventListener('pointerdown',event=>startDrag(event,w.id));stage.append(handle);}
  document.getElementById('selection').textContent=w?w.name:'Select a widget';
- document.getElementById('summary').textContent=w?`${w.kind} · preview: ${visibility(w)} · exported: ${w.props.Visibility??'Visible'}${!b&&!hidden(w)?' · hidden by ancestor':''}`:'';
+ document.getElementById('summary').textContent=w?`${w.kind} · preview: ${visibility(w)} · exported: ${w.props.Visibility??'Visible'}${!hidden(w)&&!visibleInTree(w)?' · hidden by ancestor':''}`:'';
  document.getElementById('details').textContent=w?JSON.stringify({bounds:b,slot:w.slot,properties:w.raw},null,2):'Select a widget in the tree or canvas to inspect its placement and source properties.';
  document.getElementById('metrics').textContent=`${W} × ${H} layout units · ${boxes.size} / ${data.widgets.length} widgets laid out · manual visibility overrides: ${visibilityOverrides.size}`;
  for(const [id,entry] of treeRows){
- const w=widgets.get(id);entry.check.checked=!hidden(w);entry.row.classList.toggle('not-rendered',!boxes.has(id));
+ const w=widgets.get(id);entry.check.checked=!hidden(w);entry.row.classList.toggle('not-rendered',!boxes.has(id)||!visibleInTree(w));
  entry.button.classList.toggle('selected',id===selected);
- entry.button.title=w.kind+' · '+visibility(w)+(hidden(w)?'':!boxes.has(id)?' · hidden by ancestor':'')+' · exported: '+(w.props.Visibility??'Visible');
+ entry.button.title=w.kind+' · '+visibility(w)+(hidden(w)?'':!visibleInTree(w)?' · hidden by ancestor':'')+' · exported: '+(w.props.Visibility??'Visible');
  }
  syncReview();
 }
