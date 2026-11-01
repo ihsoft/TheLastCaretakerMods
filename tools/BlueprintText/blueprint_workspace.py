@@ -364,7 +364,7 @@ class Workspace:
             for i, path in enumerate(inputs):
                 self.engine_run('ImportBatch', f'import-{i}', Input=path)
             for i, (_, _, document) in enumerate(entries):
-                actual = self.export_one(document['asset'], self.run / f'reopened-{i}.json', f'reopen-{i}', resources=True)
+                actual = self.export_one(document['asset'], self.run / f'reopened-{i}.json', f'reopen-{i}')
                 differences = codec.compare(document, actual)
                 if differences:
                     diagnostic = self.run / f'comparison-{i}.json'
@@ -376,10 +376,6 @@ class Workspace:
                 byte_path = self.run / 'accepted' / f'{i}.uasset'
                 byte_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(target(self.project, asset), byte_path)
-                resources = (self.run / f'reopened-{i}.json').with_suffix('.resources')
-                if resources.exists():
-                    destination = source.with_suffix('.resources')
-                    shutil.copytree(resources, destination, dirs_exist_ok=True)
                 updated[asset] = dict(source=str(source.relative_to(self.root)), bytes=str(byte_path.relative_to(self.internal)),
                                       before=baseline.get(asset, {}).get('before'), accepted=str((self.run / f'reopened-{i}.json').relative_to(self.internal)))
             write(self.internal / 'baseline.json', updated)
@@ -478,7 +474,9 @@ class Workspace:
         data, entries = self.load()
         self.check(entries)
         self.prepare(self.project)
-        catalog = self.preview_catalog([d['asset'] for _, _, d in entries])
+        # The catalog skips exporting the packages in this list. Include selected
+        # widgets in its exports so their images are current, independently of Apply.
+        catalog = self.preview_catalog([d['asset'] for _, _, d in entries if 'widget' not in d])
         baseline, records = self.baseline(), []
         selected = {d['asset'] for _, _, d in entries}
         referenced_by = {a: [] for a in catalog}
@@ -521,6 +519,14 @@ class Workspace:
             if item.get('placeholder', False) and not record['placeholder']:
                 raise ValueError('Workspace placeholder disagrees with project metadata; mark the actual asset as a stub: ' + asset)
             old = baseline.get(document['asset'])
+            if old and 'widget' in document:
+                native_path = catalog[asset].get('native')
+                if not native_path:
+                    raise ValueError('Preview catalog omitted current widget resources: ' + asset)
+                resources = inside(self.run / 'catalog', native_path).with_suffix('.resources') / 'manifest.json'
+                if not resources.is_file():
+                    raise ValueError('Preview catalog omitted current widget resources: ' + asset)
+                record['resources'] = str(resources)
             before = inside(self.internal, old['before']) if old and old.get('before') else None
             if before and codec.compare(read(before), document):
                 record.update(before=str(before), status='changed')

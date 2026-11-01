@@ -97,7 +97,7 @@ type or turn the workspace into a standalone copy of the project.
 | --- | --- |
 | `workspace.json` | Selection of project assets and working JSON paths, plus optional review annotations. |
 | `blueprints/**/*.json` | Editable snapshots of supported Blueprint state. |
-| Adjacent `*.resources/` bundles | Tool-owned widget preview manifests and images, when exported. |
+| Adjacent `*.resources/` bundles | Tool-owned widget resource snapshots from Export; Apply does not refresh them. |
 | `.workspace/` | Tool-owned baselines, backups, diagnostics and generated previews. |
 
 The original export is the review baseline; subsequent Apply operations update
@@ -175,6 +175,10 @@ Inheritance ordering and compatible batches are tool-owned. Unsupported
 dependency arrangements produce a diagnostic rather than requiring an agent to
 invent a per-mod build procedure.
 
+Apply verifies Blueprint state without generating or copying preview images.
+Run Preview to collect current widget resources after Apply. A Preview failure
+does not roll back applied packages or change the accepted project baseline.
+
 On a conflict, preserve both the JSON edits and the editor changes. Export the
 current project state into a separate workspace and reconcile the intended
 change; do not remove conflict checks or overwrite the newer asset manually.
@@ -197,6 +201,9 @@ move backup files by hand.
 Run `Preview` once and return its `previewUrl`. The command checks selected
 assets for changes since export/apply, prepares the shared tooling and gathers
 current project assets and references in Unreal before rendering offline.
+For saved selected Widget Blueprints, it collects fresh resource bundles for
+that preview instead of reusing the adjacent Export snapshots. The original
+Before resource snapshots remain unchanged for review.
 Warn before this engine action. Do not manually enumerate dependencies, inspect
 the catalog, refresh the module separately, or assemble a preview manifest.
 The compact result reports editable cards, listed assets, graphs, stubs, missing

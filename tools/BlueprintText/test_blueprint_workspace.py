@@ -509,6 +509,101 @@ except ValueError:
         rows[1].pop('reason')
         return dict(schema=1, assets=rows)
 
+    def select_widget(self):
+        document = copy.deepcopy(self.document)
+        document.pop('root')
+        document['parent'] = '/Script/UMG.UserWidget'
+        document['widget'] = dict(tree='BP_Test:WidgetTree', objects=[
+            dict(id='BP_Test:WidgetTree', name='WidgetTree', **{'class': '/Script/UMG.WidgetTree'},
+                 outer='$blueprint', flags=8, properties=dict(RootWidget='BP_Test:WidgetTree.Canvas')),
+            dict(id='BP_Test:WidgetTree.Canvas', name='Canvas', **{'class': '/Script/UMG.CanvasPanel'},
+                 outer='BP_Test:WidgetTree', flags=8, properties=dict(Slots='()'))])
+        self.document = document
+        bw.write(self.source, document)
+        bw.write(self.ws.internal / 'before.json', document)
+        return document
+
+    def test_widget_apply_verifies_without_preview_resources_and_survives_preview_failure(self):
+        self.select_widget()
+        changed = self.changed()
+        source_bundle = self.source.with_suffix('.resources') / 'manifest.json'
+        bw.write(source_bundle, dict(original='export resources'))
+        original_bundle = source_bundle.read_bytes()
+        calls = []
+        def engine(mode, name, **fields):
+            calls.append(mode)
+            if mode == 'ImportBatch':
+                self.file.write_bytes(b'rebuilt widget')
+            elif mode == 'Export':
+                if 'PreviewResources' in fields:
+                    raise RuntimeError('PNG export unavailable')
+                bw.write(fields['Output'], bw.codec.native(changed))
+            else:
+                self.fail('Unexpected engine action: ' + mode)
+        with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'engine_run', side_effect=engine), \
+             patch.object(bw.shutil, 'copytree', side_effect=OSError('preview copy unavailable')):
+            self.assertEqual('applied', self.ws.apply()['status'])
+        self.assertEqual(['ImportBatch', 'Export'], calls)
+        self.assertEqual(b'rebuilt widget', self.file.read_bytes())
+        self.assertEqual(original_bundle, source_bundle.read_bytes())
+        self.assertEqual('unchanged', self.ws.apply()['status'])
+        baseline = self.ws.baseline()
+        with patch.object(self.ws, 'prepare'), \
+             patch.object(self.ws, 'preview_catalog', side_effect=RuntimeError('PNG export unavailable')):
+            with self.assertRaisesRegex(RuntimeError, 'PNG export unavailable'):
+                self.ws.preview()
+        self.assertEqual(b'rebuilt widget', self.file.read_bytes())
+        self.assertEqual(baseline, self.ws.baseline())
+        self.assertFalse((self.ws.internal / 'recovery.json').exists())
+        self.assertFalse((self.ws.run / 'preview/index.html').exists())
+
+    def test_widget_preview_uses_current_resources_without_replacing_proposal_or_before(self):
+        self.select_widget()
+        desired = self.changed()
+        original = self.ws.manifest.read_bytes(), self.ws.baseline(), self.file.read_bytes()
+        # Adjacent export resources may be stale after Apply; Preview must not use them.
+        stale = self.source.with_suffix('.resources') / 'manifest.json'
+        bw.write(stale, dict(stale=True))
+        before = self.ws.internal / 'before.resources/manifest.json'
+        bundle = dict(schema=1, asset=self.document['asset'], textures={}, unsupported=[])
+        bw.write(before, bundle)
+        before_bytes = before.read_bytes()
+        native = self.ws.run / 'catalog/widget.native.json'
+        resources = native.with_suffix('.resources') / 'manifest.json'
+        def engine(mode, name, **fields):
+            self.assertEqual('PreviewCatalog', mode)
+            self.assertEqual([], bw.read(fields['Input'])['selected'])
+            bw.write(native, bw.codec.native(self.document))
+            bw.write(resources, bundle)
+            bw.write(fields['Output'], dict(schema=1, assets=[dict(asset=self.document['asset'],
+                     role='unclassified', **{'class': 'WidgetBlueprint'}, dependencies=[], native=str(native))]))
+        with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'engine_run', side_effect=engine) as engine_mock:
+            result = self.ws.preview()
+        self.assertEqual(1, engine_mock.call_count)
+        self.assertEqual('previewed', result['status'])
+        record = bw.read(self.ws.run / 'preview.json')['assets'][0]
+        self.assertEqual(str(resources), record['resources'])
+        self.assertEqual(str(self.source), record['source'])
+        self.assertEqual('changed', record['status'])
+        self.assertEqual(desired, bw.read(self.source))
+        self.assertEqual(before_bytes, before.read_bytes())
+        self.assertEqual(original, (self.ws.manifest.read_bytes(), self.ws.baseline(), self.file.read_bytes()))
+
+    def test_widget_preview_rejects_missing_resources_instead_of_reusing_export_bundle(self):
+        self.select_widget()
+        bw.write(self.source.with_suffix('.resources') / 'manifest.json',
+                 dict(schema=1, asset=self.document['asset'], textures={}, unsupported=[]))
+        row = dict(asset=self.document['asset'], role='unclassified', **{'class': 'WidgetBlueprint'}, dependencies=[])
+        for native in (None, str(self.ws.run / 'catalog/widget.native.json')):
+            with self.subTest(native=native):
+                if native:
+                    row['native'] = native
+                with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'preview_catalog', return_value={row['asset']: row}):
+                    with self.assertRaisesRegex(ValueError, 'current widget resources'):
+                        self.ws.preview()
+                self.assertFalse((self.ws.run / 'preview/index.html').exists())
+                self.assertEqual(b'original', self.file.read_bytes())
+
     def test_preview_discovers_dataasset_dependency_and_preserves_edit_selection(self):
         original = self.ws.manifest.read_bytes(), self.ws.baseline(), self.file.read_bytes()
         catalog = self.catalog_fixture()
