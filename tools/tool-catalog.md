@@ -11,7 +11,8 @@ failure handling.
 | Validate a cooked/re-extracted VoyageItem against its original and recipe | `Test-VoyageItemPatch.ps1` | [VoyageItem project updates](voyage-item-patch.md) |
 | Import/export Blueprint text or discover operations | `BlueprintText/Invoke-BlueprintText.ps1` | [BlueprintText](blueprint-text.md) |
 | Operate a Blueprint JSON workspace in an existing project | `BlueprintText/Invoke-BlueprintWorkspace.ps1` | [Blueprint workspace](blueprint-workspace.md) |
-| Import/export supported Actor/Widget Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintText/Invoke-BlueprintAssetText.ps1` | [BlueprintText](blueprint-text.md#schema-2-blueprints) |
+| Import/export supported Actor/Widget/direct UObject Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintText/Invoke-BlueprintAssetText.ps1` | [BlueprintText](blueprint-text.md#schema-2-blueprints) |
+| Import and execute the reusable INI parser in a disposable project | `BlueprintText/Test-IniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/AGENTS.md#validation-and-maintenance) |
 | Check asset-text round trips in a disposable prepared project | `BlueprintText/test_asset_text_roundtrip.py` | [Blueprint checks](blueprint-text.md#checks) |
 | Render a compact Blueprint graph offline | `BlueprintText/Render-BlueprintGraph.ps1` | [BlueprintText](blueprint-text.md) |
 | Generate graph/widget previews and a browse or review index for a set of exports | `BlueprintText/Render-BlueprintPreviews.ps1` | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |

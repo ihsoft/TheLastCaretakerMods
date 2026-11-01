@@ -62,6 +62,47 @@ class WorkspaceTests(unittest.TestCase):
         bw.write(self.source, source)
         return source
 
+    def library(self):
+        document = copy.deepcopy(self.document)
+        document.pop('root')
+        document['parent'] = '/Script/CoreUObject.Object'
+        path = self.root / 'library.json'
+        bw.write(path, document)
+        return path
+
+    def test_add_source_initializes_empty_workspace_without_engine_or_asset_writes(self):
+        workspace = bw.Workspace(self.root / 'NewSession', self.root / 'Engine')
+        asset = '/Game/Mods/Example/BP_Test'
+        with patch.object(workspace, 'command') as engine:
+            result = workspace.add_source(self.library(), asset, self.project)
+        engine.assert_not_called()
+        self.assertFalse(result['applied'])
+        self.assertEqual(workspace.baseline(), {})
+        _, entries = workspace.load()
+        self.assertEqual(entries[0][2]['asset'], asset)
+        self.assertFalse(bw.target(self.project, asset).exists())
+
+    def test_add_source_preserves_existing_baseline_and_rejects_duplicate(self):
+        before = self.ws.baseline()
+        library = self.library()
+        self.ws.add_source(library, '/Game/Mods/Example/BP_Test')
+        self.assertEqual(self.ws.baseline(), before)
+        self.assertEqual(len(self.ws.load()[1]), 2)
+        with self.assertRaisesRegex(ValueError, 'already selected'):
+            self.ws.add_source(library, '/Game/Mods/Example/BP_Test')
+
+    def test_add_source_rejects_existing_asset_and_project_mismatch(self):
+        library = self.library()
+        asset = '/Game/Mods/Example/BP_Test'
+        existing = bw.target(self.project, asset)
+        existing.parent.mkdir(parents=True)
+        existing.write_bytes(b'owned elsewhere')
+        with self.assertRaisesRegex(ValueError, 'already exists'):
+            self.ws.add_source(library, asset)
+        self.assertEqual(existing.read_bytes(), b'owned elsewhere')
+        with self.assertRaisesRegex(ValueError, 'disagrees'):
+            self.ws.add_source(library, asset, self.root / 'Other.uproject')
+
     def test_ready_provider_prepares_project_dependencies_without_project_build(self):
         events = []
         with patch.object(bw, 'prepare_project', side_effect=lambda *args: events.append('project') or []) as dependencies, \

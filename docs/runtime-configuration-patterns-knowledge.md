@@ -42,6 +42,19 @@ describe it as a strict session snapshot without changing that ownership.
 
 ## Author one settings contract
 
+For new BPT-authored loaders, the reusable
+[UObject INI parser source](../tools/BlueprintText/Library/IniFileParser/AGENTS.md)
+provides `Load`, `Reload` and typed getters with caller-supplied defaults and
+inclusive numeric bounds. Import a copy into the consuming mod's package path
+through BPT AddSource/Apply. It caches raw values per object, clears before
+reload, and uses the existing Voyage `LoadFileToArray` API. No separate parser
+generator or runtime native module is needed. Its format is the flat grammar
+below; it does not provide section namespaces. The mod-owned
+[StableGyro integration](../mods/StableGyro/ARCHITECTURE.md#settings-parser) uses
+`GetDouble` and `GetBool` and is game-validated. Editor execution tests cover
+the full getter contract, including numeric edge cases. A new consumer still
+needs game checks of its own lifecycle and value application.
+
 1. Put the distributable default `Assets/<Mod>.ini` under the mod. It owns
    distributed values, player comments, order, and formatting. Install the same
    file beside the consumed container when the mod reads it from
@@ -62,8 +75,12 @@ describe it as a strict session snapshot without changing that ownership.
    producers generate runtime names/defaults from these inputs; maintained
    Blueprints keep matching members and loaders through their authoring workflow.
    Never hand-edit generated headers or cooked output.
-4. In the runtime loader, reset the owner to defined fallbacks before each
-   read. The first `=` separates a case-sensitive key from its value. Trim both,
+4. On every runtime reload, assign every owned setting from the new snapshot
+   or its defined fallback; never retain an old effective value on failure.
+   With the BPT parser, pass the schema fallback to each getter and assign its
+   result once; no separate reset-before-read chain is needed. Procedural
+   loaders may reset before reading to establish the same outcome.
+   The first `=` separates a case-sensitive key from its value. Trim both,
    and treat `#` as a comment only outside a quoted string. Numbers accept a
    sign, decimal form, and exponent; they must be finite, representable in the
    final storage type, and inside any inclusive bounds. Booleans accept only
@@ -85,8 +102,8 @@ either schema shape, copies the default INI byte for byte, and emits one generic
 runtime table. The shared Blueprint graph generator in
 `tools/VoyageModSettings/Public` creates typed members and the parser/loader;
 each cooked mod contains its own generated graph and has no separately
-installed runtime dependency. StableGyro maintains those graphs in its Unreal
-project and edits them through BPT; its producer uses the shared schema validator
+installed runtime dependency. StableGyro instead maintains a mod-owned BPT parser
+and consuming loaders in its Unreal project; its producer uses the shared schema validator
 without generating headers or graphs. Mod-local scripts retain existing public
 build interfaces. The shared
 [INI merger](../tools/Merge-VoyageModIni.ps1) prepares a new file without

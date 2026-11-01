@@ -1,0 +1,11 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1",
+  "FriendlyName": "BPT INI parser test support (editor only distribution)",
+  "CanContainContent": false,
+  "Modules": [
+    {"Name": "Voyage", "Type": "Runtime", "LoadingPhase": "Default"},
+    {"Name": "IniParserTests", "Type": "Editor", "LoadingPhase": "Default"}
+  ]
+}

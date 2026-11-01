@@ -152,8 +152,9 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   from this path. Keep the new native mirrors as graph-reference identities,
   never serialization templates for authored component instances.
 - `Voyage.uproject` and its maintained `Content/` assets own the mod. Edit the
-  three gameplay Blueprints through the shared BPT workflow and commit their
-  synchronized JSON alongside the assets. Do not restore C++ graph generation,
+  three gameplay Blueprints and their UObject settings parser through the
+  shared BPT workflow and commit their synchronized JSON alongside the assets.
+  Do not restore C++ graph generation,
   clear Content during a build, or treat BPT JSON as build-time source assets.
 - Build-StableGyro.ps1 is the only public producer. It owns fingerprinting,
   native-support preparation through the shared item updater, focused project
@@ -233,12 +234,17 @@ schema fallbacks, and validation metadata. For each option:
 
 To add a setting, add the canonical value and adjacent comments to the INI,
 then add one schema entry with matching identities. Update the owning Blueprint
-through BPT: its member, fallback, parsing/range checks, loader and consumers
+through BPT: its member, getter arguments, fallback, numeric bounds and consumers
 must match the schema. The public producer validates the INI/schema pair; it
 does not create members or rewrite graphs. Both helpers call their maintained
 `ReloadSettings` function at BeginPlay and synchronously on
-player entry through the owning Pawn's controller-changed delegate, resetting
-their defaults before every read. `ModActor` owns the full settings set for
+player entry through the owning Pawn's controller-changed delegate. Each reload
+constructs and retains a mod-owned parser snapshot, calls `Load`, and assigns
+each setting once using `GetDouble` or `GetBool` with the schema fallback and
+bounds. Do not add a separate reset-before-read assignment chain; getter
+fallbacks initialize missing or invalid values. Keep parser logic in the
+separate asset and preserve the [settings ownership](ARCHITECTURE.md#settings-parser).
+`ModActor` owns the full settings set for
 PostPhysics stabilization, including both independent control-enable flags;
 `PitchInputActor` reads `EnableAltitudeControl` through its cached sibling only
 for native altitude-ownership eligibility and does not duplicate the setting.

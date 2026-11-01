@@ -2,6 +2,8 @@
 
 For new and existing mods, start with the [workspace workflow](../blueprint-workspace.md).
 The [format guide](../blueprint-text.md) owns lower-level interfaces.
+The [INI parser library](Library/IniFileParser/AGENTS.md) owns reusable parser
+integration, its public getters, format, and focused validation.
 BlueprintText is the recommended Blueprint authoring workflow. Packaging and
 installation remain the mod producer's responsibility. Keep disposable tool-test
 projects and working results under `Tmp/BlueprintText/`; keep the catalogue cache

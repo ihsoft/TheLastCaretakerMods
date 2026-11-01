@@ -1,0 +1,1790 @@
+{
+  "steps": [
+    {
+      "label": "GetDouble Missing {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Missing",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetFloat Missing",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Missing",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Missing",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Missing",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetBool Missing",
+      "method": "GetBool",
+      "object": 1,
+      "args": {
+        "Name": "Missing",
+        "Default": true
+      },
+      "expected": true
+    },
+    {
+      "label": "GetString Missing",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Name": "Missing",
+        "Default": "fallback"
+      },
+      "expected": "fallback"
+    },
+    {
+      "label": "Getters before Load do not read",
+      "reads": 0
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "Missing file read once",
+      "reads": 1
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "Write UTF8 BOM and CRLF input",
+      "write": "﻿# Shared parser test\r\n  Float = -1.5e0 # comment\r\nInt=42\r\nBool=TrUe\r\nFalseBool=FALSE\r\nText=\"a=b#c\\\"q\\\\z\" # tail\r\nEmpty=\"\"\r\nUnicode=\"Привет — мир\"\r\nCase=11\r\ncase=22\r\nBadBool=yes\r\nBadString=unquoted\r\nDuplicate=3\r\nDuplicate=4\r\nInvalidLast=3\r\nInvalidLast=wrong\r\nBrokenLast=\"good\"\r\nBrokenLast=\"bad\\q\"\r\nUnclosedLast=\"good\"\r\nUnclosedLast=\"unfinished\r\n[Section]\r\nSectionValue=9\r\nTiny=1e-45\r\nTinyBad=1e-46\r\nZero=0\r\nNegZero=-0\r\nHugeZero=0e-9999\r\nMaxFloat=3.4028234663852886e38\r\nMinFloat=-3.4028234663852886e38\r\nMaxInt=2147483647\r\nMinInt=-2147483648\r\nIntOverflow=2147483648\r\nIntUnderflow=-2147483649\r\nFraction=1.5\r\nWholeDecimal=3.0\r\nWholeExponent=5e1\r\nPoint=.5\r\nEndPoint=1.\r\nFloatBoundary=0.1\r\nBad0=nan\r\nBad1=Inf\r\nBad2=-Infinity\r\nBad3=1e309\r\nBad4=1e-9999\r\nBad5=0x10\r\nBad6=+\r\nBad7=.\r\nBad8=1e\r\nBad9=1ee2\r\nBad10=1 2\r\nBad11=12junk\r\nBad12=1e3.0\r\nBad13=--1\r\nBad14=1,5\r\nBad15=1.2.3\r\nFloatOverflow=1e40\r\nFloatNegativeOverflow=-1e40\r\nEmptyNumber=\r\nКлюч=6\r\nключ=7\r\n\r\nDoublePrecision = 1.0000000000000002\r\nDoubleInteger = 9007199254740991\r\nDoubleHuge = 1e300\r\nDoubleNegativeHuge = -1e300\r\nDoubleTiny = 1e-300\r\nDoubleMinNormal = 2.2250738585072014e-308\r\nDoubleSubnormal = 4.9406564584124654e-324\r\nDoubleNegativeSubnormal = -4.9406564584124654e-324\r\nDoubleMax = 1.7976931348623157e308\r\nDoubleMin = -1.7976931348623157e308\r\nDoubleUnderflow = 1e-400\r\nDoubleNegativeOverflow = -1e309\r\nDoubleRounded = 0.10000000000000001\r\n"
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "File editing alone does not change cache",
+      "reads": 1
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "Load reads exactly once",
+      "reads": 2
+    },
+    {
+      "label": "GetFloat Float",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Float",
+        "Default": 7.25
+      },
+      "expected": -1.5
+    },
+    {
+      "label": "GetFloat Tiny",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Tiny",
+        "Default": 7.25
+      },
+      "expected": 1.401298464324817e-45
+    },
+    {
+      "label": "GetFloat TinyBad",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "TinyBad",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetFloat Zero",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Zero",
+        "Default": 7.25
+      },
+      "expected": 0
+    },
+    {
+      "label": "GetFloat NegZero",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "NegZero",
+        "Default": 7.25
+      },
+      "expected": 0
+    },
+    {
+      "label": "GetFloat HugeZero",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "HugeZero",
+        "Default": 7.25
+      },
+      "expected": 0
+    },
+    {
+      "label": "GetFloat MaxFloat",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "MaxFloat",
+        "Default": 7.25
+      },
+      "expected": 3.4028234663852886e+38
+    },
+    {
+      "label": "GetFloat MinFloat",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "MinFloat",
+        "Default": 7.25
+      },
+      "expected": -3.4028234663852886e+38
+    },
+    {
+      "label": "GetFloat Point",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Point",
+        "Default": 7.25
+      },
+      "expected": 0.5
+    },
+    {
+      "label": "GetFloat EndPoint",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "EndPoint",
+        "Default": 7.25
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 42
+    },
+    {
+      "label": "GetInt Case",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Case",
+        "Default": 73
+      },
+      "expected": 11
+    },
+    {
+      "label": "GetInt case",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "case",
+        "Default": 73
+      },
+      "expected": 22
+    },
+    {
+      "label": "GetInt CASE",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "CASE",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetInt Duplicate",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Duplicate",
+        "Default": 73
+      },
+      "expected": 4
+    },
+    {
+      "label": "GetInt InvalidLast",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "InvalidLast",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetInt SectionValue",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "SectionValue",
+        "Default": 73
+      },
+      "expected": 9
+    },
+    {
+      "label": "GetInt MaxInt",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "MaxInt",
+        "Default": 73
+      },
+      "expected": 2147483647
+    },
+    {
+      "label": "GetInt MinInt",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "MinInt",
+        "Default": 73
+      },
+      "expected": -2147483648
+    },
+    {
+      "label": "GetInt IntOverflow",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "IntOverflow",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetInt IntUnderflow",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "IntUnderflow",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetInt Fraction",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Fraction",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetInt WholeDecimal",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "WholeDecimal",
+        "Default": 73
+      },
+      "expected": 3
+    },
+    {
+      "label": "GetInt WholeExponent",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "WholeExponent",
+        "Default": 73
+      },
+      "expected": 50
+    },
+    {
+      "label": "GetFloat Bad0",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad0",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad0",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad0",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad1",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad1",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad1",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad1",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad2",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad2",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad2",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad2",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad3",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad3",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad3",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad3",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad4",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad4",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad4",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad4",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad5",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad5",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad5",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad5",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad6",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad6",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad6",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad6",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad7",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad7",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad7",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad7",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad8",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad8",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad8",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad8",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad9",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad9",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad9",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad9",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad10",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad10",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad10",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad10",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad11",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad11",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad11",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad11",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad12",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad12",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad12",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad12",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad13",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad13",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad13",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad13",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad14",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad14",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad14",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad14",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetFloat Bad15",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "Bad15",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt Bad15",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Bad15",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetBool Bool",
+      "method": "GetBool",
+      "object": 1,
+      "args": {
+        "Name": "Bool",
+        "Default": true
+      },
+      "expected": true
+    },
+    {
+      "label": "GetBool FalseBool",
+      "method": "GetBool",
+      "object": 1,
+      "args": {
+        "Name": "FalseBool",
+        "Default": true
+      },
+      "expected": false
+    },
+    {
+      "label": "GetBool BadBool",
+      "method": "GetBool",
+      "object": 1,
+      "args": {
+        "Name": "BadBool",
+        "Default": true
+      },
+      "expected": true
+    },
+    {
+      "label": "GetBool Missing",
+      "method": "GetBool",
+      "object": 1,
+      "args": {
+        "Name": "Missing",
+        "Default": true
+      },
+      "expected": true
+    },
+    {
+      "label": "GetBool BadBool",
+      "method": "GetBool",
+      "object": 1,
+      "args": {
+        "Name": "BadBool",
+        "Default": false
+      },
+      "expected": false
+    },
+    {
+      "label": "GetString Text",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Name": "Text",
+        "Default": "fallback"
+      },
+      "expected": "a=b#c\"q\\z"
+    },
+    {
+      "label": "GetString Empty",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Name": "Empty",
+        "Default": "fallback"
+      },
+      "expected": ""
+    },
+    {
+      "label": "GetString Unicode",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Name": "Unicode",
+        "Default": "fallback"
+      },
+      "expected": "Привет — мир"
+    },
+    {
+      "label": "GetString BadString",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Name": "BadString",
+        "Default": "fallback"
+      },
+      "expected": "fallback"
+    },
+    {
+      "label": "GetString BrokenLast",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Name": "BrokenLast",
+        "Default": "fallback"
+      },
+      "expected": "fallback"
+    },
+    {
+      "label": "GetString UnclosedLast",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Name": "UnclosedLast",
+        "Default": "fallback"
+      },
+      "expected": "fallback"
+    },
+    {
+      "label": "GetFloat Float",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -1.5,
+        "Max": -1.5,
+        "Name": "Float",
+        "Default": 7.25
+      },
+      "expected": -1.5
+    },
+    {
+      "label": "GetFloat Float",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": 0,
+        "Max": 1,
+        "Name": "Float",
+        "Default": 99
+      },
+      "expected": 99
+    },
+    {
+      "label": "GetFloat Float",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": 1,
+        "Max": -1,
+        "Name": "Float",
+        "Default": 12
+      },
+      "expected": 12
+    },
+    {
+      "label": "GetFloat FloatBoundary",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": 0.1,
+        "Max": 0.1,
+        "Name": "FloatBoundary",
+        "Default": 7.25
+      },
+      "expected": 0.1
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": 42,
+        "Max": 42,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 42
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": 1,
+        "Max": 3,
+        "Name": "Int",
+        "Default": 99
+      },
+      "expected": 99
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": 50,
+        "Max": 20,
+        "Name": "Int",
+        "Default": 99
+      },
+      "expected": 99
+    },
+    {
+      "label": "GetFloat EmptyNumber",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "EmptyNumber",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetFloat FloatNegativeOverflow",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "FloatNegativeOverflow",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetFloat FloatOverflow",
+      "method": "GetFloat",
+      "object": 1,
+      "args": {
+        "Min": -3.4028234663852886e+38,
+        "Max": 3.4028234663852886e+38,
+        "Name": "FloatOverflow",
+        "Default": 7.25
+      },
+      "expected": 7.25
+    },
+    {
+      "label": "GetInt ключ",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "ключ",
+        "Default": 73
+      },
+      "expected": 7
+    },
+    {
+      "label": "GetInt Ключ",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Ключ",
+        "Default": 73
+      },
+      "expected": 6
+    },
+    {
+      "label": "GetDouble DoublePrecision {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoublePrecision",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble DoubleInteger {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleInteger",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 9007199254740991.0
+    },
+    {
+      "label": "GetDouble DoubleHuge {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleHuge",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1e+300
+    },
+    {
+      "label": "GetDouble DoubleNegativeHuge {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleNegativeHuge",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": -1e+300
+    },
+    {
+      "label": "GetDouble DoubleTiny {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleTiny",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1e-300
+    },
+    {
+      "label": "GetDouble DoubleMinNormal {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleMinNormal",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 2.2250738585072014e-308
+    },
+    {
+      "label": "GetDouble DoubleSubnormal {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleSubnormal",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 5e-324
+    },
+    {
+      "label": "GetDouble DoubleNegativeSubnormal {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleNegativeSubnormal",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": -5e-324
+    },
+    {
+      "label": "GetDouble DoubleMax {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleMax",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.7976931348623157e+308
+    },
+    {
+      "label": "GetDouble DoubleMin {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleMin",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": -1.7976931348623157e+308
+    },
+    {
+      "label": "GetDouble DoubleRounded {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleRounded",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 0.1
+    },
+    {
+      "label": "GetDouble DoubleUnderflow {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleUnderflow",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble DoubleNegativeOverflow {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleNegativeOverflow",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble EmptyNumber {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "EmptyNumber",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Missing {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Missing",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad0 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad0",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad1 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad1",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad2 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad2",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad3 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad3",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad4 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad4",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad5 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad5",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad6 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad6",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad7 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad7",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad8 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad8",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad9 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad9",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad10 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad10",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad11 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad11",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad12 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad12",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad13 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad13",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad14 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad14",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Bad15 {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Bad15",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble Float {}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "Float",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": -1.5
+    },
+    {
+      "label": "GetDouble DoublePrecision {'Max': 1.0}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoublePrecision",
+        "Default": 1.0000000000000002,
+        "Min": -1.7976931348623157e+308,
+        "Max": 1.0
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble DoublePrecision {'Min': 1.0000000000000004}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoublePrecision",
+        "Default": 1.0000000000000002,
+        "Min": 1.0000000000000004,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble DoublePrecision {'Min': 2.0, 'Max': 1.0}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoublePrecision",
+        "Default": 1.0000000000000002,
+        "Min": 2.0,
+        "Max": 1.0
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble DoublePrecision {'Min': 3.0, 'Max': 4.0}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoublePrecision",
+        "Default": 1.0000000000000002,
+        "Min": 3.0,
+        "Max": 4.0
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble DoublePrecision {'Min': 1.0000000000000002, 'Max': 1.0000000000000002}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoublePrecision",
+        "Default": 1.0000000000000002,
+        "Min": 1.0000000000000002,
+        "Max": 1.0000000000000002
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble DoubleHuge {'Min': 1e+300, 'Max': 1e+300}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleHuge",
+        "Default": 1.0000000000000002,
+        "Min": 1e+300,
+        "Max": 1e+300
+      },
+      "expected": 1e+300
+    },
+    {
+      "label": "GetDouble DoubleTiny {'Min': 1e-300, 'Max': 1e-300}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleTiny",
+        "Default": 1.0000000000000002,
+        "Min": 1e-300,
+        "Max": 1e-300
+      },
+      "expected": 1e-300
+    },
+    {
+      "label": "GetDouble DoubleTiny {'Min': 1e-299}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleTiny",
+        "Default": 1.0000000000000002,
+        "Min": 1e-299,
+        "Max": 1.7976931348623157e+308
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "GetDouble DoubleRounded {'Min': 0.1, 'Max': 0.1}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoubleRounded",
+        "Default": 1.0000000000000002,
+        "Min": 0.1,
+        "Max": 0.1
+      },
+      "expected": 0.1
+    },
+    {
+      "label": "GetDouble DoublePrecision {'Default': -13.0, 'Min': 1.0000000000000002, 'Max': 1.0000000000000002}",
+      "method": "GetDouble",
+      "object": 1,
+      "args": {
+        "Name": "DoublePrecision",
+        "Default": -13.0,
+        "Min": 1.0000000000000002,
+        "Max": 1.0000000000000002
+      },
+      "expected": 1.0000000000000002
+    },
+    {
+      "label": "Every getter uses memory only",
+      "reads": 2
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 2,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "Second instance owns a snapshot",
+      "reads": 3
+    },
+    {
+      "label": "Replace file",
+      "write": "Int=99\nBool=false\n"
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 42
+    },
+    {
+      "label": "Reload {}",
+      "method": "Reload",
+      "object": 1,
+      "args": {}
+    },
+    {
+      "label": "Reload reads once",
+      "reads": 4
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 99
+    },
+    {
+      "label": "GetString Text",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Name": "Text",
+        "Default": "fallback"
+      },
+      "expected": "fallback"
+    },
+    {
+      "label": "GetBool Bool",
+      "method": "GetBool",
+      "object": 1,
+      "args": {
+        "Name": "Bool",
+        "Default": true
+      },
+      "expected": false
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 2,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 42
+    },
+    {
+      "label": "Delete file",
+      "delete": true
+    },
+    {
+      "label": "Reload {}",
+      "method": "Reload",
+      "object": 1,
+      "args": {}
+    },
+    {
+      "label": "Failed Reload reads once",
+      "reads": 5
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "GetBool Bool",
+      "method": "GetBool",
+      "object": 1,
+      "args": {
+        "Name": "Bool",
+        "Default": true
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 2,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 42
+    },
+    {
+      "label": "Empty file",
+      "write": ""
+    },
+    {
+      "label": "Reload {}",
+      "method": "Reload",
+      "object": 1,
+      "args": {}
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "Restore file",
+      "write": "Int=5\n"
+    },
+    {
+      "label": "Reload {}",
+      "method": "Reload",
+      "object": 1,
+      "args": {}
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 5
+    },
+    {
+      "label": "Load {'Path': '$file.missing'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file.missing"
+      }
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "Reload {}",
+      "method": "Reload",
+      "object": 1,
+      "args": {}
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 73
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "GetInt Int",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Min": -2147483648,
+        "Max": 2147483647,
+        "Name": "Int",
+        "Default": 73
+      },
+      "expected": 5
+    },
+    {
+      "label": "Read count after empty missing and switched paths",
+      "reads": 10
+    }
+  ]
+}

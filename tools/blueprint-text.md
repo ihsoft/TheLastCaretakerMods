@@ -100,7 +100,14 @@ inference about the asset's completeness or release ownership. See the
 [workspace stub workflow](blueprint-workspace.md#editor-stub-identity).
 
 The import/export boundary is an ordinary Actor-derived or Widget Blueprint with
-a native or available Blueprint parent. Component trees include SCS nodes, component templates and
+a native or available Blueprint parent, or a normal Blueprint directly derived
+from `/Script/CoreUObject.Object`. Other UObject families and UObject Blueprint
+inheritance are not yet covered. A direct Object Blueprint omits `root`,
+`components` and `widget`; these sections are rejected on import. It retains
+member variables (including containers), CDO defaults and ordinary function
+graphs through the same schema-2 path. Actor-only CDO exclusions do not apply
+to it: a string variable named `RootComponent` remains an ordinary variable.
+Component trees include SCS nodes, component templates and
 their owned objects, including child-actor templates. Inherited component
 overrides, macro definitions, timelines, extensions, nested graphs
 and nested node objects are rejected. Widget trees and implemented interfaces
@@ -113,6 +120,23 @@ Editor dependency placeholders are not the full stock game assets. A successful
 round-trip of a placeholder or function donor does not validate replacement of
 the cooked stock package. Maps, fonts, textures, Input Actions and Input Mappings
 are dependencies or separate asset types, not Blueprint conversion targets.
+
+Create instances with `Construct Object from Class`, provide an `Outer`, and
+retain the result in an object-reference variable while it is needed. Each
+instance owns its own variables; `Outer` alone is not a lifetime guarantee.
+File loading remains a normal callable runtime dependency, not a feature
+provided by UObject support itself.
+
+For source distribution use the workspace's [AddSource operation](blueprint-workspace.md#add-a-reusable-uobject-source).
+The lower-level offline equivalent is
+`asset_text_codec.py relocate source.json --asset /Game/Mods/Example/BP_Utility --output copy.json`.
+It requires a new output file and has the same bounded reference handling.
+`Test-BlueprintObjects.ps1` exercises relocation into two packages, source-package
+absence, round-trip import/export and Blueprint execution in a disposable project
+prepared with `Invoke-BlueprintText.ps1 -Action Prepare`. It covers Object
+functions/defaults, a string map, an Actor consumer constructing two instances,
+independent member values and a retained reference across garbage collection.
+These are editor tests, not cooked-game validation.
 
 The `components` section contains `objects`, the `scs` root identity, and
 `templates` / `generatedTemplates` reference lists. Each object declares `id`,

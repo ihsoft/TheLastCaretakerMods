@@ -14,7 +14,8 @@ their respective PrePhysics and PostPhysics groups.
 `Voyage.uproject` is the Unreal project descriptor; `Content/` contains its
 authoritative editor assets, including every asset selected for release.
 The three gameplay Blueprints are `ModActor`, `PitchInputActor`, and
-`BP_GyroCopter_StablePilot`. Their synchronized JSON representations live directly
+`BP_GyroCopter_StablePilot`; `Settings/BP_IniFileParser` is their mod-owned
+UObject settings parser. All four synchronized JSON representations live directly
 in `BlueprintText/` for Git review. Use the shared
 [BPT workflow](../../tools/blueprint-workspace.md) to export, edit and apply them.
 A routine build neither imports these JSON files nor regenerates the graphs.
@@ -46,9 +47,9 @@ and its owned crafting-generator stub and validates the project-cooked item
 against the current original. Unsupported input or failed refresh stops the
 build; it does not fall back to old project output.
 
-The producer preserves the authored Blueprints and cooks eight explicit
-packages: the three gameplay Blueprints, reset input action, keyboard mapping
-context, Gyro item DataAsset and two plate meshes. Packaging validates the
+The producer preserves the authored Blueprints and cooks nine explicit
+packages: the three gameplay Blueprints, settings parser, reset input action,
+keyboard mapping context, Gyro item DataAsset and two plate meshes. Packaging validates the
 project-cooked item instead of patching cooked stock bytes. Dependency stubs
 are excluded. All intermediate extractions, split GLBs, cook output and reports
 remain ignored build output.
@@ -112,6 +113,25 @@ When horizontal velocity control is false, PostPhysics branches before reading
 or writing horizontal physics velocity, clears its prior XY sample, and
 continues into the independent altitude path. Altitude control and W/S pitch
 integration remain available.
+
+## Settings parser
+
+`Content/Mods/StableGyro/Settings/BP_IniFileParser.uasset` is the mod-owned copy
+of the reusable [BPT INI parser](../../tools/BlueprintText/Library/IniFileParser/AGENTS.md).
+Each consumer's `ReloadSettings` constructs a parser with itself as Outer,
+retains it in transient `IniParser`, and calls `Load` with
+`ProjectContentDir() + "Paks/StableGyro.ini"`. It then assigns each setting once
+from `GetDouble` or `GetBool`, supplying the schema fallback and numeric bounds.
+There is no separate reset-before-read chain or duplicated parsing helper graph
+in the consumers. Missing or invalid input assigns the getter's fallback.
+
+`ModActor` loads its twelve settings, `PitchInputActor` its two, and the Gyro
+child the four-port flag. Each owns a separate parser snapshot; this is not a
+single file read shared between all three owners. Helper BeginPlay/entry reload
+and the child's once-per-loaded-class CDO guard retain their existing lifecycle.
+The parser has no Tick reads and is cooked as an ordinary mod asset, without a
+separate native parser module. This integration is game-validated; the library's
+editor suite covers the remaining getters and numeric edge cases.
 
 ## Fuel settings
 

@@ -123,6 +123,14 @@ const TSet<FName> BlueprintOwned = {
     ATNames::ValueStatus, ATNames::ValueCrcLastCompiledCDO, ATNames::ValueCrcLastCompiledSignature, WidgetTreeProperty, WidgetAnimationsProperty};
 const TSet<FName> GraphOwned = {ATNames::ValueNodes, ATNames::ValueSubGraphs, ATNames::ValueSchema};
 const TSet<FName> DefaultOwned = {ATNames::ValueRootComponent, ATNames::ValueDefaultSceneRoot};
+const TSet<FName> ObjectDefaultOwned;
+// Start with ordinary direct UObject Blueprints. Other native UObject families
+// can have additional owned state and are not implicitly supported by this path.
+bool IsPlainObject(const UClass* Parent) { return Parent==UObject::StaticClass(); }
+const TSet<FName>& DefaultExclusions(const UBlueprint* BP)
+{
+    return IsPlainObject(BP->ParentClass) ? ObjectDefaultOwned : DefaultOwned;
+}
 constexpr TCHAR LabelsMode[] = TEXT("Labels");
 
 bool Read(const FString& Path, TSharedPtr<FJsonObject>& Value)
@@ -366,7 +374,7 @@ FString UnsupportedReason(const UBlueprint* BP)
 {
     const auto* Widget=Cast<UWidgetBlueprint>(BP);
     if(!BP || !BP->ParentClass ||
-       !(Widget?BP->ParentClass->IsChildOf(UUserWidget::StaticClass()):BP->ParentClass->IsChildOf(AActor::StaticClass())) || BP->BlueprintType!=BPTYPE_Normal ||
+       !(Widget?BP->ParentClass->IsChildOf(UUserWidget::StaticClass()):(BP->ParentClass->IsChildOf(AActor::StaticClass()) || IsPlainObject(BP->ParentClass))) || BP->BlueprintType!=BPTYPE_Normal ||
        BP->MacroGraphs.Num() || BP->DelegateSignatureGraphs.Num() || BP->Timelines.Num() ||
        BP->ComponentClassOverrides.Num() ||
        BP->GetExtensions().Num() || (!Widget && BP->GeneratedVariables.Num()) || BP->InheritableComponentHandler)
@@ -378,7 +386,13 @@ FString UnsupportedReason(const UBlueprint* BP)
     }
     if(Widget && !Widget->WidgetTree)
         return TEXT("Widget export requires a WidgetTree.");
-    if(!Widget && !BP->SimpleConstructionScript)return TEXT("Blueprint export requires a SimpleConstructionScript.");
+    if(IsPlainObject(BP->ParentClass))
+    {
+        const auto* Generated=Cast<UBlueprintGeneratedClass>(BP->GeneratedClass);
+        if(BP->SimpleConstructionScript || BP->ComponentTemplates.Num() || (Generated && Generated->ComponentTemplates.Num()))
+            return TEXT("Plain Object Blueprint cannot contain actor component state.");
+    }
+    else if(!Widget && !BP->SimpleConstructionScript)return TEXT("Blueprint export requires a SimpleConstructionScript.");
     TArray<UEdGraph*> Graphs;BP->GetAllGraphs(Graphs);
     int32 InterfaceGraphs=0;
     for(const auto& Description:BP->ImplementedInterfaces)InterfaceGraphs+=Description.Graphs.Num();
@@ -432,6 +446,11 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
         Data->SetArrayField(Objects,ExportObjectTree(BP,Roots));
         Root->SetObjectField(WidgetState,Data);
     }
+    else if(IsPlainObject(BP->ParentClass))
+    {
+        // UObject has no construction tree. Variables, defaults and graphs below
+        // are the complete supported state; do not synthesize an Actor root.
+    }
     else if(LegacyRoot(BP))
     {
     const USCS_Node* RootNode=BP->SimpleConstructionScript->GetAllNodes()[0];
@@ -451,7 +470,7 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
     // Compare inherited fields against the parent CDO; export every authored variable,
     // including transient initial values, separately from inherited defaults.
     UObject* CDO=BP->GeneratedClass->GetDefaultObject();
-    auto Defaults=Properties(CDO,BP->ParentClass->GetDefaultObject(),DefaultOwned);
+    auto Defaults=Properties(CDO,BP->ParentClass->GetDefaultObject(),DefaultExclusions(BP));
     for(const auto& Var:BP->NewVariables)
     {
         const FProperty* P=FindFProperty<FProperty>(BP->GeneratedClass,Var.VarName);
@@ -533,8 +552,10 @@ UBlueprint* CreateImport(const FJsonObject& Root)
     {UE_LOG(LogTemp,Error,TEXT("Import requires an absent target asset; preserve/move the test baseline first: %s"),*Asset);return nullptr;}
     UClass* Parent=LoadObject<UClass>(nullptr,*Root.GetStringField(ATNames::Valueparent));
     const bool IsWidget=Root.HasField(WidgetState);
-    if(!Parent || !(IsWidget?Parent->IsChildOf(UUserWidget::StaticClass()):Parent->IsChildOf(AActor::StaticClass())))
+    if(!Parent || !(IsWidget?Parent->IsChildOf(UUserWidget::StaticClass()):(Parent->IsChildOf(AActor::StaticClass()) || IsPlainObject(Parent))))
     {UE_LOG(LogTemp,Error,TEXT("Missing or incompatible parent class for %s: %s"),*Asset,*Root.GetStringField(ATNames::Valueparent));return nullptr;}
+    if(IsPlainObject(Parent) && (Root.HasField(RootState) || Root.HasField(Components) || IsWidget))
+    {UE_LOG(LogTemp,Error,TEXT("Plain Object Blueprint must omit root, components and widget sections."));return nullptr;}
     UPackage* Package=CreatePackage(*Asset);
     FString Role;
     if(Root.HasField(BlueprintPreviewNames::EditorRole) && (!Root.TryGetStringField(BlueprintPreviewNames::EditorRole,Role) || Role!=BlueprintPreviewNames::Stub))return nullptr;
@@ -580,6 +601,10 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root,const TSe
         Widget->ForEachSourceWidget([&](UWidget* Object){CheckIdentity(Object);});
         for(UWidgetAnimation* Animation:Widget->Animations)CheckIdentity(Animation);
         if(MissingIdentity)return false;
+    }
+    else if(IsPlainObject(BP->ParentClass))
+    {
+        if(Root->HasField(Components) || Root->HasField(RootState))return false;
     }
     else if(Root->HasField(Components))
     {
@@ -680,7 +705,7 @@ bool FinalizeImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
             if(List==GeneratedTemplates)GC->ComponentTemplates.Add(Template);
         }
     }
-    if(!Apply(BP->GeneratedClass->GetDefaultObject(),*Root->GetObjectField(ATNames::Valuedefaults),DefaultOwned))return false;
+    if(!Apply(BP->GeneratedClass->GetDefaultObject(),*Root->GetObjectField(ATNames::Valuedefaults),DefaultExclusions(BP)))return false;
     return Supported(BP);
 }
 bool SaveImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
@@ -787,6 +812,7 @@ bool ExportBatch(const FString& Path,const FString& Folder)
 }
 
 #include "BlueprintPreviewCatalog.h"
+#include "BlueprintObjectTests.h"
 #include "BlueprintComponentDefaultsTests.h"
 
 UBlueprintAssetTextCommandlet::UBlueprintAssetTextCommandlet(){IsClient=false;IsServer=false;IsEditor=true;LogToConsole=true;}
@@ -796,6 +822,9 @@ int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
     FParse::Value(*Params,ATNames::ValueMode_,Mode);FParse::Value(*Params,ATNames::ValueInput_,Input);
     FParse::Value(*Params,ATNames::ValueOutput_,Output);FParse::Value(*Params,ATNames::ValueAsset_,Asset);
     FString PreviewResources;FParse::Value(*Params,WidgetPreviewResources::ResourcesArgument,PreviewResources);
+    if(Mode==BlueprintObjectTests::FixtureMode)return BlueprintObjectTests::Fixture(Output)?0:6;
+    if(Mode==BlueprintObjectTests::ConsumerMode)return BlueprintObjectTests::Consumer(Asset,Output)?0:6;
+    if(Mode==BlueprintObjectTests::CheckMode)return BlueprintObjectTests::Check(Asset)?0:6;
     if(Mode==BlueprintComponentDefaultsTests::FixtureMode)return BlueprintComponentDefaultsTests::Fixture()?0:6;
     if(Mode==BlueprintComponentDefaultsTests::CheckMode)return BlueprintComponentDefaultsTests::Check()?0:6;
     if(Mode==BlueprintPreviewNames::CatalogMode)return BlueprintPreview::Catalog(Input,Output)?0:5;

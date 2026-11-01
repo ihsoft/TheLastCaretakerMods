@@ -49,8 +49,9 @@ project with the required parents, native modules and resources. Create complete
 schema-2 Blueprint JSON, then add it to a workspace's source list as described
 below; new assets use the same shared Apply path. The current Export entry point
 starts from at least one existing Blueprint, so an empty project's first
-Blueprint must be created in the editor before that first export. Subsequent
-Blueprints can be added directly through JSON.
+Blueprint must be created in the editor before that first export. A reusable
+UObject source can instead initialize a workspace with `AddSource`, described
+below. Subsequent Blueprints can also be added directly through JSON.
 
 Use an existing Unreal project with its required resources. Declare native
 dependencies in [EditorSupport.json](unreal-editor-support.md#prepare-declared-project-dependencies)
@@ -76,7 +77,7 @@ Existing workspaces and installed shared modules using the previous names remain
 supported by the current entry points. Run Prepare to refresh their module; do
 not rename generated projects or move existing preview output just to match the
 new tool directory. New projects and workspaces use the current names.
-The current implementation selects ordinary uncooked Actor/Widget Blueprint
+The current implementation selects ordinary uncooked Actor/Widget and direct UObject Blueprint
 packages under `/Game/`; split packages are rejected. Use `-EngineRoot` when the
 project uses an engine outside the wrapper's default installation.
 
@@ -104,6 +105,41 @@ the accepted project baseline used for conflict detection. To start a new review
 baseline, export into a new workspace.
 
 ## Edit and apply
+
+### Add a reusable UObject source
+
+`AddSource` stages a copy of a schema-2 UObject BPT in a new or existing workspace.
+It is offline: it does not build, launch Unreal or write project assets. The
+destination is an explicit `/Game` package path, normally under the consuming
+mod. The source file is preserved. A new workspace requires `ProjectFile`; an
+existing workspace keeps its project and baseline. Existing destination assets
+or selected sources are rejected; export existing assets to edit them.
+
+```powershell
+& $tool -Action AddSource -ProjectFile $project -WorkspaceRoot $work `
+  -SourcePath './tools/BlueprintText/Library/IniFileParser/BP_IniFileParser.json' `
+  -Asset '/Game/Mods/Example/Settings/BP_IniFileParser'
+# Review/edit the staged source, then apply through the normal transaction:
+& $tool -Action Apply -WorkspaceRoot $work
+```
+
+The reusable [INI parser library](BlueprintText/Library/IniFileParser/AGENTS.md)
+supplies that source at `tools/BlueprintText/Library/IniFileParser/BP_IniFileParser.json`.
+Each consumer gets its own package; there is no shared runtime
+package or automatic library-update relationship. After Apply, retain the
+synchronized source with the mod as usual and cook its project normally.
+
+Relocation rewrites supported own-package references, including class pin types,
+function member owners and object defaults. String values and comments remain
+literal. It preserves the Blueprint object name; if the new package basename
+differs, `objectName` records the original name. It does not rename graphs,
+variables or functions, move external dependencies, or edit other Blueprints.
+An unrecognized field mentioning the old package is rejected with its location.
+Currently this operation accepts direct `/Script/CoreUObject.Object` sources
+without component/widget sections. Complex object-bearing struct/container
+defaults may need additional typed relocation support; they fail explicitly.
+
+### Change selected assets
 
 Read `workspace.json` for the selected Blueprint/source mapping, then edit the
 relevant files under `blueprints/`. They describe complete proposed Blueprint

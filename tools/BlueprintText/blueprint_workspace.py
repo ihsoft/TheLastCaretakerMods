@@ -225,6 +225,38 @@ class Workspace:
     def baseline(self):
         return read(self.internal / 'baseline.json')
 
+    def add_source(self, source, asset, project=None):
+        """Stage a relocated library source; Apply owns all actual asset writes."""
+        document = codec.relocate(read(source), asset)
+        if self.manifest.exists():
+            data, entries = self.load()
+            if project and Path(project).resolve() != self.project:
+                raise ValueError('ProjectFile disagrees with the existing workspace')
+            self.check(entries)
+            if any(d['asset'].casefold() == asset.casefold() for _, _, d in entries):
+                raise ValueError('Destination is already selected: ' + asset)
+        else:
+            if not project:
+                raise ValueError('New source workspace requires ProjectFile')
+            self.project = Path(project).resolve()
+            if self.project.suffix != '.uproject' or not self.project.is_file():
+                raise ValueError('Workspace project is missing')
+            if self.root.exists() and any(self.root.iterdir()):
+                raise ValueError('New source workspace must be empty')
+            data = dict(schema=1, project=str(self.project), assets=[])
+        if target(self.project, asset).exists():
+            raise ValueError('Destination asset already exists; use Export to edit it: ' + asset)
+        relative = 'blueprints/' + asset[6:] + '.json'
+        output = inside(self.root, relative)
+        if output.exists():
+            raise ValueError('Destination source already exists: ' + str(output))
+        write(output, document)
+        if not self.manifest.exists():
+            write(self.internal / 'baseline.json', {})
+        data['assets'].append(dict(source=relative))
+        write(self.manifest, data)
+        return dict(status='source-added', asset=asset, source=str(output), applied=False)
+
     def check(self, entries):
         baseline = self.baseline()
         selected = {source['asset'] for _, _, source in entries}
@@ -582,10 +614,11 @@ class Workspace:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'MarkStubs', 'Recover'])
+    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'MarkStubs', 'Recover', 'AddSource'])
     parser.add_argument('--workspace', required=True)
     parser.add_argument('--project')
     parser.add_argument('--asset', action='append')
+    parser.add_argument('--source')
     parser.add_argument('--engine', default=r'K:\Epic Games\UE_5.8')
     args = parser.parse_args()
     workspace = None
@@ -595,6 +628,15 @@ def main():
         lock_path = workspace.root.parent / (workspace.root.name + '.workspace.lock')
         with ExitStack() as stack:
             stack.enter_context(lock(lock_path))
+            if args.action == 'AddSource':
+                if not args.source or not args.asset or len(args.asset) != 1:
+                    raise ValueError('AddSource requires SourcePath and exactly one destination Asset')
+                if (workspace.internal / 'recovery.json').exists():
+                    raise ValueError('Interrupted asset write requires Recover before another operation')
+                result = workspace.add_source(args.source, args.asset[0], args.project)
+                result.update(workspace=str(workspace.root), manifest=str(workspace.manifest))
+                print(json.dumps(result))
+                return
             if args.action in ('Export', 'Prepare'):
                 if not args.project:
                     raise ValueError('ProjectFile is required for Export and Prepare')
