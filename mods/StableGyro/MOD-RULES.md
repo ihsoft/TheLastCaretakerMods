@@ -157,7 +157,7 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   Do not restore C++ graph generation,
   clear Content during a build, or treat BPT JSON as build-time source assets.
 - Build-StableGyro.ps1 is the only public producer. It owns fingerprinting,
-  native-support preparation through the shared item updater, focused project
+  declared native-support preparation, focused project
   mesh and item refresh, cook, packaging, verification, ZIP creation, and
   optional -Install. Keep the native mirror sources under `EditorSupport/`;
   ready plugins and their binaries are local tooling, never release payload.
@@ -167,9 +167,12 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   defaults only when it does not exist.
 - Treat GAME_DERIVED_SOURCES.md as source provenance, not a mandatory manual
   audit before a candidate build. On a pin mismatch retry the public producer
-  with `-IgnorePinnedGameVersion`. Extract and patch a fresh current
-  `DA_Item_Module_GyroCopter` into the maintained project through
-  `Build/Item.patch.json` and the shared item updater. Keep the required editor
+  with `-IgnorePinnedGameVersion`. Recreate the item and its crafting-generator
+  stub through the shared item updater only on a changed Steam build, a changed
+  `Build/Item.patch.json` recipe, or explicit `-ReimportItemAsset`. Track their
+  applied build and recipe in `Build/Item.source.json`; commit this state with
+  the pair. Every build still compares the project-cooked item against a fresh
+  current original. Keep the required editor
   assets in Git with their provenance; raw extractions and cooked output remain
   ignored. Refresh must succeed or stop the build. Keep the stock Gyro Blueprint
   at its original package identity, represented locally by an editor stub that
@@ -203,8 +206,12 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   remove zero-area triangles or invent tangents absent from the source GLB.
   Prepare complete editor meshes through the shared StaticMesh producer with the
   Nanite, fallback and ray-tracing policy in [architecture](ARCHITECTURE.md).
-  Replace the two maintained mesh packages at unchanged identities; do not merge
-  old mesh contents. Cook them with the mod project and preserve every emitted
+  Recreate them only when the installed Steam build differs from
+  `Build/MooringMeshes.source.json` or the public producer receives
+  `-ReimportMooringMeshes`. An unchanged build reuses the project assets.
+  On refresh, replace both packages at unchanged identities; do not merge
+  old mesh contents. Commit their source state with the refreshed pair.
+  Cook them with the mod project and preserve every emitted
   cooked companion. Keep material stubs out of the payload. Validate the exact final
   container's representations, source attributes and material references before
   installation; geometry preservation and game appearance are separate gates.

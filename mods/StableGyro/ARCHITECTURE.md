@@ -39,13 +39,39 @@ assets; runtime references resolve to the game originals.
 
 ## Release preparation
 
-`Build-StableGyro.ps1` is the public producer. It validates the settings,
-refreshes both complete plate meshes from current stock geometry, and calls
-the shared item updater with `Build/Item.patch.json`. The recipe changes only
-`DroppedActor` to the mod child. The updater replaces the maintained DataAsset
-and its owned crafting-generator stub and validates the project-cooked item
-against the current original. Unsupported input or failed refresh stops the
-build; it does not fall back to old project output.
+`Build-StableGyro.ps1` is the public producer. It validates the settings and
+reuses maintained assets while their source inputs are unchanged. It prepares
+the declared native editor support even when no asset refresh is needed.
+Unsupported input or failed refresh stops the build; it does not fall back to
+old project output.
+
+`Build/Item.source.json` records the item pair's source Steam build and applied
+`Build/Item.patch.json` recipe. The recipe changes only `DroppedActor` to the
+mod child. A changed game build or recipe, or explicit `-ReimportItemAsset`,
+calls the shared item updater to replace the DataAsset and its owned
+crafting-generator stub. Recipe comparison ignores whitespace and object key
+order, but preserves values and array order. Commit the refreshed pair with
+its updated source state. Missing or invalid state, missing assets, or a pending
+update blocks ordinary reuse; restore the inputs from Git or explicitly reimport.
+The state is marked pending before the updater and ready after final-container
+validation. Every build extracts the current original and compares the complete
+project-cooked item against it, allowing only the recipe's change. The decision
+tests are `Build/Test-ItemAssetRefresh.ps1`.
+
+`Build/MooringMeshes.source.json` records the plate pair's source Steam build.
+A different installed build triggers replacement of both complete meshes.
+Use `-ReimportMooringMeshes` on the public producer to explicitly rebuild them
+after a fix, even on the same game build. Recipe or tool edits do not trigger
+an automatic reimport. Commit updated meshes together with their source state.
+Missing or invalid source state, missing meshes, or an interrupted replacement
+stops ordinary reuse; restore the inputs from Git or explicitly reimport.
+Replacement marks the source state pending before writing either asset and
+ready only after final-container mesh and material validation succeeds.
+
+Every build still exports and splits temporary stock GLBs for the existing
+final-container geometry and attribute comparisons. Reuse skips editor mesh
+creation and project replacement, not these checks. The decision tests are
+`Build/Test-MooringMeshRefresh.ps1`.
 
 The producer preserves the authored Blueprints and cooks nine explicit
 packages: the three gameplay Blueprints, settings parser, reset input action,

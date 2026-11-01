@@ -1,6 +1,6 @@
 # HAND-WRITTEN BUILD ORCHESTRATOR: the only public producer. It builds,
-# refreshes project meshes, cooks, packages, verifies, archives, and optionally installs
-# StableGyro. It refreshes the two maintained project meshes; build output stays
+# refreshes maintained assets when their source inputs change or on explicit
+# reimport, cooks, packages, verifies, archives, and optionally installs StableGyro. Output stays
 # in ignored local storage. It never publishes externally.
 
 [CmdletBinding()]
@@ -21,6 +21,10 @@ param(
     [string]$OriginalsRoot,
 
     [switch]$Install,
+
+    [switch]$ReimportMooringMeshes,
+
+    [switch]$ReimportItemAsset,
 
     [switch]$IgnorePinnedGameVersion
 )
@@ -67,6 +71,11 @@ $assetJsonReader = Join-Path $repoRoot 'tools\Get-VoyageAssetJson.ps1'
 $releaseManifestBuilder = Join-Path $repoRoot 'tools\New-VoyageReleaseManifest.ps1'
 $releaseInstaller = Join-Path $repoRoot 'tools\Install-VoyageRelease.ps1'
 $mooringSplitter = Join-Path $modRoot 'Build\Split-MooringPlateGlb.py'
+$meshSourceStatePath = Join-Path $modRoot 'Build\MooringMeshes.source.json'
+Import-Module (Join-Path $modRoot 'Build\MooringMeshRefresh.psm1') -Force
+$itemSourceStatePath = Join-Path $modRoot 'Build\Item.source.json'
+$itemRecipePath = Join-Path $modRoot 'Build\Item.patch.json'
+Import-Module (Join-Path $modRoot 'Build\ItemAssetRefresh.psm1') -Force
 $containerName = 'StableGyro_P'
 $payloadNames = @(
     "$containerName.pak",
@@ -219,7 +228,6 @@ $settingsSchema = Resolve-RequiredPath -Path $settingsSchema -Label 'StableGyro 
 $settingsDefaults = Resolve-RequiredPath -Path $settingsDefaults -Label 'StableGyro canonical settings INI'
 $settingsModule = Resolve-RequiredPath -Path $settingsModule -Label 'Settings validation module'
 $modelExporter = Resolve-RequiredPath -Path $modelExporter -Label 'Voyage model exporter'
-$staticMeshBuilder = Resolve-RequiredPath -Path $staticMeshBuilder -Label 'Voyage StaticMesh builder'
 $staticMeshValidator = Resolve-RequiredPath -Path $staticMeshValidator -Label 'Voyage StaticMesh validator'
 $assetJsonReader = Resolve-RequiredPath -Path $assetJsonReader -Label 'Voyage asset JSON reader'
 $releaseManifestBuilder = Resolve-RequiredPath -Path $releaseManifestBuilder -Label 'Voyage release manifest builder'
@@ -290,6 +298,31 @@ if ([string]$mapping.steamBuildId -cne $expectedBuild -or
 $phase.Stop()
 $timings.Fingerprint = $phase.Elapsed.TotalSeconds
 
+$meshPlan = Get-StableGyroMooringMeshPlan -StatePath $meshSourceStatePath `
+    -SteamBuildId $expectedBuild -Reimport:$ReimportMooringMeshes
+$itemPlan = Get-StableGyroItemRefreshPlan -StatePath $itemSourceStatePath `
+    -RecipePath $itemRecipePath -SteamBuildId $expectedBuild -Reimport:$ReimportItemAsset
+if (-not $itemPlan.refresh) {
+    foreach ($relativePath in @('Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset',
+            'Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $modRoot $relativePath) -PathType Leaf)) {
+            throw "Maintained item asset is missing: $relativePath. Restore it from Git or request -ReimportItemAsset."
+        }
+    }
+}
+$expectedStaticMeshObjectPaths = @(
+    '/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY.StableGyroMooringPlateNegativeY',
+    '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.StableGyroMooringPlatePositiveY'
+)
+$expectedMeshPaths = @($expectedStaticMeshObjectPaths | ForEach-Object {
+    'Content/' + (($_ -split '\.')[0]).Substring('/Game/'.Length) + '.uasset'
+})
+foreach ($relativePath in $expectedMeshPaths) {
+    if (-not $meshPlan.refresh -and -not (Test-Path -LiteralPath (Join-Path $modRoot $relativePath) -PathType Leaf)) {
+        throw "Maintained mesh is missing: $relativePath. Restore it from Git or request -ReimportMooringMeshes."
+    }
+}
+
 Write-Host '2/8 Exporting and splitting the current stock mooring plate'
 $phase.Restart()
 Assert-GameClosed
@@ -353,171 +386,183 @@ if ($splitEvidence.status -cne 'passed' -or $splitEvidence.crossingTriangles -ne
 $phase.Stop()
 $timings.MooringGeometry = $phase.Elapsed.TotalSeconds
 
-Write-Host '3/8 Building the two editor mooring meshes through the common producer'
-$phase.Restart()
-$staticMeshRequestPath = Join-Path $releaseRoot 'static-mesh-request.json'
-$staticMeshOutputRoot = Join-Path $releaseRoot 'static-mesh-assets'
-$expectedStaticMeshObjectPaths = @(
-    '/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY.StableGyroMooringPlateNegativeY',
-    '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.StableGyroMooringPlatePositiveY'
-)
-$staticMeshRequest = [ordered]@{
-    schemaVersion = 1
-    assets = @(
-        [ordered]@{
-            id = 'PositiveY'
-            source = $positiveMooringGlb
-            destination = [ordered]@{
-                packagePath = '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY'
-                objectName = 'StableGyroMooringPlatePositiveY'
+if ($meshPlan.refresh) {
+    Write-Host '3/8 Building the two editor mooring meshes through the common producer'
+    $phase.Restart()
+    $staticMeshBuilder = Resolve-RequiredPath -Path $staticMeshBuilder -Label 'Voyage StaticMesh builder'
+    $staticMeshRequestPath = Join-Path $releaseRoot 'static-mesh-request.json'
+    $staticMeshOutputRoot = Join-Path $releaseRoot 'static-mesh-assets'
+    $staticMeshRequest = [ordered]@{
+        schemaVersion = 1
+        assets = @(
+            [ordered]@{
+                id = 'PositiveY'
+                source = $positiveMooringGlb
+                destination = [ordered]@{
+                    packagePath = '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY'
+                    objectName = 'StableGyroMooringPlatePositiveY'
+                }
+                materialMode = 'ExternalReferences'
+                materialBindings = @([ordered]@{
+                    slot = 'Gyrocopter_Seat_p1'
+                    objectPath = '/Game/AssetSets/Vehicles/Gyrocopter/Materials/Gyrocopter_Seat_p1.Gyrocopter_Seat_p1'
+                    classPath = '/Script/Engine.MaterialInstanceConstant'
+                })
+                import = [ordered]@{
+                    generateLightmapUVs = $false
+                    removeDegenerates = $false
+                    recomputeNormals = $false
+                    recomputeTangents = $true
+                    useFullPrecisionUVs = $false
+                    useHighPrecisionTangentBasis = $false
+                }
+                nanite = [ordered]@{
+                    enabled = $true
+                    explicitTangents = $false
+                    positionPrecision = 4
+                    normalPrecision = 8
+                    keepPercentTriangles = 1.0
+                    trimRelativeError = 0.0
+                    generateFallback = 'Enabled'
+                    fallbackTarget = 'PercentTriangles'
+                    fallbackPercentTriangles = 0.25
+                    fallbackRelativeError = 0.0
+                }
+                rayTracing = [ordered]@{ support = $true }
+                assertions = [ordered]@{
+                    sourceTriangles = [ordered]@{ exact = 6895 }
+                    naniteInputTriangles = [ordered]@{ exact = 6852 }
+                    fallbackTriangles = [ordered]@{ min = 1500; max = 1900 }
+                }
+            },
+            [ordered]@{
+                id = 'NegativeY'
+                source = $negativeMooringGlb
+                destination = [ordered]@{
+                    packagePath = '/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY'
+                    objectName = 'StableGyroMooringPlateNegativeY'
+                }
+                materialMode = 'ExternalReferences'
+                materialBindings = @([ordered]@{
+                    slot = 'Gyrocopter_Seat_p1'
+                    objectPath = '/Game/AssetSets/Vehicles/Gyrocopter/Materials/Gyrocopter_Seat_p1.Gyrocopter_Seat_p1'
+                    classPath = '/Script/Engine.MaterialInstanceConstant'
+                })
+                import = [ordered]@{
+                    generateLightmapUVs = $false
+                    removeDegenerates = $false
+                    recomputeNormals = $false
+                    recomputeTangents = $true
+                    useFullPrecisionUVs = $false
+                    useHighPrecisionTangentBasis = $false
+                }
+                nanite = [ordered]@{
+                    enabled = $true
+                    explicitTangents = $false
+                    positionPrecision = 4
+                    normalPrecision = 8
+                    keepPercentTriangles = 1.0
+                    trimRelativeError = 0.0
+                    generateFallback = 'Enabled'
+                    fallbackTarget = 'PercentTriangles'
+                    fallbackPercentTriangles = 0.25
+                    fallbackRelativeError = 0.0
+                }
+                rayTracing = [ordered]@{ support = $true }
+                assertions = [ordered]@{
+                    sourceTriangles = [ordered]@{ exact = 6895 }
+                    naniteInputTriangles = [ordered]@{ exact = 6852 }
+                    fallbackTriangles = [ordered]@{ min = 1500; max = 1900 }
+                }
             }
-            materialMode = 'ExternalReferences'
-            materialBindings = @([ordered]@{
-                slot = 'Gyrocopter_Seat_p1'
-                objectPath = '/Game/AssetSets/Vehicles/Gyrocopter/Materials/Gyrocopter_Seat_p1.Gyrocopter_Seat_p1'
-                classPath = '/Script/Engine.MaterialInstanceConstant'
-            })
-            import = [ordered]@{
-                generateLightmapUVs = $false
-                removeDegenerates = $false
-                recomputeNormals = $false
-                recomputeTangents = $true
-                useFullPrecisionUVs = $false
-                useHighPrecisionTangentBasis = $false
-            }
-            nanite = [ordered]@{
-                enabled = $true
-                explicitTangents = $false
-                positionPrecision = 4
-                normalPrecision = 8
-                keepPercentTriangles = 1.0
-                trimRelativeError = 0.0
-                generateFallback = 'Enabled'
-                fallbackTarget = 'PercentTriangles'
-                fallbackPercentTriangles = 0.25
-                fallbackRelativeError = 0.0
-            }
-            rayTracing = [ordered]@{ support = $true }
-            assertions = [ordered]@{
-                sourceTriangles = [ordered]@{ exact = 6895 }
-                naniteInputTriangles = [ordered]@{ exact = 6852 }
-                fallbackTriangles = [ordered]@{ min = 1500; max = 1900 }
-            }
-        },
-        [ordered]@{
-            id = 'NegativeY'
-            source = $negativeMooringGlb
-            destination = [ordered]@{
-                packagePath = '/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY'
-                objectName = 'StableGyroMooringPlateNegativeY'
-            }
-            materialMode = 'ExternalReferences'
-            materialBindings = @([ordered]@{
-                slot = 'Gyrocopter_Seat_p1'
-                objectPath = '/Game/AssetSets/Vehicles/Gyrocopter/Materials/Gyrocopter_Seat_p1.Gyrocopter_Seat_p1'
-                classPath = '/Script/Engine.MaterialInstanceConstant'
-            })
-            import = [ordered]@{
-                generateLightmapUVs = $false
-                removeDegenerates = $false
-                recomputeNormals = $false
-                recomputeTangents = $true
-                useFullPrecisionUVs = $false
-                useHighPrecisionTangentBasis = $false
-            }
-            nanite = [ordered]@{
-                enabled = $true
-                explicitTangents = $false
-                positionPrecision = 4
-                normalPrecision = 8
-                keepPercentTriangles = 1.0
-                trimRelativeError = 0.0
-                generateFallback = 'Enabled'
-                fallbackTarget = 'PercentTriangles'
-                fallbackPercentTriangles = 0.25
-                fallbackRelativeError = 0.0
-            }
-            rayTracing = [ordered]@{ support = $true }
-            assertions = [ordered]@{
-                sourceTriangles = [ordered]@{ exact = 6895 }
-                naniteInputTriangles = [ordered]@{ exact = 6852 }
-                fallbackTriangles = [ordered]@{ min = 1500; max = 1900 }
-            }
-        }
-    )
-}
-$staticMeshRequest | ConvertTo-Json -Depth 12 |
-    Set-Content -LiteralPath $staticMeshRequestPath -Encoding utf8
-& $staticMeshBuilder -Manifest $staticMeshRequestPath -OutputRoot $staticMeshOutputRoot `
-    -EngineRoot (Join-Path $EngineRoot 'Engine') -OutputKind Uncooked | Out-Null
-$staticMeshBuildResultPath = Resolve-RequiredPath `
-    -Path (Join-Path $staticMeshOutputRoot 'build-result.json') `
-    -Label 'Common StaticMesh build result'
-$staticMeshOutputManifestPath = Resolve-RequiredPath `
-    -Path (Join-Path $staticMeshOutputRoot 'output-manifest.json') `
-    -Label 'Common StaticMesh output manifest'
-$staticMeshBuildResult = Get-Content -LiteralPath $staticMeshBuildResultPath -Raw | ConvertFrom-Json
-if ([string]$staticMeshBuildResult.status -cne 'passed' -or
-    @($staticMeshBuildResult.assets).Count -ne 2 -or
-    ((@($staticMeshBuildResult.assets.objectPath | Sort-Object) -join "`n") -cne
-        (($expectedStaticMeshObjectPaths | Sort-Object) -join "`n")) -or
-    @($staticMeshBuildResult.assets | Where-Object {
-        $_.sourceTriangles -ne 6895 -or $_.naniteInputTriangles -ne 6852 -or
-        $_.fallbackTriangles -lt 1500 -or $_.fallbackTriangles -gt 1900 -or
-        $_.uvChannels -ne 4 -or $_.positionPrecision -ne 4 -or
-        $_.normalPrecision -ne 8 -or -not $_.supportRayTracing -or
-        $_.rayTracingProxyLods -ne 1 -or -not $_.rayTracingUsesRenderingLods -or
-        @($_.importedMaterialSlots).Count -ne 1 -or
-        [string](@($_.importedMaterialSlots)[0]) -cne 'Gyrocopter_Seat_p1' -or
-        @($_.resolvedExternalMaterialReferences).Count -ne 1 -or
-        [string](@($_.resolvedExternalMaterialReferences)[0]) -cne
-            '/Game/AssetSets/Vehicles/Gyrocopter/Materials/Gyrocopter_Seat_p1.Gyrocopter_Seat_p1'
-    }).Count -ne 0) {
-    throw 'Common StaticMesh build result differs from StableGyro consumer policy.'
-}
-$phase.Stop()
-$timings.StaticMeshBuild = $phase.Elapsed.TotalSeconds
+        )
+    }
+    $staticMeshRequest | ConvertTo-Json -Depth 12 |
+        Set-Content -LiteralPath $staticMeshRequestPath -Encoding utf8
+    & $staticMeshBuilder -Manifest $staticMeshRequestPath -OutputRoot $staticMeshOutputRoot `
+        -EngineRoot (Join-Path $EngineRoot 'Engine') -OutputKind Uncooked | Out-Null
+    $staticMeshBuildResultPath = Resolve-RequiredPath `
+        -Path (Join-Path $staticMeshOutputRoot 'build-result.json') `
+        -Label 'Common StaticMesh build result'
+    $staticMeshOutputManifestPath = Resolve-RequiredPath `
+        -Path (Join-Path $staticMeshOutputRoot 'output-manifest.json') `
+        -Label 'Common StaticMesh output manifest'
+    $staticMeshBuildResult = Get-Content -LiteralPath $staticMeshBuildResultPath -Raw | ConvertFrom-Json
+    if ([string]$staticMeshBuildResult.status -cne 'passed' -or
+        @($staticMeshBuildResult.assets).Count -ne 2 -or
+        ((@($staticMeshBuildResult.assets.objectPath | Sort-Object) -join "`n") -cne
+            (($expectedStaticMeshObjectPaths | Sort-Object) -join "`n")) -or
+        @($staticMeshBuildResult.assets | Where-Object {
+            $_.sourceTriangles -ne 6895 -or $_.naniteInputTriangles -ne 6852 -or
+            $_.fallbackTriangles -lt 1500 -or $_.fallbackTriangles -gt 1900 -or
+            $_.uvChannels -ne 4 -or $_.positionPrecision -ne 4 -or
+            $_.normalPrecision -ne 8 -or -not $_.supportRayTracing -or
+            $_.rayTracingProxyLods -ne 1 -or -not $_.rayTracingUsesRenderingLods -or
+            @($_.importedMaterialSlots).Count -ne 1 -or
+            [string](@($_.importedMaterialSlots)[0]) -cne 'Gyrocopter_Seat_p1' -or
+            @($_.resolvedExternalMaterialReferences).Count -ne 1 -or
+            [string](@($_.resolvedExternalMaterialReferences)[0]) -cne
+                '/Game/AssetSets/Vehicles/Gyrocopter/Materials/Gyrocopter_Seat_p1.Gyrocopter_Seat_p1'
+        }).Count -ne 0) {
+        throw 'Common StaticMesh build result differs from StableGyro consumer policy.'
+    }
+    $phase.Stop()
+    $timings.StaticMeshBuild = $phase.Elapsed.TotalSeconds
 
-Write-Host '4/8 Updating project mesh assets; preserving authored Blueprints'
-$phase.Restart()
-$meshManifest = Get-Content -LiteralPath $staticMeshOutputManifestPath -Raw | ConvertFrom-Json
-$expectedMeshPaths = @($expectedStaticMeshObjectPaths | ForEach-Object {
-    'Content/' + (($_ -split '\.')[0]).Substring('/Game/'.Length) + '.uasset'
-})
-if ($meshManifest.kind -cne 'Voyage uncooked StaticMesh assets' -or
-    (@($meshManifest.files.path | Sort-Object) -join "`n") -cne
-    (($expectedMeshPaths | Sort-Object) -join "`n")) {
-    throw 'Unexpected editor mesh output; project was not changed.'
-}
-$meshBackup = Join-Path $releaseRoot 'project-mesh-backup'
-foreach ($file in $meshManifest.files) {
-    $source = Join-Path $staticMeshOutputRoot $file.path
-    $destination = Resolve-RequiredPath -Path (Join-Path $modRoot $file.path) -Label 'Maintained project mesh'
-    if ((Get-Item -LiteralPath $source).Length -ne $file.length) { throw "Mesh output size mismatch: $source" }
-    $backup = Join-Path $meshBackup $file.path
-    New-Item -ItemType Directory -Path (Split-Path $backup -Parent) -Force | Out-Null
-    Copy-Item -LiteralPath $destination -Destination $backup
-}
-try {
+    Write-Host '4/8 Updating project mesh assets; preserving authored Blueprints'
+    $phase.Restart()
+    $meshManifest = Get-Content -LiteralPath $staticMeshOutputManifestPath -Raw | ConvertFrom-Json
+    if ($meshManifest.kind -cne 'Voyage uncooked StaticMesh assets' -or
+        (@($meshManifest.files.path | Sort-Object) -join "`n") -cne
+        (($expectedMeshPaths | Sort-Object) -join "`n")) {
+        throw 'Unexpected editor mesh output; project was not changed.'
+    }
+    $meshBackup = Join-Path $releaseRoot 'project-mesh-backup'
     foreach ($file in $meshManifest.files) {
         $source = Join-Path $staticMeshOutputRoot $file.path
         $destination = Join-Path $modRoot $file.path
-        Copy-Item -LiteralPath $source -Destination $destination -Force
-        if ([Convert]::ToBase64String([IO.File]::ReadAllBytes($source)) -cne
-            [Convert]::ToBase64String([IO.File]::ReadAllBytes($destination))) {
-            throw "Project mesh copy mismatch: $destination"
+        if ((Get-Item -LiteralPath $source).Length -ne $file.length) { throw "Mesh output size mismatch: $source" }
+        $backup = Join-Path $meshBackup $file.path
+        New-Item -ItemType Directory -Path (Split-Path $backup -Parent) -Force | Out-Null
+        if (Test-Path -LiteralPath $destination -PathType Leaf) {
+            Copy-Item -LiteralPath $destination -Destination $backup
         }
     }
-} catch {
-    foreach ($file in $meshManifest.files) {
-        Copy-Item -LiteralPath (Join-Path $meshBackup $file.path) -Destination (Join-Path $modRoot $file.path) -Force
+    Set-StableGyroMooringMeshState -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild -Status pending
+    try {
+        foreach ($file in $meshManifest.files) {
+            $source = Join-Path $staticMeshOutputRoot $file.path
+            $destination = Join-Path $modRoot $file.path
+            New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
+            Copy-Item -LiteralPath $source -Destination $destination -Force
+            if ([Convert]::ToBase64String([IO.File]::ReadAllBytes($source)) -cne
+                [Convert]::ToBase64String([IO.File]::ReadAllBytes($destination))) {
+                throw "Project mesh copy mismatch: $destination"
+            }
+        }
+    } catch {
+        foreach ($file in $meshManifest.files) {
+            $backup = Join-Path $meshBackup $file.path
+            $destination = Join-Path $modRoot $file.path
+            if (Test-Path -LiteralPath $backup -PathType Leaf) {
+                Copy-Item -LiteralPath $backup -Destination $destination -Force
+            } elseif (Test-Path -LiteralPath $destination -PathType Leaf) {
+                Remove-Item -LiteralPath $destination -Force
+            }
+        }
+        throw
     }
-    throw
-}
-$phase.Stop()
-$timings.ProjectMeshUpdate = $phase.Elapsed.TotalSeconds
+    $phase.Stop()
+    $timings.ProjectMeshUpdate = $phase.Elapsed.TotalSeconds
 
-Write-Host '5/8 Refreshing the maintained project item from clean stock data'
+} else {
+    Write-Host '3/8 Reusing maintained mooring meshes for the same Steam build'
+    Write-Host '4/8 Keeping project mesh assets unchanged'
+    $timings.StaticMeshBuild = 0
+    $timings.ProjectMeshUpdate = 0
+}
+
+Write-Host '5/8 Preparing current stock item validation and maintained project inputs'
 $phase.Restart()
 if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
     Assert-GameClosed
@@ -534,10 +579,26 @@ $phase.Stop()
 $timings.Originals = $phase.Elapsed.TotalSeconds
 
 $phase.Restart()
-& (Join-Path $repoRoot 'tools/Update-VoyageItemAsset.ps1') `
-    -Project $project -Recipe (Join-Path $modRoot 'Build/Item.patch.json') `
-    -EngineRoot $EngineRoot -GameRoot $GameRoot `
-    -OutputRoot (Join-Path $releaseRoot 'item-update')
+if ($itemPlan.refresh) {
+    Write-Host "Refreshing item and crafting-generator stub: $($itemPlan.reason)"
+    Set-StableGyroItemSourceState -StatePath $itemSourceStatePath -SteamBuildId $expectedBuild `
+        -Recipe $itemPlan.recipe -Status pending
+    & (Join-Path $repoRoot 'tools/Update-VoyageItemAsset.ps1') `
+        -Project $project -Recipe $itemRecipePath `
+        -EngineRoot $EngineRoot -GameRoot $GameRoot `
+        -OutputRoot (Join-Path $releaseRoot 'item-update')
+} else {
+    Write-Host 'Reusing item and crafting-generator stub for the same Steam build and recipe'
+    # The updater normally prepares these dependencies. Reuse must also work in
+    # a checkout without installed native support, without recreating assets.
+    $support = & (Join-Path $repoRoot 'tools/Prepare-UnrealEditorSupport.ps1') `
+        -ProjectFile $project -EngineRoot $EngineRoot `
+        -OutputRoot (Join-Path $releaseRoot 'editor-support') | ConvertFrom-Json
+    $loadedModules = @($support.providers | ForEach-Object loadedModules)
+    if ('Voyage' -notin $loadedModules -or 'VoyageItemPatchEditor' -notin $loadedModules) {
+        throw 'Project support must provide Voyage and VoyageItemPatchEditor.'
+    }
+}
 $phase.Stop()
 $timings.ItemUpdate = $phase.Elapsed.TotalSeconds
 
@@ -699,6 +760,13 @@ $materialValidation | ConvertTo-Json -Depth 5 |
     Set-Content -LiteralPath $materialValidationPath -Encoding utf8
 $phase.Stop()
 $timings.Package = $phase.Elapsed.TotalSeconds
+if ($meshPlan.refresh) {
+    Set-StableGyroMooringMeshState -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild -Status ready
+}
+if ($itemPlan.refresh) {
+    Set-StableGyroItemSourceState -StatePath $itemSourceStatePath -SteamBuildId $expectedBuild `
+        -Recipe $itemPlan.recipe -Status ready
+}
 
 Write-Host '8/8 Creating the player-facing archive'
 $phase.Restart()
@@ -816,16 +884,12 @@ $manifest = [ordered]@{
     editorEngineVersion = $actualEngineVersion
     retocCompatibilityVersion = $retocCompatibilityVersion
     cookStorage = $cookStorage
+    itemRefresh = $itemPlan
     staticMeshes = [ordered]@{
-        builderRequest = [ordered]@{
-            path = $staticMeshRequestPath
-        }
-        builderResult = [ordered]@{
-            path = $staticMeshBuildResultPath
-        }
-        builderOutputManifest = [ordered]@{
-            path = $staticMeshOutputManifestPath
-        }
+        refresh = $meshPlan
+        builderRequest = $(if ($meshPlan.refresh) { [ordered]@{ path = $staticMeshRequestPath } } else { $null })
+        builderResult = $(if ($meshPlan.refresh) { [ordered]@{ path = $staticMeshBuildResultPath } } else { $null })
+        builderOutputManifest = $(if ($meshPlan.refresh) { [ordered]@{ path = $staticMeshOutputManifestPath } } else { $null })
         stagingReport = [ordered]@{
             path = $staticMeshStagingReportPath
         }
