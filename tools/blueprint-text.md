@@ -86,6 +86,15 @@ native node properties and typed pins. Original object names and GUIDs are retai
 aliases and shared pin templates reduce repetition without replacing the native
 property values. Some fields deliberately remain Unreal property text.
 
+New exports address each `pinTemplates` entry by a SHA-256 key derived from its
+complete pooled metadata. Adding or removing a different template leaves existing
+`pin.type` references unchanged. This is a deduplication key, not an asset-integrity
+check. Keys remain opaque document-local references: existing `p0`, `p1`, or
+manually assigned keys still import and compare correctly, and editing metadata
+does not require manually recalculating its key. Export/canonicalization assigns
+the content keys, producing a one-time key change for older documents. Per-pin
+identity, names, direction, links and defaults remain outside the pool.
+
 `asset` identifies the package, not the object's full path. Export locates the
 single Blueprint inside that package and rejects missing or ambiguous Blueprint
 objects. When its name differs from the package basename, optional `objectName`

@@ -5,6 +5,7 @@ call from the local Unreal catalogue. No Unreal process is launched here.
 """
 import argparse
 import copy
+import hashlib
 import json
 import re
 import uuid
@@ -262,10 +263,13 @@ def compact(document):
     result['format'] = 'compact-asset'
     result['variables'] = [fields(v[1:-1]) for v in document['variables']]
     parsed = [parse_nodes(g['text']) for g in document['graphs']]
-    # Intern repeated pin metadata by its full content, with a deterministic order.
+    # Content-address the deduplicated metadata so unrelated templates never renumber pins.
+    # These keys address this pool, not asset provenance or validation evidence.
     signatures = sorted({json.dumps({k: v for k, v in p.items() if k not in PIN_SEPARATE}, sort_keys=True)
                          for nodes in parsed for n in nodes for p in n['pins']})
-    type_ids = {signature: f'p{i}' for i, signature in enumerate(signatures)}
+    type_ids = {s: 'p_' + hashlib.sha256(s.encode('utf-8')).hexdigest() for s in signatures}
+    if len(set(type_ids.values())) != len(signatures):
+        raise ValueError('Conflicting pin template content keys')
     result['pinTemplates'] = {type_ids[s]: json.loads(s) for s in signatures}
     result['classes'] = {}
     for graph, nodes in zip(result['graphs'], parsed):

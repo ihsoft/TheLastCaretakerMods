@@ -4,6 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 from asset_text_codec import add_call, batch_sources, compact, compare, native, parse_nodes, register_widget, split_fields
 from render_graph import render
@@ -42,6 +43,90 @@ def fixture():
 
 
 class AssetTextTests(unittest.TestCase):
+    def test_pin_template_addition_and_removal_leave_other_references_unchanged(self):
+        original = compact(fixture())
+        edited = copy.deepcopy(original)
+        selected = edited['graphs'][0]['body']['nodes'][0]['pins']['out:Result']
+        metadata = copy.deepcopy(edited['pinTemplates'][selected['type']])
+        # Sorts before every original signature, exposing positional pool IDs.
+        metadata['AddedMetadata'] = '(Nested="new,value")'
+        edited['pinTemplates']['temporary'] = metadata
+        selected['type'] = 'temporary'
+        changed = compact(native(edited))
+        self.assertEqual(len(changed['pinTemplates']), 2)
+        self.assertTrue(compare(original, changed))
+        self.assertEqual(changed['graphs'][0]['body']['nodes'][1], original['graphs'][0]['body']['nodes'][1])
+        new_key = changed['graphs'][0]['body']['nodes'][0]['pins']['out:Result']['type']
+        self.assertEqual(changed['pinTemplates'][new_key], metadata)
+        # Remove the last user of the other template; the survivor keeps its key.
+        removed = copy.deepcopy(changed)
+        removed['graphs'][0]['body']['nodes'].pop()
+        removed['graphs'][0]['body']['links'] = []
+        reduced = compact(native(removed))
+        self.assertEqual(reduced['pinTemplates'], {new_key: metadata})
+        self.assertEqual(reduced['graphs'][0]['body']['nodes'][0], changed['graphs'][0]['body']['nodes'][0])
+
+    def test_pin_template_keys_depend_on_metadata_only(self):
+        original = compact(fixture())
+        edited = copy.deepcopy(original)
+        edited['graphs'][0]['body']['links'] = []
+        edited['graphs'][0]['name'] = 'RenamedGraph'
+        edited['graphs'][0]['body']['nodes'].pop()
+        node = edited['graphs'][0]['body']['nodes'][0]
+        node['id'] = 'RenamedNode'
+        pin = node['pins']['out:Result']
+        pin.update(id='9' * 32, name='OtherName', DefaultObject='None', DefaultTextValue='NSLOCTEXT("N","K","Text")')
+        node['defaults']['out:Result'] = '2'
+        edited['pinTemplates'] = {key: dict(reversed(list(value.items())))
+                                  for key, value in edited['pinTemplates'].items()}
+        changed = compact(native(edited))
+        self.assertEqual(changed['pinTemplates'], original['pinTemplates'])
+        self.assertEqual(next(iter(changed['graphs'][0]['body']['nodes'][0]['pins'].values()))['type'], pin['type'])
+
+    def test_legacy_pin_keys_expand_and_compare_without_migration(self):
+        original = compact(fixture())
+        legacy = copy.deepcopy(original)
+        metadata = next(iter(original['pinTemplates'].values()))
+        legacy['pinTemplates'] = {'p0': metadata, 'p1': metadata}
+        for i, node in enumerate(legacy['graphs'][0]['body']['nodes']):
+            for pin in node['pins'].values():
+                pin['type'] = f'p{i}'
+        self.assertEqual(native(legacy), native(original))
+        self.assertEqual(compare(legacy, original), [])
+        self.assertEqual(compact(native(legacy)), original)
+
+    def test_conflicting_content_keys_fail_instead_of_overwriting_metadata(self):
+        source = fixture()
+        source['graphs'][0]['text'] = source['graphs'][0]['text'].replace(
+            'PinName="Amount",', 'PinName="Amount",AdditionalMetadata=True,')
+        with patch('asset_text_codec.hashlib.sha256') as digest:
+            digest.return_value.hexdigest.return_value = 'collision'
+            with self.assertRaisesRegex(ValueError, 'Conflicting pin template content keys'):
+                compact(source)
+
+    def test_factory_merges_new_metadata_into_legacy_pool(self):
+        original = compact(fixture())
+        legacy = copy.deepcopy(original)
+        legacy['pinTemplates'] = {'p1': next(iter(original['pinTemplates'].values()))}
+        for node in legacy['graphs'][0]['body']['nodes']:
+            for existing in node['pins'].values():
+                existing['type'] = 'p1'
+        insertion = '\n'.join([
+            'Begin Object Class=/Script/BlueprintGraph.K2Node_CallFunction Name="Math"',
+            'FunctionReference=(MemberName="Divide_DoubleDouble")',
+            pin('5' * 32, 'A'), pin('6' * 32, 'B'), pin('7' * 32, 'ReturnValue', True),
+            'End Object']).replace('PinName="A",', 'PinName="A",bAdvancedView=True,')
+        catalog = {'entries': [{'identity': 'math.divide', 'nativeInsertion': insertion}]}
+        edited = add_call(legacy, catalog, 'math.divide', 'Division', 'Calculate')
+        self.assertEqual(len(edited['pinTemplates']), 2)
+        nodes = {node['id']: node for node in edited['graphs'][0]['body']['nodes']}
+        for node in original['graphs'][0]['body']['nodes']:
+            self.assertEqual(nodes[node['id']], node)
+        new = nodes['Division']['pins']
+        self.assertEqual(edited['pinTemplates'][new['in:left']['type']]['bAdvancedView'], 'True')
+        self.assertEqual(new['in:right']['type'], nodes['Sink']['pins']['in:Amount']['type'])
+        self.assertEqual(compare(edited, compact(native(edited))), [])
+
     def test_editor_stub_role_survives_both_directions_and_rejects_unknown_role(self):
         document = fixture()
         document['editorRole'] = 'stub'
