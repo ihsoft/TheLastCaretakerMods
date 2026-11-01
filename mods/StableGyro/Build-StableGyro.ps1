@@ -541,7 +541,7 @@ $phase.Restart()
 $phase.Stop()
 $timings.ItemUpdate = $phase.Elapsed.TotalSeconds
 
-Write-Host '6/8 Cooking eight maintained project packages'
+Write-Host '6/8 Cooking nine maintained project packages'
 $phase.Restart()
 $cookedRoot = Join-Path $releaseRoot 'cooked'
 & $cookScript `
@@ -569,7 +569,7 @@ $staticMeshStagingReportPath = Join-Path $releaseRoot 'static-mesh-staging.json'
 $phase.Stop()
 $timings.Cook = $phase.Elapsed.TotalSeconds
 
-Write-Host '7/8 Building and verifying the eight-asset IoStore container'
+Write-Host '7/8 Building and verifying the nine-asset IoStore container'
 $phase.Restart()
 $containerRoot = Join-Path $releaseRoot 'container'
 if (@($originalInputs).Count -ne 1) {

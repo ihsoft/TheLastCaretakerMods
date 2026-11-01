@@ -320,6 +320,7 @@ the synchronized BPT representations and native editor declarations.
 
 | Source location | Reconstruction and role | Refresh or revalidation |
 | --- | --- | --- |
+| `Content/Mods/StableGyro/Settings/BP_IniFileParser.uasset` | Authored [shared INI parser](../../tools/BlueprintText/Library/IniFileParser/AGENTS.md), relocated into the mod with its synchronized BPT copy. It ships with the mod and is not reconstructed game content. | Update from the shared library through package relocation. |
 | `Content/Mods/StableGyro/ModActor.uasset`, `PitchInputActor.uasset`, and `Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset` | Maintained authored gameplay graphs, initially materialized by the retired StableGyro commandlets using the game contracts above. `BlueprintText/` contains their synchronized shared-tool exports. | Edit the assets through BPT or Unreal Editor; do not regenerate them during a release. Revalidate consumed game APIs when the game build changes. |
 | `Content/Mods/StableGyro/IAV_GyroPitchReset.uasset` and `Content/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.uasset` | Authored reset action and reconstructed stock keyboard context with the reset mapping added. | Preserve all stock bindings and the exact action identities described above; revalidate the reconstruction on a game build change. |
 | `Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/` and `StableGyroMooringPlateNegativeY/` | Complete meshes derived from the stock mooring plate by the mod splitter and shared StaticMesh producer. | Each release exports current stock geometry and replaces both editor packages before project cook; unsupported geometry fails. Split GLBs are temporary. |
@@ -327,7 +328,7 @@ the synchronized BPT representations and native editor declarations.
 | Other assets under `Content/` | Editor dependency stubs: stock Gyro parent, crafting-generator Blueprint, material, icon, input actions, item references and string tables. The initial parent/input stubs came from the retired commandlets; the shared item updater owns the crafting-generator stub and creates missing item dependencies. | Never ship these stubs. The updater refreshes its owned generator stub and reuses existing dependency stubs. Revalidate other required identities and layouts when the game build changes. Material fidelity is structural only; shaders and textures are not reconstructed. |
 | `EditorSupport/Source/Voyage/` | Minimal native game API declarations reconstructed from the reflection/mapping evidence above. Shared item-profile sources are composed by `EditorSupport.json`; no native implementation is shipped. | Keep original `/Script/Voyage` identities, field order and required metadata; revalidate on a game build change. Ready plugins are rebuilt by the shared support tool when their inputs change. |
 
-The eight release packages are selected explicitly by `Cook-StableGyroAssets.ps1`;
+The nine release packages are selected explicitly by `Cook-StableGyroAssets.ps1`;
 all other project assets are editor support. `Build-InheritancePackage.ps1` and
 `Validate-StableGyroMooringTemplates.ps1` own package staging and structural
 checks. The [architecture](ARCHITECTURE.md#release-preparation) describes their

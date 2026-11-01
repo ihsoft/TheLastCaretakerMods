@@ -1,4 +1,4 @@
-# INTERNAL BUILD STAGE: cooks the eight maintained production packages in one narrow
+# INTERNAL BUILD STAGE: cooks the nine maintained production packages in one narrow
 # Unreal invocation. It contains no extracted game data; its output is generated
 # and not committed.
 
@@ -34,6 +34,7 @@ $packages = @(
     '/Game/Data/Assets/Modules/DA_Item_Module_GyroCopter',
     '/Game/Mods/StableGyro/ModActor',
     '/Game/Mods/StableGyro/PitchInputActor',
+    '/Game/Mods/StableGyro/Settings/BP_IniFileParser',
     '/Game/Mods/StableGyro/IAV_GyroPitchReset',
     '/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot',
     '/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard',
