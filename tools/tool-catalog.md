@@ -11,6 +11,8 @@ failure handling.
 | Validate a cooked/re-extracted VoyageItem against its original and recipe | `Test-VoyageItemPatch.ps1` | [VoyageItem project updates](voyage-item-patch.md) |
 | Import/export Blueprint text or discover operations | `BlueprintText/Invoke-BlueprintText.ps1` | [BlueprintText](blueprint-text.md) |
 | Operate a Blueprint JSON workspace in an existing project | `BlueprintText/Invoke-BlueprintWorkspace.ps1` | [Blueprint workspace](blueprint-workspace.md) |
+| Read BPT graph summaries or one graph with its ownership context, without Unreal | `BlueprintText/graph_hierarchy.py` | [Collapsed graphs](blueprint-text.md#collapsed-graphs) |
+| Check nested BPT graphs with strict import, executable fixtures and preview | `BlueprintText/Test-NestedGraphs.ps1` | [Collapsed graph checks](blueprint-text.md#collapsed-graphs) |
 | Import/export supported Actor/Widget/direct UObject Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintText/Invoke-BlueprintAssetText.ps1` | [BlueprintText](blueprint-text.md#schema-2-blueprints) |
 | Import and execute the reusable INI parser in a disposable project | `BlueprintText/Test-IniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/AGENTS.md#validation-and-maintenance) |
 | Check asset-text round trips in a disposable prepared project | `BlueprintText/test_asset_text_roundtrip.py` | [Blueprint checks](blueprint-text.md#checks) |

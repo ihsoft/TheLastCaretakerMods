@@ -79,6 +79,11 @@ function cleared(section) {
 for (const section of sections) {
     [view.value, direction.value] = section.id.split('-');
     context.choose();
+    const navigationLink=element();
+    navigationLink.closest=selector=>selector==='a'?navigationLink:selector==='.graph-node'?section.nodes[0]:null;
+    handlers.click({target:navigationLink});
+    handlers.keydown({target:navigationLink,key:'Enter',preventDefault(){assert.fail('Graph navigation must retain native keyboard activation')}});
+    cleared(section);
     forbidGraphScan=true;
     ui['unconnected'].checked=false;context.changeUnconnected();
     assert.equal(section.svg.classList.contains('hide-unconnected'),true);

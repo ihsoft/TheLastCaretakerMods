@@ -123,9 +123,9 @@ graphs through the same schema-2 path. Actor-only CDO exclusions do not apply
 to it: a string variable named `RootComponent` remains an ordinary variable.
 Component trees include SCS nodes, component templates and
 their owned objects, including child-actor templates. Inherited component
-overrides, macro definitions, timelines, extensions, nested graphs
-and nested node objects are rejected. Widget trees and implemented interfaces
-are described below. Required parent classes, native classes
+overrides, macro definitions, timelines, extensions and arbitrary nested node
+objects are rejected. Ordinary K2 collapsed graphs, widget trees and implemented
+interfaces use the explicit representations described below. Required parent classes, native classes
 and external asset dependencies must already
 exist in the prepared project. A blank project does not supply game
 classes or assets. This is an uncooked editor-asset workflow.
@@ -205,11 +205,71 @@ compact/native envelopes and creates call nodes from the engine catalogue:
 python -B tools/BlueprintText/asset_text_codec.py add-call $source --catalog tools/BlueprintText/.cache/catalog.json --operation /Script/Engine.KismetMathLibrary::Divide_DoubleDouble --id Division --graph Calculate --output "$run/edited.json"
 ```
 
-Use an existing graph name. The command allocates IDs and merges pin metadata;
+Use an existing GraphGuid or unambiguous graph name. The command allocates IDs
+and merges pin metadata;
 edit the new node's defaults and links in the resulting complete source.
 `template` produces a standalone insertion fragment. `compact`, `native` and
 `compare` perform offline conversion and comparison; use `--help` for arguments.
 New operations belong in shared discovery/serialization, not a per-mod builder.
+
+### Collapsed graphs
+
+Schema 2 supports ordinary K2 Collapsed Graph nodes (`K2Node_Composite`) with
+entry/exit tunnels, including multiple nesting levels. Each child is a separate
+entry in the asset's existing `graphs` array, with `kind: "collapsed"` and an
+`owner` record:
+
+```json
+"owner": {
+  "graph": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "node": "K2Node_Composite_0",
+  "entry": "K2Node_Tunnel_0",
+  "exit": "K2Node_Tunnel_1"
+}
+```
+
+`graph` is the parent's existing `properties.GraphGuid`; `node` names the
+Composite in that parent, while `entry` and `exit` name tunnels in the child.
+GraphGuid is the stable identity, including across renames. Preserve existing
+GUIDs. Display names and node IDs are scoped: distinct owners may contain graphs
+with the same short name. Root graphs omit `owner`. Flat documents retain their
+existing shape, including after the last collapsed graph is removed.
+
+The owner record is the sole representation of `BoundGraph`, `SubGraphs` and
+reciprocal tunnel ownership pointers. Do not add those pointers to node or graph
+properties. Node properties, user-pin metadata, pin identities, typed defaults
+and links remain explicit. Links stay inside their graph; the boundary binds
+matching native pin names/types with complementary directions. Export keeps the
+parent before its descendants. Keep this order when editing the registry.
+
+The codec rejects missing/multiple owners, cycles, duplicate graph identities,
+missing tunnels, inconsistent pin boundaries and invalid local links before
+Apply changes a package. Native reconstruction restores graph Outers and tunnel
+references before compilation. Fresh-process comparison remains strict.
+This is not macro-definition or arbitrary UObject-tree support.
+
+For inexpensive source inspection, run the offline helper once:
+
+```powershell
+python -B tools/BlueprintText/graph_hierarchy.py $source
+python -B tools/BlueprintText/graph_hierarchy.py $source --graph $graphGuid
+```
+
+Set `$graphGuid` to the desired ID from the summary. The first call returns
+graph summaries with owners and local counts. Selection
+accepts a GraphGuid or an unambiguous name and returns the graph, ancestor
+operations, child summaries and required class/pin definitions. These are
+read-only views; edit the complete source JSON for Apply. No Unreal query or
+recovery of missing mod data is involved.
+
+`Test-NestedGraphs.ps1 -OutputRoot <new directory below Tmp/BlueprintText>`
+runs the public workspace workflow in an isolated project through the shared
+Unreal queue. It covers two levels, repeated names, a BPT body edit and rename,
+strict re-export, invalid-owner rejection without changing the package, a no-op
+Apply, and one-call Preview. Fresh-process Blueprint execution checks branch
+results and side-effect order in UObject functions and Actor event/construction
+graphs. Vector, array and object boundaries/defaults are checked structurally.
+These are editor checks, not a cooked-game acceptance claim.
 
 ## Widget trees, interfaces and resources
 
@@ -227,7 +287,7 @@ references. `-Action Import` reconstructs these same widget and interface sectio
 compiles/saves the Blueprint, and compares a fresh-process export with the source.
 This verifies represented state; it does not establish runtime equivalence or general lossless
 Blueprint support. Existing export exclusions still apply to macros, timelines,
-extensions, nested graphs and inherited component overrides.
+extensions, unsupported nested object families and inherited component overrides.
 
 To add a widget or animation, declare its objects and hierarchy in the complete
 source, then allocate its missing editor identity without changing existing GUIDs:
@@ -375,7 +435,7 @@ badges and colored borders. Use these record shapes:
   `"status":"unchanged"`; do not supply `before`.
 
 Changed snapshots must have the same asset identity. A changed record may also
-provide `reviews`, keyed by graph name, using the existing [node review lists](#review-mode):
+provide `reviews`, keyed by GraphGuid or unambiguous graph name, using the existing [node review lists](#review-mode):
 `"reviews":{"EventGraph":{"changed":["SetLimit"]}}`. Use actual exported node
 IDs. Without a list, the card still has its status and graph Before links; node
 changes are not inferred. Added and removed graphs show all their nodes marked
@@ -383,8 +443,18 @@ accordingly, including graphs removed from a changed Blueprint. Removed content
 is rendered from the Before snapshot. `"demo":true` marks the index explicitly
 as a fictional review. None of these annotations becomes Blueprint source state.
 
-Each graph row shows full source node/link counts, independent of viewer folding
-or hidden disconnected nodes. Deleted graphs use Before counts. Widget previews
+Collapsed graphs appear in an expandable tree with counts aligned at the right.
+Their parent operation has a double border and shows the child name; a third
+toolbar icon beside Details and Copy opens the child graph. The inner border
+follows card resizing. The child page links back through ancestor
+operations. Before navigation stays within the Before snapshot. Stable graph
+identity keeps a rename from appearing as an unrelated deletion/addition.
+When a represented child or descendant changes, the parent operation receives
+a nested-change label; this does not infer individual node review lists.
+
+Each graph row shows local source node/link counts and a separate descendant
+node count, independent of viewer folding or hidden disconnected nodes. Deleted
+graphs use Before counts. Widget previews
 use the adjacent `.resources/manifest.json`; optional `resources` and
 `beforeResources` override it for the corresponding snapshot. An empty widget
 tree or missing resource manifest is explained in the index instead of creating

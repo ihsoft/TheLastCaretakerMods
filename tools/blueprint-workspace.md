@@ -160,6 +160,13 @@ Direct file edits are outside these locks; follow the task ownership rules above
 Other Unreal producers must use the shared queue wrapper. Asset conflict checks still apply when sequential
 tasks touch the same exported asset.
 
+For a large source, use `python -B tools/BlueprintText/graph_hierarchy.py <source>`
+to get graph summaries, or add `--graph <GraphGuid>` to read one graph with its
+boundary context and required definitions. This is an offline read-only view;
+edit the complete workspace source. Collapsed graphs use the
+[explicit hierarchy](blueprint-text.md#collapsed-graphs), with no additional
+asset queries or per-mod extraction scripts.
+
 ```powershell
 & $tool -Action Apply -WorkspaceRoot $work
 & $tool -Action Preview -WorkspaceRoot $work
@@ -222,9 +229,16 @@ editing support. In particular, a stub's empty graphs are not the original game
 implementation. An explicitly selected stub can still be reviewed as an editor
 contract. Discovered assets do not expand the workspace's Apply selection.
 
+The same Preview call includes collapsed graphs automatically: an expandable
+tree, operation-to-child links, ancestor navigation, local/descendant counts and
+labels on operations whose nested implementation changed. Before links stay in
+their own snapshot. The agent does not need to enumerate child graphs or render
+them individually.
+
 Blueprint status is compared with the original export, so successful Apply
 operations do not erase the review. Optional `reviews` in a manifest asset entry
-supplies known node IDs by graph, using `added`, `changed` and `removed` lists.
+supplies known node IDs by GraphGuid or unambiguous graph name, using `added`,
+`changed` and `removed` lists.
 Optional `note` adds explanatory text. These annotations do not alter the Blueprint.
 
 Read diagnostics only on failure: start with the returned short reason and

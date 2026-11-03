@@ -6,6 +6,13 @@ const page=fs.readFileSync(process.argv[2],'utf8');
 const decode=s=>s.replace(/&quot;/g,'"').replace(/&#x27;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
 const layouts=[...page.matchAll(/<svg data-layout="([^"]+)"/g)].map(m=>JSON.parse(decode(m[1])));
 assert.equal(layouts.length,4,'Both views and directions contain geometry');
+// Overall height must shrink when the resized card sets the vertical extent.
+// A shorter parallel card can shrink without changing that extent, especially LR.
+for(const direction of ['TB','LR']){
+    const tall={direction,nodes:[{id:'only',rank:0,kind:'call',w:330,h:200}],edges:[]};
+    const short=structuredClone(tall);short.nodes[0].h=100;
+    assert.ok(context.layoutRows(short,3).height<context.layoutRows(tall,3).height,'Reducing the extent-setting card reduces graph height');
+}
 function element(){return {attributes:{},setAttribute(k,v){this.attributes[k]=String(v)}}}
 const branches={nodes:[['root',0],['aRight',1],['zLeft',1],['aChild',2],['zChild',2]].map(([id,rank])=>({id,rank,kind:id==='root'?'branch':'call',w:330,h:70})),
     edges:[['root','then','zLeft','exec',true],['root','else','aRight','exec',true],
@@ -20,7 +27,7 @@ for(const data of layouts){
     const original=JSON.stringify(data),normal=context.layoutRows(data,3);
     // Default browser layout agrees with the standalone Python SVG layout.
     for(const n of data.nodes){const b=normal.boxes.get(n.id);assert.equal(b.x,n.x);assert.equal(b.y,n.y)}
-    const nodes=data.nodes.map(n=>{const rect=element();return Object.assign(element(),{dataset:{nodeId:n.id},rect,querySelector:()=>rect})});
+    const nodes=data.nodes.map(n=>{const rect=element(),frame=element();return Object.assign(element(),{dataset:{nodeId:n.id},rect,frame,querySelector:s=>s==='.nested-graph-frame'?frame:rect})});
     const edges=data.edges.map(()=>{
         const parts=Object.fromEntries(['.edge-line','.edge-hit','.label'].map(k=>[k,element()]));
         return {parts,querySelector:s=>parts[s]};
@@ -58,15 +65,23 @@ for(const data of layouts){
     const compactData=JSON.parse(original);
     for(const n of compactData.nodes)n.h=n.compactH??n.h;
     const compact=context.layoutRows(compactData,3);
-    for(const n of nodes)assert.equal(n.rect.attributes.height,String(compact.boxes.get(n.dataset.nodeId).h));
+    for(const n of nodes){
+        assert.equal(n.rect.attributes.height,String(compact.boxes.get(n.dataset.nodeId).h));
+        assert.equal(n.frame.attributes.height,String(compact.boxes.get(n.dataset.nodeId).h-8),'Inner frame follows compact card height');
+    }
     assert.ok(compact.height<=normal.height);
-    if(data.nodes.some(n=>n.compactH<n.h))assert.ok(compact.height<normal.height,'Hidden rows reduce graph height');
+    for(const n of data.nodes)if(n.compactH<n.h){
+        assert.equal(normal.boxes.get(n.id).h-compact.boxes.get(n.id).h,n.h-n.compactH,'Every hidden row reduces its own card height');
+    }
     edges.forEach((e,i)=>assert.equal(e.parts['.edge-line'].attributes.d,compact.edges[i].path));
     // Changing row capacity while hidden must keep reduced card heights.
     context.applyRowLayout(svg,6,false);
     for(const n of nodes)assert.equal(n.rect.attributes.height,String(compact.boxes.get(n.dataset.nodeId).h));
     context.applyRowLayout(svg,3,true);
-    for(const n of nodes)assert.equal(n.rect.attributes.height,String(normal.boxes.get(n.dataset.nodeId).h));
+    for(const n of nodes){
+        assert.equal(n.rect.attributes.height,String(normal.boxes.get(n.dataset.nodeId).h));
+        assert.equal(n.frame.attributes.height,String(normal.boxes.get(n.dataset.nodeId).h-8),'Inner frame restores its expanded height');
+    }
     assert.ok(nodes.every(n=>n.attributes.transform==='translate(0,0)'));
     assert.equal(JSON.stringify(data),original);
 }

@@ -113,6 +113,7 @@ function highlight(id){
 }
 function toggleNode(node){highlight(selectedId===node.dataset.nodeId?null:node.dataset.nodeId)}
 box.addEventListener('click',event=>{
+    if(event.target.closest('a'))return;
     if(tip.contains(event.target))return;
     const edge=event.target.closest('.graph-edge');
     if(edge&&svg.contains(edge)){event.stopPropagation();showEdgeDetails(edge,event);return}
@@ -128,6 +129,7 @@ document.getElementById('copy-detail-ids').addEventListener('click',()=>{if(deta
 document.getElementById('copy-details').addEventListener('click',()=>copyText(detailCopyText,'Node details copied'));
 document.getElementById('close-details').addEventListener('click',closeDetails);
 document.addEventListener('keydown',event=>{
+    if(event.target.closest('a'))return;
     if(event.key==='Escape'){highlight(null);closeDetails();return}
     const node=event.target.closest('.graph-node');
     if(node&&svg.contains(node)&&(event.key==='Enter'||event.key===' ')){

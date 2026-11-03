@@ -37,6 +37,7 @@
 #include "Internationalization/Internationalization.h"
 #include "Internationalization/Culture.h"
 #include "WidgetPreviewResources.h"
+#include "BlueprintNestedGraphs.h"
 
 namespace ATNames
 {
@@ -393,14 +394,7 @@ FString UnsupportedReason(const UBlueprint* BP)
             return TEXT("Plain Object Blueprint cannot contain actor component state.");
     }
     else if(!Widget && !BP->SimpleConstructionScript)return TEXT("Blueprint export requires a SimpleConstructionScript.");
-    TArray<UEdGraph*> Graphs;BP->GetAllGraphs(Graphs);
-    int32 InterfaceGraphs=0;
-    for(const auto& Description:BP->ImplementedInterfaces)InterfaceGraphs+=Description.Graphs.Num();
-    if(Graphs.Num()!=BP->UbergraphPages.Num()+BP->FunctionGraphs.Num()+InterfaceGraphs)
-        return TEXT("Nested graphs are outside schema 2.");
-    for(const UEdGraph* Graph:Graphs)
-        if(Graph->GetSchema()->GetClass()!=UEdGraphSchema_K2::StaticClass())return TEXT("Only K2 graph schemas are supported.");
-    return FString();
+    return BlueprintNestedGraphs::Validate(BP);
 }
 bool Supported(const UBlueprint* BP)
 {
@@ -481,10 +475,23 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
     Root->SetObjectField(ATNames::Valuedefaults,Defaults);
     Values Graphs;
     TSet<FString> DependencyPaths;
-    auto ExportGraph=[&](UEdGraph* Graph,const TCHAR* Kind)
+    TArray<UEdGraph*> AllGraphs;BP->GetAllGraphs(AllGraphs);
+    TArray<UObject*> GraphObjects;
+    bool Nested=false;
+    for(UEdGraph* Graph:AllGraphs){GraphObjects.Add(Graph);Nested|=Graph->SubGraphs.Num()>0;}
+    TFunction<void(UEdGraph*,const TCHAR*)> ExportGraph=[&](UEdGraph* Graph,const TCHAR* Kind)
     {
         auto G=MakeShared<FJsonObject>();G->SetStringField(ATNames::Valuename,Graph->GetName());G->SetStringField(ATNames::Valuekind,Kind);
         G->SetObjectField(ATNames::Valueproperties,Properties(Graph,Graph->GetClass()->GetDefaultObject(),GraphOwned));
+        if(auto* Composite=Cast<UK2Node_Composite>(Graph->GetOuter()))
+        {
+            auto Owner=MakeShared<FJsonObject>();
+            Owner->SetStringField(BlueprintNestedGraphs::GraphKey,Composite->GetGraph()->GraphGuid.ToString(EGuidFormats::Digits));
+            Owner->SetStringField(BlueprintNestedGraphs::NodeKey,Composite->GetName());
+            Owner->SetStringField(BlueprintNestedGraphs::EntryKey,Composite->InputSinkNode->GetName());
+            Owner->SetStringField(BlueprintNestedGraphs::ExitKey,Composite->OutputSourceNode->GetName());
+            G->SetObjectField(BlueprintNestedGraphs::Owner,Owner);
+        }
         TSet<UObject*> Selection;
         for(UEdGraphNode* Node:Graph->Nodes)
         {
@@ -495,9 +502,12 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
                 if(Pin->DefaultObject && Pin->DefaultObject->GetOutermost()!=BP->GetOutermost())
                     DependencyPaths.Add(Pin->DefaultObject->GetPathName());
         }
-        FString Text;FEdGraphUtilities::ExportNodesToText(Selection,Text);
+        FString Text;
+        if(Nested)Text=BlueprintNestedGraphs::ExportNodes(Graph,GraphObjects);
+        else FEdGraphUtilities::ExportNodesToText(Selection,Text);
         G->SetStringField(ATNames::Valuetext,Text);G->SetNumberField(ATNames::ValuenodeCount,Graph->Nodes.Num());
         Graphs.Add(MakeShared<FJsonValueObject>(G));
+        for(UEdGraph* Child:Graph->SubGraphs)ExportGraph(Child,BlueprintNestedGraphs::Kind);
     };
     for(UEdGraph* Graph:BP->UbergraphPages)ExportGraph(Graph,ATNames::Valueevent);
     for(UEdGraph* Graph:BP->FunctionGraphs)ExportGraph(Graph,ATNames::Valuefunction);
@@ -637,7 +647,7 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root,const TSe
     TArray<UEdGraph*> OldGraphs;BP->GetAllGraphs(OldGraphs);
     BP->UbergraphPages.Empty();BP->FunctionGraphs.Empty();
     for(UEdGraph* Graph:OldGraphs)Graph->Rename(nullptr,GetTransientPackage(),REN_DontCreateRedirectors);
-    TArray<TPair<UEdGraph*,TSharedPtr<FJsonObject>>> Pending;
+    Values Pending=Root->GetArrayField(ATNames::Valuegraphs);
     TMap<FString,int32> InterfaceOwners;
     BP->ImplementedInterfaces.Empty();
     if(Root->HasField(Interfaces))for(const auto& Value:Root->GetArrayField(Interfaces))
@@ -656,16 +666,37 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root,const TSe
         }
     }
     TSet<FString> Names;
-    for(const auto& Value:Root->GetArrayField(ATNames::Valuegraphs))
+    TMap<FString,UEdGraph*> GraphById;
+    while(Pending.Num())
     {
-        auto G=Value->AsObject();
-        if(!G.IsValid() || !Keys(*G,{ATNames::Valuename,ATNames::Valuekind,ATNames::Valueproperties,ATNames::Valuetext,ATNames::ValuenodeCount}))return false;
+      bool Progress=false;
+      for(int32 Index=0;Index<Pending.Num();)
+      {
+        auto G=Pending[Index]->AsObject();
+        if(!G.IsValid() || !Keys(*G,{ATNames::Valuename,ATNames::Valuekind,ATNames::Valueproperties,ATNames::Valuetext,ATNames::ValuenodeCount,BlueprintNestedGraphs::Owner}))return false;
         const FString Name=G->GetStringField(ATNames::Valuename);
-        if(Name.IsEmpty() || Names.Contains(Name))return false;Names.Add(Name);
-        UEdGraph* Graph=FBlueprintEditorUtils::CreateNewGraph(BP,*Name,UEdGraph::StaticClass(),UEdGraphSchema_K2::StaticClass());
+        UObject* Outer=BP;UK2Node_Composite* Composite=nullptr;
+        TSharedPtr<FJsonObject> Owner;
+        if(G->HasField(BlueprintNestedGraphs::Owner))
+        {
+            Owner=G->GetObjectField(BlueprintNestedGraphs::Owner);
+            if(!Keys(*Owner,{BlueprintNestedGraphs::GraphKey,BlueprintNestedGraphs::NodeKey,BlueprintNestedGraphs::EntryKey,BlueprintNestedGraphs::ExitKey}))return false;
+            UEdGraph** Parent=GraphById.Find(Owner->GetStringField(BlueprintNestedGraphs::GraphKey));
+            if(!Parent){++Index;continue;}
+            Composite=FindObject<UK2Node_Composite>(*Parent,*Owner->GetStringField(BlueprintNestedGraphs::NodeKey));
+            if(!Composite || Composite->BoundGraph || G->GetStringField(ATNames::Valuekind)!=BlueprintNestedGraphs::Kind)return false;
+            Outer=Composite;
+        }
+        const FString Scope=Outer->GetPathName()+TEXT(".")+Name;
+        if(Name.IsEmpty() || Names.Contains(Scope))return false;Names.Add(Scope);
+        UEdGraph* Graph=FBlueprintEditorUtils::CreateNewGraph(Outer,*Name,UEdGraph::StaticClass(),UEdGraphSchema_K2::StaticClass());
         if(!Apply(Graph,*G->GetObjectField(ATNames::Valueproperties),GraphOwned))return false;
+        const FString Id=Graph->GraphGuid.ToString(EGuidFormats::Digits);
+        if(GraphById.Contains(Id))return false;
+        GraphById.Add(Id,Graph);
         const FString Kind=G->GetStringField(ATNames::Valuekind);
-        if(Kind==ATNames::Valueevent)BP->UbergraphPages.Add(Graph);
+        if(Composite){Composite->BoundGraph=Graph;Composite->GetGraph()->SubGraphs.Add(Graph);}
+        else if(Kind==ATNames::Valueevent)BP->UbergraphPages.Add(Graph);
         else if(Kind==ATNames::Valuefunction)BP->FunctionGraphs.Add(Graph);
         else if(Kind==InterfaceKind && InterfaceOwners.Contains(Name))
         {
@@ -673,17 +704,23 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root,const TSe
             InterfaceOwners.Remove(Name);
         }
         else return false;
-        Pending.Add({Graph,G});
-    }
-    if(InterfaceOwners.Num())return false;
-    for(const auto& Pair:Pending)
-    {
-        GraphFactory Factory;Factory.ProcessBuffer(Pair.Key,RF_Transactional,Pair.Value->GetStringField(ATNames::Valuetext));
+        GraphFactory Factory;Factory.ProcessBuffer(Graph,RF_Transactional,G->GetStringField(ATNames::Valuetext));
         UEdGraphPin::ResolveAllPinReferences();
-        if(Pair.Key->Nodes.Num()!=Pair.Value->GetIntegerField(ATNames::ValuenodeCount))
-        {UE_LOG(LogTemp,Error,TEXT("Native node count mismatch in %s"),*Pair.Key->GetName());return false;}
+        if(Graph->Nodes.Num()!=G->GetIntegerField(ATNames::ValuenodeCount))
+        {UE_LOG(LogTemp,Error,TEXT("Native node count mismatch in %s"),*Graph->GetName());return false;}
+        if(Composite)
+        {
+            auto* Entry=FindObject<UK2Node_Tunnel>(Graph,*Owner->GetStringField(BlueprintNestedGraphs::EntryKey));
+            auto* Exit=FindObject<UK2Node_Tunnel>(Graph,*Owner->GetStringField(BlueprintNestedGraphs::ExitKey));
+            if(!Entry || !Exit || Entry==Exit)return false;
+            Composite->InputSinkNode=Entry;Composite->OutputSourceNode=Exit;
+            Entry->OutputSourceNode=Composite;Exit->InputSinkNode=Composite;
+        }
+        Pending.RemoveAt(Index);Progress=true;
+      }
+      if(!Progress){UE_LOG(LogTemp,Error,TEXT("Missing or cyclic collapsed graph owner."));return false;}
     }
-    return true;
+    return InterfaceOwners.Num()==0 && Supported(BP);
 }
 bool FinalizeImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
 {
@@ -814,6 +851,7 @@ bool ExportBatch(const FString& Path,const FString& Folder)
 #include "BlueprintPreviewCatalog.h"
 #include "BlueprintObjectTests.h"
 #include "BlueprintComponentDefaultsTests.h"
+#include "BlueprintNestedGraphTests.h"
 
 UBlueprintAssetTextCommandlet::UBlueprintAssetTextCommandlet(){IsClient=false;IsServer=false;IsEditor=true;LogToConsole=true;}
 int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
@@ -822,6 +860,12 @@ int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
     FParse::Value(*Params,ATNames::ValueMode_,Mode);FParse::Value(*Params,ATNames::ValueInput_,Input);
     FParse::Value(*Params,ATNames::ValueOutput_,Output);FParse::Value(*Params,ATNames::ValueAsset_,Asset);
     FString PreviewResources;FParse::Value(*Params,WidgetPreviewResources::ResourcesArgument,PreviewResources);
+    if(Mode==TEXT("NestedGraphFixture"))return BlueprintNestedGraphTests::Fixture()?0:6;
+    if(Mode==TEXT("NestedGraphCheck"))
+    {
+        int32 Offset=3;FParse::Value(*Params,TEXT("ExpectedOffset="),Offset);
+        return BlueprintNestedGraphTests::Check(Offset)?0:6;
+    }
     if(Mode==BlueprintObjectTests::FixtureMode)return BlueprintObjectTests::Fixture(Output)?0:6;
     if(Mode==BlueprintObjectTests::ConsumerMode)return BlueprintObjectTests::Consumer(Asset,Output)?0:6;
     if(Mode==BlueprintObjectTests::CheckMode)return BlueprintObjectTests::Check(Asset)?0:6;

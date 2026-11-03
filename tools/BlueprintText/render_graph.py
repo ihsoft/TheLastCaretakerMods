@@ -16,6 +16,7 @@ from pathlib import Path
 from function_labels import lookup as lookup_function_label
 from review_details import render_details
 from preview_references import node_references, package as reference_package, label as reference_label
+from graph_hierarchy import select_graph, graph_key
 
 
 def escape(value):
@@ -26,16 +27,13 @@ def load_graph(document, selection=None):
     if document.get("schema") not in (1, 2):
         raise ValueError("Expected compact schema 1 or 2.")
     if "graphs" in document:
-        graphs = [g for g in document["graphs"] if not selection or g["name"] == selection]
-        if len(graphs) != 1:
-            raise ValueError("Select exactly one graph with --graph NAME.")
-        graph = graphs[0]
+        graph = select_graph(document, selection)
         if graph.get("format") != "compact":
             raise ValueError("Native graph text is not supported. Supply a compact export.")
         body, name = graph["body"], graph["name"]
     else:
         body, name = document, document.get("graph", "Graph")
-        if selection and selection != name:
+        if selection and selection not in (name, document.get('_graphId')):
             raise ValueError(f"Graph {selection!r} was not found.")
     nodes = body["nodes"]
     ids = [node["id"] for node in nodes]
@@ -81,7 +79,9 @@ def review_document(document, before, review, selection=None):
     old, old_edges = [], []
     if before is not None:
         old, old_edges, old_owner, old_name = load_graph(before, selection)
-        if (old_owner, old_name) != (owner, name):
+        same_identity = ('graphs' in document and 'graphs' in before and
+                         graph_key(select_graph(document, selection)) == graph_key(select_graph(before, selection)))
+        if old_owner != owner or (old_name != name and not same_identity):
             raise ValueError('Before and current sources must identify the same asset and graph.')
     elif any(s in ('changed', 'removed') for s in marked.values()):
         raise ValueError('Changed and removed nodes require --before source.')
@@ -98,6 +98,7 @@ def review_document(document, before, review, selection=None):
     result = copy.deepcopy(document)
     result.pop('graphs', None)
     result.update(graph=name, nodes=copy.deepcopy(current), links=[], _review=True)
+    result['_graphId'] = graph_key(select_graph(document, selection)) if 'graphs' in document else document.get('_graphId', name)
     templates = result.setdefault('pinTemplates', {})
     old_templates = {}
     for key, value in (before or {}).get('pinTemplates', {}).items():
@@ -598,8 +599,9 @@ def order_layer(members, parent_edges, boxes, direction):
     return sorted(members, key=key)
 
 
-def render(document, selection=None, view="simplified", direction="TB", review=None, before=None, asset_context=None):
+def render(document, selection=None, view="simplified", direction="TB", review=None, before=None, asset_context=None, graph_context=None):
     asset_context = asset_context or {}
+    graph_context = graph_context or {}
     if review is not None:
         document = review_document(document, before, review, selection)
     if view not in ("simplified", "full") or direction not in ("TB", "LR"):
@@ -649,6 +651,12 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             templates, parent = document.get('pinTemplates', {}), document.get('parent')
             raw_lines = node_lines(node, connected[node_id], hidden_inputs[node_id], templates, parent, wrap=False,
                                    connected_outputs=connected_outputs[node_id])
+            child = graph_context.get('children', {}).get(node_id)
+            if child:
+                raw_lines[0] = child['name']
+                raw_lines.append('Nested graph · ' + str(child['nodes']) + ' local nodes')
+                if child.get('changed'):
+                    raw_lines.append('~ Nested implementation changed')
             title_rows[node_id] = len(wrap_node_line(raw_lines[0], True))
             previous = node.get('_reviewPreviousDescription', {})
             current = description_fields(node, templates, parent) if previous else {}
@@ -712,6 +720,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     marker_prefix = view + direction
     pieces = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="{escape(title)}">',
               '<style>text{font-family:Segoe UI,Arial,sans-serif;fill:#20334b} .label{font-size:11px;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}.graph-edge:hover>.edge-line{stroke-width:3.5}.graph-edge:hover{opacity:1}</style>',
+              '<style>.open-child-graph{cursor:pointer}.open-child-graph:focus{outline:none}.open-child-graph:hover>rect,.open-child-graph:focus-visible>rect{fill:#dbeafe;stroke:#1d4ed8;stroke-width:2}.graph-node.selected>.nested-graph-frame,.graph-node.neighbor>.nested-graph-frame,.graph-node:focus-visible>.nested-graph-frame{stroke-width:1}</style>',
               '<rect width="100%" height="100%" fill="#f8fafc"/>']
     for name, color in (("exec", "#b36b13"), ("data", "#317b9b"), ("removed", "#b42318")):
         pieces.append(f'<defs><marker id="{marker_prefix}{name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{color}"/></marker></defs>')
@@ -797,6 +806,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     execution_nodes = {endpoint for source, _, target, _, execution in all_edges if execution for endpoint in (source, target)}
     for node in nodes:
         x, y, w, h = boxes[node["id"]]
+        child = graph_context.get('children', {}).get(node['id'])
         color = node_fill(node, document.get('pinTemplates', {}), execution_nodes)
         opacity = ' opacity="0.55"' if node.get("enabled") is False else ''
         status = node.get('_reviewStatus', '')
@@ -809,13 +819,17 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         if status == 'changed':
             review_html = ' data-review-details="' + escape(render_details(details['Before'], details['After'])) + '"'
         ids = [n['id'] for n in node.get('_foldedNodes', [node])]
-        pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}" data-node-ids="{escape(json.dumps(ids))}" data-review-status="{status}"{review_html}{opacity}><title>{escape(json.dumps(details, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="{stroke}" stroke-width="{3 if status else 1.5}"{dash}/>')
+        anchor = f' id="node-{escape(node["id"])}"' if view == "simplified" and direction == "TB" else ""
+        pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}" data-node-ids="{escape(json.dumps(ids))}"{anchor} data-review-status="{status}"{review_html}{opacity}><title>{escape(json.dumps(details, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="{stroke}" stroke-width="{3 if status else 1.5}"{dash}/>')
+        if child:
+            pieces.append(f'<rect class="nested-graph-frame" x="{x+4}" y="{y+4}" width="{w-8}" height="{h-8}" rx="8" fill="none" stroke="{stroke}" stroke-width="1" pointer-events="none"{dash}/>')
         hidden_rows = 0
         for row, line in enumerate(lines_by_id[node["id"]]):
             header = row < title_rows[node['id']]
             size = 16 if header else 12
             weight = ' font-weight="600"' if header else ''
-            fit = f' textLength="{w-70 if row == 0 else w-28}" lengthAdjust="spacingAndGlyphs"' if header and len(line) > 25 else ''
+            title_width = w - (96 if child else 70) if row == 0 else w - 28
+            fit = f' textLength="{title_width}" lengthAdjust="spacingAndGlyphs"' if header and len(line) > 25 else ''
             previous = changed_lines.get(node['id'], {}).get(row)
             decoration, tooltip = '', ''
             if previous is not None:
@@ -838,6 +852,9 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         copy_label = 'Copy node ID' if len(ids) == 1 else f'Copy all {len(ids)} node IDs'
         pieces.append(f'<g class="copy-node-id" role="button" tabindex="0" aria-label="{copy_label}" transform="translate({x+w-27},{y+5})"><title>{copy_label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M6 6h9v11H6z M9 3h9v11" fill="none" stroke="#334155" stroke-width="1.5"/></g>')
         pieces.append(f'<g class="node-info" role="button" tabindex="0" aria-label="Show node details" transform="translate({x+w-53},{y+5})"><title>Show node details</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><text x="11" y="16" text-anchor="middle" font-size="16" font-weight="600">i</text></g>')
+        if child:
+            label = escape('Open graph: ' + child['name'])
+            pieces.append(f'<a class="open-child-graph" href="{escape(child["href"])}" tabindex="0" aria-label="{label}" transform="translate({x+w-79},{y+5})"><title>{label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M12 4h6v14h-6 M3 11h11 M10 7l4 4-4 4" fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></a>')
         pieces.append('</g>')
     pieces.append('</svg>')
     if direction in ('TB', 'LR'):
@@ -855,10 +872,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
     parser.add_argument("--output", type=Path, required=True, help="Output .svg; adjacent .html is also written")
-    parser.add_argument("--graph", help="Graph name when the envelope has several graphs")
+    parser.add_argument("--graph", help="Stable GraphGuid or unambiguous graph name")
     parser.add_argument('--review', type=Path, help='Explicit added/changed/removed node ID lists')
     parser.add_argument('--before', type=Path, help='Original compact source for review Before details and removed nodes')
     parser.add_argument('--asset-context', type=Path, help='Tool-owned asset roles and preview links; never part of editable BPT')
+    parser.add_argument('--graph-context', type=Path, help='Tool-owned nested navigation; never part of editable BPT')
     parser.add_argument("--view", choices=("simplified", "full"), default="simplified")
     parser.add_argument("--direction", choices=("TB", "LR"), default="TB", help="Top-to-bottom (default) or left-to-right")
     args = parser.parse_args()
@@ -872,13 +890,14 @@ def main():
             raise ValueError("Output must not overwrite the input.")
         document = json.loads(args.input.read_text(encoding="utf-8-sig"))
         asset_context = json.loads(args.asset_context.read_text(encoding='utf-8')) if args.asset_context else {}
+        graph_context = json.loads(args.graph_context.read_text(encoding='utf-8')) if args.graph_context else {}
         if args.before and not args.review:
             raise ValueError('--before requires --review.')
         if args.review:
             review = json.loads(args.review.read_text(encoding='utf-8-sig'))
             before = json.loads(args.before.read_text(encoding='utf-8-sig')) if args.before else None
             document = review_document(document, before, review, args.graph)
-        variants = {(view, direction): render(document, args.graph, view, direction, asset_context=asset_context)
+        variants = {(view, direction): render(document, args.graph, view, direction, asset_context=asset_context, graph_context=graph_context)
                     for view in ("simplified", "full") for direction in ("TB", "LR")}
         svg, title, nodes, links = variants[args.view, args.direction]
         sections = ''.join(f'<section id="{view}-{direction}"' +
@@ -899,6 +918,11 @@ def main():
 <script>''' + (Path(__file__).with_name('graph_layout.js').read_text(encoding='utf-8')) + '\n' + (Path(__file__).with_name('graph_viewer.js').read_text(encoding='utf-8')) + '''
 ''' + f'view.value="{args.view}";direction.value="{args.direction}";' + '''choose();</script></html>'''
         args.output.parent.mkdir(parents=True, exist_ok=True)
+        breadcrumbs = graph_context.get('breadcrumbs', [])
+        if breadcrumbs:
+            navigation = '<span class="graph-breadcrumbs" aria-label="Graph hierarchy">' + ' / '.join(
+                '<a href="' + escape(b['href']) + '">' + escape(b['name']) + '</a>' for b in breadcrumbs) + '</span>'
+            page = page.replace('<nav>', '<nav>' + navigation, 1)
         args.output.write_text(svg, encoding="utf-8")
         full_path.write_text(variants["full", args.direction][0], encoding="utf-8")
         html_path.write_text(page, encoding="utf-8")

@@ -10,6 +10,7 @@ import json
 import re
 import uuid
 from pathlib import Path
+from graph_hierarchy import validate_hierarchy, select_graph
 
 
 KINDS = {'K2Node_CallFunction': 'call', 'K2Node_Event': 'event',
@@ -273,7 +274,7 @@ def compact(document):
     result['pinTemplates'] = {type_ids[s]: json.loads(s) for s in signatures}
     result['classes'] = {}
     for graph, nodes in zip(result['graphs'], parsed):
-        check_keys(graph, {'name', 'kind', 'properties', 'text', 'nodeCount'}, 'native graph')
+        check_keys(graph, {'name', 'kind', 'properties', 'text', 'nodeCount', 'owner'}, 'native graph')
         if len(nodes) != graph['nodeCount']:
             raise ValueError('Native node count does not match the envelope')
         lookup, all_pins, pin_ids = {}, {}, set()
@@ -331,6 +332,7 @@ def compact(document):
         del graph['text'], graph['nodeCount']
         graph['format'] = 'compact'
         graph['body'] = {'nodes': output, 'links': sorted(links, key=lambda l: (l['from'], l['to']))}
+    validate_hierarchy(result)
     return result
 
 
@@ -342,12 +344,13 @@ def native(document):
     validate_interfaces(document)
     if document['schema'] != 2 or document['format'] != 'compact-asset':
         raise ValueError('Expected schema 2 compact-asset')
+    validate_hierarchy(document)
     result = copy.deepcopy(document)
     result['format'] = 'native-asset'
     dependencies = set()
     result['variables'] = ['(' + ','.join(f'{k}={v}' for k, v in variable.items()) + ')' for variable in document['variables']]
     for graph in result['graphs']:
-        check_keys(graph, {'name', 'kind', 'properties', 'format', 'body'}, 'compact graph')
+        check_keys(graph, {'name', 'kind', 'properties', 'format', 'body', 'owner'}, 'compact graph')
         if graph['format'] != 'compact':
             raise ValueError('Expected compact graph')
         check_keys(graph['body'], {'nodes', 'links'}, 'graph body')
@@ -439,8 +442,8 @@ def template(catalog, operation, node_id):
 
 def add_call(document, catalog, operation, node_id, graph_name):
     result = copy.deepcopy(document)
-    graphs = [g for g in result['graphs'] if g['name'] == graph_name]
-    if len(graphs) != 1 or any(n['id'] == node_id for n in graphs[0]['body']['nodes']):
+    graph = select_graph(result, graph_name)
+    if any(n['id'] == node_id for n in graph['body']['nodes']):
         raise ValueError('Select one existing graph and a new node ID')
     item = template(catalog, operation, node_id)
     for kind, cls in item['classes'].items():
@@ -459,7 +462,7 @@ def add_call(document, catalog, operation, node_id, graph_name):
         remap[key] = existing
     for pin in item['node']['pins'].values():
         pin['type'] = remap[pin['type']]
-    graphs[0]['body']['nodes'].append(item['node'])
+    graph['body']['nodes'].append(item['node'])
     # Canonicalize pooled metadata and validate the inserted declaration.
     return compact(native(result))
 

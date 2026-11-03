@@ -2,7 +2,7 @@
 
 Manifest: {title?, description?, demo?, assets: [source-path | {
   source?, before?, placeholder?: bool, status?: unchanged|added|changed|removed,
-  note?, reviews?: {graph-name: {added?: [id], changed?: [id], removed?: [id]}},
+  note?, reviews?: {graph-GUID-or-name: {added?: [id], changed?: [id], removed?: [id]}},
   resources?, beforeResources?
 }]}. Paths are relative to the manifest. Changed entries require both snapshots;
 removed entries require only before. No automatic semantic diff or Unreal launch.
@@ -20,6 +20,7 @@ from pathlib import Path
 from render_graph import load_graph, review_document
 from render_widget import render as render_widget
 from preview_references import property_references, package as reference_package, label as reference_label
+from graph_hierarchy import graph_key, select_graph, validate_hierarchy
 
 STATUSES = ('unchanged', 'added', 'changed', 'removed')
 
@@ -39,9 +40,11 @@ def keys(value, allowed, context):
 
 
 def graphs(document):
+    if any('owner' in g for g in document.get('graphs', [])):
+        validate_hierarchy(document)
     result = {}
     for graph in document.get('graphs', []):
-        name = graph['name']
+        name = graph_key(graph)
         if name in result:
             raise ValueError(f'Duplicate graph: {name}')
         load_graph(document, name)
@@ -122,13 +125,17 @@ def plan(manifest):
     return data, entries
 
 
-def graph_preview(document, name, directory, stem, marks=None, before=None, asset_context=None):
+def graph_preview(document, name, directory, stem, marks=None, before=None, asset_context=None, navigation=None):
     source = directory / f'{stem}.json'
     write(source, document)
     command = [sys.executable, '-B', str(Path(__file__).with_name('render_graph.py')),
                str(source), '--graph', name, '--output', str(directory / f'{stem}.svg')]
     if asset_context:
         command += ['--asset-context', str(asset_context)]
+    if navigation:
+        path = directory / f'{stem}.navigation.json'
+        write(path, navigation)
+        command += ['--graph-context', str(path)]
     if marks is not None:
         review = directory / f'{stem}.review.json'
         write(review, marks)
@@ -148,6 +155,50 @@ def one_graph(document, graph):
     result = {key: value for key, value in document.items() if key != 'graphs'}
     result['graphs'] = [graph]
     return result
+
+
+def graph_navigation(document, other, key, pages):
+    """Links stay in one snapshot; descendants expose changes at their parent call."""
+    registry = graphs(document)
+    other_registry = graphs(other or {})
+
+    def signature(doc, graph):
+        value = copy.deepcopy(graph)
+        for node in value['body']['nodes']:
+            for pin in node.get('pins', {}).values():
+                pin['type'] = doc.get('pinTemplates', {}).get(pin['type'], pin['type'])
+        return value
+
+    def changed(identity):
+        graph = registry[identity]
+        if identity not in other_registry or signature(document, graph) != signature(other, other_registry[identity]):
+            return True
+        children = {k for k, g in registry.items() if g.get('owner', {}).get('graph') == identity}
+        previous = {k for k, g in other_registry.items() if g.get('owner', {}).get('graph') == identity}
+        return children != previous or any(changed(k) for k in children)
+
+    breadcrumbs, cursor = [], registry[key]
+    while 'owner' in cursor:
+        owner = cursor['owner']
+        parent = registry[owner['graph']]
+        breadcrumbs.append(dict(name=parent['name'], href=pages[graph_key(parent)] + '#node-' + owner['node']))
+        cursor = parent
+    breadcrumbs.append(dict(name='Blueprints', href='../index.html'))
+    children = {}
+    for identity, graph in registry.items():
+        if graph.get('owner', {}).get('graph') == key:
+            children[graph['owner']['node']] = dict(id=identity, name=graph['name'], href=pages[identity],
+                nodes=len(graph['body']['nodes']), changed=bool(other) and changed(identity))
+    return dict(breadcrumbs=list(reversed(breadcrumbs)), children=children)
+
+
+def graph_tree(rows, registry):
+    def branch(key):
+        children = [k for k, g in registry.items() if g.get('owner', {}).get('graph') == key]
+        if not children:
+            return '<li>' + rows[key] + '</li>'
+        return '<li><details open><summary>' + rows[key] + '</summary><ul>' + ''.join(branch(k) for k in children) + '</ul></details></li>'
+    return [branch(k) for k, g in registry.items() if 'owner' not in g]
 
 
 def generate(manifest, output):
@@ -210,11 +261,20 @@ def generate(manifest, output):
         current, old = docs.get('source'), docs.get('before')
         current_graphs, old_graphs = graphs(current or {}), graphs(old or {})
         names = list(current_graphs) + [n for n in old_graphs if n not in current_graphs]
+        current_pages = {n: f'graph-{i:03d}.html' for i, n in enumerate(names) if n in current_graphs}
+        old_pages = {n: f'graph-{i:03d}-before.html' for i, n in enumerate(names) if n in old_graphs}
+        registry = {n: current_graphs.get(n, old_graphs.get(n)) for n in names}
+        def descendant_count(identity):
+            return sum(len(g['body']['nodes']) + descendant_count(k) for k, g in registry.items()
+                       if g.get('owner', {}).get('graph') == identity)
+        rows = {}
+        reviews = {graph_key(select_graph(current, n)): marks for n, marks in item.get('reviews', {}).items()}
         for index, name in enumerate(names):
             after = one_graph(current, current_graphs[name]) if name in current_graphs else None
             before = one_graph(old, old_graphs[name]) if name in old_graphs else None
-            marks = item.get('reviews', {}).get(name)
-            caption = name
+            marks = reviews.get(name)
+            displayed = current_graphs.get(name, old_graphs.get(name))
+            caption = displayed['name']
             if after is None:
                 after = copy.deepcopy(before)
                 after['graphs'][0]['body'] = {'nodes': [], 'links': []}
@@ -223,15 +283,21 @@ def generate(manifest, output):
             elif before is None and status in ('added', 'changed'):
                 marks = {'added': [n['id'] for n in current_graphs[name]['body']['nodes']]}
                 caption += ' — Added'
-            target = graph_preview(after, name, directory, f'graph-{index:03d}', marks, before, asset_context_path)
+            navigation = graph_navigation(current, old, name, current_pages) if name in current_graphs else graph_navigation(old, None, name, old_pages)
+            target = graph_preview(after, name, directory, f'graph-{index:03d}', marks, before, asset_context_path, navigation)
             links = link(target, caption)
-            if before is not None and name in current_graphs:
-                target = graph_preview(before, name, directory, f'graph-{index:03d}-before', asset_context=asset_context_path)
+            if before is not None:
+                target = graph_preview(before, name, directory, f'graph-{index:03d}-before', asset_context=asset_context_path,
+                    navigation=graph_navigation(old, None, name, old_pages))
                 links += ' · ' + link(target, 'Before')
             counted = current_graphs.get(name, old_graphs.get(name))['body']
             version = 'Before' if name not in current_graphs else 'Current'
-            stats = f'<span class="graph-stats" title="{version} full graph">{len(counted["nodes"])} nodes · {len(counted["links"])} links</span>'
-            graph_links.append('<li><span>' + links + '</span>' + stats + '</li>')
+            descendants = descendant_count(name)
+            scope = 'local' if descendants or 'owner' in displayed else 'full'
+            extra = f' · {descendants} nested nodes' if descendants else ''
+            stats = f'<span class="graph-stats" title="{version} {scope} graph">{len(counted["nodes"])} nodes · {len(counted["links"])} links{extra}</span>'
+            rows[name] = '<span>' + links + '</span>' + stats
+        graph_links = graph_tree(rows, registry)
         label = entry['asset'].rsplit('/', 1)[-1]
         placeholder = item.get('placeholder', False)
         warning = '<p class="placeholder-warning">STUB — Editor dependency placeholder; not the complete game asset.</p>' if placeholder else ''
@@ -264,7 +330,7 @@ def generate(manifest, output):
                                       '<p>Reference inventory only. These entries do not expose editable BPT graphs. STUB means an editor placeholder, not the game implementation.</p><ul>'
                                       + ''.join(other_assets) + '</ul></section>') if other_assets else '',
                         REVIEW_NOTICE=' Review badges and colored left borders indicate explicitly supplied changes.' if reviewing else '',
-                        REVIEW_FOOTER=' Statuses and node review lists are supplied explicitly; this page does not claim an automatic or complete diff.' if reviewing else '')
+                        REVIEW_FOOTER=' Statuses and node review lists are supplied explicitly. Nested-change labels compare represented child graphs; this page does not claim a complete behavioral diff.' if reviewing else '')
     # One substitution pass: user text cannot become another template marker.
     import re
     page = re.sub(r'__(TITLE|DESCRIPTION|DEMO|LEGEND|CARDS|OTHER_ASSETS|REVIEW_NOTICE|REVIEW_FOOTER)__', lambda m: replacements[m[1]], template)

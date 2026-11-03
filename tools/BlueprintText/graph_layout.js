@@ -75,6 +75,8 @@ function applyRowLayout(svg, columns, showUnconnected=true) {
         const b=result.boxes.get(n.id);
         nodes.get(n.id).setAttribute('transform',`translate(${b.x-n.x},${b.y-n.y})`);
         nodes.get(n.id).querySelector('rect').setAttribute('height',b.h);
+        const frame=nodes.get(n.id).querySelector('.nested-graph-frame');
+        if(frame)frame.setAttribute('height',b.h-8);
     }
     svg.querySelectorAll('.graph-edge').forEach((edge,i)=>{
         const geometry=result.edges[i];
