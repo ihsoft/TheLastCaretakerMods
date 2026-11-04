@@ -8,6 +8,70 @@ from render_graph import render
 
 
 class ReviewTests(unittest.TestCase):
+    @staticmethod
+    def action_fixture():
+        return dict(schema=2, graph='Actions', pinTemplates={'exec': {'PinType.PinCategory': '"exec"'}},
+            nodes=[dict(id='entry', kind='event', pins={'out:then': {'type': 'exec'}})] +
+                [dict(id=str(i), kind='call', operation='Act' + str(i), defaults={'in:Value': 'old'},
+                      pins={'in:exec': {'type': 'exec'}, 'out:then': {'type': 'exec'}}) for i in range(3)] +
+                [dict(id='exit', kind='FunctionResult', pins={'in:exec': {'type': 'exec'}})],
+            links=[{'from': a+'.out:then', 'to': b+'.in:exec'}
+                   for a, b in zip(('entry', '0', '1', '2'), ('0', '1', '2', 'exit'))])
+
+    def test_review_action_chains_keep_every_step_and_snapshot_boundary(self):
+        for status in ('added', 'changed', 'removed'):
+            for direction in ('TB', 'LR'):
+                with self.subTest(status=status, direction=direction):
+                    old = self.action_fixture()
+                    new = copy.deepcopy(old)
+                    if status == 'changed':
+                        for n in new['nodes'][1:-1]:
+                            n['defaults']['in:Value'] = 'new'
+                    else:
+                        empty = old if status == 'added' else new
+                        empty['nodes'] = [empty['nodes'][0], empty['nodes'][-1]]
+                        empty['links'] = [{'from': 'entry.out:then', 'to': 'exit.in:exec'}]
+                    originals = copy.deepcopy((old, new))
+                    marks = {status: ['0', '1', '2']}
+                    svg = ET.fromstring(render(new, direction=direction, review=marks, before=old)[0])
+                    cards = svg.findall('.//{*}g[@class="graph-node"]')
+                    self.assertEqual(len(cards), 3)
+                    chain = next(n for n in cards if n.get('data-node-id') == '2')
+                    self.assertEqual(json.loads(chain.get('data-node-ids')), ['0', '1', '2'])
+                    self.assertEqual(chain.get('data-review-status'), status)
+                    details = json.loads(chain.find('{*}title').text)
+                    for version, source in (('Before', old), ('After', new)):
+                        if (status, version) in (('added', 'Before'), ('removed', 'After')):
+                            self.assertIsNone(details[version])
+                            continue
+                        self.assertEqual(list(details[version]['Steps']), ['0', '1', '2'])
+                        for identity, snapshot in details[version]['Steps'].items():
+                            self.assertEqual(snapshot['node'], next(n for n in source['nodes'] if n['id'] == identity))
+                            self.assertEqual(len(snapshot['links']), 2)
+                    highlighted = chain.findall('.//{*}text[@class="review-changed-line"]')
+                    self.assertEqual(len(highlighted), 3 if status == 'changed' else 0)
+                    for line in highlighted:
+                        self.assertEqual(line.find('{*}title').text, 'Previously: Input: Value = "old"')
+                    if status == 'removed':
+                        ghost_edges = [e for e in svg.findall('.//{*}g[@class="graph-edge"]')
+                                       if '2' in (e.get('data-source'), e.get('data-target'))]
+                        self.assertEqual(len(ghost_edges), 2)
+                        for edge in ghost_edges:
+                            self.assertIn('Removed connection', edge.find('{*}title').text)
+                            self.assertEqual(edge.find('{*}path').get('stroke'), '#b42318')
+                    self.assertEqual(render(new, view='full', review=marks, before=old)[2], 5)
+                    self.assertEqual((old, new), originals)
+
+    def test_actions_do_not_fold_across_review_statuses_or_branching(self):
+        old, new = self.action_fixture(), self.action_fixture()
+        old['nodes'] = [n for n in old['nodes'] if n['id'] != '1']
+        old['links'] = [dict(e, **{'to': '2.in:exec'}) if e['to'] == '1.in:exec' else e
+                        for e in old['links'] if e['from'] != '1.out:then']
+        self.assertEqual(render(new, review={'added': ['1'], 'changed': ['2']}, before=old)[2], 5)
+        new['nodes'][2]['pins']['out:else'] = {'type': 'exec'}
+        self.assertEqual(render(new, review={'added': ['0', '1', '2']},
+            before=dict(old, nodes=[old['nodes'][0], old['nodes'][-1]], links=[]))[2], 5)
+
     def setUp(self):
         self.before = {'schema': 2, 'graph': 'Example', 'asset': '/Game/Example',
                        'pinTemplates': {'value': {'PinType.PinCategory': '"bool"'}},

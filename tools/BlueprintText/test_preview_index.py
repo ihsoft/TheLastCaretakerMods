@@ -169,6 +169,9 @@ class PreviewIndexTests(unittest.TestCase):
         for number, status in ((1, 'added'), (2, 'removed')):
             svg = (output / f'blueprint-{number:03d}/graph-000.svg').read_text(encoding='utf-8')
             self.assertIn(f'data-review-status="{status}"', svg)
+            viewer = (output / f'blueprint-{number:03d}/graph-000.html').read_text(encoding='utf-8')
+            self.assertNotIn('id="show-changes"', viewer)
+            self.assertNotIn('id="final-', viewer)
         self.assertEqual(originals, {p:p.read_bytes() for p in originals})
         with self.assertRaisesRegex(ValueError, 'new or empty'):
             generate(manifest, output)
@@ -217,6 +220,32 @@ class PreviewIndexTests(unittest.TestCase):
         self.assertIn('Main — Removed (Before)', page)
         self.assertIn('title="Before full graph">1 nodes · 0 links', page)
         self.assertIn('title="Current full graph">1 nodes · 0 links', page)
+        for number in (0, 1):
+            viewer = (self.root / f'out/blueprint-000/graph-{number:03d}.html').read_text(encoding='utf-8')
+            self.assertNotIn('id="show-changes"', viewer)
+            self.assertNotIn('id="final-', viewer)
+
+    def test_before_link_is_graph_scoped_not_asset_scoped(self):
+        old = fixture()
+        untouched = copy.deepcopy(old['graphs'][0])
+        untouched['name'] = 'UserConstructionScript'
+        old['graphs'].append(untouched)
+        old['pinTemplates'] = {'old': {'PinType.PinCategory': '"int"'}}
+        untouched['body']['nodes'][0]['pins'] = {'in:Limit': {'type': 'old'}}
+        new = copy.deepcopy(old)
+        new['graphs'][0]['body']['nodes'][0]['defaults']['in:Limit'] = '300'
+        new['pinTemplates']['new'] = new['pinTemplates'].pop('old')
+        new['graphs'][1]['body']['nodes'][0]['pins']['in:Limit']['type'] = 'new'
+        self.save('old.json', old)
+        self.save('new.json', new)
+        manifest = self.save('manifest.json', {'assets': [dict(source='new.json', before='old.json',
+            status='changed', reviews={'Main': {'changed': ['n']}})]})
+        generate(manifest, self.root / 'out')
+        page = (self.root / 'out/index.html').read_text(encoding='utf-8')
+        self.assertIn('href="blueprint-000/graph-000-before.html"', page)
+        self.assertNotIn('href="blueprint-000/graph-001-before.html"', page)
+        viewer = (self.root / 'out/blueprint-000/graph-001.html').read_text(encoding='utf-8')
+        self.assertNotIn('id="show-changes"', viewer)
 
     def test_invalid_identity_and_review_fail_before_creating_output(self):
         self.save('source.json', fixture()); self.save('other.json', fixture('/Game/Other'))

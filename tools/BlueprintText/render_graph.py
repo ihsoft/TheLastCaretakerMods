@@ -269,7 +269,8 @@ def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data
         incoming[edge[2]].append(edge)
 
     def eligible(node):
-        if node.get('_reviewStatus') or node.get('_reviewBoundary'):
+        status = node.get('_reviewStatus')
+        if (mode != 'action' and status) or (node.get('_reviewBoundary') and status != 'removed'):
             return False
         if mode == 'action':
             # Defaults and a technical Self target do not introduce data dependencies.
@@ -296,7 +297,8 @@ def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data
         edge = outputs[0]
         target = by_id.get(edge[2])
         inputs = [e for e in incoming[edge[2]] if e[4]] if mode == 'action' else incoming[edge[2]]
-        if edge[4] == (mode == 'action') and target and eligible(target) and len(inputs) == 1:
+        if (edge[4] == (mode == 'action') and target and eligible(target) and len(inputs) == 1
+                and node.get('_reviewStatus') == target.get('_reviewStatus')):
             successor[node['id']] = target['id']
             predecessor[target['id']] = node['id']
     removed, replacements, remap = set(), {}, {}
@@ -314,7 +316,22 @@ def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data
         steps = [node_lines(n, {e[3] for e in incoming[n['id']]}, pin_templates=templates, parent=parent,
                             connected_outputs={e[1] for e in outgoing[n['id']]}, wrap=False)
                  for n in chain]
+        for part, step in zip(chain, steps):
+            previous = part.get('_reviewPreviousDescription', {})
+            current = description_fields(part, templates, parent) if previous else {}
+            for index, line in enumerate(step):
+                key = description_key(line, index)
+                if key in current and current[key] != previous.get(key):
+                    step[index] = CardLine(line, previous=previous.get(key, '(not present)'))
+            if part.get('_graphLink'):
+                step[0] = CardLine(step[0], reference=part['_graphLink'], previous=getattr(step[0], 'previous', None))
         replacement = dict(chain[-1], _foldedNodes=chain, _foldedLinks=links, _foldedSteps=steps, _chainKind=mode)
+        if replacement.get('_reviewStatus'):
+            replacement['_reviewDetails'] = {'Status': replacement['_reviewStatus']}
+            for version in ('Before', 'After'):
+                snapshots = {n['id']: n['_reviewDetails'][version] for n in chain}
+                replacement['_reviewDetails'][version] = (
+                    {'Steps': snapshots} if any(snapshots.values()) else None)
         variable = start.get('variable') or member_name(start, 'VariableReference')
         if (mode == 'data' and start.get('kind') in ('getVariable', 'variableGet') and not incoming[start['id']] and variable
                 and all(member_name(n) == 'Not_PreBool' for n in chain[1:])
@@ -381,15 +398,17 @@ def pin_type_label(metadata):
 
 class CardLine(str):
     """Keep display semantics through wrapping and folded-step descriptions."""
-    def __new__(cls, text, unconnected_output=False, reference=None):
+    def __new__(cls, text, unconnected_output=False, reference=None, previous=None):
         line = super().__new__(cls, text)
         line.unconnected_output = unconnected_output
         line.reference = reference
+        line.previous = previous
         return line
 
 
 def wrap_card_line(line, title=False):
-    return [CardLine(part, getattr(line, 'unconnected_output', False), getattr(line, 'reference', None))
+    return [CardLine(part, getattr(line, 'unconnected_output', False), getattr(line, 'reference', None),
+                     getattr(line, 'previous', None))
             for part in wrap_node_line(line, title)]
 
 
@@ -472,7 +491,8 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
                 index = next((j for j, line in enumerate(step[1:], 1)
                               if line.startswith(('Input:', 'Output:'))), len(step))
                 step[index:index] = ['Input: ' + hint for hint in step_inputs[i-1]]
-            lines.extend([f'{i}. {readable_name(step[0])}'] + step[1:])
+            lines.extend([CardLine(f'{i}. {readable_name(step[0])}', reference=getattr(step[0], 'reference', None),
+                                   previous=getattr(step[0], 'previous', None))] + step[1:])
             if i <= len(step_outputs):
                 lines.extend(step_outputs[i-1])
         return [part for i, line in enumerate(lines) for part in wrap_card_line(line, i == 0)]
@@ -607,6 +627,10 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     if view not in ("simplified", "full") or direction not in ("TB", "LR"):
         raise ValueError("Expected view simplified/full and direction TB/LR.")
     all_nodes, all_edges, owner, graph = load_graph(document, selection)
+    # Attach navigation to view copies; source and review snapshots stay untouched.
+    all_nodes = [dict(n, _graphLink=target) if (target := graph_context.get(
+        'beforeCalls' if n.get('_reviewStatus') == 'removed' else 'calls', {}).get(n['id'])) else n
+        for n in all_nodes]
     hidden = {}
     if view == "simplified":
         for node in all_nodes:
@@ -647,6 +671,8 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                                              parent=document.get('parent'), step_inputs=[hidden_inputs[p['id']] for p in parts],
                                              step_outputs=notes, connected_outputs=connected_outputs[node_id])
             title_rows[node_id] = len(wrap_node_line(node['_expression'], True)) if '_expression' in node and not any(notes) else 1
+            changed_lines[node_id] = {i: line.previous for i, line in enumerate(lines_by_id[node_id])
+                                     if getattr(line, 'previous', None) is not None}
         else:
             templates, parent = document.get('pinTemplates', {}), document.get('parent')
             raw_lines = node_lines(node, connected[node_id], hidden_inputs[node_id], templates, parent, wrap=False,
@@ -726,7 +752,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     marker_prefix = marker_namespace + view + direction
     pieces = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="{escape(title)}">',
               '<style>text{font-family:Segoe UI,Arial,sans-serif;fill:#20334b} .label{font-size:11px;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}.graph-edge:hover>.edge-line{stroke-width:3.5}.graph-edge:hover{opacity:1}</style>',
-              '<style>.open-child-graph{cursor:pointer}.open-child-graph:focus{outline:none}.open-child-graph:hover>rect,.open-child-graph:focus-visible>rect{fill:#dbeafe;stroke:#1d4ed8;stroke-width:2}.graph-node.selected>.nested-graph-frame,.graph-node.neighbor>.nested-graph-frame,.graph-node:focus-visible>.nested-graph-frame{stroke-width:1}</style>',
+              '<style>.open-child-graph{cursor:pointer}.open-child-graph:focus{outline:none}.open-child-graph:hover>rect,.open-child-graph:focus-visible>rect{fill:#dbeafe;stroke:#1d4ed8;stroke-width:2}.graph-reference{text-decoration:underline;cursor:pointer}.graph-reference:hover text{fill:#1d4ed8}.graph-node.selected>.nested-graph-frame,.graph-node.neighbor>.nested-graph-frame,.graph-node:focus-visible>.nested-graph-frame{stroke-width:1}</style>',
               '<rect width="100%" height="100%" fill="#f8fafc"/>']
     for name, color in (("exec", "#b36b13"), ("data", "#317b9b"), ("removed", "#b42318")):
         pieces.append(f'<defs><marker id="{marker_prefix}{name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{color}"/></marker></defs>')
@@ -796,7 +822,8 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                 lx, ly, anchor = sx + 10, sy - 7, 'start'
         style, color = ("exec", "#b36b13") if execution else ("data", "#317b9b")
         dash = '' if execution else ' stroke-dasharray="6 4"'
-        removed_link = (source, output, target, input_pin, execution) in document.get('_reviewRemovedLinks', [])
+        removed_link = ((source, output, target, input_pin, execution) in document.get('_reviewRemovedLinks', [])
+                        or any(nodes_by_id[n].get('_reviewStatus') == 'removed' for n in (source, target)))
         if removed_link:
             color, dash = '#b42318', ' stroke-dasharray="4 5" opacity="0.55"'
             style = 'removed'
@@ -817,6 +844,9 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     for node in nodes:
         x, y, w, h = boxes[node["id"]]
         child = graph_context.get('children', {}).get(node['id'])
+        # A folded display chain has no graph of its own. Only its individual
+        # step links navigate; never promote one step's target to the whole card.
+        destination = (child or node.get('_graphLink')) if '_foldedNodes' not in node else None
         color = node_fill(node, document.get('pinTemplates', {}), execution_nodes)
         opacity = ' opacity="0.55"' if node.get("enabled") is False else ''
         status = node.get('_reviewStatus', '')
@@ -831,14 +861,14 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         ids = [n['id'] for n in node.get('_foldedNodes', [node])]
         anchor = f' id="node-{escape(node["id"])}"' if view == "simplified" and direction == "TB" else ""
         pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}" data-node-ids="{escape(json.dumps(ids))}"{anchor} data-review-status="{status}"{review_html}{opacity}><title>{escape(json.dumps(details, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="{stroke}" stroke-width="{3 if status else 1.5}"{dash}/>')
-        if child:
+        if destination:
             pieces.append(f'<rect class="nested-graph-frame" x="{x+4}" y="{y+4}" width="{w-8}" height="{h-8}" rx="8" fill="none" stroke="{stroke}" stroke-width="1" pointer-events="none"{dash}/>')
         hidden_rows = 0
         for row, line in enumerate(lines_by_id[node["id"]]):
             header = row < title_rows[node['id']]
             size = 16 if header else 12
             weight = ' font-weight="600"' if header else ''
-            title_width = w - (96 if child else 70) if row == 0 else w - 28
+            title_width = w - (96 if destination else 70) if row == 0 else w - 28
             fit = f' textLength="{title_width}" lengthAdjust="spacingAndGlyphs"' if header and len(line) > 25 else ''
             previous = changed_lines.get(node['id'], {}).get(row)
             decoration, tooltip = '', ''
@@ -856,15 +886,16 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                 tooltip += '<title>' + escape(reference['field'] + '\n' + reference['target']) + '</title>'
             text = f'<text data-card-row="{row}"{output_flag} x="{x+14}" y="{y+24+row*19}" font-size="{size}"{weight}{fit}{decoration}>{escape(line)}{tooltip}</text>'
             if reference and reference.get('href'):
-                text = '<a class="asset-reference" href="' + escape(reference['href']) + '">' + text + '</a>'
+                reference_class = 'graph-reference' if reference.get('kind') == 'graph' else 'asset-reference'
+                text = '<a class="' + reference_class + '" href="' + escape(reference['href']) + '">' + text + '</a>'
             pieces.append(text)
             hidden_rows += bool(output_flag)
         copy_label = 'Copy node ID' if len(ids) == 1 else f'Copy all {len(ids)} node IDs'
         pieces.append(f'<g class="copy-node-id" role="button" tabindex="0" aria-label="{copy_label}" transform="translate({x+w-27},{y+5})"><title>{copy_label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M6 6h9v11H6z M9 3h9v11" fill="none" stroke="#334155" stroke-width="1.5"/></g>')
         pieces.append(f'<g class="node-info" role="button" tabindex="0" aria-label="Show node details" transform="translate({x+w-53},{y+5})"><title>Show node details</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><text x="11" y="16" text-anchor="middle" font-size="16" font-weight="600">i</text></g>')
-        if child:
-            label = escape('Open graph: ' + child['name'])
-            pieces.append(f'<a class="open-child-graph" href="{escape(child["href"])}" tabindex="0" aria-label="{label}" transform="translate({x+w-79},{y+5})"><title>{label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M12 4h6v14h-6 M3 11h11 M10 7l4 4-4 4" fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></a>')
+        if destination:
+            label = escape('Open graph: ' + destination.get('target', destination['name']))
+            pieces.append(f'<a class="open-child-graph" href="{escape(destination["href"])}" tabindex="0" aria-label="{label}" transform="translate({x+w-79},{y+5})"><title>{label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M12 4h6v14h-6 M3 11h11 M10 7l4 4-4 4" fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></a>')
         pieces.append('</g>')
     pieces.append('</svg>')
     if direction in ('TB', 'LR'):
@@ -918,6 +949,8 @@ def main():
         sections = ''.join(f'<section id="{view}-{direction}"' +
                            ('' if (view, direction) == (args.view, args.direction) else ' hidden') +
                            '>' + result[0] + '</section>' for (view, direction), result in variants.items())
+        # A whole new/deleted graph has one snapshot, not a comparison to toggle.
+        has_review = has_review and graph_context.get('comparisonAvailable', args.before is not None)
         if has_review:
             final_context = copy.deepcopy(graph_context)
             for child in final_context.get('children', {}).values():

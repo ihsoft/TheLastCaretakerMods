@@ -437,8 +437,10 @@ badges and colored borders. Use these record shapes:
 Changed snapshots must have the same asset identity. A changed record may also
 provide `reviews`, keyed by GraphGuid or unambiguous graph name, using the existing [node review lists](#review-mode):
 `"reviews":{"EventGraph":{"changed":["SetLimit"]}}`. Use actual exported node
-IDs. Without a list, the card still has its status and graph Before links; node
-changes are not inferred. Added and removed graphs show all their nodes marked
+IDs. Without a list, the card still has its status; node changes are not inferred.
+Graph Before links appear only when the graph or its represented descendants
+differ between snapshots. Changes to shared type-table aliases alone do not
+make a graph different. Added and removed graphs show all their nodes marked
 accordingly, including graphs removed from a changed Blueprint. Removed content
 is rendered from the Before snapshot. `"demo":true` marks the index explicitly
 as a fictional review. None of these annotations becomes Blueprint source state.
@@ -451,6 +453,14 @@ operations. Before navigation stays within the Before snapshot. Stable graph
 identity keeps a rename from appearing as an unrelated deletion/addition.
 When a represented child or descendant changes, the parent operation receives
 a nested-change label; this does not infer individual node review lists.
+
+Function calls also receive a double border and an open-graph icon when their
+implementation is represented in the batch preview, including functions in other
+Blueprints. Targets are resolved from BPT owner and member identity; absent or
+ambiguous targets do not receive a guessed link. Removed calls use the Before
+target; an unchanged target may share its ordinary page. Folded chains have no
+graph of their own, so they have neither a header navigation button nor a double
+border. Each represented function call inside a chain links from its numbered step.
 
 Each graph row shows local source node/link counts and a separate descendant
 node count, independent of viewer folding or hidden disconnected nodes. Deleted
@@ -503,11 +513,12 @@ unconnected-output filter, review mode, zoom, selected node and scroll position.
 The graph title shows the full nesting path: the Blueprint name links to the
 preview index and ancestor graph names link to their respective pages.
 
-**Show changes**, next to **Show unconnected**, is available when review marks
-or nested implementation changes are present. Turn it off to render the final
-graph with its own layout, without removed nodes, old links or change highlights.
-The final-only choice follows links into child graphs. Ordinary browse pages
-and empty review mark lists do not add this control.
+**Show changes**, next to **Show unconnected**, requires both graph snapshots
+and either review marks or nested implementation changes. Turn it off to render
+the final graph with its own layout, without removed nodes, old links or change highlights.
+The final-only choice follows graph links. Ordinary browse pages, empty review
+mark lists and entirely added or removed graphs do not add this control. Entirely
+added or removed graphs retain their status without a comparison toggle.
 
 Simplified view hides disabled and technical Self nodes, labels incoming hidden
 sources, and folds exclusive data chains and linear action chains into numbered
@@ -572,11 +583,16 @@ in original, changed in both. Original and
 current must identify the same asset and graph. `-BeforePath` is required for
 changed/removed nodes; it is optional for an additions-only review. Invalid marks
 stop rendering with a diagnostic; correct the lists or selected source/graph.
+Use fresh node identities when replacing a removed chain with a new call;
+reusing a removed operation's ID represents it as Changed instead of Added.
 
 Green `+`, purple `~` and red dashed `−` borders mark added, changed and removed
 nodes; existing fill colours retain their execution/data meaning. Marked nodes
-stay visible and separate in Simplified view. Removed nodes and their original
-connections to displayed endpoints appear as translucent ghosts.
+stay visible in Simplified view. Linear actions with the same review status may
+fold under the ordinary dependency and branching rules; different statuses never
+merge. Folded review details preserve every step's Before/After snapshots and
+changed-field highlights. Marked data nodes remain separate. Removed nodes and
+their original connections to displayed endpoints appear as translucent ghosts.
 Changes remain a display overlay; neither
 source is rewritten or imported into Unreal.
 
@@ -680,6 +696,7 @@ or proof of arbitrary widget support.
 
 Offline renderer checks: `python -B tools/BlueprintText/test_render_graph.py`.
 Batch index checks: `python -B tools/BlueprintText/test_preview_index.py`.
+Function navigation checks: `python -B tools/BlueprintText/test_preview_graph_links.py`.
 Review overlay checks: `python -B tools/BlueprintText/test_review_graph.py`.
 Details comparison checks: `python -B tools/BlueprintText/test_review_details.py`.
 Codec checks: `python -B tools/BlueprintText/test_asset_text_codec.py`.

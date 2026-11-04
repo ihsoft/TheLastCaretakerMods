@@ -184,6 +184,9 @@ class NestedGraphsTests(unittest.TestCase):
             generate(manifest, root/'preview')
             page = (root/'preview/blueprint-000/graph-001.html').read_text(encoding='utf-8')
             self.assertIn('graph-002.html', page)
+            self.assertIn('data-review-status="added"', page)
+            self.assertNotIn('id="show-changes"', page)
+            self.assertNotIn('id="final-', page)
 
 
 if __name__ == '__main__':

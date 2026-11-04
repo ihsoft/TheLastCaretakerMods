@@ -21,6 +21,7 @@ from render_graph import load_graph, review_document
 from render_widget import render as render_widget
 from preview_references import property_references, package as reference_package, label as reference_label
 from graph_hierarchy import graph_key, select_graph, validate_hierarchy
+from preview_graph_links import build_catalog, displayed as entry_displayed, graph_pages, resolve_calls
 
 STATUSES = ('unchanged', 'added', 'changed', 'removed')
 
@@ -165,8 +166,12 @@ def graph_navigation(document, other, key, pages):
     def signature(doc, graph):
         value = copy.deepcopy(graph)
         for node in value['body']['nodes']:
+            node['kind'] = doc.get('classes', {}).get(node.get('kind'), node.get('kind'))
             for pin in node.get('pins', {}).values():
-                pin['type'] = doc.get('pinTemplates', {}).get(pin['type'], pin['type'])
+                if 'type' in pin:
+                    pin['type'] = doc.get('pinTemplates', {}).get(pin['type'], pin['type'])
+        value['body']['nodes'].sort(key=lambda n: n['id'])
+        value['body']['links'].sort(key=lambda e: (e['from'], e['to']))
         return value
 
     def changed(identity):
@@ -189,7 +194,8 @@ def graph_navigation(document, other, key, pages):
         if graph.get('owner', {}).get('graph') == key:
             children[graph['owner']['node']] = dict(id=identity, name=graph['name'], href=pages[identity],
                 nodes=len(graph['body']['nodes']), changed=bool(other) and changed(identity))
-    return dict(breadcrumbs=list(reversed(breadcrumbs)), children=children)
+    return dict(breadcrumbs=list(reversed(breadcrumbs)), children=children,
+                changed=bool(other) and changed(key), comparisonAvailable=key in other_registry)
 
 
 def graph_tree(rows, registry):
@@ -215,6 +221,7 @@ def generate(manifest, output):
                                     href='../index.html#' + anchors[e['asset']]) for e in entries}
     asset_context_path = output / 'asset-context.json'
     write(asset_context_path, asset_context)
+    graph_catalog = build_catalog(entries)
 
     def reference(target):
         asset = reference_package(target)
@@ -231,7 +238,7 @@ def generate(manifest, output):
         placeholder = item.get('placeholder', False)
         # A dependency stub's empty editor graphs are not the game's editable logic.
         # Explicitly selected stubs can still be reviewed when editing their contract.
-        shown = bool(docs) and (not context or not placeholder or context['selected'])
+        shown = entry_displayed(entry)
         if not shown:
             reason = context['reason'] or 'Editor stub; game implementation is not present.'
             badge = ' <span class="badge">STUB</span>' if placeholder else ''
@@ -261,8 +268,7 @@ def generate(manifest, output):
         current, old = docs.get('source'), docs.get('before')
         current_graphs, old_graphs = graphs(current or {}), graphs(old or {})
         names = list(current_graphs) + [n for n in old_graphs if n not in current_graphs]
-        current_pages = {n: f'graph-{i:03d}.html' for i, n in enumerate(names) if n in current_graphs}
-        old_pages = {n: f'graph-{i:03d}-before.html' for i, n in enumerate(names) if n in old_graphs}
+        current_pages, old_pages = graph_pages(current, old)
         registry = {n: current_graphs.get(n, old_graphs.get(n)) for n in names}
         def descendant_count(identity):
             return sum(len(g['body']['nodes']) + descendant_count(k) for k, g in registry.items()
@@ -284,12 +290,17 @@ def generate(manifest, output):
                 marks = {'added': [n['id'] for n in current_graphs[name]['body']['nodes']]}
                 caption += ' — Added'
             navigation = graph_navigation(current, old, name, current_pages) if name in current_graphs else graph_navigation(old, None, name, old_pages)
+            navigation['calls'] = resolve_calls(current, name, graph_catalog['source']) if name in current_graphs else {}
+            navigation['beforeCalls'] = resolve_calls(old, name, graph_catalog['before']) if before else {}
             target = graph_preview(after, name, directory, f'graph-{index:03d}', marks, before, asset_context_path, navigation)
             links = link(target, caption)
             if before is not None:
+                before_navigation = graph_navigation(old, None, name, old_pages)
+                before_navigation['calls'] = navigation['beforeCalls']
                 target = graph_preview(before, name, directory, f'graph-{index:03d}-before', asset_context=asset_context_path,
-                    navigation=graph_navigation(old, None, name, old_pages))
-                links += ' · ' + link(target, 'Before')
+                    navigation=before_navigation)
+                if navigation['comparisonAvailable'] and navigation['changed']:
+                    links += ' · ' + link(target, 'Before')
             counted = current_graphs.get(name, old_graphs.get(name))['body']
             version = 'Before' if name not in current_graphs else 'Current'
             descendants = descendant_count(name)
