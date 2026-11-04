@@ -498,6 +498,17 @@ steps. Connected outputs and input defaults remain visible. Toggling it resizes
 cards and reroutes links in both directions. A selected node is centered with
 the current zoom retained; without a selection the view resets and fits its width.
 
+Browser Back/Forward restores each graph visit's view, direction, row capacity,
+unconnected-output filter, review mode, zoom, selected node and scroll position.
+The graph title shows the full nesting path: the Blueprint name links to the
+preview index and ancestor graph names link to their respective pages.
+
+**Show changes**, next to **Show unconnected**, is available when review marks
+or nested implementation changes are present. Turn it off to render the final
+graph with its own layout, without removed nodes, old links or change highlights.
+The final-only choice follows links into child graphs. Ordinary browse pages
+and empty review mark lists do not add this control.
+
 Simplified view hides disabled and technical Self nodes, labels incoming hidden
 sources, and folds exclusive data chains and linear action chains into numbered
 steps. It does not combine repeated computations or invent bypass connections.

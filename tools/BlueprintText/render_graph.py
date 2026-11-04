@@ -599,7 +599,7 @@ def order_layer(members, parent_edges, boxes, direction):
     return sorted(members, key=key)
 
 
-def render(document, selection=None, view="simplified", direction="TB", review=None, before=None, asset_context=None, graph_context=None):
+def render(document, selection=None, view="simplified", direction="TB", review=None, before=None, asset_context=None, graph_context=None, marker_namespace=""):
     asset_context = asset_context or {}
     graph_context = graph_context or {}
     if review is not None:
@@ -716,15 +716,25 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     width = max(950, right + 80)
     bottom = max((y + h for x, y, w, h in boxes.values()), default=240)
     height = bottom + 90
-    title = owner.rsplit("/", 1)[-1] + " / " + graph
-    marker_prefix = view + direction
+    breadcrumbs = graph_context.get('breadcrumbs', [])
+    title_parts = [dict(name=owner.rsplit('/', 1)[-1],
+                        **({'href': breadcrumbs[0]['href']} if breadcrumbs else {})),
+                   *breadcrumbs[1:], dict(name=graph)]
+    title = ' / '.join(part['name'] for part in title_parts)
+    header_width = max(950, 80 + len(title) * 13)
+    width = max(width, header_width)
+    marker_prefix = marker_namespace + view + direction
     pieces = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="{escape(title)}">',
               '<style>text{font-family:Segoe UI,Arial,sans-serif;fill:#20334b} .label{font-size:11px;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}.graph-edge:hover>.edge-line{stroke-width:3.5}.graph-edge:hover{opacity:1}</style>',
               '<style>.open-child-graph{cursor:pointer}.open-child-graph:focus{outline:none}.open-child-graph:hover>rect,.open-child-graph:focus-visible>rect{fill:#dbeafe;stroke:#1d4ed8;stroke-width:2}.graph-node.selected>.nested-graph-frame,.graph-node.neighbor>.nested-graph-frame,.graph-node:focus-visible>.nested-graph-frame{stroke-width:1}</style>',
               '<rect width="100%" height="100%" fill="#f8fafc"/>']
     for name, color in (("exec", "#b36b13"), ("data", "#317b9b"), ("removed", "#b42318")):
         pieces.append(f'<defs><marker id="{marker_prefix}{name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{color}"/></marker></defs>')
-    pieces.append(f'<text x="40" y="34" font-size="22" font-weight="600">{escape(title)}</text>')
+    title_markup = ' / '.join(
+        '<a href="' + escape(part['href']) + '" tabindex="0"><tspan style="text-decoration:underline">' +
+        escape(part['name']) + '</tspan></a>' if 'href' in part else '<tspan>' + escape(part['name']) + '</tspan>'
+        for part in title_parts)
+    pieces.append(f'<text class="graph-title" x="40" y="34" font-size="22" font-weight="600" aria-label="Graph hierarchy">{title_markup}</text>')
     pieces.append(f'<text x="40" y="59" font-size="12">{view} · {direction} · {len(nodes)} / {len(all_nodes)} nodes · {len(edges)} / {len(all_edges)} links · source unchanged</text>')
     pieces.append('<g class="graph-legend" role="group" aria-label="Node and link legend">')
     for x, label, color in ((40, 'Entry / event', '#dce9fc'), (197, 'Execution step', '#f7e9d7'), (354, 'Data / other', '#e8edf4')):
@@ -858,7 +868,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         pieces.append('</g>')
     pieces.append('</svg>')
     if direction in ('TB', 'LR'):
-        layout = {'direction': direction, 'nodes': [dict(id=n['id'], rank=rank[n['id']], kind=n.get('kind'),
+        layout = {'direction': direction, 'minWidth': header_width, 'nodes': [dict(id=n['id'], rank=rank[n['id']], kind=n.get('kind'),
                                 x=boxes[n['id']][0], y=boxes[n['id']][1],
                                 w=boxes[n['id']][2], h=boxes[n['id']][3],
                                 compactH=boxes[n['id']][3] - 19 * sum(bool(getattr(line, 'unconnected_output', False))
@@ -891,18 +901,31 @@ def main():
         document = json.loads(args.input.read_text(encoding="utf-8-sig"))
         asset_context = json.loads(args.asset_context.read_text(encoding='utf-8')) if args.asset_context else {}
         graph_context = json.loads(args.graph_context.read_text(encoding='utf-8')) if args.graph_context else {}
+        final_document = document
+        has_review = any(c.get('changed') for c in graph_context.get('children', {}).values())
         if args.before and not args.review:
             raise ValueError('--before requires --review.')
         if args.review:
             review = json.loads(args.review.read_text(encoding='utf-8-sig'))
             before = json.loads(args.before.read_text(encoding='utf-8-sig')) if args.before else None
-            document = review_document(document, before, review, args.graph)
+            reviewed = review_document(document, before, review, args.graph)
+            if any(review.values()):
+                has_review = True
+                document = reviewed
         variants = {(view, direction): render(document, args.graph, view, direction, asset_context=asset_context, graph_context=graph_context)
                     for view in ("simplified", "full") for direction in ("TB", "LR")}
         svg, title, nodes, links = variants[args.view, args.direction]
         sections = ''.join(f'<section id="{view}-{direction}"' +
                            ('' if (view, direction) == (args.view, args.direction) else ' hidden') +
                            '>' + result[0] + '</section>' for (view, direction), result in variants.items())
+        if has_review:
+            final_context = copy.deepcopy(graph_context)
+            for child in final_context.get('children', {}).values():
+                child.pop('changed', None)
+            sections += ''.join(f'<section id="final-{view}-{direction}" hidden>' +
+                render(final_document, args.graph, view, direction,
+                       asset_context=asset_context, graph_context=final_context, marker_namespace='final-')[0] + '</section>'
+                for view in ('simplified', 'full') for direction in ('TB', 'LR'))
         page = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>''' + escape(title) + '''</title>
 <style>body{margin:0;background:#f8fafc;font:14px 'Segoe UI',sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr}nav{padding:10px 18px;background:#fff;border-bottom:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,select{padding:6px 10px}main{overflow:auto;min-height:0;position:relative}svg{display:block}</style>
 <style>.graph-node{cursor:pointer}.graph-node:focus-visible{outline:none}.graph-node:focus-visible>rect{stroke:#1d4ed8;stroke-width:3}svg.has-selection .graph-node:not(.selected):not(.neighbor),svg.has-selection .graph-edge:not(.related):not(.inspected):not(:hover){opacity:.16}.graph-node.selected,.graph-node.neighbor{opacity:1}.graph-node.selected>rect{stroke:#1d4ed8;stroke-width:4}.graph-node.neighbor>rect{stroke-width:2.5}.graph-edge.related>.edge-line,.graph-edge.inspected>.edge-line{stroke-width:3.5}.graph-edge.inspected{opacity:1}.hint{color:#52657a;font-size:12px}.copy-node-id{cursor:copy}.node-info{cursor:pointer}.copy-node-id:hover>rect,.copy-node-id:focus>rect,.node-info:hover>rect,.node-info:focus>rect{fill:#dbeafe;stroke:#1d4ed8}.copy-node-id:focus,.node-info:focus{outline:none}#edge-tooltip{position:fixed;z-index:30;max-width:min(440px,calc(100vw - 24px));max-height:60vh;overflow:auto;padding:10px 12px;border:1px solid #94a3b8;border-radius:6px;background:#fff;box-shadow:0 4px 18px #20334b33;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.5 Consolas,monospace}#copy-status{font-size:12px;color:#17614b}#node-details{position:absolute;z-index:20;width:min(520px,calc(100vw - 24px));max-height:70vh;overflow:auto;background:#fff;border:1px solid #94a3b8;border-radius:8px;box-shadow:0 6px 28px #20334b44;user-select:text}#node-details[hidden]{display:none}.detail-toolbar{position:sticky;top:0;display:flex;gap:6px;background:#f1f5f9;padding:8px;border-bottom:1px solid #cbd5e1}#close-details{margin-left:auto}#detail-ids{padding:10px 12px 0;overflow-wrap:anywhere;font-weight:600}#detail-text{margin:0;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 Consolas,monospace;cursor:text}</style>
@@ -913,16 +936,13 @@ def main():
 <label>Nodes per row <input id="nodes-per-row" type="number" min="1" max="12" step="1" value="3" style="width:4em;padding:6px" onchange="changeColumns()" title="Maximum nodes per row in top-to-bottom view"></label>
 <label title="Show unconnected outputs on every node, including execution branches and output defaults."><input id="unconnected" type="checkbox" checked onchange="changeUnconnected()">Show unconnected</label>
 <style>svg.hide-unconnected [data-unconnected-output="true"]{display:none}svg.hide-unconnected [data-card-row]{transform:translateY(var(--compact-dy,0px))}</style>
-<span class="hint">Click node: highlight. Click arrow: details. Copy icon: node IDs. Info button: selectable details. Escape: clear.</span><span id="copy-status" role="status" aria-live="polite"></span></nav><main>''' + sections + '''
+<span id="copy-status" role="status" aria-live="polite"></span></nav><main>''' + sections + '''
 <aside id="node-details" hidden aria-label="Node details"><div class="detail-toolbar"><select id="detail-version" aria-label="Details version" hidden><option>After</option><option>Before</option></select><button id="copy-detail-ids">Copy IDs</button><button id="copy-details">Copy contents</button><button id="close-details" aria-label="Close details">×</button></div><div id="detail-ids"></div><pre id="detail-text" tabindex="0"></pre></aside></main><div id="edge-tooltip" role="tooltip" hidden></div>
 <script>''' + (Path(__file__).with_name('graph_layout.js').read_text(encoding='utf-8')) + '\n' + (Path(__file__).with_name('graph_viewer.js').read_text(encoding='utf-8')) + '''
-''' + f'view.value="{args.view}";direction.value="{args.direction}";' + '''choose();</script></html>'''
+''' + f'view.value="{args.view}";direction.value="{args.direction}";' + '''restoreViewerState();</script></html>'''
+        if has_review:
+            page = page.replace('>Show unconnected</label>', '>Show unconnected</label>\n<label title="Turn off to see only the final graph, without review marks or removed nodes."><input id="show-changes" type="checkbox" checked onchange="changeReview()">Show changes</label>', 1)
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        breadcrumbs = graph_context.get('breadcrumbs', [])
-        if breadcrumbs:
-            navigation = '<span class="graph-breadcrumbs" aria-label="Graph hierarchy">' + ' / '.join(
-                '<a href="' + escape(b['href']) + '">' + escape(b['name']) + '</a>' for b in breadcrumbs) + '</span>'
-            page = page.replace('<nav>', '<nav>' + navigation, 1)
         args.output.write_text(svg, encoding="utf-8")
         full_path.write_text(variants["full", args.direction][0], encoding="utf-8")
         html_path.write_text(page, encoding="utf-8")

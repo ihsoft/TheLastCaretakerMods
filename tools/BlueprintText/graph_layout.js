@@ -61,7 +61,7 @@ function layoutRows(data, columns) {
         }
         return {path,label:execution?(horizontal?{x:sx+10,y:sy-7}:{x:sx,y:sy+13}):null};
     });
-    return {columns,boxes,edges,width:Math.max(950,...[...boxes.values()].map(b=>b.x+b.w+80)),
+    return {columns,boxes,edges,width:Math.max(950,data.minWidth||0,...[...boxes.values()].map(b=>b.x+b.w+80)),
             height:Math.max(240,...[...boxes.values()].map(b=>b.y+b.h))+90};
 }
 

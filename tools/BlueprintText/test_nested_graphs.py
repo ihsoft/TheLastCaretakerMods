@@ -134,7 +134,22 @@ class NestedGraphsTests(unittest.TestCase):
             before = (viewer/'graph-002-before.html').read_text(encoding='utf-8')
             self.assertIn('graph-001.html#node-Operation', current)
             self.assertIn('graph-001-before.html#node-Operation', before)
-            self.assertIn('class="graph-breadcrumbs"', current)
+            self.assertIn('class="graph-title"', current)
+            self.assertNotIn('class="graph-breadcrumbs"', current)
+
+    def test_title_contains_full_hierarchy_with_index_and_parent_links(self):
+        source = fixture()
+        pages = {g['properties']['GraphGuid']: str(i)+'.html' for i, g in enumerate(source['graphs'])}
+        nav = graph_navigation(source, None, 'C'*32, pages)
+        result = render(source, 'C'*32, graph_context=nav)
+        tree = ET.fromstring(result[0])
+        title = next(e for e in tree.iter() if e.get('class') == 'graph-title')
+        self.assertEqual(''.join(title.itertext()), 'Nested / Root / Details / Details')
+        self.assertEqual(result[1], 'Nested / Root / Details / Details')
+        links = [e for e in title if e.tag.endswith('}a')]
+        self.assertEqual([e.get('href') for e in links],
+                         ['../index.html', '0.html#node-Operation', '1.html#node-Operation'])
+        self.assertEqual([''.join(e.itertext()) for e in links], ['Nested', 'Root', 'Details'])
 
     def test_nested_operation_has_two_frames_and_three_separate_controls(self):
         source = fixture()

@@ -18,7 +18,7 @@ function element(dataset = {}) {
         setAttribute(name, value) {mutations++;attributes[name] = value}};
 }
 function decode(text){return text.replace(/&quot;/g,'"').replace(/&#x27;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')}
-const sections = [...page.matchAll(/<section id="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g)].map(([, id, html]) => {
+const allSections = [...page.matchAll(/<section id="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g)].map(([, id, html]) => {
     const nodes = [...html.matchAll(/class="graph-node" data-node-id="([^"]+)" data-node-ids="([^"]+)"[^>]*><title>([\s\S]*?)<\/title>/g)].map(([, nodeId,nodeIds,text]) => {
         const node=element({nodeId:decode(nodeId),nodeIds:decode(nodeIds)});
         const title={textContent:decode(text),remove(){this.removed=true}};
@@ -44,10 +44,12 @@ const sections = [...page.matchAll(/<section id="([^"]+)"[^>]*>([\s\S]*?)<\/sect
     nodes.forEach(node => {node.closest = selector => selector==='.graph-node'?node:null});
     return {id, nodes, edges, svg, querySelector: () => svg};
 });
+const sections=allSections.filter(s=>!s.id.startsWith('final-'));
 assert.equal(sections.length, 4);
 const handlers = {}, view = {value: ''}, direction = {value: ''};
 const ui=Object.fromEntries(['unconnected','nodes-per-row','detail-version','node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
 ui['unconnected'].checked=true;
+if(page.includes('id="show-changes"')){ui['show-changes']=element();ui['show-changes'].checked=true}
 const edgeTip=ui['edge-tooltip'];edgeTip.hidden=true;edgeTip.offsetWidth=400;edgeTip.offsetHeight=120;
 const tip=ui['node-details'];tip.hidden=true;tip.offsetWidth=520;tip.offsetHeight=400;
 tip.contains=node=>Object.values(ui).includes(node);
@@ -61,11 +63,14 @@ const document = {
     createElement(){return Object.assign(element(),{select(){},remove(){}})},
     execCommand(){if(fallbackFails)return false;clipboard=textarea.value;return true},
     querySelector: () => box,
-    querySelectorAll: selector => selector === 'section' ? sections : sections.flatMap(s => s.nodes),
-    getElementById: id => id === 'view' ? view : id === 'direction' ? direction : ui[id] || sections.find(s => s.id === id),
-    addEventListener: (event, fn) => {handlers[event] = fn},
+    querySelectorAll: selector => selector === 'section' ? allSections : allSections.flatMap(s => s.nodes),
+    getElementById: id => id === 'view' ? view : id === 'direction' ? direction : ui[id] || allSections.find(s => s.id === id),
+    addEventListener: (event, fn, capture) => {handlers[(capture?'capture-':'')+event] = fn},
 };
-const context = vm.createContext({document,window:{addEventListener(){}},innerWidth:1200,innerHeight:800,
+const windowHandlers={},history={state:{unrelated:'keep'},replaceState(state){this.state=structuredClone(state)}};
+const location={href:'file:///preview/parent.html'};
+const context = vm.createContext({document,window:{addEventListener(event,fn){windowHandlers[event]=fn}},innerWidth:1200,innerHeight:800,
+    history,location,URL,setTimeout,clearTimeout,
     navigator:{clipboard:{async writeText(text){if(clipboardFails)throw new Error('denied');clipboard=text}}}});
 vm.runInContext(page.match(/<script>([\s\S]*?)<\/script>/)[1], context);
 const background = {closest: () => null};
@@ -170,7 +175,8 @@ for(const [value,expected] of [['6','6'],['0','1'],['30','12'],['','3']]){
     handlers.click({target:node.info,stopPropagation(){}});assert.equal(tip.hidden,false);
     assert.equal(tip.style.left,'115px');assert.equal(tip.style.top,'291px');
     assert.equal(node.classList.contains('selected'),false);
-    assert.equal(JSON.parse(ui['detail-text'].textContent).id,'sequence');
+    const shown=JSON.parse(ui['detail-text'].textContent);
+    assert.equal((shown.node||shown).id,'sequence');
     handlers.click({target:ui['detail-text']});assert.equal(tip.hidden,false,'Selecting contents does not dismiss');
     handlers.scroll();assert.equal(tip.hidden,false,'Node panel stays anchored in scrolling graph content');
     handlers.click({target:node.info,stopPropagation(){}});assert.equal(tip.hidden,true);
@@ -227,5 +233,33 @@ for(const [value,expected] of [['6','6'],['0','1'],['30','12'],['','3']]){
     assert.ok(node.querySelector('title').removed,'Replace native unselectable tooltip');
     assert.match(page, /#node-details\{position:absolute;/);
     assert.match(page, /<aside id="node-details"[\s\S]*<\/aside><\/main>/);
-    console.log('Passed: node panel, multi-ID/contents copy, clipboard fallback, immediate edge-click details, viewport placement and dismissal (DOM stand-in).');
+    view.value='full';direction.value='LR';ui['nodes-per-row'].value='5';ui.unconnected.checked=false;
+    context.choose();context.zoom(1.25);context.highlight('sequence');
+    box.scrollLeft=123;box.scrollTop=456;
+    windowHandlers.pagehide();
+    const saved=structuredClone(history.state),savedWidth=sections.find(s=>s.id==='full-LR').svg.style.width;
+    assert.equal(saved.unrelated,'keep');
+    history.state=null;view.value='simplified';direction.value='TB';ui.unconnected.checked=true;context.choose();
+    history.state=saved;windowHandlers.pageshow();
+    assert.equal(view.value,'full');assert.equal(direction.value,'LR');assert.equal(ui.unconnected.checked,false);
+    assert.equal(ui['nodes-per-row'].value,'5');assert.equal(box.scrollLeft,123);assert.equal(box.scrollTop,456);
+    assert.equal(sections.find(s=>s.id==='full-LR').svg.style.width,savedWidth);
+    assert.equal(sections.find(s=>s.id==='full-LR').nodes.find(n=>n.dataset.nodeId==='sequence').attributes['aria-pressed'],'true');
+    box.scrollLeft=0;windowHandlers.popstate();assert.equal(box.scrollLeft,123);
+    if(ui['show-changes']){
+        ui['show-changes'].checked=false;context.changeReview();
+        assert.equal(allSections.find(s=>s.id==='final-full-LR').hidden,false);
+        assert.equal(allSections.find(s=>s.id==='full-LR').hidden,true);
+        windowHandlers.pagehide();const cleanState=structuredClone(history.state);
+        ui['show-changes'].checked=true;context.changeReview();history.state=cleanState;windowHandlers.pageshow();
+        assert.equal(ui['show-changes'].checked,false);assert.equal(box.scrollTop,456);
+        const link={href:{baseVal:'file:///preview/child.html'},closest(){return this},
+            getAttribute(){return this.href.baseVal},setAttribute(k,v){this.href.baseVal=v}};
+        handlers['capture-click']({target:link});assert.match(link.getAttribute('href'),/\?r=0$/);
+        ui['show-changes'].checked=true;context.changeReview();handlers['capture-click']({target:link});assert.ok(!link.getAttribute('href').includes('?'));
+        history.state=null;location.href='file:///preview/child.html?r=0';context.restoreViewerState();
+        assert.equal(ui['show-changes'].checked,false,'Clean mode follows navigation into a child');
+    }
+    context.saveViewerState();
+    console.log('Passed: graph interactions, per-entry history restoration, scroll/zoom/filters and final-only switching (DOM stand-in).');
 })().catch(error=>{console.error(error);process.exitCode=1});

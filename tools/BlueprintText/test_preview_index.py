@@ -16,6 +16,56 @@ def fixture(asset='/Game/Test'):
 
 
 class PreviewIndexTests(unittest.TestCase):
+    def test_review_and_final_arrows_have_unique_local_markers(self):
+        source = fixture()
+        source['graphs'][0]['body']['nodes'].append(dict(id='sink', kind='call', operation='Consume'))
+        source['graphs'][0]['body']['links'] = [
+            {'from': 'n.then', 'to': 'sink.exec'}, {'from': 'n.result', 'to': 'sink.value'}]
+        self.save('source.json', source)
+        manifest = self.save('markers.json', dict(assets=[dict(source='source.json', before='source.json',
+            status='changed', reviews={'Main': {'changed': ['n']}})]))
+        generate(manifest, self.root / 'markers')
+        page = (self.root / 'markers/blueprint-000/graph-000.html').read_text(encoding='utf-8')
+        sections = re.findall(r'<section id="([^"]+)"[^>]*>(.*?)</section>', page, re.S)
+        self.assertEqual(len(sections), 8)
+        all_markers = re.findall(r'<marker id="([^"]+)"', page)
+        self.assertEqual(len(all_markers), len(set(all_markers)), 'SVG IDs must be unique across hidden variants')
+        for name, section in sections:
+            markers = set(re.findall(r'<marker id="([^"]+)"', section))
+            references = re.findall(r'marker-end="url\(#([^)]+)\)"', section)
+            self.assertTrue(references)
+            self.assertTrue(set(references) <= markers, name)
+            if 'full' in name:
+                edges = re.findall(r'<path class="edge-line"[^>]*marker-end="url\(#([^)]+)\)"', section)
+                self.assertEqual(len(edges), 2)
+                self.assertEqual({ref.removeprefix('final-').removeprefix('fullTB').removeprefix('fullLR')
+                                  for ref in edges}, {'exec', 'data'})
+
+    def test_review_has_independent_final_only_graph(self):
+        old = fixture()
+        old['graphs'][0]['body']['nodes'].append(dict(id='deleted', kind='call', operation='OldOperation'))
+        self.save('old.json', old)
+        self.save('new.json', fixture())
+        manifest = self.save('review.json', dict(assets=[dict(source='new.json', before='old.json',
+            status='changed', reviews={'Main': {'changed': ['n'], 'removed': ['deleted']}})]))
+        output = self.root / 'clean-review'
+        generate(manifest, output)
+        page = (output / 'blueprint-000/graph-000.html').read_text(encoding='utf-8')
+        self.assertIn('id="show-changes"', page)
+        self.assertRegex(page, r'>Show unconnected</label>\s*<label[^>]*><input id="show-changes"')
+        self.assertNotIn('Click node: highlight.', page)
+        sections = dict(re.findall(r'<section id="([^"]+)"[^>]*>(.*?)</section>', page, re.S))
+        self.assertEqual(len(sections), 8)
+        for view in ('simplified', 'full'):
+            for direction in ('TB', 'LR'):
+                review = sections[f'{view}-{direction}']
+                final = sections[f'final-{view}-{direction}']
+                self.assertIn('data-node-id="deleted"', review)
+                self.assertNotIn('data-node-id="deleted"', final)
+                self.assertNotIn('data-review-status="changed"', final)
+                self.assertNotIn('REVIEW ·', final)
+                self.assertIn('data-node-id="n"', final)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -141,6 +191,18 @@ class PreviewIndexTests(unittest.TestCase):
         self.assertIn('blueprint unchanged placeholder', page)
         self.assertIn('2 nodes · 1 links', page)
         self.assertIn('1 nodes · 0 links', page)
+        viewer = (self.root / 'out/blueprint-000/graph-000.html').read_text(encoding='utf-8')
+        self.assertNotIn('id="show-changes"', viewer)
+        self.assertNotIn('id="final-', viewer)
+
+    def test_empty_review_marks_do_not_offer_changes_switch(self):
+        self.save('source.json', fixture())
+        manifest = self.save('empty-review.json', {'assets': [dict(source='source.json',
+            before='source.json', status='changed', reviews={'Main': {'changed': [], 'added': [], 'removed': []}})]})
+        generate(manifest, self.root / 'empty-review')
+        page = (self.root / 'empty-review/blueprint-000/graph-000.html').read_text(encoding='utf-8')
+        self.assertNotIn('id="show-changes"', page)
+        self.assertNotIn('REVIEW ·', page)
 
     def test_changed_asset_includes_deleted_and_added_graphs(self):
         old = fixture()

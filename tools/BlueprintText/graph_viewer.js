@@ -6,6 +6,56 @@ const edgeTip=document.getElementById('edge-tooltip');
 const detailVersion=document.getElementById('detail-version');
 const rowCapacity=document.getElementById('nodes-per-row');
 const showUnconnected=document.getElementById('unconnected');
+const showChanges=document.getElementById('show-changes');
+let restoringState=true,stateTimer;
+function saveViewerState(){
+    if(restoringState||!svg)return;
+    clearTimeout(stateTimer);
+    const state={v:view.value,d:direction.value,c:normalizeColumns(rowCapacity.value),
+        u:showUnconnected.checked,r:showChanges?showChanges.checked:true,
+        z:scale,x:box.scrollLeft,y:box.scrollTop,n:selectedId};
+    // Per history entry: two visits to the same graph may have different views.
+    try{history.replaceState({...history.state,bptGraph:state},'')}catch(error){/* Restricted embedding may disable history writes. */}
+}
+function scheduleViewerState(){if(!restoringState){clearTimeout(stateTimer);stateTimer=setTimeout(saveViewerState,150)}}
+function restoreViewerState(){
+    restoringState=true;
+    const state=history.state?.bptGraph;
+    if(state){
+        if(['simplified','full'].includes(state.v))view.value=state.v;
+        if(['TB','LR'].includes(state.d))direction.value=state.d;
+        rowCapacity.value=String(normalizeColumns(state.c));
+        if(typeof state.u==='boolean')showUnconnected.checked=state.u;
+        if(showChanges&&typeof state.r==='boolean')showChanges.checked=state.r;
+    }else if(showChanges&&new URL(location.href).searchParams.get('r')==='0')showChanges.checked=false;
+    choose();
+    if(state){
+        if(Number.isFinite(state.z)&&state.z>0){scale=Math.max(.05,Math.min(4,state.z));show()}
+        if(typeof state.n==='string')highlight(state.n);
+        box.scrollLeft=Number.isFinite(state.x)?Math.max(0,state.x):0;
+        box.scrollTop=Number.isFinite(state.y)?Math.max(0,state.y):0;
+    }
+    restoringState=false;
+}
+window.addEventListener('pagehide',saveViewerState);
+window.addEventListener('pageshow',restoreViewerState);
+window.addEventListener('popstate',restoreViewerState);
+document.addEventListener('click',event=>{
+    const link=event.target.closest('a');
+    if(!link)return;
+    const target=new URL(link.getAttribute('href'),location.href);
+    if(target.pathname.endsWith('.html')){
+        const review=showChanges?showChanges.checked:new URL(location.href).searchParams.get('r')!=='0';
+        if(review)target.searchParams.delete('r');else target.searchParams.set('r','0');
+        link.setAttribute('href',target.href);
+    }
+    saveViewerState();
+},true);
+function changeReview(){
+    const previousScale=scale,x=box.scrollLeft,y=box.scrollTop,id=selectedId;
+    choose();scale=previousScale;show();highlight(id);
+    box.scrollLeft=x;box.scrollTop=y;saveViewerState();
+}
 function changeUnconnected(){
     const selected=graphIndex(svg).selected;
     closeDetails();svg.classList.toggle('hide-unconnected',!showUnconnected.checked);
@@ -16,6 +66,7 @@ function changeUnconnected(){
         box.scrollLeft=Math.max(0,box.scrollLeft+(node.left+node.right)/2-viewport.left-box.clientWidth/2);
         box.scrollTop=Math.max(0,box.scrollTop+(node.top+node.bottom)/2-viewport.top-box.clientHeight/2);
     }else{box.scrollTop=0;box.scrollLeft=0;fit()}
+    saveViewerState();
 }
 let detailCopyText='';
 let svg,scale=1,selectedId=null,detailNode=null,detailEdge=null,detailEdgeTitle=null;
@@ -80,8 +131,8 @@ async function copyNodeIds(node){
     await copyText(ids.join('\n'),ids.length===1?'Node ID copied':ids.length+' node IDs copied');
 }
 function show(){const v=svg.viewBox.baseVal;svg.style.width=v.width*scale+'px';svg.style.height=v.height*scale+'px'}
-function zoom(f){closeDetails();scale=Math.max(.05,Math.min(4,scale*f));show()}
-function fit(all=false){closeDetails();const v=svg.viewBox.baseVal;scale=Math.min(1,Math.max(1,box.clientWidth-20)/v.width,all?box.clientHeight/v.height:1);show()}
+function zoom(f){closeDetails();scale=Math.max(.05,Math.min(4,scale*f));show();saveViewerState()}
+function fit(all=false){closeDetails();const v=svg.viewBox.baseVal;scale=Math.min(1,Math.max(1,box.clientWidth-20)/v.width,all?box.clientHeight/v.height:1);show();saveViewerState()}
 const graphIndexes=new WeakMap();
 function graphIndex(graph){
     if(graphIndexes.has(graph))return graphIndexes.get(graph);
@@ -111,7 +162,7 @@ function highlight(id){
     for(const edge of state.edges)edge.classList.toggle('related',true);
     for(const node of state.neighbors)node.classList.toggle('neighbor',true);
 }
-function toggleNode(node){highlight(selectedId===node.dataset.nodeId?null:node.dataset.nodeId)}
+function toggleNode(node){highlight(selectedId===node.dataset.nodeId?null:node.dataset.nodeId);saveViewerState()}
 box.addEventListener('click',event=>{
     if(event.target.closest('a'))return;
     if(tip.contains(event.target))return;
@@ -124,7 +175,7 @@ box.addEventListener('click',event=>{
     if(node&&svg.contains(node)){toggleNode(node)}else{highlight(null);closeDetails()}
 });
 window.addEventListener('resize',closeDetails);
-box.addEventListener('scroll',closeEdgeDetails);
+box.addEventListener('scroll',()=>{closeEdgeDetails();scheduleViewerState()});
 document.getElementById('copy-detail-ids').addEventListener('click',()=>{if(detailNode)copyNodeIds(detailNode)});
 document.getElementById('copy-details').addEventListener('click',()=>copyText(detailCopyText,'Node details copied'));
 document.getElementById('close-details').addEventListener('click',closeDetails);
@@ -147,7 +198,7 @@ document.querySelectorAll('.graph-node').forEach(node=>{
 });
 function choose(){
     if(svg)highlight(null);
-    closeDetails();const id=view.value+'-'+direction.value;
+    closeDetails();const id=(showChanges&&!showChanges.checked?'final-':'')+view.value+'-'+direction.value;
     document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==id);
     svg=document.getElementById(id).querySelector('svg');
     rowCapacity.disabled=direction.value!=='TB';
