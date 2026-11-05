@@ -50,6 +50,13 @@ const handlers = {}, view = {value: ''}, direction = {value: ''};
 const ui=Object.fromEntries(['unconnected','nodes-per-row','detail-version','node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
 ui['unconnected'].checked=true;
 if(page.includes('id="show-changes"')){ui['show-changes']=element();ui['show-changes'].checked=true}
+if(page.includes('id="caller-menu"')){
+    const menu=ui['caller-menu']=element(),link=element();
+    menu.querySelector=()=>link;menu.link=link;menu.hidden=true;menu.offsetWidth=300;
+    menu.contains=target=>[menu,link].includes(target);
+    link.closest=selector=>selector==='a'?link:null;
+    link.getAttribute=()=> 'caller.html';
+}
 const edgeTip=ui['edge-tooltip'];edgeTip.hidden=true;edgeTip.offsetWidth=400;edgeTip.offsetHeight=120;
 const tip=ui['node-details'];tip.hidden=true;tip.offsetWidth=520;tip.offsetHeight=400;
 tip.contains=node=>Object.values(ui).includes(node);
@@ -74,6 +81,31 @@ const context = vm.createContext({document,window:{addEventListener(event,fn){wi
     navigator:{clipboard:{async writeText(text){if(clipboardFails)throw new Error('denied');clipboard=text}}}});
 vm.runInContext(page.match(/<script>([\s\S]*?)<\/script>/)[1], context);
 const background = {closest: () => null};
+if(ui['caller-menu']){
+    const menu=ui['caller-menu'],button=element();
+    button.closest=selector=>selector==='.open-caller-graph'?button:selector==='.graph-node'?sections[0].nodes[0]:null;
+    handlers.click({target:button,stopPropagation(){}});
+    assert.equal(menu.hidden,false);assert.equal(button.attributes['aria-expanded'],'true');
+    assert.equal(document.activeElement,menu.link);
+    handlers['capture-click']({target:background});assert.equal(menu.hidden,true);
+    handlers.keydown({key:'Enter',target:button,preventDefault(){}});
+    assert.equal(menu.hidden,false);let prevented=false;
+    handlers.keydown({key:'Escape',target:menu.link,preventDefault(){prevented=true}});
+    assert.equal(menu.hidden,true);assert.equal(document.activeElement,button);assert.ok(prevented);
+    assert.equal(button.attributes['aria-expanded'],'false');
+    handlers.click({target:button,stopPropagation(){}});
+    handlers['capture-click']({target:menu.link});assert.equal(menu.hidden,true);
+}
+{
+    const node=sections[0].nodes[0],member=JSON.parse(node.dataset.nodeIds).at(-1);
+    history.state=null;location.href='file:///preview/caller.html#node-'+encodeURIComponent(member);
+    context.restoreViewerState();
+    assert.equal(node.classList.contains('selected'),true,'Navigate to the containing chain for a folded call');
+    box.scrollLeft=123;box.scrollTop=456;context.saveViewerState();
+    windowHandlers.hashchange();
+    assert.equal(box.scrollLeft,123);assert.equal(box.scrollTop,456,'Hash navigation must not overwrite restored history scroll');
+    history.state={unrelated:'keep'};location.href='file:///preview/parent.html';context.restoreViewerState();
+}
 function cleared(section) {
     assert.equal(section.svg.classList.contains('has-selection'),false);
     for (const item of [...section.nodes, ...section.edges]) {

@@ -6,14 +6,15 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from preview_graph_links import build_catalog, resolve_calls
-from render_graph import render
+from preview_graph_links import build_catalog, build_callers, resolve_calls
+from render_graph import render, caller_navigation
 from render_preview_index import generate
 
 
 def function(name='Reset', identity='A' * 32):
     return dict(name=name, kind='function', properties={'GraphGuid': identity},
-                format='compact', body=dict(nodes=[], links=[]))
+                format='compact', body=dict(nodes=[dict(id='Entry', kind='FunctionEntry',
+                    pins={'out:then': {'type': 'exec'}})], links=[]))
 
 
 def call(identity, reference):
@@ -33,6 +34,92 @@ def entry(document, before=None, **item):
 
 
 class GraphLinkTests(unittest.TestCase):
+    def test_callers_group_sites_by_graph_and_keep_full_hierarchy(self):
+        from test_nested_graphs import fixture as nested_fixture
+        source = nested_fixture()
+        source['graphs'].append(function(identity='D'*32))
+        ref = '(MemberName="Reset",bSelfContext=True)'
+        source['graphs'][2]['body']['nodes'] += [call('one', ref), call('two', ref)]
+        source['graphs'][0]['body']['nodes'].append(call('root', ref))
+        entries = [entry(source)]
+        callers = build_callers(entries, build_catalog(entries))['source']
+        target = callers[(source['asset'], 'D'*32)]
+        self.assertEqual(len(target), 2)
+        nested = next(c for c in target if len(c['nodes']) == 2)
+        self.assertEqual(nested['name'], 'Nested / Root / Details / Details')
+        self.assertNotIn('#node-', nested['href'])
+        self.assertEqual(nested['nodes'], ['one', 'two'])
+        owner = callers[(source['asset'], 'B'*32)]
+        self.assertEqual(len(owner), 1)
+        self.assertEqual(owner[0]['href'], '../blueprint-000/graph-000.html#node-Operation')
+
+    def test_caller_control_single_multiple_empty_and_escaped_labels(self):
+        self.assertEqual(caller_navigation([]), '')
+        caller = dict(name='BP / <Graph>', asset='/Game/BP', href='graph.html#node-call', nodes=['call'])
+        direct = caller_navigation([caller])
+        self.assertEqual(direct, '')
+        menu = caller_navigation([caller, dict(caller, name='BP / Other', nodes=['one', 'two'])])
+        self.assertIn('id="caller-menu"', menu)
+        self.assertEqual(menu.count('<li>'), 2)
+        self.assertIn('2 calls', menu)
+        self.assertIn('<aside id="caller-menu" hidden', menu)
+        self.assertNotIn('<summary', menu)
+
+    def test_reverse_control_belongs_only_to_entry_node_in_every_view(self):
+        from test_nested_graphs import fixture as nested_fixture
+        from render_preview_index import graph_navigation
+        for doc, key in [(fixture(), 'A'*32), (nested_fixture(), 'C'*32)]:
+            pages = {graph.get('properties', {}).get('GraphGuid', graph['name']): str(i)+'.html' for i, graph in enumerate(doc['graphs'])}
+            context = graph_navigation(doc, None, key, pages)
+            caller = dict(name='BP / <Graph>', asset='/Game/BP', href='graph.html#node-call', nodes=['call'])
+            for count in (0, 1, 2):
+                context['callers'] = [caller] * count
+                for view in ('simplified', 'full'):
+                    for direction in ('TB', 'LR'):
+                        svg = render(doc, key, view, direction, graph_context=context)[0]
+                        tree = ET.fromstring(svg)
+                        controls = tree.findall('.//*[@class="open-caller-graph"]')
+                        self.assertEqual(len(controls), int(count > 0))
+                        if not count:
+                            continue
+                        entry_node = tree.find('.//{*}g[@data-node-id="Entry"]')
+                        self.assertIn(controls[0], list(entry_node))
+                        buttons = [e for e in entry_node if e.get('class') in ('open-caller-graph', 'node-info', 'copy-node-id')]
+                        self.assertEqual(len({b.get('transform') for b in buttons}), 3)
+                        self.assertIn('scale(-1 1)', svg)
+                        if count == 1:
+                            self.assertEqual(controls[0].get('href'), caller['href'])
+                        else:
+                            self.assertEqual(controls[0].get('aria-controls'), 'caller-menu')
+                            self.assertEqual(controls[0].get('role'), 'button')
+
+    def test_reverse_links_keep_before_callers_for_unchanged_callee(self):
+        old = fixture()
+        old['graphs'][0]['body']['nodes'] = [call('oldCall', '(MemberParent="/Game/Other.Other_C",MemberName="Reset")')]
+        new = copy.deepcopy(old)
+        new['graphs'][0]['body']['nodes'] = []
+        other = dict(fixture(), asset='/Game/Other')
+        entries = [entry(new, old), entry(other)]
+        catalog = build_catalog(entries)
+        callers = build_callers(entries, catalog)
+        key = ('/Game/Other', 'A'*32)
+        self.assertNotIn(key, callers['source'])
+        self.assertEqual(callers['before'][key][0]['href'], '../blueprint-000/graph-000-before.html#node-oldCall')
+        self.assertEqual(resolve_calls(old, 'Main', catalog['before'])['oldCall']['href'], '../blueprint-001/graph-001-before.html')
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            for name, doc in [('old', old), ('new', new), ('other', other)]:
+                (root/(name+'.json')).write_text(json.dumps(doc), encoding='utf-8')
+            (root/'manifest.json').write_text(json.dumps({'assets': [
+                dict(source='new.json', before='old.json', status='changed', reviews={'Main': {'removed': ['oldCall']}}),
+                'other.json']}), encoding='utf-8')
+            generate(root/'manifest.json', root/'out')
+            before = (root/'out/blueprint-001/graph-001-before.html').read_text(encoding='utf-8')
+            current = (root/'out/blueprint-001/graph-001.html').read_text(encoding='utf-8')
+            self.assertIn('class="open-caller-graph" href="../blueprint-000/graph-000-before.html#node-oldCall"', before)
+            self.assertNotIn('class="open-caller-graph"', current)
+            self.assertNotIn('open-caller-graph', before.split('<nav>', 1)[1].split('</nav>', 1)[0])
+
     def test_resolve_owner_and_guid_without_cross_asset_name_guesses(self):
         source = fixture()
         other = dict(fixture(), asset='/Game/Other')

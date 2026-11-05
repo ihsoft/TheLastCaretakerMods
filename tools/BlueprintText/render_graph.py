@@ -847,6 +847,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         # A folded display chain has no graph of its own. Only its individual
         # step links navigate; never promote one step's target to the whole card.
         destination = (child or node.get('_graphLink')) if '_foldedNodes' not in node else None
+        callers = graph_context.get('callers', []) if node['id'] in graph_context.get('entryNodes', []) else []
         color = node_fill(node, document.get('pinTemplates', {}), execution_nodes)
         opacity = ' opacity="0.55"' if node.get("enabled") is False else ''
         status = node.get('_reviewStatus', '')
@@ -868,7 +869,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             header = row < title_rows[node['id']]
             size = 16 if header else 12
             weight = ' font-weight="600"' if header else ''
-            title_width = w - (96 if destination else 70) if row == 0 else w - 28
+            title_width = w - (96 if destination or callers else 70) if row == 0 else w - 28
             fit = f' textLength="{title_width}" lengthAdjust="spacingAndGlyphs"' if header and len(line) > 25 else ''
             previous = changed_lines.get(node['id'], {}).get(row)
             decoration, tooltip = '', ''
@@ -896,6 +897,11 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         if destination:
             label = escape('Open graph: ' + destination.get('target', destination['name']))
             pieces.append(f'<a class="open-child-graph" href="{escape(destination["href"])}" tabindex="0" aria-label="{label}" transform="translate({x+w-79},{y+5})"><title>{label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path d="M12 4h6v14h-6 M3 11h11 M10 7l4 4-4 4" fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></a>')
+        if callers:
+            label = escape('Go to calling graph: ' + callers[0]['name'] if len(callers) == 1 else f'Choose calling graph ({len(callers)})')
+            tag = 'a' if len(callers) == 1 else 'g'
+            action = f'href="{escape(callers[0]["href"])}"' if tag == 'a' else 'role="button" aria-haspopup="true" aria-expanded="false" aria-controls="caller-menu"'
+            pieces.append(f'<{tag} class="open-caller-graph" {action} tabindex="0" aria-label="{label}" transform="translate({x+w-79},{y+5})"><title>{label}</title><rect width="22" height="22" rx="4" fill="#fff" stroke="#64748b"/><path transform="translate(22 0) scale(-1 1)" d="M12 4h6v14h-6 M3 11h11 M10 7l4 4-4 4" fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></{tag}>')
         pieces.append('</g>')
     pieces.append('</svg>')
     if direction in ('TB', 'LR'):
@@ -907,6 +913,17 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                   'edges': edges}
         pieces[0] = pieces[0].replace('<svg ', '<svg data-layout="' + escape(json.dumps(layout, separators=(',', ':'))) + '" ', 1)
     return '\n'.join(pieces), title, len(nodes), len(edges)
+
+
+def caller_navigation(callers):
+    if len(callers) < 2:
+        return ''
+    links = []
+    for caller in callers:
+        count = len(caller['nodes'])
+        detail = f'<small>{count} calls</small>' if count > 1 else ''
+        links.append(f'<li><a href="{escape(caller["href"])}" title="{escape(caller["asset"])}">{escape(caller["name"])}{detail}</a></li>')
+    return '<aside id="caller-menu" hidden aria-label="Calling graphs"><ul>' + ''.join(links) + '</ul></aside>'
 
 
 def main():
@@ -975,6 +992,8 @@ def main():
 ''' + f'view.value="{args.view}";direction.value="{args.direction}";' + '''restoreViewerState();</script></html>'''
         if has_review:
             page = page.replace('>Show unconnected</label>', '>Show unconnected</label>\n<label title="Turn off to see only the final graph, without review marks or removed nodes."><input id="show-changes" type="checkbox" checked onchange="changeReview()">Show changes</label>', 1)
+        page = page.replace('<aside id="node-details"', caller_navigation(graph_context.get('callers', [])) + '<aside id="node-details"', 1)
+        page = page.replace('<nav>', '<style>.open-caller-graph{cursor:pointer}.open-caller-graph:focus{outline:none}.open-caller-graph:hover>rect,.open-caller-graph:focus-visible>rect{fill:#dbeafe;stroke:#1d4ed8;stroke-width:2}#caller-menu{position:absolute;z-index:40;min-width:280px;width:max-content;max-width:min(650px,85vw);max-height:60vh;overflow:auto;padding:5px;border:1px solid #94a3b8;border-radius:6px;background:#fff;box-shadow:0 4px 18px #20334b33}#caller-menu[hidden]{display:none}#caller-menu ul{list-style:none;margin:0;padding:0}#caller-menu a{display:block;padding:8px;color:#175ba4;overflow-wrap:anywhere;text-decoration:none}#caller-menu a:hover,#caller-menu a:focus-visible{background:#dbeafe}#caller-menu small{display:block;color:#52657a}</style><nav>', 1)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(svg, encoding="utf-8")
         full_path.write_text(variants["full", args.direction][0], encoding="utf-8")

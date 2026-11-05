@@ -21,7 +21,7 @@ from render_graph import load_graph, review_document
 from render_widget import render as render_widget
 from preview_references import property_references, package as reference_package, label as reference_label
 from graph_hierarchy import graph_key, select_graph, validate_hierarchy
-from preview_graph_links import build_catalog, displayed as entry_displayed, graph_pages, resolve_calls
+from preview_graph_links import build_catalog, build_callers, displayed as entry_displayed, graph_pages, resolve_calls
 
 STATUSES = ('unchanged', 'added', 'changed', 'removed')
 
@@ -194,7 +194,12 @@ def graph_navigation(document, other, key, pages):
         if graph.get('owner', {}).get('graph') == key:
             children[graph['owner']['node']] = dict(id=identity, name=graph['name'], href=pages[identity],
                 nodes=len(graph['body']['nodes']), changed=bool(other) and changed(identity))
-    return dict(breadcrumbs=list(reversed(breadcrumbs)), children=children,
+    graph = registry[key]
+    entry_nodes = [graph['owner']['entry']] if 'owner' in graph else [
+        n['id'] for n in graph['body']['nodes']
+        if document.get('classes', {}).get(n.get('kind'), n.get('kind', '')).rsplit('.', 1)[-1]
+        in ('FunctionEntry', 'K2Node_FunctionEntry')]
+    return dict(breadcrumbs=list(reversed(breadcrumbs)), children=children, entryNodes=entry_nodes,
                 changed=bool(other) and changed(key), comparisonAvailable=key in other_registry)
 
 
@@ -222,6 +227,7 @@ def generate(manifest, output):
     asset_context_path = output / 'asset-context.json'
     write(asset_context_path, asset_context)
     graph_catalog = build_catalog(entries)
+    callers = build_callers(entries, graph_catalog)
 
     def reference(target):
         asset = reference_package(target)
@@ -266,6 +272,8 @@ def generate(manifest, output):
                         render_widget(entry['paths'][snapshot], target, bundle)
                         widgets.append(link(target, 'Before widget preview' if snapshot == 'before' else 'Widget preview'))
         current, old = docs.get('source'), docs.get('before')
+        if status == 'unchanged' and reviewing:
+            old = current
         current_graphs, old_graphs = graphs(current or {}), graphs(old or {})
         names = list(current_graphs) + [n for n in old_graphs if n not in current_graphs]
         current_pages, old_pages = graph_pages(current, old)
@@ -281,22 +289,30 @@ def generate(manifest, output):
             marks = reviews.get(name)
             displayed = current_graphs.get(name, old_graphs.get(name))
             caption = displayed['name']
+            graph_status = None
             if after is None:
                 after = copy.deepcopy(before)
                 after['graphs'][0]['body'] = {'nodes': [], 'links': []}
                 marks = {'removed': [n['id'] for n in old_graphs[name]['body']['nodes']]}
-                caption += ' — Removed (Before)'
+                graph_status = 'removed'
             elif before is None and status in ('added', 'changed'):
                 marks = {'added': [n['id'] for n in current_graphs[name]['body']['nodes']]}
-                caption += ' — Added'
+                graph_status = 'added'
             navigation = graph_navigation(current, old, name, current_pages) if name in current_graphs else graph_navigation(old, None, name, old_pages)
+            if graph_status is None and navigation['comparisonAvailable'] and navigation['changed']:
+                graph_status = 'changed'
             navigation['calls'] = resolve_calls(current, name, graph_catalog['source']) if name in current_graphs else {}
             navigation['beforeCalls'] = resolve_calls(old, name, graph_catalog['before']) if before else {}
+            snapshot = 'source' if name in current_graphs else 'before'
+            navigation['callers'] = callers[snapshot].get((entry['asset'], name), [])
             target = graph_preview(after, name, directory, f'graph-{index:03d}', marks, before, asset_context_path, navigation)
             links = link(target, caption)
+            if graph_status:
+                links += f' <span class="badge {graph_status} graph-status">{graph_status.title()}</span>'
             if before is not None:
                 before_navigation = graph_navigation(old, None, name, old_pages)
                 before_navigation['calls'] = navigation['beforeCalls']
+                before_navigation['callers'] = callers['before'].get((entry['asset'], name), [])
                 target = graph_preview(before, name, directory, f'graph-{index:03d}-before', asset_context=asset_context_path,
                     navigation=before_navigation)
                 if navigation['comparisonAvailable'] and navigation['changed']:

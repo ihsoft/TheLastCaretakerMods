@@ -458,13 +458,26 @@ Function calls also receive a double border and an open-graph icon when their
 implementation is represented in the batch preview, including functions in other
 Blueprints. Targets are resolved from BPT owner and member identity; absent or
 ambiguous targets do not receive a guessed link. Removed calls use the Before
-target; an unchanged target may share its ordinary page. Folded chains have no
-graph of their own, so they have neither a header navigation button nor a double
+target; review batches also generate Before pages for unchanged callees so reverse
+navigation stays in the same snapshot. Folded chains have no graph of their own,
+so they have neither a header navigation button nor a double
 border. Each represented function call inside a chain links from its numbered step.
+
+The function or collapsed graph's entry node has a reverse-arrow control next to
+Details and Copy for represented calling graphs. One caller opens directly;
+multiple callers open a chooser beside the entry control, with full Blueprint
+and nested graph paths. Repeated calls within one graph share one entry. A single
+call site is highlighted on arrival, including when folded into an action chain.
+Collapsed graphs use their owning graph as the caller. These links are derived
+from the same BPT batch; no additional asset discovery or agent command is needed.
+The chooser supports keyboard activation and Escape returns focus to its control.
+Browser Back restores the saved view, filters, zoom and scroll position.
 
 Each graph row shows local source node/link counts and a separate descendant
 node count, independent of viewer folding or hidden disconnected nodes. Deleted
-graphs use Before counts. Widget previews
+graphs use Before counts. Review rows have Added, Changed or Removed badges;
+Changed also covers edits to a nested descendant. Unchanged graphs have no badge,
+and ordinary browse mode has no review badges. Widget previews
 use the adjacent `.resources/manifest.json`; optional `resources` and
 `beforeResources` override it for the corresponding snapshot. An empty widget
 tree or missing resource manifest is explained in the index instead of creating

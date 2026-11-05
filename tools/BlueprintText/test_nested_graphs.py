@@ -128,7 +128,9 @@ class NestedGraphsTests(unittest.TestCase):
             generate(manifest, root/'preview')
             index = (root/'preview/index.html').read_text(encoding='utf-8')
             self.assertIn('<details open>', index)
-            self.assertNotIn('Renamed — Added', index)
+            for name in ('Root', 'Details', 'Renamed'):
+                self.assertIn(f'{name}</a> <span class="badge changed graph-status">Changed</span>', index)
+            self.assertNotIn('badge added graph-status', index)
             viewer = root/'preview/blueprint-000'
             current = (viewer/'graph-002.html').read_text(encoding='utf-8')
             before = (viewer/'graph-002-before.html').read_text(encoding='utf-8')
@@ -182,6 +184,8 @@ class NestedGraphsTests(unittest.TestCase):
             manifest = root/'manifest.json'
             manifest.write_text(json.dumps(dict(assets=[dict(source='source.json', status='added')])), encoding='utf-8')
             generate(manifest, root/'preview')
+            index = (root/'preview/index.html').read_text(encoding='utf-8')
+            self.assertEqual(index.count('class="badge added graph-status"'), 3)
             page = (root/'preview/blueprint-000/graph-001.html').read_text(encoding='utf-8')
             self.assertIn('graph-002.html', page)
             self.assertIn('data-review-status="added"', page)

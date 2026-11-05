@@ -160,6 +160,9 @@ class PreviewIndexTests(unittest.TestCase):
         self.assertIn('<nav aria-label="Blueprint review status">', page)
         self.assertIn('<span class="badge unchanged">Unchanged</span>', page)
         self.assertIn('blueprint removed placeholder', page)
+        for graph_status in ('added', 'changed', 'removed'):
+            self.assertIn(f'class="badge {graph_status} graph-status">{graph_status.title()}</span>', page)
+        self.assertNotIn('badge unchanged graph-status', page)
         self.assertIn('font-style:italic;color:#a3332b', page)
         for href in re.findall(r'href="([^"]+)"', page):
             self.assertTrue((output / href).is_file(), href)
@@ -216,8 +219,8 @@ class PreviewIndexTests(unittest.TestCase):
         result = generate(manifest, self.root / 'out')
         self.assertEqual(result['graphs'], 2)
         page = (self.root / 'out/index.html').read_text(encoding='utf-8')
-        self.assertIn('NewGraph — Added', page)
-        self.assertIn('Main — Removed (Before)', page)
+        self.assertIn('NewGraph</a> <span class="badge added graph-status">Added</span>', page)
+        self.assertIn('Main</a> <span class="badge removed graph-status">Removed</span>', page)
         self.assertIn('title="Before full graph">1 nodes · 0 links', page)
         self.assertIn('title="Current full graph">1 nodes · 0 links', page)
         for number in (0, 1):
@@ -243,6 +246,8 @@ class PreviewIndexTests(unittest.TestCase):
         generate(manifest, self.root / 'out')
         page = (self.root / 'out/index.html').read_text(encoding='utf-8')
         self.assertIn('href="blueprint-000/graph-000-before.html"', page)
+        self.assertIn('Main</a> <span class="badge changed graph-status">Changed</span>', page)
+        self.assertNotIn('UserConstructionScript</a> <span class="badge', page)
         self.assertNotIn('href="blueprint-000/graph-001-before.html"', page)
         viewer = (self.root / 'out/blueprint-000/graph-001.html').read_text(encoding='utf-8')
         self.assertNotIn('id="show-changes"', viewer)

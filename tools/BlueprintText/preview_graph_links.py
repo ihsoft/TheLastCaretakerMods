@@ -1,5 +1,6 @@
 """Resolve function navigation only against BPT graphs present in the preview."""
 import json
+from urllib.parse import quote
 from asset_text_codec import fields
 from graph_hierarchy import graph_key, select_graph
 
@@ -17,24 +18,77 @@ def graph_pages(current, before):
             {key: f'graph-{i:03d}-before.html' for i, key in enumerate(names) if key in old_ids})
 
 
+def snapshot_graphs(entry, snapshot, reviewing):
+    current = entry['docs'].get('source')
+    old = entry['docs'].get('before')
+    if entry['status'] == 'unchanged' and reviewing:
+        # Dedicated Before pages keep reverse navigation in the old snapshot,
+        # even when the callee itself did not change.
+        old = current
+    current_pages, old_pages = graph_pages(current, old)
+    if snapshot == 'before' and entry['status'] == 'unchanged' and not reviewing:
+        return current, current_pages
+    return (current, current_pages) if snapshot == 'source' else (old, old_pages)
+
+
 def build_catalog(entries):
     result = {'source': {}, 'before': {}}
+    reviewing = any(e['status'] != 'unchanged' for e in entries)
     for index, entry in enumerate(entries):
         if not displayed(entry):
             continue
-        docs = entry['docs']
-        current, old = docs.get('source'), docs.get('before')
-        current_pages, old_pages = graph_pages(current, old)
         for snapshot in result:
-            doc, pages = (current, current_pages) if snapshot == 'source' else (old, old_pages)
-            # An unchanged dependency has the same implementation in both snapshots.
-            if snapshot == 'before' and entry['status'] == 'unchanged':
-                doc, pages = current, current_pages
+            doc, pages = snapshot_graphs(entry, snapshot, reviewing)
             if doc is None:
                 continue
             result[snapshot][entry['asset']] = [dict(id=graph_key(g), name=g['name'],
                 href=f'../blueprint-{index:03d}/' + pages[graph_key(g)])
                 for g in doc.get('graphs', []) if g.get('kind') == 'function']
+    return result
+
+
+def build_callers(entries, catalog):
+    """Reverse represented calls/ownership, grouped by calling graph per snapshot."""
+    result = {'source': {}, 'before': {}}
+    reviewing = any(e['status'] != 'unchanged' for e in entries)
+    for snapshot, targets in result.items():
+        for index, entry in enumerate(entries):
+            if not displayed(entry):
+                continue
+            doc, pages = snapshot_graphs(entry, snapshot, reviewing)
+            if doc is None:
+                continue
+            registry = {graph_key(g): g for g in doc.get('graphs', [])}
+
+            def add(target_asset, target_graph, caller, node):
+                key = (target_asset, target_graph)
+                caller_key = (entry['asset'], graph_key(caller))
+                group = targets.setdefault(key, {})
+                if caller_key not in group:
+                    path, cursor = [], caller
+                    while True:
+                        path.append(cursor['name'])
+                        if 'owner' not in cursor:
+                            break
+                        cursor = registry[cursor['owner']['graph']]
+                    group[caller_key] = dict(asset=entry['asset'], graph=graph_key(caller),
+                        name=' / '.join([entry['asset'].rsplit('/', 1)[-1], *reversed(path)]),
+                        href=f'../blueprint-{index:03d}/' + pages[graph_key(caller)], nodes=[])
+                if node not in group[caller_key]['nodes']:
+                    group[caller_key]['nodes'].append(node)
+
+            for key, graph in registry.items():
+                if 'owner' in graph:
+                    owner = graph['owner']
+                    add(entry['asset'], key, registry[owner['graph']], owner['node'])
+                for node, target in resolve_calls(doc, key, catalog[snapshot]).items():
+                    add(target['target'].split('::', 1)[0], target['id'], graph, node)
+        for key, group in targets.items():
+            callers = sorted(group.values(), key=lambda c: (c['name'], c['asset'], c['graph']))
+            for caller in callers:
+                if len(caller['nodes']) == 1:
+                    caller['href'] += '#node-' + quote(caller['nodes'][0], safe='')
+            targets[key] = callers
     return result
 
 

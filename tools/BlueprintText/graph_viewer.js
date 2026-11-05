@@ -7,6 +7,25 @@ const detailVersion=document.getElementById('detail-version');
 const rowCapacity=document.getElementById('nodes-per-row');
 const showUnconnected=document.getElementById('unconnected');
 const showChanges=document.getElementById('show-changes');
+const callersMenu=document.getElementById('caller-menu');
+let callerButton=null;
+function closeCallers(focus=false){
+    if(callersMenu)callersMenu.hidden=true;
+    callerButton?.setAttribute('aria-expanded','false');
+    if(focus)callerButton?.focus();
+    callerButton=null;
+}
+function showCallers(button){
+    if(!callersMenu)return;
+    const wasOpen=callerButton===button&&!callersMenu.hidden;
+    closeDetails();
+    if(wasOpen)return;
+    callerButton=button;callersMenu.hidden=false;button.setAttribute('aria-expanded','true');
+    const r=button.getBoundingClientRect(),viewport=box.getBoundingClientRect();
+    callersMenu.style.left=(box.scrollLeft+Math.max(0,Math.min(r.left-viewport.left,box.clientWidth-callersMenu.offsetWidth-8)))+'px';
+    callersMenu.style.top=(r.bottom-viewport.top+box.scrollTop+6)+'px';
+    callersMenu.querySelector('a')?.focus();
+}
 let restoringState=true,stateTimer;
 function saveViewerState(){
     if(restoringState||!svg)return;
@@ -34,13 +53,30 @@ function restoreViewerState(){
         if(typeof state.n==='string')highlight(state.n);
         box.scrollLeft=Number.isFinite(state.x)?Math.max(0,state.x):0;
         box.scrollTop=Number.isFinite(state.y)?Math.max(0,state.y):0;
-    }
+    }else focusLinkedNode();
     restoringState=false;
 }
+function focusLinkedNode(){
+    const fragment=new URL(location.href).hash;
+    if(!fragment.startsWith('#node-'))return;
+    let id;
+    try{id=decodeURIComponent(fragment.slice(6))}catch(error){return}
+    // A call may be a member of a folded action chain in the selected view.
+    const entry=[...graphIndex(svg).nodes.values()].find(e=>JSON.parse(e.node.dataset.nodeIds).includes(id));
+    if(!entry)return;
+    highlight(entry.node.dataset.nodeId);
+    const node=entry.node.getBoundingClientRect(),viewport=box.getBoundingClientRect();
+    box.scrollLeft=Math.max(0,box.scrollLeft+(node.left+node.right)/2-viewport.left-box.clientWidth/2);
+    box.scrollTop=Math.max(0,box.scrollTop+(node.top+node.bottom)/2-viewport.top-box.clientHeight/2);
+}
+window.addEventListener('hashchange',()=>{
+    if(!history.state?.bptGraph){focusLinkedNode();saveViewerState()}
+});
 window.addEventListener('pagehide',saveViewerState);
 window.addEventListener('pageshow',restoreViewerState);
 window.addEventListener('popstate',restoreViewerState);
 document.addEventListener('click',event=>{
+    if(callersMenu&&!event.target.closest('.open-caller-graph')&&(!callersMenu.contains(event.target)||event.target.closest('a')))closeCallers();
     const link=event.target.closest('a');
     if(!link)return;
     const target=new URL(link.getAttribute('href'),location.href);
@@ -75,7 +111,7 @@ function closeEdgeDetails(){
     if(detailEdgeTitle)detailEdgeTitle.textContent=edgeTip.textContent;
     edgeTip.hidden=true;detailEdge?.classList.toggle('inspected',false);detailEdge=null;detailEdgeTitle=null;
 }
-function closeDetails(){tip.hidden=true;detailNode=null;closeEdgeDetails()}
+function closeDetails(){tip.hidden=true;detailNode=null;closeEdgeDetails();closeCallers()}
 function showDetails(node){
     closeEdgeDetails();
     detailNode=node;
@@ -165,6 +201,9 @@ function highlight(id){
 function toggleNode(node){highlight(selectedId===node.dataset.nodeId?null:node.dataset.nodeId);saveViewerState()}
 box.addEventListener('click',event=>{
     if(event.target.closest('a'))return;
+    const caller=event.target.closest('.open-caller-graph');
+    if(caller){event.stopPropagation();showCallers(caller);return}
+    if(callersMenu?.contains(event.target))return;
     if(tip.contains(event.target))return;
     const edge=event.target.closest('.graph-edge');
     if(edge&&svg.contains(edge)){event.stopPropagation();showEdgeDetails(edge,event);return}
@@ -180,6 +219,9 @@ document.getElementById('copy-detail-ids').addEventListener('click',()=>{if(deta
 document.getElementById('copy-details').addEventListener('click',()=>copyText(detailCopyText,'Node details copied'));
 document.getElementById('close-details').addEventListener('click',closeDetails);
 document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&callersMenu&&!callersMenu.hidden){
+        closeCallers(true);event.preventDefault();return;
+    }
     if(event.target.closest('a'))return;
     if(event.key==='Escape'){highlight(null);closeDetails();return}
     const node=event.target.closest('.graph-node');
@@ -187,6 +229,7 @@ document.addEventListener('keydown',event=>{
         event.preventDefault();
         if(event.target.closest('.copy-node-id'))copyNodeIds(node);
         else if(event.target.closest('.node-info'))toggleDetails(node);
+        else if(event.target.closest('.open-caller-graph'))showCallers(event.target.closest('.open-caller-graph'));
         else toggleNode(node);
     }
 });
