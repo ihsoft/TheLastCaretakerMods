@@ -9,12 +9,30 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from render_graph import render, node_lines, pin_type_label, fold_data_chains, fold_chains, unconnected_outputs, edge_output_type, layers
+from render_graph import render, node_lines, pin_type_label, fold_data_chains, fold_chains, unconnected_outputs, edge_output_type, edge_pin_details, layers
 
 ROOT = Path(__file__).resolve().parent
 
 
 class GraphRenderingTests(unittest.TestCase):
+    def test_entry_parameter_review_marks_only_the_changed_parameter(self):
+        old = {'schema': 2, 'pinTemplates': {'int': {'PinType.PinCategory': '"int"'},
+                                            'bool': {'PinType.PinCategory': '"bool"'}},
+               'nodes': [{'id': 'entry', 'kind': 'Tunnel', 'properties': {'bCanHaveOutputs': 'True'},
+                          'pins': {'out:Count': {'type': 'int'}, 'out:Enabled': {'type': 'bool'}}}],
+               'links': []}
+        new = copy.deepcopy(old)
+        new['nodes'][0]['pins']['out:Count']['type'] = 'bool'
+        for view in ('full', 'simplified'):
+            svg = ET.fromstring(render(new, view=view, review={'changed': ['entry']}, before=old)[0])
+            rows = svg.find('.//{*}g[@data-node-id="entry"]').findall('{*}text')
+            changed = [r.text for r in rows if r.get('class') == 'review-changed-line']
+            self.assertEqual(changed, ['Parameter: Count (bool)'])
+            self.assertIn('Graph Entry', [r.text for r in rows])
+            parameters = [r for r in rows if (r.text or '').startswith('Parameter:')]
+            self.assertEqual(len(parameters), 2)
+            self.assertTrue(all(r.get('data-unconnected-output') is None for r in parameters))
+
     def test_asset_reference_uses_pin_site_and_role_in_both_views(self):
         document = {'schema': 1, 'asset': '/Game/Test', 'nodes': [dict(id='spawn', kind='call', operation='Spawn',
             pins={'in:Class': {'DefaultObject': '/Game/Gyro.Gyro_C'}})], 'links': []}
@@ -55,7 +73,12 @@ class GraphRenderingTests(unittest.TestCase):
                 lines = node_lines(node, set(), pin_templates=templates)
                 self.assertFalse(any(line.startswith('Output:') for line in lines))
                 node['defaults'] = {'out:Value': '0.0'}
-                self.assertIn('Output: Value = "0.0" (default; double)', node_lines(node, set(), pin_templates=templates))
+                lines = node_lines(node, set(), pin_templates=templates)
+                if kind == 'FunctionEntry':
+                    self.assertIn('Parameter: Value (double)', lines)
+                    self.assertFalse(any(line.startswith('Output:') for line in lines))
+                else:
+                    self.assertIn('Output: Value = "0.0" (default; double)', lines)
 
     def test_all_unconnected_output_rows_compact_including_execution(self):
         doc = {'schema': 2, 'pinTemplates': {'exec': {'PinType.PinCategory': '"exec"'},
@@ -341,7 +364,7 @@ class GraphRenderingTests(unittest.TestCase):
         svg = ET.fromstring(render(document)[0])
         edge = svg.find('.//{*}g[@class="graph-edge"]')
         self.assertIsNone(edge.find('{*}text'))
-        self.assertIn('Input: Condition', edge.find('{*}title').text)
+        self.assertIn('To: Condition', edge.find('{*}title').text)
 
     def test_every_execution_edge_has_source_label_and_data_is_hover_only(self):
         for view in ('simplified', 'full'):
@@ -359,13 +382,12 @@ class GraphRenderingTests(unittest.TestCase):
                     if edge.attrib['data-source'] == 'divide':
                         self.assertIsNone(edge.find('{*}text'))
                         tooltip = edge.find('{*}title').text
-                        self.assertIn('Output: result', tooltip)
-                        self.assertIn('Input: value', tooltip)
-                        self.assertIn('From: divide', tooltip)
-                        self.assertIn('To: set.result', tooltip)
+                        self.assertIn('From: result', tooltip)
+                        self.assertIn('To: value', tooltip)
+                        self.assertEqual(tooltip.splitlines()[0], 'divide -> set.result')
                     else:
                         self.assertIsNotNone(edge.find('{*}text'))
-                        self.assertIn(' → ', edge.find('{*}title').text)
+                        self.assertIn(' -> ', edge.find('{*}title').text)
 
     def test_edge_output_type_comes_from_producing_pin_and_chain_step(self):
         templates = {'double': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'},
@@ -378,14 +400,18 @@ class GraphRenderingTests(unittest.TestCase):
         self.assertEqual(edge_output_type(group, 'result', templates), 'bool')
         self.assertIsNone(edge_output_type(group, 'missing', templates))
         self.assertIsNone(edge_output_type(group, 'Step 9: result', templates))
-        document = {'schema': 2, 'nodes': [first, {'id': 'sink', 'kind': 'branch'}],
+        sink = {'id': 'sink', 'kind': 'branch', 'pins': {'in:value': {'type': 'bool', 'name': 'Condition'}}}
+        self.assertEqual(edge_pin_details(dict(last, _foldedNodes=[sink, last]), 'Step 1: value', 'in', templates),
+                         ('sink', 'Condition', 'bool'))
+        document = {'schema': 2, 'nodes': [first, sink],
                     'pinTemplates': templates, 'links': [{'from': 'first.out:result', 'to': 'sink.in:value'}]}
         for view in ('simplified', 'full'):
             edge = ET.fromstring(render(document, view=view)[0]).find('.//{*}g[@class="graph-edge"]')
-            self.assertIn('Output: result (double)', edge.find('{*}title').text)
+            self.assertEqual(edge.find('{*}title').text,
+                             'first -> sink\nFrom: result (double)\nTo: Condition (bool)')
         document['pinTemplates'] = {}
         edge = ET.fromstring(render(document)[0]).find('.//{*}g[@class="graph-edge"]')
-        self.assertEqual(edge.find('{*}title').text.splitlines()[0], 'Output: result')
+        self.assertEqual(edge.find('{*}title').text.splitlines()[1], 'From: result')
 
     def test_terminal_execution_output_is_quiet_but_data_and_branch_outputs_remain(self):
         templates = {'exec': {'PinType.PinCategory': '"exec"'}, 'bool': {'PinType.PinCategory': '"bool"'}}

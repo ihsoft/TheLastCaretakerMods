@@ -44,11 +44,13 @@ function layoutRows(data, columns) {
     const portKey=(i,input)=>{const e=data.edges[i];return [Number(e[4]),...pinOrder(e[input?3:1]),e[input?0:2],e[input?1:3],i]};
     for(const indices of outgoing.values())indices.sort((a,b)=>compareKeys(portKey(a,false),portKey(b,false)));
     for(const indices of incoming.values())indices.sort((a,b)=>compareKeys(portKey(a,true),portKey(b,true)));
+    const outputPorts=new Map([...outgoing].map(([id,indices])=>[id,[...new Set(indices.map(i=>data.edges[i][1]))]]));
     const edges=data.edges.map((e,i)=>{
         const [source,output,target,,execution]=e,a=boxes.get(source),b=boxes.get(target);
-        const outs=outgoing.get(source),ins=incoming.get(target);
-        const sx=horizontal?a.x+a.w:a.x+a.w*(outs.indexOf(i)+1)/(outs.length+1),
-              sy=horizontal?a.y+a.h*(outs.indexOf(i)+1)/(outs.length+1):a.y+a.h;
+        const outs=outputPorts.get(source),ins=incoming.get(target);
+        const sourceFraction=(outs.indexOf(output)+1)/(outs.length+1);
+        const sx=horizontal?a.x+a.w:a.x+a.w*sourceFraction,
+              sy=horizontal?a.y+a.h*sourceFraction:a.y+a.h;
         const ex=horizontal?b.x:b.x+b.w*(ins.indexOf(i)+1)/(ins.length+1),
               ey=horizontal?b.y+b.h*(ins.indexOf(i)+1)/(ins.length+1):b.y;
         const bend=Math.max(35,(ey-sy)/2);

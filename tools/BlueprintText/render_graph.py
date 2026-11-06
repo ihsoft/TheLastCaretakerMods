@@ -424,6 +424,10 @@ def output_lines(node, pin_templates, connected=()):
         return []  # Schema 1 has no complete signature; do not infer a return type.
     lines = []
     show_signature = node.get('kind') in ('call', 'getVariable', 'variableGet')
+    properties = node.get('properties', {})
+    graph_entry = node.get('kind') == 'FunctionEntry' or (
+        node.get('kind') == 'Tunnel' and properties.get('bCanHaveOutputs') == 'True'
+        and properties.get('bCanHaveInputs') != 'True')
     for alias, pin in node["pins"].items():
         if not alias.startswith("out:"):
             continue
@@ -431,6 +435,11 @@ def output_lines(node, pin_templates, connected=()):
         if native_string(metadata.get("PinType.PinCategory", '""')) == "exec" or metadata.get('bHidden') == 'True':
             continue
         name = pin.get("name", alias[4:])
+        if graph_entry:
+            # These outputs are the graph's inputs; their signature stays visible
+            # even when unused or when Show unconnected is disabled.
+            lines.append(CardLine(f'Parameter: {name} ({pin_type_label(metadata)})'))
+            continue
         prefix = "Output: " if name == "ReturnValue" or alias == "out:result" or node.get('kind') in ('getVariable', 'variableGet') else "Output: " + name + " — "
         default = output_default(node, alias, pin_templates)
         if alias[4:] not in connected and default is not None:
@@ -441,20 +450,24 @@ def output_lines(node, pin_templates, connected=()):
     return lines
 
 
-def edge_output_type(node, output, pin_templates):
-    """Resolve the producing pin, including an earlier step of an action chain."""
+def edge_pin_details(node, name, direction, pin_templates):
+    """Resolve each endpoint independently, including a folded chain step."""
     if '_foldedNodes' in node:
-        match = re.fullmatch(r'Step (\d+): (.+)', output)
+        match = re.fullmatch(r'Step (\d+): (.+)', name)
         if match:
             index = int(match.group(1)) - 1
             if not 0 <= index < len(node['_foldedNodes']):
-                return None
-            node, output = node['_foldedNodes'][index], match.group(2)
-    pin = node.get('pins', {}).get('out:' + output, {})
+                return node['id'], name, None
+            node, name = node['_foldedNodes'][index], match.group(2)
+    pin = node.get('pins', {}).get(direction + ':' + name, {})
     metadata = pin_templates.get(pin.get('type'), {})
-    if not metadata.get('PinType.PinCategory'):
-        return None  # Unknown legacy signature: do not infer a type from the consumer.
-    return pin_type_label(metadata)
+    # Unknown legacy signatures stay untyped; never borrow the opposite pin's type.
+    label = pin_type_label(metadata) if metadata.get('PinType.PinCategory') else None
+    return node['id'], pin.get('name', name), label
+
+
+def edge_output_type(node, output, pin_templates):
+    return edge_pin_details(node, output, 'out', pin_templates)[2]
 
 
 def unconnected_outputs(node, connected, pin_templates):
@@ -535,6 +548,10 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
         title = "Function entry" if kind == "FunctionEntry" else "Return from function"
         if member:
             details.append("Function: " + short)
+    elif kind == "Tunnel":
+        entry = properties.get('bCanHaveOutputs') == 'True'
+        exit_node = properties.get('bCanHaveInputs') == 'True'
+        title = "Graph Entry" if entry and not exit_node else "Graph Exit" if exit_node and not entry else "Tunnel"
     else:
         title = readable_name(short)
     if kind == "call":
@@ -566,6 +583,8 @@ def description_key(line, index):
     """Match semantic fields before wrapping, independent of ordering and links."""
     if index == 0:
         return 'title'
+    if line.startswith('Parameter: '):
+        return line.rsplit(' (', 1)[0]
     if line.startswith(('Input: ', 'Output: ')) and ' = ' in line:
         return line.partition(' = ')[0]
     if line.startswith('Output: ') and ' — ' in line:
@@ -788,12 +807,16 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         indices.sort(key=lambda i: (edges[i][4], pin_order(edges[i][1]), edges[i][2], edges[i][3], i))
     for indices in incoming.values():
         indices.sort(key=lambda i: (edges[i][4], pin_order(edges[i][3]), edges[i][0], edges[i][1], i))
+    output_ports = {node_id: list(dict.fromkeys(edges[i][1] for i in indices))
+                    for node_id, indices in outgoing.items()}
     for i, (source, output, target, input_pin, execution) in enumerate(edges):
         x, y, w, h = boxes[source]
         tx, ty, tw, th = boxes[target]
         transform = ''
+        ports = output_ports[source]
+        source_fraction = (ports.index(output) + 1) / (len(ports) + 1)
         if direction == "TB":
-            sx, sy = x + w * (outgoing[source].index(i) + 1) / (len(outgoing[source]) + 1), y + h
+            sx, sy = x + w * source_fraction, y + h
             ex, ey = tx + tw * (incoming[target].index(i) + 1) / (len(incoming[target]) + 1), ty
             bend = max(35, (ey - sy) / 2)
             path = f'M{sx},{sy} C{sx},{sy+bend} {ex},{ey-bend} {ex},{ey}'
@@ -803,7 +826,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                 path = f'M{sx},{sy} C{side},{sy+40} {side},{ey-40} {ex},{ey}'
             lx, ly = (sx + ex) / 2, (sy + ey) / 2 - 7
         else:
-            sx, sy = x + w, y + h * (outgoing[source].index(i) + 1) / (len(outgoing[source]) + 1)
+            sx, sy = x + w, y + h * source_fraction
             ex, ey = tx, ty + th * (incoming[target].index(i) + 1) / (len(incoming[target]) + 1)
             bend = max(35, (ex - sx) / 2)
             path = f'M{sx},{sy} C{sx+bend},{sy} {ex-bend},{ey} {ex},{ey}'
@@ -827,11 +850,12 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         if removed_link:
             color, dash = '#b42318', ' stroke-dasharray="4 5" opacity="0.55"'
             style = 'removed'
-        tooltip = source + '.' + output + ' → ' + target + '.' + input_pin
-        if not execution:
-            output_type = edge_output_type(nodes_by_id[source], output, document.get('pinTemplates', {}))
-            typed_output = output + (f' ({output_type})' if output_type else '')
-            tooltip = f'Output: {typed_output}\nInput: {input_pin}\nFrom: {source}\nTo: {target}'
+        templates = document.get('pinTemplates', {})
+        source_id, output_name, output_type = edge_pin_details(nodes_by_id[source], output, 'out', templates)
+        target_id, input_name, input_type = edge_pin_details(nodes_by_id[target], input_pin, 'in', templates)
+        typed_output = output_name + (f' ({output_type})' if output_type else '')
+        typed_input = input_name + (f' ({input_type})' if input_type else '')
+        tooltip = f'{source_id} -> {target_id}\nFrom: {typed_output}\nTo: {typed_input}'
         if removed_link:
             tooltip = 'Removed connection (Before)\n' + tooltip
         pieces.append(f'<g class="graph-edge" data-source="{escape(source)}" data-target="{escape(target)}"><title>{escape(tooltip)}</title><path class="edge-line" d="{path}" fill="none" stroke="{color}" stroke-width="2"{dash} marker-end="url(#{marker_prefix}{style})"/>')

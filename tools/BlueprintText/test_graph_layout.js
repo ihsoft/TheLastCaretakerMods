@@ -16,6 +16,16 @@ for(const direction of ['TB','LR']){
     assert.ok(context.layoutRows(short,3).height<context.layoutRows(tall,3).height,'Reducing the extent-setting card reduces graph height');
 }
 function element(){return {attributes:{},setAttribute(k,v){this.attributes[k]=String(v)}}}
+for(const direction of ['TB','LR'])for(const columns of [1,3,6]){
+    const data={direction,nodes:['source','a','b'].map((id,i)=>({id,rank:i?1:0,w:330,h:90})),
+        edges:[['source','value','a','x',false],['source','value','b','x',false],
+               ['source','other','a','y',false],['source','then','a','exec',true],
+               ['source','then','b','exec',true],['source','else','b','exec',true]]};
+    const paths=context.layoutRows(data,columns).edges.map(e=>e.path.split(' C')[0]);
+    assert.equal(paths[0],paths[1],'Fan-out from one data pin shares its origin');
+    assert.equal(paths[3],paths[4],'Fan-out from one execution pin shares its origin');
+    assert.equal(new Set([paths[0],paths[2],paths[3],paths[5]]).size,4,'Distinct pins keep separate origins');
+}
 const branches={nodes:[['root',0],['aRight',1],['zLeft',1],['aChild',2],['zChild',2]].map(([id,rank])=>({id,rank,kind:id==='root'?'branch':'call',w:330,h:70})),
     edges:[['root','then','zLeft','exec',true],['root','else','aRight','exec',true],
            ['zLeft','then','aChild','exec',true],['aRight','then','zChild','exec',true],

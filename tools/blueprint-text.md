@@ -508,6 +508,8 @@ at the top of the graph; shared values remain single nodes. Cycles move together
 Edges curve directly between ports; joins, cycles and wrapped
 rows can still cross. Incoming and outgoing ports place data left of execution
 in vertical views (above execution in horizontal views), with stable pin order.
+Links from the same output pin share one source point; distinct output pins
+keep separate points, including after browser layout changes.
 
 In HTML, click a node to highlight its incoming/outgoing links and immediate
 neighbors; unrelated elements dim and link colours retain their meaning.
@@ -517,7 +519,8 @@ links participate; use Full to include hidden technical nodes.
 
 **Show unconnected** controls unconnected output descriptions on every node,
 including execution branches, data types and output defaults, also inside folded
-steps. Connected outputs and input defaults remain visible. Toggling it resizes
+steps. Connected outputs, input defaults and graph-entry parameter signatures
+remain visible. Toggling it resizes
 cards and reroutes links in both directions. A selected node is centered with
 the current zoom retained; without a selection the view resets and fits its width.
 
@@ -550,6 +553,10 @@ samples: blue entries/events, amber execution steps, grey data/other nodes;
 solid amber execution links and dashed blue data links.
 `Branch:` identifies execution outputs; `Output:` identifies data outputs.
 Nodes without data outputs do not receive an extra placeholder label.
+Collapsed graph tunnels are labelled `Graph Entry` and `Graph Exit` from their
+declared direction. Graph and function entries list visible data parameters as
+`Parameter: name (type)`, including unused parameters. These are signatures,
+not runtime values inferred from stored output defaults.
 Display titles split identifiers into readable words and wrap at word boundaries;
 continued titles retain their heading style. Original identifiers remain in details.
 Stored defaults on unconnected output pins are labelled `Output: name = value
@@ -558,8 +565,10 @@ defaults are omitted. The copy icon
 copies the original node ID, or all IDs in a folded chain. The info icon opens
 selectable source details below the node; the panel also offers copy controls.
 
-Hover anywhere along an edge for its endpoints, pin names and known source
-output type. Click for immediate selectable details. Every connected execution
+Hover anywhere along an edge for `source node ID -> target node ID`, followed by
+`From: pin (type)` and `To: pin (type)`. Each type comes from its own endpoint;
+missing types are omitted, and folded steps resolve to their original endpoints.
+Click for immediate selectable details. Every connected execution
 output has a permanent label near its source; data labels stay in tooltips.
 For Branch choices, `then` is left of `else` in vertical
 view (above it in horizontal view). Unknown types are not guessed. These are
