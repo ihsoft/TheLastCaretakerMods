@@ -553,6 +553,10 @@ samples: blue entries/events, amber execution steps, grey data/other nodes;
 solid amber execution links and dashed blue data links.
 `Branch:` identifies execution outputs; `Output:` identifies data outputs.
 Nodes without data outputs do not receive an extra placeholder label.
+Unconnected text inputs show the stored source text from `DefaultTextValue`
+(`NSLOCTEXT`, `LOCTEXT`, or `INVTEXT`), without resolving runtime translations.
+Unknown text expressions remain visible verbatim; ignored defaults are omitted.
+Details retains the complete original localization expression.
 `Break Struct` names its declared structure and lists visible output fields as
 `Field: name (type)`. Connected fields remain visible; unused fields follow
 **Show unconnected**. These labels describe extracted fields, not stored values.

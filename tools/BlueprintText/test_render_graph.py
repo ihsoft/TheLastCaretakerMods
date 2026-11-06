@@ -15,6 +15,54 @@ ROOT = Path(__file__).resolve().parent
 
 
 class GraphRenderingTests(unittest.TestCase):
+    def test_text_pin_defaults_show_source_text_without_changing_localization(self):
+        examples = [
+            ('NSLOCTEXT("", "key", "Сбросить наклон")', 'Сбросить наклон'),
+            ('LOCTEXT("key", "Reset pitch")', 'Reset pitch'),
+            ('INVTEXT("comma, (brackets), \\"quote\\" and \\nline")', 'comma, (brackets), "quote" and \nline'),
+            ('NSLOCTEXT("ns", "key", "")', ''),
+            ('"Plain text"', 'Plain text'),
+            ('', ''),
+            ('LOCTABLE("Table", "Key")', 'LOCTABLE("Table", "Key")'),
+            ('NSLOCTEXT("broken")', 'NSLOCTEXT("broken")'),
+            ('INVTEXT("unterminated)', 'INVTEXT("unterminated)'),
+        ]
+        for raw, expected in examples:
+            with self.subTest(raw=raw):
+                node = {'id': 'select', 'kind': 'call', 'operation': 'SelectText',
+                        'pins': {'in:A': {'DefaultTextValue': raw}}}
+                original = copy.deepcopy(node)
+                lines = node_lines(node, set(), wrap=False)
+                self.assertIn('Input: A = ' + json.dumps(expected, ensure_ascii=False), lines)
+                for view in ('full', 'simplified'):
+                    svg = ET.fromstring(render({'schema': 2, 'nodes': [node], 'links': []}, view=view)[0])
+                    details = json.loads(svg.find('.//{*}g[@data-node-id="select"]/{*}title').text)
+                    self.assertEqual(details['pins']['in:A']['DefaultTextValue'], raw)
+                self.assertEqual(node, original)
+
+    def test_text_defaults_respect_connected_and_ignored_inputs(self):
+        node = {'id': 'select', 'kind': 'call', 'operation': 'SelectText',
+                'defaults': {'in:A': 'obsolete scalar'},
+                'pins': {'in:A': {'DefaultTextValue': 'INVTEXT("Visible")'},
+                         'in:B': {'DefaultTextValue': 'INVTEXT("Connected")'},
+                         'in:C': {'type': 'ignored', 'DefaultTextValue': 'INVTEXT("Ignored")'},
+                         'out:result': {'DefaultTextValue': 'INVTEXT("Not an input")'}}}
+        lines = node_lines(node, {'B'}, pin_templates={'ignored': {'bDefaultValueIsIgnored': 'True'}}, wrap=False)
+        self.assertEqual([line for line in lines if line.startswith('Input:')], ['Input: A = "Visible"'])
+
+    def test_localized_input_review_marks_only_changed_text(self):
+        old = {'schema': 2, 'nodes': [{'id': 'select', 'kind': 'call', 'operation': 'SelectText',
+                'pins': {'in:A': {'DefaultTextValue': 'NSLOCTEXT("ns", "a", "Old")'},
+                         'in:B': {'DefaultTextValue': 'NSLOCTEXT("ns", "b", "Same")'}}}], 'links': []}
+        new = copy.deepcopy(old)
+        new['nodes'][0]['pins']['in:A']['DefaultTextValue'] = 'NSLOCTEXT("ns", "a", "New")'
+        for view in ('full', 'simplified'):
+            svg = ET.fromstring(render(new, view=view, review={'changed': ['select']}, before=old)[0])
+            rows = svg.find('.//{*}g[@data-node-id="select"]').findall('{*}text')
+            self.assertEqual([row.text for row in rows if row.get('class') == 'review-changed-line'],
+                             ['Input: A = "New"'])
+            self.assertIn('Input: B = "Same"', [row.text for row in rows])
+
     def test_entry_parameter_review_marks_only_the_changed_parameter(self):
         old = {'schema': 2, 'pinTemplates': {'int': {'PinType.PinCategory': '"int"'},
                                             'bool': {'PinType.PinCategory': '"bool"'}},

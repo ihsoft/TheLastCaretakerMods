@@ -17,6 +17,7 @@ from function_labels import lookup as lookup_function_label
 from review_details import render_details
 from preview_references import node_references, package as reference_package, label as reference_label
 from graph_hierarchy import select_graph, graph_key
+from asset_text_codec import split_fields
 
 
 def escape(value):
@@ -219,6 +220,28 @@ def layers(nodes, edges, templates=None):
 
 def native_string(value):
     return json.loads(value) if value.startswith('"') else value
+
+
+def text_literal(value):
+    """Display stored FText source text; retain unsupported expressions verbatim."""
+    if not isinstance(value, str):
+        return value
+    expression = value.strip()
+    match = re.fullmatch(r'(NSLOCTEXT|LOCTEXT|INVTEXT)\((.*)\)', expression, re.DOTALL)
+    try:
+        if match:
+            fields = split_fields(match[2])
+            if len(fields) == {'NSLOCTEXT': 3, 'LOCTEXT': 2, 'INVTEXT': 1}[match[1]]:
+                strings = [json.loads(field) for field in fields]
+                if all(isinstance(item, str) for item in strings):
+                    return strings[-1]
+        elif expression.startswith('"'):
+            decoded = json.loads(expression)
+            if isinstance(decoded, str):
+                return decoded
+    except ValueError:
+        pass  # Unknown native syntax must remain visible, not disappear.
+    return value
 
 
 def pin_category(node, alias, templates):
@@ -565,7 +588,10 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
     # All IDs remain in the tooltip and link identity, not the visible node label.
     lines = [title] + details
     lines.extend('Input: ' + hint for hint in hidden_inputs)
-    values = node.get("arguments", node.get("defaults", {}))
+    values = dict(node.get("arguments", node.get("defaults", {})))
+    for alias, pin in node.get('pins', {}).items():
+        if alias.startswith('in:') and 'DefaultTextValue' in pin:
+            values[alias] = text_literal(pin['DefaultTextValue'])
     for key, value in sorted(values.items()):
         metadata = (pin_templates or {}).get(node.get("pins", {}).get(key, {}).get("type"), {})
         if key.startswith("out:") or key.removeprefix("in:") in connected_inputs or metadata.get("bDefaultValueIsIgnored") == "True":
