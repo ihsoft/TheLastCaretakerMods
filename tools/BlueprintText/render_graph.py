@@ -440,6 +440,9 @@ def output_lines(node, pin_templates, connected=()):
             # even when unused or when Show unconnected is disabled.
             lines.append(CardLine(f'Parameter: {name} ({pin_type_label(metadata)})'))
             continue
+        if node.get('kind') == 'BreakStruct':
+            lines.append(CardLine(f'Field: {name} ({pin_type_label(metadata)})', alias[4:] not in connected))
+            continue
         prefix = "Output: " if name == "ReturnValue" or alias == "out:result" or node.get('kind') in ('getVariable', 'variableGet') else "Output: " + name + " — "
         default = output_default(node, alias, pin_templates)
         if alias[4:] not in connected and default is not None:
@@ -529,6 +532,8 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
         title = f"Sequence · {outputs} outputs"
     elif kind == "branch":
         title = "Branch"
+    elif kind == "BreakStruct":
+        title = "Break " + readable_name(object_label(properties['StructType'])) if properties.get('StructType') else "Break Struct"
     elif kind in ("cast", "DynamicCast"):
         title = "Cast to " + object_label(properties.get("TargetType", '"unknown type"'))
         details.append("Check type; return typed reference")
@@ -583,7 +588,7 @@ def description_key(line, index):
     """Match semantic fields before wrapping, independent of ordering and links."""
     if index == 0:
         return 'title'
-    if line.startswith('Parameter: '):
+    if line.startswith(('Parameter: ', 'Field: ')):
         return line.rsplit(' (', 1)[0]
     if line.startswith(('Input: ', 'Output: ')) and ' = ' in line:
         return line.partition(' = ')[0]

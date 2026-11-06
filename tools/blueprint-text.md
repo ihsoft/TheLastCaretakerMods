@@ -553,6 +553,9 @@ samples: blue entries/events, amber execution steps, grey data/other nodes;
 solid amber execution links and dashed blue data links.
 `Branch:` identifies execution outputs; `Output:` identifies data outputs.
 Nodes without data outputs do not receive an extra placeholder label.
+`Break Struct` names its declared structure and lists visible output fields as
+`Field: name (type)`. Connected fields remain visible; unused fields follow
+**Show unconnected**. These labels describe extracted fields, not stored values.
 Collapsed graph tunnels are labelled `Graph Entry` and `Graph Exit` from their
 declared direction. Graph and function entries list visible data parameters as
 `Parameter: name (type)`, including unused parameters. These are signatures,
