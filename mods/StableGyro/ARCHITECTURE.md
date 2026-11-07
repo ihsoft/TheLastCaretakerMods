@@ -37,6 +37,33 @@ the game's implementations or shaders. Preview displays them in its supporting
 inventory and at reference use sites. Their presence does not make them release
 assets; runtime references resolve to the game originals.
 
+## Graph organization
+
+The gameplay Blueprints retain their state and tick responsibilities. Local
+collapsed graphs separate coordinating flow from calculations and side effects;
+functions hold repeated complete operations. The shared
+[graph design rule](../../docs/blueprint-graph-design-rule.md) owns the general
+editing principles.
+
+| Blueprint | Coordinating flow and implementation boundaries |
+| --- | --- |
+| `ModActor` | EventGraph retains control, propulsion and contact gates, then runs horizontal control before altitude control. Nested stages separate input intent, damping, acquisition, climb tracking, braking and swept hold. Shared full resets remain distinct from vertical-only resets. |
+| `PitchInputActor` | PrePhysics retains assistance ownership and descent-cap updates before pitch processing. Eligibility, capture and application have separate local graphs; native flag restoration is shared. |
+| `BP_GyroCopter_StablePilot` | Construction coordinates mesh caching, rear sockets, plate creation and stock-part layout. EventGraph coordinates cargo setup, controller binding, press/hold processing and disabled-port cleanup. Provided actions retain the parent result and append the enabled mod actions. |
+
+Native-assistance eligibility and held-descent-cap eligibility are intentionally
+separate: the cap does not inherit the minimum Collective or neutral-input
+requirements. Their calculations stay in the original tick phase. Physics reads,
+additive writes and sample updates retain their ordering; decomposition does not
+introduce a shared cached eligibility result.
+
+`ResetCargoPressState` owns the common release, cancellation and controller-change
+reset. `CleanupDisabledMooringSocket` owns per-socket cleanup while its caller
+keeps the queued guard across both socket calls. `RefreshCargoAvailability` scans
+the sockets before appending the action and retains the enclosing action-provider
+local variable. The inherited action array crosses collapsed boundaries by
+reference.
+
 ## Release preparation
 
 `Build-StableGyro.ps1` is the public producer. It validates the settings and
@@ -227,6 +254,16 @@ Nanite with all input triangles retained, zero trim error, position precision
 fallback supplies the ray-tracing proxy. This reduces that representation's
 geometry budget without reducing the full-detail Nanite input.
 The inherited paired plate is hidden only in four-port mode.
+
+The four decorative components share one `StableGyroMooringPlate` template for
+common material and collision settings. `CreateMooringPlates` calls
+`CreateMooringPlate` four times with the required mesh half and location. The
+function creates the component, assigns its mesh, attaches it to `VehicleMesh`
+and finishes deferred creation. Its callers do not gate later plates on a
+completion flag; failure of the internal cast ends that invocation. Decorative
+instance names are generated uniquely from the common template. The two rear
+socket templates remain separate with their stable endpoint names and SocketIDs.
+Cook validation requires exactly those two socket templates and the shared plate.
 
 Replacement keeps package identities and Blueprint references, with backup and
 copy verification; it does not merge previous LOD, collision or socket data.

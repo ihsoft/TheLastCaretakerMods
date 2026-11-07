@@ -1,5 +1,5 @@
-# INTERNAL BUILD STAGE. Validates that the six runtime-created mooring component
-# templates survived cook outside the unconditional SCS node list. It performs
+# INTERNAL BUILD STAGE. Validates that the two socket templates and one shared plate
+# template survived cook outside the unconditional SCS node list. It performs
 # a byte-identical writer roundtrip but does not patch the staged package.
 [CmdletBinding()]
 param(
@@ -18,10 +18,7 @@ Set-StrictMode -Version Latest
 $targetNames = @(
     'StableGyroMooringSocketRearLeft',
     'StableGyroMooringSocketRearRight',
-    'StableGyroMooringPlateFrontPositiveY',
-    'StableGyroMooringPlateFrontNegativeY',
-    'StableGyroMooringPlateRearPositiveY',
-    'StableGyroMooringPlateRearNegativeY'
+    'StableGyroMooringPlate'
 )
 
 function Get-Sha256([string]$Path) {
@@ -251,7 +248,7 @@ try {
     })
     if ($componentTemplateProperties.Count -ne 1 -or
         @($componentTemplateProperties[0].Value).Count -ne $targetNames.Count) {
-        throw 'Generated class does not reference exactly six component templates.'
+        throw "Generated class does not reference exactly $($targetNames.Count) component templates."
     }
     $templateReferenceNames = @($componentTemplateProperties[0].Value | ForEach-Object {
         $packageIndex = [int]$_.Value
@@ -263,7 +260,7 @@ try {
     $actualTemplateNames = @($templateReferenceNames | ForEach-Object { [string]$_ } | Sort-Object)
     $expectedTemplateNames = @($targetNames | ForEach-Object { [string]$_ } | Sort-Object)
     if (($actualTemplateNames -join "`n") -cne ($expectedTemplateNames -join "`n")) {
-        throw "Generated class component-template references differ from the exact six mooring templates: $($templateReferenceNames -join ', ')."
+        throw "Generated class component-template references differ from the two sockets and shared plate: $($templateReferenceNames -join ', ')."
     }
 
     $templateSummaries = [ordered]@{}

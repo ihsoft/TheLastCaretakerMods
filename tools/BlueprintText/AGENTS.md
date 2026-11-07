@@ -2,6 +2,9 @@
 
 For new and existing mods, start with the [workspace workflow](../blueprint-workspace.md).
 The [format guide](../blueprint-text.md) owns lower-level interfaces.
+Follow the [graph design rule](../../docs/blueprint-graph-design-rule.md) when
+authoring or simplifying graphs: separate coordinating flow from complete
+operations while preserving execution and data-evaluation boundaries.
 The [INI parser library](Library/IniFileParser/AGENTS.md) owns reusable parser
 integration, its public getters, format, and focused validation.
 BlueprintText is the recommended Blueprint authoring workflow. Packaging and
