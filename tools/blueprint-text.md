@@ -548,14 +548,25 @@ A sole unused execution output is treated as a terminal path; unused alternative
 remain visible.
 
 **Expressions** is a presentation mode, not another editable format. It folds
-recognized pure scalar arithmetic, comparisons, boolean operations, select and
-min/max calls into bounded formula cards. Native function identity and pin types
+recognized pure scalar arithmetic, comparisons, boolean operations, select,
+min/max and supported Vector calls into bounded formula cards. Native function identity and pin types
 must match; unsupported operations and incomplete signatures stay as nodes.
 Variable reads, shared results and graph boundaries remain separate. Operand
 order, parentheses, select alternatives and numeric conversions are preserved;
 the viewer does not evaluate or algebraically simplify formulas. Different review
 statuses do not merge, and removed connections remain explicit. Use Full or
 Details to inspect the original nodes, pins and links; edit the BPT graph normally.
+
+Vector formulas support `Vector(x, y, z)`, `dot(a, b)`, vector select,
+addition/subtraction and vector-times-number multiplication. `VInterpTo_Constant`
+remains a named call with labelled current/target/time/speed arguments; its
+interpolation algorithm is not expanded. Only the native `CoreUObject.Vector`
+type is recognized, not arbitrary structs or containers. Vector defaults require
+three explicit numeric components; unsupported representations remain as nodes.
+A `MakeVector` whose components are numeric defaults and have no incoming links
+can be repeated as a literal in each consuming expression. Its source node and
+links remain in Details. A consumer outside the supported expressions keeps the
+constructor card; computed shared vectors are never duplicated this way.
 
 Expression cards list typed inputs before `Output (type): formula`, separated by
 a small vertical gap. Known names are retained; anonymous inputs use local

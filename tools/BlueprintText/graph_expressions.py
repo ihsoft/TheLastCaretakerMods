@@ -1,4 +1,4 @@
-"""Bounded, presentation-only scalar expressions; source nodes stay in Details."""
+"""Bounded, presentation-only expressions; source nodes stay in Details."""
 import json
 import re
 from collections import Counter, defaultdict, deque
@@ -20,6 +20,20 @@ OPERATIONS['Not_PreBool'] = ('NOT', ('A',), ('bool',), 'bool')
 OPERATIONS['SelectFloat'] = ('select', ('bPickA', 'A', 'B'), ('bool', 'double', 'double'), 'double')
 OPERATIONS['FMin'] = ('min', ('A', 'B'), ('double', 'double'), 'double')
 OPERATIONS['FMax'] = ('max', ('A', 'B'), ('double', 'double'), 'double')
+OPERATIONS['MakeVector'] = ('Vector', ('X', 'Y', 'Z'), ('double',) * 3, 'Vector')
+OPERATIONS['SelectVector'] = ('select', ('bPickA', 'A', 'B'), ('bool', 'Vector', 'Vector'), 'Vector')
+OPERATIONS['Dot_VectorVector'] = ('dot', ('A', 'B'), ('Vector', 'Vector'), 'double')
+OPERATIONS['Add_VectorVector'] = ('+', ('A', 'B'), ('Vector', 'Vector'), 'Vector')
+OPERATIONS['Subtract_VectorVector'] = ('-', ('A', 'B'), ('Vector', 'Vector'), 'Vector')
+OPERATIONS['Multiply_VectorFloat'] = ('*', ('A', 'B'), ('Vector', 'double'), 'Vector')
+OPERATIONS['VInterpTo_Constant'] = ('VInterpTo_Constant', ('Current', 'Target', 'DeltaTime', 'InterpSpeed'),
+                                    ('Vector', 'Vector', 'float', 'float'), 'Vector')
+
+VECTOR_TYPE = '"/Script/CoreUObject.ScriptStruct\'/Script/CoreUObject.Vector\'"'
+NUMBER = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+CALL_OPERATORS = ('select', 'min', 'max', 'float', 'double', 'Vector', 'dot', 'NOT', 'VInterpTo_Constant')
+ARGUMENT_LABELS = {'select': ('', 'true: ', 'false: '),
+                   'VInterpTo_Constant': ('current: ', 'target: ', 'deltaTime: ', 'interpSpeed: ')}
 
 
 def unquote(value):
@@ -33,12 +47,14 @@ def member(node, field):
         return {}
 
 
-def scalar_type(pin, templates):
+def expression_type(pin, templates):
     metadata = templates.get(pin.get('type'), {})
     category = unquote(metadata.get('PinType.PinCategory', '""'))
     if (metadata.get('PinType.ContainerType', 'None') != 'None'
             or metadata.get('PinType.bIsReference', 'False') != 'False'):
         return None
+    if category == 'struct':
+        return 'Vector' if metadata.get('PinType.PinSubCategoryObject') == VECTOR_TYPE else None
     return unquote(metadata.get('PinType.PinSubCategory', '""')) if category == 'real' else category
 
 
@@ -67,9 +83,9 @@ def describe(node, templates):
     symbol, names, types, result = operation
     if set(inputs) != set(names) or len(outputs) != 1:
         return None
-    if any(scalar_type(node['pins'][inputs[n]], templates) != t for n, t in zip(names, types)):
+    if any(expression_type(node['pins'][inputs[n]], templates) != t for n, t in zip(names, types)):
         return None
-    if scalar_type(node['pins'][outputs[0]], templates) != result:
+    if expression_type(node['pins'][outputs[0]], templates) != result:
         return None
     return symbol, [inputs[n] for n in names], outputs[0], types
 
@@ -83,15 +99,20 @@ def literal(node, alias, kind, templates):
         return None
     if kind == 'bool':
         return value if value in ('true', 'false') else None
-    if re.fullmatch(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?', value):
+    if kind == 'Vector':
+        parts = [part.strip() for part in value.split(',')]
+        if len(parts) == 3 and all(re.fullmatch(NUMBER, part) for part in parts):
+            return {'op': 'Vector', 'args': parts}
+        return None  # Do not reconstruct missing components or guess other struct syntax.
+    if kind in ('float', 'double') and re.fullmatch(NUMBER, value):
         return value
     return None
 
 
 def formula(symbol, args):
-    if symbol == 'select':
-        return 'select(' + args[0] + ', true: ' + args[1] + ', false: ' + args[2] + ')'
-    if symbol in ('min', 'max'):
+    if symbol in ARGUMENT_LABELS:
+        return symbol + '(' + ', '.join(label + arg for label, arg in zip(ARGUMENT_LABELS[symbol], args)) + ')'
+    if symbol in ('min', 'max', 'Vector', 'dot'):
         return symbol + '(' + ', '.join(args) + ')'
     if symbol in ('float', 'double'):
         return symbol + '(' + args[0] + ')'
@@ -117,9 +138,9 @@ def format_expression(tree, width=60, label='Output:'):
         if len(single) <= width or isinstance(node, str):
             return [single]
         op, args = node['op'], node['args']
-        if op in ('select', 'min', 'max', 'float', 'double', 'NOT'):
+        if op in CALL_OPERATORS:
             lines = [pad + prefix + ('NOT ' if op == 'NOT' else op) + '(']
-            labels = ('', 'true: ', 'false: ') if op == 'select' else ('',) * len(args)
+            labels = ARGUMENT_LABELS.get(op, ('',) * len(args))
             for i, (arg, arg_label) in enumerate(zip(args, labels)):
                 comma = ',' if i < len(args) - 1 else ''
                 compact = arg_label + flat_expression(arg) + comma
@@ -171,7 +192,7 @@ def fold_expressions(nodes, edges, original_edges, templates, children=None, rem
             if alias not in wired:
                 continue
             source, output = wired[alias][0][:2]
-            actual = scalar_type(by_id.get(source, {}).get('pins', {}).get('out:' + output, {}), templates)
+            actual = expression_type(by_id.get(source, {}).get('pins', {}).get('out:' + output, {}), templates)
             if actual != kind and {actual, kind} != {'float', 'double'}:
                 compatible = False
         if not compatible:
@@ -190,6 +211,11 @@ def fold_expressions(nodes, edges, original_edges, templates, children=None, rem
                 if not indegree[e[2]]:
                     ready.append(e[2])
     specs = {nid: specs[nid] for nid in order}
+    # A literal constructor has no live reads. It may be repeated in formulas,
+    # unlike a shared computed vector. Preserve its original node in Details.
+    constant_vectors = {nid: {'op': 'Vector', 'args': [literal(by_id[nid], alias, kind, templates)
+                        for alias, kind in zip(spec[1], spec[3])]}
+                        for nid, spec in specs.items() if spec[0] == 'Vector' and not incoming[nid]}
     symbols, counts, anonymous = {}, Counter(), set()
     for index, node in enumerate(nodes, 1):
         for alias, pin in node.get('pins', {}).items():
@@ -223,11 +249,11 @@ def fold_expressions(nodes, edges, original_edges, templates, children=None, rem
     for endpoint, name in list(symbols.items()):
         if counts[name] > 1:
             symbols[endpoint] = name + '_' + endpoint[0]
-    assigned, replacements, remap = set(), {}, {}
+    assigned, replacements, remap, inlined_links = set(), {}, {}, set()
 
     def build(nid, allow):
         symbol, aliases, output, types = specs[nid]
-        args, members, inputs = [], [nid], {}
+        args, members, inputs, constants = [], [nid], {}, {}
         for alias, kind in zip(aliases, types):
             wire = [e for e in incoming[nid] if e[3] == alias[3:]]
             if not wire:
@@ -235,33 +261,42 @@ def fold_expressions(nodes, edges, original_edges, templates, children=None, rem
                 continue
             edge = wire[0]
             source, out = edge[:2]
+            if (source in constant_vectors
+                    and by_id[source].get('_reviewStatus') == by_id[nid].get('_reviewStatus')
+                    and (source in constants or allow > len(members) + len(constants))):
+                args.append(constant_vectors[source])
+                constants[source] = by_id[source]
+                continue
             expanded = None
             if (source in specs and source not in assigned and len(outgoing[source]) == 1
                     and by_id[source].get('_reviewStatus') == by_id[nid].get('_reviewStatus')
-                    and allow - len(members) > 0):
-                candidate = build(source, allow - len(members))
+                    and allow - len(members) - len(constants) > 0):
+                candidate = build(source, allow - len(members) - len(constants))
                 if len(flat_expression(candidate[0])) + sum(len(flat_expression(a)) for a in args) < max_chars:
                     expanded = candidate
             if expanded:
-                expression, parts, leaves = expanded
-                args.append(expression); members.extend(parts); inputs.update(leaves)
+                expression, parts, leaves, literals = expanded
+                args.append(expression); members.extend(parts); inputs.update(leaves); constants.update(literals)
             else:
                 name = symbols.get((source, out), source + '.' + out)
                 args.append(name)
                 pin = by_id.get(source, {}).get('pins', {}).get('out:' + out, {})
                 inputs[source, out] = dict(name=name, source=source, pin=out, type=pin.get('type'))
             source_pin = by_id[source]['pins']['out:' + out]
-            if scalar_type(source_pin, templates) != kind:
+            if expression_type(source_pin, templates) != kind:
                 args[-1] = {'op': kind, 'args': [args[-1]]}
         expression = {'op': symbol, 'args': args}
         if len(flat_expression(expression)) > max_chars and len(members) > 1:
             return build(nid, 1)
-        return expression, members, inputs
+        return expression, members, inputs, constants
 
     for nid in reversed(order):
         if nid in assigned:
             continue
-        expression, members, inputs = build(nid, max_nodes)
+        if nid in constant_vectors and outgoing[nid] and all(e in inlined_links for e in outgoing[nid]):
+            assigned.add(nid)
+            continue
+        expression, members, inputs, constants = build(nid, max_nodes)
         # Fallback aliases belong to this expression's boundary, not graph order.
         # Rename leaves structurally, so value1 never rewrites value10 or a literal.
         reserved = {p['name'] for endpoint, p in inputs.items() if endpoint not in anonymous}
@@ -283,24 +318,28 @@ def fold_expressions(nodes, edges, original_edges, templates, children=None, rem
             return dict(tree, args=[rename_leaves(arg) for arg in tree['args']])
 
         expression = rename_leaves(expression)
-        parts = [by_id[x] for x in members]
-        group = set(members)
+        parts = [by_id[x] for x in members] + list(constants.values())
+        group = set(members) | constants.keys()
+        inlined_links.update(e for e in original_edges if e[0] in constants and e[2] in members)
         replacement = dict(by_id[nid], _formula=flat_expression(expression), _formulaTree=expression,
                            _formulaInputs=list(inputs.values()),
                            _formulaResult=symbols[nid, specs[nid][2][4:]], _foldedNodes=parts,
                            _foldedLinks=[e for e in original_edges if e[0] in group and e[2] in group],
-                           _boundaryLinks=[e for e in original_edges if (e[0] in group) != (e[2] in group)])
+                           _boundaryLinks=[e for e in original_edges if (e[0] in group) != (e[2] in group)
+                                           and e[0] not in constants])
         if replacement.get('_reviewStatus'):
             replacement['_reviewDetails'] = {'Status': replacement['_reviewStatus']}
             for version in ('Before', 'After'):
                 snapshots = {n['id']: n.get('_reviewDetails', {}).get(version) for n in parts}
                 replacement['_reviewDetails'][version] = {'Nodes': snapshots} if any(snapshots.values()) else None
         replacements[nid] = replacement
-        assigned.update(group)
-        for i, part in enumerate(parts, 1):
-            remap[part['id']] = nid, i
+        assigned.update(members)
+        for i, part in enumerate(members, 1):
+            remap[part] = nid, i
     result_edges, input_groups = [], {}
     for source, output, target, pin, execution in edges:
+        if (source, output, target, pin, execution) in inlined_links:
+            continue
         new_source = remap.get(source, (source, 0))[0]
         new_target, step = remap.get(target, (target, 0))
         if new_source == new_target and source != target:

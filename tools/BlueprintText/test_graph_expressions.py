@@ -14,6 +14,8 @@ from render_graph import load_graph, render, edge_pin_details
 
 TYPES = {'double': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'},
          'float': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"float"'},
+         'Vector': {'PinType.PinCategory': '"struct"',
+                    'PinType.PinSubCategoryObject': '"/Script/CoreUObject.ScriptStruct\'/Script/CoreUObject.Vector\'"'},
          'bool': {'PinType.PinCategory': '"bool"'}, 'exec': {'PinType.PinCategory': '"exec"'}}
 
 
@@ -54,6 +56,120 @@ def visible_text(element):
 
 
 class ExpressionTests(unittest.TestCase):
+    def test_vector_operations_preserve_types_operand_order_and_literals(self):
+        cases = [
+            ('MakeVector', [('X','double'),('Y','double'),('Z','double')], 'Vector',
+             {'in:X':'0.0','in:Y':'-2','in:Z':'3e-1'}, 'Vector(0.0, -2, 3e-1)'),
+            ('SelectVector', [('A','Vector'),('B','Vector'),('bPickA','bool')], 'Vector',
+             {'in:A':'1, 2, 3','in:B':'-4, 5, 6','in:bPickA':'true'},
+             'select(true, true: Vector(1, 2, 3), false: Vector(-4, 5, 6))'),
+            ('Dot_VectorVector', [('A','Vector'),('B','Vector')], 'double',
+             {'in:A':'1, 2, 3','in:B':'4, 5, 6'}, 'dot(Vector(1, 2, 3), Vector(4, 5, 6))'),
+            ('Add_VectorVector', [('A','Vector'),('B','Vector')], 'Vector',
+             {'in:A':'1, 2, 3','in:B':'4, 5, 6'}, '(Vector(1, 2, 3) + Vector(4, 5, 6))'),
+            ('Subtract_VectorVector', [('A','Vector'),('B','Vector')], 'Vector',
+             {'in:A':'1, 2, 3','in:B':'4, 5, 6'}, '(Vector(1, 2, 3) - Vector(4, 5, 6))'),
+            ('Multiply_VectorFloat', [('A','Vector'),('B','double')], 'Vector',
+             {'in:A':'1, 2, 3','in:B':'2.0'}, '(Vector(1, 2, 3) * 2.0)'),
+            ('VInterpTo_Constant', [('Current','Vector'),('Target','Vector'),('DeltaTime','float'),('InterpSpeed','float')],
+             'Vector', {'in:Current':'1, 2, 3','in:Target':'0, 0, 0','in:DeltaTime':'0.1','in:InterpSpeed':'2'},
+             'VInterpTo_Constant(current: Vector(1, 2, 3), target: Vector(0, 0, 0), deltaTime: 0.1, interpSpeed: 2)'),
+        ]
+        for name, args, result, defaults, expected in cases:
+            with self.subTest(name=name):
+                doc=dict(schema=2,pinTemplates=copy.deepcopy(TYPES),
+                         nodes=[call('op',name,args,result,defaults)],links=[])
+                original=copy.deepcopy(doc)
+                group=folded(doc)[0][0]
+                self.assertEqual(group['_formula'],expected)
+                self.assertEqual(doc,original)
+                lines=format_expression(group['_formulaTree'],width=32)
+                self.assertEqual(''.join(''.join(lines).removeprefix('Output:').split()),
+                                 ''.join(expected.split()))
+                for direction in ('TB','LR'):
+                    self.assertEqual(render(doc,view='expressions',direction=direction)[2],1)
+
+    @staticmethod
+    def shared_vector_fixture():
+        return dict(schema=2,pinTemplates=copy.deepcopy(TYPES),nodes=[
+            call('zero','MakeVector',[('X','double'),('Y','double'),('Z','double')],
+                 'Vector',{'in:X':'0','in:Y':'0','in:Z':'0'}),
+            read('velocity','Velocity','Vector'),
+            call('dot','Dot_VectorVector',[('A','Vector'),('B','Vector')]),
+            call('add','Add_VectorVector',[('A','Vector'),('B','Vector')],'Vector')],
+            links=[{'from':a,'to':b} for a,b in [('zero.out:result','dot.in:A'),
+                ('zero.out:result','add.in:A'),('velocity.out:result','dot.in:B'),
+                ('velocity.out:result','add.in:B')]])
+
+    def test_shared_literal_constructor_inlines_per_use_without_losing_details(self):
+        doc=self.shared_vector_fixture();original=copy.deepcopy(doc)
+        nodes,edges,count=folded(doc)
+        self.assertEqual(count,1)
+        self.assertEqual({n['id'] for n in nodes},{'velocity','dot','add'})
+        self.assertEqual(len(edges),2)
+        for node in nodes:
+            if '_formula' not in node:continue
+            self.assertIn('Vector(0, 0, 0)',node['_formula'])
+            self.assertEqual([p['name'] for p in node['_formulaInputs']],['Velocity'])
+            self.assertEqual(next(p for p in node['_foldedNodes'] if p['id']=='zero'),doc['nodes'][0])
+            self.assertEqual(len(node['_foldedLinks']),1)
+            self.assertEqual(len(node['_boundaryLinks']),1)
+        self.assertEqual(doc,original)
+        self.assertEqual(render(doc,view='full')[2:4],(4,4))
+        for direction in ('TB','LR'):
+            svg=ET.fromstring(render(doc,view='expressions',direction=direction)[0])
+            self.assertIsNone(svg.find('.//{*}g[@data-node-id="zero"]'))
+            for nid in ('dot','add'):
+                card=svg.find('.//{*}g[@data-node-id="'+nid+'"]')
+                self.assertIn('zero',json.loads(card.get('data-node-ids')))
+                self.assertEqual(json.loads(card.find('{*}title').text)['_foldedNodes'][-1]['id'],'zero')
+        # A remaining unsupported consumer still needs the original constructor card.
+        doc['nodes'].append(dict(id='exit',kind='FunctionResult',pins={'in:V':{'type':'Vector'}}))
+        doc['links'].append({'from':'zero.out:result','to':'exit.in:V'})
+        nodes,edges,_=folded(doc)
+        self.assertIn('zero',{n['id'] for n in nodes})
+        self.assertEqual([e[2] for e in edges if e[0]=='zero'],['exit'])
+
+    def test_computed_vectors_review_boundaries_and_invalid_vectors_stay_explicit(self):
+        doc=self.shared_vector_fixture()
+        doc['nodes'].append(read('x','PositionX'))
+        doc['links'].append({'from':'x.out:result','to':'zero.in:X'})
+        nodes,edges,_=folded(doc)
+        self.assertIn('zero',{n['id'] for n in nodes})
+        self.assertEqual(sum(e[0]=='zero' for e in edges),2)
+        doc=self.shared_vector_fixture();doc['nodes'][0]['_reviewStatus']='added'
+        self.assertEqual(sum(e[0]=='zero' for e in folded(doc)[1]),2)
+        doc=self.shared_vector_fixture()
+        edge=('zero','result','dot','A',False)
+        self.assertNotIn('_formula',next(n for n in folded(doc,removed_links=[edge])[0] if n['id']=='zero'))
+        for metadata in [
+            {'PinType.PinSubCategoryObject':'"/Script/CoreUObject.ScriptStruct\'/Script/CoreUObject.Rotator\'"'},
+            {'PinType.ContainerType':'Array'}, {'PinType.bIsReference':'True'}]:
+            doc=self.shared_vector_fixture();doc['pinTemplates']['Vector'].update(metadata)
+            self.assertFalse(any('_formula' in n for n in folded(doc)[0]))
+        for value in ('0', '1, 2', '1, 2, 3, 4', '(X=1,Y=2,Z=3)', 'nan, 0, 0'):
+            doc=dict(schema=2,pinTemplates=TYPES,nodes=[call('op','Dot_VectorVector',
+                [('A','Vector'),('B','Vector')],defaults={'in:A':value,'in:B':'0, 0, 0'})],links=[])
+            self.assertNotIn('_formula',folded(doc)[0][0])
+
+    def test_vector_interpolation_keeps_scalar_conversion_and_shared_constant(self):
+        doc=self.shared_vector_fixture()
+        doc['nodes'].extend([read('dt','DeltaSeconds','float'),read('speed','Decay','double'),
+            call('interp','VInterpTo_Constant',[('Current','Vector'),('Target','Vector'),
+                 ('DeltaTime','float'),('InterpSpeed','float')],'Vector')])
+        doc['links'].extend({'from':a,'to':b} for a,b in [('add.out:result','interp.in:Current'),
+            ('zero.out:result','interp.in:Target'),('dt.out:result','interp.in:DeltaTime'),
+            ('speed.out:result','interp.in:InterpSpeed')])
+        original=copy.deepcopy(doc)
+        nodes,edges,_=folded(doc)
+        self.assertNotIn('zero',{n['id'] for n in nodes})
+        interp=next(n for n in nodes if n['id']=='interp')
+        self.assertEqual(interp['_formula'], 'VInterpTo_Constant(current: (Vector(0, 0, 0) + Velocity), '
+                         'target: Vector(0, 0, 0), deltaTime: DeltaSeconds, interpSpeed: float(Decay))')
+        self.assertEqual([p['id'] for p in interp['_foldedNodes']].count('zero'),1)
+        self.assertFalse(any(e[0]=='zero' for e in edges))
+        self.assertEqual(doc,original)
+
     def test_fallback_names_are_local_ordered_and_independent_of_graph_order(self):
         doc = fixture()
         # Separate expressions feed a third one; first use determines local names.
