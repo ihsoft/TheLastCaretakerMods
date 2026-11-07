@@ -7,6 +7,21 @@ The [workspace workflow](../tools/blueprint-workspace.md) owns editing,
 synchronization and preview; the [format guide](../tools/blueprint-text.md)
 owns supported graph representations.
 
+## Identify the source of complexity
+
+Before choosing a transformation, identify what makes the graph difficult to
+understand. Use its responsibilities, control flow and data dependencies:
+
+| Problem | Appropriate response |
+| --- | --- |
+| Different responsibilities or levels of detail are mixed together. | Separate complete operations from the coordinating flow. |
+| The same algorithm is implemented repeatedly. | Check semantic equivalence, then share its implementation and parameterize genuine differences. |
+| A coherent operation is hard to read because of labels, layout, wiring or expression display. | Use the existing preview views or address the presentation problem. Graph decomposition is not automatically required. |
+
+These problems can coexist. Choose edits for the identified cause rather than
+starting with a target node count or a preferred abstraction. A presentation
+defect alone is not a reason to change the represented algorithm.
+
 ## Separate flow from implementation
 
 Keep one level of detail in a graph. A coordinating graph should show meaningful
@@ -24,6 +39,20 @@ and treat the resulting small caller as finished decomposition.
 Stop when the remaining nodes express one understandable operation. Adding levels
 to meet a node limit can make navigation and reasoning harder. Judge the caller
 and implementation together, including parameters, state access and failure paths.
+
+Check whether the operation's name, boundary and surrounding flow let a reader
+understand its caller without repeatedly opening the implementation:
+
+- What inputs, owner state and preconditions does it require?
+- What result does it produce, and what state or external objects does it change?
+- When does execution continue, and which paths terminate?
+
+Pin count alone does not measure the boundary's complexity. A function with no
+arguments can still depend on many owner variables and side effects. Keep those
+dependencies coherent and apparent from the operation's purpose and context.
+When the answers remain unclear, reconsider the name, boundary or placement of
+the operation. Do not add documentation to every node as a substitute for a
+coherent design.
 
 ## Choose the boundary
 
@@ -110,9 +139,39 @@ For reuse or deduplication, also check argument/target equivalence and execution
 order. Treat deliberate behavior changes separately. This semantic review does
 not replace or require repeating the public tool's mechanical validation.
 
-Use the ordinary Apply and one-call Preview workflow. Preview folding and
-expression rendering improve the view without changing BPT or runtime behavior;
-do not rewrite graphs solely to imitate those presentation features. Group related
-behavior-preserving edits into a coherent candidate and test their affected
-gameplay scenarios together. Compilation and export comparison establish editor
-consistency, not gameplay equivalence or a performance improvement.
+Decomposition should reduce the context needed for the next task. Use the BPT
+hierarchy summary to locate relevant operations, then read the selected graph
+with its boundary context and required definitions through the public source
+inspection interface. Expand that scope when dependencies require it; do not
+routinely reread the complete Blueprint merely because its JSON is one file.
+Continue editing the complete proposed source as required by the workspace
+workflow.
+
+For human review, keep the implementation and calling context reachable through
+the ordinary preview navigation, search and preserved view state. Extra nesting
+has a navigation cost; assess that cost alongside smaller local graphs. Return
+the standard preview rather than manually assembling or inspecting generated
+pages. The agent owns semantic decisions; successful public-tool results own
+the mechanical acceptance checks described by the workspace workflow.
+Preview folding and expression rendering change the view, not BPT or runtime
+behavior; do not rewrite graphs solely to imitate those presentation features.
+
+## Size iterations by uncertainty
+
+Use a small, focused first step when introducing an unfamiliar transformation or
+testing a new format/tool capability. Resolve uncertain semantics before applying
+the transformation broadly. Once the operation and its boundaries are established,
+group related behavior-preserving edits into a coherent candidate. Do not require
+a separate game launch for every extracted subgraph. Keep deliberate behavior
+changes explicit and separately assessable.
+
+Choose gameplay checks from the affected states and transitions, with expected
+outcomes: entry and exit, enable and disable, loss and recovery of eligibility,
+press and release, and interactions between affected controls. Graph names and
+node counts do not define adequate test coverage. One combined scenario may
+exercise several extractions; retain distinct checks where behavior differs.
+
+Use the ordinary Apply and one-call Preview workflow. Compilation and export
+comparison establish editor consistency, not gameplay equivalence or a performance
+improvement. If new failures or unresolved dependencies appear, narrow the next
+step around that uncertainty rather than continuing to enlarge the batch.
