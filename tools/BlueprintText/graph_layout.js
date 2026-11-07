@@ -15,6 +15,7 @@ function layoutRows(data, columns) {
     const groups=new Map(),boxes=new Map();
     for(const n of data.nodes){if(!groups.has(n.rank))groups.set(n.rank,[]);groups.get(n.rank).push(n)}
     const capacity=Math.min(columns,Math.max(1,...[...groups.values()].map(g=>g.length)));
+    const widest=Math.max(330,...data.nodes.map(n=>n.w)),rowStep=widest+50,columnStep=widest+170;
     const parents=new Map(data.nodes.map(n=>[n.id,[]]));
     for(const edge of data.edges)parents.get(edge[2]).push(edge);
     function parentOrder(node){
@@ -30,12 +31,12 @@ function layoutRows(data, columns) {
         members.sort((a,b)=>compareKeys(parentOrder(a),parentOrder(b)));
         if(horizontal){
             y=240;
-            for(const n of members){boxes.set(n.id,{x:40+rank*500,y,w:n.w,h:n.h,kind:n.kind});y+=n.h+60}
+            for(const n of members){boxes.set(n.id,{x:40+rank*columnStep,y,w:n.w,h:n.h,kind:n.kind});y+=n.h+60}
             continue;
         }
         for(let start=0;start<members.length;start+=columns){
-            const row=members.slice(start,start+columns),offset=(capacity-row.length)*190;
-            row.forEach((n,i)=>boxes.set(n.id,{x:40+offset+i*380,y,w:n.w,h:n.h,kind:n.kind}));
+            const row=members.slice(start,start+columns),offset=(capacity-row.length)*rowStep/2;
+            row.forEach((n,i)=>boxes.set(n.id,{x:40+offset+i*rowStep,y,w:n.w,h:n.h,kind:n.kind}));
             y+=Math.max(...row.map(n=>n.h))+110;
         }
     }

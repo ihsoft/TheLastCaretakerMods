@@ -5,7 +5,7 @@ vm.runInContext(fs.readFileSync(__dirname+'/graph_layout.js','utf8'),context);
 const page=fs.readFileSync(process.argv[2],'utf8');
 const decode=s=>s.replace(/&quot;/g,'"').replace(/&#x27;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
 const layouts=[...page.matchAll(/<svg data-layout="([^"]+)"/g)].map(m=>JSON.parse(decode(m[1])));
-assert.equal(layouts.length,4,'Both views and directions contain geometry');
+assert.equal(layouts.length,6,'All three views and both directions contain geometry');
 assert.equal(context.layoutRows({nodes:[],edges:[],direction:'TB',minWidth:1800},3).width,1800,
     'A long hierarchy title remains inside the viewport after browser reflow');
 // Overall height must shrink when the resized card sets the vertical extent.
@@ -62,6 +62,12 @@ for(const data of layouts){
             const b=result.boxes.get(n.id);rows.set(b.y,(rows.get(b.y)||0)+1);
             assert.ok(b.x>=0&&b.x+b.w<=result.width&&b.y+b.h<=result.height);
             assert.equal(nodes.find(v=>v.dataset.nodeId===n.id).attributes.transform,`translate(${b.x-n.x},${b.y-n.y})`);
+        }
+        const boxes=[...result.boxes.values()];
+        for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){
+            const a=boxes[i],b=boxes[j];
+            assert.ok(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y,
+                'Cards of different widths never overlap after reflow');
         }
         if(data.direction!=='LR')assert.ok([...rows.values()].every(count=>count<=columns));
         edges.forEach((e,i)=>{

@@ -41,7 +41,7 @@ function restoreViewerState(){
     restoringState=true;
     const state=history.state?.bptGraph;
     if(state){
-        if(['simplified','full'].includes(state.v))view.value=state.v;
+        if(['simplified','full','expressions'].includes(state.v))view.value=state.v;
         if(['TB','LR'].includes(state.d))direction.value=state.d;
         rowCapacity.value=String(normalizeColumns(state.c));
         if(typeof state.u==='boolean')showUnconnected.checked=state.u;

@@ -14,7 +14,71 @@ from render_graph import render, node_lines, pin_type_label, fold_data_chains, f
 ROOT = Path(__file__).resolve().parent
 
 
+def visible_text(element):
+    # SVG labels contain styled tspans and optional non-visible title tooltips.
+    return (element.text or '') + ''.join(
+        (''.join(child.itertext()) if child.tag.rsplit('}', 1)[-1] != 'title' else '')
+        + (child.tail or '') for child in element)
+
+
 class GraphRenderingTests(unittest.TestCase):
+    def test_input_output_gap_survives_hiding_first_unconnected_output(self):
+        doc = {'schema':2, 'pinTemplates':{'number':{'PinType.PinCategory':'"real"',
+                                                   'PinType.PinSubCategory':'"double"'}},
+               'nodes':[{'id':'call','kind':'call','pins':{'in:A':{'type':'number'},
+                         'out:Unused':{'type':'number'},'out:Used':{'type':'number'}},
+                         'defaults':{'in:A':'1'},'comment':'After outputs'},
+                        {'id':'sink','kind':'FunctionResult','pins':{'in:Value':{'type':'number'}}}],
+               'links':[{'from':'call.out:Used','to':'sink.in:Value'}]}
+        svg = ET.fromstring(render(doc, view='full')[0])
+        rows = svg.find('.//{*}g[@data-node-id="call"]').findall('{*}text')
+        visible = [r for r in rows if not r.get('data-unconnected-output')]
+        def compact_y(row):
+            return float(row.get('y')) + float(re.search(r'--compact-dy:(-?\d+)px', row.get('style'))[1])
+        input_row = next(r for r in visible if visible_text(r).startswith('Input:'))
+        output_row = next(r for r in visible if visible_text(r).startswith('Output:'))
+        self.assertEqual(compact_y(output_row) - compact_y(input_row), 27)
+        self.assertEqual(compact_y(visible[-1]) - compact_y(output_row), 19)
+        layout = json.loads(svg.get('data-layout'))
+        box = next(n for n in layout['nodes'] if n['id'] == 'call')
+        self.assertEqual(box['compactH'], 28 + 19 * len(visible) + 8)
+
+    def test_exit_signatures_include_named_results_and_stay_visible(self):
+        templates = {'number': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'},
+                     'bool': {'PinType.PinCategory': '"bool"'}, 'exec': {'PinType.PinCategory': '"exec"'},
+                     'hidden': {'PinType.PinCategory': '"object"', 'bHidden': 'True'}}
+        for kind, properties in [('Tunnel', {'bCanHaveInputs': 'True'}), ('FunctionResult', {})]:
+            doc = {'schema': 2, 'pinTemplates': templates, 'nodes': [
+                {'id': 'source', 'kind': 'getVariable', 'variable': 'Velocity', 'pins': {'out:Value': {'type': 'number'}}},
+                {'id': 'exit', 'kind': kind, 'properties': properties,
+                 'pins': {'in:exec': {'type': 'exec'}, 'in:Value': {'type': 'number', 'name': 'CorrectedVelocity'},
+                          'in:Continue': {'type': 'bool'}, 'in:hidden': {'type': 'hidden'}}}],
+                'links': [{'from': 'source.out:Value', 'to': 'exit.in:Value'}]}
+            original = copy.deepcopy(doc)
+            for view in ('full', 'simplified'):
+                svg = ET.fromstring(render(doc, view=view)[0])
+                rows = svg.find('.//{*}g[@data-node-id="exit"]').findall('{*}text')
+                signatures = [r for r in rows if (visible_text(r) or '').startswith('Output:')]
+                self.assertEqual([visible_text(r) for r in signatures],
+                                 ['Output: CorrectedVelocity (double)', 'Output: Continue (bool)'])
+                self.assertTrue(all(r.get('data-unconnected-output') is None for r in signatures))
+            self.assertEqual(original, doc)
+
+    def test_exit_review_distinguishes_result_types(self):
+        for kind, properties in [('Tunnel', {'bCanHaveInputs': 'True'}), ('FunctionResult', {})]:
+            old = {'schema': 2, 'pinTemplates': {'int': {'PinType.PinCategory': '"int"'},
+                                               'bool': {'PinType.PinCategory': '"bool"'}},
+                   'nodes': [{'id': 'exit', 'kind': kind, 'properties': properties,
+                              'pins': {'in:Count': {'type': 'int'}, 'in:Ready': {'type': 'bool'}}}], 'links': []}
+            new = copy.deepcopy(old)
+            new['nodes'][0]['pins']['in:Count']['type'] = 'bool'
+            for view in ('full', 'simplified'):
+                svg = ET.fromstring(render(new, view=view, review={'changed': ['exit']}, before=old)[0])
+                rows = svg.find('.//{*}g[@data-node-id="exit"]').findall('{*}text')
+                self.assertEqual([visible_text(r) for r in rows if r.get('class') == 'review-changed-line'],
+                                 ['Output: Count (bool)'])
+                self.assertIn('Output: Ready (bool)', [visible_text(r) for r in rows])
+
     def test_text_pin_defaults_show_source_text_without_changing_localization(self):
         examples = [
             ('NSLOCTEXT("", "key", "Сбросить наклон")', 'Сбросить наклон'),
@@ -59,9 +123,9 @@ class GraphRenderingTests(unittest.TestCase):
         for view in ('full', 'simplified'):
             svg = ET.fromstring(render(new, view=view, review={'changed': ['select']}, before=old)[0])
             rows = svg.find('.//{*}g[@data-node-id="select"]').findall('{*}text')
-            self.assertEqual([row.text for row in rows if row.get('class') == 'review-changed-line'],
+            self.assertEqual([visible_text(row) for row in rows if row.get('class') == 'review-changed-line'],
                              ['Input: A = "New"'])
-            self.assertIn('Input: B = "Same"', [row.text for row in rows])
+            self.assertIn('Input: B = "Same"', [visible_text(row) for row in rows])
 
     def test_entry_parameter_review_marks_only_the_changed_parameter(self):
         old = {'schema': 2, 'pinTemplates': {'int': {'PinType.PinCategory': '"int"'},
@@ -74,10 +138,10 @@ class GraphRenderingTests(unittest.TestCase):
         for view in ('full', 'simplified'):
             svg = ET.fromstring(render(new, view=view, review={'changed': ['entry']}, before=old)[0])
             rows = svg.find('.//{*}g[@data-node-id="entry"]').findall('{*}text')
-            changed = [r.text for r in rows if r.get('class') == 'review-changed-line']
+            changed = [visible_text(r) for r in rows if r.get('class') == 'review-changed-line']
             self.assertEqual(changed, ['Parameter: Count (bool)'])
-            self.assertIn('Graph Entry', [r.text for r in rows])
-            parameters = [r for r in rows if (r.text or '').startswith('Parameter:')]
+            self.assertIn('Graph Entry', [visible_text(r) for r in rows])
+            parameters = [r for r in rows if (visible_text(r) or '').startswith('Parameter:')]
             self.assertEqual(len(parameters), 2)
             self.assertTrue(all(r.get('data-unconnected-output') is None for r in parameters))
 
@@ -139,7 +203,7 @@ class GraphRenderingTests(unittest.TestCase):
         hidden = 0
         for row in rows:
             self.assertIn(f'--compact-dy:{-19 * hidden}px;', row.get('style'))
-            if 'then —' in (row.text or '') or 'else —' in (row.text or ''):
+            if 'then —' in (visible_text(row) or '') or 'else —' in (visible_text(row) or ''):
                 self.assertEqual(row.get('data-unconnected-output'), 'true')
             hidden += bool(row.get('data-unconnected-output'))
         self.assertEqual(hidden, 4)
@@ -159,11 +223,11 @@ class GraphRenderingTests(unittest.TestCase):
                'pinTemplates': templates, 'links': [{'from':'read.out:Pitch', 'to':'consumer.in:value'}]}
         svg = ET.fromstring(render(doc, view='full')[0])
         getter = svg.find('.//{*}g[@data-node-id="read"]')
-        self.assertIn('Output: double', [n.text for n in getter.findall('{*}text')])
+        self.assertIn('Output: double', [visible_text(n) for n in getter.findall('{*}text')])
         self.assertFalse(getter.findall('{*}text[@data-unconnected-output="true"]'))
         event = svg.find('.//{*}g[@data-node-id="input"]')
-        always = ' '.join(n.text or '' for n in event.findall('{*}text') if not n.get('data-unconnected-output'))
-        optional = ' '.join(n.text or '' for n in event.findall('{*}text[@data-unconnected-output="true"]'))
+        always = ' '.join(visible_text(n) or '' for n in event.findall('{*}text') if not n.get('data-unconnected-output'))
+        optional = ' '.join(visible_text(n) or '' for n in event.findall('{*}text[@data-unconnected-output="true"]'))
         for label in ('Branch: then — unconnected', 'Branch: else — unconnected', 'Output: ActionValue = "false"', 'Output: InputAction = "IA_PrimaryAction"', '(default;'):
             self.assertIn(label, optional)
         self.assertIn('Output: Unused — unconnected', optional)
@@ -256,7 +320,7 @@ class GraphRenderingTests(unittest.TestCase):
         document = {'schema': 2, 'nodes': [node], 'links': [], 'pinTemplates': templates}
         original = copy.deepcopy(document)
         svg = ET.fromstring(render(document)[0])
-        texts = [n.text for n in svg.findall('.//{*}g[@class="graph-node"]/{*}text')]
+        texts = [visible_text(n) for n in svg.findall('.//{*}g[@class="graph-node"]/{*}text')]
         self.assertNotIn(node['id'], texts)
         self.assertIn(node['id'], svg.find('.//{*}g[@class="graph-node"]/{*}title').text)
         self.assertEqual(document, original)
@@ -385,10 +449,10 @@ class GraphRenderingTests(unittest.TestCase):
             text, _, _, links = render(document, view=view)
             svg = ET.fromstring(text)
             seq = svg.find('.//{*}g[@data-node-id="seq"]')
-            labels = [n.text for n in seq.findall('{*}text')]
+            labels = [visible_text(n) for n in seq.findall('{*}text')]
             self.assertIn('Branch: then1 — unconnected', labels)
             self.assertNotIn('Branch: then0 — unconnected', labels)
-            self.assertIn('Output: result — unconnected', text)
+            self.assertIn('Output: result — unconnected', [visible_text(n) for n in ET.fromstring(text).findall('.//{*}text')])
             self.assertEqual(links, 0 if view == 'simplified' else 1)
 
     def test_input_parameters_precede_output_types(self):
@@ -482,7 +546,7 @@ class GraphRenderingTests(unittest.TestCase):
             rect = svg.find('.//{*}g[@data-node-id="branch"]/{*}rect')
             x, y, w, h = (float(rect.attrib[k]) for k in ('x', 'y', 'width', 'height'))
             labels = svg.findall('.//{*}g[@data-source="branch"]/{*}text')
-            self.assertEqual({n.text for n in labels}, {'then', 'else'})
+            self.assertEqual({visible_text(n) for n in labels}, {'then', 'else'})
             for label in labels:
                 self.assertNotIn('transform', label.attrib)
                 lx, ly = float(label.attrib['x']), float(label.attrib['y'])
@@ -501,7 +565,7 @@ class GraphRenderingTests(unittest.TestCase):
         for view in ('simplified', 'full'):
             for direction in ('TB', 'LR'):
                 svg = ET.fromstring(render(document, view=view, direction=direction)[0])
-                labels = {n.text: n for n in svg.findall('.//{*}g[@data-source="branch"]/{*}text')}
+                labels = {visible_text(n): n for n in svg.findall('.//{*}g[@data-source="branch"]/{*}text')}
                 axis = 'x' if direction == 'TB' else 'y'
                 self.assertLess(float(labels['then'].attrib[axis]), float(labels['else'].attrib[axis]))
                 # Only source port placement changes, not the destination identity.
@@ -593,14 +657,14 @@ class GraphRenderingTests(unittest.TestCase):
         composite = svg.find('.//{*}g[@data-node-id="second"]')
         self.assertEqual(json.loads(composite.attrib['data-node-ids']), ['first', 'second'])
         self.assertEqual(composite.find('{*}rect').attrib['fill'], '#f7e9d7')
-        labels = [n.text for n in composite.findall('{*}text')]
+        labels = [visible_text(n) for n in composite.findall('{*}text')]
         self.assertIn('Output: result — unconnected', labels)
         self.assertNotIn('Branch: then — unconnected', labels)
         self.assertLess(labels.index('Output: Unused — unconnected'), labels.index('2. second'))
         self.assertGreater(labels.index('Output: result — unconnected'), labels.index('2. second'))
         self.assertFalse(any('← Step ' in label for label in labels))
         self.assertEqual(labels.count('Input: value = "false"'), 2)
-        optional = [n.text for n in composite.findall('{*}text[@data-unconnected-output="true"]')]
+        optional = [visible_text(n) for n in composite.findall('{*}text[@data-unconnected-output="true"]')]
         self.assertIn('Output: Unused — unconnected', optional)
         self.assertIn('Output: result — unconnected', optional)
         self.assertIn('Output: bool', optional)
@@ -658,7 +722,7 @@ class GraphRenderingTests(unittest.TestCase):
             page = output.with_suffix('.html').read_text(encoding='utf-8')
             self.assertIn('<html lang="en">', page)
             self.assertNotRegex(page, r'[\u0400-\u04ff]')
-            for view in ('simplified', 'full'):
+            for view in ('simplified', 'full', 'expressions'):
                 for direction in ('TB', 'LR'):
                     self.assertIn(f'id="{view}-{direction}"', page)
             self.assertNotIn('<script src=', page)

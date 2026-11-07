@@ -45,7 +45,7 @@ const allSections = [...page.matchAll(/<section id="([^"]+)"[^>]*>([\s\S]*?)<\/s
     return {id, nodes, edges, svg, querySelector: () => svg};
 });
 const sections=allSections.filter(s=>!s.id.startsWith('final-'));
-assert.equal(sections.length, 4);
+assert.equal(sections.length, 6);
 const handlers = {}, view = {value: ''}, direction = {value: ''};
 const ui=Object.fromEntries(['unconnected','nodes-per-row','detail-version','node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
 ui['unconnected'].checked=true;
@@ -168,7 +168,7 @@ for (const section of sections) {
     context.fit(true); assert.ok(parseFloat(section.svg.style.height) <= box.clientHeight);
     forbidGraphScan=false;
 }
-console.log('Passed: incoming/outgoing links, immediate neighbors, all clear actions, keyboard, view reset, zoom/fit in all four variants (DOM stand-in).');
+console.log('Passed: incoming/outgoing links, immediate neighbors, all clear actions, keyboard, view reset, zoom/fit in all six variants (DOM stand-in).');
 // A large sparse graph must touch only the selected neighborhood after indexing.
 {
     const nodes=Array.from({length:5000},(_,i)=>element({nodeId:String(i)}));
@@ -265,23 +265,26 @@ for(const [value,expected] of [['6','6'],['0','1'],['30','12'],['','3']]){
     assert.ok(node.querySelector('title').removed,'Replace native unselectable tooltip');
     assert.match(page, /#node-details\{position:absolute;/);
     assert.match(page, /<aside id="node-details"[\s\S]*<\/aside><\/main>/);
-    view.value='full';direction.value='LR';ui['nodes-per-row'].value='5';ui.unconnected.checked=false;
+    for(const mode of ['full','expressions']){
+    history.state={...history.state,unrelated:'keep'};
+    if(ui['show-changes'])ui['show-changes'].checked=true;
+    view.value=mode;direction.value='LR';ui['nodes-per-row'].value='5';ui.unconnected.checked=false;
     context.choose();context.zoom(1.25);context.highlight('sequence');
     box.scrollLeft=123;box.scrollTop=456;
     windowHandlers.pagehide();
-    const saved=structuredClone(history.state),savedWidth=sections.find(s=>s.id==='full-LR').svg.style.width;
+    const saved=structuredClone(history.state),savedWidth=sections.find(s=>s.id===mode+'-LR').svg.style.width;
     assert.equal(saved.unrelated,'keep');
     history.state=null;view.value='simplified';direction.value='TB';ui.unconnected.checked=true;context.choose();
     history.state=saved;windowHandlers.pageshow();
-    assert.equal(view.value,'full');assert.equal(direction.value,'LR');assert.equal(ui.unconnected.checked,false);
+    assert.equal(view.value,mode);assert.equal(direction.value,'LR');assert.equal(ui.unconnected.checked,false);
     assert.equal(ui['nodes-per-row'].value,'5');assert.equal(box.scrollLeft,123);assert.equal(box.scrollTop,456);
-    assert.equal(sections.find(s=>s.id==='full-LR').svg.style.width,savedWidth);
-    assert.equal(sections.find(s=>s.id==='full-LR').nodes.find(n=>n.dataset.nodeId==='sequence').attributes['aria-pressed'],'true');
+    assert.equal(sections.find(s=>s.id===mode+'-LR').svg.style.width,savedWidth);
+    assert.equal(sections.find(s=>s.id===mode+'-LR').nodes.find(n=>n.dataset.nodeId==='sequence').attributes['aria-pressed'],'true');
     box.scrollLeft=0;windowHandlers.popstate();assert.equal(box.scrollLeft,123);
     if(ui['show-changes']){
         ui['show-changes'].checked=false;context.changeReview();
-        assert.equal(allSections.find(s=>s.id==='final-full-LR').hidden,false);
-        assert.equal(allSections.find(s=>s.id==='full-LR').hidden,true);
+        assert.equal(allSections.find(s=>s.id==='final-'+mode+'-LR').hidden,false);
+        assert.equal(allSections.find(s=>s.id===mode+'-LR').hidden,true);
         windowHandlers.pagehide();const cleanState=structuredClone(history.state);
         ui['show-changes'].checked=true;context.changeReview();history.state=cleanState;windowHandlers.pageshow();
         assert.equal(ui['show-changes'].checked,false);assert.equal(box.scrollTop,456);
@@ -291,6 +294,7 @@ for(const [value,expected] of [['6','6'],['0','1'],['30','12'],['','3']]){
         ui['show-changes'].checked=true;context.changeReview();handlers['capture-click']({target:link});assert.ok(!link.getAttribute('href').includes('?'));
         history.state=null;location.href='file:///preview/child.html?r=0';context.restoreViewerState();
         assert.equal(ui['show-changes'].checked,false,'Clean mode follows navigation into a child');
+    }
     }
     context.saveViewerState();
     console.log('Passed: graph interactions, per-entry history restoration, scroll/zoom/filters and final-only switching (DOM stand-in).');

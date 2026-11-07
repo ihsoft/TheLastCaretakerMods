@@ -493,13 +493,13 @@ from editor placeholders and runtime-created widgets are not reconstructed.
 
 Requires Python 3.9+ (bundled runtime or `python`; override with `-PythonPath`).
 Writes SVG, adjacent `.full.svg`, and a self-contained HTML viewer with zoom,
-full/simplified views and top-to-bottom/left-to-right directions. Defaults are
+Full, Simplified and Expressions views and top-to-bottom/left-to-right directions. Defaults are
 `-View simplified -Direction TB`; `-Graph` selects a graph when needed. No model,
 network, engine, or catalogue call is involved. Input is never rewritten.
 
 In vertical HTML views, **Nodes per row** selects 1–12 nodes (default 3).
 Changing it rearranges the current graph locally and fits its width; the value
-is retained between Full and Simplified views. Horizontal views disable this
+is retained between all three views. Horizontal views disable this
 control. Standalone SVGs retain the default row capacity.
 
 Nodes follow their upstream parents, prioritizing execution dependencies for
@@ -519,7 +519,7 @@ links participate; use Full to include hidden technical nodes.
 
 **Show unconnected** controls unconnected output descriptions on every node,
 including execution branches, data types and output defaults, also inside folded
-steps. Connected outputs, input defaults and graph-entry parameter signatures
+steps. Connected outputs, input defaults and graph entry/exit signatures
 remain visible. Toggling it resizes
 cards and reroutes links in both directions. A selected node is centered with
 the current zoom retained; without a selection the view resets and fits its width.
@@ -547,6 +547,26 @@ and unconnected-output notes; data chains retain their internal dependencies.
 A sole unused execution output is treated as a terminal path; unused alternatives
 remain visible.
 
+**Expressions** is a presentation mode, not another editable format. It folds
+recognized pure scalar arithmetic, comparisons, boolean operations, select and
+min/max calls into bounded formula cards. Native function identity and pin types
+must match; unsupported operations and incomplete signatures stay as nodes.
+Variable reads, shared results and graph boundaries remain separate. Operand
+order, parentheses, select alternatives and numeric conversions are preserved;
+the viewer does not evaluate or algebraically simplify formulas. Different review
+statuses do not merge, and removed connections remain explicit. Use Full or
+Details to inspect the original nodes, pins and links; edit the BPT graph normally.
+
+Expression cards list typed inputs before `Output (type): formula`, separated by
+a small vertical gap. Known names are retained; anonymous inputs use local
+`value1`, `value2`, etc. in first-use order, reusing the name for repeated uses
+and avoiding collisions with real names. Formulas use monospace text, two-space
+structural indentation and a target width of 60 characters. Long identifiers are
+not split; cards widen as needed. Service labels use the ordinary bold label
+font. Repeated uses of one source pin in one expression share a single arrow;
+its tooltip lists all original destinations. Distinct source pins stay separate.
+The mode works with review/final-only switching and browser history restoration.
+
 Nodes describe operations and input values; function calls and variable getters
 also show known output types. The header legend uses colored node cards and arrow
 samples: blue entries/events, amber execution steps, grey data/other nodes;
@@ -564,6 +584,10 @@ Collapsed graph tunnels are labelled `Graph Entry` and `Graph Exit` from their
 declared direction. Graph and function entries list visible data parameters as
 `Parameter: name (type)`, including unused parameters. These are signatures,
 not runtime values inferred from stored output defaults.
+Graph exits and function results list their visible data results as
+`Output: name (type)`, using their declared input pins. These signatures remain
+visible with **Show unconnected** off. Input and output sections are separated
+by a small gap; `Input`, `Output`, `Parameter` and `Field` labels are bold.
 Display titles split identifiers into readable words and wrap at word boundaries;
 continued titles retain their heading style. Original identifiers remain in details.
 Stored defaults on unconnected output pins are labelled `Output: name = value
@@ -724,6 +748,7 @@ or proof of arbitrary widget support.
 ## Checks
 
 Offline renderer checks: `python -B tools/BlueprintText/test_render_graph.py`.
+Expression presentation checks: `python -B tools/BlueprintText/test_graph_expressions.py`.
 Batch index checks: `python -B tools/BlueprintText/test_preview_index.py`.
 Function navigation checks: `python -B tools/BlueprintText/test_preview_graph_links.py`.
 Review overlay checks: `python -B tools/BlueprintText/test_review_graph.py`.

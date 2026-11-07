@@ -7,6 +7,13 @@ import xml.etree.ElementTree as ET
 from render_graph import render
 
 
+def visible_text(element):
+    # Include styled labels, excluding non-visible SVG title tooltips.
+    return (element.text or '') + ''.join(
+        (''.join(child.itertext()) if child.tag.rsplit('}', 1)[-1] != 'title' else '')
+        + (child.tail or '') for child in element)
+
+
 class ReviewTests(unittest.TestCase):
     @staticmethod
     def action_fixture():
@@ -148,7 +155,7 @@ class ReviewTests(unittest.TestCase):
                 svg = ET.fromstring(render(after, view=view, direction=direction,
                     review={'changed': ['clamp']}, before=before)[0])
                 changed = svg.findall('.//{*}text[@class="review-changed-line"]')
-                self.assertEqual([n.text for n in changed], ['Input: Max = "0.8"'])
+                self.assertEqual([visible_text(n) for n in changed], ['Input: Max = "0.8"'])
                 self.assertEqual(changed[0].find('{*}title').text, 'Previously: Input: Max = "0.9999"')
 
     def test_wrapping_and_field_order_do_not_create_false_changes(self):
@@ -160,9 +167,9 @@ class ReviewTests(unittest.TestCase):
         svg = ET.fromstring(render(after, review={'changed': ['n']}, before=before)[0])
         changed = svg.findall('.//{*}text[@class="review-changed-line"]')
         self.assertGreater(len(changed), 3)
-        self.assertFalse(any('unchanged' in n.text for n in changed))
+        self.assertFalse(any('unchanged' in visible_text(n) for n in changed))
         self.assertTrue(all(n.find('{*}title').text == 'Previously: Input: LongParameterNameWithWrapping = "old"'
-                            for n in changed if n.text != 'Input: A = "new"'))
+                            for n in changed if visible_text(n) != 'Input: A = "new"'))
 
     def test_link_only_change_does_not_highlight_newly_visible_default(self):
         before = copy.deepcopy(self.before)
@@ -179,7 +186,7 @@ class ReviewTests(unittest.TestCase):
         after['pinTemplates']['value'] = {'PinType.PinCategory': '"int"'}
         svg = ET.fromstring(render(after, review={'changed': ['old']}, before=self.before)[0])
         changed = svg.findall('.//{*}text[@class="review-changed-line"]')
-        self.assertEqual([n.text for n in changed], ['Output: int'])
+        self.assertEqual([visible_text(n) for n in changed], ['Output: int'])
         self.assertEqual(changed[0].find('{*}title').text, 'Previously: Output: bool')
 
 
