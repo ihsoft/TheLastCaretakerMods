@@ -128,8 +128,8 @@ class NestedGraphsTests(unittest.TestCase):
             generate(manifest, root/'preview')
             index = (root/'preview/index.html').read_text(encoding='utf-8')
             self.assertIn('<details open>', index)
-            for name in ('Root', 'Details', 'Renamed'):
-                self.assertIn(f'{name}</a> <span class="badge changed graph-status">Changed</span>', index)
+            for name, status in (('Root', 'Nested changes'), ('Details', 'Nested changes'), ('Renamed', 'Changed')):
+                self.assertIn(f'{name}</a> <span class="badge changed graph-status">{status}</span>', index)
             self.assertNotIn('badge added graph-status', index)
             viewer = root/'preview/blueprint-000'
             current = (viewer/'graph-002.html').read_text(encoding='utf-8')
@@ -138,6 +138,32 @@ class NestedGraphsTests(unittest.TestCase):
             self.assertIn('graph-001-before.html#node-Operation', before)
             self.assertIn('class="graph-title"', current)
             self.assertNotIn('class="graph-breadcrumbs"', current)
+
+    def test_nested_change_is_visible_along_ancestor_path_and_clears_in_final_view(self):
+        old, new = fixture(), fixture()
+        new['graphs'][2]['body']['nodes'][0]['properties']['NodeComment'] = '"Edited"'
+        source = copy.deepcopy(new)
+        pages = {g['properties']['GraphGuid']: str(i)+'.html' for i, g in enumerate(new['graphs'])}
+        for key in ('A'*32, 'B'*32):
+            nav = graph_navigation(new, old, key, pages)
+            self.assertTrue(nav['changed'])
+            self.assertFalse(nav['localChanged'])
+            for view in ('full', 'simplified', 'expressions'):
+                for direction in ('TB', 'LR'):
+                    for final in (False, True):
+                        context = copy.deepcopy(nav)
+                        if final:
+                            for child in context['children'].values():
+                                child.pop('changed', None)
+                        svg = ET.fromstring(render(new, key, view, direction, graph_context=context)[0])
+                        operation = next(e for e in svg.iter() if e.get('data-node-id') == 'Operation')
+                        frame = operation.find('{*}rect')
+                        self.assertEqual(frame.get('stroke'), '#8b9bae' if final else '#7c3aed')
+                        self.assertEqual(frame.get('stroke-width'), '1.5' if final else '3')
+                        self.assertEqual('Nested implementation changed' in ''.join(operation.itertext()), not final)
+                        # The call node itself has not changed; do not manufacture a local diff.
+                        self.assertEqual(operation.get('data-review-status'), '')
+        self.assertEqual(new, source)
 
     def test_title_contains_full_hierarchy_with_index_and_parent_links(self):
         source = fixture()
@@ -191,6 +217,32 @@ class NestedGraphsTests(unittest.TestCase):
             self.assertIn('data-review-status="added"', page)
             self.assertNotIn('id="show-changes"', page)
             self.assertNotIn('id="final-', page)
+
+    def test_new_child_is_added_without_nested_changed_but_ancestors_still_change(self):
+        new = fixture()
+        old = copy.deepcopy(new)
+        old['graphs'].pop()
+        old['graphs'][1]['body']['nodes'].pop()
+        pages = {g['properties']['GraphGuid']: str(i)+'.html' for i,g in enumerate(new['graphs'])}
+        nav = graph_navigation(new, old, 'B'*32, pages)
+        self.assertTrue(nav['changed'])
+        self.assertFalse(nav['children']['Operation']['changed'])
+        ancestor = graph_navigation(new, old, 'A'*32, pages)
+        self.assertTrue(ancestor['children']['Operation']['changed'])
+        for view in ('full','simplified','expressions'):
+            for direction in ('TB','LR'):
+                for child_changed in (False, True):
+                    # An added call needs no redundant marker even if an existing
+                    # edited graph was relocated under that new call.
+                    context = copy.deepcopy(nav)
+                    context['children']['Operation']['changed'] = child_changed
+                    svg = ET.fromstring(render(new, 'B'*32, view, direction,
+                        review={'added':['Operation']}, before=old, graph_context=context)[0])
+                    card = next(e for e in svg.iter() if e.get('data-node-id') == 'Operation')
+                    self.assertEqual(card.get('data-review-status'), 'added')
+                    self.assertEqual(card.find('{*}rect').get('stroke'), '#15803d')
+                    self.assertIn('+ Added', ''.join(card.itertext()))
+                    self.assertNotIn('Nested implementation changed', ''.join(card.itertext()))
 
     def test_reparented_graph_reports_move_without_inventing_body_changes(self):
         for edit_body in (False, True):

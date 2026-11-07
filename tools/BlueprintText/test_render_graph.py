@@ -22,6 +22,60 @@ def visible_text(element):
 
 
 class GraphRenderingTests(unittest.TestCase):
+    def test_hidden_advanced_outputs_follow_metadata_and_keep_connected_results(self):
+        templates = {'bool': {'PinType.PinCategory':'"bool"'},
+                     'advanced': {'PinType.PinCategory':'"real"', 'PinType.PinSubCategory':'"double"', 'bAdvancedView':'True'}}
+        node = {'id':'break', 'kind':'call', 'operation':'BreakHitResult',
+                'properties':{'AdvancedPinDisplay':'Hidden'},
+                'pins':{**{'out:'+name:{'type':'bool'} for name in ('bBlockingHit','bInitialOverlap')},
+                        **{'out:'+name:{'type':'advanced'} for name in ('Time','ObjectWithoutDefault','ConnectedAdvanced')}},
+                'defaults':{'out:Time':'0.0','out:ConnectedAdvanced':'0.0'}}
+        doc = {'schema':2,'pinTemplates':templates,'nodes':[node,{'id':'sink','kind':'FunctionResult',
+               'pins':{'in:'+name:{'type':node['pins']['out:'+name]['type']} for name in ('bBlockingHit','bInitialOverlap','ConnectedAdvanced')}}],
+               'links':[{'from':'break.out:'+name,'to':'sink.in:'+name} for name in ('bBlockingHit','bInitialOverlap','ConnectedAdvanced')]}
+        before = copy.deepcopy(doc)
+        for mode in ('full','simplified','expressions'):
+            for direction in ('TB','LR'):
+                for expanded in (False,True):
+                    doc['nodes'][0]['properties']['AdvancedPinDisplay']='Shown' if expanded else 'Hidden'
+                    svg=ET.fromstring(render(doc,view=mode,direction=direction)[0])
+                    card=svg.find('.//{*}g[@data-node-id="break"]')
+                    text='\n'.join(visible_text(row) for row in card.findall('{*}text'))
+                    self.assertIn('bBlockingHit',text);self.assertIn('bInitialOverlap',text)
+                    self.assertIn('ConnectedAdvanced',text)
+                    self.assertEqual('Output: Time' in text,expanded)
+                    self.assertEqual('Output: ObjectWithoutDefault' in text,expanded)
+                    self.assertIn('out:Time',card.find('{*}title').text)
+        doc['nodes'][0]['properties']['AdvancedPinDisplay']='Hidden'
+        self.assertEqual(doc,before)
+
+    def test_unreachable_exec_exit_is_explicit_and_warns_about_results(self):
+        for kind, flags in [('Tunnel',{'bCanHaveInputs':'True'}),('FunctionResult',{})]:
+            for has_exec in (False,True):
+                for wired_exec in (False,True):
+                    for data in (False,True):
+                        if wired_exec and not has_exec:continue
+                        pins={}
+                        if has_exec:pins['in:then']={'type':'exec'}
+                        if data:pins['in:Value']={'type':'number'}
+                        doc={'schema':2,'pinTemplates':{'exec':{'PinType.PinCategory':'"exec"'},
+                             'number':{'PinType.PinCategory':'"real"','PinType.PinSubCategory':'"double"'}},
+                             'nodes':[{'id':'entry','kind':'FunctionEntry','pins':{'out:then':{'type':'exec'},'out:Value':{'type':'number'}}},
+                                      {'id':'exit','kind':kind,'properties':flags,'pins':pins}],
+                             'links':([{'from':'entry.out:then','to':'exit.in:then'}] if wired_exec else [])+
+                                     ([{'from':'entry.out:Value','to':'exit.in:Value'}] if data else [])}
+                        original=copy.deepcopy(doc)
+                        for view in ('full','simplified','expressions'):
+                            for direction in ('TB','LR'):
+                                svg=ET.fromstring(render(doc,view=view,direction=direction)[0])
+                                rows=svg.find('.//{*}g[@data-node-id="exit"]').findall('{*}text')
+                                text='\n'.join(visible_text(r) for r in rows)
+                                never=kind=='Tunnel' and has_exec and not wired_exec
+                                self.assertEqual('Graph Never Continues' in text,never)
+                                self.assertEqual('Warning: result outputs' in text,never and data)
+                                if data:self.assertIn('Output: Value (double)',text)
+                        self.assertEqual(doc,original)
+
     @staticmethod
     def action_spacing_fixture():
         names = ['AltitudeLockActive', 'AltitudeDescentBrakingActiveWithLongWrappedName',

@@ -106,6 +106,26 @@ if(ui['caller-menu']){
     assert.equal(box.scrollLeft,123);assert.equal(box.scrollTop,456,'Hash navigation must not overwrite restored history scroll');
     history.state={unrelated:'keep'};location.href='file:///preview/parent.html';context.restoreViewerState();
 }
+{
+    const initialView=view.value,initialDirection=direction.value;
+    const full=sections.find(s=>s.id==='full-TB'),target=full.nodes.at(-1),originalIds=target.dataset.nodeIds;
+    // Simulate a source node represented only in Full, not in the simplified view.
+    target.dataset.nodeIds=JSON.stringify([...JSON.parse(originalIds),'hidden search target']);
+    view.value='simplified';direction.value='TB';context.choose();history.state=null;
+    location.href='file:///preview/graph.html#node-hidden%20search%20target';context.focusLinkedNode();
+    assert.equal(view.value,'full');assert.equal(target.classList.contains('selected'),true);
+    target.dataset.nodeIds=originalIds;
+    view.value='simplified';context.choose();
+    location.href='file:///preview/graph.html#node-missing';context.focusLinkedNode();
+    assert.equal(view.value,'simplified','Unknown IDs must not change view');
+    const folded=sections.find(s=>s.id==='simplified-TB').nodes[0],foldedIds=folded.dataset.nodeIds;
+    folded.dataset.nodeIds=JSON.stringify([...JSON.parse(foldedIds),'folded search target']);
+    location.href='file:///preview/graph.html#node-folded%20search%20target';context.focusLinkedNode();
+    assert.equal(folded.classList.contains('selected'),true);assert.equal(view.value,'simplified');
+    folded.dataset.nodeIds=foldedIds;
+    view.value=initialView;direction.value=initialDirection;
+    history.state={unrelated:'keep'};location.href='file:///preview/parent.html';context.restoreViewerState();
+}
 function cleared(section) {
     assert.equal(section.svg.classList.contains('has-selection'),false);
     for (const item of [...section.nodes, ...section.edges]) {

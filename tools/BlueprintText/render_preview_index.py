@@ -16,8 +16,9 @@ import subprocess
 import sys
 from html import escape
 from pathlib import Path
+from urllib.parse import quote
 
-from render_graph import load_graph, review_document
+from render_graph import load_graph, review_document, node_lines
 from render_widget import render as render_widget
 from preview_references import property_references, package as reference_package, label as reference_label
 from graph_hierarchy import graph_key, select_graph, validate_hierarchy
@@ -178,9 +179,12 @@ def graph_navigation(document, other, key, pages):
         value['body']['links'].sort(key=lambda e: (e['from'], e['to']))
         return value
 
-    def changed(identity):
+    def locally_changed(identity):
         graph = registry[identity]
-        if identity not in other_registry or signature(document, graph) != signature(other, other_registry[identity]):
+        return identity not in other_registry or signature(document, graph) != signature(other, other_registry[identity])
+
+    def changed(identity):
+        if locally_changed(identity):
             return True
         children = {k for k, g in registry.items() if g.get('owner', {}).get('graph') == identity}
         previous = {k for k, g in other_registry.items() if g.get('owner', {}).get('graph') == identity}
@@ -197,7 +201,7 @@ def graph_navigation(document, other, key, pages):
     for identity, graph in registry.items():
         if graph.get('owner', {}).get('graph') == key:
             children[graph['owner']['node']] = dict(id=identity, name=graph['name'], href=pages[identity],
-                nodes=len(graph['body']['nodes']), changed=bool(other) and changed(identity))
+                nodes=len(graph['body']['nodes']), changed=identity in other_registry and changed(identity))
     graph = registry[key]
     previous_graph = other_registry.get(key)
     def location(g):
@@ -215,7 +219,8 @@ def graph_navigation(document, other, key, pages):
         if document.get('classes', {}).get(n.get('kind'), n.get('kind', '')).rsplit('.', 1)[-1]
         in ('FunctionEntry', 'K2Node_FunctionEntry')]
     return dict(breadcrumbs=list(reversed(breadcrumbs)), children=children, entryNodes=entry_nodes,
-                changed=bool(other) and changed(key), comparisonAvailable=key in other_registry,
+                changed=bool(other) and changed(key), localChanged=bool(other) and locally_changed(key),
+                comparisonAvailable=key in other_registry,
                 movedFrom=moved_from)
 
 
@@ -228,6 +233,28 @@ def graph_tree(rows, registry):
     return [branch(k) for k, g in registry.items() if 'owner' not in g]
 
 
+def searchable_nodes(document, pages, directory, snapshot):
+    if not document:
+        return []
+    registry = {graph_key(g): g for g in document.get('graphs', [])}
+    children = {(g['owner']['graph'], g['owner']['node']): g['name']
+                for g in registry.values() if 'owner' in g}
+    result = []
+    for key, graph in registry.items():
+        path, cursor = [graph['name']], graph
+        while 'owner' in cursor:
+            cursor = registry[cursor['owner']['graph']]
+            path.append(cursor['name'])
+        path.append(document['asset'].rsplit('/', 1)[-1])
+        for node in graph['body']['nodes']:
+            title = children.get((key, node['id'])) or node_lines(node, set(),
+                pin_templates=document.get('pinTemplates', {}), parent=document.get('parent'), wrap=False)[0]
+            result.append(dict(id=node['id'], title=title, path=' / '.join(reversed(path)),
+                asset=document['asset'], snapshot=snapshot,
+                href=directory + '/' + pages[key] + '#node-' + quote(node['id'], safe='')))
+    return result
+
+
 def generate(manifest, output):
     data, entries = plan(manifest)
     reviewing = any(entry['status'] != 'unchanged' for entry in entries)
@@ -235,7 +262,7 @@ def generate(manifest, output):
     if output.exists() and (not output.is_dir() or any(output.iterdir())):
         raise ValueError('Output directory must be new or empty')
     output.mkdir(parents=True, exist_ok=True)
-    cards, inventory, other_assets = [], [], []
+    cards, inventory, other_assets, node_search = [], [], [], []
     anchors = {e['asset']: f'asset-{i:03d}' for i, e in enumerate(entries)}
     asset_context = {e['asset']: dict(stub=e['item'].get('placeholder', False),
                                     missing=e['item'].get('context', {}).get('reason', '').startswith('Missing dependency'),
@@ -293,6 +320,8 @@ def generate(manifest, output):
         current_graphs, old_graphs = graphs(current or {}), graphs(old or {})
         names = list(current_graphs) + [n for n in old_graphs if n not in current_graphs]
         current_pages, old_pages = graph_pages(current, old)
+        node_search.extend(searchable_nodes(current, current_pages, directory.name, 'Current'))
+        node_search.extend(searchable_nodes(old, old_pages, directory.name, 'Before'))
         registry = {n: current_graphs.get(n, old_graphs.get(n)) for n in names}
         def descendant_count(identity):
             return sum(len(g['body']['nodes']) + descendant_count(k) for k, g in registry.items()
@@ -324,7 +353,9 @@ def generate(manifest, output):
             target = graph_preview(after, name, directory, f'graph-{index:03d}', marks, before, asset_context_path, navigation)
             links = link(target, caption)
             if graph_status:
-                links += f' <span class="badge {graph_status} graph-status">{graph_status.title()}</span>'
+                caption_status = ('Nested changes' if graph_status == 'changed' and not navigation['localChanged']
+                                  else graph_status.title())
+                links += f' <span class="badge {graph_status} graph-status">{caption_status}</span>'
             if navigation.get('movedFrom'):
                 previous_location = escape('Previously: ' + navigation['movedFrom'], quote=True)
                 links += f' <span class="badge moved graph-status" title="{previous_location}">Moved</span>'
@@ -372,6 +403,8 @@ def generate(manifest, output):
     replacements = dict(TITLE=escape(data.get('title', 'Blueprint previews')), DESCRIPTION=escape(data.get('description', '')),
                         DEMO='<p class="demo">DEMO — fictional changes for review. No mod assets were edited or rebuilt.</p>' if data.get('demo') else '',
                         LEGEND=legend, CARDS=''.join(cards),
+                        NODE_SEARCH_DATA=json.dumps(node_search, ensure_ascii=True).replace('<', '\\u003c'),
+                        NODE_SEARCH_SCRIPT=Path(__file__).with_name('node_search.js').read_text(encoding='utf-8'),
                         OTHER_ASSETS=('<section class="other-assets"><h2>Other assets (' + str(len(other_assets)) + ')</h2>'
                                       '<p>Reference inventory only. These entries do not expose editable BPT graphs. STUB means an editor placeholder, not the game implementation.</p><ul>'
                                       + ''.join(other_assets) + '</ul></section>') if other_assets else '',
@@ -379,7 +412,7 @@ def generate(manifest, output):
                         REVIEW_FOOTER=' Statuses and node review lists are supplied explicitly. Nested-change labels compare represented child graphs; this page does not claim a complete behavioral diff.' if reviewing else '')
     # One substitution pass: user text cannot become another template marker.
     import re
-    page = re.sub(r'__(TITLE|DESCRIPTION|DEMO|LEGEND|CARDS|OTHER_ASSETS|REVIEW_NOTICE|REVIEW_FOOTER)__', lambda m: replacements[m[1]], template)
+    page = re.sub(r'__(TITLE|DESCRIPTION|DEMO|LEGEND|CARDS|OTHER_ASSETS|REVIEW_NOTICE|REVIEW_FOOTER|NODE_SEARCH_DATA|NODE_SEARCH_SCRIPT)__', lambda m: replacements[m[1]], template)
     (output / 'index.html').write_text(page, encoding='utf-8')
     summary = dict(index=str(output / 'index.html'), mode='review' if reviewing else 'browse', assets=len(entries),
                    editableAssets=len(cards), listedAssets=len(other_assets),

@@ -455,7 +455,9 @@ follows card resizing. The child page links back through ancestor
 operations. Before navigation stays within the Before snapshot. Stable graph
 identity keeps a rename from appearing as an unrelated deletion/addition.
 When a represented child or descendant changes, the parent operation receives
-a nested-change label; this does not infer individual node review lists.
+a purple frame and a nested-change label; this does not infer individual node
+review lists. Added and removed operations keep their own status without a
+redundant nested-change label. Final-only view clears nested-change highlights.
 
 Function calls also receive a double border and an open-graph icon when their
 implementation is represented in the batch preview, including functions in other
@@ -476,10 +478,21 @@ from the same BPT batch; no additional asset discovery or agent command is neede
 The chooser supports keyboard activation and Escape returns focus to its control.
 Browser Back restores the saved view, filters, zoom and scroll position.
 
+The preview root has **Find a node**, searching represented node IDs, display
+names and graph paths without regard to case. Results show the Blueprint and
+full nested path because IDs can repeat between graphs. Select a result to open
+its graph and highlight the node, including a member of a folded card. A node
+hidden in Simplified opens in Full instead. **Include Before** adds old-snapshot
+results, including deleted nodes. The query and snapshot choice survive Back
+and are retained in the URL. Enter opens a unique result; with multiple matches,
+it focuses the first result for selection. Search uses the same preview batch
+and needs no extra agent command or asset query.
+
 Each graph row shows local source node/link counts and a separate descendant
 node count, independent of viewer folding or hidden disconnected nodes. Deleted
-graphs use Before counts. Review rows have Added, Changed or Removed badges;
-Changed also covers edits to a nested descendant. Unchanged graphs have no badge,
+graphs use Before counts. Review rows distinguish Added, Changed, Removed and
+Nested changes; the last means the local graph is unchanged but a represented
+descendant differs. Relocations additionally show Moved. Unchanged graphs have no badge,
 and ordinary browse mode has no review badges. Widget previews
 use the adjacent `.resources/manifest.json`; optional `resources` and
 `beforeResources` override it for the corresponding snapshot. An empty widget
@@ -523,7 +536,9 @@ links participate; use Full to include hidden technical nodes.
 **Show unconnected** controls unconnected output descriptions on every node,
 including execution branches, data types and output defaults, also inside folded
 steps. Connected outputs, input defaults and graph entry/exit signatures
-remain visible. Toggling it resizes
+remain visible. Unconnected advanced outputs are omitted when BPT declares
+`AdvancedPinDisplay=Hidden`; connected advanced outputs remain visible, and
+Details retains all source pins and defaults. Toggling **Show unconnected** resizes
 cards and reroutes links in both directions. A selected node is centered with
 the current zoom retained; without a selection the view resets and fits its width.
 
@@ -595,7 +610,11 @@ Details retains the complete original localization expression.
 `Field: name (type)`. Connected fields remain visible; unused fields follow
 **Show unconnected**. These labels describe extracted fields, not stored values.
 Collapsed graph tunnels are labelled `Graph Entry` and `Graph Exit` from their
-declared direction. Graph and function entries list visible data parameters as
+declared direction. An exit Tunnel with declared execution inputs but no incoming
+execution link is labelled `Graph Never Continues`. If it also declares data
+results, the card warns that those results cannot be returned. This is a local
+connection check, not whole-graph reachability analysis; pure data tunnels and
+function returns keep their ordinary labels. Graph and function entries list visible data parameters as
 `Parameter: name (type)`, including unused parameters. These are signatures,
 not runtime values inferred from stored output defaults.
 Graph exits and function results list their visible data results as

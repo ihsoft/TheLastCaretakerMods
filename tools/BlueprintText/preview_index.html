@@ -19,8 +19,17 @@ nav{display:flex;gap:8px;flex-wrap:wrap}a{color:#175ba4}li{padding:7px 0;border-
 <style>.other-assets{margin-top:48px;border-top:1px solid #cbd5e1;padding-top:18px}.other-assets p{font-size:14px;color:#52657a}.other-assets li{padding:5px 0;font-size:12px}.other-assets .badge{font-size:11px;padding:1px 5px}.property-references{margin:12px 0}.property-references li{font-size:13px}:target{outline:2px solid #93c5fd;scroll-margin:20px}</style>
 <h1>__TITLE__</h1><p>__DESCRIPTION__</p>__DEMO__
 __LEGEND__
+<style>.node-search{margin:20px 0;padding:18px;background:white;border:1px solid #cbd5e1;border-radius:10px}.node-search label[for]{display:block;font-weight:600;margin-bottom:6px}.node-search-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.node-search input[type=search]{flex:1;min-width:220px;padding:9px;font:inherit;border:1px solid #94a3b8;border-radius:5px}.node-search button{font:inherit;padding:6px 12px}.node-search small{display:block;color:#52657a}.node-search li{display:block}.node-search a{display:block;padding:4px;text-decoration:none}.node-search a:focus-visible{outline:2px solid #175ba4}.node-search a:hover{background:#f1f5f9}.node-search code{font-weight:600}.node-search .node-name{margin-left:12px}#node-search-status{font-size:14px;margin:10px 0 0}#node-search-results:empty{display:none}</style>
+<section class="node-search" aria-label="Node search">
+<label for="node-search-query">Find a node</label>
+<div class="node-search-controls"><input id="node-search-query" type="search" placeholder="Node ID or name" autocomplete="off" aria-controls="node-search-results"><button id="node-search-clear" type="button">Clear</button><label id="node-search-before-label"><input id="node-search-before" type="checkbox"> Include Before</label></div>
+<p id="node-search-status" role="status" aria-live="polite">Enter a node ID or name.</p>
+<ul id="node-search-results" aria-label="Matching nodes"></ul>
+</section>
 <p class="notice">Blueprints below can be edited through BPT. Asset references appear at their node, pin or property; STUB identifies an editor placeholder.__REVIEW_NOTICE__</p>
 __CARDS__
 __OTHER_ASSETS__
 <footer>Offline structural preview.__REVIEW_FOOTER__ Blueprint code, bindings and animations are not executed.</footer>
+<script id="node-search-data" type="application/json">__NODE_SEARCH_DATA__</script>
+<script>__NODE_SEARCH_SCRIPT__</script>
 </html>

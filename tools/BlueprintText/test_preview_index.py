@@ -16,6 +16,41 @@ def fixture(asset='/Game/Test'):
 
 
 class PreviewIndexTests(unittest.TestCase):
+    def test_root_node_search_has_scoped_current_and_before_links_and_safe_labels(self):
+        old, new = fixture('/Game/A'), fixture('/Game/A')
+        old['graphs'][0]['body']['nodes'].append(dict(id='gone node',kind='call',operation='Old'))
+        new['graphs'][0]['body']['nodes'][0]['operation']='</script><script>alert(1)</script>'
+        other=fixture('/Game/B')
+        for name,doc in [('old',old),('new',new),('other',other)]:self.save(name+'.json',doc)
+        manifest=self.save('search.json',dict(assets=[dict(source='new.json',before='old.json',status='changed'), 'other.json']))
+        generate(manifest,self.root/'search')
+        page=(self.root/'search/index.html').read_text(encoding='utf-8')
+        payload=re.search(r'<script id="node-search-data" type="application/json">(.*?)</script>',page,re.S)[1]
+        records=json.loads(payload)
+        current=[n for n in records if n['snapshot']=='Current']
+        self.assertEqual([(n['id'],n['path']) for n in current],[('n','A / Main'),('n','B / Main')])
+        self.assertEqual(current[0]['href'],'blueprint-000/graph-000.html#node-n')
+        removed=next(n for n in records if n['id']=='gone node')
+        self.assertEqual(removed['snapshot'],'Before')
+        self.assertEqual(removed['href'],'blueprint-000/graph-000-before.html#node-gone%20node')
+        self.assertIn('\\u003c',payload)
+        self.assertNotIn('</script>',payload)
+        self.assertIn('id="node-search-query"',page)
+        self.assertNotIn('id="node-search-query"',(self.root/'search/blueprint-000/graph-000.html').read_text(encoding='utf-8'))
+
+    def test_node_search_names_nested_graphs_and_retains_each_scoped_node_id(self):
+        from test_nested_graphs import fixture as nested_fixture
+        source=nested_fixture()
+        self.save('source.json',source)
+        generate(self.save('search.json',dict(assets=['source.json'])),self.root/'nested-search')
+        page=(self.root/'nested-search/index.html').read_text(encoding='utf-8')
+        records=json.loads(re.search(r'<script id="node-search-data" type="application/json">(.*?)</script>',page,re.S)[1])
+        entries=[n for n in records if n['id']=='Entry']
+        self.assertEqual([n['path'] for n in entries],['Nested / Root / Details','Nested / Root / Details / Details'])
+        self.assertEqual([n['href'] for n in entries],['blueprint-000/graph-001.html#node-Entry','blueprint-000/graph-002.html#node-Entry'])
+        self.assertEqual(next(n for n in records if n['id']=='Operation')['title'],'Details')
+        self.assertTrue(all(n['snapshot']=='Current' for n in records))
+
     def test_review_and_final_arrows_have_unique_local_markers(self):
         source = fixture()
         source['graphs'][0]['body']['nodes'].append(dict(id='sink', kind='call', operation='Consume'))

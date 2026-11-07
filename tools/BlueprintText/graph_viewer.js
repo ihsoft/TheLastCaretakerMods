@@ -62,7 +62,12 @@ function focusLinkedNode(){
     let id;
     try{id=decodeURIComponent(fragment.slice(6))}catch(error){return}
     // A call may be a member of a folded action chain in the selected view.
-    const entry=[...graphIndex(svg).nodes.values()].find(e=>JSON.parse(e.node.dataset.nodeIds).includes(id));
+    const find=target=>[...graphIndex(target).nodes.values()].find(e=>JSON.parse(e.node.dataset.nodeIds).includes(id));
+    let entry=find(svg);
+    if(!entry&&view.value!=='full'){
+        const full=document.getElementById((showChanges&&!showChanges.checked?'final-':'')+'full-'+direction.value).querySelector('svg');
+        if(find(full)){view.value='full';choose();entry=find(svg)}
+    }
     if(!entry)return;
     highlight(entry.node.dataset.nodeId);
     const node=entry.node.getBoundingClientRect(),viewport=box.getBoundingClientRect();

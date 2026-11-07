@@ -469,6 +469,14 @@ def output_default(node, alias, templates):
     return node.get('defaults', {}).get(alias)
 
 
+def hidden_advanced_output(node, alias, templates, connected):
+    metadata = templates.get(node.get('pins', {}).get(alias, {}).get('type'), {})
+    return (node.get('properties', {}).get('AdvancedPinDisplay') == 'Hidden'
+            and metadata.get('bAdvancedView') == 'True'
+            and native_string(metadata.get('PinType.PinCategory', '""')) != 'exec'
+            and alias[4:] not in connected)
+
+
 def output_lines(node, pin_templates, connected=()):
     if "pins" not in node:
         return []  # Schema 1 has no complete signature; do not infer a return type.
@@ -497,6 +505,8 @@ def output_lines(node, pin_templates, connected=()):
             # These outputs are the graph's inputs; their signature stays visible
             # even when unused or when Show unconnected is disabled.
             lines.append(CardLine(f'Parameter: {name} ({pin_type_label(metadata)})'))
+            continue
+        if hidden_advanced_output(node, alias, pin_templates, connected):
             continue
         if node.get('kind') == 'BreakStruct':
             lines.append(CardLine(f'Field: {name} ({pin_type_label(metadata)})', alias[4:] not in connected))
@@ -535,7 +545,8 @@ def unconnected_outputs(node, connected, pin_templates):
     """Declared visible pins only; count original links, including folded/hidden ones."""
     if 'pins' in node:
         outputs = [alias[4:] for alias, pin in node['pins'].items() if alias.startswith('out:')
-                   and pin_templates.get(pin.get('type'), {}).get('bHidden') != 'True']
+                   and pin_templates.get(pin.get('type'), {}).get('bHidden') != 'True'
+                   and not hidden_advanced_output(node, alias, pin_templates, connected)]
         execution_outputs = [alias[4:] for alias in node['pins'] if alias.startswith('out:')
                              and pin_category(node, alias, pin_templates) == 'exec']
     elif node.get('kind') == 'sequence':
@@ -784,11 +795,21 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             templates, parent = document.get('pinTemplates', {}), document.get('parent')
             raw_lines = node_lines(node, connected[node_id], hidden_inputs[node_id], templates, parent, wrap=False,
                                    connected_outputs=connected_outputs[node_id])
+            properties = node.get('properties', {})
+            if (node.get('kind') == 'Tunnel' and properties.get('bCanHaveInputs') == 'True'
+                    and properties.get('bCanHaveOutputs') != 'True'):
+                exec_inputs = {alias[3:] for alias in node.get('pins', {}) if alias.startswith('in:')
+                               and pin_category(node, alias, templates) == 'exec'}
+                if exec_inputs and not exec_inputs.intersection(connected[node_id]):
+                    raw_lines[0] = 'Graph Never Continues'
+                    if any(alias.startswith('in:') and pin_category(node, alias, templates) not in ('exec', None, '')
+                           for alias in node.get('pins', {})):
+                        raw_lines.append('Warning: result outputs cannot be returned')
             child = graph_context.get('children', {}).get(node_id)
             if child:
                 raw_lines[0] = child['name']
                 raw_lines.append('Nested graph · ' + str(child['nodes']) + ' local nodes')
-                if child.get('changed'):
+                if child.get('changed') and node.get('_reviewStatus') not in ('added', 'removed'):
                     raw_lines.append('~ Nested implementation changed')
             title_rows[node_id] = len(wrap_node_line(raw_lines[0], True))
             previous = node.get('_reviewPreviousDescription', {})
@@ -982,7 +1003,9 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         color = node_fill(node, document.get('pinTemplates', {}), execution_nodes)
         opacity = ' opacity="0.55"' if node.get("enabled") is False else ''
         status = node.get('_reviewStatus', '')
-        stroke = {'added': '#15803d', 'changed': '#7c3aed', 'removed': '#b42318'}.get(status, '#8b9bae')
+        nested_changed = bool(child and child.get('changed') and status not in ('added', 'removed'))
+        stroke = {'added': '#15803d', 'changed': '#7c3aed', 'removed': '#b42318'}.get(
+            status, '#7c3aed' if nested_changed else '#8b9bae')
         dash = ' stroke-dasharray="7 4"' if status == 'removed' else ''
         if status == 'removed':
             opacity = ' opacity="0.6"'
@@ -992,7 +1015,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             review_html = ' data-review-details="' + escape(render_details(details['Before'], details['After'])) + '"'
         ids = [n['id'] for n in node.get('_foldedNodes', [node])]
         anchor = f' id="node-{escape(node["id"])}"' if view == "simplified" and direction == "TB" else ""
-        pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}" data-node-ids="{escape(json.dumps(ids))}"{anchor} data-review-status="{status}"{review_html}{opacity}><title>{escape(json.dumps(details, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="{stroke}" stroke-width="{3 if status else 1.5}"{dash}/>')
+        pieces.append(f'<g class="graph-node" data-node-id="{escape(node["id"])}" data-node-ids="{escape(json.dumps(ids))}"{anchor} data-review-status="{status}"{review_html}{opacity}><title>{escape(json.dumps(details, ensure_ascii=False, indent=2))}</title><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{color}" stroke="{stroke}" stroke-width="{3 if status or nested_changed else 1.5}"{dash}/>')
         if destination:
             pieces.append(f'<rect class="nested-graph-frame" x="{x+4}" y="{y+4}" width="{w-8}" height="{h-8}" rx="8" fill="none" stroke="{stroke}" stroke-width="1" pointer-events="none"{dash}/>')
         hidden_offset, section_offset = 0, 0
@@ -1008,6 +1031,10 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             if previous is not None:
                 decoration = ' class="review-changed-line" style="fill:#7c3aed;font-weight:600"'
                 tooltip = '<title>' + escape('Previously: ' + previous) + '</title>'
+            elif line == '~ Nested implementation changed':
+                decoration = ' class="review-nested-change" style="fill:#7c3aed;font-weight:600"'
+            elif line.startswith('Warning: result outputs'):
+                decoration = ' class="graph-result-warning" style="fill:#b45309;font-weight:600"'
             gap = section_gaps[node['id']][row]
             section_offset += gap
             if not getattr(line, 'unconnected_output', False):
