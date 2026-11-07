@@ -424,23 +424,32 @@ def pin_type_label(metadata):
 
 class CardLine(str):
     """Keep display semantics through wrapping and folded-step descriptions."""
-    def __new__(cls, text, unconnected_output=False, reference=None, previous=None, code=False):
+    def __new__(cls, text, unconnected_output=False, reference=None, previous=None, code=False, step_start=False):
         line = super().__new__(cls, text)
         line.unconnected_output = unconnected_output
         line.reference = reference
         line.previous = previous
         line.code = code
+        line.step_start = step_start
         return line
 
 
 def wrap_card_line(line, title=False):
     return [CardLine(part, getattr(line, 'unconnected_output', False), getattr(line, 'reference', None),
-                     getattr(line, 'previous', None))
-            for part in wrap_node_line(line, title)]
+                     getattr(line, 'previous', None), step_start=index == 0 and getattr(line, 'step_start', False))
+            for index, part in enumerate(wrap_node_line(line, title))]
 
 
 def card_section_gaps(lines):
     """Separate inputs from outputs without inserting fake text rows."""
+    if any(getattr(line, 'step_start', False) for line in lines):
+        # A chain is grouped by operation, not by the pins within an operation.
+        seen_step, gaps = False, []
+        for line in lines:
+            start = getattr(line, 'step_start', False)
+            gaps.append(8 if start and seen_step else 0)
+            seen_step = seen_step or start
+        return gaps
     section, gaps = None, []
     for line in lines:
         current = ('input' if line.startswith(('Input:', 'Parameter:')) else
@@ -574,7 +583,7 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
                               if line.startswith(('Input:', 'Output:'))), len(step))
                 step[index:index] = ['Input: ' + hint for hint in step_inputs[i-1]]
             lines.extend([CardLine(f'{i}. {readable_name(step[0])}', reference=getattr(step[0], 'reference', None),
-                                   previous=getattr(step[0], 'previous', None))] + step[1:])
+                                   previous=getattr(step[0], 'previous', None), step_start=True)] + step[1:])
             if i <= len(step_outputs):
                 lines.extend(step_outputs[i-1])
         return [part for i, line in enumerate(lines) for part in wrap_card_line(line, i == 0)]

@@ -598,7 +598,10 @@ not runtime values inferred from stored output defaults.
 Graph exits and function results list their visible data results as
 `Output: name (type)`, using their declared input pins. These signatures remain
 visible with **Show unconnected** off. Input and output sections are separated
-by a small gap; `Input`, `Output`, `Parameter` and `Field` labels are bold.
+by a small gap. Folded chains instead separate successive steps, keeping each
+step's inputs and outputs together without an internal gap. This grouping is
+preserved when unconnected outputs are hidden. `Input`, `Output`, `Parameter`
+and `Field` labels are bold.
 Display titles split identifiers into readable words and wrap at word boundaries;
 continued titles retain their heading style. Original identifiers remain in details.
 Stored defaults on unconnected output pins are labelled `Output: name = value

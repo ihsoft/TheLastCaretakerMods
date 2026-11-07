@@ -22,6 +22,52 @@ def visible_text(element):
 
 
 class GraphRenderingTests(unittest.TestCase):
+    @staticmethod
+    def action_spacing_fixture():
+        names = ['AltitudeLockActive', 'AltitudeDescentBrakingActiveWithLongWrappedName',
+                 'VerticalVelocitySampleValid']
+        return {'schema':2, 'pinTemplates':{'exec':{'PinType.PinCategory':'"exec"'},
+                                           'bool':{'PinType.PinCategory':'"bool"'}},
+                'nodes':[{'id':str(i),'kind':'setVariable','variable':name,
+                          'pins':{'in:exec':{'type':'exec'},'out:then':{'type':'exec'},
+                                  'in:'+name:{'type':'bool'},'out:Output_Get':{'type':'bool'}},
+                          'defaults':{'in:'+name:'false','out:Output_Get':'false'}}
+                         for i,name in enumerate(names)],
+                'links':[{'from':str(i)+'.out:then','to':str(i+1)+'.in:exec'} for i in range(2)]}
+
+    def test_folded_steps_are_spaced_as_units_with_compact_inputs_and_outputs(self):
+        for status in (None, 'added', 'removed', 'changed'):
+            doc = self.action_spacing_fixture()
+            before = copy.deepcopy(doc)
+            if status == 'added':
+                before['nodes'], before['links'] = [], []
+            elif status == 'removed':
+                doc['nodes'], doc['links'] = [], []
+            elif status == 'changed':
+                for node in doc['nodes']:
+                    node['defaults']['in:'+node['variable']] = 'true'
+            source = copy.deepcopy(doc)
+            for direction in ('TB','LR'):
+                svg = ET.fromstring(render(doc, direction=direction,
+                    review={status:['0','1','2']} if status else None, before=before)[0])
+                card = svg.find('.//{*}g[@data-node-id="2"]')
+                rows = card.findall('{*}text')
+                self.assertIn('Action chain', visible_text(rows[0]))
+                # The long second step heading wraps, but only its first row starts a section.
+                second = next(i for i,r in enumerate(rows) if visible_text(r).startswith('2. '))
+                self.assertFalse(visible_text(rows[second+1]).startswith('Input:'))
+                for compact in (False, True):
+                    shown = [r for r in rows if not compact or not r.get('data-unconnected-output')]
+                    def position(r):
+                        dy = float(re.search(r'--compact-dy:(-?\d+)px', r.get('style'))[1]) if compact else 0
+                        return float(r.get('y')) + dy
+                    for previous, current in zip(shown, shown[1:]):
+                        gap = 8 if visible_text(current).startswith(('2. ', '3. ')) else 0
+                        self.assertEqual(position(current)-position(previous), 19+gap)
+                    box = next(n for n in json.loads(svg.get('data-layout'))['nodes'] if n['id']=='2')
+                    self.assertEqual(box['compactH' if compact else 'h'], 28+19*len(shown)+16)
+                self.assertEqual(doc, source)
+
     def test_input_output_gap_survives_hiding_first_unconnected_output(self):
         doc = {'schema':2, 'pinTemplates':{'number':{'PinType.PinCategory':'"real"',
                                                    'PinType.PinSubCategory':'"double"'}},
