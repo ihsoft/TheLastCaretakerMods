@@ -439,7 +439,10 @@ provide `reviews`, keyed by GraphGuid or unambiguous graph name, using the exist
 `"reviews":{"EventGraph":{"changed":["SetLimit"]}}`. Use actual exported node
 IDs. Without a list, the card still has its status; node changes are not inferred.
 Graph Before links appear only when the graph or its represented descendants
-differ between snapshots. Changes to shared type-table aliases alone do not
+differ between snapshots, or the graph moves to another owner. A relocation
+shows `Moved` with the previous full path in its tooltip; it does not by itself
+mark the graph's contents as changed or enable **Show changes**. A graph moved
+and edited shows both `Moved` and `Changed`. Changes to shared type-table aliases alone do not
 make a graph different. Added and removed graphs show all their nodes marked
 accordingly, including graphs removed from a changed Blueprint. Removed content
 is rendered from the Before snapshot. `"demo":true` marks the index explicitly

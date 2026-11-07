@@ -192,6 +192,40 @@ class NestedGraphsTests(unittest.TestCase):
             self.assertNotIn('id="show-changes"', page)
             self.assertNotIn('id="final-', page)
 
+    def test_reparented_graph_reports_move_without_inventing_body_changes(self):
+        for edit_body in (False, True):
+            with self.subTest(edit_body=edit_body), tempfile.TemporaryDirectory() as folder:
+                old, new = fixture(), fixture()
+                operation = new['graphs'][1]['body']['nodes'].pop()
+                operation['id'] = 'MovedOperation'
+                new['graphs'][0]['body']['nodes'].append(operation)
+                new['graphs'][2]['owner'].update(graph='A'*32, node='MovedOperation')
+                if edit_body:
+                    new['graphs'][2]['body']['nodes'][0]['properties']['NodeComment'] = '"Edited"'
+                validate_hierarchy(new)
+                pages = {g['properties']['GraphGuid']: str(i)+'.html' for i, g in enumerate(new['graphs'])}
+                nav = graph_navigation(new, old, 'C'*32, pages)
+                self.assertEqual(nav['changed'], edit_body)
+                self.assertEqual(nav['movedFrom'], 'Nested / Root / Details / Details')
+                parent_nav = graph_navigation(new, old, 'A'*32, pages)
+                self.assertEqual(parent_nav['children']['MovedOperation']['changed'], edit_body)
+                root = Path(folder)
+                for name, document in (('old', old), ('new', new)):
+                    (root/(name+'.json')).write_text(json.dumps(document), encoding='utf-8')
+                reviews = {'C'*32: {'changed': ['Entry']}} if edit_body else {}
+                manifest = root/'manifest.json'
+                manifest.write_text(json.dumps(dict(assets=[dict(source='new.json', before='old.json',
+                    status='changed', reviews=reviews)])), encoding='utf-8')
+                generate(manifest, root/'preview')
+                index = (root/'preview/index.html').read_text(encoding='utf-8')
+                row = index.split('href="blueprint-000/graph-002.html"', 1)[1].split('</li>', 1)[0]
+                self.assertIn('class="badge moved graph-status"', row)
+                self.assertIn('Previously: Nested / Root / Details / Details', row)
+                self.assertEqual('class="badge changed graph-status"' in row, edit_body)
+                self.assertIn('graph-002-before.html', row)
+                viewer = (root/'preview/blueprint-000/graph-002.html').read_text(encoding='utf-8')
+                self.assertEqual('id="show-changes"' in viewer, edit_body)
+
 
 if __name__ == '__main__':
     unittest.main()

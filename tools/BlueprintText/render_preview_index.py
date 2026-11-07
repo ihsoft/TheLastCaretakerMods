@@ -165,6 +165,10 @@ def graph_navigation(document, other, key, pages):
 
     def signature(doc, graph):
         value = copy.deepcopy(graph)
+        # Location is reported separately: moving a graph does not edit its body.
+        if 'owner' in value:
+            value['owner'].pop('graph', None)
+            value['owner'].pop('node', None)
         for node in value['body']['nodes']:
             node['kind'] = doc.get('classes', {}).get(node.get('kind'), node.get('kind'))
             for pin in node.get('pins', {}).values():
@@ -195,12 +199,24 @@ def graph_navigation(document, other, key, pages):
             children[graph['owner']['node']] = dict(id=identity, name=graph['name'], href=pages[identity],
                 nodes=len(graph['body']['nodes']), changed=bool(other) and changed(identity))
     graph = registry[key]
+    previous_graph = other_registry.get(key)
+    def location(g):
+        return tuple(g.get('owner', {}).get(field) for field in ('graph', 'node'))
+    moved_from = None
+    if previous_graph and location(graph) != location(previous_graph):
+        path, cursor = [previous_graph['name']], previous_graph
+        while 'owner' in cursor:
+            cursor = other_registry[cursor['owner']['graph']]
+            path.append(cursor['name'])
+        path.append(other['asset'].rsplit('/', 1)[-1])
+        moved_from = ' / '.join(reversed(path))
     entry_nodes = [graph['owner']['entry']] if 'owner' in graph else [
         n['id'] for n in graph['body']['nodes']
         if document.get('classes', {}).get(n.get('kind'), n.get('kind', '')).rsplit('.', 1)[-1]
         in ('FunctionEntry', 'K2Node_FunctionEntry')]
     return dict(breadcrumbs=list(reversed(breadcrumbs)), children=children, entryNodes=entry_nodes,
-                changed=bool(other) and changed(key), comparisonAvailable=key in other_registry)
+                changed=bool(other) and changed(key), comparisonAvailable=key in other_registry,
+                movedFrom=moved_from)
 
 
 def graph_tree(rows, registry):
@@ -309,13 +325,16 @@ def generate(manifest, output):
             links = link(target, caption)
             if graph_status:
                 links += f' <span class="badge {graph_status} graph-status">{graph_status.title()}</span>'
+            if navigation.get('movedFrom'):
+                previous_location = escape('Previously: ' + navigation['movedFrom'], quote=True)
+                links += f' <span class="badge moved graph-status" title="{previous_location}">Moved</span>'
             if before is not None:
                 before_navigation = graph_navigation(old, None, name, old_pages)
                 before_navigation['calls'] = navigation['beforeCalls']
                 before_navigation['callers'] = callers['before'].get((entry['asset'], name), [])
                 target = graph_preview(before, name, directory, f'graph-{index:03d}-before', asset_context=asset_context_path,
                     navigation=before_navigation)
-                if navigation['comparisonAvailable'] and navigation['changed']:
+                if navigation['comparisonAvailable'] and (navigation['changed'] or navigation.get('movedFrom')):
                     links += ' · ' + link(target, 'Before')
             counted = current_graphs.get(name, old_graphs.get(name))['body']
             version = 'Before' if name not in current_graphs else 'Current'
