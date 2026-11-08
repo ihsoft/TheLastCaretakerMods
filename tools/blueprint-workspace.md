@@ -148,6 +148,57 @@ JSON and a corresponding source entry to the manifest. Deletion of whole assets
 is not supported; removing a baseline entry or losing a source file must not be
 used as a delete operation.
 
+### Extract an operation into a collapsed graph
+
+Choose a logically complete operation and its name under the
+[graph design rule](../docs/blueprint-graph-design-rule.md). `Collapse` performs
+the mechanical extraction in one offline call; it does not choose the operation
+or launch Unreal. Select the parent by GraphGuid or an unambiguous graph name,
+and provide the existing node IDs. `Asset` is required when the workspace selects
+more than one Blueprint. The new name must be a unique ASCII identifier in that
+Blueprint.
+
+```powershell
+& $tool -Action Collapse -WorkspaceRoot $work -Asset '/Game/Mods/Example/ModActor' `
+  -Graph 'CalculateMotion' -Node @('K2Node_CallFunction_12', 'K2Node_CallFunction_13') `
+  -Name 'CalculateBraking' `
+  -BoundaryNames @{ 'K2Node_VariableGet_4.out:Speed' = 'Speed' }
+& $tool -Action Apply -WorkspaceRoot $work
+& $tool -Action Preview -WorkspaceRoot $work
+```
+
+`BoundaryNames` is optional. Its keys are crossing **source** endpoints, for
+both inputs and outputs; values name the new boundary parameters. Otherwise
+the tool uses the source pin name, with unique `Value` names for generic results.
+Execution boundary names remain `execute` and `then`.
+
+The supported selection is one connected region: a pure calculation, or a
+region with one execution entry and at most one continuation. Several callers
+may share that entry; terminal branches retain their original termination.
+Common call, get/set, branch, sequence, cast, struct, select, reroute and existing
+collapsed nodes are supported. Entry/result/event nodes and other special
+classes are rejected. Boundary pins require concrete scalar or array types;
+wildcards, references, weak pointers, delegates, maps, sets and split pins are
+outside this operation. Existing derived-to-base object/class connections keep
+the source type. Other type conversions and dependency paths that leave the
+selection and re-enter it are rejected. A rejection changes neither source nor
+project assets; use its reason to choose a supported boundary or discuss a tool
+extension, rather than bypassing the check.
+
+The compact result reports parent counts, moved nodes, the new graph identity
+and `inverseVerified`. That check expands the new boundary and compares original
+node payloads, ownership and links. It is structural evidence, not a substitute
+for strict Apply or task-appropriate runtime validation. Existing node/pin GUIDs
+are preserved, including nested children. The tool supplies cumulative preview
+annotations against the workspace's original review baseline. Source and
+manifest writes recover together after interruption; a subsequent conflicting
+edit stops recovery for reconciliation. `applied: false` means project assets
+are still unchanged. Apply and Preview remain the ordinary next steps; no
+manual tunnel construction, annotation pass or generated-output inspection is
+needed.
+
+### Workspace coordination
+
 Use a separate workspace for each independent task. All commands hold an OS lock
 on their workspace. Prepare, Export, Apply, Preview, MarkStubs and Recover also lock the project and
 join the [shared Unreal queue](unreal-coordination.md) for their entire operation,

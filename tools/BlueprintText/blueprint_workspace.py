@@ -225,6 +225,50 @@ class Workspace:
     def baseline(self):
         return read(self.internal / 'baseline.json')
 
+    def recover_edit(self):
+        """Rollback an interrupted offline source/manifest pair before any next operation."""
+        journal = self.internal / 'edit-recovery.json'
+        if not journal.exists():
+            return
+        entries = read(journal)['files']
+        resolved = [(inside(self.root, row['path']), row) for row in entries]
+        for path, row in resolved:
+            if path.read_bytes() not in (row['before'].encode('utf-8'), row['after'].encode('utf-8')):
+                raise ValueError('Interrupted offline edit conflicts with subsequent changes: ' + str(path))
+        for path, row in resolved:
+            temporary = path.with_name(path.name + '.writing')
+            temporary.write_bytes(row['before'].encode('utf-8'))
+            temporary.replace(path)
+        journal.unlink()
+
+    def collapse(self, asset, graph, nodes, name, boundary_names=None):
+        from collapse_graph import collapse, review_marks
+        data, entries = self.load()
+        matches = [entry for entry in entries if asset is None or entry[2]['asset'] == asset]
+        if len(matches) != 1:
+            raise ValueError('Collapse requires exactly one selected Asset')
+        item, source, document = matches[0]
+        result_document, result = collapse(document, graph, nodes, name, boundary_names)
+        baseline = self.baseline().get(document['asset'])
+        if baseline and baseline.get('before'):
+            item['reviews'] = review_marks(read(inside(self.internal, baseline['before'])), result_document)
+        else:
+            item.pop('reviews', None)  # A wholly new asset has no Before view.
+        files = [dict(path=str(path.relative_to(self.root)), before=path.read_bytes().decode('utf-8'),
+                      after=(json.dumps(value, indent=2, ensure_ascii=False) + '\n').replace('\n', os.linesep))
+                 for path, value in ((source, result_document), (self.manifest, data))]
+        journal = self.internal / 'edit-recovery.json'
+        write(journal, dict(files=files))
+        try:
+            write(source, result_document)
+            write(self.manifest, data)
+            journal.unlink()
+        except Exception:
+            self.recover_edit()
+            raise
+        result['source'] = str(source)
+        return result
+
     def add_source(self, source, asset, project=None):
         """Stage a relocated library source; Apply owns all actual asset writes."""
         document = codec.relocate(read(source), asset)
@@ -640,11 +684,15 @@ class Workspace:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'MarkStubs', 'Recover', 'AddSource'])
+    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'MarkStubs', 'Recover', 'AddSource', 'Collapse'])
     parser.add_argument('--workspace', required=True)
     parser.add_argument('--project')
     parser.add_argument('--asset', action='append')
     parser.add_argument('--source')
+    parser.add_argument('--graph')
+    parser.add_argument('--node', action='append')
+    parser.add_argument('--name')
+    parser.add_argument('--boundary-names', type=json.loads)
     parser.add_argument('--engine', default=r'K:\Epic Games\UE_5.8')
     args = parser.parse_args()
     workspace = None
@@ -654,6 +702,17 @@ def main():
         lock_path = workspace.root.parent / (workspace.root.name + '.workspace.lock')
         with ExitStack() as stack:
             stack.enter_context(lock(lock_path))
+            workspace.recover_edit()
+            if args.action == 'Collapse':
+                if not args.graph or not args.node or not args.name or (args.asset and len(args.asset) != 1):
+                    raise ValueError('Collapse requires Graph, Node IDs, Name and at most one Asset')
+                if (workspace.internal / 'recovery.json').exists():
+                    raise ValueError('Interrupted asset write requires Recover before another operation')
+                result = workspace.collapse(args.asset[0] if args.asset else None, args.graph,
+                                            args.node, args.name, args.boundary_names)
+                result.update(workspace=str(workspace.root), manifest=str(workspace.manifest))
+                print(json.dumps(result))
+                return 0
             if args.action == 'AddSource':
                 if not args.source or not args.asset or len(args.asset) != 1:
                     raise ValueError('AddSource requires SourcePath and exactly one destination Asset')

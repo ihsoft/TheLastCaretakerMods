@@ -70,11 +70,48 @@ class GraphRenderingTests(unittest.TestCase):
                                 svg=ET.fromstring(render(doc,view=view,direction=direction)[0])
                                 rows=svg.find('.//{*}g[@data-node-id="exit"]').findall('{*}text')
                                 text='\n'.join(visible_text(r) for r in rows)
-                                never=kind=='Tunnel' and has_exec and not wired_exec
+                                never=kind=='Tunnel' and not wired_exec
                                 self.assertEqual('Graph Never Continues' in text,never)
+                                if never:
+                                    self.assertEqual(svg.find('.//{*}g[@data-node-id="exit"]/{*}rect').get('fill'), '#f7e9d7')
                                 self.assertEqual('Warning: result outputs' in text,never and data)
                                 if data:self.assertIn('Output: Value (double)',text)
                         self.assertEqual(doc,original)
+
+    def test_pinless_exit_uses_graph_execution_context_and_review_snapshot(self):
+        doc = {'schema': 2, 'pinTemplates': {'exec': {'PinType.PinCategory': '"exec"'}},
+               'nodes': [{'id': 'entry', 'kind': 'Tunnel', 'properties': {'bCanHaveOutputs': 'True'},
+                          'pins': {'out:exec': {'type': 'exec'}}},
+                         {'id': 'exit', 'kind': 'Tunnel', 'properties': {'bCanHaveInputs': 'True'}, 'pins': {}}],
+               'links': []}
+        pure = copy.deepcopy(doc)
+        pure['nodes'][0]['pins'] = {}
+        for view in ('full', 'simplified', 'expressions'):
+            for direction in ('TB', 'LR'):
+                for source, never in ((doc, True), (pure, False)):
+                    svg = ET.fromstring(render(source, view=view, direction=direction)[0])
+                    card = svg.find('.//{*}g[@data-node-id="exit"]')
+                    self.assertEqual('Graph Never Continues' in ''.join(visible_text(t) for t in card.findall('{*}text')), never)
+                    self.assertEqual(card.find('{*}rect').get('fill'), '#f7e9d7' if never else '#e8edf4')
+        # A removed execution entry must not turn the current pure exit into an action.
+        current = copy.deepcopy(pure)
+        current['nodes'] = current['nodes'][1:]
+        svg = ET.fromstring(render(current, review={'removed': ['entry']}, before=doc)[0])
+        self.assertEqual(svg.find('.//{*}g[@data-node-id="exit"]/{*}rect').get('fill'), '#e8edf4')
+
+    def test_removed_execution_link_does_not_hide_terminal_exit(self):
+        old = {'schema': 2, 'pinTemplates': {'exec': {'PinType.PinCategory': '"exec"'}},
+               'nodes': [{'id': 'entry', 'kind': 'Tunnel', 'properties': {'bCanHaveOutputs': 'True'},
+                          'pins': {'out:exec': {'type': 'exec'}}},
+                         {'id': 'action', 'kind': 'call', 'pins': {'in:exec': {'type': 'exec'}, 'out:then': {'type': 'exec'}}},
+                         {'id': 'exit', 'kind': 'Tunnel', 'properties': {'bCanHaveInputs': 'True'}, 'pins': {'in:then': {'type': 'exec'}}}],
+               'links': [{'from': 'entry.out:exec', 'to': 'action.in:exec'}, {'from': 'action.out:then', 'to': 'exit.in:then'}]}
+        current = copy.deepcopy(old)
+        current['nodes'].pop(1)
+        current['links'] = []
+        svg = ET.fromstring(render(current, review={'removed': ['action']}, before=old)[0])
+        card = svg.find('.//{*}g[@data-node-id="exit"]')
+        self.assertIn('Graph Never Continues', ''.join(visible_text(t) for t in card.findall('{*}text')))
 
     @staticmethod
     def action_spacing_fixture():

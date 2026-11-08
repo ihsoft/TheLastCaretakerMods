@@ -90,6 +90,8 @@ def review_document(document, before, review, selection=None):
     elif any(s in ('changed', 'removed') for s in marked.values()):
         raise ValueError('Changed and removed nodes require --before source.')
     current_by_id, old_by_id = ({n['id']: n for n in ns} for ns in (current, old))
+    current_terminal = terminal_exit_ids(current, edges, document.get('pinTemplates', {}))
+    old_terminal = terminal_exit_ids(old, old_edges, (before or {}).get('pinTemplates', {}))
     for node_id, status in marked.items():
         if status == 'removed':
             valid = node_id in old_by_id and node_id not in current_by_id
@@ -135,6 +137,7 @@ def review_document(document, before, review, selection=None):
 
     for node in result['nodes']:
         node_id = node['id']
+        node['_graphNeverContinues'] = node_id in (old_terminal if node_id in removed else current_terminal)
         if node_id in boundary:
             node['_reviewBoundary'] = True
         if node_id in marked:
@@ -203,7 +206,7 @@ def layers(nodes, edges, templates=None):
     execution_nodes = {endpoint for source, _, target, _, execution in edges
                        if execution for endpoint in (source, target)}
     for node in nodes:
-        if (node.get('_chainKind') == 'action'
+        if (node.get('_chainKind') == 'action' or node.get('_graphNeverContinues')
                 or node.get('kind') in ('event', 'customEvent', 'FunctionEntry', 'FunctionResult',
                                         'sequence', 'branch', 'setVariable', 'variableSet')
                 or any(pin_category(part, alias, templates or {}) == 'exec'
@@ -252,12 +255,29 @@ def pin_category(node, alias, templates):
     return native_string(templates.get(pin.get('type'), {}).get('PinType.PinCategory', '""'))
 
 
+def terminal_exit_ids(nodes, edges, templates):
+    """An impure collapsed graph may have a required exit tunnel with no pins."""
+    execution_entry = any(
+        (node.get('kind') == 'FunctionEntry' or
+         (node.get('kind') == 'Tunnel' and node.get('properties', {}).get('bCanHaveOutputs') == 'True'))
+        and any(alias.startswith('out:') and pin_category(node, alias, templates) == 'exec'
+                for alias in node.get('pins', {})) for node in nodes)
+    connected_execution = {target for _, _, target, _, execution in edges if execution}
+    return {node['id'] for node in nodes
+            if node.get('kind') == 'Tunnel'
+            and node.get('properties', {}).get('bCanHaveInputs') == 'True'
+            and node.get('properties', {}).get('bCanHaveOutputs') != 'True'
+            and (execution_entry or any(alias.startswith('in:') and pin_category(node, alias, templates) == 'exec'
+                                        for alias in node.get('pins', {})))
+            and node['id'] not in connected_execution}
+
+
 def node_fill(node, templates, execution_nodes):
     kind = node.get('kind', 'unknown')
     if kind in ('event', 'customEvent', 'FunctionEntry'):
         return '#dce9fc'
     if (any(pin_category(node, alias, templates) == 'exec' for alias in node.get('pins', {}))
-            or node['id'] in execution_nodes
+            or node['id'] in execution_nodes or node.get('_graphNeverContinues')
             or kind in ('setVariable', 'variableSet', 'branch', 'sequence', 'FunctionResult')):
         return '#f7e9d7'
     return '#e8edf4'
@@ -742,6 +762,8 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     if view not in VIEW_MODES or direction not in ("TB", "LR"):
         raise ValueError("Expected view simplified/full/expressions and direction TB/LR.")
     all_nodes, all_edges, owner, graph = load_graph(document, selection)
+    terminal = terminal_exit_ids(all_nodes, all_edges, document.get('pinTemplates', {}))
+    all_nodes = [dict(n, _graphNeverContinues=n.get('_graphNeverContinues', n['id'] in terminal)) for n in all_nodes]
     # Attach navigation to view copies; source and review snapshots stay untouched.
     all_nodes = [dict(n, _graphLink=target) if (target := graph_context.get(
         'beforeCalls' if n.get('_reviewStatus') == 'removed' else 'calls', {}).get(n['id'])) else n
@@ -795,16 +817,11 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             templates, parent = document.get('pinTemplates', {}), document.get('parent')
             raw_lines = node_lines(node, connected[node_id], hidden_inputs[node_id], templates, parent, wrap=False,
                                    connected_outputs=connected_outputs[node_id])
-            properties = node.get('properties', {})
-            if (node.get('kind') == 'Tunnel' and properties.get('bCanHaveInputs') == 'True'
-                    and properties.get('bCanHaveOutputs') != 'True'):
-                exec_inputs = {alias[3:] for alias in node.get('pins', {}) if alias.startswith('in:')
-                               and pin_category(node, alias, templates) == 'exec'}
-                if exec_inputs and not exec_inputs.intersection(connected[node_id]):
-                    raw_lines[0] = 'Graph Never Continues'
-                    if any(alias.startswith('in:') and pin_category(node, alias, templates) not in ('exec', None, '')
-                           for alias in node.get('pins', {})):
-                        raw_lines.append('Warning: result outputs cannot be returned')
+            if node.get('_graphNeverContinues'):
+                raw_lines[0] = 'Graph Never Continues'
+                if any(alias.startswith('in:') and pin_category(node, alias, templates) not in ('exec', None, '')
+                       for alias in node.get('pins', {})):
+                    raw_lines.append('Warning: result outputs cannot be returned')
             child = graph_context.get('children', {}).get(node_id)
             if child:
                 raw_lines[0] = child['name']

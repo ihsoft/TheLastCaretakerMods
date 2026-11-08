@@ -271,6 +271,18 @@ results and side-effect order in UObject functions and Actor event/construction
 graphs. Vector, array and object boundaries/defaults are checked structurally.
 These are editor checks, not a cooked-game acceptance claim.
 
+For mechanical extraction, use the workspace
+[Collapse action](blueprint-workspace.md#extract-an-operation-into-a-collapsed-graph).
+`Test-CollapseGraphs.ps1 -OutputRoot <new directory below Tmp/BlueprintText>`
+checks that public action in an isolated project, followed by strict Apply,
+fresh-process result/side-effect assertions, no-op Apply and one-call Preview.
+Its executable cases cover pure integer arithmetic, an assignment with a
+continuation, terminal Actor paths and reparenting existing collapsed graphs.
+Existing vector/array/object defaults remain part of the strict comparison;
+this does not establish executable coverage for every new boundary type.
+Offline transformation, rejection, identity and write-recovery checks run with
+`python -B tools/BlueprintText/test_collapse_graphs.py`.
+
 ## Widget trees, interfaces and resources
 
 `Invoke-BlueprintAssetText.ps1 -Action Export` reads ordinary uncooked Widget
@@ -610,8 +622,11 @@ Details retains the complete original localization expression.
 `Field: name (type)`. Connected fields remain visible; unused fields follow
 **Show unconnected**. These labels describe extracted fields, not stored values.
 Collapsed graph tunnels are labelled `Graph Entry` and `Graph Exit` from their
-declared direction. An exit Tunnel with declared execution inputs but no incoming
-execution link is labelled `Graph Never Continues`. If it also declares data
+declared direction. An exit Tunnel with no incoming execution link is shown as
+an action labelled `Graph Never Continues` when it declares execution inputs or
+the graph has an execution entry. This includes an exit with no pins. Review
+uses the corresponding snapshot; removed links cannot imply a current continuation.
+If the exit also declares data
 results, the card warns that those results cannot be returned. This is a local
 connection check, not whole-graph reachability analysis; pure data tunnels and
 function returns keep their ordinary labels. Graph and function entries list visible data parameters as
