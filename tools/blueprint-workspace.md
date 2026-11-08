@@ -217,11 +217,13 @@ Other Unreal producers must use the shared queue wrapper. Asset conflict checks 
 tasks touch the same exported asset.
 
 For a large source, use `python -B tools/BlueprintText/graph_hierarchy.py <source>`
-to get graph summaries, or add `--graph <GraphGuid>` to read one graph with its
-boundary context and required definitions. This is an offline read-only view;
-edit the complete workspace source. Collapsed graphs use the
-[explicit hierarchy](blueprint-text.md#collapsed-graphs), with no additional
-asset queries or per-mod extraction scripts.
+to get graph summaries, or add `--graph <GraphGuid>` for a compact graph with
+its boundary context. Reveal exact details with `--node <id>` and optionally
+`--pin <alias>`; `--view full` restores the complete selected-graph view.
+See [source reading](blueprint-text.md#read-graphs-without-unreal) for the
+selection and value semantics. These are offline read-only views; edit the
+complete workspace source. No additional asset queries or per-mod extraction
+scripts are needed.
 
 ```powershell
 & $tool -Action Apply -WorkspaceRoot $work

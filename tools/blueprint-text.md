@@ -250,19 +250,8 @@ Apply changes a package. Native reconstruction restores graph Outers and tunnel
 references before compilation. Fresh-process comparison remains strict.
 This is not macro-definition or arbitrary UObject-tree support.
 
-For inexpensive source inspection, run the offline helper once:
-
-```powershell
-python -B tools/BlueprintText/graph_hierarchy.py $source
-python -B tools/BlueprintText/graph_hierarchy.py $source --graph $graphGuid
-```
-
-Set `$graphGuid` to the desired ID from the summary. The first call returns
-graph summaries with owners and local counts. Selection
-accepts a GraphGuid or an unambiguous name and returns the graph, ancestor
-operations, child summaries and required class/pin definitions. These are
-read-only views; edit the complete source JSON for Apply. No Unreal query or
-recovery of missing mod data is involved.
+Use [compact source reading](#read-graphs-without-unreal) to inspect this
+hierarchy and reveal exact node or pin details as needed.
 
 `Test-NestedGraphs.ps1 -OutputRoot <new directory below Tmp/BlueprintText>`
 runs the public workspace workflow in an isolated project through the shared
@@ -284,6 +273,53 @@ Existing vector/array/object defaults remain part of the strict comparison;
 this does not establish executable coverage for every new boundary type.
 Offline transformation, rejection, identity and write-recovery checks run with
 `python -B tools/BlueprintText/test_collapse_graphs.py`.
+
+## Read graphs without Unreal
+
+Read schema-2 source in layers: graph summaries, a compact selected graph,
+then exact details only where the task needs them.
+
+```powershell
+python -B tools/BlueprintText/graph_hierarchy.py $source
+python -B tools/BlueprintText/graph_hierarchy.py $source --graph $graphGuid
+python -B tools/BlueprintText/graph_hierarchy.py $source --graph $graphGuid --node $nodeId
+python -B tools/BlueprintText/graph_hierarchy.py $source --graph $graphGuid --node $nodeId --pin 'in:Value'
+python -B tools/BlueprintText/graph_hierarchy.py $source --graph $graphGuid --view full
+```
+
+Take `$graphGuid` from the summary; an unambiguous graph name also works.
+Node IDs are local to that graph. Use the exact pin alias shown in its `pins`
+(including `in:` or `out:`); `in:Value` above is an example. Repeat `--node`
+to inspect several nodes together. `--pin` requires exactly one node.
+Unknown or ambiguous selections fail explicitly.
+
+The default selected-graph view includes every node and link, original pin order,
+operation identities, comments, relevant native properties and typed pins.
+It preserves disabled nodes, terminal branches, reference/container semantics,
+unknown properties and custom data. Ancestor operations and child summaries
+retain the ownership context. It omits known editor layout, redundant GUIDs,
+pin-template indirection and known inactive metadata. It does not fold flow,
+infer reachability, resolve callbacks or simulate execution.
+
+Unconnected input defaults remain visible, including zero and empty strings;
+connected, ignored and ordinary output defaults are not presented as runtime
+values. Entry/tunnel `signatureDefaults` describe the declared signature.
+Referenced own variables include their declaration and, when exported, their
+`initialDefault`; that is an initial asset value, not a value at the current
+execution point. External and local variables are not guessed from matching names.
+
+`--node` returns exact source nodes, only their class/pin definitions, incident
+links and typed neighboring endpoints. `--pin` narrows this to its exact source
+record, full template, stored default and incident links. These details expose
+fields omitted from the compact view. `--view full` returns the previous complete
+selected-graph payload, including ancestor operations and required definitions.
+Consumers of the old CLI detail shape must add `--view full`; the summary and
+Python `inspect_graphs` API remain unchanged. Do not combine `--view full` with
+node/pin selectors.
+
+All outputs are read-only views, not Apply input. Edit the complete workspace
+source JSON. Reading does not change source files, launch Unreal, query missing
+assets or establish runtime behavior.
 
 ## Widget trees, interfaces and resources
 
@@ -816,6 +852,7 @@ or proof of arbitrary widget support.
 
 ## Checks
 
+Source reading and scoped detail checks: `python -B tools/BlueprintText/test_graph_inspection.py`.
 Offline renderer checks: `python -B tools/BlueprintText/test_render_graph.py`.
 Expression presentation checks: `python -B tools/BlueprintText/test_graph_expressions.py`.
 Batch index checks: `python -B tools/BlueprintText/test_preview_index.py`.

@@ -27,5 +27,6 @@ rules remain in the [repository index](../AGENTS.md).
 | Extract selected BPT nodes into a named collapsed graph | [Workspace Collapse](blueprint-workspace.md#extract-an-operation-into-a-collapsed-graph) |
 | Add a reusable UObject INI parser to a mod through BPT | [INI parser source library](BlueprintText/Library/IniFileParser/AGENTS.md) |
 | View or render one exported Blueprint graph offline | [Graph preview](blueprint-text.md#view-one-graph) |
+| Read a BPT graph compactly and reveal exact node/pin details | [Source reading](blueprint-text.md#read-graphs-without-unreal) |
 | Preview and annotate an exported HUD widget layout | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Browse exported Blueprints or review an explicitly marked set of changes | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |

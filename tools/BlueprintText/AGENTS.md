@@ -29,7 +29,9 @@ Blueprint preservation from the bounded tests.
 
 - Use the shared workflow entry point and its compact result. Read the workspace
   manifest to find editable Blueprint JSON; inspect only source needed for the
-  requested change. Edit the complete proposed Blueprint state, not generated native text.
+  requested change. Start with [compact graph reading](../blueprint-text.md#read-graphs-without-unreal)
+  and reveal exact node/pin details as needed. Edit the complete proposed Blueprint
+  state, not a read view or generated native text.
 - Generated previews are for the user. Run workspace Preview and return its
   index link; it derives node changes from the original and current snapshots.
   Do not assemble review lists or inspect baselines as a routine prerequisite.

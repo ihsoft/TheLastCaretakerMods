@@ -151,12 +151,18 @@ def main():
     parser = argparse.ArgumentParser(description='Read graph summaries or one graph and its boundary context from BPT. No Unreal launch; output is a read-only view.')
     parser.add_argument('input', type=Path)
     parser.add_argument('--graph', help='Stable GraphGuid or unambiguous display name')
+    parser.add_argument('--view', choices=('compact', 'full'), default='compact',
+                        help='Selected graph view: compact by default, full for original fields and definitions')
+    parser.add_argument('--node', action='append', help='Exact node ID in --graph; repeat for scoped raw details')
+    parser.add_argument('--pin', help='Exact pin alias (in:/out:) of one --node; returns raw pin and template')
     args = parser.parse_args()
     try:
         document = json.loads(args.input.read_text(encoding='utf-8-sig'))
         if document.get('schema') != 2 or document.get('format') != 'compact-asset':
             raise ValueError('Expected schema-2 compact-asset')
-        print(json.dumps(inspect_graphs(document, args.graph), ensure_ascii=False, indent=2))
+        from graph_inspection import inspect_source
+        print(json.dumps(inspect_source(document, args.graph, view=args.view, node_ids=args.node, pin=args.pin),
+                         ensure_ascii=False, indent=2))
     except (ValueError, KeyError, TypeError, OSError) as error:
         parser.exit(2, f'Cannot inspect BPT graphs: {error}\n')
 
