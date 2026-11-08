@@ -243,10 +243,6 @@ if ($actualEngineVersion -cne $expectedEditorEngineVersion) {
     throw "StableGyro requires Unreal Engine $expectedEditorEngineVersion; selected engine is $actualEngineVersion."
 }
 
-if ([string]::IsNullOrWhiteSpace($OriginalsRoot) -or $Install) {
-    Assert-GameClosed
-}
-
 $sourceStatus = @(& git -C $repoRoot status --porcelain -- `
     'mods/StableGyro' `
     'tools/New-VoyageModSettings.ps1' `
@@ -325,7 +321,6 @@ foreach ($relativePath in $expectedMeshPaths) {
 
 Write-Host '2/8 Exporting and splitting the current stock mooring plate'
 $phase.Restart()
-Assert-GameClosed
 $mooringGeometryRoot = Join-Path $releaseRoot 'mooring-geometry'
 New-Item -ItemType Directory -Path $mooringGeometryRoot | Out-Null
 $stockMooringGlb = Join-Path $mooringGeometryRoot 'Gyro_MooringPlate.stock.glb'
@@ -565,7 +560,6 @@ if ($meshPlan.refresh) {
 Write-Host '5/8 Preparing current stock item validation and maintained project inputs'
 $phase.Restart()
 if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
-    Assert-GameClosed
     $OriginalsRoot = Join-Path $releaseRoot 'originals'
     & $prepareScript -GameRoot $GameRoot -Retoc $Retoc -OutputRoot $OriginalsRoot
 } else {

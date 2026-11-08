@@ -72,6 +72,11 @@ the declared native editor support even when no asset refresh is needed.
 Unsupported input or failed refresh stops the build; it does not fall back to
 old project output.
 
+A build without `-Install` may run while Voyage is running. Stock extraction
+and final-container validation still read the installed game packages; an actual
+read failure stops the build. Closing the game is required before installation
+and before writing or restoring the installed INI, not before build-only work.
+
 `Build/Item.source.json` records the item pair's source Steam build and applied
 `Build/Item.patch.json` recipe. The recipe changes only `DroppedActor` to the
 mod child. A changed game build or recipe, or explicit `-ReimportItemAsset`,
