@@ -5,7 +5,8 @@ Manifest: {title?, description?, demo?, assets: [source-path | {
   note?, reviews?: {graph-GUID-or-name: {added?: [id], changed?: [id], removed?: [id]}},
   resources?, beforeResources?
 }]}. Paths are relative to the manifest. Changed entries require both snapshots;
-removed entries require only before. No automatic semantic diff or Unreal launch.
+removed entries require only before. Node overlays compare represented structure;
+this does not simulate behavior or launch Unreal.
 Review UI appears only when at least one asset has added/changed/removed status.
 Output must be a new or empty directory. Existing input files are never edited.
 """
@@ -18,6 +19,7 @@ from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
+from graph_review import graph_signature, review_marks
 from render_graph import load_graph, review_document, node_lines
 from render_widget import render as render_widget
 from preview_references import property_references, package as reference_package, label as reference_label
@@ -164,24 +166,9 @@ def graph_navigation(document, other, key, pages):
     registry = graphs(document)
     other_registry = graphs(other or {})
 
-    def signature(doc, graph):
-        value = copy.deepcopy(graph)
-        # Location is reported separately: moving a graph does not edit its body.
-        if 'owner' in value:
-            value['owner'].pop('graph', None)
-            value['owner'].pop('node', None)
-        for node in value['body']['nodes']:
-            node['kind'] = doc.get('classes', {}).get(node.get('kind'), node.get('kind'))
-            for pin in node.get('pins', {}).values():
-                if 'type' in pin:
-                    pin['type'] = doc.get('pinTemplates', {}).get(pin['type'], pin['type'])
-        value['body']['nodes'].sort(key=lambda n: n['id'])
-        value['body']['links'].sort(key=lambda e: (e['from'], e['to']))
-        return value
-
     def locally_changed(identity):
         graph = registry[identity]
-        return identity not in other_registry or signature(document, graph) != signature(other, other_registry[identity])
+        return identity not in other_registry or graph_signature(document, graph) != graph_signature(other, other_registry[identity])
 
     def changed(identity):
         if locally_changed(identity):
@@ -327,7 +314,14 @@ def generate(manifest, output):
             return sum(len(g['body']['nodes']) + descendant_count(k) for k, g in registry.items()
                        if g.get('owner', {}).get('graph') == identity)
         rows = {}
-        reviews = {graph_key(select_graph(current, n)): marks for n, marks in item.get('reviews', {}).items()}
+        reviews = review_marks(old, current) if old and current else {}
+        # Explicit annotations supplement comparison; an incomplete list cannot
+        # hide changes visible in the two snapshots.
+        for selection, explicit in item.get('reviews', {}).items():
+            identity = graph_key(select_graph(current, selection))
+            automatic = reviews.get(identity, {})
+            reviews[identity] = {status: sorted(set(automatic.get(status, [])) | set(explicit.get(status, [])))
+                                 for status in ('added', 'changed', 'removed')}
         for index, name in enumerate(names):
             after = one_graph(current, current_graphs[name]) if name in current_graphs else None
             before = one_graph(old, old_graphs[name]) if name in old_graphs else None
@@ -408,8 +402,8 @@ def generate(manifest, output):
                         OTHER_ASSETS=('<section class="other-assets"><h2>Other assets (' + str(len(other_assets)) + ')</h2>'
                                       '<p>Reference inventory only. These entries do not expose editable BPT graphs. STUB means an editor placeholder, not the game implementation.</p><ul>'
                                       + ''.join(other_assets) + '</ul></section>') if other_assets else '',
-                        REVIEW_NOTICE=' Review badges and colored left borders indicate explicitly supplied changes.' if reviewing else '',
-                        REVIEW_FOOTER=' Statuses and node review lists are supplied explicitly. Nested-change labels compare represented child graphs; this page does not claim a complete behavioral diff.' if reviewing else '')
+                        REVIEW_NOTICE=' Review badges and colored left borders indicate changes in represented Blueprint state.' if reviewing else '',
+                        REVIEW_FOOTER=' Node and nested-graph changes compare the supplied snapshots. Explicit annotations may supplement them; this page does not claim a complete behavioral diff.' if reviewing else '')
     # One substitution pass: user text cannot become another template marker.
     import re
     page = re.sub(r'__(TITLE|DESCRIPTION|DEMO|LEGEND|CARDS|OTHER_ASSETS|REVIEW_NOTICE|REVIEW_FOOTER|NODE_SEARCH_DATA|NODE_SEARCH_SCRIPT)__', lambda m: replacements[m[1]], template)

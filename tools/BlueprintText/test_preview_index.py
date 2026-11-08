@@ -16,6 +16,35 @@ def fixture(asset='/Game/Test'):
 
 
 class PreviewIndexTests(unittest.TestCase):
+    def test_changed_graphs_automatically_show_node_edits_without_reviews(self):
+        old = fixture()
+        old['graphs'][0]['name'] = 'CreateMooringPlates'
+        old['graphs'].append(dict(name='CreateMooringPlate', format='compact', body=dict(
+            nodes=[dict(id='entry', kind='call', operation='Entry'),
+                   dict(id='setMesh', kind='call', operation='SetStaticMesh'),
+                   dict(id='attach', kind='call', operation='Attach')],
+            links=[{'from': 'entry.then', 'to': 'setMesh.exec'},
+                   {'from': 'setMesh.then', 'to': 'attach.exec'}])))
+        new = copy.deepcopy(old)
+        new['graphs'][0]['body']['nodes'][0]['defaults'] = {'in:Scale': '1,-1,1'}
+        new['graphs'][1]['body']['nodes'].pop(1)
+        new['graphs'][1]['body']['links'] = [{'from': 'entry.then', 'to': 'attach.exec'}]
+        self.save('old.json', old); self.save('new.json', new)
+        for annotations in ({}, {'reviews': {'CreateMooringPlates': {'changed': []}}}):
+            with self.subTest(annotations=annotations):
+                suffix = 'partial' if annotations else 'automatic'
+                manifest = self.save(suffix+'.json', dict(assets=[dict(
+                    source='new.json', before='old.json', status='changed', **annotations)]))
+                generate(manifest, self.root / suffix)
+                for index in (0, 1):
+                    page = (self.root / suffix / f'blueprint-000/graph-{index:03d}.html').read_text(encoding='utf-8')
+                    self.assertIn('id="show-changes"', page)
+                    self.assertIn('data-review-status="changed"', page)
+                removed_page = (self.root / suffix / 'blueprint-000/graph-001.html').read_text(encoding='utf-8')
+                self.assertIn('data-review-status="removed"', removed_page)
+                marks = json.loads((self.root / suffix / 'blueprint-000/graph-001.review.json').read_text())
+                self.assertEqual(marks, dict(added=[], changed=['attach', 'entry'], removed=['setMesh']))
+
     def test_root_node_search_has_scoped_current_and_before_links_and_safe_labels(self):
         old, new = fixture('/Game/A'), fixture('/Game/A')
         old['graphs'][0]['body']['nodes'].append(dict(id='gone node',kind='call',operation='Old'))

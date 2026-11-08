@@ -5,6 +5,7 @@ import re
 import uuid
 
 import asset_text_codec as codec
+from graph_review import review_marks
 from graph_hierarchy import graph_key, select_graph
 
 
@@ -257,27 +258,3 @@ def collapse(document, selection, selected, name, boundary_names=None):
     return document, dict(status='collapsed', asset=document['asset'], graph=graph_key(parent),
                           childGraph=child_id, name=name, movedNodes=len(selected), parentNodesBefore=before_count,
                           parentNodesAfter=len(parent['body']['nodes']), boundaryPins=len(groups), inverseVerified=True, applied=False)
-
-
-def review_marks(before, after):
-    """Structural marks against the workspace review baseline, including prior edits."""
-    result = {}
-    old_graphs = {graph_key(g): g for g in before['graphs']}
-    for graph in after['graphs']:
-        old = old_graphs.get(graph_key(graph))
-        if old is None:
-            continue
-        left, right = ({n['id']: n for n in g['body']['nodes']} for g in (old, graph))
-        def payload(document, node):
-            value = copy.deepcopy(node)
-            value['kind'] = document['classes'][node['kind']]
-            for pin in value['pins'].values():
-                pin['type'] = document['pinTemplates'][pin['type']]
-            return value
-        def incident(g, identity):
-            return Counter((e['from'], e['to']) for e in g['body']['links'] if identity in map(node_id, e.values()))
-        result[graph_key(graph)] = dict(added=sorted(right.keys()-left.keys()), removed=sorted(left.keys()-right.keys()),
-            changed=sorted(k for k in left.keys() & right.keys() if payload(before, left[k]) != payload(after, right[k]) or incident(old, k) != incident(graph, k)))
-        if not any(result[graph_key(graph)].values()):
-            del result[graph_key(graph)]
-    return result

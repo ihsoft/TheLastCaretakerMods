@@ -19,7 +19,7 @@ failure handling.
 | Import and execute the reusable INI parser in a disposable project | `BlueprintText/Test-IniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/AGENTS.md#validation-and-maintenance) |
 | Check asset-text round trips in a disposable prepared project | `BlueprintText/test_asset_text_roundtrip.py` | [Blueprint checks](blueprint-text.md#checks) |
 | Render a compact Blueprint graph offline | `BlueprintText/Render-BlueprintGraph.ps1` | [BlueprintText](blueprint-text.md) |
-| Generate graph/widget previews and a browse or review index for a set of exports | `BlueprintText/Render-BlueprintPreviews.ps1` | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |
+| Generate graph/widget previews and an index with automatic node comparison for changed snapshots | `BlueprintText/Render-BlueprintPreviews.ps1` | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |
 | Preview an exported HUD layout and copy review adjustments | `BlueprintText/Render-WidgetPreview.ps1` | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
 | Generate a settings header and INI | `New-VoyageModSettings.ps1` | [Mod setup](mod-setup.md) |

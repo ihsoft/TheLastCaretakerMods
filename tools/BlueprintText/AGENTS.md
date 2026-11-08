@@ -25,8 +25,10 @@ Blueprint preservation from the bounded tests.
 - Use the shared workflow entry point and its compact result. Read the workspace
   manifest to find editable Blueprint JSON; inspect only source needed for the
   requested change. Edit the complete proposed Blueprint state, not generated native text.
-- Generated previews are for the user. Supply review annotations to the renderer
-  and return its index link. Do not open or analyze generated HTML, SVG, PNGs or
+- Generated previews are for the user. Run workspace Preview and return its
+  index link; it derives node changes from the original and current snapshots.
+  Do not assemble review lists or inspect baselines as a routine prerequisite.
+  Explicit annotations are optional supplements. Do not open or analyze generated HTML, SVG, PNGs or
   screenshots to reconfirm a successful render or infer changes already known
   from the source. Inspect preview output only when the user asks to investigate
   the preview itself, or a concrete rendering failure requires it.

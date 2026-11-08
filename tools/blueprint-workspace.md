@@ -287,9 +287,14 @@ their own snapshot. The agent does not need to enumerate child graphs or render
 them individually.
 
 Blueprint status is compared with the original export, so successful Apply
-operations do not erase the review. Optional `reviews` in a manifest asset entry
-supplies known node IDs by GraphGuid or unambiguous graph name, using `added`,
-`changed` and `removed` lists.
+operations do not erase the review. Preview automatically compares node identities,
+represented fields and connections to mark added, changed and removed nodes.
+Graph badges and node overlays use the same resolved class and pin definitions;
+node/link ordering and equivalent type-table aliases do not count as edits.
+This is structural comparison, not behavioral equivalence.
+Optional `reviews` in a manifest asset entry supplements that comparison with
+node IDs by GraphGuid or unambiguous graph name, using `added`, `changed` and
+`removed` lists. Missing or incomplete lists do not hide detected changes.
 Optional `note` adds explanatory text. These annotations do not alter the Blueprint.
 
 Read diagnostics only on failure: start with the returned short reason and

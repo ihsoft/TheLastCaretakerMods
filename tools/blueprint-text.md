@@ -446,10 +446,16 @@ badges and colored borders. Use these record shapes:
 - Unchanged: a source path, or a record with `source` and optional
   `"status":"unchanged"`; do not supply `before`.
 
-Changed snapshots must have the same asset identity. A changed record may also
-provide `reviews`, keyed by GraphGuid or unambiguous graph name, using the existing [node review lists](#review-mode):
+Changed snapshots must have the same asset identity. The batch renderer compares
+stable node identities, represented fields (including resolved class and pin
+definitions) and incident connections to derive node review marks automatically.
+Both endpoints of a changed connection are marked. Node/link ordering and
+equivalent type-table aliases do not count as edits. This compares represented
+state, including technical fields, rather than proving behavioral equivalence.
+A changed record may also provide supplemental `reviews`, keyed by GraphGuid or
+unambiguous graph name, using the existing [node review lists](#review-mode):
 `"reviews":{"EventGraph":{"changed":["SetLimit"]}}`. Use actual exported node
-IDs. Without a list, the card still has its status; node changes are not inferred.
+IDs. Missing or incomplete lists do not suppress automatically detected changes.
 Graph Before links appear only when the graph or its represented descendants
 differ between snapshots, or the graph moves to another owner. A relocation
 shows `Moved` with the previous full path in its tooltip; it does not by itself
@@ -467,8 +473,8 @@ follows card resizing. The child page links back through ancestor
 operations. Before navigation stays within the Before snapshot. Stable graph
 identity keeps a rename from appearing as an unrelated deletion/addition.
 When a represented child or descendant changes, the parent operation receives
-a purple frame and a nested-change label; this does not infer individual node
-review lists. Added and removed operations keep their own status without a
+a purple frame and a nested-change label; the child's page shows its own node
+changes. Added and removed operations keep their own status without a
 redundant nested-change label. Final-only view clears nested-change highlights.
 
 Function calls also receive a double border and an open-graph icon when their
@@ -664,8 +670,10 @@ view/direction variants.
 
 ### Review mode
 
-Supply the current compact source, an original source and a JSON file of explicit
-node IDs for the selected graph:
+Workspace Preview and the batch renderer derive node marks automatically from
+their snapshots. The lower-level single-graph renderer instead accepts the
+current compact source, an original source and a JSON file of explicit node IDs
+for the selected graph:
 
 ```json
 {
@@ -679,8 +687,8 @@ node IDs for the selected graph:
 ./tools/BlueprintText/Render-BlueprintGraph.ps1 -InputPath ./Tmp/BlueprintText/review/after.json -BeforePath ./Tmp/BlueprintText/review/before.json -ReviewPath ./Tmp/BlueprintText/review/review.json -Graph EventGraph -OutputPath ./Tmp/BlueprintText/review/EventGraph.svg
 ```
 
-The author supplies the lists; the tool does not discover changes or verify that
-the lists are complete. For connection-only edits, mark both endpoint nodes as
+For this single-graph interface, the author supplies the lists; it does not
+discover changes or verify that the lists are complete. For connection-only edits, mark both endpoint nodes as
 changed. IDs must be unique across lists and match their declared state: added
 exists in current (and must be absent from original when supplied), removed only
 in original, changed in both. Original and
@@ -801,6 +809,7 @@ or proof of arbitrary widget support.
 Offline renderer checks: `python -B tools/BlueprintText/test_render_graph.py`.
 Expression presentation checks: `python -B tools/BlueprintText/test_graph_expressions.py`.
 Batch index checks: `python -B tools/BlueprintText/test_preview_index.py`.
+Automatic structural comparison checks: `python -B tools/BlueprintText/test_graph_review.py`.
 Function navigation checks: `python -B tools/BlueprintText/test_preview_graph_links.py`.
 Review overlay checks: `python -B tools/BlueprintText/test_review_graph.py`.
 Details comparison checks: `python -B tools/BlueprintText/test_review_details.py`.
