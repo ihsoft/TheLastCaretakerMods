@@ -765,7 +765,8 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     all_nodes, all_edges, owner, graph = load_graph(document, selection)
     all_nodes = [with_type_reference_details(n, document.get('pinTemplates', {})) for n in all_nodes]
     terminal = terminal_exit_ids(all_nodes, all_edges, document.get('pinTemplates', {}))
-    all_nodes = [dict(n, _graphNeverContinues=n.get('_graphNeverContinues', n['id'] in terminal)) for n in all_nodes]
+    all_nodes = [dict(n, _graphNeverContinues=True)
+                 if n['id'] in terminal and '_graphNeverContinues' not in n else n for n in all_nodes]
     # Attach navigation to view copies; source and review snapshots stay untouched.
     all_nodes = [dict(n, _graphLink=target) if (target := graph_context.get(
         'beforeCalls' if n.get('_reviewStatus') == 'removed' else 'calls', {}).get(n['id'])) else n

@@ -11,6 +11,10 @@ def node_signature(document, node):
     for pin in value.get('pins', {}).values():
         if 'type' in pin:
             pin['type'] = document.get('pinTemplates', {}).get(pin['type'], pin['type'])
+    # Native pin order is represented state (for example, Sequence execution).
+    # Keep it in comparison signatures without changing source or Details data.
+    if 'pins' in value:
+        value['pins'] = list(value['pins'].items())
     return value
 
 

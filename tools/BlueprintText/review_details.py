@@ -10,11 +10,17 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, ensure_ascii=False)
 
 
+def pin_order_changed(before, after, path):
+    return (path == ('node', 'pins') and isinstance(before, dict)
+            and isinstance(after, dict) and list(before) != list(after))
+
+
 def equal(before, after, path=()):
     if before is MISSING or after is MISSING:
         return before is after
     if isinstance(before, dict) and isinstance(after, dict):
-        return before.keys() == after.keys() and all(equal(before[k], after[k], (*path, k)) for k in before)
+        return (not pin_order_changed(before, after, path) and before.keys() == after.keys()
+                and all(equal(before[k], after[k], (*path, k)) for k in before))
     if path == ('links',) and isinstance(before, list) and isinstance(after, list):
         return sorted(map(canonical, before)) == sorted(map(canonical, after))
     return canonical(before) == canonical(after)
@@ -29,7 +35,7 @@ def changes(before, after, path):
     if equal(before, after, path):
         return []
     if isinstance(before, dict) and isinstance(after, dict):
-        return [p for key in dict.fromkeys([*before, *after])
+        return ([path] if pin_order_changed(before, after, path) else []) + [p for key in dict.fromkeys([*before, *after])
                 for p in changes(before.get(key, MISSING), after.get(key, MISSING), (*path, key))]
     return [path]
 
@@ -49,6 +55,8 @@ def render_details(before, after):
             'object (see Before)' if isinstance(old, dict) and isinstance(new, dict)
             else json.dumps(old, ensure_ascii=False, indent=2))
         title = ('Previously: ' + previous) if status else ''
+        if pin_order_changed(old, new, path):
+            title = 'Previous pin order: ' + json.dumps(list(old), ensure_ascii=False)
         rows.append(f'<span class="detail-row {css}" title="{html.escape(title, quote=True)}">'
                     f'<span class="detail-mark" aria-hidden="true">{symbol}</span>{html.escape(text)}</span>')
 
@@ -59,7 +67,7 @@ def render_details(before, after):
             line(prefix + '{', old, new, path)
             old_map = old if isinstance(old, dict) else {}
             new_map = new if isinstance(new, dict) else {}
-            keys = list(dict.fromkeys([*old_map, *new_map]))
+            keys = list(dict.fromkeys([*new_map, *old_map] if path == ('node', 'pins') else [*old_map, *new_map]))
             for i, k in enumerate(keys):
                 walk(old_map.get(k, MISSING), new_map.get(k, MISSING), (*path, k), depth+1,
                      k, ',' if i < len(keys)-1 else '')

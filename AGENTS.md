@@ -24,6 +24,8 @@ do not load every document just because it is indexed here.
   content, project authority, focused update scripts, and the shared Unreal queue.
 - [BlueprintText](tools/blueprint-workspace.md): bidirectional Blueprint editing
   through JSON, with synchronized text committed for Git review.
+- [BPT specialist decisions](docs/blueprint-text-maintenance-rule.md): shared
+  BPT ownership, evidence-based proposal review and tool-maintenance criteria.
 - [Research workflow](docs/research-workflow-rule.md): investigate, record
   evidence, maintain a large-task backlog, and coordinate optional checkpoints.
 - [Generated-output lifecycle](docs/artifact-lifecycle-rule.md): choose `Tmp/`

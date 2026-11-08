@@ -2,6 +2,8 @@
 
 For new and existing mods, use the [workspace workflow](blueprint-workspace.md).
 The interfaces below describe the format, lower-level tools and validation.
+For shared tool changes and specialist reviews, use the
+[maintenance guide](blueprint-text-maintenance.md).
 
 BlueprintText (BPT) is the recommended bidirectional text interface for editing
 Blueprint assets in an authoritative Unreal project. Its synchronized JSON is
@@ -455,6 +457,8 @@ definitions) and incident connections to derive node review marks automatically.
 Both endpoints of a changed connection are marked. Node/link ordering and
 equivalent type-table aliases do not count as edits. This compares represented
 state, including technical fields, rather than proving behavioral equivalence.
+Order inside each node's `pins` object is significant and marks the node and
+graph as changed, even when pin values and connections are identical.
 A changed record may also provide supplemental `reviews`, keyed by GraphGuid or
 unambiguous graph name, using the existing [node review lists](#review-mode):
 `"reviews":{"EventGraph":{"changed":["SetLimit"]}}`. Use actual exported node
@@ -722,6 +726,9 @@ object headings; hover shows prior values. Added fields use `+`; removed fields
 use `−` and strikethrough. GUID and position changes use neutral grey. Incident
 links are compared by endpoint pair, ignoring order; other arrays are marked as
 whole fields without an element diff. Before shows the original snapshot.
+Reordered node pins mark the `pins` heading, whose tooltip lists the previous
+order. After lists surviving pins in their current order, with removed pins
+following them. Other object-key ordering does not count as a field change.
 Copy contents returns clean JSON of the selected snapshot, without review
 markers or deleted-field overlays. Keep review lists and generated previews with
 temporary review output; they are not Blueprint source requirements.

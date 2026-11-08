@@ -16,6 +16,25 @@ def fixture(asset='/Game/Test'):
 
 
 class PreviewIndexTests(unittest.TestCase):
+    def test_pin_order_only_change_has_before_page_and_node_mark(self):
+        from asset_text_codec import compact
+        from test_asset_text_codec import sequence_fixture
+        old = compact(sequence_fixture())
+        new = copy.deepcopy(old)
+        node = new['graphs'][0]['body']['nodes'][0]
+        node['pins'] = {key: node['pins'][key] for key in ('in:exec', 'out:then1', 'out:then0')}
+        self.save('old.json', old); self.save('new.json', new)
+        manifest = self.save('pins.json', dict(assets=[dict(
+            source='new.json', before='old.json', status='changed')]))
+        generate(manifest, self.root / 'pins')
+        graph = self.root / 'pins/blueprint-000/graph-000.html'
+        page = graph.read_text(encoding='utf-8')
+        self.assertIn('id="show-changes"', page)
+        self.assertIn('data-review-status="changed"', page)
+        self.assertTrue(graph.with_name('graph-000-before.html').is_file())
+        marks = json.loads(graph.with_suffix('.review.json').read_text())
+        self.assertEqual(marks, dict(added=[], changed=['Sequence'], removed=[]))
+
     def test_changed_graphs_automatically_show_node_edits_without_reviews(self):
         old = fixture()
         old['graphs'][0]['name'] = 'CreateMooringPlates'

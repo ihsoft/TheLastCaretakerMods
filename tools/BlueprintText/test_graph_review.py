@@ -45,6 +45,20 @@ class GraphReviewTests(unittest.TestCase):
         new['pinTemplates']['vector']['PinType.PinCategory'] = 'object'
         self.assertEqual(review_marks(self.old, new)['Main']['changed'], ['a'])
 
+    def test_sequence_pin_order_is_a_reviewed_change(self):
+        from asset_text_codec import compact, compare
+        from test_asset_text_codec import sequence_fixture
+        old = compact(sequence_fixture())
+        new = copy.deepcopy(old)
+        node = new['graphs'][0]['body']['nodes'][0]
+        node['pins'] = {key: node['pins'][key] for key in ('in:exec', 'out:then1', 'out:then0')}
+        original = copy.deepcopy(new)
+        self.assertTrue(compare(old, new))
+        self.assertEqual(review_marks(old, new)['EventGraph']['changed'], ['Sequence'])
+        self.assertNotEqual(graph_signature(old, old['graphs'][0]),
+                            graph_signature(new, new['graphs'][0]))
+        self.assertEqual(new, original)
+
     def test_added_removed_and_reused_identity(self):
         new = copy.deepcopy(self.old)
         new['graphs'][0]['body']['nodes'][1]['id'] = 'new'

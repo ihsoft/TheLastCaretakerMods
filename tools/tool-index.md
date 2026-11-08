@@ -23,6 +23,7 @@ rules remain in the [repository index](../AGENTS.md).
 | Measure explicitly requested agent work | [Agent work measurement](agent-work-measurement.md) |
 | Create or edit Blueprints for new and existing mods (requires a prepared Unreal project with the needed dependencies) | [Blueprint workspace](blueprint-workspace.md) |
 | Look up BlueprintText formats, schemas and lower-level interfaces | [BlueprintText reference](blueprint-text.md) |
+| Evaluate or maintain shared BPT tools and guidance | [BPT maintenance](blueprint-text-maintenance.md) |
 | Extract selected BPT nodes into a named collapsed graph | [Workspace Collapse](blueprint-workspace.md#extract-an-operation-into-a-collapsed-graph) |
 | Add a reusable UObject INI parser to a mod through BPT | [INI parser source library](BlueprintText/Library/IniFileParser/AGENTS.md) |
 | View or render one exported Blueprint graph offline | [Graph preview](blueprint-text.md#view-one-graph) |

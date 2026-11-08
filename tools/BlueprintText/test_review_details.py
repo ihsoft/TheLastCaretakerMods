@@ -3,6 +3,20 @@ from review_details import render_details
 
 
 class DetailReviewTests(unittest.TestCase):
+    def test_pin_order_change_is_visible_in_current_order(self):
+        import copy
+        before = {'node': {'pins': {'out:then0': {'id': 'a'}, 'out:then1': {'id': 'b'}}}}
+        after = copy.deepcopy(before)
+        after['node']['pins'] = dict(reversed(list(after['node']['pins'].items())))
+        original = copy.deepcopy(after)
+        text = render_details(before, after)
+        self.assertIn('detail-changed', text)
+        self.assertNotIn('detail-technical', text)
+        self.assertIn('Previous pin order: [&quot;out:then0&quot;, &quot;out:then1&quot;]', text)
+        self.assertLess(text.index('      &quot;out:then1&quot;'), text.index('      &quot;out:then0&quot;'))
+        self.assertEqual(after, original)
+        self.assertEqual(list(after['node']['pins']), ['out:then1', 'out:then0'])
+
     def test_fields_nested_markers_and_deleted_position(self):
         before = {'node': {'defaults': {'Min': -1, 'Max': 1, 'Old': True}, 'name': 'Clamp'}}
         after = {'node': {'defaults': {'Min': -1, 'Max': .8, 'New': False}, 'name': 'Clamp'}}
