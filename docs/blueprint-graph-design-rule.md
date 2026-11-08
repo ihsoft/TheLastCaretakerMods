@@ -139,6 +139,15 @@ For reuse or deduplication, also check argument/target equivalence and execution
 order. Treat deliberate behavior changes separately. This semantic review does
 not replace or require repeating the public tool's mechanical validation.
 
+When validation fails after an authorized structural change, distinguish a
+violated contract from an expectation tied to the previous representation.
+If that expectation is obsolete, update the exact expectations for the new
+structure while preserving the required identity, content and behavior checks.
+For example, component-template count and runtime instance count are different
+contracts. Do not weaken a check merely to make it pass, or treat a successful
+representation check as proof of runtime behavior. Diagnose import/export
+mismatches rather than dismissing them as harmless metadata differences.
+
 Decomposition should reduce the context needed for the next task. Use the BPT
 hierarchy summary to locate relevant operations, then read the selected graph
 with its boundary context and required definitions through the public source
