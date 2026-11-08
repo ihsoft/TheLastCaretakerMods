@@ -1,5 +1,10 @@
 # BlueprintText workspace workflow
 
+BPT is an **AI-to-Human interface**: the agent authors Blueprint behavior and
+the human understands and reviews it through the preview. Human-readable graphs
+with minimal nonessential noise are a core requirement; follow the
+[human readability contract](../docs/blueprint-graph-design-rule.md#bpt-is-an-ai-to-human-interface).
+
 Use [Invoke-BlueprintWorkspace.ps1](BlueprintText/Invoke-BlueprintWorkspace.ps1)
 for the recommended Blueprint authoring workflow for new and existing mods:
 export, edit JSON, apply and preview. The Unreal project is the source of truth,

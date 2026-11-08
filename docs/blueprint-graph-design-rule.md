@@ -1,11 +1,43 @@
 # Blueprint graph design
 
 Apply these rules when authoring or simplifying Blueprint graphs through BPT.
-The objective is understandable control flow and locally understandable operations.
+The objective is human understanding of the behavior authored by the agent.
 Node count is a review signal, not a quota or evidence of faster execution.
 The [workspace workflow](../tools/blueprint-workspace.md) owns editing,
 synchronization and preview; the [format guide](../tools/blueprint-text.md)
 owns supported graph representations.
+
+## BPT is an AI-to-Human interface
+
+BPT lets an agent author behavior that a human can understand, evaluate and
+discuss through the preview. Human readability is a primary acceptance criterion
+for both the authored graph and its presentation. The agent's ability to process
+a large or noisy representation does not make that representation suitable for
+the person reviewing it.
+
+Apply Occam's razor: include only what the graph needs. Every node, branch,
+check, cast, state variable or abstraction must serve required behavior, an
+established contract or a concrete human-understanding need. The burden of
+justification is on adding complexity. Possibility, habit, speculative future
+reuse and "just in case" are insufficient reasons. If an element can be omitted
+without losing those requirements, omit it. Use the preservation rules below
+to establish that an existing element is unnecessary before removing it.
+
+Minimize nonessential noise: redundant checks and casts, repeated plumbing,
+technical identifiers and irrelevant displayed details compete with meaningful
+operations for the reader's attention. Remove semantically redundant operations
+from the authored graph under the preservation rules below. For information
+needed by serialization or detailed inspection but not by the main reading task,
+improve the preview's presentation and keep the detail accessible through Full
+or Details. Hiding a necessary decision or failure path is not simplification.
+
+Low noise is one part of readability. Meaningful names, clear responsibility
+boundaries, visible execution order, readable expressions and useful navigation
+must let the reader follow intent, conditions and effects without repeatedly
+decoding implementation details. Explain a readability improvement by the
+irrelevant decisions or indirections it removes from that reading task, and the
+meaning it makes easier to see. Runtime speedup is not required to justify this
+benefit; fewer nodes or a smaller JSON file alone do not establish it.
 
 ## Identify the source of complexity
 
@@ -111,6 +143,47 @@ count and order. Check the paths, not just the node signatures.
 Use a straight execution chain for ordered calls. Use Sequence when the graph
 actually needs separately dispatched branches; Sequence is not a generic way to
 preserve the termination behavior of an extracted operation.
+
+## Justify casts and validity checks
+
+Unnecessary checks and casts add apparent decisions that the human must interpret.
+Removing them when their guarantees are already established improves the
+AI-to-Human interface even without a measurable runtime performance change.
+
+For each check, identify the input contract, a concrete way it can fail before
+use, and the purpose of its failure path. Similar-looking chains can require
+different checks. Separate type narrowing, object lifetime and required authored
+structure; one check does not establish all three.
+
+- Use a cast when the source type does not guarantee the required class, for
+  example when filtering heterogeneous objects. Preserve concrete types through
+  variables, arrays and ForEach pins when no generalization is needed. Do not
+  widen a typed array merely to cast each element back to its original type.
+- A cast to an already guaranteed type is redundant for typing, but its execution
+  pins may still reject a null reference. Inspect the success and failure paths
+  and other consumers before removing it. A successful cast is not a substitute
+  for checking object lifetime where that matters.
+- Keep IsValid when a reference can legitimately be absent or invalid at use,
+  and skipping, resetting or restoring state is the appropriate response.
+  Cached references, deferred work, EndPlay and calls that can trigger callbacks
+  are reasons to examine lifetime, not automatic reasons to add a check everywhere.
+- Remove a validity check when the producer or an earlier guard already provides
+  the required guarantee through the point of use. A fresh typed array alone
+  does not prove this: consider the producer's filtering and mutations during
+  traversal. A synchronous read-only traversal differs from a loop that changes
+  game state. An empty array needs no per-element guard to handle its emptiness.
+- Consecutive operations can share a caller-owned guard when all call paths meet
+  it and intervening work cannot invalidate its guarantee. Preserve the separate
+  failure responses, operation order and continuation. Make the callee precondition
+  apparent; do not cache validity across ticks or asynchronous boundaries.
+
+Required authored components and names are project contracts. A guard that merely
+skips required work when such a contract is broken can hide a defect rather than
+provide useful recovery. Establish those contracts during development and build
+validation; do not treat a proposed check as already provided by the tooling.
+Apply the [error-handling rule](error-handling-rule.md) to contract failures.
+If the necessary lifetime or producer contract is unknown, state that limit;
+neither removing the check nor retaining it proves the missing guarantee.
 
 ## Make failure handling useful
 

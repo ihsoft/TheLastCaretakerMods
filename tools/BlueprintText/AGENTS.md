@@ -2,9 +2,14 @@
 
 For new and existing mods, start with the [workspace workflow](../blueprint-workspace.md).
 The [format guide](../blueprint-text.md) owns lower-level interfaces.
+Shared BPT changes and unresolved limitations follow the
+[specialist decision rule](../../docs/blueprint-text-maintenance-rule.md).
+For tool development, use the [maintenance guide](../blueprint-text-maintenance.md)
+to select the owning contract and validation boundary.
 Follow the [graph design rule](../../docs/blueprint-graph-design-rule.md) when
-authoring or simplifying graphs: separate coordinating flow from complete
-operations while preserving execution and data-evaluation boundaries.
+authoring or simplifying graphs. BPT is an AI-to-Human interface: optimize graphs
+and previews for human understanding, including minimal nonessential noise,
+while preserving execution and data-evaluation boundaries.
 The [INI parser library](Library/IniFileParser/AGENTS.md) owns reusable parser
 integration, its public getters, format, and focused validation.
 BlueprintText is the recommended Blueprint authoring workflow. Packaging and
