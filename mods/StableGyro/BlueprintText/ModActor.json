@@ -223,7 +223,7 @@
     {
       "VarName": "\"OwnedPrimitiveComponents\"",
       "VarGuid": "E5162FA244E06AEDCE75AC9B23C59B7A",
-      "VarType": "(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.ActorComponent'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=(),ContainerType=Array)",
+      "VarType": "(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.PrimitiveComponent'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=(),ContainerType=Array)",
       "FriendlyName": "\"Owned Primitive Components\"",
       "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
       "PropertyFlags": "73733"
@@ -6274,6 +6274,28 @@
             }
           },
           {
+            "id": "K2Node_Composite_CancelVerticalVelocity",
+            "kind": "Composite",
+            "properties": {
+              "NodeGuid": "53B073489FA84FC7A9A8681D67164A22"
+            },
+            "pins": {
+              "out:then": {
+                "id": "53752AB42D6044FDBDAD26210F7D6B73",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:exec": {
+                "id": "865C826677BF4A1A8014918397B2119C",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Gyro": {
+                "id": "EECE41E7879E4B448A95BEB330A1D7A1",
+                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
+              }
+            }
+          },
+          {
             "id": "K2Node_IfThenElse_15",
             "kind": "branch",
             "properties": {
@@ -6402,28 +6424,6 @@
               "in:CollisionReleaseUntilTime": "0.0",
               "out:Output_Get": "0.0"
             }
-          },
-          {
-            "id": "K2Node_Composite_CancelVerticalVelocity",
-            "kind": "Composite",
-            "properties": {
-              "NodeGuid": "53B073489FA84FC7A9A8681D67164A22"
-            },
-            "pins": {
-              "out:then": {
-                "id": "53752AB42D6044FDBDAD26210F7D6B73",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:exec": {
-                "id": "865C826677BF4A1A8014918397B2119C",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Gyro": {
-                "id": "EECE41E7879E4B448A95BEB330A1D7A1",
-                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
-              }
-            }
           }
         ],
         "links": [
@@ -6504,38 +6504,15 @@
       "properties": {
         "GraphGuid": "EAE6938C7A454B2CBB3BB62C682DF65C"
       },
-      "format": "compact",
       "owner": {
         "graph": "88520B12C7B24693A3278CA367E65EEF",
         "node": "K2Node_Composite_CancelVerticalVelocity",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
-          {
-            "id": "K2Node_Tunnel_0",
-            "kind": "Tunnel",
-            "properties": {
-              "bCanHaveOutputs": "True",
-              "NodeGuid": "6EC37035D3D44F66B90843884365B5A2"
-            },
-            "pins": {
-              "out:exec": {
-                "id": "B97AAFBAC3CD40C7A7431A43A3393A1F",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:Gyro": {
-                "id": "F9697BFD2C34454DA611B2B333BD4509",
-                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
-              }
-            },
-            "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"execute\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Output)",
-              "CustomProperties UserDefinedPin (PinName=\"Gyro\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageVehicleGyroCopter'\"),DesiredPinDirection=EGPD_Output)"
-            ]
-          },
           {
             "id": "K2Node_CallFunction_82",
             "kind": "call",
@@ -6779,6 +6756,46 @@
             }
           },
           {
+            "id": "K2Node_Tunnel_0",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveOutputs": "True",
+              "NodeGuid": "6EC37035D3D44F66B90843884365B5A2"
+            },
+            "pins": {
+              "out:exec": {
+                "id": "B97AAFBAC3CD40C7A7431A43A3393A1F",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:Gyro": {
+                "id": "F9697BFD2C34454DA611B2B333BD4509",
+                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"execute\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Output)",
+              "CustomProperties UserDefinedPin (PinName=\"Gyro\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageVehicleGyroCopter'\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_Tunnel_1",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveInputs": "True",
+              "NodeGuid": "305B8EA3DB7041DEA6B5C5C8F323501C"
+            },
+            "pins": {
+              "in:then": {
+                "id": "095C8592752D40DA989F86FD59CFE8F2",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"then\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Input)"
+            ]
+          },
+          {
             "id": "K2Node_VariableGet_25",
             "kind": "getVariable",
             "properties": {
@@ -6798,23 +6815,6 @@
                 "name": "self"
               }
             }
-          },
-          {
-            "id": "K2Node_Tunnel_1",
-            "kind": "Tunnel",
-            "properties": {
-              "bCanHaveInputs": "True",
-              "NodeGuid": "305B8EA3DB7041DEA6B5C5C8F323501C"
-            },
-            "pins": {
-              "in:then": {
-                "id": "095C8592752D40DA989F86FD59CFE8F2",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              }
-            },
-            "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"then\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Input)"
-            ]
           }
         ],
         "links": [
@@ -6851,12 +6851,12 @@
             "to": "K2Node_CallFunction_82.in:exec"
           },
           {
-            "from": "K2Node_Tunnel_0.out:exec",
-            "to": "K2Node_DynamicCast_8.in:exec"
-          },
-          {
             "from": "K2Node_Tunnel_0.out:Gyro",
             "to": "K2Node_VariableGet_25.in:target"
+          },
+          {
+            "from": "K2Node_Tunnel_0.out:exec",
+            "to": "K2Node_DynamicCast_8.in:exec"
           },
           {
             "from": "K2Node_VariableGet_25.out:RootComponent",
@@ -12295,44 +12295,6 @@
             }
           },
           {
-            "id": "K2Node_DynamicCast_2",
-            "kind": "cast",
-            "properties": {
-              "TargetType": "\"/Script/CoreUObject.Class'/Script/Engine.PrimitiveComponent'\"",
-              "PureState": "Impure",
-              "NodePosX": "1830",
-              "NodePosY": "-1120",
-              "NodeGuid": "A9D66E6246909FD7E55DA6A8FFB6B119"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "E66E55AE40B0F76D56D58F8E7FEFC153",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "9CD6B78847610A43531F1E99594C4D53",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "out:CastFailed": {
-                "id": "3DD6EA42495E78F6FD2019BB36548417",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:Object": {
-                "id": "5F4CBC4944D15F0C6FFD3FB2E98CBEDF",
-                "type": "p_5ce4ab9cc1e24fcc43bae7b944e13ce938a412ba1e9609fc1ddabed2e3284d92"
-              },
-              "out:AsPrimitive Component": {
-                "id": "D1D62873425EDA3F1281F190A031E595",
-                "type": "p_d5ad3ded50e4bc4cefcad1e788a8550c94e065efc278b3e28218dadf1c3b1ea3"
-              },
-              "out:bSuccess": {
-                "id": "1AE4C5DA47E852818B4153BFC92F37F8",
-                "type": "p_56993b8655c965530d38c63d18de10c2e0ae9d0e8769c755d2fca14c67316f3c"
-              }
-            }
-          },
-          {
             "id": "K2Node_MacroInstance_0",
             "kind": "MacroInstance",
             "properties": {
@@ -12348,7 +12310,7 @@
               },
               "in:Array": {
                 "id": "FAB66C2845EC78AB2922CC84B07F70A2",
-                "type": "p_69d1bb14efdc06f9cd38671acbdc2c777c338b29170be64adc49d3c545073dae"
+                "type": "p_3c2142eaafae52fffe11d7071f59f02576ba5f30a448ae80454c2447d50b13b2"
               },
               "out:LoopBody": {
                 "id": "6C321A7443655A0E47710DAA112C9347",
@@ -12356,7 +12318,7 @@
               },
               "out:Array Element": {
                 "id": "BF6AD76E41FEF828F5566FABD2736AEF",
-                "type": "p_2a413a3219c454d6438d027a1c8547068d9638dd55b644537d147f6a9f3b473f"
+                "type": "p_d5ad3ded50e4bc4cefcad1e788a8550c94e065efc278b3e28218dadf1c3b1ea3"
               },
               "out:Array Index": {
                 "id": "20C13C9A49759F519598FEAC02037060",
@@ -12455,11 +12417,11 @@
               },
               "in:OwnedPrimitiveComponents": {
                 "id": "706DBD92442E0E8A2AB487961FE2004F",
-                "type": "p_69d1bb14efdc06f9cd38671acbdc2c777c338b29170be64adc49d3c545073dae"
+                "type": "p_3c2142eaafae52fffe11d7071f59f02576ba5f30a448ae80454c2447d50b13b2"
               },
               "out:Output_Get": {
                 "id": "DF2733DA4783916DDA2056BDB425BAD1",
-                "type": "p_850c1937c294cdfc4cf5f9794a496511073d23dfb0f063ce7af2763defa04b9b"
+                "type": "typed_PrimitiveComponent_94"
               },
               "in:target": {
                 "id": "FBB08A344A6E2E999BDCDABFBE4057D7",
@@ -12499,20 +12461,12 @@
             "to": "K2Node_RemoveDelegate_1.in:Delegate"
           },
           {
-            "from": "K2Node_DynamicCast_2.out:AsPrimitive Component",
+            "from": "K2Node_MacroInstance_0.out:Array Element",
             "to": "K2Node_CallFunction_7.in:target"
           },
           {
-            "from": "K2Node_DynamicCast_2.out:then",
-            "to": "K2Node_CallFunction_7.in:exec"
-          },
-          {
-            "from": "K2Node_MacroInstance_0.out:Array Element",
-            "to": "K2Node_DynamicCast_2.in:Object"
-          },
-          {
             "from": "K2Node_MacroInstance_0.out:LoopBody",
-            "to": "K2Node_DynamicCast_2.in:exec"
+            "to": "K2Node_CallFunction_7.in:exec"
           },
           {
             "from": "K2Node_RemoveDelegate_1.out:then",
@@ -14439,6 +14393,24 @@
             }
           },
           {
+            "id": "K2Node_Composite_ResetFlightStateOnControllerChange",
+            "kind": "Composite",
+            "properties": {
+              "NodeGuid": "5E985E0051CC4A1E9DAF8CF2CB3C3773"
+            },
+            "pins": {
+              "out:then": {
+                "id": "FF8934DDCF324410BCB67FB09975A66B",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:exec": {
+                "id": "37A917650EC34ECFA876A2FD587A6A76",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              }
+            }
+          },
+          {
             "id": "K2Node_DynamicCast_0",
             "kind": "cast",
             "properties": {
@@ -14587,24 +14559,6 @@
             "defaults": {
               "out:HoverPitchScale": "0.0"
             }
-          },
-          {
-            "id": "K2Node_Composite_ResetFlightStateOnControllerChange",
-            "kind": "Composite",
-            "properties": {
-              "NodeGuid": "5E985E0051CC4A1E9DAF8CF2CB3C3773"
-            },
-            "pins": {
-              "out:then": {
-                "id": "FF8934DDCF324410BCB67FB09975A66B",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:exec": {
-                "id": "37A917650EC34ECFA876A2FD587A6A76",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              }
-            }
           }
         ],
         "links": [
@@ -14661,33 +14615,15 @@
       "properties": {
         "GraphGuid": "9A97461DC9254E4892B212B0CB66AF98"
       },
-      "format": "compact",
       "owner": {
         "graph": "31BFB83A457DCCAE4AFBA89BEB65AB57",
         "node": "K2Node_Composite_ResetFlightStateOnControllerChange",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
-          {
-            "id": "K2Node_Tunnel_0",
-            "kind": "Tunnel",
-            "properties": {
-              "bCanHaveOutputs": "True",
-              "NodeGuid": "9A39D9C609A4417DAD9C3A236231AFB5"
-            },
-            "pins": {
-              "out:exec": {
-                "id": "9CD0080EEA8A42EA9E9AE5E6387B2D29",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              }
-            },
-            "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"execute\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Output)"
-            ]
-          },
           {
             "id": "K2Node_CallFunction_3",
             "kind": "call",
@@ -14713,6 +14649,41 @@
                 "name": "self"
               }
             }
+          },
+          {
+            "id": "K2Node_Tunnel_0",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveOutputs": "True",
+              "NodeGuid": "9A39D9C609A4417DAD9C3A236231AFB5"
+            },
+            "pins": {
+              "out:exec": {
+                "id": "9CD0080EEA8A42EA9E9AE5E6387B2D29",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"execute\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_Tunnel_1",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveInputs": "True",
+              "NodeGuid": "44C2E9CC4D084A75996F59884D5D9C53"
+            },
+            "pins": {
+              "in:then": {
+                "id": "30042D4105B04787B134FFA83BF31D6B",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"then\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Input)"
+            ]
           },
           {
             "id": "K2Node_VariableSet_0",
@@ -15093,23 +15064,6 @@
               "in:VerticalVelocitySampleValid": "false",
               "out:Output_Get": "false"
             }
-          },
-          {
-            "id": "K2Node_Tunnel_1",
-            "kind": "Tunnel",
-            "properties": {
-              "bCanHaveInputs": "True",
-              "NodeGuid": "44C2E9CC4D084A75996F59884D5D9C53"
-            },
-            "pins": {
-              "in:then": {
-                "id": "30042D4105B04787B134FFA83BF31D6B",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              }
-            },
-            "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"then\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Input)"
-            ]
           }
         ],
         "links": [
@@ -17788,6 +17742,27 @@
       "PinType.PinSubCategory": "\"\"",
       "PinType.PinSubCategoryMemberReference": "()",
       "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/EnhancedInput.InputActionValue'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "typed_PrimitiveComponent_94": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "Array",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.PrimitiveComponent'\"",
       "PinType.PinValueType": "()",
       "PinType.bIsConst": "False",
       "PinType.bIsReference": "False",

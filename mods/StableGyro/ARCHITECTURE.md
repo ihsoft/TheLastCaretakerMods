@@ -57,6 +57,21 @@ requirements. Their calculations stay in the original tick phase. Physics reads,
 additive writes and sample updates retain their ordering; decomposition does not
 introduce a shared cached eligibility result.
 
+`PitchInputActor.UpdateAltitudeAssistance` owns the common validity gate for
+`CachedGyro` and `CachedStabilizationHelper`. With both references valid, it
+updates the descent cap before native altitude ownership. Without the helper,
+it restores native ownership without accessing the helper; with only the helper
+valid, it clears the cap before restoration. Both update functions rely on this
+caller gate. Pitch processing continues after every path. EndPlay retains its
+separate helper validity check.
+
+Component arrays preserve their concrete element types through storage and
+ForEach. Construction requires `VehicleMesh` and both authored rear sockets;
+their absence is a broken project contract, not an optional configuration.
+Cargo availability reads freshly enumerated sockets without a per-element
+validity branch. Cable disconnection and deferred socket cleanup retain their
+validity gates because they cross mutation or scheduling boundaries.
+
 `ResetCargoPressState` owns the common release, cancellation and controller-change
 reset. `CleanupDisabledMooringSocket` owns per-socket cleanup while its caller
 keeps the queued guard across both socket calls. `RefreshCargoAvailability` scans
@@ -315,7 +330,7 @@ construction graph, represented in `BlueprintText/BP_GyroCopter_StablePilot.json
 Native reeling covers the extra sockets, but the stock Drop Cargo callback and
 availability test use only the original pair. Four-port mode reuses the stock
 Enhanced Input action and supplies one replacement binding and hint. It scans
-valid Mooring sockets, uses the native connection predicate for availability,
+Mooring socket components, uses the native connection predicate for availability,
 and disconnects through the stock helper with `bDestroy=false`. Inherited
 non-cargo actions remain available.
 

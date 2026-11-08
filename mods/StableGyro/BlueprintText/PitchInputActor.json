@@ -71,7 +71,7 @@
     {
       "VarName": "\"OwnedChildActorComponents\"",
       "VarGuid": "B2E5C2AD41B868A0B5E00F858D989543",
-      "VarType": "(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.ActorComponent'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=(),ContainerType=Array)",
+      "VarType": "(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.ChildActorComponent'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=(),ContainerType=Array)",
       "FriendlyName": "\"Owned Child Actor Components\"",
       "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
       "PropertyFlags": "73733"
@@ -155,58 +155,6 @@
               },
               "in:target": {
                 "id": "C652201E4DCD5250D13C93AA9647DA51",
-                "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_CallFunction_24",
-            "kind": "call",
-            "properties": {
-              "FunctionReference": "(MemberName=\"UpdateDescentUpwardVelocityCap\",MemberGuid=8C9EF58844363DBF2B94F48825A099F6,bSelfContext=True)",
-              "NodePosX": "1140",
-              "NodePosY": "-180",
-              "NodeGuid": "8CFC754845BC4A5119F91FA935EFE237"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "2F360D4A49FAE2261E6ABEB733E092CE",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "A286AAA344FE138E667148BA29D7378B",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:target": {
-                "id": "AB64401A44DB5EE241F871AF35F61AD9",
-                "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_CallFunction_25",
-            "kind": "call",
-            "properties": {
-              "FunctionReference": "(MemberName=\"UpdateNativeAltitudeOwnership\",MemberGuid=3B50133C448D82EE5CBEFF853111A8D2,bSelfContext=True)",
-              "NodePosX": "1370",
-              "NodePosY": "-180",
-              "NodeGuid": "67A0017240AAC77EA39CF0A03BCF5450"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "82C36F28471105E3DD503387F1C9C3A4",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "A580CC104209BC22A55113ACC9644833",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:target": {
-                "id": "848E19A54194B5E3B83D969C487AC114",
                 "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
                 "name": "self"
               }
@@ -901,20 +849,30 @@
               "in:ResetActionWasActive": "false",
               "out:Output_Get": "false"
             }
+          },
+          {
+            "id": "K2Node_Composite_UpdateAltitudeAssistance",
+            "kind": "Composite",
+            "properties": {
+              "NodeGuid": "309811E4FEC947D3A6DFB5151D8063DA"
+            },
+            "pins": {
+              "out:then": {
+                "id": "0F19103EA15A4525A98DBF3E710B4E9E",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:exec": {
+                "id": "74E72EE8BF764B33839FD686F62D07D3",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              }
+            }
           }
         ],
         "links": [
           {
             "from": "K2Node_CallFunction_0.out:then",
             "to": "K2Node_Composite_1.in:exec"
-          },
-          {
-            "from": "K2Node_CallFunction_24.out:then",
-            "to": "K2Node_CallFunction_25.in:exec"
-          },
-          {
-            "from": "K2Node_CallFunction_25.out:then",
-            "to": "K2Node_IfThenElse_1.in:exec"
           },
           {
             "from": "K2Node_CallFunction_5.out:result",
@@ -939,10 +897,6 @@
           {
             "from": "K2Node_DynamicCast_1.out:CastFailed",
             "to": "K2Node_VariableSet_6.in:exec"
-          },
-          {
-            "from": "K2Node_DynamicCast_1.out:then",
-            "to": "K2Node_CallFunction_24.in:exec"
           },
           {
             "from": "K2Node_Event_3.out:then",
@@ -1003,6 +957,393 @@
           {
             "from": "K2Node_VariableSet_5.out:then",
             "to": "K2Node_VariableSet_8.in:exec"
+          },
+          {
+            "from": "K2Node_Composite_UpdateAltitudeAssistance.out:then",
+            "to": "K2Node_IfThenElse_1.in:exec"
+          },
+          {
+            "from": "K2Node_DynamicCast_1.out:then",
+            "to": "K2Node_Composite_UpdateAltitudeAssistance.in:exec"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateAltitudeAssistance",
+      "kind": "collapsed",
+      "properties": {
+        "GraphGuid": "88473FEFB7144373A583CAFEC3E5CE2D"
+      },
+      "format": "compact",
+      "owner": {
+        "graph": "C09489B24DE4B8E605DDCD9BD2C97B9D",
+        "node": "K2Node_Composite_UpdateAltitudeAssistance",
+        "entry": "K2Node_Tunnel_Entry",
+        "exit": "K2Node_Tunnel_Exit"
+      },
+      "body": {
+        "nodes": [
+          {
+            "id": "K2Node_Tunnel_Entry",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveOutputs": "True",
+              "NodeGuid": "081FB1AEE6D840139AB99B08A3DE1C78"
+            },
+            "pins": {
+              "out:exec": {
+                "id": "0AFBFECAFCBA437289D7B6262264C744",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"execute\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_CallFunction_24",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberName=\"UpdateDescentUpwardVelocityCap\",MemberGuid=8C9EF58844363DBF2B94F48825A099F6,bSelfContext=True)",
+              "NodePosX": "1140",
+              "NodePosY": "-180",
+              "NodeGuid": "8CFC754845BC4A5119F91FA935EFE237"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "2F360D4A49FAE2261E6ABEB733E092CE",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "A286AAA344FE138E667148BA29D7378B",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "AB64401A44DB5EE241F871AF35F61AD9",
+                "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_25",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberName=\"UpdateNativeAltitudeOwnership\",MemberGuid=3B50133C448D82EE5CBEFF853111A8D2,bSelfContext=True)",
+              "NodePosX": "1370",
+              "NodePosY": "-180",
+              "NodeGuid": "67A0017240AAC77EA39CF0A03BCF5450"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "82C36F28471105E3DD503387F1C9C3A4",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "A580CC104209BC22A55113ACC9644833",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "848E19A54194B5E3B83D969C487AC114",
+                "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_AltitudeHelper",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"CachedStabilizationHelper\",MemberGuid=CB109D604B6BE768F2686AAFC587DC21,bSelfContext=True)",
+              "NodePosY": "-400",
+              "NodeGuid": "14FE3F76915D4C4CB7277140E61E285F"
+            },
+            "pins": {
+              "out:CachedStabilizationHelper": {
+                "id": "AB70ADEC53D947ABBE29F4A5E2FD3D5C",
+                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
+              },
+              "in:target": {
+                "id": "6F5F1EECF0C74ACE8199D7AF98931918",
+                "type": "p_297fc386d7da37422061774455e74957cc032d7600567b025982c6838542984f",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_AltitudeGyro",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"CachedGyro\",MemberGuid=3AC914CF469EEEF9BF7CCD92300AA051,bSelfContext=True)",
+              "NodePosY": "-160",
+              "NodeGuid": "FE98BDC4E7C845D19C27DF438BEC4149"
+            },
+            "pins": {
+              "out:CachedGyro": {
+                "id": "81BA3617188F4396922BDD58D926BFC3",
+                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
+              },
+              "in:target": {
+                "id": "347CFF70D2FD42759E43C3D2D7AE16C2",
+                "type": "p_297fc386d7da37422061774455e74957cc032d7600567b025982c6838542984f",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_IsAltitudeHelperValid",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\",MemberName=\"IsValid\")",
+              "NodePosX": "240",
+              "NodePosY": "-400",
+              "NodeGuid": "A8FE4A04DCC4400F9B8A9C238155CD43"
+            },
+            "pins": {
+              "in:target": {
+                "id": "A8C7972C9479453095E09027D6C013A0",
+                "type": "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetSystemLibrary\""
+              },
+              "in:Object": {
+                "id": "CEA3630B216C48F2BD4A708E7A6F2FAD",
+                "type": "p_f28ac20dffb6cea691bdc6de1853f3113b944b6df5c73999021bbff4b099a407"
+              },
+              "out:result": {
+                "id": "0F0699C485FE45E19E0E23F065ECF923",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_IsAltitudeGyroValid",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\",MemberName=\"IsValid\")",
+              "NodePosX": "240",
+              "NodePosY": "-160",
+              "NodeGuid": "05FCC183BDDF4028B974D5F521BBBB55"
+            },
+            "pins": {
+              "in:target": {
+                "id": "F33FE6553B0E4D7DB19E4F9B97A27A48",
+                "type": "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetSystemLibrary\""
+              },
+              "in:Object": {
+                "id": "26C2BB466B2740FAA7FEAE8A7147423C",
+                "type": "p_f28ac20dffb6cea691bdc6de1853f3113b944b6df5c73999021bbff4b099a407"
+              },
+              "out:result": {
+                "id": "CC108897D0F1494B8393DCE726E783C1",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_AltitudeHelperValid",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "480",
+              "NodePosY": "-400",
+              "NodeGuid": "9F4D29D53076443BA1536C957B8658DB"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "3D122955A4254F5BB8323D8A0729149E",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "FCD129BC110A4EEEA15D55EBE8DDFA97",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "6EDB22C7BC2645FBA481B5B2C0F2587D",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "232D1BAF00434762B8A963414C92C7E1",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_AltitudeGyroValid",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "720",
+              "NodePosY": "-160",
+              "NodeGuid": "F4B5BAE23E524B7C8C71D69EC54170A1"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "B6DE49D57AAA444EA24BB2E7D196EAA6",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "F4E963790AA841CF8FEF39CE0F0BE332",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "2C5E83F92A4842479F4B82948FDCA4F4",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "70F4C388270C48209E9BAA57C8F3588B",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_ClearUnavailableGyroCap",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/StableGyro/ModActor.ModActor_C'\",MemberName=\"ClearDescentUpwardVelocityCap\",MemberGuid=6C6304A64A0654F9ABF22BB5B12FAA26)",
+              "NodePosX": "960",
+              "NodePosY": "80",
+              "NodeGuid": "AD08D047E8B24A53A6050C5F096C27CD"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "F49BF640AF5B47488A49251AFED83E44",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "B7E9A8F9FD224F359FB3E8D2CBBA3C53",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "443CA0313CB24577842625774CE90DC2",
+                "type": "p_aa900265b8393934f621c8c868f4ba7aa931645ab99574cb9b1690927a229934",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_RestoreUnavailableAltitudeOwnership",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberName=\"RestoreNativeAltitudeOwnership\",MemberGuid=BC6D3DE44DA9BB1BB5D91C8F43B486CB,bSelfContext=True)",
+              "NodePosX": "1200",
+              "NodePosY": "300",
+              "NodeGuid": "8A3B287E164F497284183A99678512E5"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "26A335120522429DBF1D3C8CEA05DB63",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "78766243B2754E03B442EADC77F99F48",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "4E067F1468024F8EBE29E1DBB1C63F2F",
+                "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_Tunnel_Exit",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveInputs": "True",
+              "NodeGuid": "4B11E204B98040C8B2DACF7AC9181A09"
+            },
+            "pins": {
+              "in:then": {
+                "id": "81962AF33ED749338B9F59E2A43FDA09",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"then\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Input)"
+            ]
+          }
+        ],
+        "links": [
+          {
+            "from": "K2Node_CallFunction_24.out:then",
+            "to": "K2Node_CallFunction_25.in:exec"
+          },
+          {
+            "from": "K2Node_VariableGet_AltitudeHelper.out:CachedStabilizationHelper",
+            "to": "K2Node_CallFunction_IsAltitudeHelperValid.in:Object"
+          },
+          {
+            "from": "K2Node_VariableGet_AltitudeGyro.out:CachedGyro",
+            "to": "K2Node_CallFunction_IsAltitudeGyroValid.in:Object"
+          },
+          {
+            "from": "K2Node_CallFunction_IsAltitudeHelperValid.out:result",
+            "to": "K2Node_IfThenElse_AltitudeHelperValid.in:Condition"
+          },
+          {
+            "from": "K2Node_CallFunction_IsAltitudeGyroValid.out:result",
+            "to": "K2Node_IfThenElse_AltitudeGyroValid.in:Condition"
+          },
+          {
+            "from": "K2Node_IfThenElse_AltitudeHelperValid.out:then",
+            "to": "K2Node_IfThenElse_AltitudeGyroValid.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_AltitudeHelperValid.out:else",
+            "to": "K2Node_CallFunction_RestoreUnavailableAltitudeOwnership.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_AltitudeGyroValid.out:then",
+            "to": "K2Node_CallFunction_24.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_AltitudeGyroValid.out:else",
+            "to": "K2Node_CallFunction_ClearUnavailableGyroCap.in:exec"
+          },
+          {
+            "from": "K2Node_VariableGet_AltitudeHelper.out:CachedStabilizationHelper",
+            "to": "K2Node_CallFunction_ClearUnavailableGyroCap.in:target"
+          },
+          {
+            "from": "K2Node_CallFunction_ClearUnavailableGyroCap.out:then",
+            "to": "K2Node_CallFunction_RestoreUnavailableAltitudeOwnership.in:exec"
+          },
+          {
+            "from": "K2Node_CallFunction_25.out:then",
+            "to": "K2Node_Tunnel_Exit.in:then"
+          },
+          {
+            "from": "K2Node_CallFunction_RestoreUnavailableAltitudeOwnership.out:then",
+            "to": "K2Node_Tunnel_Exit.in:then"
+          },
+          {
+            "from": "K2Node_Tunnel_Entry.out:exec",
+            "to": "K2Node_IfThenElse_AltitudeHelperValid.in:exec"
           }
         ]
       }
@@ -1609,44 +1950,6 @@
             }
           },
           {
-            "id": "K2Node_DynamicCast_4",
-            "kind": "cast",
-            "properties": {
-              "TargetType": "\"/Script/CoreUObject.Class'/Script/Engine.ChildActorComponent'\"",
-              "PureState": "Impure",
-              "NodePosX": "1370",
-              "NodePosY": "-1700",
-              "NodeGuid": "251F40A44598FAC0557D058003160139"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "5801C4F94B36F76C801D089F3D0D3058",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "67371B57453DBC685996589968313708",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "out:CastFailed": {
-                "id": "66B1193F4F3AB6FDF845FF953F11C49D",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:Object": {
-                "id": "00AE78FA405F32AEBB478CB946103460",
-                "type": "p_5ce4ab9cc1e24fcc43bae7b944e13ce938a412ba1e9609fc1ddabed2e3284d92"
-              },
-              "out:AsChild Actor Component": {
-                "id": "1EEC304240DBF632DA6C5194D512064A",
-                "type": "p_dc2a5838c11793be47fc51fad4dd21511cd2013bcec9e2a7614816513ec9acf7"
-              },
-              "out:bSuccess": {
-                "id": "9BECC48348CD68ACF483D686CA9C2F65",
-                "type": "p_56993b8655c965530d38c63d18de10c2e0ae9d0e8769c755d2fca14c67316f3c"
-              }
-            }
-          },
-          {
             "id": "K2Node_DynamicCast_5",
             "kind": "cast",
             "properties": {
@@ -1700,7 +2003,7 @@
               },
               "in:Array": {
                 "id": "7326D8EA4E4248535E871D82BFFD80E9",
-                "type": "p_69d1bb14efdc06f9cd38671acbdc2c777c338b29170be64adc49d3c545073dae"
+                "type": "p_c411b71a0d3483a24ad05b723a78fee4cd4cddb52f09bd598234cca29d1dac6e"
               },
               "out:LoopBody": {
                 "id": "995FF94C4B1DB3B17B102E9D4156486E",
@@ -1708,7 +2011,7 @@
               },
               "out:Array Element": {
                 "id": "47A533C34AA2A3C818870BA528AF647E",
-                "type": "p_2a413a3219c454d6438d027a1c8547068d9638dd55b644537d147f6a9f3b473f"
+                "type": "p_dc2a5838c11793be47fc51fad4dd21511cd2013bcec9e2a7614816513ec9acf7"
               },
               "out:Array Index": {
                 "id": "95880D1846566CC1DC176CB803F3767F",
@@ -1798,11 +2101,11 @@
               },
               "in:OwnedChildActorComponents": {
                 "id": "48DEA8A94C0731450F49EF84DBAC3E8D",
-                "type": "p_69d1bb14efdc06f9cd38671acbdc2c777c338b29170be64adc49d3c545073dae"
+                "type": "p_c411b71a0d3483a24ad05b723a78fee4cd4cddb52f09bd598234cca29d1dac6e"
               },
               "out:Output_Get": {
                 "id": "019D5CEE45FBF3F8DE4815AD27470065",
-                "type": "p_850c1937c294cdfc4cf5f9794a496511073d23dfb0f063ce7af2763defa04b9b"
+                "type": "p_09267ac40bff562cab2f529f5c281f65e728cf9b6f80f59acdb3e3e766ef7e59"
               },
               "in:target": {
                 "id": "F23F6E4445C43F3F60257AA5F62A6DEF",
@@ -1902,14 +2205,6 @@
             "to": "K2Node_VariableSet_9.in:exec"
           },
           {
-            "from": "K2Node_DynamicCast_4.out:AsChild Actor Component",
-            "to": "K2Node_VariableGet_7.in:target"
-          },
-          {
-            "from": "K2Node_DynamicCast_4.out:then",
-            "to": "K2Node_DynamicCast_5.in:exec"
-          },
-          {
             "from": "K2Node_DynamicCast_5.out:AsMod Actor",
             "to": "K2Node_VariableSet_11.in:CachedStabilizationHelper"
           },
@@ -1919,7 +2214,7 @@
           },
           {
             "from": "K2Node_MacroInstance_0.out:Array Element",
-            "to": "K2Node_DynamicCast_4.in:Object"
+            "to": "K2Node_VariableGet_7.in:target"
           },
           {
             "from": "K2Node_MacroInstance_0.out:Completed",
@@ -1927,7 +2222,7 @@
           },
           {
             "from": "K2Node_MacroInstance_0.out:LoopBody",
-            "to": "K2Node_DynamicCast_4.in:exec"
+            "to": "K2Node_DynamicCast_5.in:exec"
           },
           {
             "from": "K2Node_Tunnel_0.out:exec",
@@ -4098,107 +4393,6 @@
       "body": {
         "nodes": [
           {
-            "id": "K2Node_CallFunction_0",
-            "kind": "call",
-            "properties": {
-              "bDefaultsToPureFunc": "True",
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\",MemberName=\"IsValid\")",
-              "NodePosX": "450",
-              "NodePosY": "-400",
-              "NodeGuid": "7DBED1D947FCC643E36E249DB35FED49"
-            },
-            "pins": {
-              "in:target": {
-                "id": "CB71208449F88DD40F78189B3EFC6053",
-                "type": "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123",
-                "name": "self",
-                "DefaultObject": "\"/Script/Engine.Default__KismetSystemLibrary\""
-              },
-              "in:Object": {
-                "id": "C1B228FE4CD10853E293529546EE3752",
-                "type": "p_f28ac20dffb6cea691bdc6de1853f3113b944b6df5c73999021bbff4b099a407"
-              },
-              "out:result": {
-                "id": "59F060D447DA7AD3ABA6C19A91234CE8",
-                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
-                "name": "ReturnValue"
-              }
-            },
-            "defaults": {
-              "out:result": "false"
-            }
-          },
-          {
-            "id": "K2Node_CallFunction_1",
-            "kind": "call",
-            "properties": {
-              "bDefaultsToPureFunc": "True",
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\",MemberName=\"IsValid\")",
-              "NodePosX": "450",
-              "NodePosY": "-220",
-              "NodeGuid": "396E160C4BF269CF1E6105B0E895DB29"
-            },
-            "pins": {
-              "in:target": {
-                "id": "D3C9B4394AE05A1CCC4A32BEC478CDE6",
-                "type": "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123",
-                "name": "self",
-                "DefaultObject": "\"/Script/Engine.Default__KismetSystemLibrary\""
-              },
-              "in:Object": {
-                "id": "E4E40462458E730A81CFC797FAD48F45",
-                "type": "p_f28ac20dffb6cea691bdc6de1853f3113b944b6df5c73999021bbff4b099a407"
-              },
-              "out:result": {
-                "id": "89CDCC014806C5B340F4D3A7A56A7FF6",
-                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
-                "name": "ReturnValue"
-              }
-            },
-            "defaults": {
-              "out:result": "false"
-            }
-          },
-          {
-            "id": "K2Node_CallFunction_2",
-            "kind": "call",
-            "properties": {
-              "bDefaultsToPureFunc": "True",
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"BooleanAND\")",
-              "NodePosX": "680",
-              "NodePosY": "-310",
-              "NodeGuid": "079349F7421E286AC5FA9A808DB6E8CC"
-            },
-            "pins": {
-              "in:target": {
-                "id": "079AD0D64941D5FFDC9AAA9467A23B3C",
-                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
-                "name": "self",
-                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
-              },
-              "in:left": {
-                "id": "D786DC394E79BB9F738AE99E8954FB53",
-                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
-                "name": "A"
-              },
-              "in:right": {
-                "id": "D2FA48E24475E3E34691F9AF2A35FFF1",
-                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
-                "name": "B"
-              },
-              "out:result": {
-                "id": "F326AC234AFFA7C88AB10C851A625416",
-                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
-                "name": "ReturnValue"
-              }
-            },
-            "defaults": {
-              "in:left": "false",
-              "in:right": "false",
-              "out:result": "false"
-            }
-          },
-          {
             "id": "K2Node_CallFunction_26",
             "kind": "call",
             "properties": {
@@ -4369,37 +4563,6 @@
             }
           },
           {
-            "id": "K2Node_IfThenElse_0",
-            "kind": "branch",
-            "properties": {
-              "NodePosX": "2620",
-              "NodePosY": "-700",
-              "NodeGuid": "2EEE68D84EFCFB77AEA0DFBC816C6FB5"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "F325854549CCD6356FB1689741077012",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Condition": {
-                "id": "E73539C644E3E6CC9B7083B4C46BFD75",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              },
-              "out:then": {
-                "id": "322A34564346A398F54B57BAA4BD837B",
-                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
-              },
-              "out:else": {
-                "id": "7AFB35904CD8BF45AE946CA56D63D342",
-                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
-              }
-            },
-            "defaults": {
-              "in:Condition": "true"
-            }
-          },
-          {
             "id": "K2Node_IfThenElse_1",
             "kind": "branch",
             "properties": {
@@ -4506,18 +4669,6 @@
         ],
         "links": [
           {
-            "from": "K2Node_CallFunction_0.out:result",
-            "to": "K2Node_CallFunction_2.in:left"
-          },
-          {
-            "from": "K2Node_CallFunction_1.out:result",
-            "to": "K2Node_CallFunction_2.in:right"
-          },
-          {
-            "from": "K2Node_CallFunction_2.out:result",
-            "to": "K2Node_IfThenElse_0.in:Condition"
-          },
-          {
             "from": "K2Node_CallFunction_3.out:result",
             "to": "K2Node_IfThenElse_1.in:Condition"
           },
@@ -4538,18 +4689,6 @@
             "to": "K2Node_IfThenElse_2.in:exec"
           },
           {
-            "from": "K2Node_FunctionEntry_0.out:then",
-            "to": "K2Node_IfThenElse_0.in:exec"
-          },
-          {
-            "from": "K2Node_IfThenElse_0.out:else",
-            "to": "K2Node_CallFunction_26.in:exec"
-          },
-          {
-            "from": "K2Node_IfThenElse_0.out:then",
-            "to": "K2Node_IfThenElse_1.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_1.out:else",
             "to": "K2Node_CallFunction_26.in:exec"
           },
@@ -4564,10 +4703,6 @@
           {
             "from": "K2Node_IfThenElse_2.out:then",
             "to": "K2Node_Composite_AcquireNativeAltitudeOwnership.in:exec"
-          },
-          {
-            "from": "K2Node_VariableGet_0.out:CachedGyro",
-            "to": "K2Node_CallFunction_0.in:Object"
           },
           {
             "from": "K2Node_VariableGet_0.out:CachedGyro",
@@ -4587,11 +4722,11 @@
           },
           {
             "from": "K2Node_VariableGet_1.out:CachedStabilizationHelper",
-            "to": "K2Node_CallFunction_1.in:Object"
+            "to": "K2Node_Composite_CanTakeNativeAltitudeOwnership.in:StabilizationHelper"
           },
           {
-            "from": "K2Node_VariableGet_1.out:CachedStabilizationHelper",
-            "to": "K2Node_Composite_CanTakeNativeAltitudeOwnership.in:StabilizationHelper"
+            "from": "K2Node_FunctionEntry_0.out:then",
+            "to": "K2Node_IfThenElse_1.in:exec"
           }
         ]
       }
@@ -5438,6 +5573,48 @@
             }
           },
           {
+            "id": "K2Node_Composite_HasAltitudeControlPropulsion",
+            "kind": "Composite",
+            "properties": {
+              "NodeGuid": "A7CBE1D06E4C4F30ACA174F2B1739893"
+            },
+            "pins": {
+              "out:Ready": {
+                "id": "B892253495D74197A1B0025114C0FBAA",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              },
+              "in:Gyro": {
+                "id": "8AAD7578D47A4C1282B9DBC6B2FB8ECC",
+                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
+              },
+              "in:StabilizationHelper": {
+                "id": "01A924007B074379B24F7F854AE89136",
+                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
+              }
+            }
+          },
+          {
+            "id": "K2Node_Composite_HasAltitudeHoldCollective",
+            "kind": "Composite",
+            "properties": {
+              "NodeGuid": "FC0F83A37C5448E397F09800A4239818"
+            },
+            "pins": {
+              "out:Ready": {
+                "id": "6ED8C9F6DBB841649646A86AADCF0E00",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              },
+              "in:Gyro": {
+                "id": "5DA9B0FEC6AE448F9B701FAC4B4B2D05",
+                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
+              },
+              "in:StabilizationHelper": {
+                "id": "5742BC3CF5D5435A981BA50BF5FE10F3",
+                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
+              }
+            }
+          },
+          {
             "id": "K2Node_Self_0",
             "kind": "self",
             "properties": {
@@ -5516,48 +5693,6 @@
             "defaults": {
               "out:CollisionReleaseUntilTime": "0.0"
             }
-          },
-          {
-            "id": "K2Node_Composite_HasAltitudeControlPropulsion",
-            "kind": "Composite",
-            "properties": {
-              "NodeGuid": "A7CBE1D06E4C4F30ACA174F2B1739893"
-            },
-            "pins": {
-              "out:Ready": {
-                "id": "B892253495D74197A1B0025114C0FBAA",
-                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
-              },
-              "in:Gyro": {
-                "id": "8AAD7578D47A4C1282B9DBC6B2FB8ECC",
-                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
-              },
-              "in:StabilizationHelper": {
-                "id": "01A924007B074379B24F7F854AE89136",
-                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Composite_HasAltitudeHoldCollective",
-            "kind": "Composite",
-            "properties": {
-              "NodeGuid": "FC0F83A37C5448E397F09800A4239818"
-            },
-            "pins": {
-              "out:Ready": {
-                "id": "6ED8C9F6DBB841649646A86AADCF0E00",
-                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
-              },
-              "in:Gyro": {
-                "id": "5DA9B0FEC6AE448F9B701FAC4B4B2D05",
-                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
-              },
-              "in:StabilizationHelper": {
-                "id": "5742BC3CF5D5435A981BA50BF5FE10F3",
-                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
-              }
-            }
           }
         ],
         "links": [
@@ -5590,10 +5725,6 @@
             "to": "K2Node_CallFunction_23.in:right"
           },
           {
-            "from": "K2Node_Composite_HasAltitudeControlPropulsion.out:Ready",
-            "to": "K2Node_CallFunction_20.in:left"
-          },
-          {
             "from": "K2Node_CallFunction_20.out:result",
             "to": "K2Node_CallFunction_21.in:left"
           },
@@ -5610,12 +5741,16 @@
             "to": "K2Node_Tunnel_1.in:Eligible"
           },
           {
-            "from": "K2Node_Composite_HasAltitudeHoldCollective.out:Ready",
-            "to": "K2Node_CallFunction_20.in:right"
-          },
-          {
             "from": "K2Node_CallFunction_9.out:result",
             "to": "K2Node_CallFunction_10.in:InValue"
+          },
+          {
+            "from": "K2Node_Composite_HasAltitudeControlPropulsion.out:Ready",
+            "to": "K2Node_CallFunction_20.in:left"
+          },
+          {
+            "from": "K2Node_Composite_HasAltitudeHoldCollective.out:Ready",
+            "to": "K2Node_CallFunction_20.in:right"
           },
           {
             "from": "K2Node_Self_0.out:target",
@@ -5662,37 +5797,15 @@
       "properties": {
         "GraphGuid": "BED0B7A42B8D4952B1733393067477DA"
       },
-      "format": "compact",
       "owner": {
         "graph": "06106BA1721F4CF5AF39A05EB3147880",
         "node": "K2Node_Composite_HasAltitudeHoldCollective",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
-          {
-            "id": "K2Node_Tunnel_0",
-            "kind": "Tunnel",
-            "properties": {
-              "bCanHaveOutputs": "True",
-              "NodeGuid": "9A6AD71F317B4C1A9E686FB987ABAC06"
-            },
-            "pins": {
-              "out:Gyro": {
-                "id": "5130A35F5BFE457CA19EEFCF0DACA904",
-                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
-              },
-              "out:StabilizationHelper": {
-                "id": "C671F28AB5624961BD13ADE8A9424CA5",
-                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
-              }
-            },
-            "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"Gyro\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageVehicleGyroCopter'\"),DesiredPinDirection=EGPD_Output)",
-              "CustomProperties UserDefinedPin (PinName=\"StabilizationHelper\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/StableGyro/ModActor.ModActor_C'\"),DesiredPinDirection=EGPD_Output)"
-            ]
-          },
           {
             "id": "K2Node_CallFunction_6",
             "kind": "call",
@@ -5772,6 +5885,45 @@
             }
           },
           {
+            "id": "K2Node_Tunnel_0",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveOutputs": "True",
+              "NodeGuid": "9A6AD71F317B4C1A9E686FB987ABAC06"
+            },
+            "pins": {
+              "out:Gyro": {
+                "id": "5130A35F5BFE457CA19EEFCF0DACA904",
+                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
+              },
+              "out:StabilizationHelper": {
+                "id": "C671F28AB5624961BD13ADE8A9424CA5",
+                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Gyro\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageVehicleGyroCopter'\"),DesiredPinDirection=EGPD_Output)",
+              "CustomProperties UserDefinedPin (PinName=\"StabilizationHelper\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/StableGyro/ModActor.ModActor_C'\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_Tunnel_1",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveInputs": "True",
+              "NodeGuid": "DCE544D6D892409EA3E2697ADF640E08"
+            },
+            "pins": {
+              "in:Ready": {
+                "id": "1A1FEB020E6C4E5193B2231B3976166A",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Ready\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input)"
+            ]
+          },
+          {
             "id": "K2Node_VariableGet_7",
             "kind": "getVariable",
             "properties": {
@@ -5818,23 +5970,6 @@
             "defaults": {
               "out:AltitudeStabilizationMinimumThrottlePercent": "0.0"
             }
-          },
-          {
-            "id": "K2Node_Tunnel_1",
-            "kind": "Tunnel",
-            "properties": {
-              "bCanHaveInputs": "True",
-              "NodeGuid": "DCE544D6D892409EA3E2697ADF640E08"
-            },
-            "pins": {
-              "in:Ready": {
-                "id": "1A1FEB020E6C4E5193B2231B3976166A",
-                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
-              }
-            },
-            "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"Ready\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input)"
-            ]
           }
         ],
         "links": [
@@ -5871,37 +6006,15 @@
       "properties": {
         "GraphGuid": "31A4172082A54D1495FBBE6D48598B52"
       },
-      "format": "compact",
       "owner": {
         "graph": "06106BA1721F4CF5AF39A05EB3147880",
         "node": "K2Node_Composite_HasAltitudeControlPropulsion",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
-          {
-            "id": "K2Node_Tunnel_0",
-            "kind": "Tunnel",
-            "properties": {
-              "bCanHaveOutputs": "True",
-              "NodeGuid": "C0FF2D1B4DF04B658D987F707C35BAD2"
-            },
-            "pins": {
-              "out:Gyro": {
-                "id": "1F3595E9B88049F5B607792D2B2FF499",
-                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
-              },
-              "out:StabilizationHelper": {
-                "id": "B37C15CF1C954A44B6FD6B27DAFF2054",
-                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
-              }
-            },
-            "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"Gyro\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageVehicleGyroCopter'\"),DesiredPinDirection=EGPD_Output)",
-              "CustomProperties UserDefinedPin (PinName=\"StabilizationHelper\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/StableGyro/ModActor.ModActor_C'\"),DesiredPinDirection=EGPD_Output)"
-            ]
-          },
           {
             "id": "K2Node_CallFunction_17",
             "kind": "call",
@@ -6098,6 +6211,45 @@
             }
           },
           {
+            "id": "K2Node_Tunnel_0",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveOutputs": "True",
+              "NodeGuid": "C0FF2D1B4DF04B658D987F707C35BAD2"
+            },
+            "pins": {
+              "out:Gyro": {
+                "id": "1F3595E9B88049F5B607792D2B2FF499",
+                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
+              },
+              "out:StabilizationHelper": {
+                "id": "B37C15CF1C954A44B6FD6B27DAFF2054",
+                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Gyro\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageVehicleGyroCopter'\"),DesiredPinDirection=EGPD_Output)",
+              "CustomProperties UserDefinedPin (PinName=\"StabilizationHelper\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/StableGyro/ModActor.ModActor_C'\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_Tunnel_1",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveInputs": "True",
+              "NodeGuid": "9853BB55AE874725A8AFE5921EFB6EDE"
+            },
+            "pins": {
+              "in:Ready": {
+                "id": "381DF310DD5D466D898DF9F987988E75",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Ready\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input)"
+            ]
+          },
+          {
             "id": "K2Node_VariableGet_2",
             "kind": "getVariable",
             "properties": {
@@ -6216,23 +6368,6 @@
             "defaults": {
               "out:EnableAltitudeControl": "false"
             }
-          },
-          {
-            "id": "K2Node_Tunnel_1",
-            "kind": "Tunnel",
-            "properties": {
-              "bCanHaveInputs": "True",
-              "NodeGuid": "9853BB55AE874725A8AFE5921EFB6EDE"
-            },
-            "pins": {
-              "in:Ready": {
-                "id": "381DF310DD5D466D898DF9F987988E75",
-                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
-              }
-            },
-            "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"Ready\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input)"
-            ]
           }
         ],
         "links": [
@@ -6308,68 +6443,6 @@
       "format": "compact",
       "body": {
         "nodes": [
-          {
-            "id": "K2Node_CallFunction_0",
-            "kind": "call",
-            "properties": {
-              "bDefaultsToPureFunc": "True",
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\",MemberName=\"IsValid\")",
-              "NodePosX": "450",
-              "NodePosY": "-500",
-              "NodeGuid": "468D87524BDA6AB9625333819F3D42F8"
-            },
-            "pins": {
-              "in:target": {
-                "id": "0C703E69496F2C184430279A474C9B05",
-                "type": "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123",
-                "name": "self",
-                "DefaultObject": "\"/Script/Engine.Default__KismetSystemLibrary\""
-              },
-              "in:Object": {
-                "id": "A687EBDE4F8A70CDC53BBC9B1EC1C8FA",
-                "type": "p_f28ac20dffb6cea691bdc6de1853f3113b944b6df5c73999021bbff4b099a407"
-              },
-              "out:result": {
-                "id": "301930C14B99B6239E8B06AA17345765",
-                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
-                "name": "ReturnValue"
-              }
-            },
-            "defaults": {
-              "out:result": "false"
-            }
-          },
-          {
-            "id": "K2Node_CallFunction_1",
-            "kind": "call",
-            "properties": {
-              "bDefaultsToPureFunc": "True",
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\",MemberName=\"IsValid\")",
-              "NodePosX": "450",
-              "NodePosY": "-320",
-              "NodeGuid": "5BB1EB65426DA24E582A759CBA23FE7E"
-            },
-            "pins": {
-              "in:target": {
-                "id": "A42B115F40ADEE9643ACC0A5D0AAD0E3",
-                "type": "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123",
-                "name": "self",
-                "DefaultObject": "\"/Script/Engine.Default__KismetSystemLibrary\""
-              },
-              "in:Object": {
-                "id": "B80E68964476091BEE327CAC6DDE3FD5",
-                "type": "p_f28ac20dffb6cea691bdc6de1853f3113b944b6df5c73999021bbff4b099a407"
-              },
-              "out:result": {
-                "id": "720BB89C43A6E5D3AFCECF8C6C2EF6A1",
-                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
-                "name": "ReturnValue"
-              }
-            },
-            "defaults": {
-              "out:result": "false"
-            }
-          },
           {
             "id": "K2Node_CallFunction_15",
             "kind": "call",
@@ -6545,68 +6618,6 @@
             }
           },
           {
-            "id": "K2Node_IfThenElse_0",
-            "kind": "branch",
-            "properties": {
-              "NodePosX": "680",
-              "NodePosY": "-700",
-              "NodeGuid": "23938C7F4A763C0C53D94DB7000F3D08"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "EE3DC9BB48ABF9FDBBE72E81C4EAD48C",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Condition": {
-                "id": "A68B153D43828749729F15BD4566420F",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              },
-              "out:then": {
-                "id": "6173D503482AD1799D19FF89880B9C86",
-                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
-              },
-              "out:else": {
-                "id": "AF76E7B34FF3130C60627FBEFB260FCC",
-                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
-              }
-            },
-            "defaults": {
-              "in:Condition": "true"
-            }
-          },
-          {
-            "id": "K2Node_IfThenElse_1",
-            "kind": "branch",
-            "properties": {
-              "NodePosX": "910",
-              "NodePosY": "-700",
-              "NodeGuid": "916C179B47A006A2C5330A906781099D"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "1FD89F7D4581A83368689E88EB4A6FF0",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Condition": {
-                "id": "35BB6A1541E74BF1A3F0318F5BB70932",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              },
-              "out:then": {
-                "id": "BECD005E4031AF71416BB08FE36172CF",
-                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
-              },
-              "out:else": {
-                "id": "1F4E9B0040C058CA81EA18BEDB5EF44F",
-                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
-              }
-            },
-            "defaults": {
-              "in:Condition": "true"
-            }
-          },
-          {
             "id": "K2Node_IfThenElse_2",
             "kind": "branch",
             "properties": {
@@ -6713,14 +6724,6 @@
         ],
         "links": [
           {
-            "from": "K2Node_CallFunction_0.out:result",
-            "to": "K2Node_IfThenElse_1.in:Condition"
-          },
-          {
-            "from": "K2Node_CallFunction_1.out:result",
-            "to": "K2Node_IfThenElse_0.in:Condition"
-          },
-          {
             "from": "K2Node_CallFunction_2.out:result",
             "to": "K2Node_IfThenElse_2.in:Condition"
           },
@@ -6741,22 +6744,6 @@
             "to": "K2Node_IfThenElse_3.in:exec"
           },
           {
-            "from": "K2Node_FunctionEntry_0.out:then",
-            "to": "K2Node_IfThenElse_0.in:exec"
-          },
-          {
-            "from": "K2Node_IfThenElse_0.out:then",
-            "to": "K2Node_IfThenElse_1.in:exec"
-          },
-          {
-            "from": "K2Node_IfThenElse_1.out:else",
-            "to": "K2Node_CallFunction_15.in:exec"
-          },
-          {
-            "from": "K2Node_IfThenElse_1.out:then",
-            "to": "K2Node_IfThenElse_2.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_2.out:else",
             "to": "K2Node_CallFunction_15.in:exec"
           },
@@ -6771,10 +6758,6 @@
           {
             "from": "K2Node_IfThenElse_3.out:then",
             "to": "K2Node_Composite_CaptureDescentVelocityCapIfNeeded.in:exec"
-          },
-          {
-            "from": "K2Node_VariableGet_0.out:CachedGyro",
-            "to": "K2Node_CallFunction_0.in:Object"
           },
           {
             "from": "K2Node_VariableGet_0.out:CachedGyro",
@@ -6794,10 +6777,6 @@
           },
           {
             "from": "K2Node_VariableGet_1.out:CachedStabilizationHelper",
-            "to": "K2Node_CallFunction_1.in:Object"
-          },
-          {
-            "from": "K2Node_VariableGet_1.out:CachedStabilizationHelper",
             "to": "K2Node_CallFunction_15.in:target"
           },
           {
@@ -6807,6 +6786,10 @@
           {
             "from": "K2Node_VariableGet_1.out:CachedStabilizationHelper",
             "to": "K2Node_Composite_CaptureDescentVelocityCapIfNeeded.in:StabilizationHelper"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:then",
+            "to": "K2Node_IfThenElse_2.in:exec"
           }
         ]
       }
@@ -7500,6 +7483,27 @@
             }
           },
           {
+            "id": "K2Node_Composite_HasAltitudeControlPropulsion",
+            "kind": "Composite",
+            "properties": {
+              "NodeGuid": "6898A5D4D84E46789AB2464716AE85B8"
+            },
+            "pins": {
+              "out:Ready": {
+                "id": "FBCB73CFD0014823A67C38F8B2ACBE9B",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              },
+              "in:Gyro": {
+                "id": "3A4F68629F024F84AC23852788749086",
+                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
+              },
+              "in:StabilizationHelper": {
+                "id": "26413EC7ACB540E1915580C838A71B68",
+                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
+              }
+            }
+          },
+          {
             "id": "K2Node_Self_0",
             "kind": "self",
             "properties": {
@@ -7578,34 +7582,9 @@
             "defaults": {
               "out:CollisionReleaseUntilTime": "0.0"
             }
-          },
-          {
-            "id": "K2Node_Composite_HasAltitudeControlPropulsion",
-            "kind": "Composite",
-            "properties": {
-              "NodeGuid": "6898A5D4D84E46789AB2464716AE85B8"
-            },
-            "pins": {
-              "out:Ready": {
-                "id": "FBCB73CFD0014823A67C38F8B2ACBE9B",
-                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
-              },
-              "in:Gyro": {
-                "id": "3A4F68629F024F84AC23852788749086",
-                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
-              },
-              "in:StabilizationHelper": {
-                "id": "26413EC7ACB540E1915580C838A71B68",
-                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
-              }
-            }
           }
         ],
         "links": [
-          {
-            "from": "K2Node_Composite_HasAltitudeControlPropulsion.out:Ready",
-            "to": "K2Node_CallFunction_13.in:left"
-          },
           {
             "from": "K2Node_CallFunction_13.out:result",
             "to": "K2Node_CallFunction_14.in:left"
@@ -7629,6 +7608,10 @@
           {
             "from": "K2Node_CallFunction_9.out:result",
             "to": "K2Node_CallFunction_13.in:right"
+          },
+          {
+            "from": "K2Node_Composite_HasAltitudeControlPropulsion.out:Ready",
+            "to": "K2Node_CallFunction_13.in:left"
           },
           {
             "from": "K2Node_Self_0.out:target",
@@ -7663,37 +7646,15 @@
       "properties": {
         "GraphGuid": "F220502FA2DD454D8DC11DB852C9A85A"
       },
-      "format": "compact",
       "owner": {
         "graph": "1E68C41A707145D08EDB3B205CDACD41",
         "node": "K2Node_Composite_HasAltitudeControlPropulsion",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
-          {
-            "id": "K2Node_Tunnel_0",
-            "kind": "Tunnel",
-            "properties": {
-              "bCanHaveOutputs": "True",
-              "NodeGuid": "9082C5579686462F93DA1E3FC077EFF5"
-            },
-            "pins": {
-              "out:Gyro": {
-                "id": "53FBC60938C24AABA824F32FE795E71F",
-                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
-              },
-              "out:StabilizationHelper": {
-                "id": "8F7AF1688BA347FC94595A0639B8589E",
-                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
-              }
-            },
-            "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"Gyro\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageVehicleGyroCopter'\"),DesiredPinDirection=EGPD_Output)",
-              "CustomProperties UserDefinedPin (PinName=\"StabilizationHelper\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/StableGyro/ModActor.ModActor_C'\"),DesiredPinDirection=EGPD_Output)"
-            ]
-          },
           {
             "id": "K2Node_CallFunction_10",
             "kind": "call",
@@ -7890,6 +7851,45 @@
             }
           },
           {
+            "id": "K2Node_Tunnel_0",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveOutputs": "True",
+              "NodeGuid": "9082C5579686462F93DA1E3FC077EFF5"
+            },
+            "pins": {
+              "out:Gyro": {
+                "id": "53FBC60938C24AABA824F32FE795E71F",
+                "type": "p_589f436b3e1f2a01cb7e4411682aafef98f2c597cad673bfbcfe2ed975dd7732"
+              },
+              "out:StabilizationHelper": {
+                "id": "8F7AF1688BA347FC94595A0639B8589E",
+                "type": "p_5a27da7d7695399d4f6cf7256463df4e4f19f487bb1360eeaad1d38b4e1e2c47"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Gyro\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageVehicleGyroCopter'\"),DesiredPinDirection=EGPD_Output)",
+              "CustomProperties UserDefinedPin (PinName=\"StabilizationHelper\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/StableGyro/ModActor.ModActor_C'\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_Tunnel_1",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveInputs": "True",
+              "NodeGuid": "C22DB3684A76422E87D6BD26C2AC2345"
+            },
+            "pins": {
+              "in:Ready": {
+                "id": "50DF06F874D74EEEA1F7D09C9752236D",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Ready\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input)"
+            ]
+          },
+          {
             "id": "K2Node_VariableGet_2",
             "kind": "getVariable",
             "properties": {
@@ -8008,23 +8008,6 @@
             "defaults": {
               "out:EnableAltitudeControl": "false"
             }
-          },
-          {
-            "id": "K2Node_Tunnel_1",
-            "kind": "Tunnel",
-            "properties": {
-              "bCanHaveInputs": "True",
-              "NodeGuid": "C22DB3684A76422E87D6BD26C2AC2345"
-            },
-            "pins": {
-              "in:Ready": {
-                "id": "50DF06F874D74EEEA1F7D09C9752236D",
-                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
-              }
-            },
-            "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"Ready\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input)"
-            ]
           }
         ],
         "links": [
@@ -9463,14 +9446,14 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
-    "p_850c1937c294cdfc4cf5f9794a496511073d23dfb0f063ce7af2763defa04b9b": {
+    "p_09267ac40bff562cab2f529f5c281f65e728cf9b6f80f59acdb3e3e766ef7e59": {
       "PersistentGuid": "00000000000000000000000000000000",
       "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
       "PinType.ContainerType": "Array",
       "PinType.PinCategory": "\"object\"",
       "PinType.PinSubCategory": "\"\"",
       "PinType.PinSubCategoryMemberReference": "()",
-      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.ActorComponent'\"",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.ChildActorComponent'\"",
       "PinType.PinValueType": "()",
       "PinType.bIsConst": "False",
       "PinType.bIsReference": "False",
@@ -9534,26 +9517,6 @@
       "PinType.PinSubCategory": "\"\"",
       "PinType.PinSubCategoryMemberReference": "()",
       "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/StableGyro/Settings/BP_IniFileParser.BP_IniFileParser_C'\"",
-      "PinType.PinValueType": "()",
-      "PinType.bIsConst": "False",
-      "PinType.bIsReference": "False",
-      "PinType.bIsUObjectWrapper": "False",
-      "PinType.bIsWeakPointer": "False",
-      "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "bAdvancedView": "False",
-      "bDefaultValueIsIgnored": "False",
-      "bDefaultValueIsReadOnly": "False",
-      "bHidden": "False",
-      "bNotConnectable": "False",
-      "bOrphanedPin": "False"
-    },
-    "p_69d1bb14efdc06f9cd38671acbdc2c777c338b29170be64adc49d3c545073dae": {
-      "PersistentGuid": "00000000000000000000000000000000",
-      "PinType.ContainerType": "Array",
-      "PinType.PinCategory": "\"object\"",
-      "PinType.PinSubCategory": "\"\"",
-      "PinType.PinSubCategoryMemberReference": "()",
-      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.ActorComponent'\"",
       "PinType.PinValueType": "()",
       "PinType.bIsConst": "False",
       "PinType.bIsReference": "False",
@@ -9834,26 +9797,6 @@
       "PinType.PinSubCategory": "\"\"",
       "PinType.PinSubCategoryMemberReference": "()",
       "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.Actor'\"",
-      "PinType.PinValueType": "()",
-      "PinType.bIsConst": "False",
-      "PinType.bIsReference": "False",
-      "PinType.bIsUObjectWrapper": "False",
-      "PinType.bIsWeakPointer": "False",
-      "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "bAdvancedView": "False",
-      "bDefaultValueIsIgnored": "False",
-      "bDefaultValueIsReadOnly": "False",
-      "bHidden": "False",
-      "bNotConnectable": "False",
-      "bOrphanedPin": "False"
-    },
-    "p_2a413a3219c454d6438d027a1c8547068d9638dd55b644537d147f6a9f3b473f": {
-      "PersistentGuid": "00000000000000000000000000000000",
-      "PinType.ContainerType": "None",
-      "PinType.PinCategory": "\"object\"",
-      "PinType.PinSubCategory": "\"\"",
-      "PinType.PinSubCategoryMemberReference": "()",
-      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.ActorComponent'\"",
       "PinType.PinValueType": "()",
       "PinType.bIsConst": "False",
       "PinType.bIsReference": "False",
