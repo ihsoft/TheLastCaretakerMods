@@ -132,6 +132,10 @@ see [mooring cable and socket lifecycle](mooring-cable-and-socket-knowledge.md).
 
 ## Integration boundary
 
+For changing an individual port's bandwidth or direction at runtime, use the
+[socket control contract](module-socket-runtime-control-knowledge.md), including
+notification of connected modules after a limit change.
+
 Network-wide Diesel and Electricity belong in the possessed-Boat HUD, while
 socket scan text remains local to its module. Preserve the stock Actor, SCS
 template, component class and global interaction-widget consumer. The

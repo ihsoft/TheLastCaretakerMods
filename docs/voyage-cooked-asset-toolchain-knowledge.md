@@ -8,6 +8,34 @@ The [reviewed mapping registry](../mappings/Voyage/) keeps exact Steam build
 identities and validation manifests. Use the public mapping resolver for the
 installed game; this knowledge does not select a mapping by a historical ID.
 
+## Self-contained materials in additive mods
+
+On UE 5.8, an owned material can ship inside an additive DML container without
+replacing the game's material or shader archives. Cook the material for the
+game's shader format; the Windows DX12 path uses `PCD3D_SM6` in
+`D3D12TargetedShaderFormats`. Native mesh usages, including Nanite when needed,
+must be enabled on the material.
+
+For a package that does not ship a separate shader library, set
+`bShareMaterialShaderCode=False` and `bSharedMaterialNativeLibraries=False`
+under `/Script/UnrealEd.ProjectPackagingSettings` in the project's
+`Config/DefaultGame.ini`. This keeps shader code inline with the cooked
+material. Include that material explicitly in a single-package/no-references
+cook and in the release inventory. These are authoring project settings,
+not configuration to copy into the installed game.
+
+A per-mesh dynamic material instance can update a named color parameter
+without changing a shared stock material. A base-color tint alone does not
+provide an emissive control: inspect the material's exposed parameters or
+author an emissive input explicitly. Keep the original slot material for
+cleanup. Emission strength is a material value; perceived brightness and halo
+also depend on game exposure and bloom.
+
+[Smart Outlet](../mods/SmartOutlet/ARCHITECTURE.md#indicator-material)
+provides a maintained material and consumer using this arrangement. Shader
+compilation and package checks establish structural correctness; visual
+acceptance still belongs to the real game.
+
 ## Reflected weak-object arrays
 
 An editor-only mirror must retain the real `FArrayProperty` inner type.

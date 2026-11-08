@@ -53,6 +53,8 @@ do not load every document just because it is indexed here.
 
 ## Reusable knowledge
 
+- [Runtime resource socket control](docs/module-socket-runtime-control-knowledge.md):
+  per-port limits, direction changes, network notifications and state preservation.
 - [Boat resource sockets](docs/boat-resource-socket-architecture-knowledge.md):
   power and Diesel connectors, registration, and hover-card data flow.
 - [Mooring cables and sockets](docs/mooring-cable-and-socket-knowledge.md):
@@ -87,8 +89,9 @@ do not load every document just because it is indexed here.
   identity, mappings, device settings, and hint ownership.
 - [Item fabrication and pickup](docs/voyage-item-fabrication-and-pickup-knowledge.md):
   item serialization, inventories, crafting, and transfer behavior.
-- [Scanning and recipe unlocks](docs/voyage-scanning-and-recipe-unlocks-knowledge.md):
-  scanner completion, item flags, and vault grants.
+- [Scanning, research and recipe unlocks](docs/voyage-scanning-and-recipe-unlocks-knowledge.md):
+  scanner completion, direct Vault recipes versus component grants, and runtime
+  eligibility changes for existing technologies without asset overrides.
 
 ## Entry points outside shared docs
 

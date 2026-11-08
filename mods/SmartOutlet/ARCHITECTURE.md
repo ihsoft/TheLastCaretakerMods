@@ -1,0 +1,149 @@
+# Smart Outlet architecture
+
+## Behavior and identity
+
+Smart Outlet controls configured resource-storage ports using upper and lower
+fill thresholds. `SmartOutlet` is the technical identifier; **Smart Outlet** is
+the display name. The generic controller is `BP_OutletController`.
+
+The [commented INI](Assets/SmartOutlet.ini) owns settings and defaults.
+`SmartOutlet.ini` selects the exact storage class, socket component name,
+`input` or `output` mode, thresholds and indicator material slot per rule.
+Several rules may control different ports on the same actor; for duplicate
+actor/socket matches, the first valid rule wins. Configuration is read once
+per session. `RuleCount=0` disables port rules; at most 64 rules are read.
+The shipped configuration covers energy storage and fresh/salt water tanks.
+The resource type comes from the socket; amount and capacity use the native
+resource getters without resource-specific conversion.
+
+`EnablePortAtPercent` and `DisablePortAtPercent` name the transitions explicitly.
+The loader maps them to internal upper/lower fractions by mode and rejects
+overlapping or equal boundaries. Missing thresholds default to Enable=80/Disable=20
+for output and Enable=20/Disable=80 for input.
+Output opens at the upper threshold and closes at the lower threshold. Input
+opens at the lower threshold and closes at the upper threshold. Between them,
+the previous state is retained. Unconfigured ports stay under stock control.
+
+Each controller stores its latch on the storage actor in namespaced `Tags`:
+`SmartOutlet.Latch.v1.<socket>.<mode>` means open;
+`SmartOutlet.LatchKnown.v1.<socket>.<mode>` distinguishes an explicit closed
+state from a missing record. Missing state starts open, then normal boundary
+checks apply immediately. Cleanup retains the tags. An older open-only encoding
+cannot distinguish closed from missing: an unmarked midrange port starts open.
+Tags are per socket/mode; switching mode retires the previous mode's markers.
+
+`UnlockSaltWaterTank` makes the existing tank technology available at Tier 1
+at runtime. Learning it remains the player's action with the stock research
+cost and native recipe/component grants. Disabling the setting does not revoke
+learned recipes. See the shared
+[research contract](../../docs/voyage-scanning-and-recipe-unlocks-knowledge.md).
+
+## Runtime ownership
+
+`ModActor` subscribes to `VoyagePersistentSubsystem.OnActorAttached` and makes
+one initial pass over existing `VoyageModuleActor` instances. It applies the
+configured rules and owns one transient controller per matched actor/socket.
+Actor ticks are disabled; discovery does not run periodically.
+
+After a next-tick delay, the controller resolves its `Storage` actor's module
+and named socket. It captures the original port type, bandwidth, automatic
+initialization flag, connection direction and optional rim material. It restores
+the latch, disables automatic socket initialization, requests the configured
+direction and applies the port limits. See the shared
+[socket control contract](../../docs/module-socket-runtime-control-knowledge.md)
+for native direction restrictions and network notifications.
+
+`OnModuleValueChanged` drives threshold evaluation. Limit changes are written
+through the live `Port` reference. The comparison is captured before the write;
+`BroadcastConnectionsChanged` runs only after an actual input/output limit
+change. `OnModuleSocketConnectionChanged` schedules a coalesced next-tick
+reconciliation. Unchanged limits do not trigger another notification.
+
+Storage EndPlay destroys its controller. Cleanup unbinds module delegates and
+restores captured socket fields, direction and material when their objects
+remain valid. ModActor EndPlay removes its attachment listener and destroys
+its controllers. Missing visuals do not block resource control. A negative
+indicator slot disables visuals; out-of-range slots are ignored.
+
+## Indicator material
+
+The controller assigns a per-socket dynamic instance of `M_PortGlow` to the
+configured mesh material slot (the rim in the default rules). `ColorTint` is red
+while disabled and green while enabled. The material is lit and opaque:
+base color is `ColorTint * 0.12`,
+metallic is 0.25 and roughness is 0.5. Emissive is
+`ColorTint * GlowStrength * (0.525 + 0.475 * sin(2*pi*Time/period))`.
+The default glow strength is 2.0; the pulse ranges from 5% to 100% of that
+intensity. `GreenPulseSeconds` is 6 and `RedPulseSeconds` is 2. The material
+compares the green and red channels of `ColorTint` to select the period.
+Material Time follows game pause; animation needs no actor tick or timer.
+This is a simple tinted surface without stock trim textures; geometry is
+unchanged. Bloom and exposure affect the halo and perceived pulse contrast.
+
+The maintained material lives in the project. The focused
+[creation script](Editor/CreatePortGlowMaterial.py) refuses to overwrite it and
+is not part of normal builds. The focused
+[pulse update](Editor/ApplyPortGlowPulse.py) adds the pulse to the original
+steady material and refuses an already modified graph. Both scripts are
+one-time authoring steps; edit the saved material to tune its appearance.
+See [self-contained materials](../../docs/voyage-cooked-asset-toolchain-knowledge.md#self-contained-materials-in-additive-mods)
+for the shader packaging contract.
+
+## Source and package boundaries
+
+The Unreal project owns the assets; synchronized files in `BlueprintText/`
+provide the text editing/review interface through the shared BPT workflow.
+`EditorSupport/Source/Voyage/StorageContracts.h` and `ResearchContracts.h`
+supply minimal editor-only reflection mirrors for Steam build 25982825 and UE 5.8.
+Their test getters and
+notification counter do not enter the game. `ModuleSocketIOData` is deliberately
+partial: use member writes by reference, never serialize a complete native
+socket or replace its full Port value from this mirror.
+
+The public producer cooks exactly these owned packages:
+
+- `/Game/Mods/SmartOutlet/ModActor`, DML entry class `ModActor.ModActor_C`;
+- `/Game/Mods/SmartOutlet/BP_OutletController`;
+- `/Game/Mods/SmartOutlet/M_PortGlow`;
+- `/Game/Mods/SmartOutlet/Settings/BP_IniFileParser`;
+- `/Game/Mods/SmartOutlet/Settings/BP_OutletRule`.
+
+The container triplet installs directly into `Voyage/Content/Paks/LogicMods`.
+The package contains no replacement stock Blueprint, native DLL, game INI,
+stock mesh, or stock material. `EditorBootstrap` is an editor-only BPT stub
+excluded from the release inventory. Project configuration enables SM6 and
+inline material shader code; it is not installed as game configuration.
+
+## Validation boundary
+
+Editor tests execute the compiled Blueprints against native mirrors: input and
+output hysteresis, per-port independence, configuration and discovery, latch
+snapshots, bandwidth preservation, notifications, reconciliation and visual
+cleanup. They also check research changes and restoration. These tests do not
+simulate native network transfer or the game save pipeline.
+
+Runtime power control and the pulsing rim glow are accepted for the user's tested
+setup. Attachment/restoration coverage across every placement context,
+multiplayer and a complete save/reload matrix are not established by that
+acceptance. The user accepted latch persistence and missing-record recovery in
+his tested game saves; this does not establish every streaming/save context.
+Recheck native identities and notification behavior when
+the game contract changes; the producer's game pin and reviewed mappings own
+build selection. Exact accepted candidate identity and the user report remain
+with local release evidence, separate from the original build manifest.
+Technical identity changes also require a fresh DML discovery/load check.
+
+Run all maintained editor checks through the shared queue:
+
+```powershell
+$shell = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
+./tools/Invoke-UnrealQueued.ps1 -Operation 'Validate SmartOutlet' `
+  -FilePath (Join-Path $PSHOME $shell) `
+  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',
+    'mods/SmartOutlet/Validate-SmartOutlet.ps1')
+```
+
+The validator prepares declared editor support and runs the four suites in one
+editor session. Reports and logs live under `Tmp/SmartOutlet/`; missing or failed
+reports fail the command. Build/install failures remain visible in their owning
+tools. Development-only `PrintString` is not a production diagnostic channel.

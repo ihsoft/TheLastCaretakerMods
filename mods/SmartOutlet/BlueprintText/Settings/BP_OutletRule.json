@@ -1,0 +1,2701 @@
+{
+  "schema": 2,
+  "format": "compact-asset",
+  "asset": "/Game/Mods/SmartOutlet/Settings/BP_OutletRule",
+  "parent": "/Script/CoreUObject.Object",
+  "properties": {
+    "BlueprintSystemVersion": "2",
+    "bLegacyNeedToPurgeSkelRefs": "False",
+    "BlueprintGuid": "28FFA35E9B0F4CEDB00273B4F8C3228E"
+  },
+  "variables": [
+    {
+      "VarName": "\"ActorClass\"",
+      "VarGuid": "5004811C18CF4A0C84A3AD34106820FC",
+      "VarType": "(PinCategory=\"string\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"ActorClass\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"SocketName\"",
+      "VarGuid": "FF583AF611B0461091C1B59BB8BA3FF2",
+      "VarType": "(PinCategory=\"string\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"SocketName\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"HighFraction\"",
+      "VarGuid": "C3EBBA686B5D486BACE38CA62BF6010A",
+      "VarType": "(PinCategory=\"real\",PinSubCategory=\"double\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"HighFraction\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"LowFraction\"",
+      "VarGuid": "5CC1B3E8898E42CFB20EDA04C5AF3954",
+      "VarType": "(PinCategory=\"real\",PinSubCategory=\"double\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"LowFraction\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"GlowMaterialSlot\"",
+      "VarGuid": "644CFB7C4FFC4357804E08611828BAD0",
+      "VarType": "(PinCategory=\"int\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"GlowMaterialSlot\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"IsInput\"",
+      "VarGuid": "520DC5AFD8A5465B9DA58EABC5CB0898",
+      "VarType": "(PinCategory=\"bool\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"IsInput\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"Direction\"",
+      "VarGuid": "DFF8BC0A33ED42389DA17210C0915EA7",
+      "VarType": "(PinCategory=\"byte\",PinSubCategoryObject=\"/Script/CoreUObject.Enum'/Script/Voyage.EModuleSocketType'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"Direction\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    }
+  ],
+  "defaults": {
+    "ActorClass": "",
+    "SocketName": "",
+    "HighFraction": "0.800000",
+    "LowFraction": "0.200000",
+    "GlowMaterialSlot": "0",
+    "IsInput": "False",
+    "Direction": "ST_Output"
+  },
+  "graphs": [
+    {
+      "name": "ReadSettings",
+      "kind": "function",
+      "properties": {
+        "GraphGuid": "28F2F912EFD845868CF4A0514CA1A26B"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "ChooseDirection",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "1280",
+              "NodePosY": "240",
+              "NodeGuid": "02C6CC9432D944A98AA69DD7D0EB2630"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "8BA80BA633A0481AAC939892B4BC3E92",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "20206B85D6D24ACB96CA48C216F1FB95",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "DB08CB4ABAB0458F962E97188E44CAC4",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "608EE790C68B4DE4A006E3508A0AF31B",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "DirectionST_Input",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"Direction\",MemberGuid=DFF8BC0A33ED42389DA17210C0915EA7,bSelfContext=True)",
+              "NodeGuid": "3D604906737B40418A1BF413A50B7B6A"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "53B9E1CBBD3747BB8041A4942A122609",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "0576208372E348088AE6B0C0DA7F6670",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:Direction": {
+                "id": "B6014F29A24C4FB491C30978802E3C86",
+                "type": "p_a576382c9b9ea7aa3b43f142a24da72f01179881ffbcc6a8319856143393bbe9"
+              },
+              "out:Output_Get": {
+                "id": "836D125886AE48BB9A0A8695453617EC",
+                "type": "p_035b2f0aabd6097c4a03e10a9b10dfc663c513f1d502be93c855aa3d9514bd23"
+              },
+              "in:target": {
+                "id": "AB664E97443BF66B7966C7B89B99A2F2",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:Direction": "ST_Input",
+              "out:Output_Get": "ST_Any"
+            }
+          },
+          {
+            "id": "DirectionST_Output",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"Direction\",MemberGuid=DFF8BC0A33ED42389DA17210C0915EA7,bSelfContext=True)",
+              "NodeGuid": "6CE51E8A02264C6DBE162816FB03DFED"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "C120EA32BA764E0994BEC3AFFF389B8F",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "214CC2A7B6C644B0BCBA0351FBA4C9D4",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:Direction": {
+                "id": "C18F00E028B540F18C1C9911996E1622",
+                "type": "p_a576382c9b9ea7aa3b43f142a24da72f01179881ffbcc6a8319856143393bbe9"
+              },
+              "out:Output_Get": {
+                "id": "56FC5B6BD6644A55B1FEB938AF2B824C",
+                "type": "p_035b2f0aabd6097c4a03e10a9b10dfc663c513f1d502be93c855aa3d9514bd23"
+              },
+              "in:target": {
+                "id": "0FA9D294453E4E549413CAAAF03F1B44",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:Direction": "ST_Output",
+              "out:Output_Get": "ST_Any"
+            }
+          },
+          {
+            "id": "Entry",
+            "kind": "FunctionEntry",
+            "properties": {
+              "ExtraFlags": "201457664",
+              "FunctionReference": "(MemberName=\"ReadSettings\")",
+              "bIsEditable": "True",
+              "NodeGuid": "AED35DBC2CD74B51AE58E9756DFC14D0"
+            },
+            "pins": {
+              "out:then": {
+                "id": "DF8E1D3175C74146A1C5AB51B8445B18",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:Parser": {
+                "id": "96850E0B2AE64D5EA325C2257B8242E4",
+                "type": "p_fc23b1f92fb97297456aa2dda50737bfa15dc817c756ee9bca9c5bd720ba0b96"
+              },
+              "out:Index": {
+                "id": "BD8DEE0C2E854560A806472F44BBE9C8",
+                "type": "p_d6fc60d7408c5aa1ed59190c252a8145c9867a04978989da93cc2567db238e36"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Parser\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C'\"),DesiredPinDirection=EGPD_Output)",
+              "CustomProperties UserDefinedPin (PinName=\"Index\",PinType=(PinCategory=\"int\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "IndexText",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"Conv_IntToString\")",
+              "NodePosX": "640",
+              "NodeGuid": "E23F6999E8514059ABB801D2DD91CB70"
+            },
+            "pins": {
+              "in:target": {
+                "id": "09A7DC6F19B24906B459FBF02938C789",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:InInt": {
+                "id": "B22C239B8FBA4723AE623F50073C1E0D",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c"
+              },
+              "out:result": {
+                "id": "DC4CB6D0A4B94BB59B06BBA9578D28F8",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:InInt": "0"
+            }
+          },
+          {
+            "id": "IsInput",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"EqualEqual_StrStr\")",
+              "NodePosY": "240",
+              "NodeGuid": "E456D24C031045328C23678213A85D4C"
+            },
+            "pins": {
+              "in:target": {
+                "id": "61E0A5574F1C48E0A1EDCC96651D0EC4",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "3F4CAE726E47499ABBD07BC1C6E4A499",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "3EC18386656146FB8D52D165206A67B3",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "34A1BA819CFB46E283ED83C7A5990AC4",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:right": "input",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "IsOutput",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"EqualEqual_StrStr\")",
+              "NodePosY": "240",
+              "NodeGuid": "A47132DD6E2F4D7F8AEEA9CABCEF27D0"
+            },
+            "pins": {
+              "in:target": {
+                "id": "C72859137E0F4EB69D4646F929C08229",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "7B10C911374E443196578C69240865D3",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "655C3977079B4630922BBB3A95786E82",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "C1A3B0774FF0482C85FEDF543E0FF3C4",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:right": "output",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_Composite_ValidateRule",
+            "kind": "Composite",
+            "properties": {
+              "NodeGuid": "0D656C464F3D4E47A2D761E71F624D0E"
+            },
+            "pins": {
+              "out:IsValid": {
+                "id": "02757F071F754637BA052DDCA7E1DBDD",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              },
+              "in:ModeIsValid": {
+                "id": "FC333CE5206545F28A3239AD7D6932A5",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              }
+            }
+          },
+          {
+            "id": "KeyActorClass",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"Concat_StrStr\")",
+              "NodePosX": "2640",
+              "NodePosY": "40",
+              "NodeGuid": "21B7AA3A696E4BF9BBC6034411B2D890"
+            },
+            "pins": {
+              "in:target": {
+                "id": "228419F1EA4943229B234D3578C2A756",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "D033C936EAB24D83BAEEB054C963808D",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "0A01729375E94D71A441119B73C338D2",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "92CF2F7377984F8CA2B84A69BC041B5B",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:right": "ActorClass"
+            }
+          },
+          {
+            "id": "KeyGlowMaterialSlot",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"Concat_StrStr\")",
+              "NodePosX": "2640",
+              "NodePosY": "40",
+              "NodeGuid": "3FDFB49F179F4049A01E9502DCDC40F7"
+            },
+            "pins": {
+              "in:target": {
+                "id": "E307198BD6784DFEAD8DEFB374D11A82",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "10060501AF9C45358A7CA72FDB8D83B1",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "DE3213D0CD2D4D81AC6C1814461C0646",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "286D6A1DB25849EBA9324F8ECED49560",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:right": "GlowMaterialSlot"
+            }
+          },
+          {
+            "id": "KeyMode",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"Concat_StrStr\")",
+              "NodePosX": "2640",
+              "NodePosY": "40",
+              "NodeGuid": "F292F7BFEC124312AF2DF296B69B64CD"
+            },
+            "pins": {
+              "in:target": {
+                "id": "CC6EAD0BE8D142668D74EC089E3322F6",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "653EA3DB279D4123874D3D399CFD4365",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "D28F190CB5C4466EA4FB9C413D384C98",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "F48FBBA65A1347CAB42B5E1343337EA9",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:right": "Mode"
+            }
+          },
+          {
+            "id": "KeySocketName",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"Concat_StrStr\")",
+              "NodePosX": "2640",
+              "NodePosY": "40",
+              "NodeGuid": "EBBB91A9A1DE4B0EBF047EB5E93ED5A3"
+            },
+            "pins": {
+              "in:target": {
+                "id": "0759B123FD0B46848AD77186E95DF498",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "9D04A0A864D24E89929C77F9EB0D5120",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "FFBA344A0A02455EB2946909A341453D",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "FFF5E23C09E748F7977A07CF8CDE6059",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:right": "SocketName"
+            }
+          },
+          {
+            "id": "ParseActorClass",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C'\",MemberName=\"GetString\",MemberGuid=C7DE9D5975D6441486CA14BE77308FDC)",
+              "NodePosY": "220",
+              "NodeGuid": "520D4B10888F4B56AFBB198454AC532D"
+            },
+            "pins": {
+              "in:target": {
+                "id": "0A6908492D124DC5994C677D0BE201A7",
+                "type": "p_fddf5544c1627235811e6700ef4e70a490eea25693da690b8986eac1a9cb6a45",
+                "name": "self"
+              },
+              "in:Name": {
+                "id": "5B3D989BAD3F465587BF39A3D9397230",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:Default": {
+                "id": "3E5377A7C2CA4C6CA8C6E8ACA6C9E54A",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "out:result": {
+                "id": "8D22CEBBC8A74788BBC439BFA0722ACD",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "ParseGlowMaterialSlot",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C'\",MemberName=\"GetInt\",MemberGuid=15CB196BED7C4607BB6516751E18831A)",
+              "NodePosX": "1280",
+              "NodePosY": "660",
+              "NodeGuid": "947FD3B2341A482998FE54BEAB4D7AC9"
+            },
+            "pins": {
+              "in:target": {
+                "id": "D0C5B0FB6C864E5F8794F945C550EBEB",
+                "type": "p_fddf5544c1627235811e6700ef4e70a490eea25693da690b8986eac1a9cb6a45",
+                "name": "self"
+              },
+              "in:Name": {
+                "id": "6B5111C8553947B894E64FCEDA64360C",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:Default": {
+                "id": "8831403B3E4146CB8385E746EF012723",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c"
+              },
+              "in:Min": {
+                "id": "A1D4ED3401284A3BB8435989950EB35A",
+                "type": "p_6bf01f17181cddce57e7c8c1b0efacff2ae3bb1792f00c3c0012b6e40f76fbfd"
+              },
+              "in:Max": {
+                "id": "BB4E06FDC3F14D7489D8440FC49ECF23",
+                "type": "p_6088cf2e06865ab6e4799dadcf8d1f0a80f7451719f4cdb2f43b09d2c9309c6a"
+              },
+              "out:result": {
+                "id": "F08F5BD40E5645D0AA4BE10377ADE805",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:Default": "0",
+              "in:Min": "-1",
+              "in:Max": "31",
+              "out:result": "0"
+            }
+          },
+          {
+            "id": "ParseMode",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C'\",MemberName=\"GetString\",MemberGuid=C7DE9D5975D6441486CA14BE77308FDC)",
+              "NodePosX": "960",
+              "NodePosY": "220",
+              "NodeGuid": "057780CF20864FEA838B056BE56CED9E"
+            },
+            "pins": {
+              "in:target": {
+                "id": "F0A3C5B5DC79443E822B38AD58098405",
+                "type": "p_fddf5544c1627235811e6700ef4e70a490eea25693da690b8986eac1a9cb6a45",
+                "name": "self"
+              },
+              "in:Name": {
+                "id": "005434164A8E4FE496D6DA3F37FD7AE8",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:Default": {
+                "id": "7BB39972F8F143CB8C1740048B12C8D2",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "out:result": {
+                "id": "F4AECBC85ECD4BE78A05772580B6C2AA",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:Default": "output"
+            }
+          },
+          {
+            "id": "ParseSocketName",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C'\",MemberName=\"GetString\",MemberGuid=C7DE9D5975D6441486CA14BE77308FDC)",
+              "NodePosX": "960",
+              "NodePosY": "220",
+              "NodeGuid": "3F92A78859164B21AFE34BA163F07D9A"
+            },
+            "pins": {
+              "in:target": {
+                "id": "9A9784D0FDC54D7487F5CBFEBABD5E6F",
+                "type": "p_fddf5544c1627235811e6700ef4e70a490eea25693da690b8986eac1a9cb6a45",
+                "name": "self"
+              },
+              "in:Name": {
+                "id": "B438B555373A4897A2724BD1EDB0CC8F",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:Default": {
+                "id": "FBB425A4AD164C78903C3658E53D403C",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "out:result": {
+                "id": "C8EC6F0A9CFD44F8AE99E835D96AAB9D",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "Prefix",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"Concat_StrStr\")",
+              "NodePosX": "2640",
+              "NodePosY": "40",
+              "NodeGuid": "B929FB6E456D4D60BA612BF383A17FA9"
+            },
+            "pins": {
+              "in:target": {
+                "id": "996923D47100408FA41740A9461768E1",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "B01C6B6B39D44CC196311BD69F764BAC",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "8A1C9DD577564C2088E117AB52D98EA9",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "D8CD2BE7D4A843A7915F7679FDDD72CB",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "Rule"
+            }
+          },
+          {
+            "id": "Return",
+            "kind": "FunctionResult",
+            "properties": {
+              "FunctionReference": "(MemberName=\"ReadSettings\")",
+              "NodePosX": "320",
+              "NodeGuid": "6EC541DD2E714C97AA00D3A27CE47453"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "1646D30178594678ACFCE1CF4BC6F549",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:result": {
+                "id": "7EAC24D2994A4662A135D247D88E6B3E",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:result": "false"
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"ReturnValue\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input,PinDefaultValue=\"false\")"
+            ]
+          },
+          {
+            "id": "ValidMode",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"BooleanOR\")",
+              "NodePosX": "1280",
+              "NodePosY": "4160",
+              "NodeGuid": "3B4C8C7CB83243D98E459B638AAE4DF2"
+            },
+            "pins": {
+              "in:target": {
+                "id": "1FD34EE0D42D470F8BEC3C075FEBB9AD",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "CECBEA3DEF93470C90C3401DF0920C96",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "191BD2BFF16343688B2656AC308740F6",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "C942E1A307004084BFE2C30A64A4DE35",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "false",
+              "in:right": "false",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "WriteActorClass",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"ActorClass\",MemberGuid=5004811C18CF4A0C84A3AD34106820FC,bSelfContext=True)",
+              "NodePosX": "320",
+              "NodePosY": "220",
+              "NodeGuid": "C7BBB160A19F4277892B458D841A08FC"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "D16380FEFB24465DA1486576B8475238",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "00AD3C958F7C4EBAB0D93B8156D89984",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:ActorClass": {
+                "id": "2C5D64F7D024445B9C6BE84E1EEB4B23",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "out:Output_Get": {
+                "id": "3ECD6D81E0894360BB45A4DCBC49F87A",
+                "type": "p_157d699d52edc680f0003312380e9c16c6c0e9a24d1183ea5dd05b53e7cd91b2"
+              },
+              "in:target": {
+                "id": "A05939204C318BF19A00CA82C91D6815",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "WriteGlowMaterialSlot",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"GlowMaterialSlot\",MemberGuid=644CFB7C4FFC4357804E08611828BAD0,bSelfContext=True)",
+              "NodePosY": "880",
+              "NodeGuid": "59DACF5E55234DDBACCFCFCEDD3FB97A"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "0FC389DC98534929B4F0A54BFE9FCDC7",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "DA232594C486423DBE67208A566107A3",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:GlowMaterialSlot": {
+                "id": "88135F114C894BC58C4DEAB8DEEA69F0",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c"
+              },
+              "out:Output_Get": {
+                "id": "17C3CBFACF494D8ABE631B469F784F2E",
+                "type": "p_70cb832bf918bea20df94515824058280d997db52742e43e5fe9efcc2d5f19db"
+              },
+              "in:target": {
+                "id": "C61198AB4E5B31B156F508A6811987D5",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:GlowMaterialSlot": "0",
+              "out:Output_Get": "0"
+            }
+          },
+          {
+            "id": "WriteHighFraction",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"HighFraction\",MemberGuid=C3EBBA686B5D486BACE38CA62BF6010A,bSelfContext=True)",
+              "NodePosX": "960",
+              "NodePosY": "440",
+              "NodeGuid": "F629292410E54DD69DBECE969D26C7FE"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "BF224449A02F475EB463DBC7D18FA062",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "D0E4B7F07F534F1D94F90E667CC52EBF",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:HighFraction": {
+                "id": "98D580E5B144472F89B560EE7CEDF05A",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "out:Output_Get": {
+                "id": "45BC72D23720448C9575F9A267EE2D26",
+                "type": "p_3cf45d08eba2231a6ece81821b9a165836ee41d8af3f5074d6543780bae35c4a"
+              },
+              "in:target": {
+                "id": "57298FD24FB4E51A4A2AA1A38E8829F4",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:HighFraction": "0.0",
+              "out:Output_Get": "0.0"
+            }
+          },
+          {
+            "id": "WriteIsInput",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"IsInput\",MemberGuid=520DC5AFD8A5465B9DA58EABC5CB0898,bSelfContext=True)",
+              "NodeGuid": "30A16585F6D946AFBB1B63B14C6413E4"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "6A24E64390BC4B72A25B5D5B6C419D6A",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "6CD54B67ED6A4CD6AB1B677803170E9D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:IsInput": {
+                "id": "CD7AD0D14C0E45878F2C74D129A00758",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:Output_Get": {
+                "id": "85BD857930804045B467D6267B2B41B8",
+                "type": "p_b2a7bd72f8a232636d2a3951831b0b467cc223b358b7bdc1ec0304d59059c0f2"
+              },
+              "in:target": {
+                "id": "474D8EC74C4640FA4D9EA59E383B8679",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:IsInput": "false",
+              "out:Output_Get": "false"
+            }
+          },
+          {
+            "id": "WriteLowFraction",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"LowFraction\",MemberGuid=5CC1B3E8898E42CFB20EDA04C5AF3954,bSelfContext=True)",
+              "NodePosX": "640",
+              "NodePosY": "660",
+              "NodeGuid": "412EA08B3AE64D829D7E45DFCD538023"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "6529B3BFCDD5459A9527057ADBCDFA33",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "4D88B650350349DBA40BE96E1747CD0C",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:LowFraction": {
+                "id": "5477B054FAA94BC782DA89E320136B82",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "out:Output_Get": {
+                "id": "E9CFE6AE8F7345969AF9ECC336F6922C",
+                "type": "p_3cf45d08eba2231a6ece81821b9a165836ee41d8af3f5074d6543780bae35c4a"
+              },
+              "in:target": {
+                "id": "ED03F8BF41F79C4C44EF45A785047D2B",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:LowFraction": "0.0",
+              "out:Output_Get": "0.0"
+            }
+          },
+          {
+            "id": "WriteSocketName",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"SocketName\",MemberGuid=FF583AF611B0461091C1B59BB8BA3FF2,bSelfContext=True)",
+              "NodePosX": "1280",
+              "NodePosY": "220",
+              "NodeGuid": "E707C6A62C4F42A0B3CB1DB2882B8867"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "58D76F351CA846DE9EFA8CE615E3CFFF",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "CE9FBC013559424190666385816712C6",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:SocketName": {
+                "id": "FC6D5C68D23148BCA9F4289C96315E08",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "out:Output_Get": {
+                "id": "562D75C525834D8FA802671C88EE1B21",
+                "type": "p_157d699d52edc680f0003312380e9c16c6c0e9a24d1183ea5dd05b53e7cd91b2"
+              },
+              "in:target": {
+                "id": "4ED984AC431F746CD5E82E9B2EE722D3",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_Composite_ReadPortThresholds",
+            "kind": "Composite",
+            "properties": {
+              "NodeGuid": "751F4A7838494BD5BCCF041C85CAFEFA"
+            },
+            "pins": {
+              "out:UpperFraction": {
+                "id": "A1E65BB18F524FCF981464B8294690A3",
+                "type": "collapse_26"
+              },
+              "out:LowerFraction": {
+                "id": "593923026DAA406FA9A416C51C5E92C7",
+                "type": "collapse_26"
+              },
+              "in:Parser": {
+                "id": "FC37C620DA3F4C12A02ABA080858DCB0",
+                "type": "p_fc23b1f92fb97297456aa2dda50737bfa15dc817c756ee9bca9c5bd720ba0b96"
+              },
+              "in:RulePrefix": {
+                "id": "5E673A8320184AE980EF1DECF9D4694F",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:IsInput": {
+                "id": "B69B6D1DA8AB400F8638F361DEAD305E",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              }
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "ChooseDirection.out:else",
+            "to": "DirectionST_Output.in:exec"
+          },
+          {
+            "from": "ChooseDirection.out:then",
+            "to": "DirectionST_Input.in:exec"
+          },
+          {
+            "from": "DirectionST_Input.out:then",
+            "to": "Return.in:exec"
+          },
+          {
+            "from": "DirectionST_Output.out:then",
+            "to": "Return.in:exec"
+          },
+          {
+            "from": "Entry.out:Index",
+            "to": "IndexText.in:InInt"
+          },
+          {
+            "from": "Entry.out:Parser",
+            "to": "ParseActorClass.in:target"
+          },
+          {
+            "from": "Entry.out:Parser",
+            "to": "ParseGlowMaterialSlot.in:target"
+          },
+          {
+            "from": "Entry.out:Parser",
+            "to": "ParseMode.in:target"
+          },
+          {
+            "from": "Entry.out:Parser",
+            "to": "ParseSocketName.in:target"
+          },
+          {
+            "from": "Entry.out:then",
+            "to": "WriteActorClass.in:exec"
+          },
+          {
+            "from": "IndexText.out:result",
+            "to": "Prefix.in:right"
+          },
+          {
+            "from": "IsInput.out:result",
+            "to": "ChooseDirection.in:Condition"
+          },
+          {
+            "from": "IsInput.out:result",
+            "to": "ValidMode.in:left"
+          },
+          {
+            "from": "IsInput.out:result",
+            "to": "WriteIsInput.in:IsInput"
+          },
+          {
+            "from": "IsOutput.out:result",
+            "to": "ValidMode.in:right"
+          },
+          {
+            "from": "K2Node_Composite_ValidateRule.out:IsValid",
+            "to": "Return.in:result"
+          },
+          {
+            "from": "KeyActorClass.out:result",
+            "to": "ParseActorClass.in:Name"
+          },
+          {
+            "from": "KeyGlowMaterialSlot.out:result",
+            "to": "ParseGlowMaterialSlot.in:Name"
+          },
+          {
+            "from": "KeyMode.out:result",
+            "to": "ParseMode.in:Name"
+          },
+          {
+            "from": "KeySocketName.out:result",
+            "to": "ParseSocketName.in:Name"
+          },
+          {
+            "from": "ParseActorClass.out:result",
+            "to": "WriteActorClass.in:ActorClass"
+          },
+          {
+            "from": "ParseGlowMaterialSlot.out:result",
+            "to": "WriteGlowMaterialSlot.in:GlowMaterialSlot"
+          },
+          {
+            "from": "ParseMode.out:result",
+            "to": "IsInput.in:left"
+          },
+          {
+            "from": "ParseMode.out:result",
+            "to": "IsOutput.in:left"
+          },
+          {
+            "from": "ParseSocketName.out:result",
+            "to": "WriteSocketName.in:SocketName"
+          },
+          {
+            "from": "Prefix.out:result",
+            "to": "KeyActorClass.in:left"
+          },
+          {
+            "from": "Prefix.out:result",
+            "to": "KeyGlowMaterialSlot.in:left"
+          },
+          {
+            "from": "Prefix.out:result",
+            "to": "KeyMode.in:left"
+          },
+          {
+            "from": "Prefix.out:result",
+            "to": "KeySocketName.in:left"
+          },
+          {
+            "from": "ValidMode.out:result",
+            "to": "K2Node_Composite_ValidateRule.in:ModeIsValid"
+          },
+          {
+            "from": "WriteActorClass.out:then",
+            "to": "WriteSocketName.in:exec"
+          },
+          {
+            "from": "WriteGlowMaterialSlot.out:then",
+            "to": "WriteIsInput.in:exec"
+          },
+          {
+            "from": "WriteHighFraction.out:then",
+            "to": "WriteLowFraction.in:exec"
+          },
+          {
+            "from": "WriteIsInput.out:then",
+            "to": "ChooseDirection.in:exec"
+          },
+          {
+            "from": "WriteLowFraction.out:then",
+            "to": "WriteGlowMaterialSlot.in:exec"
+          },
+          {
+            "from": "WriteSocketName.out:then",
+            "to": "WriteHighFraction.in:exec"
+          },
+          {
+            "from": "K2Node_Composite_ReadPortThresholds.out:UpperFraction",
+            "to": "WriteHighFraction.in:HighFraction"
+          },
+          {
+            "from": "K2Node_Composite_ReadPortThresholds.out:LowerFraction",
+            "to": "WriteLowFraction.in:LowFraction"
+          },
+          {
+            "from": "Entry.out:Parser",
+            "to": "K2Node_Composite_ReadPortThresholds.in:Parser"
+          },
+          {
+            "from": "Prefix.out:result",
+            "to": "K2Node_Composite_ReadPortThresholds.in:RulePrefix"
+          },
+          {
+            "from": "IsInput.out:result",
+            "to": "K2Node_Composite_ReadPortThresholds.in:IsInput"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReadPortThresholds",
+      "kind": "collapsed",
+      "properties": {
+        "GraphGuid": "ACEE6363B0694FF7B0D55A7C4A8574B7"
+      },
+      "format": "compact",
+      "owner": {
+        "graph": "28F2F912EFD845868CF4A0514CA1A26B",
+        "node": "K2Node_Composite_ReadPortThresholds",
+        "entry": "K2Node_Tunnel_Entry",
+        "exit": "K2Node_Tunnel_Exit"
+      },
+      "body": {
+        "nodes": [
+          {
+            "id": "K2Node_Tunnel_Entry",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveOutputs": "True",
+              "NodeGuid": "52422CD8D01A41D88EF76C661601CE93"
+            },
+            "pins": {
+              "out:Parser": {
+                "id": "E4F0F4A07DC642108B0BC2F3A68BCAF9",
+                "type": "p_fc23b1f92fb97297456aa2dda50737bfa15dc817c756ee9bca9c5bd720ba0b96"
+              },
+              "out:RulePrefix": {
+                "id": "2AAC4233CC4B4B9BBDFB85FCC4566B70",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "out:IsInput": {
+                "id": "5FA4D9DC8F574E8E800A20426569F159",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Parser\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C'\"),DesiredPinDirection=EGPD_Output)",
+              "CustomProperties UserDefinedPin (PinName=\"RulePrefix\",PinType=(PinCategory=\"string\"),DesiredPinDirection=EGPD_Output)",
+              "CustomProperties UserDefinedPin (PinName=\"IsInput\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "FractionHighFraction",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Divide_DoubleDouble\")",
+              "NodePosX": "320",
+              "NodePosY": "480",
+              "NodeGuid": "34A5589F4205445890BCA4E82B55AE0D"
+            },
+            "pins": {
+              "in:target": {
+                "id": "B59DE663938945D884FDE84DB434B2AC",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "02043556369F4473B6DAA0F8610D9425",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "6404E02B6F884B068C17DAC47846B933",
+                "type": "p_4d1c70798478a4900d704c9a9d29609aa1a343f8be43fa95240224fd665e0e4b",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "ABFBD6A0CC354788B73E093FDF3D50F6",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0.0",
+              "in:right": "100.0",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "FractionLowFraction",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Divide_DoubleDouble\")",
+              "NodePosX": "320",
+              "NodePosY": "480",
+              "NodeGuid": "B9CC9F7CE943411D96140A7355DA8C4E"
+            },
+            "pins": {
+              "in:target": {
+                "id": "BAD8F111CFB34652AD30968760F312EE",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "11A3DD9447C5488BACC3E70FB55C844E",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "DDF2D0AE05F04863BE384C04D3153BEB",
+                "type": "p_4d1c70798478a4900d704c9a9d29609aa1a343f8be43fa95240224fd665e0e4b",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "126305D51DBD4DB2925C0ABB391B3270",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0.0",
+              "in:right": "100.0",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "KeyEnablePercent",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"Concat_StrStr\")",
+              "NodePosX": "2640",
+              "NodePosY": "40",
+              "NodeGuid": "94A4A30DE3D64A5180ADDAC53A51542F"
+            },
+            "pins": {
+              "in:target": {
+                "id": "DC914E3760A0492DBFEF691E2A5178FD",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "48E61B715B3A4C229A5DC4D8F1CF8625",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "9157D61FD4A348C8A5D88D75F00E8A02",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "3DA3C8F2F4A94DCFABBF9BFCB1B830EA",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:right": "EnablePortAtPercent"
+            }
+          },
+          {
+            "id": "KeyDisablePercent",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"Concat_StrStr\")",
+              "NodePosX": "2640",
+              "NodePosY": "40",
+              "NodeGuid": "495F6AFB96B444808091510C3E695E4A"
+            },
+            "pins": {
+              "in:target": {
+                "id": "17AA16D9CE4047A695BD52B25BE4CD8B",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "1D31A115FB664071A42A04399620AAD7",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "36C609B0FEE3410DB0C436AC1ACFFA36",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "879B0E04224F4F6B9CE9302B9181E37D",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:right": "DisablePortAtPercent"
+            }
+          },
+          {
+            "id": "ParseEnablePercent",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C'\",MemberName=\"GetDouble\",MemberGuid=A240098E853C4AA8A8971BED4E215420)",
+              "NodePosX": "320",
+              "NodePosY": "440",
+              "NodeGuid": "87BD4BC0465346E48D09E801FFE4671D"
+            },
+            "pins": {
+              "in:target": {
+                "id": "657947E186794509A3CF26DE7C7E0724",
+                "type": "p_fddf5544c1627235811e6700ef4e70a490eea25693da690b8986eac1a9cb6a45",
+                "name": "self"
+              },
+              "in:Name": {
+                "id": "D64C4DA9F8A847738CE098B5EF659165",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:Default": {
+                "id": "98D1935817DE49FA9E04851131989126",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:Min": {
+                "id": "BA4BBC6C64D34780B5DAD998AD47B570",
+                "type": "p_079af7ef56d52bd00e4ee6260ba5d94382e0bee54de0ce21b4003387dc0b0a5f"
+              },
+              "in:Max": {
+                "id": "E27F154F39D84EC181F1A3C3C79439D7",
+                "type": "p_ec3ccb52b4202f635b8427ca3e32db99cb75652ef844db43f62bf7b2b66f5723"
+              },
+              "out:result": {
+                "id": "4E3D2B420F074FC792E12E1E6AF41A6E",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:Default": "80.0",
+              "in:Min": "0.0",
+              "in:Max": "100.0",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "ParseDisablePercent",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C'\",MemberName=\"GetDouble\",MemberGuid=A240098E853C4AA8A8971BED4E215420)",
+              "NodePosY": "660",
+              "NodeGuid": "412CD4113F974E388881DC95C84F0C55"
+            },
+            "pins": {
+              "in:target": {
+                "id": "1816A9556A7244BA87B1215F96926D6A",
+                "type": "p_fddf5544c1627235811e6700ef4e70a490eea25693da690b8986eac1a9cb6a45",
+                "name": "self"
+              },
+              "in:Name": {
+                "id": "F16F75C712A347FD8128251DCB0D24EA",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:Default": {
+                "id": "766A075C671A4B07BBE030D5D8DFA657",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:Min": {
+                "id": "F2EEA8DA17BF4F07ADECFE185F9452A8",
+                "type": "p_079af7ef56d52bd00e4ee6260ba5d94382e0bee54de0ce21b4003387dc0b0a5f"
+              },
+              "in:Max": {
+                "id": "A1932A10CEEC440696260681FF846D39",
+                "type": "p_ec3ccb52b4202f635b8427ca3e32db99cb75652ef844db43f62bf7b2b66f5723"
+              },
+              "out:result": {
+                "id": "4A9E87D62D3344FEAA3925731E01451F",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:Default": "20.0",
+              "in:Min": "0.0",
+              "in:Max": "100.0",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "DefaultEnablePercent",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"SelectFloat\")",
+              "NodePosX": "1000",
+              "NodePosY": "800",
+              "NodeGuid": "D7BC08C4A9B5472F93CD70FB9C389AED"
+            },
+            "pins": {
+              "in:target": {
+                "id": "6F5F6B50577F4D0A8DD7FA60691B36E9",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:A": {
+                "id": "A97BD3654C384E2591B7B6A888816F01",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:B": {
+                "id": "F711C8D4FE974948AE78FC1D6F880A6A",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:bPickA": {
+                "id": "558580023FBE4A168CF861D99F1C11F8",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:result": {
+                "id": "921B236683124E8FAD726BE3CE51A33F",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:A": "20.0",
+              "in:B": "80.0",
+              "in:bPickA": "false",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "DefaultDisablePercent",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"SelectFloat\")",
+              "NodePosX": "1320",
+              "NodePosY": "800",
+              "NodeGuid": "E203B7DE297C4EF284B3C80E21FE776F"
+            },
+            "pins": {
+              "in:target": {
+                "id": "01F4C62B0E0942DE8B7D60E38BE4DDC3",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:A": {
+                "id": "0B8493995BD5407AAD5CBAAADB13B093",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:B": {
+                "id": "2D803824243341D59C8313537883CDFC",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:bPickA": {
+                "id": "14C847F7C1C348348C18928BCB406F95",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:result": {
+                "id": "E1EAE823D1994A77A7C45C4E0CE2766E",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:A": "80.0",
+              "in:B": "20.0",
+              "in:bPickA": "false",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "UpperPercentForMode",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"SelectFloat\")",
+              "NodePosX": "1640",
+              "NodePosY": "800",
+              "NodeGuid": "977390CB0A9D4042923D860A7EF32306"
+            },
+            "pins": {
+              "in:target": {
+                "id": "8C80592417EE427EAE2E614EB00CFE8B",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:A": {
+                "id": "BDD5F7317001406AB58603EAD38ED54C",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:B": {
+                "id": "EACB4EB841254AEB8F163026AAC5565A",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:bPickA": {
+                "id": "DAA9DBD0392C42379E996B6130AE8A8A",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:result": {
+                "id": "A13A34A26EFA475489D3D828E0EC75D8",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:A": "0.0",
+              "in:B": "0.0",
+              "in:bPickA": "false",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "LowerPercentForMode",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"SelectFloat\")",
+              "NodePosX": "1960",
+              "NodePosY": "800",
+              "NodeGuid": "F8FCE3D7B6AE4F24938FD21196A9EFF2"
+            },
+            "pins": {
+              "in:target": {
+                "id": "12FBBA6A01AF4CB1BEACA8D37188029B",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:A": {
+                "id": "BE2E9C2F26DF402C85C171EA9E01015C",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:B": {
+                "id": "AC8A9480195F4CD2B83992F4B09DF712",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:bPickA": {
+                "id": "F1A7C368C800413BA73BD63EA0FBF776",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:result": {
+                "id": "75D5AD9F0FD04F8D9080A12F69851C3A",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:A": "0.0",
+              "in:B": "0.0",
+              "in:bPickA": "false",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "K2Node_Tunnel_Exit",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveInputs": "True",
+              "NodeGuid": "779547AFF0EC498EADD303B0AD39FF40"
+            },
+            "pins": {
+              "in:UpperFraction": {
+                "id": "A958E5D8EEB443AF9CD4113B40E59F6F",
+                "type": "collapse_26"
+              },
+              "in:LowerFraction": {
+                "id": "4F56F8FC7ADE41619DDB4ED2FC73F77A",
+                "type": "collapse_26"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"UpperFraction\",PinType=(PinCategory=\"real\",PinSubCategory=\"double\"),DesiredPinDirection=EGPD_Input)",
+              "CustomProperties UserDefinedPin (PinName=\"LowerFraction\",PinType=(PinCategory=\"real\",PinSubCategory=\"double\"),DesiredPinDirection=EGPD_Input)"
+            ]
+          }
+        ],
+        "links": [
+          {
+            "from": "KeyEnablePercent.out:result",
+            "to": "ParseEnablePercent.in:Name"
+          },
+          {
+            "from": "KeyDisablePercent.out:result",
+            "to": "ParseDisablePercent.in:Name"
+          },
+          {
+            "from": "DefaultEnablePercent.out:result",
+            "to": "ParseEnablePercent.in:Default"
+          },
+          {
+            "from": "DefaultDisablePercent.out:result",
+            "to": "ParseDisablePercent.in:Default"
+          },
+          {
+            "from": "ParseDisablePercent.out:result",
+            "to": "UpperPercentForMode.in:A"
+          },
+          {
+            "from": "ParseEnablePercent.out:result",
+            "to": "UpperPercentForMode.in:B"
+          },
+          {
+            "from": "ParseEnablePercent.out:result",
+            "to": "LowerPercentForMode.in:A"
+          },
+          {
+            "from": "ParseDisablePercent.out:result",
+            "to": "LowerPercentForMode.in:B"
+          },
+          {
+            "from": "UpperPercentForMode.out:result",
+            "to": "FractionHighFraction.in:left"
+          },
+          {
+            "from": "LowerPercentForMode.out:result",
+            "to": "FractionLowFraction.in:left"
+          },
+          {
+            "from": "FractionHighFraction.out:result",
+            "to": "K2Node_Tunnel_Exit.in:UpperFraction"
+          },
+          {
+            "from": "FractionLowFraction.out:result",
+            "to": "K2Node_Tunnel_Exit.in:LowerFraction"
+          },
+          {
+            "from": "K2Node_Tunnel_Entry.out:Parser",
+            "to": "ParseEnablePercent.in:target"
+          },
+          {
+            "from": "K2Node_Tunnel_Entry.out:Parser",
+            "to": "ParseDisablePercent.in:target"
+          },
+          {
+            "from": "K2Node_Tunnel_Entry.out:RulePrefix",
+            "to": "KeyEnablePercent.in:left"
+          },
+          {
+            "from": "K2Node_Tunnel_Entry.out:RulePrefix",
+            "to": "KeyDisablePercent.in:left"
+          },
+          {
+            "from": "K2Node_Tunnel_Entry.out:IsInput",
+            "to": "DefaultEnablePercent.in:bPickA"
+          },
+          {
+            "from": "K2Node_Tunnel_Entry.out:IsInput",
+            "to": "DefaultDisablePercent.in:bPickA"
+          },
+          {
+            "from": "K2Node_Tunnel_Entry.out:IsInput",
+            "to": "UpperPercentForMode.in:bPickA"
+          },
+          {
+            "from": "K2Node_Tunnel_Entry.out:IsInput",
+            "to": "LowerPercentForMode.in:bPickA"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ValidateRule",
+      "kind": "collapsed",
+      "properties": {
+        "GraphGuid": "07C9C73939F94D5A965457156D9F5054"
+      },
+      "owner": {
+        "graph": "28F2F912EFD845868CF4A0514CA1A26B",
+        "node": "K2Node_Composite_ValidateRule",
+        "entry": "K2Node_Tunnel_Entry",
+        "exit": "K2Node_Tunnel_Exit"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "HasActorClass",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"NotEqual_StrStr\")",
+              "NodePosX": "2640",
+              "NodePosY": "420",
+              "NodeGuid": "2EB1891F8B39465BB395095AFF368454"
+            },
+            "pins": {
+              "in:target": {
+                "id": "D8B582D9996242469655C3062E783DEF",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "C00E65D9AB49423C94FE5A9D62EFA284",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "D211B2D78D644248BB3CEB558188CEBD",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "074DD4029AA5486DAF27A0DF1116191C",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "HasSocketName",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"NotEqual_StrStr\")",
+              "NodePosX": "2640",
+              "NodePosY": "420",
+              "NodeGuid": "EE39915BECF042D194980B3DFFD22A35"
+            },
+            "pins": {
+              "in:target": {
+                "id": "18AE52EC74A34453A1204FEE1C97B69D",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "17AA071D5563456A8708523A2C8D987E",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "812B495881F641C283C559877067B63F",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "00866D9FDAEE4686B00A1DCD719C87E2",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_Tunnel_Entry",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveOutputs": "True",
+              "NodeGuid": "7BA725732E4947D39363966E2C6B48E9"
+            },
+            "pins": {
+              "out:ModeIsValid": {
+                "id": "9DAFF87BCFAD482E90F08B1837D25DCB",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"ModeIsValid\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_Tunnel_Exit",
+            "kind": "Tunnel",
+            "properties": {
+              "bCanHaveInputs": "True",
+              "NodeGuid": "0A04ABDFEB33490B949B2E8781EF9351"
+            },
+            "pins": {
+              "in:IsValid": {
+                "id": "F5EE06C897094EDE99E874B8282D3A9E",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"IsValid\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input)"
+            ]
+          },
+          {
+            "id": "NamesValid",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"BooleanAND\")",
+              "NodePosX": "960",
+              "NodePosY": "240",
+              "NodeGuid": "511F36F68B28488CB2A24AFC9DCF407A"
+            },
+            "pins": {
+              "in:target": {
+                "id": "437A5447989848CA971E4009B76B33B8",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "47833F4019EC41129A3EEB8F0CD0B248",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "E609DF05CA5D42B788CF2705D463F442",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "02DB09B2DC944F3AAE282F0034D61A6E",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "false",
+              "in:right": "false",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "ReadActorClass",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"ActorClass\",MemberGuid=5004811C18CF4A0C84A3AD34106820FC,bSelfContext=True)",
+              "NodePosX": "320",
+              "NodePosY": "880",
+              "NodeGuid": "7AA425E2078A4113B171B7145210B083"
+            },
+            "pins": {
+              "out:ActorClass": {
+                "id": "18E028F4BA054090A57E48CD135D7F8A",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:target": {
+                "id": "7DC8BAFE48A7DA1D2469BBA26EFE9688",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "ReadHighFraction",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"HighFraction\",MemberGuid=C3EBBA686B5D486BACE38CA62BF6010A,bSelfContext=True)",
+              "NodePosY": "1100",
+              "NodeGuid": "3A39E00E130740B492FC5BCE03FB44B8"
+            },
+            "pins": {
+              "out:HighFraction": {
+                "id": "AD80B4AAB267454BA970C1625E626127",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:target": {
+                "id": "E1E212574A5B5865504C9B8C1821DC57",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:HighFraction": "0.0"
+            }
+          },
+          {
+            "id": "ReadLowFraction",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"LowFraction\",MemberGuid=5CC1B3E8898E42CFB20EDA04C5AF3954,bSelfContext=True)",
+              "NodePosX": "320",
+              "NodePosY": "1100",
+              "NodeGuid": "8065E2DDB4504DCF87B5185CEC6F28B3"
+            },
+            "pins": {
+              "out:LowFraction": {
+                "id": "B10669BF762947ABAEC59B02E97B5420",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:target": {
+                "id": "A20A812E44D2A53CC4B3D5A070B96D7F",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:LowFraction": "0.0"
+            }
+          },
+          {
+            "id": "ReadSocketName",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"SocketName\",MemberGuid=FF583AF611B0461091C1B59BB8BA3FF2,bSelfContext=True)",
+              "NodePosX": "960",
+              "NodePosY": "880",
+              "NodeGuid": "4C8876E2FB874728A814E5B9881D73F3"
+            },
+            "pins": {
+              "out:SocketName": {
+                "id": "78310DB709314FF4BF66766DAB3C4D68",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:target": {
+                "id": "0A33FC20423DC2E9E92BDDB3ADFFA040",
+                "type": "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "RuleValid",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"BooleanAND\")",
+              "NodePosX": "960",
+              "NodePosY": "240",
+              "NodeGuid": "893EBDD4E8ED47A7ACC87109C2969B02"
+            },
+            "pins": {
+              "in:target": {
+                "id": "8C75FAD5143C45769FBFF5E1B7866B4A",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "65168BA8B77A4672946C749D3E358A61",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "7DFC49F8B4B644D9A2ED445B4E8E7034",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "BB8E5BF8DB1E4971818D9AD49B3B3FB5",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "false",
+              "in:right": "false",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "ThresholdOrder",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Greater_DoubleDouble\")",
+              "NodePosX": "1600",
+              "NodePosY": "240",
+              "NodeGuid": "76F180C71CAE4ECF9D5F452FB42FAFBC"
+            },
+            "pins": {
+              "in:target": {
+                "id": "21B6704C02B240A19F5825919CEC97A0",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "CE3BE91C70D34CA5AB47FCC78D78EC59",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "E76656FC58A04C159A23518A29C20380",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "0E49ECD6F60D4D4EBD484EA18F9B3608",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0.0",
+              "in:right": "0.0",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "ValidRuleAndMode",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"BooleanAND\")",
+              "NodePosX": "960",
+              "NodePosY": "240",
+              "NodeGuid": "A70A9CB779634E54B2EF5AD4EFF391EF"
+            },
+            "pins": {
+              "in:target": {
+                "id": "5756791F05AA47408491DB28484116D6",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "7DCC41FCC8164CE7888FDD1083E3709E",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "E0BAE448CB6A4D808EE98704C355F858",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "724B1A0295834BE1BD7A4FF98CAE2B13",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "false",
+              "in:right": "false",
+              "out:result": "false"
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "HasActorClass.out:result",
+            "to": "NamesValid.in:left"
+          },
+          {
+            "from": "HasSocketName.out:result",
+            "to": "NamesValid.in:right"
+          },
+          {
+            "from": "K2Node_Tunnel_Entry.out:ModeIsValid",
+            "to": "ValidRuleAndMode.in:right"
+          },
+          {
+            "from": "NamesValid.out:result",
+            "to": "RuleValid.in:left"
+          },
+          {
+            "from": "ReadActorClass.out:ActorClass",
+            "to": "HasActorClass.in:left"
+          },
+          {
+            "from": "ReadHighFraction.out:HighFraction",
+            "to": "ThresholdOrder.in:left"
+          },
+          {
+            "from": "ReadLowFraction.out:LowFraction",
+            "to": "ThresholdOrder.in:right"
+          },
+          {
+            "from": "ReadSocketName.out:SocketName",
+            "to": "HasSocketName.in:left"
+          },
+          {
+            "from": "RuleValid.out:result",
+            "to": "ValidRuleAndMode.in:left"
+          },
+          {
+            "from": "ThresholdOrder.out:result",
+            "to": "RuleValid.in:right"
+          },
+          {
+            "from": "ValidRuleAndMode.out:result",
+            "to": "K2Node_Tunnel_Exit.in:IsValid"
+          }
+        ]
+      }
+    }
+  ],
+  "dependencies": [
+    "/Script/Engine.Default__KismetMathLibrary",
+    "/Script/Engine.Default__KismetStringLibrary"
+  ],
+  "pinTemplates": {
+    "p_079af7ef56d52bd00e4ee6260ba5d94382e0bee54de0ce21b4003387dc0b0a5f": {
+      "AutogeneratedDefaultValue": "\"-1.7976931348623157e308\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_6bf01f17181cddce57e7c8c1b0efacff2ae3bb1792f00c3c0012b6e40f76fbfd": {
+      "AutogeneratedDefaultValue": "\"-2147483648\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_3cf45d08eba2231a6ece81821b9a165836ee41d8af3f5074d6543780bae35c4a": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_70cb832bf918bea20df94515824058280d997db52742e43e5fe9efcc2d5f19db": {
+      "AutogeneratedDefaultValue": "\"0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c": {
+      "AutogeneratedDefaultValue": "\"0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_4d1c70798478a4900d704c9a9d29609aa1a343f8be43fa95240224fd665e0e4b": {
+      "AutogeneratedDefaultValue": "\"1.000000\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_ec3ccb52b4202f635b8427ca3e32db99cb75652ef844db43f62bf7b2b66f5723": {
+      "AutogeneratedDefaultValue": "\"1.7976931348623157e308\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_6088cf2e06865ab6e4799dadcf8d1f0a80f7451719f4cdb2f43b09d2c9309c6a": {
+      "AutogeneratedDefaultValue": "\"2147483647\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_b2a7bd72f8a232636d2a3951831b0b467cc223b358b7bdc1ec0304d59059c0f2": {
+      "AutogeneratedDefaultValue": "\"false\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0": {
+      "AutogeneratedDefaultValue": "\"false\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c": {
+      "AutogeneratedDefaultValue": "\"true\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_fddf5544c1627235811e6700ef4e70a490eea25693da690b8986eac1a9cb6a45": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_27bc2daeaa152823ed79f85770aa9a9c705fb82947f5b1a554a4ce0ab179468c": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_OutletRule.BP_OutletRule_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"false\", \"false\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"true\", \"true\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_035b2f0aabd6097c4a03e10a9b10dfc663c513f1d502be93c855aa3d9514bd23": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"byte\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Enum'/Script/Voyage.EModuleSocketType'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_157d699d52edc680f0003312380e9c16c6c0e9a24d1183ea5dd05b53e7cd91b2": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"string\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a576382c9b9ea7aa3b43f142a24da72f01179881ffbcc6a8319856143393bbe9": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"byte\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Enum'/Script/Voyage.EModuleSocketType'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_d6fc60d7408c5aa1ed59190c252a8145c9867a04978989da93cc2567db238e36": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_fc23b1f92fb97297456aa2dda50737bfa15dc817c756ee9bca9c5bd720ba0b96": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"string\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "collapse_26": {
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinValueType": "()",
+      "PinType.ContainerType": "None",
+      "PinType.bIsReference": "False",
+      "PinType.bIsConst": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bAdvancedView": "False",
+      "bOrphanedPin": "False"
+    }
+  },
+  "classes": {
+    "branch": "/Script/BlueprintGraph.K2Node_IfThenElse",
+    "setVariable": "/Script/BlueprintGraph.K2Node_VariableSet",
+    "FunctionEntry": "/Script/BlueprintGraph.K2Node_FunctionEntry",
+    "call": "/Script/BlueprintGraph.K2Node_CallFunction",
+    "Composite": "/Script/BlueprintGraph.K2Node_Composite",
+    "FunctionResult": "/Script/BlueprintGraph.K2Node_FunctionResult",
+    "Tunnel": "/Script/BlueprintGraph.K2Node_Tunnel",
+    "getVariable": "/Script/BlueprintGraph.K2Node_VariableGet"
+  }
+}

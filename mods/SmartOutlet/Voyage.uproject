@@ -1,0 +1,23 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Description": "Smart Outlet - threshold-controlled storage ports",
+  "Plugins": [
+    {
+      "Name": "PythonScriptPlugin",
+      "Enabled": true
+    },
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    },
+    {
+      "Name": "SmartOutletSupport",
+      "Enabled": true
+    },
+    {
+      "Name": "BlueprintTextWorkspace",
+      "Enabled": true
+    }
+  ]
+}
