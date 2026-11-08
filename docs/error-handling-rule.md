@@ -1,10 +1,23 @@
 # Error handling and defined outcomes
 
-- Every in-scope input or requested action must have a defined outcome. Never
-  silently return from an error check and leave promised behavior missing or
-  the mod in an indeterminate, partially applied state. A final mod must work
-  or fail unmistakably; a warning that accompanies broken behavior is not a
-  substitute for a working implementation.
+- For supported runtime conditions, every in-scope input or requested action
+  must have a defined outcome. Never silently return from an error check and
+  leave promised behavior missing or the mod in an indeterminate, partially
+  applied state. A warning that accompanies broken behavior is not a substitute
+  for a working implementation.
+- Required authored components, assets and identities are project contracts.
+  Validate the specific structural requirements during development and build
+  preparation instead of hiding violations behind silent fallback branches.
+  Successful compilation or packaging proves only the checks actually performed;
+  it does not establish every structural requirement. When removing a guard in
+  reliance on such a contract, identify the evidence that establishes it.
+- Required structure does not guarantee runtime lifetime or availability. Even
+  a mandatory object can become unavailable through destruction, unloading or
+  owner teardown during supported play. Preserve guards and meaningful failure
+  responses where those situations can reach the operation. Distinguish them
+  from an authored object that was missing or misconfigured from the start.
+  Removing a redundant guard does not guarantee how Unreal will react to a
+  broken project contract, and does not require a replacement failure mechanism.
 - Error reporting is a development/investigation aid, not a production feature
   in its own right. Do not add permanent error panels, notification frameworks,
   polling or diagnostic packages, or block an otherwise scoped change on
@@ -23,6 +36,10 @@
   corrupting persistent data. Do not use a crash for ordinary out-of-scope input
   or when safe recovery is available; do not invent crashes merely to satisfy
   this rule.
+  Permission to crash is not a requirement to cause or guarantee a crash. Do not
+  add a crash mechanism, runtime dependency or investigation solely to turn an
+  accepted possibility of failure into deterministic termination. Such work needs
+  a separate functional requirement; ordinary graph cleanup does not imply one.
   This policy is not authorization to deliberately crash a live user session;
   controlled crash experiments still follow the research and test safeguards.
 - Deliberately ignored out-of-scope events and verified idempotent no-ops are
