@@ -16,6 +16,7 @@ from pathlib import Path
 from function_labels import lookup as lookup_function_label
 from review_details import render_details
 from preview_references import node_references, package as reference_package, label as reference_label
+from preview_references import is_type_reference, with_type_reference_details
 from graph_hierarchy import select_graph, graph_key
 from asset_text_codec import split_fields
 from graph_expressions import fold_expressions, format_expression
@@ -128,10 +129,10 @@ def review_document(document, before, review, selection=None):
     for source, output, target, input_pin, _ in edges + ghosts:
         result['links'].append({'from': source + '.out:' + output, 'to': target + '.in:' + input_pin})
 
-    def snapshot(node_id, by_id, links):
+    def snapshot(node_id, by_id, links, pin_templates):
         if node_id not in by_id:
             return None
-        return {'node': copy.deepcopy(by_id[node_id]),
+        return {'node': with_type_reference_details(copy.deepcopy(by_id[node_id]), pin_templates),
                 'links': [{'from': e[0] + '.' + e[1], 'to': e[2] + '.' + e[3]}
                           for e in links if node_id in (e[0], e[2])]}
 
@@ -146,8 +147,8 @@ def review_document(document, before, review, selection=None):
                 node['_reviewPreviousDescription'] = description_fields(
                     old_by_id[node_id], before.get('pinTemplates', {}), before.get('parent'))
             node['_reviewDetails'] = {'Status': marked[node_id],
-                                     'Before': snapshot(node_id, old_by_id, old_edges),
-                                     'After': snapshot(node_id, current_by_id, edges)}
+                                     'Before': snapshot(node_id, old_by_id, old_edges, (before or {}).get('pinTemplates', {})),
+                                     'After': snapshot(node_id, current_by_id, edges, document.get('pinTemplates', {}))}
     return result
 
 
@@ -762,6 +763,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     if view not in VIEW_MODES or direction not in ("TB", "LR"):
         raise ValueError("Expected view simplified/full/expressions and direction TB/LR.")
     all_nodes, all_edges, owner, graph = load_graph(document, selection)
+    all_nodes = [with_type_reference_details(n, document.get('pinTemplates', {})) for n in all_nodes]
     terminal = terminal_exit_ids(all_nodes, all_edges, document.get('pinTemplates', {}))
     all_nodes = [dict(n, _graphNeverContinues=n.get('_graphNeverContinues', n['id'] in terminal)) for n in all_nodes]
     # Attach navigation to view copies; source and review snapshots stay untouched.
@@ -845,6 +847,8 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         seen_references = set()
         for part in node.get('_foldedNodes', [node]):
             for field, target in node_references(part, document.get('pinTemplates', {})):
+                if view != 'full' and is_type_reference(field):
+                    continue
                 if reference_package(target) == owner or (part['id'], field, target) in seen_references:
                     continue
                 seen_references.add((part['id'], field, target))

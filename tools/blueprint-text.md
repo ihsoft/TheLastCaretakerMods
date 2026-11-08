@@ -432,8 +432,11 @@ displayed as editable functionality.
 
 Asset references in editable source are displayed at their node/pin or named
 Blueprint property, with exact paths in tooltips and links to preview entries
-when available. Stub markers come from the supplied project context. Viewer
-role/link metadata stays separate from BPT source. The summary distinguishes
+when available. Stub markers come from the supplied project context.
+Simplified and Expressions cards omit technical pin-type and member-owner links;
+these remain resolved in node Details (`_typeReferences`) and visible in Full.
+Chosen asset values (including class defaults) retain their links in every view.
+Viewer role/link metadata stays separate from BPT source. The summary distinguishes
 `editableAssets`, `listedAssets` and displayed `graphs` from total `assets`.
 
 With no changes, the index is a browser: no status badges, review legend or diff

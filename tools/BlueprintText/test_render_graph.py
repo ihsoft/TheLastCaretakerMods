@@ -287,7 +287,7 @@ class GraphRenderingTests(unittest.TestCase):
             pins={'in:Class': {'DefaultObject': '/Game/Gyro.Gyro_C'}})], 'links': []}
         original = copy.deepcopy(document)
         context = {'/Game/Gyro': dict(stub=True, href='../index.html#asset-001')}
-        for view in ('full', 'simplified'):
+        for view in ('full', 'simplified', 'expressions'):
             svg = render(document, view=view, asset_context=context)[0]
             root = ET.fromstring(svg)
             links = root.findall('.//{http://www.w3.org/2000/svg}a')
@@ -297,6 +297,49 @@ class GraphRenderingTests(unittest.TestCase):
             self.assertIn('[STUB]', svg)
             self.assertIn('/Game/Gyro.Gyro_C', svg)
         self.assertEqual(original, document)
+
+    def test_getter_chain_keeps_type_references_in_details_and_full(self):
+        rule = '/Game/Settings/BP_Rule.BP_Rule_C'
+        document = {'schema': 1, 'asset': '/Game/Test', 'pinTemplates': {
+            'rule': {'PinType.PinCategory': '"object"', 'PinType.PinSubCategoryObject': rule},
+            'string': {'PinType.PinCategory': '"string"'}}, 'nodes': [
+                dict(id='ReadRule', kind='getVariable', variable='Rule',
+                     pins={'out:Rule': {'type': 'rule'}}),
+                dict(id='ReadSocketName', kind='getVariable', variable='SocketName',
+                     properties={'VariableReference': f'(MemberParent="{rule}",MemberName="SocketName")'},
+                     pins={'in:target': {'type': 'rule'}, 'out:SocketName': {'type': 'string'}}),
+                dict(id='consumer', kind='call', operation='Consume',
+                     pins={'in:value': {'type': 'string'}})], 'links': [
+                         {'from': 'ReadRule.out:Rule', 'to': 'ReadSocketName.in:target'},
+                         {'from': 'ReadSocketName.out:SocketName', 'to': 'consumer.in:value'}]}
+        original = copy.deepcopy(document)
+        for view in ('simplified', 'expressions', 'full'):
+            with self.subTest(view=view):
+                svg = ET.fromstring(render(document, view=view)[0])
+                labels = ' '.join(visible_text(t) for t in svg.findall('.//{*}text'))
+                self.assertEqual('PinType.PinSubCategoryObject' in labels, view == 'full')
+                self.assertEqual('VariableReference' in labels, view == 'full')
+                card = svg.find('.//{*}g[@data-node-id="ReadSocketName"]')
+                details = json.loads(card.find('{*}title').text)
+                parts = details.get('_foldedNodes', [details])
+                read = next(n for n in parts if n['id'] == 'ReadSocketName')
+                self.assertIn({'field': 'pins / in:target / PinType.PinSubCategoryObject',
+                               'target': rule}, read['_typeReferences'])
+                if view == 'simplified':
+                    self.assertIn('Data chain', labels)
+                    self.assertIn('1. Get Rule', labels)
+                    self.assertIn('2. Get Socket Name', labels)
+                    self.assertIn('Output: string', labels)
+                    self.assertEqual(details['_foldedLinks'],
+                                     [['ReadRule', 'Rule', 'ReadSocketName', 'target', False]])
+        # Review Details must resolve each snapshot with its own template types.
+        old = copy.deepcopy(document)
+        old['pinTemplates']['rule']['PinType.PinSubCategoryObject'] = '/Game/Old.Old_C'
+        svg = ET.fromstring(render(document, review={'changed': ['ReadRule']}, before=old)[0])
+        details = json.loads(svg.find('.//{*}g[@data-node-id="ReadRule"]/{*}title').text)
+        self.assertEqual(details['Before']['node']['_typeReferences'][0]['target'], '/Game/Old.Old_C')
+        self.assertEqual(details['After']['node']['_typeReferences'][0]['target'], rule)
+        self.assertEqual(document, original)
 
     def test_folded_step_titles_wrap_once_at_body_width(self):
         templates = {'number': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'}}

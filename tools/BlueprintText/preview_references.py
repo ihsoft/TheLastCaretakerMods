@@ -25,6 +25,21 @@ def node_references(node, templates):
     return references(fields)
 
 
+def is_type_reference(field):
+    """Signature/owner metadata, distinct from a chosen asset or class value."""
+    parts = field.split(' / ')
+    return (len(parts) >= 3 and parts[0] == 'pins' and parts[2].startswith('PinType.')) or (
+        parts[0] == 'properties' and len(parts) == 2 and parts[1] in (
+            'VariableReference', 'FunctionReference', 'EventReference', 'DelegateReference'))
+
+
+def with_type_reference_details(node, templates):
+    """View-only metadata keeps resolved pin types accessible in node Details."""
+    refs = [dict(field=field, target=target) for field, target in node_references(node, templates)
+            if is_type_reference(field)]
+    return dict(node, _typeReferences=refs) if refs else node
+
+
 def property_references(document):
     fields = {k: v for k, v in document.items() if k in (
         'parent', 'defaults', 'variables', 'components', 'root', 'interfaces', 'widget', 'properties')}
