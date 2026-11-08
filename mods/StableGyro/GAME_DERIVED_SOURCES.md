@@ -14,9 +14,10 @@ only their explicitly named build.
 
 ## Game contracts
 
-The public producer validates the supported item and plate contracts against
-current stock inputs. Asset replacement follows the source build, item recipe
-and explicit reimport policies in [release preparation](ARCHITECTURE.md#release-preparation).
+The public release producer compares the item against current stock inputs and
+checks the maintained plate's source build and cooked representations. The
+separate plate updater owns extraction and full source-geometry comparison.
+Asset replacement follows the policies in [release preparation](ARCHITECTURE.md#release-preparation).
 The native owner and property
 types consumed by the stabilization and calibration-prevention graphs were
 revalidated against Steam build `25982825` mapping metadata. Resolving a mapping
@@ -147,9 +148,11 @@ Together, these sources establish:
   The generated child adds two distinct rear templates with the same socket
   contract and unique IDs `2056977161` and `2056977162`. It also adds four
   decorative plate components from
-  two side-specific meshes derived from the current stock
+  one positive-Y half mesh derived from the current stock
   `/Game/AssetSets/Vehicles/Gyrocopter/Mesh/Gyro_MooringPlate` and reuses the
-  stock `Gyrocopter_Seat_p1` material. The public producer exports the current
+  stock `Gyrocopter_Seat_p1` material. Opposite-side components mirror local Y;
+  the shared component template owns the mesh reference. The separate plate
+  updater exports the current
   decoded Nanite leaf geometry, requiring all four streaming pages, all 223
   clusters, all 111 leaf clusters, 13,790 faces and four UV channels without an
   ordinary-LOD fallback. The decoded source has no tangent stream, so both the
@@ -284,9 +287,12 @@ Unreal's native mesh builders may still discard coincident-position faces.
 For this source, each 6,895-face split produces 6,852 decoded Nanite leaf faces;
 all 43 omitted faces per half have exactly zero source area. No nondegenerate
 source face is absent. The 25% fallback has 1,713 triangles per half and supplies
-one ray-tracing proxy LOD. The final-container validator compares positions,
-normals, UV0..3 and vertex colors to the split GLBs with the producer's explicit
-tolerances. These are geometry and serialization contracts, not GPU timing
+one ray-tracing proxy LOD. The maintained mesh uses the positive-Y half;
+the negative-Y package is not part of the project or release. During explicit
+updates, the container validator compares positions, normals, UV0..3 and vertex
+colors to the positive-Y split GLB with the updater's explicit tolerances.
+Ordinary releases check source readiness, representations and material binding
+without extracting geometry. These are geometry and serialization contracts, not GPU timing
 measurements or proof of the representation selected for an individual frame.
 
 These contracts can be revisited through the public
@@ -325,12 +331,12 @@ the synchronized BPT representations and native editor declarations.
 | `Content/Mods/StableGyro/Settings/BP_IniFileParser.uasset` | Authored [shared INI parser](../../tools/BlueprintText/Library/IniFileParser/AGENTS.md), relocated into the mod with its synchronized BPT copy. It ships with the mod and is not reconstructed game content. | Update from the shared library through package relocation. |
 | `Content/Mods/StableGyro/ModActor.uasset`, `PitchInputActor.uasset`, and `Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset` | Maintained authored gameplay graphs, initially materialized by the retired StableGyro commandlets using the game contracts above. `BlueprintText/` contains their synchronized shared-tool exports. | Edit the assets through BPT or Unreal Editor; do not regenerate them during a release. Revalidate consumed game APIs when the game build changes. |
 | `Content/Mods/StableGyro/IAV_GyroPitchReset.uasset` and `Content/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.uasset` | Authored reset action and reconstructed stock keyboard context with the reset mapping added. | Preserve all stock bindings and the exact action identities described above; revalidate the reconstruction on a game build change. |
-| `Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/` and `StableGyroMooringPlateNegativeY/` | Complete meshes derived from the stock mooring plate by the mod splitter and shared StaticMesh producer; `Build/MooringMeshes.source.json` records their source Steam build. | Replace both packages on a changed Steam build or explicit `-ReimportMooringMeshes`; otherwise cook the maintained pair. Every build compares cooked geometry and attributes with temporary stock-derived split GLBs; unsupported geometry fails. |
+| `Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/` | Complete positive-Y mesh derived from the stock mooring plate by the mod splitter and shared StaticMesh producer; shared by all four instances. `Build/MooringMeshes.source.json` records its source Steam build, recipe and readiness. | Explicitly run `Update-StableGyroMooringPlate.ps1` after a game update or import fix. It replaces the package and fully compares its project-cooked geometry and attributes with a fresh stock-derived GLB. Ordinary builds reuse it, check cooked representations/materials and fail on stale or incomplete source state. |
 | `Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset` | Shared VoyageItem profile reconstructs the current item; `Build/Item.patch.json` changes only `DroppedActor`. `Build/Item.source.json` records the applied recipe and source Steam build. | Refresh the item and its generator stub on a changed build or recipe, or explicit `-ReimportItemAsset`. Every build compares the project-cooked item with current stock. The profile rejects unsupported inputs. |
 | Other assets under `Content/` | Editor dependency stubs: stock Gyro parent, crafting-generator Blueprint, material, icon, input actions, item references and string tables. The initial parent/input stubs came from the retired commandlets; the shared item updater owns the crafting-generator stub and creates missing item dependencies. | Never ship these stubs. The updater refreshes its owned generator stub and reuses existing dependency stubs. Revalidate other required identities and layouts when the game build changes. Material fidelity is structural only; shaders and textures are not reconstructed. |
 | `EditorSupport/Source/Voyage/` | Minimal native game API declarations reconstructed from the reflection/mapping evidence above. Shared item-profile sources are composed by `EditorSupport.json`; no native implementation is shipped. | Keep original `/Script/Voyage` identities, field order and required metadata; revalidate on a game build change. Ready plugins are rebuilt by the shared support tool when their inputs change. |
 
-The nine release packages are selected explicitly by `Cook-StableGyroAssets.ps1`;
+The eight release packages are selected explicitly by `Cook-StableGyroAssets.ps1`;
 all other project assets are editor support. `Build-InheritancePackage.ps1` and
 `Validate-StableGyroMooringTemplates.ps1` own package staging and structural
 checks. The [architecture](ARCHITECTURE.md#release-preparation) describes their

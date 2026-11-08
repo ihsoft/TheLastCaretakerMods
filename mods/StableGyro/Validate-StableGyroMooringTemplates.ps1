@@ -280,6 +280,22 @@ try {
             $templateExports[0].'$type' -notlike '*NormalExport*') {
             throw "Expected exactly one normal component-template export for $target."
         }
+        if ($target -ceq 'StableGyroMooringPlate') {
+            $meshProperties = @($templateExports[0].Data | Where-Object { [string]$_.Name -ceq 'StaticMesh' })
+            if ($meshProperties.Count -ne 1 -or [int]$meshProperties[0].Value -ge 0) {
+                throw 'Shared plate template must reference the maintained StaticMesh.'
+            }
+            $meshImport = $original.Imports[-[int]$meshProperties[0].Value - 1]
+            if ([string]$meshImport.ObjectName -cne 'StableGyroMooringPlatePositiveY' -or
+                [string]$meshImport.ClassName -cne 'StaticMesh' -or [int]$meshImport.OuterIndex -ge 0) {
+                throw 'Shared plate template references an unexpected mesh.'
+            }
+            $meshPackage = $original.Imports[-[int]$meshImport.OuterIndex - 1]
+            if ([string]$meshPackage.ObjectName -cne
+                '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY') {
+                throw 'Shared plate mesh package identity differs from the release inventory.'
+            }
+        }
         $templateSummaries[$target] = [ordered]@{
             objectName = [string]$templateExports[0].ObjectName
             exportType = [string]$templateExports[0].'$type'

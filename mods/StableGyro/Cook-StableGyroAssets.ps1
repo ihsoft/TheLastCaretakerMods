@@ -1,4 +1,4 @@
-# INTERNAL BUILD STAGE: cooks the nine maintained production packages in one narrow
+# INTERNAL BUILD STAGE: cooks the eight maintained production packages in one narrow
 # Unreal invocation. It contains no extracted game data; its output is generated
 # and not committed.
 
@@ -13,7 +13,9 @@ param(
     [string]$LogPath,
 
     [Parameter(Mandatory = $true)]
-    [string]$OutputRoot
+    [string]$OutputRoot,
+
+    [switch]$MooringPlateOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,9 +40,9 @@ $packages = @(
     '/Game/Mods/StableGyro/IAV_GyroPitchReset',
     '/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot',
     '/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard',
-    '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY',
-    '/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY'
+    '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY'
 )
+if ($MooringPlateOnly) { $packages = @($packages[-1]) }
 $requiredCookedExtensions = @('.uasset', '.uexp')
 $optionalCookedExtensions = @('.ubulk', '.uptnl', '.m.ubulk')
 $cookedExtensions = @($requiredCookedExtensions + $optionalCookedExtensions)

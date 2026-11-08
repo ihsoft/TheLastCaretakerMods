@@ -90,24 +90,41 @@ validation. Every build extracts the current original and compares the complete
 project-cooked item against it, allowing only the recipe's change. The decision
 tests are `Build/Test-ItemAssetRefresh.ps1`.
 
-`Build/MooringMeshes.source.json` records the plate pair's source Steam build.
-A different installed build triggers replacement of both complete meshes.
-Use `-ReimportMooringMeshes` on the public producer to explicitly rebuild them
-after a fix, even on the same game build. Recipe or tool edits do not trigger
-an automatic reimport. Commit updated meshes together with their source state.
-Missing or invalid source state, missing meshes, or an interrupted replacement
-stops ordinary reuse; restore the inputs from Git or explicitly reimport.
-Replacement marks the source state pending before writing either asset and
-ready only after final-container mesh and material validation succeeds.
+`Build/MooringMeshes.source.json` records the one maintained plate's source Steam
+build, reconstruction recipe and readiness. Ordinary builds require a current,
+ready state and the mesh package. A changed game build, missing or invalid state,
+or interrupted update stops reuse and directs the caller to the separate
+`Update-StableGyroMooringPlate.ps1` script. The release producer never exports,
+splits or imports plate geometry and does not require Blender.
 
-Every build still exports and splits temporary stock GLBs for the existing
-final-container geometry and attribute comparisons. Reuse skips editor mesh
-creation and project replacement, not these checks. The decision tests are
+Run the updater explicitly after a game update or to repair an import on the
+same build. Every invocation performs complete replacement at the existing package
+identity; it does not create numbered copies or merge old contents. Use the
+shared Unreal queue, with PowerShell 7, from the repository root:
+
+```powershell
+& tools/Invoke-UnrealQueued.ps1 -Operation 'Update StableGyro plate' `
+  -FilePath (Join-Path $PSHOME 'pwsh.exe') `
+  -ArgumentList @('-NoProfile', '-File', 'mods/StableGyro/Update-StableGyroMooringPlate.ps1')
+```
+
+The updater accepts `GameRoot`, `EngineRoot`, `BlenderPath`, `Retoc`, `OutputRoot`
+and `IgnorePinnedGameVersion`. Output stays below `Tmp/StableGyro`; it never
+installs a candidate. It marks the source state pending before replacement,
+cooks the mesh in the maintained project and validates an isolated container
+against the freshly extracted geometry, normals, UVs and colors. Only successful
+geometry, representation and material checks mark it ready. Failure restores
+the prior mesh and source state; an interrupted pending update cannot be reused.
+Commit the updated mesh together with its source state.
+
+Ordinary builds retain final-container Nanite, fallback, ray-tracing and material
+checks without a source-GLB comparison. Both paths share
+`Build/Test-MooringPlateContainer.ps1`; source-state decision tests are in
 `Build/Test-MooringMeshRefresh.ps1`.
 
-The producer preserves the authored Blueprints and cooks nine explicit
+The producer preserves the authored Blueprints and cooks eight explicit
 packages: the three gameplay Blueprints, settings parser, reset input action,
-keyboard mapping context, Gyro item DataAsset and two plate meshes. Packaging validates the
+keyboard mapping context, Gyro item DataAsset and one plate mesh. Packaging validates the
 project-cooked item instead of patching cooked stock bytes. Dependency stubs
 are excluded. All intermediate extractions, split GLBs, cook output and reports
 remain ignored build output.
@@ -247,13 +264,15 @@ actor's socket components, so the extra pair needs no separate winch loop.
 
 The stock `MooringPlate` is a separate decorative component whose mesh contains
 both sides together. It is not part of the frame mesh or two selectable material
-sections. The producer splits its full decoded Nanite leaf geometry into two
-side-specific meshes while preserving the original pivot. Four components reuse
-those halves with the stock component material override and no collision. The
-public producer delegates mesh import to the shared
+sections. The separate updater splits its full decoded Nanite leaf geometry and
+retains the positive-Y half as one complete editor mesh, preserving the original
+pivot. The other half is temporary extraction evidence only. Four components reuse
+the maintained mesh with the stock component material override and no collision.
+The updater delegates mesh import to the shared
 [StaticMesh tools](../../tools/static-mesh-assets.md) with `-OutputKind Uncooked`,
-then replaces both complete packages in the maintained project. The mod's
-project cook supplies the runtime meshes. The meshes use native
+then replaces the complete package in the maintained project. The retained name
+`StableGyroMooringPlatePositiveY` identifies the source half, not an instance side.
+The mod's project cook supplies the runtime mesh. It uses native
 Nanite with all input triangles retained, zero trim error, position precision
 `4`, normal precision `8`, and implicit tangents. A separate 25% triangle
 fallback supplies the ray-tracing proxy. This reduces that representation's
@@ -261,14 +280,17 @@ geometry budget without reducing the full-detail Nanite input.
 The inherited paired plate is hidden only in four-port mode.
 
 The four decorative components share one `StableGyroMooringPlate` template for
-common material and collision settings. `CreateMooringPlates` calls
-`CreateMooringPlate` four times with the required mesh half and location. The
-function creates the component, assigns its mesh, attaches it to `VehicleMesh`
+the mesh, material and collision settings. `CreateMooringPlates` calls
+`CreateMooringPlate` four times with the required location and scale. Two use
+`(1,1,1)` and the opposite pair use `(1,-1,1)` to mirror across local Y while
+retaining their instance translations. The function creates the component with
+its template mesh, attaches it to `VehicleMesh`
 and finishes deferred creation. Its callers do not gate later plates on a
 completion flag; failure of the internal cast ends that invocation. Decorative
 instance names are generated uniquely from the common template. The two rear
 socket templates remain separate with their stable endpoint names and SocketIDs.
 Cook validation requires exactly those two socket templates and the shared plate.
+It also verifies that the plate template references the packaged mesh identity.
 
 Replacement keeps package identities and Blueprint references, with backup and
 copy verification; it does not merge previous LOD, collision or socket data.

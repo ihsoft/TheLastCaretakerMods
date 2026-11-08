@@ -106,7 +106,8 @@
         "properties": {
           "OverrideMaterials": "(\"/Script/Engine.MaterialInstanceConstant'/Game/AssetSets/Vehicles/Gyrocopter/Materials/Gyrocopter_Seat_p1.Gyrocopter_Seat_p1'\")",
           "bGenerateOverlapEvents": "False",
-          "BodyInstance": "(PositionSolverIterationCount=8,VelocitySolverIterationCount=2,ProjectionSolverIterationCount=1,ObjectType=ECC_WorldStatic,CollisionEnabled=NoCollision,SleepFamily=Normal,DOFMode=Default,bUseCCD=False,bUseMACD=False,bAllowPartialIslandSleep=True,bIgnoreAnalyticCollisions=False,bNotifyRigidBodyCollision=False,bSmoothEdgeCollisions=False,bLockTranslation=True,bLockRotation=True,bLockXTranslation=False,bLockYTranslation=False,bLockZTranslation=False,bLockXRotation=False,bLockYRotation=False,bLockZRotation=False,bOverrideMaxAngularVelocity=False,bOverrideMaxDepenetrationVelocity=False,bOverrideWalkableSlopeOnInstance=False,bOverrideIterationCounts=False,bInterpolateWhenSubStepping=True,bInertiaConditioning=True,bOneWayInteraction=False,bOverrideSolverAsyncDeltaTime=False,SolverAsyncDeltaTime=0.016667,CollisionProfileName=\"NoCollision\",CollisionResponses=(ResponseArray=((Channel=\"Visibility\",Response=ECR_Ignore),(Channel=\"Camera\",Response=ECR_Ignore))),MaxDepenetrationVelocity=0.000000,MassInKgOverride=100.000000,LinearDamping=0.010000,AngularDamping=0.000000,CustomDOFPlaneNormal=(X=0.000000,Y=0.000000,Z=0.000000),COMNudge=(X=0.000000,Y=0.000000,Z=0.000000),MassScale=1.000000,GravityGroupIndex=0,InertiaTensorScale=(X=1.000000,Y=1.000000,Z=1.000000),WalkableSlopeOverride=(WalkableSlopeBehavior=WalkableSlope_Default,WalkableSlopeAngle=0.000000),PhysMaterialOverride=None,MaxAngularVelocity=3600.000000,CustomSleepThresholdMultiplier=1.000000,StabilizationThresholdMultiplier=1.000000,PhysicsBlendWeight=0.000000,bSimulatePhysics=False,bOverrideMass=False,bEnableGravity=True,bUpdateKinematicFromSimulation=False,bGyroscopicTorqueEnabled=False,bAutoWeld=True,bStartAwake=True,bGenerateWakeEvents=False,bUpdateMassWhenScaleChanges=True)"
+          "BodyInstance": "(PositionSolverIterationCount=8,VelocitySolverIterationCount=2,ProjectionSolverIterationCount=1,ObjectType=ECC_WorldStatic,CollisionEnabled=NoCollision,SleepFamily=Normal,DOFMode=Default,bUseCCD=False,bUseMACD=False,bAllowPartialIslandSleep=True,bIgnoreAnalyticCollisions=False,bNotifyRigidBodyCollision=False,bSmoothEdgeCollisions=False,bLockTranslation=True,bLockRotation=True,bLockXTranslation=False,bLockYTranslation=False,bLockZTranslation=False,bLockXRotation=False,bLockYRotation=False,bLockZRotation=False,bOverrideMaxAngularVelocity=False,bOverrideMaxDepenetrationVelocity=False,bOverrideWalkableSlopeOnInstance=False,bOverrideIterationCounts=False,bInterpolateWhenSubStepping=True,bInertiaConditioning=True,bOneWayInteraction=False,bOverrideSolverAsyncDeltaTime=False,SolverAsyncDeltaTime=0.016667,CollisionProfileName=\"NoCollision\",CollisionResponses=(ResponseArray=((Channel=\"Visibility\",Response=ECR_Ignore),(Channel=\"Camera\",Response=ECR_Ignore))),MaxDepenetrationVelocity=0.000000,MassInKgOverride=100.000000,LinearDamping=0.010000,AngularDamping=0.000000,CustomDOFPlaneNormal=(X=0.000000,Y=0.000000,Z=0.000000),COMNudge=(X=0.000000,Y=0.000000,Z=0.000000),MassScale=1.000000,GravityGroupIndex=0,InertiaTensorScale=(X=1.000000,Y=1.000000,Z=1.000000),WalkableSlopeOverride=(WalkableSlopeBehavior=WalkableSlope_Default,WalkableSlopeAngle=0.000000),PhysMaterialOverride=None,MaxAngularVelocity=3600.000000,CustomSleepThresholdMultiplier=1.000000,StabilizationThresholdMultiplier=1.000000,PhysicsBlendWeight=0.000000,bSimulatePhysics=False,bOverrideMass=False,bEnableGravity=True,bUpdateKinematicFromSimulation=False,bGyroscopicTorqueEnabled=False,bAutoWeld=True,bStartAwake=True,bGenerateWakeEvents=False,bUpdateMassWhenScaleChanges=True)",
+          "StaticMesh": "/Script/Engine.StaticMesh'/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.StableGyroMooringPlatePositiveY'"
         }
       },
       {
@@ -647,6 +648,14 @@
             "to": "K2Node_Composite_ConfigureCargoAction.in:exec"
           },
           {
+            "from": "K2Node_EnhancedInputAction_0.out:Canceled",
+            "to": "K2Node_CallFunction_ResetCargoPressState.in:exec"
+          },
+          {
+            "from": "K2Node_EnhancedInputAction_0.out:Completed",
+            "to": "K2Node_CallFunction_ResetCargoPressState.in:exec"
+          },
+          {
             "from": "K2Node_EnhancedInputAction_0.out:ElapsedSeconds",
             "to": "K2Node_Composite_HandleCargoHold.in:ElapsedSeconds"
           },
@@ -689,14 +698,6 @@
           {
             "from": "K2Node_ExecutionSequence_1.out:then2",
             "to": "K2Node_Composite_ConfigureDisabledMooringCleanup.in:exec"
-          },
-          {
-            "from": "K2Node_EnhancedInputAction_0.out:Completed",
-            "to": "K2Node_CallFunction_ResetCargoPressState.in:exec"
-          },
-          {
-            "from": "K2Node_EnhancedInputAction_0.out:Canceled",
-            "to": "K2Node_CallFunction_ResetCargoPressState.in:exec"
           }
         ]
       }
@@ -707,13 +708,13 @@
       "properties": {
         "GraphGuid": "62AB9F63762C4234BF79B1E2F64BD623"
       },
-      "format": "compact",
       "owner": {
         "graph": "413FAA064735E388A03CDCBE737DDE61",
         "node": "K2Node_Composite_HandleCargoHold",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
           {
@@ -1247,14 +1248,6 @@
             "to": "K2Node_IfThenElse_3.in:exec"
           },
           {
-            "from": "K2Node_Tunnel_0.out:ElapsedSeconds",
-            "to": "K2Node_CallFunction_5.in:left"
-          },
-          {
-            "from": "K2Node_Tunnel_0.out:exec",
-            "to": "K2Node_CallFunction_9.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_2.out:then",
             "to": "K2Node_VariableSet_2.in:exec"
           },
@@ -1273,6 +1266,14 @@
           {
             "from": "K2Node_Self_1.out:target",
             "to": "K2Node_VariableGet_2.in:target"
+          },
+          {
+            "from": "K2Node_Tunnel_0.out:ElapsedSeconds",
+            "to": "K2Node_CallFunction_5.in:left"
+          },
+          {
+            "from": "K2Node_Tunnel_0.out:exec",
+            "to": "K2Node_CallFunction_9.in:exec"
           },
           {
             "from": "K2Node_VariableGet_0.out:StableGyroCargoPressArmed",
@@ -1787,13 +1788,13 @@
       "properties": {
         "GraphGuid": "C655982D6F1649AF80CEAC4402F5BAFD"
       },
-      "format": "compact",
       "owner": {
         "graph": "413FAA064735E388A03CDCBE737DDE61",
         "node": "K2Node_Composite_ArmCargoPress",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
           {
@@ -1983,12 +1984,12 @@
             "to": "K2Node_IfThenElse_1.in:exec"
           },
           {
-            "from": "K2Node_Tunnel_0.out:exec",
-            "to": "K2Node_CallFunction_2.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_1.out:then",
             "to": "K2Node_VariableSet_0.in:exec"
+          },
+          {
+            "from": "K2Node_Tunnel_0.out:exec",
+            "to": "K2Node_CallFunction_2.in:exec"
           },
           {
             "from": "K2Node_VariableSet_0.out:then",
@@ -2003,13 +2004,13 @@
       "properties": {
         "GraphGuid": "7D25DA4D22DE4C3E907777D7EE324FFF"
       },
-      "format": "compact",
       "owner": {
         "graph": "413FAA064735E388A03CDCBE737DDE61",
         "node": "K2Node_Composite_ConfigureDisabledMooringCleanup",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
           {
@@ -2163,12 +2164,12 @@
             "to": "K2Node_Composite_BindDisabledMooringCleanup.in:exec"
           },
           {
-            "from": "K2Node_Tunnel_0.out:exec",
-            "to": "K2Node_CallFunction_14.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_7.out:else",
             "to": "K2Node_Composite_CacheRearMooringSockets.in:exec"
+          },
+          {
+            "from": "K2Node_Tunnel_0.out:exec",
+            "to": "K2Node_CallFunction_14.in:exec"
           }
         ]
       }
@@ -3151,13 +3152,13 @@
       "properties": {
         "GraphGuid": "E28BB12BA19F4C5696811D61334CB380"
       },
-      "format": "compact",
       "owner": {
         "graph": "413FAA064735E388A03CDCBE737DDE61",
         "node": "K2Node_Composite_RebindCargoControllerChanged",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
           {
@@ -3304,10 +3305,6 @@
             "to": "K2Node_RemoveDelegate_0.in:Delegate"
           },
           {
-            "from": "K2Node_Tunnel_0.out:exec",
-            "to": "K2Node_RemoveDelegate_0.in:exec"
-          },
-          {
             "from": "K2Node_RemoveDelegate_0.out:then",
             "to": "K2Node_AddDelegate_0.in:exec"
           },
@@ -3318,6 +3315,10 @@
           {
             "from": "K2Node_Self_2.out:target",
             "to": "K2Node_RemoveDelegate_0.in:target"
+          },
+          {
+            "from": "K2Node_Tunnel_0.out:exec",
+            "to": "K2Node_RemoveDelegate_0.in:exec"
           }
         ]
       }
@@ -3328,13 +3329,13 @@
       "properties": {
         "GraphGuid": "E283AD130E304C8CB4DD7122ACFABD66"
       },
-      "format": "compact",
       "owner": {
         "graph": "413FAA064735E388A03CDCBE737DDE61",
         "node": "K2Node_Composite_ConfigureCargoAction",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
           {
@@ -3505,16 +3506,16 @@
             "to": "K2Node_IfThenElse_0.in:exec"
           },
           {
-            "from": "K2Node_Tunnel_0.out:exec",
-            "to": "K2Node_CallFunction_1.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_0.out:then",
             "to": "K2Node_CallFunction_0.in:exec"
           },
           {
             "from": "K2Node_Self_0.out:target",
             "to": "K2Node_CallFunction_0.in:Object"
+          },
+          {
+            "from": "K2Node_Tunnel_0.out:exec",
+            "to": "K2Node_CallFunction_1.in:exec"
           }
         ]
       }
@@ -5044,18 +5045,18 @@
                 "id": "86C5162BEB7740DAB601484D650D0577",
                 "type": "p_f15e1c980064744f96b026d15dcb23d128f0bd3dd9c51907313edf059d6cdc85"
               },
-              "in:Mesh": {
-                "id": "6871A44896C448E59AF1279CD0596F65",
-                "type": "p_758fd83af92aedc216a0c442ff0688371815a3dc7a5f5bf7039d1c107eeef3ea",
-                "DefaultObject": "\"/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.StableGyroMooringPlatePositiveY\""
-              },
               "in:Location": {
                 "id": "5F0E95B51CE9414B8B7BE8B1BDBB27C2",
+                "type": "p_45bf263fae7b5c7a1db15bc448d2634c2575c47348f5db52496b830a121001f2"
+              },
+              "in:Scale": {
+                "id": "5BC09A25E87147DF9841B5C4B8533CEF",
                 "type": "p_45bf263fae7b5c7a1db15bc448d2634c2575c47348f5db52496b830a121001f2"
               }
             },
             "defaults": {
-              "in:Location": "3.300752000,-3.646131000,0.900426000"
+              "in:Location": "3.300752000,-3.646131000,0.900426000",
+              "in:Scale": "1.000000,1.000000,1.000000"
             }
           },
           {
@@ -5089,18 +5090,18 @@
                 "id": "C75344EABABC4FCFBB1A246F21EE4BF5",
                 "type": "p_f15e1c980064744f96b026d15dcb23d128f0bd3dd9c51907313edf059d6cdc85"
               },
-              "in:Mesh": {
-                "id": "4E2307EE977C4F6BA04CFA6A5039C023",
-                "type": "p_758fd83af92aedc216a0c442ff0688371815a3dc7a5f5bf7039d1c107eeef3ea",
-                "DefaultObject": "\"/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY.StableGyroMooringPlateNegativeY\""
-              },
               "in:Location": {
                 "id": "2C83C15A83C842B8A764F33E15B6DB2A",
+                "type": "p_45bf263fae7b5c7a1db15bc448d2634c2575c47348f5db52496b830a121001f2"
+              },
+              "in:Scale": {
+                "id": "2FAD3B65E1364F5F8CAAB1A6BA2702BC",
                 "type": "p_45bf263fae7b5c7a1db15bc448d2634c2575c47348f5db52496b830a121001f2"
               }
             },
             "defaults": {
-              "in:Location": "3.300752000,3.646131000,0.900426000"
+              "in:Location": "3.300752000,3.646131000,0.900426000",
+              "in:Scale": "1.000000,-1.000000,1.000000"
             }
           },
           {
@@ -5134,18 +5135,18 @@
                 "id": "A1E314FD6B564B1CB3E5029140D4F50F",
                 "type": "p_f15e1c980064744f96b026d15dcb23d128f0bd3dd9c51907313edf059d6cdc85"
               },
-              "in:Mesh": {
-                "id": "6CCDFF8E94DA414DB574C0458CFBD680",
-                "type": "p_758fd83af92aedc216a0c442ff0688371815a3dc7a5f5bf7039d1c107eeef3ea",
-                "DefaultObject": "\"/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.StableGyroMooringPlatePositiveY\""
-              },
               "in:Location": {
                 "id": "83F2D91BC49C4B99A86E22391C3C1675",
+                "type": "p_45bf263fae7b5c7a1db15bc448d2634c2575c47348f5db52496b830a121001f2"
+              },
+              "in:Scale": {
+                "id": "1D024ECB7096405D977ABE15579773A1",
                 "type": "p_45bf263fae7b5c7a1db15bc448d2634c2575c47348f5db52496b830a121001f2"
               }
             },
             "defaults": {
-              "in:Location": "-26.406014000,29.169048000,-7.203407000"
+              "in:Location": "-26.406014000,29.169048000,-7.203407000",
+              "in:Scale": "1.000000,1.000000,1.000000"
             }
           },
           {
@@ -5179,18 +5180,18 @@
                 "id": "3EB45E91B3AB49D889DAAAEB76780F09",
                 "type": "p_f15e1c980064744f96b026d15dcb23d128f0bd3dd9c51907313edf059d6cdc85"
               },
-              "in:Mesh": {
-                "id": "16DBCA30F17B4F77A10F8FE4D2696C1C",
-                "type": "p_758fd83af92aedc216a0c442ff0688371815a3dc7a5f5bf7039d1c107eeef3ea",
-                "DefaultObject": "\"/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY.StableGyroMooringPlateNegativeY\""
-              },
               "in:Location": {
                 "id": "79E32450DA824174BD2A075564677615",
+                "type": "p_45bf263fae7b5c7a1db15bc448d2634c2575c47348f5db52496b830a121001f2"
+              },
+              "in:Scale": {
+                "id": "2DC0BABFBE42483B8E9C08BEA4C02995",
                 "type": "p_45bf263fae7b5c7a1db15bc448d2634c2575c47348f5db52496b830a121001f2"
               }
             },
             "defaults": {
-              "in:Location": "-26.406014000,-29.169048000,-7.203407000"
+              "in:Location": "-26.406014000,-29.169048000,-7.203407000",
+              "in:Scale": "1.000000,-1.000000,1.000000"
             }
           },
           {
@@ -9486,12 +9487,12 @@
             "to": "K2Node_Tunnel_1.in:then"
           },
           {
-            "from": "K2Node_Literal_0.out:IA_GyroCopterDropCargo",
-            "to": "K2Node_VariableGet_1.in:target"
-          },
-          {
             "from": "K2Node_Composite_RefreshCargoAvailability.out:then",
             "to": "K2Node_CallArrayFunction_0.in:exec"
+          },
+          {
+            "from": "K2Node_Literal_0.out:IA_GyroCopterDropCargo",
+            "to": "K2Node_VariableGet_1.in:target"
           },
           {
             "from": "K2Node_MakeArray_0.out:Array",
@@ -9534,13 +9535,13 @@
       "properties": {
         "GraphGuid": "D0E9C71D2C7142A7A1455E68AC4AD7BA"
       },
-      "format": "compact",
       "owner": {
         "graph": "DC3362A678A449D2A5455265E872CFC5",
         "node": "K2Node_Composite_RefreshCargoAvailability",
         "entry": "K2Node_Tunnel_0",
         "exit": "K2Node_Tunnel_1"
       },
+      "format": "compact",
       "body": {
         "nodes": [
           {
@@ -10190,7 +10191,7 @@
               "in:A": {
                 "id": "1802632347AB26D5DB06DE9963F29902",
                 "type": "p_2babc6bf1362bfec7a59b863c573a24f7f0fed6ac8cd6c39ab615ed061f56927",
-                "DefaultTextValue": "NSLOCTEXT(\"\", \"120EE21942C06CD8ED7BD29571144FC2\", \"\u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c \u043d\u0430\u043a\u043b\u043e\u043d\")"
+                "DefaultTextValue": "NSLOCTEXT(\"\", \"120EE21942C06CD8ED7BD29571144FC2\", \"Сбросить наклон\")"
               },
               "in:B": {
                 "id": "FE2D3C994FA34B3929E74C888AB1D1CA",
@@ -10715,44 +10716,6 @@
             }
           },
           {
-            "id": "K2Node_CallFunction_SetPlateMesh",
-            "kind": "call",
-            "properties": {
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.StaticMeshComponent'\",MemberName=\"SetStaticMesh\")",
-              "NodePosX": "700",
-              "NodePosY": "-420",
-              "NodeGuid": "95C6162DECBC499D94CD7272A8A0CC81"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "2A4EF8340E91444D9CE78021B023842F",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "FAF87F5A12164360B5D126E7A279BCF7",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:target": {
-                "id": "2EE8FEFF387F4FDCB376E2F3DAA90144",
-                "type": "p_aabc04eb25ac4babdb292a9da7e83647960c2bab8d4c8f1428035413b9ded0a4",
-                "name": "self"
-              },
-              "in:NewMesh": {
-                "id": "7FF573FBDD8D49DDB96DF876813E5FD8",
-                "type": "p_758fd83af92aedc216a0c442ff0688371815a3dc7a5f5bf7039d1c107eeef3ea"
-              },
-              "out:result": {
-                "id": "57A8728A984641E491D253849A923D4C",
-                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
-                "name": "ReturnValue"
-              }
-            },
-            "defaults": {
-              "out:result": "false"
-            }
-          },
-          {
             "id": "K2Node_DynamicCast_3",
             "kind": "cast",
             "properties": {
@@ -10810,20 +10773,20 @@
                 "id": "0E049336993849A68251F3B335D574D6",
                 "type": "p_f15e1c980064744f96b026d15dcb23d128f0bd3dd9c51907313edf059d6cdc85"
               },
-              "out:Mesh": {
-                "id": "CEAF5C5ECA11415082B98D9D55E19E0F",
-                "type": "p_758fd83af92aedc216a0c442ff0688371815a3dc7a5f5bf7039d1c107eeef3ea"
-              },
               "out:Location": {
                 "id": "E1668BC5689A4C33A544E3522429761A",
+                "type": "p_480e63d745ab587e26996946080e9c570a9f78ee2febf4f467415a3ea0627c59"
+              },
+              "out:Scale": {
+                "id": "FD1ECC2B5B81430385D4A39BFCF1127A",
                 "type": "p_480e63d745ab587e26996946080e9c570a9f78ee2febf4f467415a3ea0627c59"
               }
             },
             "custom": [
               "CustomProperties UserDefinedPin (PinName=\"Actor\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.Actor'\"),DesiredPinDirection=EGPD_Output)",
               "CustomProperties UserDefinedPin (PinName=\"VehicleMesh\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.SceneComponent'\"),DesiredPinDirection=EGPD_Output)",
-              "CustomProperties UserDefinedPin (PinName=\"Mesh\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.StaticMesh'\"),DesiredPinDirection=EGPD_Output)",
-              "CustomProperties UserDefinedPin (PinName=\"Location\",PinType=(PinCategory=\"struct\",PinSubCategoryObject=\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\"),DesiredPinDirection=EGPD_Output)"
+              "CustomProperties UserDefinedPin (PinName=\"Location\",PinType=(PinCategory=\"struct\",PinSubCategoryObject=\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\"),DesiredPinDirection=EGPD_Output)",
+              "CustomProperties UserDefinedPin (PinName=\"Scale\",PinType=(PinCategory=\"struct\",PinSubCategoryObject=\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\"),DesiredPinDirection=EGPD_Output)"
             ]
           }
         ],
@@ -10853,20 +10816,8 @@
             "to": "K2Node_CallFunction_16.in:exec"
           },
           {
-            "from": "K2Node_CallFunction_SetPlateMesh.out:then",
-            "to": "K2Node_CallFunction_15.in:exec"
-          },
-          {
             "from": "K2Node_DynamicCast_3.out:AsStatic Mesh Component",
             "to": "K2Node_CallFunction_15.in:target"
-          },
-          {
-            "from": "K2Node_DynamicCast_3.out:AsStatic Mesh Component",
-            "to": "K2Node_CallFunction_SetPlateMesh.in:target"
-          },
-          {
-            "from": "K2Node_DynamicCast_3.out:then",
-            "to": "K2Node_CallFunction_SetPlateMesh.in:exec"
           },
           {
             "from": "K2Node_FunctionEntry_0.out:Actor",
@@ -10881,16 +10832,20 @@
             "to": "K2Node_CallFunction_13.in:Location"
           },
           {
-            "from": "K2Node_FunctionEntry_0.out:Mesh",
-            "to": "K2Node_CallFunction_SetPlateMesh.in:NewMesh"
-          },
-          {
             "from": "K2Node_FunctionEntry_0.out:VehicleMesh",
             "to": "K2Node_CallFunction_15.in:Parent"
           },
           {
             "from": "K2Node_FunctionEntry_0.out:then",
             "to": "K2Node_CallFunction_14.in:exec"
+          },
+          {
+            "from": "K2Node_DynamicCast_3.out:then",
+            "to": "K2Node_CallFunction_15.in:exec"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:Scale",
+            "to": "K2Node_CallFunction_13.in:Scale"
           }
         ]
       }
@@ -11014,7 +10969,6 @@
     "/Game/Game/Input/Vehicle/IA_GyroCopterThrottleUp.IA_GyroCopterThrottleUp",
     "/Game/Mods/StableGyro/IAV_GyroPitchReset.IAV_GyroPitchReset",
     "/Game/Mods/StableGyro/Settings/BP_IniFileParser.BP_IniFileParser_C",
-    "/Game/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY.StableGyroMooringPlateNegativeY",
     "/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.StableGyroMooringPlatePositiveY",
     "/Script/Engine.Default__BlueprintPathsLibrary",
     "/Script/Engine.Default__GameUserSettings",
@@ -13726,6 +13680,26 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
+    "p_76deda82db767a70046c946059451b034fd5e732677741bdb65b994910ffb6ca": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
     "p_8d629527942d6b0516039cb6e879d1e3a5a0f45be5a1048b83794fba1c320d0c": {
       "PersistentGuid": "00000000000000000000000000000000",
       "PinType.ContainerType": "None",
@@ -13985,47 +13959,27 @@
       "bHidden": "False",
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
-    },
-    "p_76deda82db767a70046c946059451b034fd5e732677741bdb65b994910ffb6ca": {
-      "PersistentGuid": "00000000000000000000000000000000",
-      "PinType.ContainerType": "None",
-      "PinType.PinCategory": "\"real\"",
-      "PinType.PinSubCategory": "\"double\"",
-      "PinType.PinSubCategoryMemberReference": "()",
-      "PinType.PinSubCategoryObject": "None",
-      "PinType.PinValueType": "()",
-      "PinType.bIsConst": "False",
-      "PinType.bIsReference": "False",
-      "PinType.bIsUObjectWrapper": "False",
-      "PinType.bIsWeakPointer": "False",
-      "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "bAdvancedView": "False",
-      "bDefaultValueIsIgnored": "False",
-      "bDefaultValueIsReadOnly": "False",
-      "bHidden": "False",
-      "bNotConnectable": "False",
-      "bOrphanedPin": "False"
     }
   },
   "classes": {
-    "AddDelegate": "/Script/BlueprintGraph.K2Node_AddDelegate",
     "call": "/Script/BlueprintGraph.K2Node_CallFunction",
     "CallParentFunction": "/Script/BlueprintGraph.K2Node_CallParentFunction",
     "Composite": "/Script/BlueprintGraph.K2Node_Composite",
-    "CreateDelegate": "/Script/BlueprintGraph.K2Node_CreateDelegate",
     "EnhancedInputAction": "/Script/InputBlueprintNodes.K2Node_EnhancedInputAction",
     "event": "/Script/BlueprintGraph.K2Node_Event",
     "sequence": "/Script/BlueprintGraph.K2Node_ExecutionSequence",
     "branch": "/Script/BlueprintGraph.K2Node_IfThenElse",
-    "RemoveDelegate": "/Script/BlueprintGraph.K2Node_RemoveDelegate",
     "self": "/Script/BlueprintGraph.K2Node_Self",
+    "Tunnel": "/Script/BlueprintGraph.K2Node_Tunnel",
     "getVariable": "/Script/BlueprintGraph.K2Node_VariableGet",
     "setVariable": "/Script/BlueprintGraph.K2Node_VariableSet",
-    "cast": "/Script/BlueprintGraph.K2Node_DynamicCast",
-    "MacroInstance": "/Script/BlueprintGraph.K2Node_MacroInstance",
-    "Tunnel": "/Script/BlueprintGraph.K2Node_Tunnel",
     "BreakStruct": "/Script/BlueprintGraph.K2Node_BreakStruct",
+    "cast": "/Script/BlueprintGraph.K2Node_DynamicCast",
     "EnumEquality": "/Script/BlueprintGraph.K2Node_EnumEquality",
+    "MacroInstance": "/Script/BlueprintGraph.K2Node_MacroInstance",
+    "AddDelegate": "/Script/BlueprintGraph.K2Node_AddDelegate",
+    "CreateDelegate": "/Script/BlueprintGraph.K2Node_CreateDelegate",
+    "RemoveDelegate": "/Script/BlueprintGraph.K2Node_RemoveDelegate",
     "FunctionEntry": "/Script/BlueprintGraph.K2Node_FunctionEntry",
     "GenericCreateObject": "/Script/BlueprintGraph.K2Node_GenericCreateObject",
     "FunctionResult": "/Script/BlueprintGraph.K2Node_FunctionResult",

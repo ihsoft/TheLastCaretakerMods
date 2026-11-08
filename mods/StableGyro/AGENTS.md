@@ -14,6 +14,9 @@ Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
   reconstructed identities.
 - [Candidate producer](Build-StableGyro.ps1): complete build; use `-Install`
   when preparing a game candidate so the owned INI is merged and installed.
+- [Plate updater](Update-StableGyroMooringPlate.ps1): explicitly replace and fully
+  validate the maintained mesh after a game update or an import fix; invocation
+  and the ordinary build boundary are in [release preparation](ARCHITECTURE.md#release-preparation).
 - [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
 - [Shared INI recipe](../../docs/runtime-configuration-patterns-knowledge.md):
   schema-driven settings, entry reload, and user-value preservation.

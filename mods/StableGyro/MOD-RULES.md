@@ -156,9 +156,9 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   shared BPT workflow and commit their synchronized JSON alongside the assets.
   Do not restore C++ graph generation,
   clear Content during a build, or treat BPT JSON as build-time source assets.
-- Build-StableGyro.ps1 is the only public producer. It owns fingerprinting,
+- Build-StableGyro.ps1 is the public release producer. It owns fingerprinting,
   declared native-support preparation, focused project
-  mesh and item refresh, cook, packaging, verification, ZIP creation, and
+  item refresh, cook, packaging, verification, ZIP creation, and
   optional -Install. Keep the native mirror sources under `EditorSupport/`;
   ready plugins and their binaries are local tooling, never release payload.
 - `-Install` must preserve current values and comments in an existing
@@ -202,19 +202,22 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
   and hint; include any connected Mooring port in the hint predicate and stock
   disconnect path. Disabled mode keeps the native two-port action and hint.
 - Preserve the extracted mooring mesh's corner normals, UV channels, vertex
-  colors and material override when splitting its two sides. Do not manually
+  colors and material override when extracting the positive-Y plate. Do not manually
   remove zero-area triangles or invent tangents absent from the source GLB.
-  Prepare complete editor meshes through the shared StaticMesh producer with the
+  Prepare the complete editor mesh through the shared StaticMesh producer with the
   Nanite, fallback and ray-tracing policy in [architecture](ARCHITECTURE.md).
-  Recreate them only when the installed Steam build differs from
-  `Build/MooringMeshes.source.json` or the public producer receives
-  `-ReimportMooringMeshes`. An unchanged build reuses the project assets.
-  On refresh, replace both packages at unchanged identities; do not merge
-  old mesh contents. Commit their source state with the refreshed pair.
-  Cook them with the mod project and preserve every emitted
-  cooked companion. Keep material stubs out of the payload. Validate the exact final
-  container's representations, source attributes and material references before
-  installation; geometry preservation and game appearance are separate gates.
+  Keep one mesh in the maintained project and share it through the plate component
+  template; use instance transforms to mirror the opposite side. Preserve socket
+  component names and SocketIDs. Run `Update-StableGyroMooringPlate.ps1` separately
+  after a game build change or to repair an import. It replaces the complete package
+  at its existing identity, never merging old mesh contents. Commit the mesh with
+  `Build/MooringMeshes.source.json`. Ordinary builds must not extract, split or
+  recreate the plate; stale, missing or pending inputs block the build.
+  The updater performs full source-geometry and attribute comparison after cooking
+  in the mod project. Every release validates the exact final container's Nanite,
+  fallback, ray-tracing and material contracts. Preserve every cooked companion
+  and exclude material stubs. Geometry preservation and game appearance are
+  separate gates.
 - Gameplay validation covers pitch in both directions, release hold, both
   limits, X, exit/re-entry, altitude braking/hold across partial and full
   throttle, Ctrl descent/reacquisition with positive and zero configured descent

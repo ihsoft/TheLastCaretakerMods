@@ -131,7 +131,7 @@ New-Item -ItemType Directory -Path $settingsStage -Force | Out-Null
 foreach ($extension in @('.uasset', '.uexp')) {
     Copy-Item -LiteralPath (Join-Path $helperSource ('Settings\BP_IniFileParser' + $extension)) -Destination $settingsStage
 }
-foreach ($meshName in @('StableGyroMooringPlatePositiveY', 'StableGyroMooringPlateNegativeY')) {
+foreach ($meshName in @('StableGyroMooringPlatePositiveY')) {
     $meshSource = Join-Path $helperSource ($meshName + '\StaticMeshes')
     $meshStage = Join-Path $helperStage ($meshName + '\StaticMeshes')
     New-Item -ItemType Directory -Path $meshStage -Force | Out-Null
@@ -199,7 +199,6 @@ $expectedAssetPaths = @(
     '../../../Voyage/Content/Mods/StableGyro/ModActor.uasset'
     '../../../Voyage/Content/Mods/StableGyro/PitchInputActor.uasset'
     '../../../Voyage/Content/Mods/StableGyro/Settings/BP_IniFileParser.uasset'
-    '../../../Voyage/Content/Mods/StableGyro/StableGyroMooringPlateNegativeY/StaticMeshes/StableGyroMooringPlateNegativeY.uasset'
     '../../../Voyage/Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.uasset'
     '../../../Voyage/Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset'
 )
