@@ -155,6 +155,33 @@ def groups(sources):
     return result
 
 
+def engine_error_detail(text):
+    """Keep the first compiler failure visible alongside the command's stop reason."""
+    errors = []
+    for line in text.splitlines():
+        match = re.search(r'Log(Temp|Blueprint): Error:\s*(.*)', line)
+        if match:
+            error = (match[1], match[2].strip())
+            if error not in errors:
+                errors.append(error)
+    if not errors:
+        return ''
+    compiler = next((message for channel, message in errors
+                     if channel == 'Blueprint' and '[Compiler]' in message), None)
+    if compiler:
+        stop = next((message for channel, message in reversed(errors)
+                     if channel == 'Temp'), errors[-1][1])
+        details = [('first compiler error', compiler)]
+        if stop != compiler:
+            details.append(('stop', stop))
+    else:
+        details = [('', message) for _, message in errors[-2:]]
+    # Bound each message separately so a long compiler error cannot hide the stop.
+    return ': ' + ' | '.join((label + ': ' if label else '') +
+                            (message if len(message) <= 300 else message[:297] + '...')
+                            for label, message in details)
+
+
 class Workspace:
     def __init__(self, root, engine):
         self.root = Path(root).resolve()
@@ -174,11 +201,8 @@ class Workspace:
             result = subprocess.run([str(a) for a in args], stdout=stream, stderr=subprocess.STDOUT)
         if result.returncode:
             unreal_log = self.run / (name + '-unreal.log')
-            detail = ''
-            if unreal_log.is_file():
-                errors = [line.split('Error:', 1)[1].strip() for line in unreal_log.read_text(encoding='utf-8', errors='replace').splitlines()
-                          if re.search(r'Log(?:Temp|Blueprint): Error:', line)]
-                detail = ': ' + ' | '.join(errors[-2:])[:500] if errors else ''
+            detail = engine_error_detail((unreal_log if unreal_log.is_file() else log)
+                                        .read_text(encoding='utf-8', errors='replace'))
             raise RuntimeError(f'{name} failed ({result.returncode}){detail}; diagnostic: {log}')
 
     def engine_run(self, mode, name, **fields):

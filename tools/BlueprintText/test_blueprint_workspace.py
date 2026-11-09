@@ -62,6 +62,51 @@ class WorkspaceTests(unittest.TestCase):
         bw.write(self.source, source)
         return source
 
+    def test_command_reports_first_dependency_compiler_error_and_stop(self):
+        first = '[AssetLog] /Game/Peer.Peer: [Compiler] In use pin Target no longer exists on node Refresh Ui.'
+        later = '[AssetLog] /Game/Selected.Selected: [Compiler] Manager type does not match the property.'
+        stop = 'Rebuilt Blueprint failed compilation: /Game/Selected.Selected'
+        lines = ['LogBlueprint: Error: ' + first, 'LogBlueprint: Error: ' + later,
+                 'LogTemp: Error: ' + stop]
+        # Unreal repeats these errors in its final summary.
+        log_text = '\n'.join(['LogBlueprint: Warning: irrelevant'] + lines + lines)
+        for separate_log in (True, False):
+            with self.subTest(separate_log=separate_log):
+                name = 'import-separate' if separate_log else 'import-stdout'
+                def run(args, stdout, **kwargs):
+                    stdout.write(log_text)
+                    if separate_log:
+                        (self.ws.run / (name + '-unreal.log')).write_text(log_text, encoding='utf-8')
+                    return subprocess.CompletedProcess(args, 3)
+                with patch.object(bw.subprocess, 'run', side_effect=run):
+                    with self.assertRaises(RuntimeError) as caught:
+                        self.ws.command(['unused-engine'], name)
+                message = str(caught.exception)
+                self.assertIn('first compiler error: ' + first, message)
+                self.assertIn('stop: ' + stop, message)
+                self.assertNotIn(later, message)
+                self.assertEqual(message.count(first), 1)
+                self.assertIn(f'{name} failed (3)', message)
+                self.assertIn('diagnostic: ' + str(self.ws.run / (name + '.log')), message)
+
+    def test_engine_error_detail_keeps_stop_after_long_first_error(self):
+        first = 'LogBlueprint: Error: [AssetLog] /Game/Peer.Peer: [Compiler] ' + 'x' * 1000
+        detail = bw.engine_error_detail(first + '\nLogTemp: Error: Import stopped')
+        self.assertIn('/Game/Peer.Peer', detail)
+        self.assertIn('... | stop: Import stopped', detail)
+        self.assertLess(len(detail), 400)
+
+    def test_engine_error_detail_handles_single_and_noncompiler_failures(self):
+        first = '[AssetLog] /Game/Peer.Peer: [Compiler] Missing function'
+        self.assertEqual(bw.engine_error_detail('LogBlueprint: Error: ' + first),
+                         ': first compiler error: ' + first)
+        self.assertEqual(bw.engine_error_detail('LogTemp: Error: Missing resource\n'
+                                              'LogTemp: Error: Import failed\n'
+                                              'LogTemp: Error: Missing resource\n'
+                                              'LogTemp: Error: Import failed'),
+                         ': Missing resource | Import failed')
+        self.assertEqual(bw.engine_error_detail('LogBlueprint: Warning: warning only'), '')
+
     def library(self):
         document = copy.deepcopy(self.document)
         document.pop('root')

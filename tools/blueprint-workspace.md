@@ -310,6 +310,11 @@ not a requirement to enumerate all dependencies before ordinary edits or a
 guarantee that every reference cycle is supported. Selection remains explicit;
 Apply does not automatically expand its write set.
 
+On engine failure, the compact reason includes the first Blueprint compiler error
+with its logged asset identity and the final tool error when available. Repeated
+summary entries are omitted and each message is bounded; use the diagnostic log
+for complete text. An earlier error in an unselected dependency remains visible.
+
 Apply verifies Blueprint state without generating or copying preview images.
 Run Preview to collect current widget resources after Apply. A Preview failure
 does not roll back applied packages or change the accepted project baseline.
