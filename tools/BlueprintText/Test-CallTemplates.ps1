@@ -33,7 +33,8 @@ function RunEngine([string]$Mode,[string]$Name){
 RunEngine 'CallTemplateFixture' 'fixture'
 & $tool -Action Export -ProjectFile $project -WorkspaceRoot $work -Asset '/Game/BPTCallTemplateFixture' -EngineRoot $EngineRoot -PythonPath $PythonPath
 $operations=@('/Script/Engine.Actor::AddComponentByClass','/Script/Engine.SceneComponent::K2_AttachToComponent',
-    '/Script/Engine.BoxComponent::SetBoxExtent','/Script/Engine.SceneComponent::GetChildrenComponents','/Script/Engine.KismetMathLibrary::MakeTransform')
+    '/Script/Engine.BoxComponent::SetBoxExtent','/Script/Engine.SceneComponent::GetChildrenComponents','/Script/Engine.KismetMathLibrary::MakeTransform',
+    '/Script/Engine.KismetSystemLibrary::SetClassPropertyByName')
 $before=Get-Content -LiteralPath (Join-Path $work 'workspace.json') -Raw | ConvertFrom-Json
 $source=Join-Path $work $before.assets[0].source
 $sourceBytes=[IO.File]::ReadAllBytes($source)
@@ -72,6 +73,10 @@ $rejected=$false
 try{& $tool -Action CallTemplates -WorkspaceRoot $work -Operation '/Script/Engine.KismetSystemLibrary::Delay' -EngineRoot $EngineRoot -PythonPath $PythonPath *> (Join-Path $output 'latent-rejection.log')}
 catch{$rejected=$true}
 if(-not $rejected -or (Get-Content (Join-Path $output 'latent-rejection.log') -Raw) -notmatch 'Latent'){throw 'Expected latent template rejection.'}
-$result=[pscustomobject]@{status='passed';templates=5;strictApply=$true;freshProcessCheck=$true;explicitFalsePreserved=$true;purePinsPreserved=$true;constReferenceConnected=$true;missingReferenceRejected=$referenceRejected;latentRejected=$true;sourceIsolation=$true;evidence=$output}
+$internalRejected=$false
+try{& $tool -Action CallTemplates -WorkspaceRoot $work -Operation '/Script/Engine.KismetSystemLibrary::SetObjectPropertyByName' -EngineRoot $EngineRoot -PythonPath $PythonPath *> (Join-Path $output 'internal-rejection.log')}
+catch{$internalRejected=$true}
+if(-not $internalRejected -or (Get-Content (Join-Path $output 'internal-rejection.log') -Raw) -notmatch 'outside the tested allowlist'){throw 'Expected unrelated internal setter rejection.'}
+$result=[pscustomobject]@{status='passed';templates=6;strictApply=$true;freshProcessCheck=$true;classPropertyWrite=$true;classPropertyNoOpsAndNull=$true;classPropertyInstanceIsolation=$true;unrelatedInternalRejected=$internalRejected;explicitFalsePreserved=$true;purePinsPreserved=$true;constReferenceConnected=$true;missingReferenceRejected=$referenceRejected;latentRejected=$true;sourceIsolation=$true;evidence=$output}
 $result | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding UTF8
 $result | ConvertTo-Json -Compress

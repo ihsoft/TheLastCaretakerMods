@@ -21,7 +21,8 @@ constexpr TCHAR NativePrefix[]=TEXT("/Script/");
 constexpr TCHAR ContextName[]=TEXT("BPTCallTemplateContext");
 constexpr TCHAR ContextGraph[]=TEXT("CallTemplateGraph");
 constexpr TCHAR InternalMetadata[]=TEXT("BlueprintInternalUseOnly");
-constexpr TCHAR AllowedInternal[]=TEXT("/Script/Engine.Actor::AddComponentByClass");
+constexpr TCHAR AllowedAddComponent[]=TEXT("/Script/Engine.Actor::AddComponentByClass");
+constexpr TCHAR AllowedSetClass[]=TEXT("/Script/Engine.KismetSystemLibrary::SetClassPropertyByName");
 constexpr TCHAR LatentMetadata[]=TEXT("Latent");
 constexpr TCHAR ArrayMetadata[]=TEXT("ArrayParm");
 constexpr TCHAR MapMetadata[]=TEXT("MapParam");
@@ -30,7 +31,7 @@ constexpr TCHAR StructMetadata[]=TEXT("CustomStructureParam");
 constexpr TCHAR EnumExecMetadata[]=TEXT("ExpandEnumAsExecs");
 constexpr TCHAR BoolExecMetadata[]=TEXT("ExpandBoolAsExecs");
 constexpr TCHAR DynamicTypeMetadata[]=TEXT("DeterminesOutputType");
-constexpr TCHAR CoverageText[]=TEXT("Ordinary native CallFunction nodes with concrete pins in the selected parent context; no latent, wildcard, event or special-node synthesis. Internal allowlist: Actor.AddComponentByClass.");
+constexpr TCHAR CoverageText[]=TEXT("Ordinary native CallFunction nodes with concrete pins in the selected parent context; no latent, wildcard, event or special-node synthesis. Internal allowlist: Actor.AddComponentByClass, KismetSystemLibrary.SetClassPropertyByName.");
 
 bool Build(const FString& Input,const FString& Output)
 {
@@ -61,7 +62,7 @@ bool Build(const FString& Input,const FString& Output)
                                   EnumExecMetadata,BoolExecMetadata,DynamicTypeMetadata})
             if(Function->HasMetaData(Metadata))
             {UE_LOG(LogTemp,Error,TEXT("CallTemplates does not support %s metadata on %s."),Metadata,*Operation);return false;}
-        if(Function->HasMetaData(InternalMetadata) && Operation!=AllowedInternal)
+        if(Function->HasMetaData(InternalMetadata) && Operation!=AllowedAddComponent && Operation!=AllowedSetClass)
         {UE_LOG(LogTemp,Error,TEXT("CallTemplates internal function is outside the tested allowlist: %s"),*Operation);return false;}
         auto* Call=NewObject<UK2Node_CallFunction>(Graph);Graph->AddNode(Call);Call->CreateNewGuid();
         Call->SetFromFunction(Function);Call->AllocateDefaultPins();

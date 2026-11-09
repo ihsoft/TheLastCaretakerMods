@@ -199,9 +199,18 @@ concrete pins. The request must name the function's declaring class. Blueprint
 functions, events, private/protected functions, latent calls, wildcard/container
 specialization, dynamic output typing and enum/bool execution expansion are
 outside this factory. Internal functions are rejected except the tested
-`Actor.AddComponentByClass` native call; this does not synthesize its editor
-special node or expose-on-spawn assignments. Unsupported requests fail without
+`Actor.AddComponentByClass` and `KismetSystemLibrary.SetClassPropertyByName`
+native calls; this does not synthesize editor special nodes or expose-on-spawn
+assignments. Unsupported requests fail without
 publishing a partial catalogue.
+
+Request `/Script/Engine.KismetSystemLibrary::SetClassPropertyByName` for a named
+class-property write. Its reflected inputs are `Object`, `PropertyName` and
+`Value` (a class reference constrained to `UObject`), plus execution pins.
+The engine writes only an existing class property whose class constraint accepts
+the value; null clears it. A missing property or incompatible class is a silent
+no-op. Strict Apply verifies the represented call, not the presence or effect of
+the named property in the game; validate that consumer contract separately.
 
 Templates reflect declarations loaded by the selected editor project. For game
 APIs, correctness still depends on its native mirrors; this is not discovery from
@@ -381,6 +390,15 @@ diagnostic path, then inspect the relevant evidence. A successful render does no
 require screenshot inspection, link crawling or a second comparison by the agent.
 
 ## Editor stub identity
+
+When creating or changing an external Blueprint compilation stub, establish its
+exact generated-class parent from the stock asset's `SuperStruct`, rather than
+inferring it from the asset name or the API the caller needs. Record that source
+contract in the mod's [game-derived input provenance](../docs/game-derived-data-rule.md).
+Revalidate it under that provenance's refresh conditions, not before each Apply.
+Compilation and strict round-trip comparison establish consistency with the
+editor dependencies supplied to BPT; they do not establish that those dependencies
+match the game. The stub role marker below labels an asset, not its fidelity.
 
 Stub creators must set asset metadata `BlueprintText.Role` to `stub`. Supported
 BPT exports preserve it as optional `editorRole: "stub"`, and Apply restores it

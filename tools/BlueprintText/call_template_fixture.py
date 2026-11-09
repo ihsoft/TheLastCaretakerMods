@@ -13,6 +13,7 @@ OPERATIONS = {
     'ChildrenCall': '/Script/Engine.SceneComponent::GetChildrenComponents',
     'Transform': '/Script/Engine.KismetMathLibrary::MakeTransform',
 }
+SET_CLASS = '/Script/Engine.KismetSystemLibrary::SetClassPropertyByName'
 
 
 def edited(document, catalog):
@@ -50,6 +51,16 @@ def edited(document, catalog):
         link(entry['id'], 'TargetBox', identity, 'self')
     link(entry['id'], 'ParentComponent', 'Attach', 'Parent')
     link('ChildrenCall', 'Children', result['id'], 'Children')
+    document = add_call(document, catalog, SET_CLASS, 'SetClass', 'SetClassProbe')
+    graph = next(g for g in document['graphs'] if g['name'] == 'SetClassProbe')
+    nodes = {n['id']: n for n in graph['body']['nodes']}
+    entry = next(n for n in nodes.values() if document['classes'][n['kind']].endswith('.K2Node_FunctionEntry'))
+    result = next(n for n in nodes.values() if document['classes'][n['kind']].endswith('.K2Node_FunctionResult'))
+    graph['body']['links'] = []
+    link(entry['id'], 'then', 'SetClass', 'execute')
+    link('SetClass', 'then', result['id'], 'execute')
+    for pin in ('Object', 'PropertyName', 'Value'):
+        link(entry['id'], pin, 'SetClass', pin)
     return compact(native(document))
 
 
