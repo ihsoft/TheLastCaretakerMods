@@ -19,6 +19,23 @@ A working mapping does not imply a visible standard hint. A changed HUD value
 does not prove movement consumes the same field. Diagnose the producer and
 consumer of each layer separately.
 
+## Camera compass in a vehicle HUD
+
+On Steam build `25982825`, the stock `WBP_CompassHUD` uses native
+`VoyageCompassWidget` logic with a cached pawn reference. Its
+`bUseControllerDirection` mode is not a guarantee of the active camera's
+heading after possession changes. Reusing the visual widget in a vehicle HUD
+therefore also requires verifying its direction source.
+
+A camera-driven consumer can retain the stock widget tree through a child,
+disable that display's native tick and update its material and degree text
+from the owning player's `PlayerCameraManager.GetCameraRotation`. Cache the
+owned display references at initialization and let the vehicle HUD control
+visibility. Avoid a second native updater competing for the same presentation.
+The [StableGyro camera compass](../mods/StableGyro/ARCHITECTURE.md#camera-compass)
+provides the concrete widget and heading contract; it does not establish
+other vehicles' HUD ownership or lifecycle.
+
 ## Actor attachment and save restoration
 
 In an observed stock snapshot,

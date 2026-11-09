@@ -2,6 +2,8 @@
 
 ## Next
 
+- Added a compass to the Gyro.
+
 ## V6
 
 - Fixed abnormally low fuel consumption by restoring the stock default.

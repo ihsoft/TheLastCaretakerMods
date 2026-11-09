@@ -1,7 +1,8 @@
 # StableGyro Blueprint text
 
-Text representations of StableGyro's three gameplay Blueprints and its INI
-parser. These JSON files make Blueprint changes visible in Git and support
+Text representations of StableGyro's gameplay Blueprints, INI parser and
+compass widgets, with HUD dependency stubs under `Stubs/`.
+These JSON files make Blueprint changes visible in Git and support
 editing through BlueprintText (BPT).
 
 The original assets live in the Unreal project's `Content/` directory. These

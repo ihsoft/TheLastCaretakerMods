@@ -1,5 +1,5 @@
-# INTERNAL BUILD STAGE: cooks the eight maintained production packages in one narrow
-# Unreal invocation. It contains no extracted game data; its output is generated
+# INTERNAL BUILD STAGE: cooks the maintained production packages in narrow
+# Unreal invocations. It contains no extracted game data; its output is generated
 # and not committed.
 
 param(
@@ -39,10 +39,15 @@ $packages = @(
     '/Game/Mods/StableGyro/Settings/BP_IniFileParser',
     '/Game/Mods/StableGyro/IAV_GyroPitchReset',
     '/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroCompassHUD',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroCameraCompass',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay',
     '/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard',
     '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY'
 )
 if ($MooringPlateOnly) { $packages = @($packages[-1]) }
+$compassDisplay = '/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay'
+$ordinaryPackages = @($packages | Where-Object { $_ -ne $compassDisplay })
 $requiredCookedExtensions = @('.uasset', '.uexp')
 $optionalCookedExtensions = @('.ubulk', '.uptnl', '.m.ubulk')
 $cookedExtensions = @($requiredCookedExtensions + $optionalCookedExtensions)
@@ -58,14 +63,14 @@ foreach ($package in $packages) {
     }
 }
 
-Write-Host "Cooking $($packages.Count) StableGyro packages in one Unreal process"
+Write-Host "Cooking $($packages.Count) StableGyro packages"
 $arguments = @(
     ('"{0}"' -f $projectPath),
     '-run=cook',
     '-targetplatform=Windows',
     '-unversioned',
     '-SkipZenStore',
-    ('-Package={0}' -f ($packages -join '+')),
+    ('-Package={0}' -f ($ordinaryPackages -join '+')),
     '-CookSinglePackageNoRefs',
     '-unattended',
     '-nop4',
@@ -99,24 +104,50 @@ if ($badMeshDescriptionErrors.Count -ne 0) {
     throw "Cook reported invalid reference StaticMesh packages despite exit code 0: $($badMeshDescriptionErrors.Line -join '; ')"
 }
 
-foreach ($package in $packages) {
-    $relativeAsset = $package.Substring('/Game/'.Length)
-    $sourceBase = Join-Path $cookedContent $relativeAsset
-    $destinationBase = Join-Path $outputContent $relativeAsset
-    New-Item -ItemType Directory -Path (Split-Path $destinationBase -Parent) -Force | Out-Null
-    foreach ($extension in $requiredCookedExtensions) {
-        $source = $sourceBase + $extension
-        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
-            throw "Expected cooked file was not produced: $source"
-        }
-        Copy-Item -LiteralPath $source -Destination ($destinationBase + $extension)
-    }
-    foreach ($extension in $optionalCookedExtensions) {
-        $source = $sourceBase + $extension
-        if (Test-Path -LiteralPath $source -PathType Leaf) {
+function Copy-CookedPackageFiles {
+    param([string[]]$PackageNames)
+    foreach ($package in $PackageNames) {
+        $relativeAsset = $package.Substring('/Game/'.Length)
+        $sourceBase = Join-Path $cookedContent $relativeAsset
+        $destinationBase = Join-Path $outputContent $relativeAsset
+        New-Item -ItemType Directory -Path (Split-Path $destinationBase -Parent) -Force | Out-Null
+        foreach ($extension in $requiredCookedExtensions) {
+            $source = $sourceBase + $extension
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+                throw "Expected cooked file was not produced: $source"
+            }
             Copy-Item -LiteralPath $source -Destination ($destinationBase + $extension)
         }
+        foreach ($extension in $optionalCookedExtensions) {
+            $source = $sourceBase + $extension
+            if (Test-Path -LiteralPath $source -PathType Leaf) {
+                Copy-Item -LiteralPath $source -Destination ($destinationBase + $extension)
+            }
+        }
     }
+}
+
+# A subsequent cook cleans the project cook directory; stage each batch first.
+Copy-CookedPackageFiles -PackageNames $ordinaryPackages
+
+if ($packages -contains $compassDisplay) {
+    # This child writes an inherited UUserWidget property through partial native
+    # editor mirrors. Named property tags preserve TickFrequency's real identity;
+    # an unversioned field index would resolve against the game's larger schema.
+    $displayArguments = @($arguments | Where-Object { $_ -ne '-unversioned' -and $_ -notlike '-Package=*' -and $_ -notlike '-abslog=*' })
+    $displayArguments += ('-Package={0}' -f $compassDisplay)
+    if (-not [string]::IsNullOrWhiteSpace($LogPath)) {
+        $displayArguments += ('-abslog="{0}"' -f ($log + '.compass-display.log'))
+    }
+    $displayProcess = Start-Process -FilePath $editor -ArgumentList $displayArguments -Wait -PassThru -WindowStyle Hidden
+    if ($displayProcess.ExitCode -ne 0) {
+        throw "Compass display cook failed with exit code $($displayProcess.ExitCode)."
+    }
+}
+
+
+if ($packages -contains $compassDisplay) {
+    Copy-CookedPackageFiles -PackageNames @($compassDisplay)
 }
 
 $files = @(Get-ChildItem -LiteralPath $outputContent -Recurse -File)

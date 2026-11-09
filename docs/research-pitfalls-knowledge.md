@@ -33,11 +33,17 @@ Keep the distinctions below in mind after game updates or context compaction.
   than the field accessed by a new graph. Cook serializes the inherited CDO by
   editor-class schema indices, while runtime reads it against the full shipping
   schema. An incomplete mirror can compile, cook, and pass `retoc verify`, yet
-  fail during async loading with `Bad export index` before any graph runs. The
-  Boat HUD child failed this way at
-  `BP_VoyageIngameBoatHud.Default__BP_VoyageIngameBoatHud_C`, index `66559/5`.
-  Establish the exact native property prefix and check the cooked CDO against
-  the shipping mapping before runtime testing.
+  resolve a value to the wrong property or fail during async loading with
+  `Bad export index` before any graph runs. Establish the exact native property
+  prefix or use a named-property cook for the affected authored package, then
+  check its CDO against the shipping mapping before runtime testing.
+  In UE 5.8.2, omitting `-unversioned` on that cook preserves property tags.
+  Do not disable `CanUseUnversionedPropertySerialization` globally: editor
+  object duplication also uses unversioned serialization and can assert.
+  Separate cook passes need their outputs staged between invocations because
+  a later cook clears the cook directory. The
+  [StableGyro display](../mods/StableGyro/ARCHITECTURE.md#release-preparation)
+  uses this boundary for an inherited widget setting.
 - Writing a new UObject into a widget field does not guarantee that the
   compiled Blueprint or `WidgetTree` uses the reference.
 - A copy of the original Blueprint at a new package path preserves behavior

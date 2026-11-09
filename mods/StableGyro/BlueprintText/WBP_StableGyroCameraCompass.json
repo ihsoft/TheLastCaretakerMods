@@ -1,0 +1,2005 @@
+{
+  "schema": 2,
+  "format": "compact-asset",
+  "asset": "/Game/Mods/StableGyro/UI/WBP_StableGyroCameraCompass",
+  "parent": "/Script/UMG.UserWidget",
+  "properties": {
+    "BlueprintSystemVersion": "2",
+    "bLegacyNeedToPurgeSkelRefs": "False",
+    "BlueprintGuid": "6C8238A8DEF949B1BE5FE8ABAE4A99E2",
+    "WidgetVariableNameToGuidMap": "((\"CompassContainer\", C158E209B1C5434D8494B65048B428FD))",
+    "TickPrediction": "WillTick",
+    "TickPredictionReason": "Script"
+  },
+  "variables": [
+    {
+      "VarName": "\"DirectionMaterial\"",
+      "VarGuid": "30712D48DE3F4748A6D9ADA212611DD0",
+      "VarType": "(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.MaterialInstanceDynamic'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"DirectionMaterial\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"DegreesText\"",
+      "VarGuid": "9E6D5F01F4C64D349228363E7A062D8F",
+      "VarType": "(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"DegreesText\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"Camera\"",
+      "VarGuid": "B0696AE5C14E4AC0AD4E2AE9BCED5ED2",
+      "VarType": "(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.PlayerCameraManager'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"Camera\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    }
+  ],
+  "defaults": {
+    "bHasScriptImplementedPaint": "False",
+    "Camera": "None",
+    "DegreesText": "None",
+    "DirectionMaterial": "None"
+  },
+  "widget": {
+    "tree": "WBP_StableGyroCameraCompass:WidgetTree",
+    "objects": [
+      {
+        "id": "WBP_StableGyroCameraCompass:WidgetTree",
+        "name": "WidgetTree",
+        "class": "/Script/UMG.WidgetTree",
+        "outer": "$blueprint",
+        "flags": 262153,
+        "properties": {
+          "RootWidget": "/Script/UMG.Overlay'/Game/Mods/StableGyro/UI/WBP_StableGyroCameraCompass.WBP_StableGyroCameraCompass:WidgetTree.CompassContainer'"
+        }
+      },
+      {
+        "id": "WBP_StableGyroCameraCompass:WidgetTree.CompassContainer",
+        "name": "CompassContainer",
+        "class": "/Script/UMG.Overlay",
+        "outer": "WBP_StableGyroCameraCompass:WidgetTree",
+        "flags": 8,
+        "properties": {
+          "bIsVariable": "True"
+        }
+      }
+    ]
+  },
+  "graphs": [
+    {
+      "name": "EventGraph",
+      "kind": "event",
+      "properties": {
+        "bAllowDeletion": "False",
+        "GraphGuid": "0D682C73D4664726A0DA74088189C2CA"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "AttachStockCompass",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.Overlay'\",MemberName=\"AddChildToOverlay\")",
+              "NodeGuid": "56040770967A498D9FFF33D6F820DA69"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "D396476580154C48A1BE0DCB4782FFC6",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "55566AB03A804F5786AEC956A5122308",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "F91B41F596344B73BAC257F302C7D1D8",
+                "type": "p_edc7e961f1080a41ee26827cfa8566e8b76c4d0538201b453849c2a308b80278",
+                "name": "self"
+              },
+              "in:Content": {
+                "id": "4DA17A7225DF498A83CF9D9F06ECEB29",
+                "type": "p_505230412b4a32920a97e48b5870ea936cd4332e4ff29cd8d6091868bde95ce4"
+              },
+              "out:result": {
+                "id": "A112598865D249C88F2E4B3D87A97018",
+                "type": "p_e514cb1fb7acbe6cd646c42066a3c041a96992abbc81fae2c166a1214eb891a5",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "CameraRotation",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.PlayerCameraManager'\",MemberName=\"GetCameraRotation\")",
+              "NodeGuid": "081B1F76DF89408E9BCADC0D6D617AFE"
+            },
+            "pins": {
+              "in:target": {
+                "id": "988A4C69D14A4884A7AEEA84030AEBF0",
+                "type": "p_d97521736446d20c015b397b365361f6bfdd0fd0d1d85f1ce261b912b367d217",
+                "name": "self"
+              },
+              "out:result": {
+                "id": "51AB8995466843BCB752C60B7066E5C4",
+                "type": "p_ce3bd6cdf0cecf7be52851c1ef3a41622ca28afcc4f9803a3c0e59cc69098c13",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "0, 0, 0"
+            }
+          },
+          {
+            "id": "CameraYaw",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"BreakRotator\")",
+              "NodeGuid": "1E21610E63774010A2A90491549BFAD0"
+            },
+            "pins": {
+              "in:target": {
+                "id": "D0D0114407EA4FD69670B51229C94D3D",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:InRot": {
+                "id": "7DDBFBF9423046D9B96B9DBA2F787F7C",
+                "type": "p_c7fe9308b04aa4c853bbdd38c57117a431dbc3c19117e743d427f406ddfdba4f"
+              },
+              "out:Roll": {
+                "id": "73AC386E9D0F46A487EA2751C51F9E7D",
+                "type": "p_9c065eed90b6ca2ce6bd7b2e2fff1a7df09fd0cf6c8b18ea908f50bcb824103f"
+              },
+              "out:Pitch": {
+                "id": "28278850B4D54C968C6D366799A6C1A7",
+                "type": "p_04411cb85586c35ff43daf6a6f66795821f32cfb85121984ea3856f3d585966c"
+              },
+              "out:Yaw": {
+                "id": "D80D54EA99C740008ECB30F4703226F3",
+                "type": "p_6559531c6889f156e3a0b7c2e13fa5b7c257842c8d40e464ca1c280fe90bdaea"
+              }
+            },
+            "defaults": {
+              "in:InRot": "0, 0, 0",
+              "out:Roll": "0.0",
+              "out:Pitch": "0.0",
+              "out:Yaw": "0.0"
+            }
+          },
+          {
+            "id": "CompassHeading",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"ClampAxis\")",
+              "NodeGuid": "D371B1FD114C42B5ACFE527B1FC71053"
+            },
+            "pins": {
+              "in:target": {
+                "id": "1A5584E952034DB59E374AAE17C9C9F5",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:Angle": {
+                "id": "DF8CCE2543F047B48B0B6187B6DF9373",
+                "type": "p_725eeaedf942587b7e439cbe348fe124800c835b2fcd0dfea24ac8dfe50c5bfa"
+              },
+              "out:result": {
+                "id": "A682750BEC29424B8D06732ED9F727F7",
+                "type": "p_725eeaedf942587b7e439cbe348fe124800c835b2fcd0dfea24ac8dfe50c5bfa",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:Angle": "0.0",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "CompassMaterial",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.Image'\",MemberName=\"GetDynamicMaterial\")",
+              "NodeGuid": "6AB5CB7CA58C436D95D3EC22814764C6"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "4576DBDF70834A56B5D56BF1BDBD5F5F",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "A1243AB2E32D4A48A23D23A05B0D91DC",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "61A3C74204574700B74BF7B8CE03CEFA",
+                "type": "p_4f3d919ca903b38c1885405c5535ef23abb345a362788cadd0c4ace679df6c90",
+                "name": "self"
+              },
+              "out:result": {
+                "id": "54A1BAA22B9D4C78AE33B41B70E702D6",
+                "type": "p_fe47f596d80b42a85abf10abae888eae2e25275c5cc91478b86e0d997e647294",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "Container",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"CompassContainer\",MemberGuid=C158E209B1C5434D8494B65048B428FD,bSelfContext=True)",
+              "NodeGuid": "8B5D749309E9429BB44EAB65B3176031"
+            },
+            "pins": {
+              "out:CompassContainer": {
+                "id": "C7FC5A47DEC04717AD067969A09ADF1C",
+                "type": "p_f935e17251f8c64c625d1403083b1b5c1fa63d6e150bef03e735957f47cb290f"
+              },
+              "in:target": {
+                "id": "7726EAE0915E4480B9F39D3A79018635",
+                "type": "p_ea000aab63b59dff813167ac2b77e2ad3fc7b313c930a7e59682873df8be6b31",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "CreateCompass",
+            "kind": "CreateWidget",
+            "properties": {
+              "NodeGuid": "85D07C7F200F4F5E8458114F62073477"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "6444582C2DAE40CDAF47C4D39D818B53",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "4D8F0E27E0FE4E27975E25FDF39E3EAB",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:Class": {
+                "id": "0F206EBDE11146FEA6DDB36305541017",
+                "type": "p_8c6f2cfd3623dadb33879e18662124e23384d8006f1f95ae0f34989ce25f00e5",
+                "DefaultObject": "\"/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay.WBP_StableGyroCompassDisplay_C\""
+              },
+              "out:result": {
+                "id": "EB42A6CAC1B34A59B9DBEB930ED16AC5",
+                "type": "p_8b8738dfa2a689243b3402d88cef74ab9eada50edde8757f36224ecdaf17b630",
+                "name": "ReturnValue"
+              },
+              "in:OwningPlayer": {
+                "id": "6C31081B48574B09A76CDEFE47B465B1",
+                "type": "p_66393f1ff338a338c740df4c9ac52ae81261fd6e98102fd843c16fc70aad6c10"
+              }
+            }
+          },
+          {
+            "id": "HeadingBelow360",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Min\")",
+              "NodeGuid": "FE2E31AF724C479B85728F8B0FB761EE"
+            },
+            "pins": {
+              "in:target": {
+                "id": "063285540BF143C6BADC18379A69E9F0",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "EAA8BEAC830445B7AAA16036C729D299",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "20FC987D00884F8B8E7178B6A32D83E7",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "92E273C15A1C4BC9AFB012EB00236466",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0",
+              "in:right": "359",
+              "out:result": "0"
+            }
+          },
+          {
+            "id": "HeadingText",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetTextLibrary'\",MemberName=\"Conv_IntToText\")",
+              "AdvancedPinDisplay": "Hidden",
+              "NodeGuid": "CDE5CB86EB134E0D9076DC9BA5FBE6BB"
+            },
+            "pins": {
+              "in:target": {
+                "id": "DA77A57F67B74B41B1FC6E152AF36564",
+                "type": "p_25a9f92618ea8b77f61911cff6e4631e0b9d14560e184f063e68dc0e1a8ef698",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetTextLibrary\""
+              },
+              "in:Value": {
+                "id": "DB2BD04D6CDB4B9899D43F3E74E8A98A",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c"
+              },
+              "in:bAlwaysSign": {
+                "id": "D95B4925A6514F5D8FBD774694E675F3",
+                "type": "p_e4f92e93d7ce58434447c04ced54082ebc7c361d1645e7c2568c8bc34544b431"
+              },
+              "in:bUseGrouping": {
+                "id": "734811A0C2814F3991003508F1D3276E",
+                "type": "p_e20299ff8ef92759eb7e8bc3a2fe274dc050f7a2dcc37df6758830a3cc446ead"
+              },
+              "in:MinimumIntegralDigits": {
+                "id": "412B030DC5524AFCAD0CE9F22E262797",
+                "type": "p_241b8a5392da1325124c4f2a73bc814ef015daf1e458b53f6076969611e61c72"
+              },
+              "in:MaximumIntegralDigits": {
+                "id": "2B81C23FDD4A4EDD89C92DB146B225AB",
+                "type": "p_6f99ce64f7ecad8bec5337e634ce8f8c0d8c447ff4bcbc683f240617fd04d606"
+              },
+              "out:result": {
+                "id": "12B087B11800450A8BCEAEEAD2B43958",
+                "type": "p_18af6e7815cce4023974f11fe644f612d1d3f48c3f8d3ec47d97f0ac5a7895f1",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:Value": "0",
+              "in:bAlwaysSign": "false",
+              "in:bUseGrouping": "true",
+              "in:MinimumIntegralDigits": "1",
+              "in:MaximumIntegralDigits": "324"
+            }
+          },
+          {
+            "id": "HeadingUV",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Divide_DoubleDouble\")",
+              "NodeGuid": "418484BFA09A48F18834A7ACB3BEB8AA"
+            },
+            "pins": {
+              "in:target": {
+                "id": "8A47FAA232174B398A51F90C56FADF27",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "4C68F152C18846DEA490D4A68E97F7C3",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "F5EDCD1F77BD4136BCFB633E6A7D47D3",
+                "type": "p_4d1c70798478a4900d704c9a9d29609aa1a343f8be43fa95240224fd665e0e4b",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "C490BA0007A64B24961F3FBCA1EAC04A",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0.0",
+              "in:right": "360.0",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "HudSelf",
+            "kind": "self",
+            "properties": {
+              "NodeGuid": "1B4C4F19179E4BBEA20CC3CD1C039F07"
+            },
+            "pins": {
+              "out:target": {
+                "id": "37F5AB7B841744D0BF3FBB23FE14AED6",
+                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "InitializeCompass",
+            "kind": "event",
+            "properties": {
+              "EventReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"OnInitialized\")",
+              "bOverrideFunction": "True",
+              "NodeGuid": "53A9E79F214E4B26851E36FD3FB6CAFC"
+            },
+            "pins": {
+              "out:OutputDelegate": {
+                "id": "F06815F207014017AECE2C93990FEDA5",
+                "type": "p_8c2dd988e4ecfc08e93a93e0e2ccf6b197a46a5aa4f2376ed785f3141be73356"
+              },
+              "out:then": {
+                "id": "1BA40E0B3DFE4428987D880802654554",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              }
+            }
+          },
+          {
+            "id": "KeepCamera",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"Camera\",MemberGuid=B0696AE5C14E4AC0AD4E2AE9BCED5ED2,bSelfContext=True)",
+              "NodeGuid": "88482413524E4170B457E8CD5C38404F"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "BEF57F96E31D40CA89EC5D4EC24DE6F2",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "CBDF06A404084683A4DEBC27AEB7C955",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:Camera": {
+                "id": "D999CAEA32894B898AF81DB4E1F8EE81",
+                "type": "p_3ecea62bb0f21868039453403553c119f6865d6caab19deb1817fd79e1aa1dc6"
+              },
+              "out:Output_Get": {
+                "id": "E547A453367B486C8005B7C23D137FF4",
+                "type": "p_929f75db0f4a6107a0f4027c5a130970cd1ad3b1c13d9f0899bf41ac732af2fb"
+              },
+              "in:target": {
+                "id": "1B86FE87524E435CABB654BA5FC39A9C",
+                "type": "p_ea000aab63b59dff813167ac2b77e2ad3fc7b313c930a7e59682873df8be6b31",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "KeepDegreesText",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"DegreesText\",MemberGuid=9E6D5F01F4C64D349228363E7A062D8F,bSelfContext=True)",
+              "NodeGuid": "707D932005B44107BBB542C7203A205B"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "A3A8D5C08B81436B8A47EAA860BC1286",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "30B89F550B044372A6CBBD3C667649FC",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:DegreesText": {
+                "id": "E81E09FD42C3416DA638C84B3A6B429D",
+                "type": "p_a4b4e4aeee41a198351f436cdbd7609202c383a12765bbae3c996ffeeb829ad5"
+              },
+              "out:Output_Get": {
+                "id": "1E97901D8F7B4991BA2DAFF41D52AD2F",
+                "type": "p_2a602fe379971c6386eba81b8293de6f52c5f885a2baef1fbee80816b03b7869"
+              },
+              "in:target": {
+                "id": "3309E6FDA5B244B19F1E6419F675D40F",
+                "type": "p_ea000aab63b59dff813167ac2b77e2ad3fc7b313c930a7e59682873df8be6b31",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "KeepDirectionMaterial",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"DirectionMaterial\",MemberGuid=30712D48DE3F4748A6D9ADA212611DD0,bSelfContext=True)",
+              "NodeGuid": "B1F3D961BE294FA3BBD0D820A7DC726A"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "82AEB9731CD5496283045D4D77D80FA7",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "C036E90F825A436C891144EA76C597FF",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:DirectionMaterial": {
+                "id": "CF288FF05425484293190E001CA74E08",
+                "type": "p_fe47f596d80b42a85abf10abae888eae2e25275c5cc91478b86e0d997e647294"
+              },
+              "out:Output_Get": {
+                "id": "5CE08A52044E4C919BCABC44C18A91FC",
+                "type": "p_9f1274542abe04115e3284e725ec1da3479830015fa99f426c14373758daf754"
+              },
+              "in:target": {
+                "id": "1ED218AC0CA041019677EF8904FAF8B5",
+                "type": "p_ea000aab63b59dff813167ac2b77e2ad3fc7b313c930a7e59682873df8be6b31",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "NorthOffset",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Add_DoubleDouble\")",
+              "NodeGuid": "B6195658B47345829B58A9F0D3489E65"
+            },
+            "pins": {
+              "in:target": {
+                "id": "28666B9F50FC4591AB67226CD6AC2709",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "F66387FA636E4AF2A4787143DC828849",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "E4683718C73042F0804D742E084D1B6F",
+                "type": "p_4d1c70798478a4900d704c9a9d29609aa1a343f8be43fa95240224fd665e0e4b",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "5D750010B8894AE9B66D875B428AD5CF",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0.0",
+              "in:right": "90.0",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "OwningPlayer",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberName=\"GetOwningPlayer\",bSelfContext=True)",
+              "NodeGuid": "7B49DA200C9942CBA35FDFEAC757BF08"
+            },
+            "pins": {
+              "in:target": {
+                "id": "59C6E626DF974760AFAFAAA0313E1154",
+                "type": "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb",
+                "name": "self"
+              },
+              "out:result": {
+                "id": "F8191577C0594FDB830E16AE9871D312",
+                "type": "p_c629a8d220ad76f45ebde47097efa425f7f7b85983b081c65454b72758fbb676",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "PlayerCamera",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.PlayerController'\",MemberName=\"PlayerCameraManager\")",
+              "NodeGuid": "9089A7C423794412888BCA871FC6C56B"
+            },
+            "pins": {
+              "out:PlayerCameraManager": {
+                "id": "4F52F249F9F44F1891A5AAC7CA30FB84",
+                "type": "p_e7ca0e5002c38aa5e9c0f44ea48223a48e33e4dd4200166f19f183c96dbce4d7"
+              },
+              "in:target": {
+                "id": "43156F987FB74C6EB4ECC60B617AA054",
+                "type": "p_9dfc36cc0f110cf20a3eb96b15218c6dafc9cf5cb20bcf968268e9d0031237d7",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "ReadCamera",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"Camera\",MemberGuid=B0696AE5C14E4AC0AD4E2AE9BCED5ED2,bSelfContext=True)",
+              "NodeGuid": "CD2D4A9CF9994DE58859285BD005202C"
+            },
+            "pins": {
+              "out:Camera": {
+                "id": "4609DD1A7FD14CBA80D983D8F709BFEF",
+                "type": "p_3ecea62bb0f21868039453403553c119f6865d6caab19deb1817fd79e1aa1dc6"
+              },
+              "in:target": {
+                "id": "B6018CD104754AB1BCEE0765A4637EFD",
+                "type": "p_ea000aab63b59dff813167ac2b77e2ad3fc7b313c930a7e59682873df8be6b31",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "ReadDegreesText",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"DegreesText\",MemberGuid=9E6D5F01F4C64D349228363E7A062D8F,bSelfContext=True)",
+              "NodeGuid": "A69AE42D6C3F4A5DB00082042F4003C7"
+            },
+            "pins": {
+              "out:DegreesText": {
+                "id": "B29DCDE91725422CB9AC386F6489D149",
+                "type": "p_a4b4e4aeee41a198351f436cdbd7609202c383a12765bbae3c996ffeeb829ad5"
+              },
+              "in:target": {
+                "id": "B0BF923A1BB04229A455F8635F4D45B2",
+                "type": "p_ea000aab63b59dff813167ac2b77e2ad3fc7b313c930a7e59682873df8be6b31",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "ReadDirectionMaterial",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"DirectionMaterial\",MemberGuid=30712D48DE3F4748A6D9ADA212611DD0,bSelfContext=True)",
+              "NodeGuid": "05F2B6863E2841B5A9F9B7F7014FB032"
+            },
+            "pins": {
+              "out:DirectionMaterial": {
+                "id": "FDF75B6F7F2141C6BCBBD5723A288BB0",
+                "type": "p_fe47f596d80b42a85abf10abae888eae2e25275c5cc91478b86e0d997e647294"
+              },
+              "in:target": {
+                "id": "E551EB15F87A444FB1F04E1160E41233",
+                "type": "p_ea000aab63b59dff813167ac2b77e2ad3fc7b313c930a7e59682873df8be6b31",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "RoundedHeading",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Round\")",
+              "NodeGuid": "4937669A2CF64CB4B76B6C113E1D9295"
+            },
+            "pins": {
+              "in:target": {
+                "id": "F55EC9D98E854616B0993DFDBBA4B8B0",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:A": {
+                "id": "FEE328CDB4A546C7ADC8D35909E24D20",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "out:result": {
+                "id": "8D70BAFEE20F497EBB310F1EB65B4E40",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:A": "0.0",
+              "out:result": "0"
+            }
+          },
+          {
+            "id": "StockDegrees",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageCompassWidget'\",MemberName=\"CompassAngleText\")",
+              "NodeGuid": "D47D16BE308144AD998B27506C9CA4D1"
+            },
+            "pins": {
+              "out:CompassAngleText": {
+                "id": "8F5F7B8B5E4F493C98E281588CF00682",
+                "type": "p_3d59356c56d3de0fe6d4b83b08f0b746a5a284def34ed4d7fea9b2c13995812e"
+              },
+              "in:target": {
+                "id": "5E769C2E612E49E2BBB62E9279E0A8E8",
+                "type": "p_8e3566ded2b3f8697f0efb8165ba529af6e6d00b791ede46a5226aa06ed922f6",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "StockImage",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageCompassWidget'\",MemberName=\"CompassImage\")",
+              "NodeGuid": "8F0ED16419B8464ABB7242969014F859"
+            },
+            "pins": {
+              "out:CompassImage": {
+                "id": "DF79478DD6DA4924A946CE42AAD06B1D",
+                "type": "p_d250acaac65227bc974804b6aa618fba031a308329b5c0ab878a06e8e303bac4"
+              },
+              "in:target": {
+                "id": "2B5604C9243F463DBEA922E4B0E0319A",
+                "type": "p_8e3566ded2b3f8697f0efb8165ba529af6e6d00b791ede46a5226aa06ed922f6",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "UpdateDegrees",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\",MemberName=\"SetText\")",
+              "NodeGuid": "486A126B882E42179C064859869E9968"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "8BBD7A693D3F435395B537AFB5021E02",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "36937E0AED2643EEB652F9445A030BE0",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "F7DED1A50AFE48DAB7C131DE8DE8D42C",
+                "type": "p_5431e65f2c01be315ac71d5ce3a78470e2b0acc6d3f1c3ca9d85a19291f065eb",
+                "name": "self"
+              },
+              "in:InText": {
+                "id": "5274AA42142A453B97EFBA7EC4C9416E",
+                "type": "p_18af6e7815cce4023974f11fe644f612d1d3f48c3f8d3ec47d97f0ac5a7895f1"
+              }
+            }
+          },
+          {
+            "id": "UpdateFromCamera",
+            "kind": "event",
+            "properties": {
+              "EventReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"Tick\")",
+              "bOverrideFunction": "True",
+              "NodeGuid": "71859FEEB4744BDBB01846C4044F3BB1"
+            },
+            "pins": {
+              "out:OutputDelegate": {
+                "id": "5584D1B66FDA49EBA69B3EAE19A91A53",
+                "type": "p_b08525d356e9532d9357c24e6b916159bb0d50e13507366b82f5c1ebc97d704e"
+              },
+              "out:then": {
+                "id": "86730E3DB7B14BF3BE34F0505BFB6906",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:MyGeometry": {
+                "id": "C414D2617785429D89F333C555F39945",
+                "type": "p_072da7298ed6ad9738961d7ce3274c781c6183c71b6914121f6da64c3dd0cdd1"
+              },
+              "out:InDeltaTime": {
+                "id": "E597411B4FBB4D55ADAB84AE7C1B710B",
+                "type": "p_917072790573f4748d200d05b2236da99d314b62a00065e65f25bb0c3e9a92c4"
+              }
+            },
+            "defaults": {
+              "out:InDeltaTime": "0.0"
+            }
+          },
+          {
+            "id": "UpdateScale",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.MaterialInstanceDynamic'\",MemberName=\"SetScalarParameterValue\")",
+              "NodeGuid": "E809A52DD1C44918B227FB78391B3DEA"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "85B16FE773E64799A20C681E96A8A20D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "65EBD128DD184266AAA618CCDC34E4CB",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "41F4D9B3CD07454EAAC73844146ED7F0",
+                "type": "p_d22ba7e7d84318024aff3754260aac0b3941b76fba491ddbfdc98a912bde636d",
+                "name": "self"
+              },
+              "in:ParameterName": {
+                "id": "64E20F8BB56F4FCB8A854CD58E262365",
+                "type": "p_c5f99913f0738cc9c361d3bb5a87639e015e07773a0fc16954383fa24a80855f"
+              },
+              "in:Value": {
+                "id": "AD61EE5C989F45808414BC7392CC481A",
+                "type": "p_725eeaedf942587b7e439cbe348fe124800c835b2fcd0dfea24ac8dfe50c5bfa"
+              }
+            },
+            "defaults": {
+              "in:ParameterName": "Direction",
+              "in:Value": "0.0"
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "AttachStockCompass.out:then",
+            "to": "CompassMaterial.in:exec"
+          },
+          {
+            "from": "CameraRotation.out:result",
+            "to": "CameraYaw.in:InRot"
+          },
+          {
+            "from": "CameraYaw.out:Yaw",
+            "to": "NorthOffset.in:left"
+          },
+          {
+            "from": "CompassHeading.out:result",
+            "to": "HeadingUV.in:left"
+          },
+          {
+            "from": "CompassHeading.out:result",
+            "to": "RoundedHeading.in:A"
+          },
+          {
+            "from": "CompassMaterial.out:result",
+            "to": "KeepDirectionMaterial.in:DirectionMaterial"
+          },
+          {
+            "from": "CompassMaterial.out:then",
+            "to": "KeepDirectionMaterial.in:exec"
+          },
+          {
+            "from": "Container.out:CompassContainer",
+            "to": "AttachStockCompass.in:target"
+          },
+          {
+            "from": "CreateCompass.out:result",
+            "to": "AttachStockCompass.in:Content"
+          },
+          {
+            "from": "CreateCompass.out:result",
+            "to": "StockDegrees.in:target"
+          },
+          {
+            "from": "CreateCompass.out:result",
+            "to": "StockImage.in:target"
+          },
+          {
+            "from": "CreateCompass.out:then",
+            "to": "AttachStockCompass.in:exec"
+          },
+          {
+            "from": "HeadingBelow360.out:result",
+            "to": "HeadingText.in:Value"
+          },
+          {
+            "from": "HeadingText.out:result",
+            "to": "UpdateDegrees.in:InText"
+          },
+          {
+            "from": "HeadingUV.out:result",
+            "to": "UpdateScale.in:Value"
+          },
+          {
+            "from": "HudSelf.out:target",
+            "to": "Container.in:target"
+          },
+          {
+            "from": "HudSelf.out:target",
+            "to": "KeepCamera.in:target"
+          },
+          {
+            "from": "HudSelf.out:target",
+            "to": "KeepDegreesText.in:target"
+          },
+          {
+            "from": "HudSelf.out:target",
+            "to": "KeepDirectionMaterial.in:target"
+          },
+          {
+            "from": "HudSelf.out:target",
+            "to": "ReadCamera.in:target"
+          },
+          {
+            "from": "HudSelf.out:target",
+            "to": "ReadDegreesText.in:target"
+          },
+          {
+            "from": "HudSelf.out:target",
+            "to": "ReadDirectionMaterial.in:target"
+          },
+          {
+            "from": "InitializeCompass.out:then",
+            "to": "CreateCompass.in:exec"
+          },
+          {
+            "from": "KeepDegreesText.out:then",
+            "to": "KeepCamera.in:exec"
+          },
+          {
+            "from": "KeepDirectionMaterial.out:then",
+            "to": "KeepDegreesText.in:exec"
+          },
+          {
+            "from": "NorthOffset.out:result",
+            "to": "CompassHeading.in:Angle"
+          },
+          {
+            "from": "OwningPlayer.out:result",
+            "to": "CreateCompass.in:OwningPlayer"
+          },
+          {
+            "from": "OwningPlayer.out:result",
+            "to": "PlayerCamera.in:target"
+          },
+          {
+            "from": "PlayerCamera.out:PlayerCameraManager",
+            "to": "KeepCamera.in:Camera"
+          },
+          {
+            "from": "ReadCamera.out:Camera",
+            "to": "CameraRotation.in:target"
+          },
+          {
+            "from": "ReadDegreesText.out:DegreesText",
+            "to": "UpdateDegrees.in:target"
+          },
+          {
+            "from": "ReadDirectionMaterial.out:DirectionMaterial",
+            "to": "UpdateScale.in:target"
+          },
+          {
+            "from": "RoundedHeading.out:result",
+            "to": "HeadingBelow360.in:left"
+          },
+          {
+            "from": "StockDegrees.out:CompassAngleText",
+            "to": "KeepDegreesText.in:DegreesText"
+          },
+          {
+            "from": "StockImage.out:CompassImage",
+            "to": "CompassMaterial.in:target"
+          },
+          {
+            "from": "UpdateFromCamera.out:then",
+            "to": "UpdateScale.in:exec"
+          },
+          {
+            "from": "UpdateScale.out:then",
+            "to": "UpdateDegrees.in:exec"
+          }
+        ]
+      }
+    }
+  ],
+  "dependencies": [
+    "/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay.WBP_StableGyroCompassDisplay_C",
+    "/Script/Engine.Default__KismetMathLibrary",
+    "/Script/Engine.Default__KismetTextLibrary"
+  ],
+  "pinTemplates": {
+    "p_c7fe9308b04aa4c853bbdd38c57117a431dbc3c19117e743d427f406ddfdba4f": {
+      "AutogeneratedDefaultValue": "\"0, 0, 0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "INVTEXT(\"Rotation\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Rotator'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_ce3bd6cdf0cecf7be52851c1ef3a41622ca28afcc4f9803a3c0e59cc69098c13": {
+      "AutogeneratedDefaultValue": "\"0, 0, 0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Rotator'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_9c065eed90b6ca2ce6bd7b2e2fff1a7df09fd0cf6c8b18ea908f50bcb824103f": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "INVTEXT(\"X (Roll)\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"float\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_04411cb85586c35ff43daf6a6f66795821f32cfb85121984ea3856f3d585966c": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "INVTEXT(\"Y (Pitch)\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"float\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_6559531c6889f156e3a0b7c2e13fa5b7c257842c8d40e464ca1c280fe90bdaea": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "INVTEXT(\"Z (Yaw)\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"float\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_917072790573f4748d200d05b2236da99d314b62a00065e65f25bb0c3e9a92c4": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"In Delta Time\\nFloat (single-precision)\\n\\nReal time passed since last tick\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"float\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_725eeaedf942587b7e439cbe348fe124800c835b2fcd0dfea24ac8dfe50c5bfa": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"float\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c": {
+      "AutogeneratedDefaultValue": "\"0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_4d1c70798478a4900d704c9a9d29609aa1a343f8be43fa95240224fd665e0e4b": {
+      "AutogeneratedDefaultValue": "\"1.000000\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_241b8a5392da1325124c4f2a73bc814ef015daf1e458b53f6076969611e61c72": {
+      "AutogeneratedDefaultValue": "\"1\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "True",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_6f99ce64f7ecad8bec5337e634ce8f8c0d8c447ff4bcbc683f240617fd04d606": {
+      "AutogeneratedDefaultValue": "\"324\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "True",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_c5f99913f0738cc9c361d3bb5a87639e015e07773a0fc16954383fa24a80855f": {
+      "AutogeneratedDefaultValue": "\"None\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"name\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_e4f92e93d7ce58434447c04ced54082ebc7c361d1645e7c2568c8bc34544b431": {
+      "AutogeneratedDefaultValue": "\"false\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "True",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_e20299ff8ef92759eb7e8bc3a2fe274dc050f7a2dcc37df6758830a3cc446ead": {
+      "AutogeneratedDefaultValue": "\"true\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "True",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_25a9f92618ea8b77f61911cff6e4631e0b9d14560e184f063e68dc0e1a8ef698": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.KismetTextLibrary'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_d22ba7e7d84318024aff3754260aac0b3941b76fba491ddbfdc98a912bde636d": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.MaterialInstanceDynamic'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_d97521736446d20c015b397b365361f6bfdd0fd0d1d85f1ce261b912b367d217": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.PlayerCameraManager'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_9dfc36cc0f110cf20a3eb96b15218c6dafc9cf5cb20bcf968268e9d0031237d7": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.PlayerController'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_4f3d919ca903b38c1885405c5535ef23abb345a362788cadd0c4ace679df6c90": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.Image'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_edc7e961f1080a41ee26827cfa8566e8b76c4d0538201b453849c2a308b80278": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.Overlay'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_5431e65f2c01be315ac71d5ce3a78470e2b0acc6d3f1c3ca9d85a19291f065eb": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.Widget'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_8e3566ded2b3f8697f0efb8165ba529af6e6d00b791ede46a5226aa06ed922f6": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Voyage.VoyageCompassWidget'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_ea000aab63b59dff813167ac2b77e2ad3fc7b313c930a7e59682873df8be6b31": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/UMG.WidgetBlueprintGeneratedClass'/Game/Mods/StableGyro/UI/WBP_StableGyroCameraCompass.WBP_StableGyroCameraCompass_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_e7ca0e5002c38aa5e9c0f44ea48223a48e33e4dd4200166f19f183c96dbce4d7": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"UObjectDisplayNames\", \"PlayerController:PlayerCameraManager\", \"Player Camera Manager\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.PlayerCameraManager'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "True",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_3d59356c56d3de0fe6d4b83b08f0b746a5a284def34ed4d7fea9b2c13995812e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"UObjectDisplayNames\", \"VoyageCompassWidget:CompassAngleText\", \"Compass Angle Text\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "True",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_d250acaac65227bc974804b6aa618fba031a308329b5c0ab878a06e8e303bac4": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"UObjectDisplayNames\", \"VoyageCompassWidget:CompassImage\", \"Compass Image\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.Image'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "True",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_072da7298ed6ad9738961d7ce3274c781c6183c71b6914121f6da64c3dd0cdd1": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"My Geometry\\nGeometry Structure\\n\\nThe space allotted for this widget\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/SlateCore.Geometry'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_66393f1ff338a338c740df4c9ac52ae81261fd6e98102fd843c16fc70aad6c10": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Player Controller Object Reference Owning Player\\nThe player that \\'owns\\' the widget.\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.PlayerController'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_9f1274542abe04115e3284e725ec1da3479830015fa99f426c14373758daf754": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.MaterialInstanceDynamic'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_929f75db0f4a6107a0f4027c5a130970cd1ad3b1c13d9f0899bf41ac732af2fb": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.PlayerCameraManager'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_2a602fe379971c6386eba81b8293de6f52c5f885a2baef1fbee80816b03b7869": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_8c6f2cfd3623dadb33879e18662124e23384d8006f1f95ae0f34989ce25f00e5": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"class\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_8c2dd988e4ecfc08e93a93e0e2ccf6b197a46a5aa4f2376ed785f3141be73356": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"delegate\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"OnInitialized\")",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_b08525d356e9532d9357c24e6b916159bb0d50e13507366b82f5c1ebc97d704e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"delegate\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"Tick\")",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_fe47f596d80b42a85abf10abae888eae2e25275c5cc91478b86e0d997e647294": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.MaterialInstanceDynamic'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_3ecea62bb0f21868039453403553c119f6865d6caab19deb1817fd79e1aa1dc6": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.PlayerCameraManager'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_c629a8d220ad76f45ebde47097efa425f7f7b85983b081c65454b72758fbb676": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.PlayerController'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_f935e17251f8c64c625d1403083b1b5c1fa63d6e150bef03e735957f47cb290f": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.Overlay'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_e514cb1fb7acbe6cd646c42066a3c041a96992abbc81fae2c166a1214eb891a5": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.OverlaySlot'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a4b4e4aeee41a198351f436cdbd7609202c383a12765bbae3c996ffeeb829ad5": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_505230412b4a32920a97e48b5870ea936cd4332e4ff29cd8d6091868bde95ce4": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.Widget'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_8b8738dfa2a689243b3402d88cef74ab9eada50edde8757f36224ecdaf17b630": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/UMG.WidgetBlueprintGeneratedClass'/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay.WBP_StableGyroCompassDisplay_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"self\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_18af6e7815cce4023974f11fe644f612d1d3f48c3f8d3ec47d97f0ac5a7895f1": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"text\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    }
+  },
+  "classes": {
+    "call": "/Script/BlueprintGraph.K2Node_CallFunction",
+    "getVariable": "/Script/BlueprintGraph.K2Node_VariableGet",
+    "CreateWidget": "/Script/UMGEditor.K2Node_CreateWidget",
+    "self": "/Script/BlueprintGraph.K2Node_Self",
+    "event": "/Script/BlueprintGraph.K2Node_Event",
+    "setVariable": "/Script/BlueprintGraph.K2Node_VariableSet"
+  }
+}

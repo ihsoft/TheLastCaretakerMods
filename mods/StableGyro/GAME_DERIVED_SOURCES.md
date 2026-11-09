@@ -319,6 +319,39 @@ the input integration rate. That fingerprint also established native defaults
 `PropellerVelocityScale=50` and `PropellerLift=75`. These details were not
 revalidated for the current fingerprint and are not consumed by this build.
 
+## Compass and vehicle HUD inputs
+
+For Steam build `25982825`, UE `5.8.2`, the stock Gyro's
+`HUDOverrideWidgetClass` selects
+`/Game/UI/Game/HUD/WBP_VoyageIngameGyroCopter.WBP_VoyageIngameGyroCopter_C`.
+Stock asset inspection establishes its `RootCanvasPanel` and inherited HUD
+visibility handling. The binocular overlay
+`/Game/UI/Tools/BP_ToolsOverlay_Binoculars` embeds
+`/Game/UI/Game/World/WBP_CompassHUD` at scale `0.4`; it is a presentation
+reference, not a replacement payload.
+
+Current mappings establish the native chain
+`VoyageIngameGenericVehicleWidget -> VoyageInGameVehicleWidget ->
+VoyageInGameWidget -> VoyageBaseUserWidget -> UserWidget`, and
+`VoyageCompassWidget -> VoyageBaseUserWidget`. The compass owns
+`bUseControllerDirection`, `bUseDynamicIndicatorIcon`, `CompassImage`,
+`CompassAngleText`, `IndicatorWidgetSwitcher` and `CompassMaterial`.
+`StableGyroHudContracts.h` declares only the parent identities and the two
+widget references consumed by the mod; it does not reconstruct the full
+native serialization layout.
+
+Stock widget data and native constructor/update inspection establish the
+`/Game/UI/Compass/M_Compass` material, its `Direction` scalar, the 90-degree
+heading offset and conversion to a fraction of a full turn. The stock native
+update retains a pawn reference; enabling its controller-direction mode does
+not replace that path with the active camera manager. The mod's camera source,
+display tick ownership and lifecycle are defined in
+[camera compass](ARCHITECTURE.md#camera-compass).
+
+Revalidate these identities, inherited widgets and material convention after
+a game update. A complete editor compile or a readable dependency stub does
+not establish compatibility with changed native CDO schemas.
+
 ## Maintained project inputs and reconstruction
 
 The maintained editor assets use the contracts reviewed for Steam build
@@ -330,13 +363,15 @@ the synchronized BPT representations and native editor declarations.
 | --- | --- | --- |
 | `Content/Mods/StableGyro/Settings/BP_IniFileParser.uasset` | Authored [shared INI parser](../../tools/BlueprintText/Library/IniFileParser/AGENTS.md), relocated into the mod with its synchronized BPT copy. It ships with the mod and is not reconstructed game content. | Update from the shared library through package relocation. |
 | `Content/Mods/StableGyro/ModActor.uasset`, `PitchInputActor.uasset`, and `Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset` | Maintained authored gameplay graphs, initially materialized by the retired StableGyro commandlets using the game contracts above. `BlueprintText/` contains their synchronized shared-tool exports. | Edit the assets through BPT or Unreal Editor; do not regenerate them during a release. Revalidate consumed game APIs when the game build changes. |
+| `Content/Mods/StableGyro/UI/` | Three authored compass widgets with synchronized BPT sources. HUD and display children inherit the stock packages; the camera wrapper is an authored `UserWidget`. | Preserve the external parents and camera update contract. Cook the display with named properties as specified in release preparation. |
+| `Content/UI/Game/HUD/WBP_VoyageIngameGyroCopter.uasset`, `Content/UI/Game/World/WBP_CompassHUD.uasset`, and `BlueprintText/Stubs/` | Hand-reconstructed editor-only identities from the HUD inputs above. The HUD stub exposes `RootCanvasPanel`; the compass stub supplies its native parent identity. Neither contains the stock implementation. | Exclude both from the container. Revalidate parent chains, widget names and consumed native fields after a game update. |
 | `Content/Mods/StableGyro/IAV_GyroPitchReset.uasset` and `Content/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.uasset` | Authored reset action and reconstructed stock keyboard context with the reset mapping added. | Preserve all stock bindings and the exact action identities described above; revalidate the reconstruction on a game build change. |
 | `Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/` | Complete positive-Y mesh derived from the stock mooring plate by the mod splitter and shared StaticMesh producer; shared by all four instances. `Build/MooringMeshes.source.json` records its source Steam build, recipe and readiness. | Explicitly run `Update-StableGyroMooringPlate.ps1` after a game update or import fix. It replaces the package and fully compares its project-cooked geometry and attributes with a fresh stock-derived GLB. Ordinary builds reuse it, check cooked representations/materials and fail on stale or incomplete source state. |
 | `Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset` | Shared VoyageItem profile reconstructs the current item; `Build/Item.patch.json` changes only `DroppedActor`. `Build/Item.source.json` records the applied recipe and source Steam build. | Refresh the item and its generator stub on a changed build or recipe, or explicit `-ReimportItemAsset`. Every build compares the project-cooked item with current stock. The profile rejects unsupported inputs. |
 | Other assets under `Content/` | Editor dependency stubs: stock Gyro parent, crafting-generator Blueprint, material, icon, input actions, item references and string tables. The initial parent/input stubs came from the retired commandlets; the shared item updater owns the crafting-generator stub and creates missing item dependencies. | Never ship these stubs. The updater refreshes its owned generator stub and reuses existing dependency stubs. Revalidate other required identities and layouts when the game build changes. Material fidelity is structural only; shaders and textures are not reconstructed. |
 | `EditorSupport/Source/Voyage/` | Minimal native game API declarations reconstructed from the reflection/mapping evidence above. Shared item-profile sources are composed by `EditorSupport.json`; no native implementation is shipped. | Keep original `/Script/Voyage` identities, field order and required metadata; revalidate on a game build change. Ready plugins are rebuilt by the shared support tool when their inputs change. |
 
-The eight release packages are selected explicitly by `Cook-StableGyroAssets.ps1`;
+The eleven release packages are selected explicitly by `Cook-StableGyroAssets.ps1`;
 all other project assets are editor support. `Build-InheritancePackage.ps1` and
 `Validate-StableGyroMooringTemplates.ps1` own package staging and structural
 checks. The [architecture](ARCHITECTURE.md#release-preparation) describes their

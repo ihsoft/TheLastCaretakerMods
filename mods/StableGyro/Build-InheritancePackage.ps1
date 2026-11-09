@@ -127,6 +127,13 @@ foreach ($assetName in @(
     Copy-Item -LiteralPath (Join-Path $helperSource $assetName) -Destination $helperStage
 }
 $settingsStage = Join-Path $helperStage 'Settings'
+$hudStage = Join-Path $helperStage 'UI'
+New-Item -ItemType Directory -Path $hudStage -Force | Out-Null
+foreach ($extension in @('.uasset', '.uexp')) {
+    Copy-Item -LiteralPath (Join-Path $helperSource ('UI\WBP_StableGyroCompassHUD' + $extension)) -Destination $hudStage
+    Copy-Item -LiteralPath (Join-Path $helperSource ('UI\WBP_StableGyroCameraCompass' + $extension)) -Destination $hudStage
+    Copy-Item -LiteralPath (Join-Path $helperSource ('UI\WBP_StableGyroCompassDisplay' + $extension)) -Destination $hudStage
+}
 New-Item -ItemType Directory -Path $settingsStage -Force | Out-Null
 foreach ($extension in @('.uasset', '.uexp')) {
     Copy-Item -LiteralPath (Join-Path $helperSource ('Settings\BP_IniFileParser' + $extension)) -Destination $settingsStage
@@ -199,6 +206,9 @@ $expectedAssetPaths = @(
     '../../../Voyage/Content/Mods/StableGyro/ModActor.uasset'
     '../../../Voyage/Content/Mods/StableGyro/PitchInputActor.uasset'
     '../../../Voyage/Content/Mods/StableGyro/Settings/BP_IniFileParser.uasset'
+    '../../../Voyage/Content/Mods/StableGyro/UI/WBP_StableGyroCompassHUD.uasset'
+    '../../../Voyage/Content/Mods/StableGyro/UI/WBP_StableGyroCameraCompass.uasset'
+    '../../../Voyage/Content/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay.uasset'
     '../../../Voyage/Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.uasset'
     '../../../Voyage/Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset'
 )

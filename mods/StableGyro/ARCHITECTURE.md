@@ -8,6 +8,8 @@ The child retains stock mappings and provided actions while adding an optional
 pitch-reset action whose default key is X. Tick prerequisites are established at
 BeginPlay and controller changes, not re-added every frame. The two flight helpers remain in
 their respective PrePhysics and PostPhysics groups.
+The vehicle HUD also shows the stock compass scale with its heading driven by
+the player's camera.
 
 ## Maintained project and editing
 
@@ -15,8 +17,11 @@ their respective PrePhysics and PostPhysics groups.
 authoritative editor assets, including every asset selected for release.
 The three gameplay Blueprints are `ModActor`, `PitchInputActor`, and
 `BP_GyroCopter_StablePilot`; `Settings/BP_IniFileParser` is their mod-owned
-UObject settings parser. All four synchronized JSON representations live directly
-in `BlueprintText/` for Git review. Use the shared
+UObject settings parser. Three widgets under `Content/Mods/StableGyro/UI/` own
+the compass integration, camera update and inherited stock presentation.
+Their synchronized JSON representations live directly in `BlueprintText/`;
+the two HUD dependency stubs have corresponding sources in `BlueprintText/Stubs/`.
+Use the shared
 [BPT workflow](../../tools/blueprint-workspace.md) to export, edit and apply them.
 A routine build neither imports these JSON files nor regenerates the graphs.
 
@@ -50,6 +55,9 @@ editing principles.
 | `ModActor` | EventGraph retains control, propulsion and contact gates, then runs horizontal control before altitude control. Nested stages separate input intent, damping, acquisition, climb tracking, braking and swept hold. Shared full resets remain distinct from vertical-only resets. |
 | `PitchInputActor` | PrePhysics retains assistance ownership and descent-cap updates before pitch processing. Eligibility, capture and application have separate local graphs; native flag restoration is shared. |
 | `BP_GyroCopter_StablePilot` | Construction coordinates mesh caching, rear sockets, plate creation and stock-part layout. EventGraph coordinates cargo setup, controller binding, press/hold processing and disabled-port cleanup. Provided actions retain the parent result and append the enabled mod actions. |
+| `WBP_StableGyroCompassHUD` | Inherits the stock vehicle HUD; initializes and places the camera compass in its root canvas. |
+| `WBP_StableGyroCameraCompass` | Creates the compass display and caches its material, degree text and owning player's camera manager once. Widget Tick updates the scale and degree text from the camera. |
+| `WBP_StableGyroCompassDisplay` | Inherits the stock compass tree and disables its native tick; it has no authored graphs. |
 
 Native-assistance eligibility and held-descent-cap eligibility are intentionally
 separate: the cap does not inherit the minimum Collective or neutral-input
@@ -137,12 +145,53 @@ checks without a source-GLB comparison. Both paths share
 `Build/Test-MooringPlateContainer.ps1`; source-state decision tests are in
 `Build/Test-MooringMeshRefresh.ps1`.
 
-The producer preserves the authored Blueprints and cooks eight explicit
-packages: the three gameplay Blueprints, settings parser, reset input action,
-keyboard mapping context, Gyro item DataAsset and one plate mesh. Packaging validates the
+The producer preserves the authored Blueprints and cooks eleven explicit
+packages: the three gameplay Blueprints, settings parser, three compass widgets,
+reset input action, keyboard mapping context, Gyro item DataAsset and one plate mesh. Packaging validates the
 project-cooked item instead of patching cooked stock bytes. Dependency stubs
 are excluded. All intermediate extractions, split GLBs, cook output and reports
 remain ignored build output.
+
+`WBP_StableGyroCompassDisplay` requires a separate cook without `-unversioned`.
+Its inherited `TickFrequency=Never` must be saved with property names because
+the editor's native HUD mirrors are partial declarations, not the full shipping
+serialization schema. The other ten packages keep the ordinary unversioned
+cook. Stage each batch before starting the next cook, which clears the project
+cook directory. Final-container readback with the current game mappings must
+resolve the display CDO's property as `TickFrequency=EWidgetTickFrequency::Never`.
+Do not change the global `CanUseUnversionedPropertySerialization` setting to
+achieve this; editor object duplication also needs that capability.
+
+## Camera compass
+
+The Gyro child's construction assigns `HUDOverrideWidgetClass` to
+`WBP_StableGyroCompassHUD` through `KismetSystemLibrary.SetClassPropertyByName`.
+This widget inherits `/Game/UI/Game/HUD/WBP_VoyageIngameGyroCopter` and leaves its
+tree, vehicle Tick and visibility handling inherited. `OnInitialized` creates
+one `WBP_StableGyroCameraCompass` with the owning player and attaches it to the
+inherited `RootCanvasPanel`: top-center anchors, position `(0,24)`, auto size,
+top-center pivot and render scale `(0.4,0.4)`. It is hit-test-invisible and
+follows the stock HUD's visibility without an additional possession poll.
+
+The camera widget creates `WBP_StableGyroCompassDisplay`, a child of
+`/Game/UI/Game/World/WBP_CompassHUD`. Its empty authored tree preserves the
+stock layout and material. The display's `TickFrequency=Never` prevents the
+native character-based update from competing with the camera update.
+Initialization retains the `CompassImage` dynamic material, `CompassAngleText`
+and the owning controller's `PlayerCameraManager`; it does not rediscover them
+each frame.
+
+Widget Tick reads `PlayerCameraManager.GetCameraRotation` and uses
+`heading = ClampAxis(cameraYaw + 90)`. It writes `heading / 360` to the material's
+`Direction` scalar and `min(round(heading), 359)` to the degree text. The 90-degree
+offset follows the game's compass convention; normalization handles negative
+yaw and the north boundary. Camera heading is independent of the Gyro's hull
+rotation and flight-control settings.
+
+Only the three mod-owned widgets ship. The stock HUD and compass remain external
+parents, with editor-only stubs at their original package identities. No stock
+HUD, compass or binocular asset is overridden, and the feature adds no input
+mapping, flight tick, loader or INI setting.
 
 ## Altitude control
 
@@ -364,6 +413,11 @@ and leaving inaccessible attachment pads. Hiding or deactivating an endpoint
 alone does not disconnect its saved cable; native disconnect must run first.
 
 ## Validation boundary
+
+On Steam build `25982825`, game checks establish compass show/hide behavior
+with the Gyro HUD and correct heading updates from the camera. The separate
+display cook preserves the required inherited tick setting in the final
+container; compilation alone does not establish that serialization contract.
 
 On Steam build `25982825`, game checks cover four simultaneous connections,
 the expanded hint and hold-to-release action, base placement and restored mesh

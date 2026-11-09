@@ -1,0 +1,862 @@
+{
+  "schema": 2,
+  "format": "compact-asset",
+  "asset": "/Game/Mods/StableGyro/UI/WBP_StableGyroCompassHUD",
+  "parent": "/Game/UI/Game/HUD/WBP_VoyageIngameGyroCopter.WBP_VoyageIngameGyroCopter_C",
+  "properties": {
+    "TickPrediction": "WillTick",
+    "TickPredictionReason": "Native",
+    "BlueprintSystemVersion": "2",
+    "bLegacyNeedToPurgeSkelRefs": "False",
+    "BlueprintGuid": "6B07FDDB1F9144D8AF57D6366F8B0F1A"
+  },
+  "widget": {
+    "tree": "WBP_StableGyroCompassHUD:WidgetTree",
+    "objects": [
+      {
+        "id": "WBP_StableGyroCompassHUD:WidgetTree",
+        "name": "WidgetTree",
+        "class": "/Script/UMG.WidgetTree",
+        "outer": "$blueprint",
+        "flags": 262153,
+        "properties": {}
+      }
+    ]
+  },
+  "variables": [],
+  "defaults": {},
+  "graphs": [
+    {
+      "name": "EventGraph",
+      "kind": "event",
+      "properties": {
+        "bAllowDeletion": "False",
+        "GraphGuid": "7CB3F146C7BC41E0BD6655C84F6F8A05"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "AlignTopCenter",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.CanvasPanelSlot'\",MemberName=\"SetAlignment\")",
+              "NodeGuid": "164722019879436E96072E345BDA4518"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "11AB09CFBAC24D01ACC82F95E7ED54CE",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "031E9F20FE764C0D9AE311ACCE6957C7",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "73FF658CC8C943EEA38AF18377C94C47",
+                "type": "p_c0bfc8a15cc4bd16dbff834f6704bfd45a4cb17cfecc1af1424d4647cdffec87",
+                "name": "self"
+              },
+              "in:InAlignment": {
+                "id": "0A0533FB885A43FE8F473825A367F65A",
+                "type": "p_cd23d4a964a7858fc36eb8d7461f373e2574a788d265e3d07243182e55b875a1"
+              }
+            },
+            "defaults": {
+              "in:InAlignment": "(X=0.500000,Y=0.000000)"
+            }
+          },
+          {
+            "id": "AnchorTopCenter",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.CanvasPanelSlot'\",MemberName=\"SetAnchors\")",
+              "NodeGuid": "AB21FFD94C114145908985293930FD0E"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "72BB6382071044F4A1B9B37861F32B92",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "37CB3901A81F45308B6F2A08B47CE10D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "70FFF1C9B61142B5933BDFF62E31882E",
+                "type": "p_c0bfc8a15cc4bd16dbff834f6704bfd45a4cb17cfecc1af1424d4647cdffec87",
+                "name": "self"
+              },
+              "in:InAnchors": {
+                "id": "17990155185140FE866DEBC6FD5368BB",
+                "type": "p_f41451c69a7054395df9a5a2a7fd34c71f762ef73f4fd6a5599911e3f42fb836"
+              }
+            },
+            "defaults": {
+              "in:InAnchors": "(Minimum=(X=0.500000,Y=0.000000),Maximum=(X=0.500000,Y=0.000000))"
+            }
+          },
+          {
+            "id": "AttachCompass",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.CanvasPanel'\",MemberName=\"AddChildToCanvas\")",
+              "NodeGuid": "D67F69BE69764364AA7F6DADC9F0F3CA"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "935553E743C5443189206F8BD47E311D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "9A0CF10CBA2745D3BB1F392A4EE14142",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "3D6C5A19A7B344C2B892E251765197CC",
+                "type": "p_355e5901970f8e589f07609c85c5b9026e5d7bbed8a7cdd6122485f5ee0907c5",
+                "name": "self"
+              },
+              "in:Content": {
+                "id": "86310A17207C47D289C06704281321AD",
+                "type": "p_505230412b4a32920a97e48b5870ea936cd4332e4ff29cd8d6091868bde95ce4"
+              },
+              "out:result": {
+                "id": "5585E5BDB1E646008C9254FC17D5F836",
+                "type": "p_be31bb363d0860c1c594c03243c933b9f0b3dd11546db48c30b923d0b1f0f637",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "CreateCompass",
+            "kind": "CreateWidget",
+            "properties": {
+              "NodeGuid": "ADBDDD15B4B049C9AB90E4D2BD6F0138"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "374E6024062043388D0956D64D5B2CF2",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "593B1A3F9B7A45378329144C2632059D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:Class": {
+                "id": "3717A27647084B73A7716CF77E63C7C7",
+                "type": "p_8c6f2cfd3623dadb33879e18662124e23384d8006f1f95ae0f34989ce25f00e5",
+                "DefaultObject": "\"/Game/Mods/StableGyro/UI/WBP_StableGyroCameraCompass.WBP_StableGyroCameraCompass_C\""
+              },
+              "out:result": {
+                "id": "4E3B06ACD920424BA243F5DFEF6A1428",
+                "type": "p_728354e72efb7d0d71d36343591e0d7232a5ac269521110e3b76bed2624dc260",
+                "name": "ReturnValue"
+              },
+              "in:OwningPlayer": {
+                "id": "440CE4AC245B40A0AFCA7D50CE834907",
+                "type": "p_66393f1ff338a338c740df4c9ac52ae81261fd6e98102fd843c16fc70aad6c10"
+              }
+            }
+          },
+          {
+            "id": "GetHudCanvas",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberParent=\"/Script/UMG.WidgetBlueprintGeneratedClass'/Game/UI/Game/HUD/WBP_VoyageIngameGyroCopter.WBP_VoyageIngameGyroCopter_C'\",MemberName=\"RootCanvasPanel\",MemberGuid=21C61B9555D441188807A0155904C6AD)",
+              "NodeGuid": "CDB15F2965D84A36A02C1817B0CF0D76"
+            },
+            "pins": {
+              "out:RootCanvasPanel": {
+                "id": "119D96917DC74B3EA27BE88F095A763A",
+                "type": "p_95a9dcfc027cd198ff40d4b8de88514a34a4203b7b0b10cdd024654232989d2c"
+              },
+              "in:target": {
+                "id": "884B9F0328424FFC905DDD67CE2C835F",
+                "type": "p_24ab858d8f7bca170291d7edf0a49079dfe4db2f3afb56e1cacaf505fc1802a2",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "GetHudPlayer",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberName=\"GetOwningPlayer\",bSelfContext=True)",
+              "NodeGuid": "BF3DAAFAAC5F4BE9AC08E332EFE5920C"
+            },
+            "pins": {
+              "in:target": {
+                "id": "7959FA6AF09E43329A56DB02FFF8213F",
+                "type": "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb",
+                "name": "self"
+              },
+              "out:result": {
+                "id": "D9B75D8A9C3E474F9D873745E91315FF",
+                "type": "p_c629a8d220ad76f45ebde47097efa425f7f7b85983b081c65454b72758fbb676",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "HudSelf",
+            "kind": "self",
+            "properties": {
+              "NodeGuid": "555D4963420C42DB887FE41F5DFC29E0"
+            },
+            "pins": {
+              "out:target": {
+                "id": "30C61086E8AD4CAABF95C75585C4EFCB",
+                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "InitializeCompass",
+            "kind": "event",
+            "properties": {
+              "EventReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"OnInitialized\")",
+              "bOverrideFunction": "True",
+              "NodeGuid": "5B1EE7238AA14BD69CD2544DBC6A0CB6"
+            },
+            "pins": {
+              "out:OutputDelegate": {
+                "id": "88364EB977764A87A8381395DA1A2429",
+                "type": "p_8c2dd988e4ecfc08e93a93e0e2ccf6b197a46a5aa4f2376ed785f3141be73356"
+              },
+              "out:then": {
+                "id": "B9D06341FD3D4953A085BBF9AB43E59F",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              }
+            }
+          },
+          {
+            "id": "MakeCompassDisplayOnly",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberName=\"SetVisibility\",bSelfContext=True)",
+              "NodeGuid": "62BEA9FAAC8E4ABD9AAFC68F6288601B"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "4CFDF29ECE664924BE3BD6D001EF2B74",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "2931EB3180D1419EBE4C02AA57FD9F6C",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "B0354F440F6443D693A725624A3DAAE8",
+                "type": "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb",
+                "name": "self"
+              },
+              "in:InVisibility": {
+                "id": "34119A256A8943478248FA4812338C6A",
+                "type": "p_bc0febd1300d5c5b4f2807215aa7704926a5f90f5492f7d41d737efd492262d1"
+              }
+            },
+            "defaults": {
+              "in:InVisibility": "HitTestInvisible"
+            }
+          },
+          {
+            "id": "PivotTopCenter",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberName=\"SetRenderTransformPivot\",bSelfContext=True)",
+              "NodeGuid": "41C06FEBD0204C76BA8BCE98D28A1EBE"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "7CBBD808829A48538AFE2AE8721A085B",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "F28A827C399A47F59E25CC293F0539DA",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "D03980E2245A48E89FB0EAC36C8A6901",
+                "type": "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb",
+                "name": "self"
+              },
+              "in:Pivot": {
+                "id": "7E846A3F012C47929C5565417B6DAE1F",
+                "type": "p_cd23d4a964a7858fc36eb8d7461f373e2574a788d265e3d07243182e55b875a1"
+              }
+            },
+            "defaults": {
+              "in:Pivot": "(X=0.500000,Y=0.000000)"
+            }
+          },
+          {
+            "id": "PositionCompass",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.CanvasPanelSlot'\",MemberName=\"SetPosition\")",
+              "NodeGuid": "7C2CD9A46A76416A8607FD52A4A20794"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "D6DDCA9025BD433891C35995FA100A1C",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "102E8BAF7B0B42CE8D6DDFF08E5B2DC5",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "B4B56BE436C8457EB5D95F82417AD1B4",
+                "type": "p_c0bfc8a15cc4bd16dbff834f6704bfd45a4cb17cfecc1af1424d4647cdffec87",
+                "name": "self"
+              },
+              "in:InPosition": {
+                "id": "F1FF44DDF97541E9861B7236F739270D",
+                "type": "p_cd23d4a964a7858fc36eb8d7461f373e2574a788d265e3d07243182e55b875a1"
+              }
+            },
+            "defaults": {
+              "in:InPosition": "(X=0.000000,Y=24.000000)"
+            }
+          },
+          {
+            "id": "ScaleCompass",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberName=\"SetRenderScale\",bSelfContext=True)",
+              "NodeGuid": "3E924C9E49F34098A06AC737BD061D8C"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "799BFA05AA6C4585869645617D35E5AF",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "8BA04D0B1C3A42B884D7889265F4392E",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "7FD95DB4834A4D05BB3B6E810C1A3AD6",
+                "type": "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb",
+                "name": "self"
+              },
+              "in:Scale": {
+                "id": "39EDEB9A2B8C4163BD6D6E7EC70A70E0",
+                "type": "p_cd23d4a964a7858fc36eb8d7461f373e2574a788d265e3d07243182e55b875a1"
+              }
+            },
+            "defaults": {
+              "in:Scale": "(X=0.400000,Y=0.400000)"
+            }
+          },
+          {
+            "id": "SizeToCompass",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.CanvasPanelSlot'\",MemberName=\"SetAutoSize\")",
+              "NodeGuid": "B0A2BD71F051484CAEBA170B27B31B70"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "C1B52516ACD54EA0A87A5F00C5A81D76",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "784DEB408B0349CBA087C27B2E562F76",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "F3E3307649ED4C8BB97FC086F4F76D2B",
+                "type": "p_c0bfc8a15cc4bd16dbff834f6704bfd45a4cb17cfecc1af1424d4647cdffec87",
+                "name": "self"
+              },
+              "in:InbAutoSize": {
+                "id": "23DA1C905AA74E58A6E445CECFE76215",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              }
+            },
+            "defaults": {
+              "in:InbAutoSize": "true"
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "AlignTopCenter.out:then",
+            "to": "PositionCompass.in:exec"
+          },
+          {
+            "from": "AnchorTopCenter.out:then",
+            "to": "AlignTopCenter.in:exec"
+          },
+          {
+            "from": "AttachCompass.out:result",
+            "to": "AlignTopCenter.in:target"
+          },
+          {
+            "from": "AttachCompass.out:result",
+            "to": "AnchorTopCenter.in:target"
+          },
+          {
+            "from": "AttachCompass.out:result",
+            "to": "PositionCompass.in:target"
+          },
+          {
+            "from": "AttachCompass.out:result",
+            "to": "SizeToCompass.in:target"
+          },
+          {
+            "from": "AttachCompass.out:then",
+            "to": "AnchorTopCenter.in:exec"
+          },
+          {
+            "from": "CreateCompass.out:result",
+            "to": "AttachCompass.in:Content"
+          },
+          {
+            "from": "CreateCompass.out:result",
+            "to": "MakeCompassDisplayOnly.in:target"
+          },
+          {
+            "from": "CreateCompass.out:result",
+            "to": "PivotTopCenter.in:target"
+          },
+          {
+            "from": "CreateCompass.out:result",
+            "to": "ScaleCompass.in:target"
+          },
+          {
+            "from": "CreateCompass.out:then",
+            "to": "PivotTopCenter.in:exec"
+          },
+          {
+            "from": "GetHudCanvas.out:RootCanvasPanel",
+            "to": "AttachCompass.in:target"
+          },
+          {
+            "from": "GetHudPlayer.out:result",
+            "to": "CreateCompass.in:OwningPlayer"
+          },
+          {
+            "from": "HudSelf.out:target",
+            "to": "GetHudCanvas.in:target"
+          },
+          {
+            "from": "HudSelf.out:target",
+            "to": "GetHudPlayer.in:target"
+          },
+          {
+            "from": "InitializeCompass.out:then",
+            "to": "CreateCompass.in:exec"
+          },
+          {
+            "from": "PivotTopCenter.out:then",
+            "to": "ScaleCompass.in:exec"
+          },
+          {
+            "from": "PositionCompass.out:then",
+            "to": "SizeToCompass.in:exec"
+          },
+          {
+            "from": "ScaleCompass.out:then",
+            "to": "AttachCompass.in:exec"
+          },
+          {
+            "from": "SizeToCompass.out:then",
+            "to": "MakeCompassDisplayOnly.in:exec"
+          }
+        ]
+      }
+    }
+  ],
+  "dependencies": [
+    "/Game/Mods/StableGyro/UI/WBP_StableGyroCameraCompass.WBP_StableGyroCameraCompass_C"
+  ],
+  "pinTemplates": {
+    "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0": {
+      "AutogeneratedDefaultValue": "\"false\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_355e5901970f8e589f07609c85c5b9026e5d7bbed8a7cdd6122485f5ee0907c5": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.CanvasPanel'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_c0bfc8a15cc4bd16dbff834f6704bfd45a4cb17cfecc1af1424d4647cdffec87": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.CanvasPanelSlot'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.Widget'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_24ab858d8f7bca170291d7edf0a49079dfe4db2f3afb56e1cacaf505fc1802a2": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/UMG.WidgetBlueprintGeneratedClass'/Game/UI/Game/HUD/WBP_VoyageIngameGyroCopter.WBP_VoyageIngameGyroCopter_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_66393f1ff338a338c740df4c9ac52ae81261fd6e98102fd843c16fc70aad6c10": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Player Controller Object Reference Owning Player\\nThe player that \\'owns\\' the widget.\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.PlayerController'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_bc0febd1300d5c5b4f2807215aa7704926a5f90f5492f7d41d737efd492262d1": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"byte\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Enum'/Script/UMG.ESlateVisibility'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_8c6f2cfd3623dadb33879e18662124e23384d8006f1f95ae0f34989ce25f00e5": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"class\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_8c2dd988e4ecfc08e93a93e0e2ccf6b197a46a5aa4f2376ed785f3141be73356": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"delegate\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"OnInitialized\")",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_c629a8d220ad76f45ebde47097efa425f7f7b85983b081c65454b72758fbb676": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.PlayerController'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_95a9dcfc027cd198ff40d4b8de88514a34a4203b7b0b10cdd024654232989d2c": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.CanvasPanel'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_be31bb363d0860c1c594c03243c933b9f0b3dd11546db48c30b923d0b1f0f637": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.CanvasPanelSlot'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_505230412b4a32920a97e48b5870ea936cd4332e4ff29cd8d6091868bde95ce4": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.Widget'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_728354e72efb7d0d71d36343591e0d7232a5ac269521110e3b76bed2624dc260": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/UMG.WidgetBlueprintGeneratedClass'/Game/Mods/StableGyro/UI/WBP_StableGyroCameraCompass.WBP_StableGyroCameraCompass_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"self\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_cd23d4a964a7858fc36eb8d7461f373e2574a788d265e3d07243182e55b875a1": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector2D'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_f41451c69a7054395df9a5a2a7fd34c71f762ef73f4fd6a5599911e3f42fb836": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/Slate.Anchors'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    }
+  },
+  "classes": {
+    "call": "/Script/BlueprintGraph.K2Node_CallFunction",
+    "CreateWidget": "/Script/UMGEditor.K2Node_CreateWidget",
+    "getVariable": "/Script/BlueprintGraph.K2Node_VariableGet",
+    "self": "/Script/BlueprintGraph.K2Node_Self",
+    "event": "/Script/BlueprintGraph.K2Node_Event"
+  }
+}

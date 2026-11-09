@@ -26,6 +26,13 @@ Root ../../AGENTS.md applies. This file owns Gyro-specific contracts.
 [postphysics-pattern]: ../../docs/vehicle-and-hud-modding-patterns-knowledge.md#post-physics-kinematic-correction
 [action-ui-pattern]: ../../docs/vehicle-and-hud-modding-patterns-knowledge.md#discovering-voyages-standard-action-ui
 
+- Keep the compass under the inherited vehicle HUD's visibility lifecycle.
+  Its heading follows the owning player's camera, independently of the hull
+  and flight-control flags. Preserve the stock HUD and compass as external
+  parents and disable the display's native direction tick so it cannot compete
+  with the camera update. The [camera compass](ARCHITECTURE.md#camera-compass)
+  owns the widget responsibilities; [release preparation](ARCHITECTURE.md#release-preparation)
+  owns the required named-property cook and final CDO readback.
 - Runtime flight input must use the exact `IA_GyroCopterThrottleUp`,
   `IA_GyroCopterThrottleDown` and `IAV_GyroPitchReset` actions. Space/Ctrl/X
   references below denote their defaults. Query bound action values on the
