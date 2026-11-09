@@ -20,6 +20,7 @@ failure handling.
 | Check Collapse with strict Apply and executable isolated fixtures | `BlueprintText/Test-CollapseGraphs.ps1` | [Collapsed graph checks](blueprint-text.md#collapsed-graphs) |
 | Import/export supported Actor/Widget/direct UObject Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintText/Invoke-BlueprintAssetText.ps1` | [BlueprintText](blueprint-text.md#schema-2-blueprints) |
 | Import and execute the reusable INI parser in a disposable project | `BlueprintText/Test-IniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/AGENTS.md#validation-and-maintenance) |
+| Validate the sectioned INI parser and flat compatibility in a disposable project | `BlueprintText/Test-SectionedIniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/AGENTS.md#validation-and-maintenance) |
 | Check asset-text round trips in a disposable prepared project | `BlueprintText/test_asset_text_roundtrip.py` | [Blueprint checks](blueprint-text.md#checks) |
 | Check inherited and overridden child-actor defaults across repeated BPT imports | `BlueprintText/Test-ComponentDefaults.ps1` | [BPT maintenance checks](blueprint-text-maintenance.md#choose-validation-by-the-change) |
 | Render a compact Blueprint graph offline, with technical type links in Details / Full | `BlueprintText/Render-BlueprintGraph.ps1` | [BlueprintText](blueprint-text.md) |

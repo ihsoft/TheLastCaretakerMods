@@ -10,8 +10,8 @@ Follow the [graph design rule](../../docs/blueprint-graph-design-rule.md) when
 authoring or simplifying graphs. BPT is an AI-to-Human interface: optimize graphs
 and previews for human understanding, including minimal nonessential noise,
 while preserving execution and data-evaluation boundaries.
-The [INI parser library](Library/IniFileParser/AGENTS.md) owns reusable parser
-integration, its public getters, format, and focused validation.
+The [INI parser library](Library/IniFileParser/AGENTS.md) owns the flat and sectioned
+parsers, their integration, public getters, formats, and focused validation.
 BlueprintText is the recommended Blueprint authoring workflow. Packaging and
 installation remain the mod producer's responsibility. Keep disposable tool-test
 projects and working results under `Tmp/BlueprintText/`; keep the catalogue cache

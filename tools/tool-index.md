@@ -25,7 +25,7 @@ rules remain in the [repository index](../AGENTS.md).
 | Look up BlueprintText formats, schemas and lower-level interfaces | [BlueprintText reference](blueprint-text.md) |
 | Evaluate or maintain shared BPT tools and guidance | [BPT maintenance](blueprint-text-maintenance.md) |
 | Extract selected BPT nodes into a named collapsed graph | [Workspace Collapse](blueprint-workspace.md#extract-an-operation-into-a-collapsed-graph) |
-| Add a reusable UObject INI parser to a mod through BPT | [INI parser source library](BlueprintText/Library/IniFileParser/AGENTS.md) |
+| Add a reusable flat or sectioned UObject INI parser to a mod through BPT | [INI parser source library](BlueprintText/Library/IniFileParser/AGENTS.md) |
 | View or render one exported Blueprint graph offline | [Graph preview](blueprint-text.md#view-one-graph) |
 | Read a BPT graph compactly and reveal exact node/pin details | [Source reading](blueprint-text.md#read-graphs-without-unreal) |
 | Find BPT callers, callbacks and variable accesses across selected sources | [Member-use search](blueprint-text.md#find-member-uses) |

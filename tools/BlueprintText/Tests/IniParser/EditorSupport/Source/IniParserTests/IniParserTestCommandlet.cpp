@@ -19,6 +19,12 @@ constexpr TCHAR InputArgument[]=TEXT("Input=");
 constexpr TCHAR OutputArgument[]=TEXT("Output=");
 constexpr TCHAR PackageA[]=TEXT("/Game/Mods/IniTestA/BP_IniFileParser.BP_IniFileParser_C");
 constexpr TCHAR PackageB[]=TEXT("/Game/Mods/IniTestB/BP_IniFileParser.BP_IniFileParser_C");
+constexpr TCHAR SectionedArgument[]=TEXT("Sectioned");
+constexpr TCHAR SectionPackageA[]=TEXT("/Game/Mods/IniTestA/BP_SectionedIniFileParser.BP_SectionedIniFileParser_C");
+constexpr TCHAR SectionPackageB[]=TEXT("/Game/Mods/IniTestB/BP_SectionedIniFileParser.BP_SectionedIniFileParser_C");
+constexpr TCHAR Section[]=TEXT("Section");
+constexpr TCHAR NameInput[]=TEXT("Name");
+constexpr TCHAR HasSection[]=TEXT("HasSection");
 constexpr TCHAR ReaderClass[]=TEXT("/Script/Voyage.VoyageEditorBlueprintFunctionLibrary");
 constexpr TCHAR CounterFunction[]=TEXT("GetTestReadCount");
 constexpr TCHAR FileName[]=TEXT("settings.ini");
@@ -92,13 +98,14 @@ bool Call(UObject* Instance,const TSharedPtr<FJsonObject>& Step,const FString& F
     }
     return true;
 }
-bool DefaultPins(UClass* Class)
+bool DefaultPins(UClass* Class,bool Sectioned)
 {
     auto* Blueprint=Cast<UBlueprint>(Class->ClassGeneratedBy);if(!Blueprint)return false;
     auto* Graph=NewObject<UEdGraph>(Blueprint);Graph->Schema=UEdGraphSchema_K2::StaticClass();
     for(const TCHAR* Name:{GetFloat,GetDouble,GetInt,GetBool,GetString})
     {
         auto* Function=Class->FindFunctionByName(Name);if(!Function || !Function->HasAnyFunctionFlags(FUNC_BlueprintPure))return false;
+        if(Sectioned && !FindFProperty<FStrProperty>(Function,Section))return false;
         auto* Node=NewObject<UK2Node_CallFunction>(Graph);Node->SetFromFunction(Function);Node->AllocateDefaultPins();
         const auto* DefaultPin=Node->FindPin(Default);if(!DefaultPin)return false;
         if(FString(Name)==GetString && !DefaultPin->DefaultValue.IsEmpty())return false;
@@ -119,6 +126,12 @@ bool DefaultPins(UClass* Class)
             else if(Lower!=-double(MAX_flt)||Upper!=double(MAX_flt))return false;
         }
     }
+    if(Sectioned)
+    {
+        auto* Function=Class->FindFunctionByName(HasSection);
+        if(!Function || !Function->HasAnyFunctionFlags(FUNC_BlueprintPure) ||
+           !FindFProperty<FStrProperty>(Function,NameInput) || !FindFProperty<FBoolProperty>(Function,ReturnValue))return false;
+    }
     return true;
 }
 }
@@ -131,8 +144,10 @@ int32 UIniParserTestCommandlet::Main(const FString& Params)
     FParse::Value(*Params,InputArgument,Input);FParse::Value(*Params,OutputArgument,Output);
     if(!FFileHelper::LoadFileToString(Text,*Input))return 1;
     TSharedPtr<FJsonObject> Suite;if(!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text),Suite))return 1;
-    auto* ClassA=LoadObject<UClass>(nullptr,PackageA);auto* ClassB=LoadObject<UClass>(nullptr,PackageB);
-    if(!ClassA||!ClassB||ClassA==ClassB||!DefaultPins(ClassA))
+    const bool Sectioned=FParse::Param(*Params,SectionedArgument);
+    auto* ClassA=LoadObject<UClass>(nullptr,Sectioned?SectionPackageA:PackageA);
+    auto* ClassB=LoadObject<UClass>(nullptr,Sectioned?SectionPackageB:PackageB);
+    if(!ClassA||!ClassB||ClassA==ClassB||!DefaultPins(ClassA,Sectioned))
     {UE_LOG(LogTemp,Error,TEXT("INI parser classes or default call pins are invalid."));return 2;}
     TStrongObjectPtr<UObject> A(NewObject<UObject>(GetTransientPackage(),ClassA));
     TStrongObjectPtr<UObject> B(NewObject<UObject>(GetTransientPackage(),ClassB));

@@ -1,0 +1,1777 @@
+{
+  "steps": [
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Missing'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Missing"
+      },
+      "expected": false
+    },
+    {
+      "label": "GetInt {'Section': 'Missing', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Missing",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "Queries before Load perform no IO",
+      "reads": 0
+    },
+    {
+      "label": "Write section fixture",
+      "write": "﻿# comment\n   \n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 1
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "Write section fixture",
+      "write": "Broken=\"bad\\q\"\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 2
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "Write section fixture",
+      "write": "BadNumber=nan\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 3
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'BadNumber', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "BadNumber",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "Write section fixture",
+      "write": "Only=\"valid\"\nOnly=\"bad\\q\"\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 4
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": true
+    },
+    {
+      "label": "GetString {'Section': '', 'Name': 'Only', 'Default': 'fallback'}",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Only",
+        "Default": "fallback"
+      },
+      "expected": "fallback"
+    },
+    {
+      "label": "Write section fixture",
+      "write": "Global=5\n[Empty]\n[ A ] # trailing comment\n Key = 1\nText=\"a=#b\"\n[a]\nKey=2\n[Класс]\nKey=3\n[класс]\nKey=4\n[é]\nKey=5\n[é]\nKey=6\n[A:B]\nC=7\n[A]\nB:C=8\n[x|y]\nz=9\n[x]\ny|z=10\n[. /:#= Юникод]\nK=11\n[A]# reopen\nKey=12\n[Empty]\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 5
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Global', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Global",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 5
+    },
+    {
+      "label": "HasSection {'Name': 'Empty'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Empty"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': 'A'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "A"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': 'a'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "a"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': 'Класс'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Класс"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': 'класс'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "класс"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': 'é'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "é"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': 'é'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "é"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': '. /:#= Юникод'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ". /:#= Юникод"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': ' A '}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": " A "
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'EMPTY'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "EMPTY"
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Missing'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Missing"
+      },
+      "expected": false
+    },
+    {
+      "label": "GetInt {'Section': 'A', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "A",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 12
+    },
+    {
+      "label": "GetInt {'Section': 'a', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "a",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "GetInt {'Section': 'Класс', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Класс",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 3
+    },
+    {
+      "label": "GetInt {'Section': 'класс', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "класс",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 4
+    },
+    {
+      "label": "GetInt {'Section': 'é', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "é",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 5
+    },
+    {
+      "label": "GetInt {'Section': 'é', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "é",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 6
+    },
+    {
+      "label": "GetInt {'Section': 'A:B', 'Name': 'C', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "A:B",
+        "Name": "C",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 7
+    },
+    {
+      "label": "GetInt {'Section': 'A', 'Name': 'B:C', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "A",
+        "Name": "B:C",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 8
+    },
+    {
+      "label": "GetInt {'Section': 'x|y', 'Name': 'z', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "x|y",
+        "Name": "z",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 9
+    },
+    {
+      "label": "GetInt {'Section': 'x', 'Name': 'y|z', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "x",
+        "Name": "y|z",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 10
+    },
+    {
+      "label": "GetInt {'Section': '. /:#= Юникод', 'Name': 'K', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": ". /:#= Юникод",
+        "Name": "K",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 11
+    },
+    {
+      "label": "GetInt {'Section': 'Empty', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Empty",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetString {'Section': 'A', 'Name': 'Text', 'Default': 'fallback'}",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Section": "A",
+        "Name": "Text",
+        "Default": "fallback"
+      },
+      "expected": "a=#b"
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nGood=4\n# [Ignored]\nGood=5\nBroken=\"good\"\nBroken=\"bad\\q\"\nNumber=4\nNumber=wrong\nBlank=9\nBlank=\n[Other]\nGood=90\n[S]\nGood=6\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 6
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Good', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Good",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 6
+    },
+    {
+      "label": "GetInt {'Section': 'Other', 'Name': 'Good', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Other",
+        "Name": "Good",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 90
+    },
+    {
+      "label": "GetString {'Section': 'S', 'Name': 'Broken', 'Default': 'fallback'}",
+      "method": "GetString",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Broken",
+        "Default": "fallback"
+      },
+      "expected": "fallback"
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Number', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Number",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Blank', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Blank",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': 'S'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "S"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': 'Ignored'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Ignored"
+      },
+      "expected": false
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nKey=1\n[\nKey=99\nLeak=55\n[Recovery] # allowed\nKey=2\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 7
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Leak', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Leak",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Recovery'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Recovery"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Recovery', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Recovery",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nKey=1\n[]\nKey=99\nLeak=55\n[Recovery] # allowed\nKey=2\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 8
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Leak', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Leak",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Recovery'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Recovery"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Recovery', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Recovery",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nKey=1\n[   ]\nKey=99\nLeak=55\n[Recovery] # allowed\nKey=2\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 9
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Leak', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Leak",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Recovery'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Recovery"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Recovery', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Recovery",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nKey=1\n[Missing\nKey=99\nLeak=55\n[Recovery] # allowed\nKey=2\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 10
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Leak', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Leak",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Recovery'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Recovery"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Recovery', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Recovery",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nKey=1\n[[Nested]]\nKey=99\nLeak=55\n[Recovery] # allowed\nKey=2\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 11
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Leak', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Leak",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Recovery'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Recovery"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Recovery', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Recovery",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nKey=1\n[S] junk\nKey=99\nLeak=55\n[Recovery] # allowed\nKey=2\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 12
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Leak', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Leak",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Recovery'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Recovery"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Recovery', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Recovery",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nKey=1\n[S] ;comment\nKey=99\nLeak=55\n[Recovery] # allowed\nKey=2\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 13
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Leak', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Leak",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Recovery'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Recovery"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Recovery', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Recovery",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nKey=1\n[S]]\nKey=99\nLeak=55\n[Recovery] # allowed\nKey=2\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 14
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Leak', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Leak",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Recovery'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Recovery"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Recovery', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Recovery",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nKey=1\n[bad\rname]\nKey=99\nLeak=55\n[Recovery] # allowed\nKey=2\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 15
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Leak', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Leak",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Recovery'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Recovery"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Recovery', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Recovery",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nKey=1\n[bad\nname]\nKey=99\nLeak=55\n[Recovery] # allowed\nKey=2\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 16
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'Leak', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "Leak",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Recovery'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Recovery"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Recovery', 'Name': 'Key', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Recovery",
+        "Name": "Key",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 2
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[S]\nK=3\nnot an assignment\nBad=\"unterminated\nK=4\n[Other]\nK=6\n[S]\nK=oops\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 17
+    },
+    {
+      "label": "GetInt {'Section': 'S', 'Name': 'K', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "S",
+        "Name": "K",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': 'Other', 'Name': 'K', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Other",
+        "Name": "K",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 6
+    },
+    {
+      "label": "HasSection {'Name': 'S'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "S"
+      },
+      "expected": true
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[broken\nGlobal=4\n[Good]\nK=1\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 18
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "GetInt {'Section': '', 'Name': 'Global', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "",
+        "Name": "Global",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "GetInt {'Section': 'Good', 'Name': 'K', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Good",
+        "Name": "K",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 1
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[First]\nK=10\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 1,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 19
+    },
+    {
+      "label": "HasSection {'Name': 'First'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "First"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': 'First'}",
+      "method": "HasSection",
+      "object": 2,
+      "args": {
+        "Name": "First"
+      },
+      "expected": false
+    },
+    {
+      "label": "Write section fixture",
+      "write": "[Second]\nK=20\n"
+    },
+    {
+      "label": "Load {'Path': '$file'}",
+      "method": "Load",
+      "object": 2,
+      "args": {
+        "Path": "$file"
+      }
+    },
+    {
+      "label": "One file read",
+      "reads": 20
+    },
+    {
+      "label": "HasSection {'Name': 'First'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "First"
+      },
+      "expected": true
+    },
+    {
+      "label": "HasSection {'Name': 'Second'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Second"
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Second'}",
+      "method": "HasSection",
+      "object": 2,
+      "args": {
+        "Name": "Second"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'First', 'Name': 'K', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "First",
+        "Name": "K",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 10
+    },
+    {
+      "label": "GetInt {'Section': 'Second', 'Name': 'K', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 2,
+      "args": {
+        "Section": "Second",
+        "Name": "K",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 20
+    },
+    {
+      "label": "Getters and HasSection perform no IO",
+      "reads": 20
+    },
+    {
+      "label": "Reload {}",
+      "method": "Reload",
+      "object": 1,
+      "args": {}
+    },
+    {
+      "label": "One reload read",
+      "reads": 21
+    },
+    {
+      "label": "HasSection {'Name': 'First'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "First"
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Second'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Second"
+      },
+      "expected": true
+    },
+    {
+      "label": "GetInt {'Section': 'Second', 'Name': 'K', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 1,
+      "args": {
+        "Section": "Second",
+        "Name": "K",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": 20
+    },
+    {
+      "label": "Empty file",
+      "write": ""
+    },
+    {
+      "label": "Reload {}",
+      "method": "Reload",
+      "object": 1,
+      "args": {}
+    },
+    {
+      "label": "One reload read",
+      "reads": 22
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Second'}",
+      "method": "HasSection",
+      "object": 1,
+      "args": {
+        "Name": "Second"
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Second'}",
+      "method": "HasSection",
+      "object": 2,
+      "args": {
+        "Name": "Second"
+      },
+      "expected": true
+    },
+    {
+      "label": "Delete file",
+      "delete": true
+    },
+    {
+      "label": "Reload {}",
+      "method": "Reload",
+      "object": 2,
+      "args": {}
+    },
+    {
+      "label": "One reload read",
+      "reads": 23
+    },
+    {
+      "label": "HasSection {'Name': ''}",
+      "method": "HasSection",
+      "object": 2,
+      "args": {
+        "Name": ""
+      },
+      "expected": false
+    },
+    {
+      "label": "HasSection {'Name': 'Second'}",
+      "method": "HasSection",
+      "object": 2,
+      "args": {
+        "Name": "Second"
+      },
+      "expected": false
+    },
+    {
+      "label": "GetInt {'Section': 'Second', 'Name': 'K', 'Default': -9, 'Min': -2147483648, 'Max': 2147483647}",
+      "method": "GetInt",
+      "object": 2,
+      "args": {
+        "Section": "Second",
+        "Name": "K",
+        "Default": -9,
+        "Min": -2147483648,
+        "Max": 2147483647
+      },
+      "expected": -9
+    },
+    {
+      "label": "Final read count",
+      "reads": 23
+    }
+  ]
+}

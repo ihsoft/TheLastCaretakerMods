@@ -129,7 +129,8 @@ or selected sources are rejected; export existing assets to edit them.
 ```
 
 The reusable [INI parser library](BlueprintText/Library/IniFileParser/AGENTS.md)
-supplies that source at `tools/BlueprintText/Library/IniFileParser/BP_IniFileParser.json`.
+supplies the flat `BP_IniFileParser.json` and separate `BP_SectionedIniFileParser.json`
+sources; select the documented format and interface before importing a copy.
 Each consumer gets its own package; there is no shared runtime
 package or automatic library-update relationship. After Apply, retain the
 synchronized source with the mod as usual and cook its project normally.

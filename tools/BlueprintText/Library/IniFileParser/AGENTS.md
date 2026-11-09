@@ -1,10 +1,20 @@
-# INI parser BPT library: integration and maintenance
+# INI parsers BPT library: integration and maintenance
 
-[BP_IniFileParser.json](BP_IniFileParser.json) is a reusable schema-2 BlueprintText
-source for a Blueprint directly derived from UObject. Parsing, validation, cache
-management and typed getters are implemented in its graphs. Consumers import
-their own copy through the ordinary BPT workspace. There is no parser asset
-generator, shared runtime package or additional native parser to distribute.
+The library provides two supported parsers. Choose by the configuration's shape:
+
+| Source | Use case | Key lookup |
+| --- | --- | --- |
+| [BP_IniFileParser.json](BP_IniFileParser.json) | One flat set of settings; headers have no namespace meaning. | `Name` |
+| [BP_SectionedIniFileParser.json](BP_SectionedIniFileParser.json) | Independent named groups or optional profiles, including empty section declarations. | `Section`, `Name`; `HasSection(Name)` checks presence. |
+
+Both are schema-2 BlueprintText sources for Blueprints directly derived from
+UObject. Parsing, validation, cache management and typed getters are implemented
+in their graphs. Consumers import their own copy through the ordinary BPT
+workspace. There is no parser asset generator, shared runtime package or additional
+native parser to distribute. Both interfaces are maintained independently.
+
+The interface and format below describe the flat source; the
+[sectioned interface and grammar](#sectioned-parser) follow separately.
 
 ## Add to a mod project
 
@@ -106,6 +116,61 @@ private key encoder preserves case-sensitive identity despite Unreal's reflected
 String-map comparison. Helpers are private; consumers need only the seven methods
 above. The lexical helper graphs preserve the existing shared settings grammar.
 
+## Sectioned parser
+
+Import `BP_SectionedIniFileParser.json` with the same AddSource/Apply workflow,
+using a distinct destination package such as
+`/Game/Mods/MyMod/Settings/BP_SectionedIniFileParser`. The reader dependency,
+object lifetime and snapshot ownership are the same as for the flat source.
+
+| Function | Input pin names | Result |
+| --- | --- | --- |
+| `Load` | `Path` | Stores the path and calls Reload. |
+| `Reload` | None | Clears both caches, then reads the stored path. |
+| `HasSection` | `Name` | Pure Boolean presence query. |
+| `GetFloat`, `GetDouble`, `GetInt` | `Section`, `Name`, `Default`, `Min`, `Max` | Same types, defaults, bounds and validation as the flat getters above. |
+| `GetBool`, `GetString` | `Section`, `Name`, `Default` | Same types, defaults and validation as the flat getters above. |
+
+All getters and HasSection are pure and perform no file I/O. `Section` and `Name`
+are exact lookup strings; trimming happens when the file is parsed. Getter
+defaults remain 0 for numbers, false for Boolean and empty string for String;
+numeric bounds retain the full ranges listed above.
+
+```ini
+GlobalValue = 3
+[BP_Module_Battery.BP_Module_Battery_C:Input] # optional comment
+Enabled = true
+Threshold = 20
+[EmptySection]
+```
+
+- Sections are opaque names. Dots, colons, slashes, `#`, `=`, and Unicode inside
+  brackets are ordinary characters. Trim whitespace around the enclosed name;
+  preserve case and Unicode identity without normalization. Brackets and line
+  breaks are reserved; an empty enclosed name is invalid.
+- A trimmed line beginning with `[` is a header candidate, parsed before the
+  ordinary comment/assignment scanner. After its closing `]`, only whitespace
+  and an optional `#` comment are allowed. A malformed candidate disables the
+  current assignment destination until the next valid header; its following
+  assignments cannot leak into the preceding or global section. An ordinary
+  malformed value does not switch sections.
+- Every valid named header establishes presence, including an empty section.
+  Repeating a header reopens that section. The last assignment wins only for
+  the same section/key pair; malformed identifiable values remove the preceding
+  value in that pair, following the flat lexical contract.
+- Before the first header, assignments use `Section=""`. `HasSection("")`
+  becomes true on the first lexically valid global assignment and stays true
+  until Reload, even if a later malformed assignment removes its value. A raw
+  value that fails typed conversion still counts as a lexical assignment.
+- Presence is separate from value validity. Consumers validate their own mode
+  or profile after HasSection succeeds. The parser does not interpret class,
+  socket, mode or other consumer-specific syntax in a section name.
+- Values retain the flat grammar, including quoted strings, `#` comments,
+  escapes and numeric checks. Section/key addressing is collision-free and
+  case-sensitive; punctuation does not act as an internal separator.
+- Reload clears both section presence and raw values, including when the file
+  is missing, unreadable or empty. Each instance retains an independent snapshot.
+
 ## Validation and maintenance
 
 Run the focused integration test in a new temporary directory:
@@ -115,7 +180,23 @@ Run the focused integration test in a new temporary directory:
   -OutputRoot './Tmp/BlueprintText/test-ini-parser'
 ```
 
-It creates a disposable project, supplies test editor dependencies, imports two
+For the sectioned variant, run:
+
+```powershell
+./tools/BlueprintText/Test-SectionedIniParser.ps1 `
+  -OutputRoot './Tmp/BlueprintText/test-sectioned-ini-parser'
+```
+
+The sectioned runner imports two copies of each variant through AddSource/Apply,
+executes the flat regression unchanged, reuses its typed cases in a named
+namespace, and checks section presence, repeated/empty/malformed headers, opaque
+punctuation, address collisions, case/Unicode identity, global assignments,
+invalid values, cache reset, read counts and independent snapshots. It also
+checks reflected public pins/defaults and repeats Apply after execution. Use a
+new output directory for each full run; game and installation checks remain with
+the consumer.
+
+The flat runner creates a disposable project, supplies test editor dependencies, imports two
 relocated copies with AddSource/Apply, and executes the BPT functions. The suite
 covers numeric storage and ranges, exact double precision and subnormal values,
 default call pins, strings/escapes, comments, case-sensitive keys, duplicate keys, empty/missing files, reload, independent
@@ -129,10 +210,11 @@ mirror and a reflective test driver; it does not implement parsing or generate
 Blueprint graphs. Do not copy that plugin into a mod or ship it. Validation is
 against the local UE 5.8.2 editor and the maintained Voyage API signature. It is
 not cooked-game or installation validation. Runtime integration is established
-for the mod-owned copy in [StableGyro](../../../../mods/StableGyro/ARCHITECTURE.md#settings-parser).
-That consumer uses `GetDouble` and `GetBool`; the complete getter and numeric-edge
-coverage belongs to the editor suite. Each new consumer still needs game checks
-of its own settings lifecycle and value application.
+for the flat mod-owned copy in [StableGyro](../../../../mods/StableGyro/ARCHITECTURE.md#settings-parser)
+and the sectioned copy in [SmartOutlet](../../../../mods/SmartOutlet/AGENTS.md).
+StableGyro uses `GetDouble` and `GetBool`; complete getter, numeric-edge and
+section-grammar coverage belongs to the editor suites. Each new consumer still
+needs game checks of its own settings lifecycle and value application.
 
 Edit the BPT source through the normal workspace workflow and rerun the tests.
 There is no regeneration step from a parser-specific C++ or Python builder.
