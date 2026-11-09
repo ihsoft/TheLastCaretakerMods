@@ -302,6 +302,14 @@ Inheritance ordering and compatible batches are tool-owned. Unsupported
 dependency arrangements produce a diagnostic rather than requiring an agent to
 invent a per-mod build procedure.
 
+If a failed Apply reports broken references between a selected Blueprint and a
+known mutually referencing Blueprint outside the selection, export both into a
+new workspace, reapply the intended edit and run Apply with both selected. The
+unchanged peer must also pass strict comparison. This is a focused recovery path,
+not a requirement to enumerate all dependencies before ordinary edits or a
+guarantee that every reference cycle is supported. Selection remains explicit;
+Apply does not automatically expand its write set.
+
 Apply verifies Blueprint state without generating or copying preview images.
 Run Preview to collect current widget resources after Apply. A Preview failure
 does not roll back applied packages or change the accepted project baseline.
