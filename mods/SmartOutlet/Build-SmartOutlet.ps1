@@ -28,23 +28,10 @@ $fingerprintPath = Join-Path $output 'game-fingerprint.json'
 $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
 $buildGate = & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 $mappings = & (Join-Path $repoRoot 'tools/Get-VoyageMappings.ps1') -GameRoot $GameRoot
-Import-Module (Join-Path $repoRoot 'tools/VoyageModSettings/VoyageModSettings.psm1') -Force
 $settingsTemplate = Join-Path $modRoot 'Assets/SmartOutlet.ini'
-$settings = @(Read-VoyageModSettingsSchema -SchemaPath (Join-Path $modRoot 'Settings/SmartOutlet.settings.json') -DefaultIniPath $settingsTemplate)
-$settingsByKey = @{}
-foreach ($setting in $settings) { $settingsByKey[$setting.Key] = $setting }
-$ruleCount = [double]$settingsByKey['RuleCount'].IniValue
-if ($ruleCount -ne [math]::Truncate($ruleCount)) { throw 'RuleCount must be an integer' }
-for ($ruleIndex = 1; $ruleIndex -le $ruleCount; $ruleIndex++) {
-    $enable = [double]$settingsByKey["Rule${ruleIndex}EnablePortAtPercent"].IniValue
-    $disable = [double]$settingsByKey["Rule${ruleIndex}DisablePortAtPercent"].IniValue
-    $mode = [string]$settingsByKey["Rule${ruleIndex}Mode"].IniValue
-    $slot = [double]$settingsByKey["Rule${ruleIndex}GlowMaterialSlot"].IniValue
-    $invalidThresholds = if ($mode -ceq 'input') { $enable -ge $disable } else { $enable -le $disable }
-    if ($invalidThresholds -or $slot -ne [math]::Truncate($slot) -or $mode -cnotin @('input','output')) { throw "Invalid thresholds, mode or slot in rule $ruleIndex" }
-}
+& (Join-Path $modRoot 'Settings/Test-SettingsTemplate.ps1') -Path $settingsTemplate | Out-Null
 & (Join-Path $repoRoot 'tools/Prepare-UnrealEditorSupport.ps1') -ProjectFile $project -EngineRoot $EngineRoot | Out-Null
-$ownedNames = @('BP_OutletController', 'ModActor', 'M_PortGlow', 'Settings/BP_IniFileParser', 'Settings/BP_OutletRule')
+$ownedNames = @('BP_OutletController', 'ModActor', 'WBP_PortModeAction', 'M_PortGlow', 'Settings/BP_SectionedIniFileParser', 'Settings/BP_OutletRule', 'Settings/BP_StorageProfile')
 $packages = @($ownedNames | ForEach-Object { '/Game/Mods/SmartOutlet/' + $_ })
 $cookedRoot = [IO.Path]::GetFullPath((Join-Path $modRoot 'Saved/Cooked/Windows/Voyage/Content/Mods/SmartOutlet'))
 foreach ($name in $ownedNames) {

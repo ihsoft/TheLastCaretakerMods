@@ -13,6 +13,8 @@ cases = [
     ('ValidateRules', 'rules-validation.json'),
     ('ValidateResearchTier', 'research-tier-validation.json'),
     ('ValidateLatchState', 'latch-validation.json'),
+    ('ValidatePortInteraction', 'port-interaction-validation.json'),
+    ('ValidateModes', 'modes-validation.json'),
 ]
 for _, report in cases:
     (output / report).unlink(missing_ok=True)

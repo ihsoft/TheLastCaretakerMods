@@ -19,5 +19,5 @@ $log = Join-Path $output 'checks-validation.log'
     > (Join-Path $output 'checks-validation-console.log')
 if (-not (Test-Path -LiteralPath $report)) { throw "Editor checks did not complete. See $log" }
 $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
-if ($result.status -cne 'passed' -or @($result.tests).Count -ne 4) { throw "Editor checks failed. See $report" }
+if ($result.status -cne 'passed' -or @($result.tests).Count -ne 6) { throw "Editor checks failed. See $report" }
 $result

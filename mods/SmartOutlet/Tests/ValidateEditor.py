@@ -27,9 +27,11 @@ rule_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/Settings/BP_OutletR
 assert rule_class, 'Rule class missing'
 rule = unreal.new_object(rule_class, outer=controller)
 system.call_method('SetObjectPropertyByName', (controller, 'Rule', rule))
+system.call_method('SetBytePropertyByName', (controller, 'Mode', 2))
 system.call_method('SetObjectPropertyByName', (controller, 'Module', module))
 system.call_method('SetObjectPropertyByName', (controller, 'Port', port))
 system.call_method('SetBoolPropertyByName', (controller, 'Initialized', True))
+system.call_method('SetBoolPropertyByName', (controller, 'OwnsPort', True))
 glow = unreal.load_asset('/Game/Mods/SmartOutlet/M_PortGlow')
 assert glow, 'Glow material missing'
 assert unreal.MaterialEditingLibrary.get_material_default_scalar_parameter_value(glow, 'GlowStrength') == 2.0

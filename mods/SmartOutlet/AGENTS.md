@@ -10,12 +10,15 @@ knowledge. For a new mod, follow its
   and creates the additive DML candidate and release manifest.
 - [Installer](Install-SmartOutlet.ps1) deploys a candidate and preserves the
   player's INI. [Commented INI](Assets/SmartOutlet.ini) owns rule keys and defaults.
-- [Editor checks](Validate-SmartOutlet.ps1) execute all four compiled Blueprint
+- [Editor checks](Validate-SmartOutlet.ps1) execute all six compiled Blueprint
   suites against editor mirrors; wrap the script in the shared Unreal queue.
 - [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
 
-Smart Outlet is maintained mod work, no longer an exploratory prototype.
-Game-tested candidates remain under `Tmp/SmartOutlet/` until publication;
+Smart Outlet is a maintained mod using optional section-based input/output
+profiles and per-port mode selection. The shared parser is owned by the BPT
+curator; this project imports a separate runtime copy. Required editor-only
+game identities are documented in [source provenance](SOURCE-PROVENANCE.md).
+Candidates remain under `Tmp/SmartOutlet/` until publication;
 `version.txt` advances only after a numbered Nexus release.
 
 The user routes BPT tool/process observations to

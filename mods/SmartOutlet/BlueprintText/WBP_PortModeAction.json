@@ -1,0 +1,327 @@
+{
+  "schema": 2,
+  "format": "compact-asset",
+  "asset": "/Game/Mods/SmartOutlet/WBP_PortModeAction",
+  "parent": "/Script/UMG.UserWidget",
+  "properties": {
+    "WidgetVariableNameToGuidMap": "((\"InteractionRoot\", 76370397A53243F1AF3736EC34C0BC5F),(\"HintHost\", 72E76CBC93374E0E83A581CEEAD29163))",
+    "TickPrediction": "WillTick",
+    "TickPredictionReason": "Script",
+    "BlueprintSystemVersion": "2",
+    "bLegacyNeedToPurgeSkelRefs": "False",
+    "BlueprintGuid": "FB57BB4CECC54AA99ED8F9608017A8F6"
+  },
+  "widget": {
+    "tree": "WBP_PortModeAction:WidgetTree",
+    "objects": [
+      {
+        "id": "WBP_PortModeAction:WidgetTree",
+        "name": "WidgetTree",
+        "class": "/Script/UMG.WidgetTree",
+        "outer": "$blueprint",
+        "flags": 262153,
+        "properties": {
+          "RootWidget": "/Script/UMG.VerticalBox'/Game/Mods/SmartOutlet/WBP_PortModeAction.WBP_PortModeAction:WidgetTree.InteractionRoot'"
+        }
+      },
+      {
+        "id": "WBP_PortModeAction:WidgetTree.HintHost",
+        "name": "HintHost",
+        "class": "/Script/UMG.HorizontalBox",
+        "outer": "WBP_PortModeAction:WidgetTree",
+        "flags": 8,
+        "properties": {
+          "Slot": "/Script/UMG.VerticalBoxSlot'/Game/Mods/SmartOutlet/WBP_PortModeAction.WBP_PortModeAction:WidgetTree.InteractionRoot.HintSlot'",
+          "bIsVariable": "True"
+        }
+      },
+      {
+        "id": "WBP_PortModeAction:WidgetTree.InteractionRoot",
+        "name": "InteractionRoot",
+        "class": "/Script/UMG.VerticalBox",
+        "outer": "WBP_PortModeAction:WidgetTree",
+        "flags": 8,
+        "properties": {
+          "Slots": "(\"/Script/UMG.VerticalBoxSlot'/Game/Mods/SmartOutlet/WBP_PortModeAction.WBP_PortModeAction:WidgetTree.InteractionRoot.HintSlot'\")"
+        }
+      },
+      {
+        "id": "WBP_PortModeAction:WidgetTree.InteractionRoot.HintSlot",
+        "name": "HintSlot",
+        "class": "/Script/UMG.VerticalBoxSlot",
+        "outer": "WBP_PortModeAction:WidgetTree.InteractionRoot",
+        "flags": 8,
+        "properties": {
+          "HorizontalAlignment": "HAlign_Left",
+          "Parent": "/Script/UMG.VerticalBox'/Game/Mods/SmartOutlet/WBP_PortModeAction.WBP_PortModeAction:WidgetTree.InteractionRoot'",
+          "Content": "/Script/UMG.HorizontalBox'/Game/Mods/SmartOutlet/WBP_PortModeAction.WBP_PortModeAction:WidgetTree.HintHost'"
+        }
+      }
+    ]
+  },
+  "variables": [
+    {
+      "VarName": "\"OutletManager\"",
+      "VarGuid": "B562FCC58F954658ADEB0B7BE0BFF44D",
+      "VarType": "(PinCategory=\"object\",PinSubCategoryObject=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/ModActor.ModActor_C'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"Outlet Manager\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    }
+  ],
+  "defaults": {
+    "bHasScriptImplementedPaint": "False",
+    "Visibility": "HitTestInvisible",
+    "OutletManager": "None"
+  },
+  "graphs": [
+    {
+      "name": "EventGraph",
+      "kind": "event",
+      "properties": {
+        "GraphGuid": "2A3F25F1E7344EB4B1DD3D51B6602B22"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "Manager",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"OutletManager\",MemberGuid=B562FCC58F954658ADEB0B7BE0BFF44D,bSelfContext=True)",
+              "NodeGuid": "7082E3018B314FCD9451E76553EC692E"
+            },
+            "pins": {
+              "out:OutletManager": {
+                "id": "AEBC791F380C4C63B14B676E050D4A04",
+                "type": "p_c9cefbdcd8bef5c68128a6aec1013afb4bc88d87a233278ce8edc325e901d763"
+              },
+              "in:target": {
+                "id": "3314CB62486B809FDCF68A8F4D1E292E",
+                "type": "p_746d99f42b6380fae0b41e6637fbf5c0b4e2f05bb26a5911b97379dab02971a2",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "RefreshOwnedHint",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/ModActor.ModActor_C'\",MemberName=\"RefreshPortInteraction\",MemberGuid=DF62318C52534836B32494BA5EF28A0F)",
+              "NodeGuid": "2CB56FA0D2DA4949AFBE81F926BD3A2D"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "2DB5D053DB8C40A0824B7A7CF56DE376",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "AEA326884A5E4B9FABC4616A8541110A",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "7D5CE898FB444BB1A0E73F48C3A5CD5B",
+                "type": "p_bd013ffbaa623297b507a49061c159e86b924895985fc7f0057c2f2e8593d790",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "RefreshWhilePaused",
+            "kind": "event",
+            "properties": {
+              "EventReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"Tick\")",
+              "bOverrideFunction": "True",
+              "NodeGuid": "39FB039117B446DCADA06018471497A5"
+            },
+            "pins": {
+              "out:OutputDelegate": {
+                "id": "35CD5BDC482A4DA5931DBDB670880CE8",
+                "type": "p_b08525d356e9532d9357c24e6b916159bb0d50e13507366b82f5c1ebc97d704e"
+              },
+              "out:then": {
+                "id": "91E25472332A457880260E4A2F23732D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:MyGeometry": {
+                "id": "E8DD132FE2FF433B8EDCF8ADE800EBA1",
+                "type": "p_072da7298ed6ad9738961d7ce3274c781c6183c71b6914121f6da64c3dd0cdd1"
+              },
+              "out:InDeltaTime": {
+                "id": "7D0F44608A3C44FBB2E60D120D14741A",
+                "type": "p_917072790573f4748d200d05b2236da99d314b62a00065e65f25bb0c3e9a92c4"
+              }
+            },
+            "defaults": {
+              "out:InDeltaTime": "0.0"
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "Manager.out:OutletManager",
+            "to": "RefreshOwnedHint.in:target"
+          },
+          {
+            "from": "RefreshWhilePaused.out:then",
+            "to": "RefreshOwnedHint.in:exec"
+          }
+        ]
+      }
+    }
+  ],
+  "dependencies": [],
+  "pinTemplates": {
+    "p_917072790573f4748d200d05b2236da99d314b62a00065e65f25bb0c3e9a92c4": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"In Delta Time\\nFloat (single-precision)\\n\\nReal time passed since last tick\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"float\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_bd013ffbaa623297b507a49061c159e86b924895985fc7f0057c2f2e8593d790": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/ModActor.ModActor_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_746d99f42b6380fae0b41e6637fbf5c0b4e2f05bb26a5911b97379dab02971a2": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/UMG.WidgetBlueprintGeneratedClass'/Game/Mods/SmartOutlet/WBP_PortModeAction.WBP_PortModeAction_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_072da7298ed6ad9738961d7ce3274c781c6183c71b6914121f6da64c3dd0cdd1": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"My Geometry\\nGeometry Structure\\n\\nThe space allotted for this widget\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/SlateCore.Geometry'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_b08525d356e9532d9357c24e6b916159bb0d50e13507366b82f5c1ebc97d704e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"delegate\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"Tick\")",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_c9cefbdcd8bef5c68128a6aec1013afb4bc88d87a233278ce8edc325e901d763": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/ModActor.ModActor_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    }
+  },
+  "classes": {
+    "getVariable": "/Script/BlueprintGraph.K2Node_VariableGet",
+    "call": "/Script/BlueprintGraph.K2Node_CallFunction",
+    "event": "/Script/BlueprintGraph.K2Node_Event"
+  }
+}

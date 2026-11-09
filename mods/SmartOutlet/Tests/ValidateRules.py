@@ -1,224 +1,91 @@
-"""Compiled Blueprint checks for INI rules and non-electric resource control.
-
-Run through the shared Unreal queue. Native mirrors do not simulate game flow.
-"""
+"""Compiled profile lookup/discovery and independent resource ports; editor mirrors only."""
 import json
 from pathlib import Path
 import unreal
-
-root = Path(__file__).resolve().parents[3]
-report = root / 'Tmp/SmartOutlet/rules-validation.json'
-parser_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C')
-rule_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/Settings/BP_OutletRule.BP_OutletRule_C')
-controller_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/BP_OutletController.BP_OutletController_C')
-manager_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/ModActor.ModActor_C')
-assert all((parser_class, rule_class, controller_class, manager_class))
-actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-system = unreal.get_default_object(unreal.SystemLibrary)
-parser = unreal.new_object(parser_class)
-reader = unreal.get_default_object(unreal.VoyageEditorBlueprintFunctionLibrary)
-before = reader.call_method('GetTestReadCount')
-parser.call_method('Load', (str(root/'mods/SmartOutlet/Assets/SmartOutlet.ini'),))
-rules = []
-for i, expected in [(1, 'BP_Module_Battery'), (2, 'BP_Module_fresh_Water_Tank'), (3, 'BP_Module_salt_Water_Tank')]:
-    rule = unreal.new_object(rule_class)
-    assert rule.call_method('ReadSettings', (parser, i)), 'Default rule rejected'
-    assert expected in rule.get_editor_property('ActorClass')
-    assert rule.get_editor_property('SocketName') == ('VoyageModuleSocketView2' if i == 1 else 'VoyageModuleSocketView1')
-    assert abs(rule.get_editor_property('HighFraction') - .8) < 1e-8
-    assert abs(rule.get_editor_property('LowFraction') - .2) < 1e-8
-    assert rule.get_editor_property('IsInput') == (i != 1)
-    assert rule.get_editor_property('Direction') == (unreal.ModuleSocketType.ST_INPUT if i != 1 else unreal.ModuleSocketType.ST_OUTPUT)
-    rules.append(rule)
-assert reader.call_method('GetTestReadCount') == before + 1, 'Rule getters reread INI'
-missing = unreal.new_object(rule_class)
-assert not missing.call_method('ReadSettings', (parser, 5)), 'Missing rule accepted'
-
-fixture = root/'Tmp/SmartOutlet/rules-invalid.ini'
-fixture.write_text('Rule1ActorClass="/Script/Voyage.VoyageModuleActor"\nRule1SocketName="AlternativeSocket"\nRule1EnablePortAtPercent=30\nRule1DisablePortAtPercent=70\nRule1GlowMaterialSlot=-1\n', encoding='utf-8')
-parser.call_method('Load', (str(fixture),))
-assert not missing.call_method('ReadSettings', (parser, 1)), 'Reversed thresholds accepted'
-fixture.write_text(fixture.read_text().replace('=30', '=75').replace('=70', '=25'), encoding='utf-8')
-parser.call_method('Load', (str(fixture),))
-assert missing.call_method('ReadSettings', (parser, 1)), 'Custom rule rejected'
-assert missing.get_editor_property('SocketName') == 'AlternativeSocket'
-assert missing.get_editor_property('GlowMaterialSlot') == -1
-fixture.write_text(fixture.read_text() + 'Rule1Mode="both"\n', encoding='utf-8')
-parser.call_method('Load', (str(fixture),))
-assert not missing.call_method('ReadSettings', (parser, 1)), 'Unknown direction accepted'
-fixture.write_text(fixture.read_text().replace('"both"', '"output"'), encoding='utf-8')
-parser.call_method('Load', (str(fixture),))
-assert missing.call_method('ReadSettings', (parser, 1))
-
-# Explicit transition names invert with mode. Missing values use mode defaults;
-# a reversed/equal range is rejected without sorting away the requested meaning.
-for mode in ('input', 'output'):
-    base = ('Rule1ActorClass="/Script/Voyage.VoyageModuleActor"\n'
-            'Rule1SocketName="AlternativeSocket"\n'
-            f'Rule1Mode="{mode}"\nRule1GlowMaterialSlot=-1\n')
-    for enable, disable, valid in [(None, None, True),
-                                   (25 if mode == 'input' else 75,
-                                    75 if mode == 'input' else 25, True),
-                                   (75 if mode == 'input' else 25,
-                                    25 if mode == 'input' else 75, False),
-                                   (50, 50, False)]:
-        text = base
-        if enable is not None:
-            text += f'Rule1EnablePortAtPercent={enable}\nRule1DisablePortAtPercent={disable}\n'
-        fixture.write_text(text, encoding='utf-8')
-        parser.call_method('Load', (str(fixture),))
-        probe = unreal.new_object(rule_class)
-        assert bool(probe.call_method('ReadSettings', (parser, 1))) == valid, (mode, enable, disable)
-        if valid:
-            assert abs(probe.get_editor_property('HighFraction') - (.8 if enable is None else .75)) < 1e-8
-            assert abs(probe.get_editor_property('LowFraction') - (.2 if enable is None else .25)) < 1e-8
-fixture.unlink()
-
-# The same controller must use FreshWater even when Electricity is always full.
-module = unreal.new_object(unreal.VoyageModuleComponent)
-port = unreal.new_object(unreal.VoyageModuleSocketViewComponent)
-data = port.get_editor_property('port')
-limits = unreal.ModuleSocketBandwidth(input=42.0, output=73.0, item_bandwidth_in_kg=9.0)
-data.set_editor_property('resource_type', unreal.ModuleResourceType.FRESH_WATER)
-data.set_editor_property('bandwidth', limits)
-port.set_editor_property('port', data)
-unreal.get_default_object(controller_class).set_editor_property('OriginalBandwidth', limits)
-controller = actors.spawn_actor_from_class(controller_class, unreal.Vector())
-for key, value in [('Rule', missing), ('Module', module), ('Port', port)]:
-    system.call_method('SetObjectPropertyByName', (controller, key, value))
-system.call_method('SetBoolPropertyByName', (controller, 'Initialized', True))
-module.set_editor_property('editor_validation_amount', 6000.0)
-module.set_editor_property('editor_validation_capacity', 6000.0)
-module.set_editor_property('editor_validation_capacities', {unreal.ModuleResourceType.FRESH_WATER: 2000.0})
-cases = []
-for amount, enabled in [(0,False),(1499,False),(1500,True),(1000,True),(501,True),(500,False),(1000,False)]:
-    module.set_editor_property('editor_validation_amounts', {unreal.ModuleResourceType.FRESH_WATER:float(amount)})
-    controller.call_method('Refresh')
-    assert bool(controller.get_editor_property('Enabled')) == enabled, (amount, enabled)
-    live = port.get_editor_property('port')
-    assert live.get_editor_property('resource_type') == unreal.ModuleResourceType.FRESH_WATER
-    bandwidth = live.get_editor_property('bandwidth')
-    assert bandwidth.get_editor_property('input') == 0
-    assert bandwidth.get_editor_property('output') == (73.0 if enabled else 0.0)
-    assert bandwidth.get_editor_property('item_bandwidth_in_kg') == 9.0
-    assert not controller.get_editor_property('Indicator'), 'Visual disabled rule created an indicator'
-    cases.append({'water':amount,'enabled':enabled})
-controller.call_method('Cleanup')
-actors.destroy_actor(controller)
-
-# Execute the manager's actual file-load path in the isolated editor project.
-# Never write to the installed game's settings here.
-settings = Path(unreal.Paths.project_content_dir())/'Paks/LogicMods/SmartOutlet.ini'
-assert not settings.exists(), 'Editor test would replace an existing settings file'
-settings.parent.mkdir(parents=True, exist_ok=True)
-manager = actors.spawn_actor_from_class(manager_class, unreal.Vector())
+root=Path(__file__).resolve().parents[3]
+actors=unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+system=unreal.get_default_object(unreal.SystemLibrary)
+reader=unreal.get_default_object(unreal.VoyageEditorBlueprintFunctionLibrary)
+parser_class=unreal.load_class(None,'/Game/Mods/SmartOutlet/Settings/BP_SectionedIniFileParser.BP_SectionedIniFileParser_C')
+profile_class=unreal.load_class(None,'/Game/Mods/SmartOutlet/Settings/BP_StorageProfile.BP_StorageProfile_C')
+manager_class=unreal.load_class(None,'/Game/Mods/SmartOutlet/ModActor.ModActor_C')
+parser=unreal.new_object(parser_class)
+fixture=root/'Tmp/SmartOutlet/profile-fixture.ini'
+created=[]
+def block(key,mode,enable,disable,slot=-1):
+    return f'[{key}:{mode}]\nEnablePortAtPercent={enable}\nDisablePortAtPercent={disable}\nGlowMaterialSlot={slot}\n'
+def profile(text,key='Test.Class_C'):
+    fixture.write_text(text,encoding='utf-8');parser.call_method('Load',(str(fixture),))
+    p=unreal.new_object(profile_class);p.call_method('ReadSettings',(parser,key));return p
+def spawn(cls):
+    a=actors.spawn_actor_from_class(cls,unreal.Vector());created.append(a);return a
 try:
-    settings.write_text((root/'mods/SmartOutlet/Assets/SmartOutlet.ini').read_text(encoding='utf-8'), encoding='utf-8')
-    count_before = reader.call_method('GetTestReadCount')
-    manager.call_method('LoadRules')
-    loaded = manager.get_editor_property('Rules')
-    assert len(loaded) == 3, 'Manager did not load all rules'
-    assert reader.call_method('GetTestReadCount') == count_before + 1
-    # Match a real editor actor class using configuration, without stock asset stubs.
-    system.call_method('SetStringPropertyByName', (loaded[0], 'ActorClass', '/Script/Voyage.VoyageModuleActor'))
-    target = actors.spawn_actor_from_class(unreal.VoyageModuleActor, unreal.Vector())
-    def add_instance_component(component_class):
-        # Instance ownership survives editor property edits/reconstruction.
-        return reader.call_method('AddTestComponent', (target, component_class.static_class()))
-    test_module = add_instance_component(unreal.VoyageModuleComponent)
-    test_ports = [add_instance_component(unreal.VoyageModuleSocketViewComponent) for _ in range(2)]
-    assert test_module and all(test_ports)
-    for test_port in test_ports:
-        port_data = test_port.get_editor_property('port')
-        port_data.set_editor_property('bandwidth', unreal.ModuleSocketBandwidth(input=15.0, output=25.0, item_bandwidth_in_kg=3.0))
-        port_data.set_editor_property('resource_type', unreal.ModuleResourceType.FRESH_WATER)
-        test_port.set_editor_property('port', port_data)
-    system.call_method('SetStringPropertyByName', (loaded[0], 'SocketName', test_ports[1].get_name()))
-    system.call_method('SetIntPropertyByName', (loaded[0], 'GlowMaterialSlot', -1))
-    test_module.set_editor_property('editor_validation_amount', 0.0)
-    test_module.set_editor_property('editor_validation_capacity', 2000.0)
-    unrelated = actors.spawn_actor_from_class(unreal.Actor, unreal.Vector())
-    manager.call_method('ObserveStorage', (unrelated,))
-    assert len(manager.get_editor_property('Controllers')) == 0
-    manager.call_method('ObserveStorage', (target,))
-    controlled = manager.get_editor_property('Controllers')
-    assert len(controlled) == 1, 'Configured class not observed'
-    assert controlled[0].get_editor_property('Rule') == loaded[0], 'Rule not assigned before finishing spawn'
-    assert controlled[0].get_owner() == target
-    controlled[0].call_method('Initialize')
-    assert controlled[0].get_editor_property('Port') == test_ports[1], 'Configured socket selection ignored'
-    assert controlled[0].get_editor_property('Initialized')
-    assert test_ports[1].get_editor_property('port').get_editor_property('bandwidth').get_editor_property('output') == 0.0
-    assert test_ports[0].get_editor_property('port').get_editor_property('bandwidth').get_editor_property('output') == 25.0, 'Other socket changed'
-    manager.call_method('ObserveStorage', (target,))
-    assert len(manager.get_editor_property('Controllers')) == 1, 'Duplicate controller'
-    assert reader.call_method('GetTestReadCount') == count_before + 1, 'Discovery reread the file'
-
-    # Add an input on the other port plus a conflicting later rule on that SAME
-    # port. Two controllers must coexist; the duplicate must not take ownership.
-    fixture.write_text('\n'.join(
-        f'Rule{i}ActorClass="/Script/Voyage.VoyageModuleActor"\n'
-        f'Rule{i}SocketName="{test_ports[0].get_name()}"\n'
-        f'Rule{i}Mode="{mode}"\nRule{i}EnablePortAtPercent={20 if mode == "input" else 80}\n'
-        f'Rule{i}DisablePortAtPercent={80 if mode == "input" else 20}\nRule{i}GlowMaterialSlot=-1'
-        for i, mode in [(1, 'input'), (2, 'output')]), encoding='utf-8')
-    parser.call_method('Load', (str(fixture),))
-    assert loaded[1].call_method('ReadSettings', (parser, 1))
-    assert loaded[2].call_method('ReadSettings', (parser, 2))
-    fixture.unlink()
-    discovery_reads = reader.call_method('GetTestReadCount')
-    manager.call_method('ObserveStorage', (target,))
-    pair = manager.get_editor_property('Controllers')
-    assert len(pair) == 2, 'Multiple ports rejected or duplicate socket registered'
-    incoming = pair[1]
-    assert incoming.get_editor_property('Rule') == loaded[1], 'First rule did not win'
-    # Disabled visuals must remain disabled even when there is a valid socket mesh.
-    socket_mesh = unreal.new_object(unreal.StaticMeshComponent, outer=target)
-    socket_mesh.set_static_mesh(unreal.load_asset('/Engine/BasicShapes/Cube'))
-    system.call_method('SetObjectPropertyByName', (test_ports[0], 'mesh', socket_mesh))
-    incoming.call_method('Initialize')
-    assert incoming.get_editor_property('Port') == test_ports[0]
-    assert incoming.get_editor_property('Initialized')
-    pair_cases = []
-    for amount, input_on, output_on in [(0,True,False),(1000,True,False),
-            (1599,True,False),(1600,False,True),(1000,False,True),
-            (401,False,True),(400,True,False),(1000,True,False)]:
-        test_module.set_editor_property('editor_validation_amount', float(amount))
-        for active in pair:
-            active.call_method('Refresh')
-        assert incoming.get_editor_property('Enabled') == input_on
-        assert pair[0].get_editor_property('Enabled') == output_on
-        in_data = test_ports[0].get_editor_property('port')
-        out_data = test_ports[1].get_editor_property('port')
-        assert in_data.get_editor_property('type') == unreal.ModuleSocketType.ST_INPUT
-        assert out_data.get_editor_property('type') == unreal.ModuleSocketType.ST_OUTPUT
-        assert in_data.get_editor_property('bandwidth').get_editor_property('input') == (15.0 if input_on else 0.0)
-        assert in_data.get_editor_property('bandwidth').get_editor_property('output') == 0.0
-        assert out_data.get_editor_property('bandwidth').get_editor_property('input') == 0.0
-        assert out_data.get_editor_property('bandwidth').get_editor_property('output') == (25.0 if output_on else 0.0)
-        refresh_count = test_module.get_editor_property('editor_validation_network_refreshes')
-        for active in pair:
-            active.call_method('ReconcileConnection')
-        assert test_module.get_editor_property('editor_validation_network_refreshes') == refresh_count, 'Port reconciliation loops'
-        assert not incoming.get_editor_property('Indicator'), 'Disabled indicator recreated'
-        pair_cases.append({'water': amount, 'input': input_on, 'output': output_on})
-    manager.call_method('ObserveStorage', (target,))
-    assert len(manager.get_editor_property('Controllers')) == 2
-    assert reader.call_method('GetTestReadCount') == discovery_reads
-    # Removing one controller must preserve the other's limits and state.
-    incoming.call_method('Cleanup')
-    restored = test_ports[0].get_editor_property('port').get_editor_property('bandwidth')
-    assert restored.get_editor_property('input') == 15.0 and restored.get_editor_property('output') == 25.0
-    assert test_ports[1].get_editor_property('port').get_editor_property('bandwidth').get_editor_property('output') == 0.0
-    controlled[0].call_method('Cleanup')
-    assert test_ports[1].get_editor_property('port').get_editor_property('bandwidth').get_editor_property('output') == 25.0
+    before=reader.call_method('GetTestReadCount')
+    parser.call_method('Load',(str(root/'mods/SmartOutlet/Assets/SmartOutlet.ini'),))
+    for key, mode, low, high in [
+        ('BP_Module_Battery.BP_Module_Battery_C','Output',.2,.8),
+        ('BP_Module_fresh_Water_Tank.BP_Module_fresh_Water_Tank_C','Input',.2,1.0),
+        ('BP_Module_Salt_Water_Tank.BP_Module_salt_Water_Tank_C','Input',.2,1.0)]:
+        p=unreal.new_object(profile_class);p.call_method('ReadSettings',(parser,key))
+        assert p.get_editor_property('HasModes')
+        selected=p.get_editor_property(mode+'Rule')
+        assert selected and bool(selected.get_editor_property('IsInput'))==(mode=='Input')
+        assert p.get_editor_property(('Input' if mode=='Output' else 'Output')+'Rule') is None
+        assert abs(selected.get_editor_property('LowFraction')-low)<1e-8
+        assert abs(selected.get_editor_property('HighFraction')-high)<1e-8
+    assert reader.call_method('GetTestReadCount')==before+1
+    for modes in [[],['Input'],['Output'],['Input','Output']]:
+        p=profile(''.join(block('Test.Class_C',m,20 if m=='Input' else 80,80 if m=='Input' else 20) for m in modes))
+        assert bool(p.get_editor_property('HasModes'))==bool(modes)
+        for m in ['Input','Output']:assert bool(p.get_editor_property(m+'Rule'))==(m in modes)
+    for mode in ['Input','Output']:
+        for enable,disable,slot in [(50,50,0),(80 if mode=='Input' else 20,20 if mode=='Input' else 80,0),(-1,80,0),(20,101,0),(20,80,0.5),(20,80,-2)]:
+            p=profile(block('Test.Class_C',mode,enable,disable,slot));assert not p.get_editor_property('HasModes'),(mode,enable,disable,slot)
+    for bad in ['[Test.Class_C:Input]\n','[Test.Class_C:input]\nEnablePortAtPercent=20\nDisablePortAtPercent=80\nGlowMaterialSlot=0\n',block('Test.Class_C','Input','bad',80)]:
+        assert not profile(bad).get_editor_property('HasModes')
+    p=profile(block('Test.Class_C','Input',12.5,66,-1)+block('Test.Class_C','Output',95,30,0))
+    assert abs(p.get_editor_property('InputRule').get_editor_property('HighFraction')-.66)<1e-8
+    assert abs(p.get_editor_property('OutputRule').get_editor_property('LowFraction')-.3)<1e-8
+    # Manager uses actual class identity and the same snapshot for every instance.
+    settings=Path(unreal.Paths.project_content_dir())/'Paks/LogicMods/SmartOutlet.ini'
+    assert not settings.exists(),'Would replace existing editor settings'
+    settings.parent.mkdir(parents=True,exist_ok=True)
+    settings.write_text('UnlockSaltWaterTank=false\n'+block('Voyage.VoyageModuleActor','Input',20,70)+block('Voyage.VoyageModuleActor','Output',90,30),encoding='utf-8')
+    manager=spawn(manager_class);count=reader.call_method('GetTestReadCount');manager.call_method('LoadSettings')
+    target=spawn(unreal.VoyageModuleActor);unrelated=spawn(unreal.Actor)
+    module=reader.call_method('AddTestComponent',(target,unreal.VoyageModuleComponent.static_class()))
+    ports=[reader.call_method('AddTestComponent',(target,unreal.VoyageModuleSocketViewComponent.static_class())) for _ in range(2)]
+    module.set_editor_property('editor_validation_capacity',2000.0)
+    for port in ports:
+        data=port.get_editor_property('port');data.bandwidth=unreal.ModuleSocketBandwidth(input=15,output=25,item_bandwidth_in_kg=3);data.resource_type=unreal.ModuleResourceType.FRESH_WATER;port.set_editor_property('port',data)
+    manager.call_method('ObserveStorage',(unrelated,));assert len(manager.get_editor_property('Controllers'))==0
+    manager.call_method('ObserveStorage',(target,));pair=list(manager.get_editor_property('Controllers'));assert len(pair)==2
+    for c in pair:
+        c.call_method('Initialize');assert c.get_editor_property('Mode')==unreal.ModuleSocketType.ST_ANY
+        assert c.get_editor_property('Port').get_editor_property('port').bandwidth.output==25
+    assert pair[0].get_editor_property('Profile')==pair[1].get_editor_property('Profile')
+    second=spawn(unreal.VoyageModuleActor)
+    assert manager.call_method('GetStorageProfile',(second,))==pair[0].get_editor_property('Profile')
+    manager.call_method('ObserveStorage',(target,));assert len(manager.get_editor_property('Controllers'))==2
+    assert reader.call_method('GetTestReadCount')==count+1
+    pair[0].call_method('CycleMode');pair[1].call_method('CycleMode');pair[1].call_method('CycleMode')
+    cases=[]
+    for amount,incoming,outgoing in [(0,True,False),(1000,True,False),(1400,False,False),(1800,False,True),(1000,False,True),(600,False,False),(400,True,False)]:
+        module.set_editor_property('editor_validation_amount',float(amount))
+        for c in pair:c.call_method('Refresh')
+        assert pair[0].get_editor_property('Enabled')==incoming,(amount,'input')
+        assert pair[1].get_editor_property('Enabled')==outgoing,(amount,'output')
+        assert pair[0].get_editor_property('Port').get_editor_property('port').bandwidth.input==(15 if incoming else 0)
+        assert pair[1].get_editor_property('Port').get_editor_property('port').bandwidth.output==(25 if outgoing else 0)
+        count_before=module.get_editor_property('editor_validation_network_refreshes')
+        for c in pair:c.call_method('ReconcileConnection')
+        assert module.get_editor_property('editor_validation_network_refreshes')==count_before
+        cases.append([amount,incoming,outgoing])
     manager.call_method('Stop')
-    for active in pair:
-        actors.destroy_actor(active)
-    actors.destroy_actor(target)
-    actors.destroy_actor(unrelated)
+    (root/'Tmp/SmartOutlet/rules-validation.json').write_text(json.dumps({'status':'passed','profiles':'input/output/both/neither; invalid/missing/case-sensitive','lookup':'real owner class; shared class cache; one file read; all ports; duplicate discovery','waterCases':cases,'boundary':'Compiled editor mirrors, not native transport or saves'},indent=2))
 finally:
-    actors.destroy_actor(manager)
-    settings.unlink(missing_ok=True)
-report.write_text(json.dumps({'status':'passed','defaultRules':4,'waterCases':cases,'pairedPorts':pair_cases,'managerSelectionAndSingleRead':'passed','invalidThresholdsAndMode':'rejected','duplicatePortFirstWins':'passed','disabledVisualWithMesh':'passed','boundary':'Compiled Blueprint against editor mirrors; native input flow and salt-water configuration need game testing'},indent=2))
-unreal.log('SmartOutlet rule validation PASSED')
+    fixture.unlink(missing_ok=True)
+    if 'settings' in globals():settings.unlink(missing_ok=True)
+    if 'manager' in globals():manager.call_method('Stop')
+    for a in reversed(created):
+        if unreal.SystemLibrary.is_valid(a):actors.destroy_actor(a)

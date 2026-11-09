@@ -1,4 +1,4 @@
-# Install an existing candidate and merge its default INI without losing user rules.
+# Install a candidate, preserving section profiles or migrating legacy port rules.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)][string]$ReleaseManifest,
@@ -40,7 +40,7 @@ try {
     if ($entries.Count -ne 1) { throw 'Candidate must contain exactly one SmartOutlet.ini at the runtime path' }
     [IO.Compression.ZipFileExtensions]::ExtractToFile($entries[0], $template)
 } finally { $zip.Dispose() }
-$mergeArgs = @{TemplatePath=$template;OutputPath=$merged}
+$preparedSettings = $template
 $originalHash = $null
 if ($existed) {
     Copy-Item -LiteralPath $target -Destination $backup
@@ -50,10 +50,11 @@ if ($existed) {
         $migrated = Join-Path $operation 'migrated.ini'
         & (Join-Path $PSScriptRoot 'Settings/Convert-LegacySettings.ps1') `
             -CurrentPath $backup -TemplatePath $template -OutputPath $migrated
-        $mergeArgs.CurrentPath = $migrated
+        $preparedSettings = $migrated
     }
 }
-$merge = & (Join-Path $repo 'tools/Merge-VoyageModIni.ps1') @mergeArgs
+Copy-Item -LiteralPath $preparedSettings -Destination $merged
+$merge = [pscustomobject]@{Changed=((-not $existed) -or ([IO.File]::ReadAllText($backup) -cne [IO.File]::ReadAllText($merged)));Policy='Preserve section profiles; migrate legacy rules without adding modes'}
 $mergedHash = (Get-FileHash -LiteralPath $merged -Algorithm SHA256).Hash
 $containerResult = $null
 $iniWritten = $false
@@ -85,5 +86,5 @@ try {
 }
 $resolvedOperation = (Resolve-Path -LiteralPath $operation).Path
 if (-not $resolvedOperation.StartsWith($tmpOwner + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unexpected cleanup path' }
-Remove-Item -LiteralPath $resolvedOperation -Recurse -Force
-[pscustomobject]@{status='installed';releaseManifest=$manifestPath;settingsPath=$target;created=(-not $existed);settingsMerge=$merge;containerFiles=$containerResult.fileCount}
+# Retain the original INI and container recovery record for settings and container rollback.
+[pscustomobject]@{status='installed';releaseManifest=$manifestPath;settingsPath=$target;created=(-not $existed);settingsMerge=$merge;containerFiles=$containerResult.fileCount;recoveryDirectory=$operation;installManifestPath=$containerResult.installManifestPath}

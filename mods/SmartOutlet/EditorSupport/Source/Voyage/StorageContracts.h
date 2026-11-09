@@ -49,6 +49,7 @@ class VOYAGE_API UModuleSocketComponent : public UBoxComponent
 {
     GENERATED_BODY()
 public:
+    UPROPERTY(Category="SmartOutlet", BlueprintReadOnly) TObjectPtr<UBoxComponent> SocketCollisionBox;
     UPROPERTY(Category="SmartOutlet", BlueprintReadWrite) FModuleSocketIOData Port;
     UPROPERTY(Category="SmartOutlet", BlueprintReadWrite) bool bAutoInitialize = true;
     UFUNCTION(Category="SmartOutlet", BlueprintCallable) void SetSocketDirectionType(EModuleSocketType CustomType) {}

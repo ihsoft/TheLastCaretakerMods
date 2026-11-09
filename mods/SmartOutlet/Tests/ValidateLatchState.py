@@ -11,7 +11,7 @@ actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 system = unreal.get_default_object(unreal.SystemLibrary)
 controller_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/BP_OutletController.BP_OutletController_C')
 rule_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/Settings/BP_OutletRule.BP_OutletRule_C')
-parser_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/Settings/BP_IniFileParser.BP_IniFileParser_C')
+parser_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/Settings/BP_SectionedIniFileParser.BP_SectionedIniFileParser_C')
 rule_fixture_path = root/'Tmp/SmartOutlet/latch-rule.ini'
 limits = unreal.ModuleSocketBandwidth(input=42, output=73, item_bandwidth_in_kg=9)
 unreal.get_default_object(controller_class).set_editor_property('OriginalBandwidth', limits)
@@ -27,14 +27,12 @@ def tags(value):
 def fixture(storage, socket='SocketA', is_input=False):
     mode = 'input' if is_input else 'output'
     rule_fixture_path.write_text(
-        'Rule1ActorClass="/Script/Voyage.VoyageModuleActor"\n'
-        f'Rule1SocketName="{socket}"\nRule1Mode="{mode}"\n'
-        f'Rule1EnablePortAtPercent={20 if mode == "input" else 80}\n'
-        f'Rule1DisablePortAtPercent={80 if mode == "input" else 20}\nRule1GlowMaterialSlot=-1\n')
+        f'[Test:{mode}]\nEnablePortAtPercent={20 if is_input else 80}\n'
+        f'DisablePortAtPercent={80 if is_input else 20}\nGlowMaterialSlot=-1\n')
     parser = unreal.new_object(parser_class)
     parser.call_method('Load', (str(rule_fixture_path),))
     rule = unreal.new_object(rule_class)
-    assert rule.call_method('ReadSettings', (parser, 1))
+    assert rule.call_method('ReadSettings', (parser, 'Test:'+mode, is_input))
     module = unreal.new_object(unreal.VoyageModuleComponent)
     module.set_editor_property('editor_validation_capacity', 100)
     port = unreal.new_object(unreal.VoyageModuleSocketViewComponent)
@@ -47,6 +45,8 @@ def fixture(storage, socket='SocketA', is_input=False):
     for k, v in [('Storage',storage), ('Rule',rule), ('Module',module), ('Port',port)]:
         system.call_method('SetObjectPropertyByName', (c,k,v))
     system.call_method('SetBoolPropertyByName', (c,'Initialized',True))
+    system.call_method('SetStringPropertyByName', (c, 'SocketName', socket))
+    system.call_method('SetBytePropertyByName', (c, 'Mode', 1 if is_input else 2))
     c.call_method('RestoreLatch')
     return c, module, port
 def refresh(f, amount, expected):

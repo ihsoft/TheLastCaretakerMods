@@ -1,9 +1,9 @@
 # Smart Outlet
 
-Configurable input/output ports for resource storage, with upper/lower fill
-thresholds, saved hysteresis state and a softly pulsing green/red indicator.
-Supports several configured ports per storage actor. Requires DML.
-See [Commented INI](Assets/SmartOutlet.ini) for settings and the supplied storage rules.
+Select smart input, smart output or normal on each supported storage socket
+with V (Interact 3). Smart modes use fill thresholds, saved state and a pulsing
+green/red indicator. Requires DML. The [commented INI](Assets/SmartOutlet.ini)
+defines available modes and their settings for each storage class.
 
 Build a candidate from the repository root:
 
