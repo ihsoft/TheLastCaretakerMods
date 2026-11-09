@@ -11,7 +11,10 @@ failure handling.
 | Validate a cooked/re-extracted VoyageItem against its original and recipe | `Test-VoyageItemPatch.ps1` | [VoyageItem project updates](voyage-item-patch.md) |
 | Import/export Blueprint text or discover operations | `BlueprintText/Invoke-BlueprintText.ps1` | [BlueprintText](blueprint-text.md) |
 | Operate a Blueprint JSON workspace in an existing project | `BlueprintText/Invoke-BlueprintWorkspace.ps1` | [Blueprint workspace](blueprint-workspace.md) |
-| Read BPT graph summaries, compact graphs or exact scoped node/pin details, without Unreal | `BlueprintText/graph_hierarchy.py` | [Source reading](blueprint-text.md#read-graphs-without-unreal) |
+| Generate reflected ordinary native call templates for a workspace source | `BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action CallTemplates` | [Native call templates](blueprint-workspace.md#create-reflected-native-call-nodes) |
+| Check native call templates through strict Apply and fresh-process inspection | `BlueprintText/Test-CallTemplates.ps1` | [Blueprint checks](blueprint-text.md#checks) |
+| Read BPT graphs, exact node/pin details or local/component context without Unreal | `BlueprintText/graph_hierarchy.py` | [Source reading](blueprint-text.md#read-graphs-without-unreal) |
+| Find BPT calls, callback references and variable accesses in explicit source files | `BlueprintText/graph_references.py` | [Member-use search](blueprint-text.md#find-member-uses) |
 | Check nested BPT graphs with strict import, executable fixtures and preview | `BlueprintText/Test-NestedGraphs.ps1` | [Collapsed graph checks](blueprint-text.md#collapsed-graphs) |
 | Extract selected BPT nodes offline into a collapsed graph | `BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action Collapse` | [Workspace Collapse](blueprint-workspace.md#extract-an-operation-into-a-collapsed-graph) |
 | Check Collapse with strict Apply and executable isolated fixtures | `BlueprintText/Test-CollapseGraphs.ps1` | [Collapsed graph checks](blueprint-text.md#collapsed-graphs) |

@@ -1,8 +1,7 @@
 """Resolve function navigation only against BPT graphs present in the preview."""
-import json
 from urllib.parse import quote
-from asset_text_codec import fields
 from graph_hierarchy import graph_key, select_graph
+from graph_symbols import CALL_KINDS, node_kind, member_identity, function_matches, object_package
 
 
 def displayed(entry):
@@ -92,39 +91,14 @@ def build_callers(entries, catalog):
     return result
 
 
-def object_package(raw):
-    if raw.startswith('"'):
-        raw = json.loads(raw)
-    if "'" in raw:
-        raw = raw.split("'", 2)[1]
-    return raw.split('.', 1)[0] if raw.startswith('/') else None
-
-
 def resolve_calls(document, selection, catalog):
     result = {}
     for node in select_graph(document, selection)['body']['nodes']:
-        kind = document.get('classes', {}).get(node.get('kind'), node.get('kind', '')).rsplit('.', 1)[-1]
-        if kind not in ('call', 'CallFunction', 'CallParentFunction', 'K2Node_CallFunction', 'K2Node_CallParentFunction'):
+        if node_kind(document, node) not in CALL_KINDS:
             continue
-        raw = node.get('properties', {}).get('FunctionReference', '')
-        reference = fields(raw[1:-1]) if raw.startswith('(') and raw.endswith(')') else {}
-        name = reference.get('MemberName', '')
-        name = json.loads(name) if name.startswith('"') else name
-        identity = reference.get('MemberGuid')
-        owner = None
-        if 'MemberParent' in reference:
-            owner = object_package(reference['MemberParent'])
-        elif reference.get('bSelfContext') == 'True':
-            owner = document['asset']
-        else:
-            target = node.get('pins', {}).get('in:target', node.get('pins', {}).get('in:self', {}))
-            metadata = document.get('pinTemplates', {}).get(target.get('type'), {})
-            owner = object_package(metadata.get('PinType.PinSubCategoryObject', ''))
-        if not reference and '::' in node.get('operation', ''):
-            raw_owner, name = node['operation'].rsplit('::', 1)
-            owner = object_package(raw_owner)
-        matches = [g for g in catalog.get(owner, [])
-                   if (g['id'] == identity if identity and identity != '0' * 32 else g['name'] == name)]
+        identity = member_identity(document, node)
+        owner = identity['owner']
+        matches = function_matches(identity, catalog)
         if len(matches) == 1:
             target = matches[0]
             result[node['id']] = dict(target, field='FunctionReference', kind='graph',

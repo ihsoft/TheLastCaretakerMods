@@ -5,11 +5,13 @@ Preview refreshes project dependencies in Unreal, then renders offline. MarkStub
 persists an explicit role on existing unselected dependencies. Warn before engine work.
 AddSource copies a reusable UObject source to -Asset in the workspace; it is offline.
 Collapse extracts explicit -Node IDs from -Graph into -Name; it is offline.
+CallTemplates reflects a batch of -Operation native functions in the selected
+source parent context; it launches Unreal but does not edit Blueprint sources/assets.
 Edit workspace.json and blueprints/*.json. Recover restores interrupted asset writes.
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Prepare','Export','Apply','Preview','MarkStubs','Recover','AddSource','Collapse')][string]$Action,
+    [Parameter(Mandatory)][ValidateSet('Prepare','Export','Apply','Preview','MarkStubs','Recover','AddSource','Collapse','CallTemplates')][string]$Action,
     [Parameter(Mandatory)][string]$WorkspaceRoot,
     [string]$ProjectFile,
     [string[]]$Asset,
@@ -18,6 +20,7 @@ param(
     [string[]]$Node,
     [string]$Name,
     [hashtable]$BoundaryNames,
+    [string[]]$Operation,
     [string]$EngineRoot='K:\Epic Games\UE_5.8',
     [string]$PythonPath
 )
@@ -32,6 +35,7 @@ if($SourcePath){$arguments+=@('--source',$SourcePath)}
 if($Graph){$arguments+=@('--graph',$Graph)}
 if($Name){$arguments+=@('--name',$Name)}
 foreach($identity in $Node){$arguments+=@('--node',$identity)}
+foreach($identity in $Operation){$arguments+=@('--operation',$identity)}
 if($BoundaryNames){$arguments+=@('--boundary-names',($BoundaryNames | ConvertTo-Json -Compress))}
 foreach($item in $Asset){$arguments+=@('--asset',$item)}
 & $PythonPath @arguments

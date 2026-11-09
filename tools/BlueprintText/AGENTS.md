@@ -30,8 +30,11 @@ Blueprint preservation from the bounded tests.
 - Use the shared workflow entry point and its compact result. Read the workspace
   manifest to find editable Blueprint JSON; inspect only source needed for the
   requested change. Start with [compact graph reading](../blueprint-text.md#read-graphs-without-unreal)
-  and reveal exact node/pin details as needed. Edit the complete proposed Blueprint
-  state, not a read view or generated native text.
+  and reveal exact node/pin details or [declaration context](../blueprint-text.md#reveal-source-context)
+  as needed. Use [member-use search](../blueprint-text.md#find-member-uses) for callers
+  and variable accesses across selected sources; its unresolved results and coverage
+  are not proof of absence. Edit the complete proposed Blueprint state, not a read
+  view or generated native text.
 - Generated previews are for the user. Run workspace Preview and return its
   index link; it derives node changes from the original and current snapshots.
   Do not assemble review lists or inspect baselines as a routine prerequisite.
@@ -48,6 +51,10 @@ Blueprint preservation from the bounded tests.
   shared interface cannot perform the requested operation, report the missing
   capability or fix the shared tool. Focused tool-development test fixtures are
   separate from ordinary mod work.
+- For ordinary native call nodes outside the math catalogue, use
+  [CallTemplates](../blueprint-workspace.md#create-reflected-native-call-nodes)
+  and the shared insertion factory. Preserve reflected pin metadata when editing
+  arguments; a successful compilation does not replace strict Apply comparison.
 - Warn before engine actions. Let the tool own backups, conflict checks and
   recovery; do not bypass them or manually overwrite an asset changed since
   export. Existing resources and native mirrors remain project dependencies.

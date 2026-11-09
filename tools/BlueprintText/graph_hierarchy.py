@@ -155,14 +155,23 @@ def main():
                         help='Selected graph view: compact by default, full for original fields and definitions')
     parser.add_argument('--node', action='append', help='Exact node ID in --graph; repeat for scoped raw details')
     parser.add_argument('--pin', help='Exact pin alias (in:/out:) of one --node; returns raw pin and template')
+    parser.add_argument('--context', choices=('locals', 'components', 'all'),
+                        help='Reveal declarations/templates used by the selected graph or nodes')
+    parser.add_argument('--component', help='Read a component object by exact ID or unambiguous name, without graph selectors')
     args = parser.parse_args()
     try:
         document = json.loads(args.input.read_text(encoding='utf-8-sig'))
         if document.get('schema') != 2 or document.get('format') != 'compact-asset':
             raise ValueError('Expected schema-2 compact-asset')
         from graph_inspection import inspect_source
-        print(json.dumps(inspect_source(document, args.graph, view=args.view, node_ids=args.node, pin=args.pin),
-                         ensure_ascii=False, indent=2))
+        if args.component:
+            if args.graph or args.node or args.pin or args.context or args.view != 'compact':
+                raise ValueError('--component cannot be combined with graph/detail selectors')
+            from graph_context import component_detail
+            result = component_detail(document, args.component)
+        else:
+            result = inspect_source(document, args.graph, view=args.view, node_ids=args.node, pin=args.pin, context=args.context)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
     except (ValueError, KeyError, TypeError, OSError) as error:
         parser.exit(2, f'Cannot inspect BPT graphs: {error}\n')
 

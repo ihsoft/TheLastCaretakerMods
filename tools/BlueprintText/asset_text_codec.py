@@ -437,10 +437,13 @@ def template(catalog, operation, node_id):
     for pin in n['pins'].values():
         pin['id'] = uuid.uuid4().hex.upper()
     return {'node': n, 'classes': data['classes'], 'pinTemplates': data['pinTemplates'],
+            **({'contextParent': catalog['contextParent']} if 'contextParent' in catalog else {}),
             'note': 'Merge pinTemplates with unique keys and remap node pin.type values before insertion.'}
 
 
 def add_call(document, catalog, operation, node_id, graph_name):
+    if catalog.get('contextParent', document['parent']) != document['parent']:
+        raise ValueError('Call template parent context differs; request templates for this Blueprint')
     result = copy.deepcopy(document)
     graph = select_graph(result, graph_name)
     if any(n['id'] == node_id for n in graph['body']['nodes']):

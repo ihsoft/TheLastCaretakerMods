@@ -156,16 +156,18 @@ def variable_context(document, nodes, compact=False):
     return result
 
 
-def inspect_source(document, selection=None, *, view='compact', node_ids=None, pin=None):
+def inspect_source(document, selection=None, *, view='compact', node_ids=None, pin=None, context=None):
     """Default compact CLI view; full retains the existing inspect_graphs payload."""
     if view not in ('compact', 'full'):
         raise ValueError('Expected view compact or full')
-    if (node_ids or pin is not None or view == 'full') and selection is None:
+    if (node_ids or pin is not None or view == 'full' or context) and selection is None:
         raise ValueError('Detail selectors require --graph')
     if pin is not None and (not node_ids or len(node_ids) != 1):
         raise ValueError('--pin requires exactly one --node')
     if node_ids and view == 'full':
         raise ValueError('Use --view full for the graph or --node for scoped raw details')
+    if context and view == 'full':
+        raise ValueError('--context requires a compact graph or scoped node/pin view')
     detail = inspect_graphs(document, selection)
     if selection is None or view == 'full':
         return copy.deepcopy(detail)
@@ -217,5 +219,8 @@ def inspect_source(document, selection=None, *, view='compact', node_ids=None, p
             result['graph']['properties'] = props
         result.update(nodes=[compact_node(document, n, connected) for n in nodes.values()], links=links,
                       classes=detail['classes'], variables=variable_context(document, nodes.values(), compact=True))
+    if context:
+        from graph_context import inspect_context
+        result['context'] = inspect_context(document, graph, selected if node_ids else list(nodes.values()), context)
     result['readOnly'] = True
     return copy.deepcopy(result)

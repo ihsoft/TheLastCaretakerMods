@@ -213,6 +213,11 @@ edit the new node's defaults and links in the resulting complete source.
 `template` produces a standalone insertion fragment. `compact`, `native` and
 `compare` perform offline conversion and comparison; use `--help` for arguments.
 New operations belong in shared discovery/serialization, not a per-mod builder.
+For ordinary native functions beyond the initial math catalogue, request
+[workspace CallTemplates](blueprint-workspace.md#create-reflected-native-call-nodes)
+and pass its returned catalogue to the same `add-call` command. Reflected pin
+metadata supplies pure/exec structure, native defaults and reference requirements;
+do not reconstruct those fields manually from a function's name or C++ signature.
 
 ### Collapsed graphs
 
@@ -315,11 +320,82 @@ fields omitted from the compact view. `--view full` returns the previous complet
 selected-graph payload, including ancestor operations and required definitions.
 Consumers of the old CLI detail shape must add `--view full`; the summary and
 Python `inspect_graphs` API remain unchanged. Do not combine `--view full` with
-node/pin selectors.
+node/pin selectors or `--context`.
 
 All outputs are read-only views, not Apply input. Edit the complete workspace
 source JSON. Reading does not change source files, launch Unreal, query missing
 assets or establish runtime behavior.
+
+### Reveal source context
+
+Add `--context locals`, `--context components` or `--context all` to a selected
+graph or node/pin view. This optional section does not expand the ordinary
+compact output. For example, on the StableGyro child source:
+
+```powershell
+python -B tools/BlueprintText/graph_hierarchy.py $source --graph RefreshCargoAvailability --context locals
+python -B tools/BlueprintText/graph_hierarchy.py $source --graph CreateMooringPlate --context components
+python -B tools/BlueprintText/graph_hierarchy.py $source --component StableGyroMooringPlate
+```
+
+Local context follows collapsed ownership to the enclosing FunctionEntry and
+matches referenced local variables by scope and GUID, or name when no GUID is
+present. It returns the exact `LocalVariables(...)` source field, its parsed
+declaration and the declaring graph/node. It never borrows a same-named variable
+from another function. Missing or ambiguous declarations remain unresolved.
+Declared defaults describe initialization, not values at the selected operation.
+
+Component context recognizes named `AddComponent` uses of local templates.
+`source-template` means the named template exists in this source; it does not
+establish runtime target identity or creation success. Connected template names,
+explicit template-context inputs and missing/ambiguous local templates remain
+unresolved. It does not evaluate an inherited template or arbitrary component
+lookup. Each resolved result contains the original object and its owned subtree;
+property references are preserved without fetching referenced assets.
+
+`--component` reads an exact object ID or an unambiguous object name from
+`components.objects`, including its owned subtree and template-list membership.
+It is independent of graph selection and cannot be combined with graph/detail
+selectors. Legacy `root` representations have no component-object registry.
+
+### Find member uses
+
+Search explicitly supplied schema-2 files. Use the workspace manifest to select
+current editable sources; synchronized tracked sources also support read-only
+analysis. Supply one version of each asset, rather than mixing snapshots.
+For example:
+
+```powershell
+$sources = @('./mods/StableGyro/BlueprintText/ModActor.json', './mods/StableGyro/BlueprintText/PitchInputActor.json')
+python -B tools/BlueprintText/graph_references.py @sources --variable EnableAltitudeControl --owner /Game/Mods/StableGyro/ModActor
+python -B tools/BlueprintText/graph_references.py @sources --function HandleControllerChanged
+python -B tools/BlueprintText/graph_references.py $source --variable StableGyroCargoAvailable --scope GetProvidedActionsBP
+python -B tools/BlueprintText/graph_references.py $source --function RunDisabledMooringCleanup
+```
+
+Choose exactly one `--function` or `--variable` with an exact member name.
+`--owner` optionally limits the declared owner to an asset package or native
+`/Script/Module.Class`; `--scope` limits local variables to an enclosing function
+name. Results retain the asset, stable graph identity, full nested path, node
+and source field. Disabled sites remain included and labelled.
+
+Uses distinguish `direct-call`, variable `read`/`write`, `delegate-reference`
+and `timer`. Delegate results identify directly connected bind/unbind/assign
+nodes; storing or forwarding delegates is not traced. Named timers cover
+`KismetSystemLibrary.K2_SetTimer` and `K2_SetTimerForNextTick`. Scheduling or
+binding is not immediate callback execution and is never added as an execution
+wire. Variable access means an explicit Get/Set node, not all indirect mutation
+through references or native calls.
+
+Source definitions resolve by owner and GUID, or name when no GUID is present,
+using the same function-identity logic as preview navigation. A valid GUID can
+locate a renamed definition; the result retains both source spelling and resolved
+name. Missing source, unknown targets and ambiguous definitions are reported as
+unresolved. `unresolvedCandidates` separately lists sites whose dynamic name or
+unknown owner could not be matched to the query; these are not counted as uses.
+No runtime subtype dispatch, arbitrary string invocation, recursive asset
+discovery or missing native declaration is inferred. An empty search therefore
+does not prove that a member is unused outside the stated coverage.
 
 ## Widget trees, interfaces and resources
 
@@ -853,6 +929,14 @@ or proof of arbitrary widget support.
 ## Checks
 
 Source reading and scoped detail checks: `python -B tools/BlueprintText/test_graph_inspection.py`.
+Member-use search and optional context checks: `python -B tools/BlueprintText/test_graph_references.py`.
+Call-template request/factory checks: `python -B tools/BlueprintText/test_call_templates.py`.
+Native reflection acceptance: `tools/BlueprintText/Test-CallTemplates.ps1 -OutputRoot <new directory below Tmp/BlueprintText>`
+with `-EngineRoot` for the selected engine. The isolated queued runner checks
+five component/math calls through strict Apply and fresh-process inspection,
+explicit false overrides, pure pins, a connected const-reference input, rejected
+missing-reference/latent cases, asset preservation after rejection and no-op Apply.
+These are editor checks, not gameplay acceptance.
 Offline renderer checks: `python -B tools/BlueprintText/test_render_graph.py`.
 Expression presentation checks: `python -B tools/BlueprintText/test_graph_expressions.py`.
 Batch index checks: `python -B tools/BlueprintText/test_preview_index.py`.

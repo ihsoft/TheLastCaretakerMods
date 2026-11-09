@@ -468,6 +468,29 @@ class Workspace:
         write(self.manifest, dict(schema=1, project=str(self.project), assets=records))
         return dict(status='exported', assets=len(records))
 
+    def call_templates(self, operations, asset=None):
+        if not operations or len(set(operations)) != len(operations) or any(
+                not re.fullmatch(r'/Script/[A-Za-z0-9_]+\.[A-Za-z0-9_]+::[A-Za-z0-9_]+', op) for op in operations):
+            raise ValueError('CallTemplates requires distinct /Script/Module.Class::Function operations')
+        _, entries = self.load()
+        selected = [doc for _, _, doc in entries if asset is None or doc['asset'] == asset]
+        if len(selected) != 1:
+            raise ValueError('CallTemplates requires one selected Asset when the workspace has several sources')
+        document = selected[0]
+        self.prepare(self.project)
+        request, output = self.run / 'call-request.json', self.run / 'call-templates.json'
+        write(request, dict(operations=operations, contextParent=document['parent']))
+        self.engine_run('CallTemplates', 'call-templates', Input=request, Output=output)
+        catalog = read(output)
+        if catalog.get('contextParent') != document['parent'] or [e['identity'] for e in catalog.get('entries', [])] != operations:
+            raise ValueError('CallTemplates returned a different operation set or parent context')
+        # Validate factory consumption before advertising a usable catalogue.
+        for entry in catalog['entries']:
+            codec.template(catalog, entry['identity'], 'TemplateCheck')
+        return dict(status='call-templates', catalog=str(output), asset=document['asset'],
+                    contextParent=document['parent'], engineVersion=catalog['engineVersion'],
+                    operations=[{k: e[k] for k in ('identity', 'pure', 'requiredConnections')} for e in catalog['entries']])
+
     def preview_catalog(self, selected):
         request, output = self.run / 'catalog-request.json', self.run / 'catalog/catalog.json'
         write(request, dict(selected=selected))
@@ -684,7 +707,7 @@ class Workspace:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'MarkStubs', 'Recover', 'AddSource', 'Collapse'])
+    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'MarkStubs', 'Recover', 'AddSource', 'Collapse', 'CallTemplates'])
     parser.add_argument('--workspace', required=True)
     parser.add_argument('--project')
     parser.add_argument('--asset', action='append')
@@ -693,6 +716,7 @@ def main():
     parser.add_argument('--node', action='append')
     parser.add_argument('--name')
     parser.add_argument('--boundary-names', type=json.loads)
+    parser.add_argument('--operation', action='append')
     parser.add_argument('--engine', default=r'K:\Epic Games\UE_5.8')
     args = parser.parse_args()
     workspace = None
@@ -741,6 +765,10 @@ def main():
                 result = workspace.apply()
             elif args.action == 'Preview':
                 result = workspace.preview()
+            elif args.action == 'CallTemplates':
+                if args.asset and len(args.asset) != 1:
+                    raise ValueError('CallTemplates accepts at most one Asset')
+                result = workspace.call_templates(args.operation, args.asset[0] if args.asset else None)
             elif args.action == 'MarkStubs':
                 result = workspace.mark_stubs(args.asset)
             else:

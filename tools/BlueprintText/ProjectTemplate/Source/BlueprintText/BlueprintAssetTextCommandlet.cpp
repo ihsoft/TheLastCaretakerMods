@@ -852,6 +852,8 @@ bool ExportBatch(const FString& Path,const FString& Folder)
 #include "BlueprintObjectTests.h"
 #include "BlueprintComponentDefaultsTests.h"
 #include "BlueprintNestedGraphTests.h"
+#include "BlueprintCallTemplates.h"
+#include "BlueprintCallTemplateTests.h"
 
 UBlueprintAssetTextCommandlet::UBlueprintAssetTextCommandlet(){IsClient=false;IsServer=false;IsEditor=true;LogToConsole=true;}
 int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
@@ -860,6 +862,9 @@ int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
     FParse::Value(*Params,ATNames::ValueMode_,Mode);FParse::Value(*Params,ATNames::ValueInput_,Input);
     FParse::Value(*Params,ATNames::ValueOutput_,Output);FParse::Value(*Params,ATNames::ValueAsset_,Asset);
     FString PreviewResources;FParse::Value(*Params,WidgetPreviewResources::ResourcesArgument,PreviewResources);
+    if(Mode==BlueprintCallTemplates::Mode)return BlueprintCallTemplates::Build(Input,Output)?0:7;
+    if(Mode==BlueprintCallTemplateTests::FixtureMode)return BlueprintCallTemplateTests::Fixture()?0:7;
+    if(Mode==BlueprintCallTemplateTests::CheckMode)return BlueprintCallTemplateTests::Check()?0:7;
     if(Mode==TEXT("NestedGraphFixture"))return BlueprintNestedGraphTests::Fixture()?0:6;
     if(Mode==TEXT("NestedGraphCheck"))
     {
