@@ -43,8 +43,10 @@ checks apply immediately. Cleanup retains the tags. An older open-only encoding
 cannot distinguish closed from missing: an unmarked midrange port starts open.
 Tags are per socket/mode; switching mode retires the previous mode's markers.
 
-`UnlockSaltWaterTank` makes the existing tank technology available at Tier 1
-at runtime. Learning it remains the player's action with the stock research
+`UnlockSaltWaterTank` makes the existing tank technology available at Tier 11,
+matching the stock Fresh Water Tank technology
+(`DA_Skill_Engineering_Large_Water_Tank`) on the supported game build.
+Learning it remains the player's action with the stock research
 cost and native recipe/component grants. Disabling the setting does not revoke
 learned recipes. See the shared
 [research contract](../../docs/voyage-scanning-and-recipe-unlocks-knowledge.md).

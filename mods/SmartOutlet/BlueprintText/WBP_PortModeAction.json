@@ -98,7 +98,7 @@
               },
               "in:target": {
                 "id": "3314CB62486B809FDCF68A8F4D1E292E",
-                "type": "p_746d99f42b6380fae0b41e6637fbf5c0b4e2f05bb26a5911b97379dab02971a2",
+                "type": "p_6f77bb01d2b99f2f17fce9fffac376892f0fa60841d198ecc9b876c2a26576dd",
                 "name": "self"
               }
             }
@@ -216,7 +216,7 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
-    "p_746d99f42b6380fae0b41e6637fbf5c0b4e2f05bb26a5911b97379dab02971a2": {
+    "p_6f77bb01d2b99f2f17fce9fffac376892f0fa60841d198ecc9b876c2a26576dd": {
       "PersistentGuid": "00000000000000000000000000000000",
       "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
       "PinType.ContainerType": "None",

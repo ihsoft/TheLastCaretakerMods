@@ -31,7 +31,8 @@ try:
     assert not manager.call_method('ApplyResearchTier', (None,))
     assert manager.call_method('ApplyResearchTier', (skill,))
     assert fields().get_editor_property('unlock_method') == unreal.VoyageSkillUnlockMethod.TIER
-    assert fields().get_editor_property('requirement') == 1
+    # Stock fresh-water tank research: Tier 11 on Steam25982825.
+    assert fields().get_editor_property('requirement') == 11
     check_preserved()
     checks.append('Only method and requirement change; cost and other fields survive')
     assert manager.call_method('ApplyResearchTier', (skill,))

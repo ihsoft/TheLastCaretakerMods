@@ -2434,7 +2434,7 @@
             ]
           },
           {
-            "id": "TierOne",
+            "id": "SetTankResearchTier",
             "kind": "SetFieldsInStruct",
             "properties": {
               "bMadeAfterOverridePinRemoval": "True",
@@ -2478,7 +2478,7 @@
             },
             "defaults": {
               "in:UnlockMethod": "Tier",
-              "in:Requirement": "1"
+              "in:Requirement": "11"
             }
           },
           {
@@ -2665,7 +2665,7 @@
           },
           {
             "from": "LiveUnlock.out:Unlock",
-            "to": "TierOne.in:StructRef"
+            "to": "SetTankResearchTier.in:StructRef"
           },
           {
             "from": "OriginalUnlock.out:Requirement",
@@ -2680,7 +2680,7 @@
             "to": "AlreadyApplied.in:Condition"
           },
           {
-            "from": "TierOne.out:then",
+            "from": "SetTankResearchTier.out:then",
             "to": "WriteResearchApplied.in:exec"
           },
           {
@@ -2697,7 +2697,7 @@
           },
           {
             "from": "WriteResearchSkill.out:then",
-            "to": "TierOne.in:exec"
+            "to": "SetTankResearchTier.in:exec"
           }
         ]
       }
@@ -3113,7 +3113,7 @@
             }
           },
           {
-            "id": "StillTierOne",
+            "id": "StillTargetTier",
             "kind": "call",
             "properties": {
               "bDefaultsToPureFunc": "True",
@@ -3144,7 +3144,7 @@
               }
             },
             "defaults": {
-              "in:right": "1",
+              "in:right": "11",
               "out:result": "false"
             }
           },
@@ -3224,7 +3224,7 @@
           },
           {
             "from": "CurrentUnlock.out:Requirement",
-            "to": "StillTierOne.in:left"
+            "to": "StillTargetTier.in:left"
           },
           {
             "from": "CurrentUnlock.out:UnlockMethod",
@@ -3295,7 +3295,7 @@
             "to": "StillOurs.in:left"
           },
           {
-            "from": "StillTierOne.out:result",
+            "from": "StillTargetTier.out:result",
             "to": "StillOurs.in:right"
           },
           {
@@ -3623,7 +3623,7 @@
               },
               "in:target": {
                 "id": "0FB8BCF81E9A4C8895307CD6D592DE12",
-                "type": "p_b364ae0cc1e3c7675f3863f897f31c91c0d0868e4769461059d4b1644bca3907",
+                "type": "p_a16e7b71be72d2cb0f11907fdab3d6971b2558562d2df9a4b8fee6144c1c08f8",
                 "name": "self"
               }
             }
@@ -3650,30 +3650,6 @@
             }
           },
           {
-            "id": "CreateModeHint",
-            "kind": "call",
-            "properties": {
-              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/ModActor.ModActor_C'\",MemberName=\"CreateModeHint\",MemberGuid=E59B1A3CB10E4B519FDEDDFD6F863394)",
-              "NodeGuid": "EB9C9BB8D72E4B13A8195EC86DAC6043"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "A92ED10FDFBC417786552891C5B97531",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "42FC070A50D34395AA4D41CD7B1591DE",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:target": {
-                "id": "64777F54C6EE4ABF9D6400CB8338C1EC",
-                "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "CreateInteractionWidget",
             "kind": "CreateWidget",
             "properties": {
@@ -3696,12 +3672,36 @@
               },
               "out:result": {
                 "id": "6CEBD085246442598202BE4A8625AEC6",
-                "type": "p_b1a31391b18d2b3a74e519853ddc32c508d1b2b8f16904a5debb6ca9db413af8",
+                "type": "p_9398b9ceb1ce683bf0584ab32e3f5032387e18a84e750a5993d1fca8e4577f85",
                 "name": "ReturnValue"
               },
               "in:OwningPlayer": {
                 "id": "7E90B199C4334437AE9F017C9F3ACDE5",
                 "type": "p_66393f1ff338a338c740df4c9ac52ae81261fd6e98102fd843c16fc70aad6c10"
+              }
+            }
+          },
+          {
+            "id": "CreateModeHint",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/ModActor.ModActor_C'\",MemberName=\"CreateModeHint\",MemberGuid=E59B1A3CB10E4B519FDEDDFD6F863394)",
+              "NodeGuid": "EB9C9BB8D72E4B13A8195EC86DAC6043"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "A92ED10FDFBC417786552891C5B97531",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "42FC070A50D34395AA4D41CD7B1591DE",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "64777F54C6EE4ABF9D6400CB8338C1EC",
+                "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
+                "name": "self"
               }
             }
           },
@@ -3845,79 +3845,12 @@
               },
               "out:AsWBP Port Mode Action": {
                 "id": "7C443B40EECE48C084D8B99887A52B40",
-                "type": "p_b1a31391b18d2b3a74e519853ddc32c508d1b2b8f16904a5debb6ca9db413af8"
+                "type": "p_9398b9ceb1ce683bf0584ab32e3f5032387e18a84e750a5993d1fca8e4577f85"
               },
               "out:bSuccess": {
                 "id": "BEED16C2C591445CA9BB7CB0B75B270D",
                 "type": "p_56993b8655c965530d38c63d18de10c2e0ae9d0e8769c755d2fca14c67316f3c"
               }
-            }
-          },
-          {
-            "id": "WidgetPosition",
-            "kind": "call",
-            "properties": {
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"SetPositionInViewport\")",
-              "NodeGuid": "3DCE6CFC9A2A43ED9215BFB041104A75"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "3764C919151A4F269A8E28AC1C4B8C96",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "2E7D0D55002041238335980F4A18BE8D",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:target": {
-                "id": "1E139174822C4634BA64260C1E5EEAEF",
-                "type": "p_db8a6ecf5b0cf6c14db4e44ddb83a2c8e792853637d1a5afd0a8703f27d103b9",
-                "name": "self"
-              },
-              "in:Position": {
-                "id": "1B1886C4423D4ED69C59089266281198",
-                "type": "p_cd23d4a964a7858fc36eb8d7461f373e2574a788d265e3d07243182e55b875a1"
-              },
-              "in:bRemoveDPIScale": {
-                "id": "BA2353A605734872A0E9CADA7A595E51",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              }
-            },
-            "defaults": {
-              "in:Position": "(X=28.000000,Y=110.000000)",
-              "in:bRemoveDPIScale": "true"
-            }
-          },
-          {
-            "id": "WidgetSize",
-            "kind": "call",
-            "properties": {
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"SetDesiredSizeInViewport\")",
-              "NodeGuid": "189F2801CFD64FEE87CF757A5CF61B3F"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "292291EC3EBC403FA3F123C49DB2FF42",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "7DE4860BD9B944D283194350760EEDE5",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:target": {
-                "id": "BC2DDDDA8F914336BC0D5856B9A099F5",
-                "type": "p_db8a6ecf5b0cf6c14db4e44ddb83a2c8e792853637d1a5afd0a8703f27d103b9",
-                "name": "self"
-              },
-              "in:Size": {
-                "id": "F201F659885348C6A5E6C93742382BA9",
-                "type": "p_cd23d4a964a7858fc36eb8d7461f373e2574a788d265e3d07243182e55b875a1"
-              }
-            },
-            "defaults": {
-              "in:Size": "(X=900.000000,Y=220.000000)"
             }
           },
           {
@@ -4059,6 +3992,105 @@
             }
           },
           {
+            "id": "WidgetPosition",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"SetPositionInViewport\")",
+              "NodeGuid": "3DCE6CFC9A2A43ED9215BFB041104A75"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "3764C919151A4F269A8E28AC1C4B8C96",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "2E7D0D55002041238335980F4A18BE8D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "1E139174822C4634BA64260C1E5EEAEF",
+                "type": "p_db8a6ecf5b0cf6c14db4e44ddb83a2c8e792853637d1a5afd0a8703f27d103b9",
+                "name": "self"
+              },
+              "in:Position": {
+                "id": "1B1886C4423D4ED69C59089266281198",
+                "type": "p_cd23d4a964a7858fc36eb8d7461f373e2574a788d265e3d07243182e55b875a1"
+              },
+              "in:bRemoveDPIScale": {
+                "id": "BA2353A605734872A0E9CADA7A595E51",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              }
+            },
+            "defaults": {
+              "in:Position": "(X=28.000000,Y=110.000000)",
+              "in:bRemoveDPIScale": "true"
+            }
+          },
+          {
+            "id": "WidgetSize",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.UserWidget'\",MemberName=\"SetDesiredSizeInViewport\")",
+              "NodeGuid": "189F2801CFD64FEE87CF757A5CF61B3F"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "292291EC3EBC403FA3F123C49DB2FF42",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "7DE4860BD9B944D283194350760EEDE5",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "BC2DDDDA8F914336BC0D5856B9A099F5",
+                "type": "p_db8a6ecf5b0cf6c14db4e44ddb83a2c8e792853637d1a5afd0a8703f27d103b9",
+                "name": "self"
+              },
+              "in:Size": {
+                "id": "F201F659885348C6A5E6C93742382BA9",
+                "type": "p_cd23d4a964a7858fc36eb8d7461f373e2574a788d265e3d07243182e55b875a1"
+              }
+            },
+            "defaults": {
+              "in:Size": "(X=900.000000,Y=220.000000)"
+            }
+          },
+          {
+            "id": "WriteInteractionWidget",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"InteractionWidget\",MemberGuid=E0F50BD22AAF4167BD9F77C0909C656E,bSelfContext=True)",
+              "NodeGuid": "DFAB565DD59B4632BA9868B1B794119F"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "E30A6AF5A86D4C37980B29053726FD6B",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "CE0B9C0E670045E1A689F66126BC465F",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:InteractionWidget": {
+                "id": "DCDD7C050D6C425FA2221659A94D0971",
+                "type": "p_9398b9ceb1ce683bf0584ab32e3f5032387e18a84e750a5993d1fca8e4577f85"
+              },
+              "out:Output_Get": {
+                "id": "D27B3B1437B749AFB5AF28D8A4EEF7ED",
+                "type": "p_6e45230710ad747a072c46895d686e6454ba1fbf217926cb1dc3adb215f735fb"
+              },
+              "in:target": {
+                "id": "A800F5FD4E9FA1304E1854AEC565DC9F",
+                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
+                "name": "self"
+              }
+            }
+          },
+          {
             "id": "WriteLocalPlayer",
             "kind": "setVariable",
             "properties": {
@@ -4089,38 +4121,6 @@
                 "name": "self"
               }
             }
-          },
-          {
-            "id": "WriteInteractionWidget",
-            "kind": "setVariable",
-            "properties": {
-              "VariableReference": "(MemberName=\"InteractionWidget\",MemberGuid=E0F50BD22AAF4167BD9F77C0909C656E,bSelfContext=True)",
-              "NodeGuid": "DFAB565DD59B4632BA9868B1B794119F"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "E30A6AF5A86D4C37980B29053726FD6B",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "CE0B9C0E670045E1A689F66126BC465F",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:InteractionWidget": {
-                "id": "DCDD7C050D6C425FA2221659A94D0971",
-                "type": "p_b1a31391b18d2b3a74e519853ddc32c508d1b2b8f16904a5debb6ca9db413af8"
-              },
-              "out:Output_Get": {
-                "id": "D27B3B1437B749AFB5AF28D8A4EEF7ED",
-                "type": "p_dd903dbbd3cc806f06b7a9c6dc9ab7c7d52e42786692f5d4fa151422b6a93495"
-              },
-              "in:target": {
-                "id": "A800F5FD4E9FA1304E1854AEC565DC9F",
-                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
-                "name": "self"
-              }
-            }
           }
         ],
         "links": [
@@ -4133,16 +4133,16 @@
             "to": "HandlePlayerPawnChanged.in:NewPawn"
           },
           {
-            "from": "CreateModeHint.out:then",
-            "to": "HandlePlayerPawnChanged.in:exec"
-          },
-          {
             "from": "CreateInteractionWidget.out:result",
             "to": "OurWidget.in:Object"
           },
           {
             "from": "CreateInteractionWidget.out:then",
             "to": "OurWidget.in:exec"
+          },
+          {
+            "from": "CreateModeHint.out:then",
+            "to": "HandlePlayerPawnChanged.in:exec"
           },
           {
             "from": "EnableInput.out:then",
@@ -4158,6 +4158,10 @@
           },
           {
             "from": "OurWidget.out:AsWBP Port Mode Action",
+            "to": "ShowInteractionWidget.in:target"
+          },
+          {
+            "from": "OurWidget.out:AsWBP Port Mode Action",
             "to": "WidgetPosition.in:target"
           },
           {
@@ -4166,23 +4170,11 @@
           },
           {
             "from": "OurWidget.out:AsWBP Port Mode Action",
-            "to": "ShowInteractionWidget.in:target"
-          },
-          {
-            "from": "OurWidget.out:AsWBP Port Mode Action",
             "to": "WriteInteractionWidget.in:InteractionWidget"
           },
           {
             "from": "OurWidget.out:then",
             "to": "WriteInteractionWidget.in:exec"
-          },
-          {
-            "from": "WidgetPosition.out:then",
-            "to": "WidgetSize.in:exec"
-          },
-          {
-            "from": "WidgetSize.out:then",
-            "to": "WatchPossession.in:exec"
           },
           {
             "from": "Self.out:target",
@@ -4225,8 +4217,12 @@
             "to": "WatchPossession.in:Delegate"
           },
           {
-            "from": "WriteLocalPlayer.out:then",
-            "to": "CreateInteractionWidget.in:exec"
+            "from": "WidgetPosition.out:then",
+            "to": "WidgetSize.in:exec"
+          },
+          {
+            "from": "WidgetSize.out:then",
+            "to": "WatchPossession.in:exec"
           },
           {
             "from": "WriteInteractionWidget.out:Output_Get",
@@ -4235,6 +4231,10 @@
           {
             "from": "WriteInteractionWidget.out:then",
             "to": "AssignOutletManager.in:exec"
+          },
+          {
+            "from": "WriteLocalPlayer.out:then",
+            "to": "CreateInteractionWidget.in:exec"
           }
         ]
       }
@@ -4437,6 +4437,25 @@
             }
           },
           {
+            "id": "ReadInteractionWidget",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"InteractionWidget\",MemberGuid=E0F50BD22AAF4167BD9F77C0909C656E,bSelfContext=True)",
+              "NodeGuid": "202D7E6812B04E8FB131366AC25F3D5F"
+            },
+            "pins": {
+              "out:InteractionWidget": {
+                "id": "FDA8C8D20B6D46AC9E32CCD45310F8DD",
+                "type": "p_9398b9ceb1ce683bf0584ab32e3f5032387e18a84e750a5993d1fca8e4577f85"
+              },
+              "in:target": {
+                "id": "245647E241393A7BAC7321B2E9473C90",
+                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
+                "name": "self"
+              }
+            }
+          },
+          {
             "id": "ReadLocalPlayer",
             "kind": "getVariable",
             "properties": {
@@ -4450,25 +4469,6 @@
               },
               "in:target": {
                 "id": "C2A839C14A0FD93F5067EDB7BC248400",
-                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "ReadInteractionWidget",
-            "kind": "getVariable",
-            "properties": {
-              "VariableReference": "(MemberName=\"InteractionWidget\",MemberGuid=E0F50BD22AAF4167BD9F77C0909C656E,bSelfContext=True)",
-              "NodeGuid": "202D7E6812B04E8FB131366AC25F3D5F"
-            },
-            "pins": {
-              "out:InteractionWidget": {
-                "id": "FDA8C8D20B6D46AC9E32CCD45310F8DD",
-                "type": "p_b1a31391b18d2b3a74e519853ddc32c508d1b2b8f16904a5debb6ca9db413af8"
-              },
-              "in:target": {
-                "id": "245647E241393A7BAC7321B2E9473C90",
                 "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
                 "name": "self"
               }
@@ -4610,7 +4610,7 @@
               },
               "in:target": {
                 "id": "0C104591D23C40C1B910AAC1CA84C1E1",
-                "type": "p_b364ae0cc1e3c7675f3863f897f31c91c0d0868e4769461059d4b1644bca3907",
+                "type": "p_a16e7b71be72d2cb0f11907fdab3d6971b2558562d2df9a4b8fee6144c1c08f8",
                 "name": "self"
               }
             }
@@ -4642,18 +4642,6 @@
             "to": "HasWidget.in:Condition"
           },
           {
-            "from": "ReadLocalPlayer.out:LocalPlayer",
-            "to": "DisableInput.in:PlayerController"
-          },
-          {
-            "from": "ReadLocalPlayer.out:LocalPlayer",
-            "to": "HasPlayerValid.in:Object"
-          },
-          {
-            "from": "ReadLocalPlayer.out:LocalPlayer",
-            "to": "UnwatchPossession.in:target"
-          },
-          {
             "from": "ReadInteractionWidget.out:InteractionWidget",
             "to": "HasWidgetValid.in:Object"
           },
@@ -4664,6 +4652,18 @@
           {
             "from": "ReadInteractionWidget.out:InteractionWidget",
             "to": "WidgetHintHost.in:target"
+          },
+          {
+            "from": "ReadLocalPlayer.out:LocalPlayer",
+            "to": "DisableInput.in:PlayerController"
+          },
+          {
+            "from": "ReadLocalPlayer.out:LocalPlayer",
+            "to": "HasPlayerValid.in:Object"
+          },
+          {
+            "from": "ReadLocalPlayer.out:LocalPlayer",
+            "to": "UnwatchPossession.in:target"
           },
           {
             "from": "ReleaseOwnedResources.out:then0",
@@ -4838,6 +4838,25 @@
             }
           },
           {
+            "id": "ReadInteractionWidget",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"InteractionWidget\",MemberGuid=E0F50BD22AAF4167BD9F77C0909C656E,bSelfContext=True)",
+              "NodeGuid": "C8FF22964F3547A09AD475817B764DCF"
+            },
+            "pins": {
+              "out:InteractionWidget": {
+                "id": "71053A4423FB4DD8AE0F958B252139D2",
+                "type": "p_9398b9ceb1ce683bf0584ab32e3f5032387e18a84e750a5993d1fca8e4577f85"
+              },
+              "in:target": {
+                "id": "82F38CFF4065AE836C0E4DBEA1FE0E54",
+                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
+                "name": "self"
+              }
+            }
+          },
+          {
             "id": "ReadLocalPlayer",
             "kind": "getVariable",
             "properties": {
@@ -4851,25 +4870,6 @@
               },
               "in:target": {
                 "id": "B4959EEE4D1AB967CCAD3E88EC326546",
-                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "ReadInteractionWidget",
-            "kind": "getVariable",
-            "properties": {
-              "VariableReference": "(MemberName=\"InteractionWidget\",MemberGuid=E0F50BD22AAF4167BD9F77C0909C656E,bSelfContext=True)",
-              "NodeGuid": "C8FF22964F3547A09AD475817B764DCF"
-            },
-            "pins": {
-              "out:InteractionWidget": {
-                "id": "71053A4423FB4DD8AE0F958B252139D2",
-                "type": "p_b1a31391b18d2b3a74e519853ddc32c508d1b2b8f16904a5debb6ca9db413af8"
-              },
-              "in:target": {
-                "id": "82F38CFF4065AE836C0E4DBEA1FE0E54",
                 "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
                 "name": "self"
               }
@@ -4928,7 +4928,7 @@
               },
               "in:target": {
                 "id": "E39BB83C07F14EDE8523D73DE38AA2D0",
-                "type": "p_b364ae0cc1e3c7675f3863f897f31c91c0d0868e4769461059d4b1644bca3907",
+                "type": "p_a16e7b71be72d2cb0f11907fdab3d6971b2558562d2df9a4b8fee6144c1c08f8",
                 "name": "self"
               }
             }
@@ -4988,12 +4988,12 @@
             "to": "CreateStockHint.in:exec"
           },
           {
-            "from": "ReadLocalPlayer.out:LocalPlayer",
-            "to": "CreateStockHint.in:OwningPlayer"
-          },
-          {
             "from": "ReadInteractionWidget.out:InteractionWidget",
             "to": "WidgetHintHost.in:target"
+          },
+          {
+            "from": "ReadLocalPlayer.out:LocalPlayer",
+            "to": "CreateStockHint.in:OwningPlayer"
           },
           {
             "from": "StockHint.out:AsVoyage Button Info Container Widget",
@@ -6161,37 +6161,6 @@
             }
           },
           {
-            "id": "HideInteractionWidget",
-            "kind": "call",
-            "properties": {
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.Widget'\",MemberName=\"SetVisibility\")",
-              "NodeGuid": "A313DC099F3D4D2291703A334F36C1BB"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "54AF1FC6E2A0439BA1ABA906C6146A3D",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "52D24F16A38D4014A8F3ED419889868B",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:target": {
-                "id": "EA259CF5FCA7434E91DD5CDB329DAE01",
-                "type": "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb",
-                "name": "self"
-              },
-              "in:InVisibility": {
-                "id": "A8326907D8804117A18BD069E4258DAD",
-                "type": "p_bc0febd1300d5c5b4f2807215aa7704926a5f90f5492f7d41d737efd492262d1"
-              }
-            },
-            "defaults": {
-              "in:InVisibility": "Collapsed"
-            }
-          },
-          {
             "id": "HideHint",
             "kind": "call",
             "properties": {
@@ -6215,6 +6184,37 @@
               },
               "in:InVisibility": {
                 "id": "D95BF6B82AA24D35B5B1FCF67E30C6F1",
+                "type": "p_bc0febd1300d5c5b4f2807215aa7704926a5f90f5492f7d41d737efd492262d1"
+              }
+            },
+            "defaults": {
+              "in:InVisibility": "Collapsed"
+            }
+          },
+          {
+            "id": "HideInteractionWidget",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.Widget'\",MemberName=\"SetVisibility\")",
+              "NodeGuid": "A313DC099F3D4D2291703A334F36C1BB"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "54AF1FC6E2A0439BA1ABA906C6146A3D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "52D24F16A38D4014A8F3ED419889868B",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "EA259CF5FCA7434E91DD5CDB329DAE01",
+                "type": "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb",
+                "name": "self"
+              },
+              "in:InVisibility": {
+                "id": "A8326907D8804117A18BD069E4258DAD",
                 "type": "p_bc0febd1300d5c5b4f2807215aa7704926a5f90f5492f7d41d737efd492262d1"
               }
             },
@@ -6289,6 +6289,25 @@
             }
           },
           {
+            "id": "ReadInteractionWidget",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"InteractionWidget\",MemberGuid=E0F50BD22AAF4167BD9F77C0909C656E,bSelfContext=True)",
+              "NodeGuid": "93F50259EE19479387C572862E951F07"
+            },
+            "pins": {
+              "out:InteractionWidget": {
+                "id": "D8B0F4D11AA4469BB76A7A9B630074D6",
+                "type": "p_9398b9ceb1ce683bf0584ab32e3f5032387e18a84e750a5993d1fca8e4577f85"
+              },
+              "in:target": {
+                "id": "DCA059D747E6FD9030CE558FFB198CCA",
+                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
+                "name": "self"
+              }
+            }
+          },
+          {
             "id": "ReadLocalPlayer",
             "kind": "getVariable",
             "properties": {
@@ -6327,25 +6346,6 @@
             }
           },
           {
-            "id": "ReadInteractionWidget",
-            "kind": "getVariable",
-            "properties": {
-              "VariableReference": "(MemberName=\"InteractionWidget\",MemberGuid=E0F50BD22AAF4167BD9F77C0909C656E,bSelfContext=True)",
-              "NodeGuid": "93F50259EE19479387C572862E951F07"
-            },
-            "pins": {
-              "out:InteractionWidget": {
-                "id": "D8B0F4D11AA4469BB76A7A9B630074D6",
-                "type": "p_b1a31391b18d2b3a74e519853ddc32c508d1b2b8f16904a5debb6ca9db413af8"
-              },
-              "in:target": {
-                "id": "DCA059D747E6FD9030CE558FFB198CCA",
-                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "RefreshSelectedPort",
             "kind": "call",
             "properties": {
@@ -6367,37 +6367,6 @@
                 "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
                 "name": "self"
               }
-            }
-          },
-          {
-            "id": "ShowInteractionWidget",
-            "kind": "call",
-            "properties": {
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.Widget'\",MemberName=\"SetVisibility\")",
-              "NodeGuid": "954604A2F0A045AE8869BC523F60B4AD"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "29E0F8D059C94DC3952F0041773674D3",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "994E39D4A32649F5AB82F7BCF49B61AC",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:target": {
-                "id": "CD7FF3E9CF8C43CD89E32760EB55BC09",
-                "type": "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb",
-                "name": "self"
-              },
-              "in:InVisibility": {
-                "id": "611469281C914C13AB8A8424CB08213A",
-                "type": "p_bc0febd1300d5c5b4f2807215aa7704926a5f90f5492f7d41d737efd492262d1"
-              }
-            },
-            "defaults": {
-              "in:InVisibility": "HitTestInvisible"
             }
           },
           {
@@ -6469,6 +6438,37 @@
             }
           },
           {
+            "id": "ShowInteractionWidget",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/UMG.Widget'\",MemberName=\"SetVisibility\")",
+              "NodeGuid": "954604A2F0A045AE8869BC523F60B4AD"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "29E0F8D059C94DC3952F0041773674D3",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "994E39D4A32649F5AB82F7BCF49B61AC",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "CD7FF3E9CF8C43CD89E32760EB55BC09",
+                "type": "p_b7468c81b025ff3020e90e3a84420de5562306a5259822941dfa0351942912fb",
+                "name": "self"
+              },
+              "in:InVisibility": {
+                "id": "611469281C914C13AB8A8424CB08213A",
+                "type": "p_bc0febd1300d5c5b4f2807215aa7704926a5f90f5492f7d41d737efd492262d1"
+              }
+            },
+            "defaults": {
+              "in:InVisibility": "HitTestInvisible"
+            }
+          },
+          {
             "id": "UpdateModeHint",
             "kind": "call",
             "properties": {
@@ -6506,7 +6506,7 @@
               },
               "in:target": {
                 "id": "68DDC881C6EF425496A2D1CFDEE4CB72",
-                "type": "p_b364ae0cc1e3c7675f3863f897f31c91c0d0868e4769461059d4b1644bca3907",
+                "type": "p_a16e7b71be72d2cb0f11907fdab3d6971b2558562d2df9a4b8fee6144c1c08f8",
                 "name": "self"
               }
             }
@@ -6570,22 +6570,6 @@
             "to": "ShowInGameplay.in:left"
           },
           {
-            "from": "ReadLocalPlayer.out:LocalPlayer",
-            "to": "GameplayInput.in:target"
-          },
-          {
-            "from": "ReadLocalPlayer.out:LocalPlayer",
-            "to": "HasPlayerValid.in:Object"
-          },
-          {
-            "from": "ReadLocalPlayer.out:LocalPlayer",
-            "to": "HudVisible.in:target"
-          },
-          {
-            "from": "ReadSelectedPort.out:SelectedPort",
-            "to": "HasSelectedPortValid.in:Object"
-          },
-          {
             "from": "ReadInteractionWidget.out:InteractionWidget",
             "to": "HasWidgetValid.in:Object"
           },
@@ -6602,16 +6586,32 @@
             "to": "WidgetHintHost.in:target"
           },
           {
+            "from": "ReadLocalPlayer.out:LocalPlayer",
+            "to": "GameplayInput.in:target"
+          },
+          {
+            "from": "ReadLocalPlayer.out:LocalPlayer",
+            "to": "HasPlayerValid.in:Object"
+          },
+          {
+            "from": "ReadLocalPlayer.out:LocalPlayer",
+            "to": "HudVisible.in:target"
+          },
+          {
+            "from": "ReadSelectedPort.out:SelectedPort",
+            "to": "HasSelectedPortValid.in:Object"
+          },
+          {
             "from": "RefreshSelectedPort.out:then",
             "to": "HasSelectedPort.in:exec"
           },
           {
-            "from": "ShowInteractionWidget.out:then",
-            "to": "RefreshSelectedPort.in:exec"
-          },
-          {
             "from": "ShowInGameplay.out:result",
             "to": "HintAvailable.in:left"
+          },
+          {
+            "from": "ShowInteractionWidget.out:then",
+            "to": "RefreshSelectedPort.in:exec"
           },
           {
             "from": "UpdateModeHint.out:then",
@@ -6889,6 +6889,25 @@
             }
           },
           {
+            "id": "ReadLocalPlayer",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"LocalPlayer\",MemberGuid=51954D4C361F4D53BBA2CFE10B0613FE,bSelfContext=True)",
+              "NodeGuid": "EAFF219AD529429E8364533BD473A98D"
+            },
+            "pins": {
+              "out:LocalPlayer": {
+                "id": "29AE6024A6C14E41A64D03FF4C318D29",
+                "type": "p_30c86373606745a28d437fcd3bc5e8856d1c6761e56363ec1724004597d0eb19"
+              },
+              "in:target": {
+                "id": "75AB2DAE4E06F86253A1BEA17BE94A56",
+                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
+                "name": "self"
+              }
+            }
+          },
+          {
             "id": "ReadModeInputHeld",
             "kind": "getVariable",
             "properties": {
@@ -6911,25 +6930,6 @@
             }
           },
           {
-            "id": "ReadLocalPlayer",
-            "kind": "getVariable",
-            "properties": {
-              "VariableReference": "(MemberName=\"LocalPlayer\",MemberGuid=51954D4C361F4D53BBA2CFE10B0613FE,bSelfContext=True)",
-              "NodeGuid": "EAFF219AD529429E8364533BD473A98D"
-            },
-            "pins": {
-              "out:LocalPlayer": {
-                "id": "29AE6024A6C14E41A64D03FF4C318D29",
-                "type": "p_30c86373606745a28d437fcd3bc5e8856d1c6761e56363ec1724004597d0eb19"
-              },
-              "in:target": {
-                "id": "75AB2DAE4E06F86253A1BEA17BE94A56",
-                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "ReadSelectedPort",
             "kind": "getVariable",
             "properties": {
@@ -6944,30 +6944,6 @@
               "in:target": {
                 "id": "8F0972A14B5200A33792AFB50171B812",
                 "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "RefreshSelectedPort",
-            "kind": "call",
-            "properties": {
-              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/ModActor.ModActor_C'\",MemberName=\"RefreshSelectedPort\",MemberGuid=B60E16ACB27B4DE99394E88952B794CC)",
-              "NodeGuid": "6B75BDF57BBA4604ABFAC362BED27E6E"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "8E939A25A8CB44AC8D05905B86767D0D",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "out:then": {
-                "id": "0AFEC1BCC0374D00B3CB18DC961CDBA4",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
-              },
-              "in:target": {
-                "id": "5F0313C3E74F4E9CBD2C3B2E8F68CD2F",
-                "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
                 "name": "self"
               }
             }
@@ -6991,6 +6967,30 @@
               },
               "in:target": {
                 "id": "166EF340552B461BB056C158DC163ECB",
+                "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "RefreshSelectedPort",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/ModActor.ModActor_C'\",MemberName=\"RefreshSelectedPort\",MemberGuid=B60E16ACB27B4DE99394E88952B794CC)",
+              "NodeGuid": "6B75BDF57BBA4604ABFAC362BED27E6E"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "8E939A25A8CB44AC8D05905B86767D0D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "0AFEC1BCC0374D00B3CB18DC961CDBA4",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "5F0313C3E74F4E9CBD2C3B2E8F68CD2F",
                 "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
                 "name": "self"
               }
@@ -7071,16 +7071,16 @@
             "to": "OnConfiguredPort.in:Condition"
           },
           {
-            "from": "ReadModeInputHeld.out:ModeInputHeld",
-            "to": "AlreadyHeld.in:Condition"
-          },
-          {
             "from": "ReadLocalPlayer.out:LocalPlayer",
             "to": "GameplayInput.in:target"
           },
           {
             "from": "ReadLocalPlayer.out:LocalPlayer",
             "to": "HasPlayerValid.in:Object"
+          },
+          {
+            "from": "ReadModeInputHeld.out:ModeInputHeld",
+            "to": "AlreadyHeld.in:Condition"
           },
           {
             "from": "ReadSelectedPort.out:SelectedPort",
@@ -8458,6 +8458,25 @@
             }
           },
           {
+            "id": "ReadInteractionWidget",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"InteractionWidget\",MemberGuid=E0F50BD22AAF4167BD9F77C0909C656E,bSelfContext=True)",
+              "NodeGuid": "61AB8AC29998458CAE9B8FA8FC672E01"
+            },
+            "pins": {
+              "out:InteractionWidget": {
+                "id": "4E3FF95DD24A4BAF84D3D34E6E39BA5D",
+                "type": "p_9398b9ceb1ce683bf0584ab32e3f5032387e18a84e750a5993d1fca8e4577f85"
+              },
+              "in:target": {
+                "id": "30D64F7204DB4E3FBEDBB6866D77D270",
+                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
+                "name": "self"
+              }
+            }
+          },
+          {
             "id": "ReadLocalPlayer",
             "kind": "getVariable",
             "properties": {
@@ -8471,25 +8490,6 @@
               },
               "in:target": {
                 "id": "4A1A35D8808C478E9D7778BBE30D7B6E",
-                "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "ReadInteractionWidget",
-            "kind": "getVariable",
-            "properties": {
-              "VariableReference": "(MemberName=\"InteractionWidget\",MemberGuid=E0F50BD22AAF4167BD9F77C0909C656E,bSelfContext=True)",
-              "NodeGuid": "61AB8AC29998458CAE9B8FA8FC672E01"
-            },
-            "pins": {
-              "out:InteractionWidget": {
-                "id": "4E3FF95DD24A4BAF84D3D34E6E39BA5D",
-                "type": "p_b1a31391b18d2b3a74e519853ddc32c508d1b2b8f16904a5debb6ca9db413af8"
-              },
-              "in:target": {
-                "id": "30D64F7204DB4E3FBEDBB6866D77D270",
                 "type": "p_181f64fc4e113321f62aaf24e6947d84b1133a5ebb5b2c1c3e91a09a78c3fd4d",
                 "name": "self"
               }
@@ -8573,7 +8573,7 @@
               },
               "in:target": {
                 "id": "ADB67C854E264CBAB4EA5AD7B773F2B6",
-                "type": "p_b364ae0cc1e3c7675f3863f897f31c91c0d0868e4769461059d4b1644bca3907",
+                "type": "p_a16e7b71be72d2cb0f11907fdab3d6971b2558562d2df9a4b8fee6144c1c08f8",
                 "name": "self"
               }
             }
@@ -8629,12 +8629,12 @@
             "to": "AlreadyAttached.in:exec"
           },
           {
-            "from": "ReadLocalPlayer.out:LocalPlayer",
-            "to": "FocusWidget.in:target"
-          },
-          {
             "from": "ReadInteractionWidget.out:InteractionWidget",
             "to": "WidgetHintHost.in:target"
+          },
+          {
+            "from": "ReadLocalPlayer.out:LocalPlayer",
+            "to": "FocusWidget.in:target"
           },
           {
             "from": "SameRow.out:result",
@@ -11658,7 +11658,7 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
-    "p_b364ae0cc1e3c7675f3863f897f31c91c0d0868e4769461059d4b1644bca3907": {
+    "p_a16e7b71be72d2cb0f11907fdab3d6971b2558562d2df9a4b8fee6144c1c08f8": {
       "PersistentGuid": "00000000000000000000000000000000",
       "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
       "PinType.ContainerType": "None",
@@ -11967,7 +11967,7 @@
       "PinType.bIsUObjectWrapper": "False",
       "PinType.bIsWeakPointer": "False",
       "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "ReferencePassThroughConnection": "TierOne 13C2C49BDEF34289A91C9B6CF9298334",
+      "ReferencePassThroughConnection": "SetTankResearchTier 13C2C49BDEF34289A91C9B6CF9298334",
       "bAdvancedView": "False",
       "bDefaultValueIsIgnored": "False",
       "bDefaultValueIsReadOnly": "False",
@@ -12185,7 +12185,7 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
-    "p_dd903dbbd3cc806f06b7a9c6dc9ab7c7d52e42786692f5d4fa151422b6a93495": {
+    "p_6e45230710ad747a072c46895d686e6454ba1fbf217926cb1dc3adb215f735fb": {
       "PersistentGuid": "00000000000000000000000000000000",
       "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
       "PinType.ContainerType": "None",
@@ -13491,7 +13491,7 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
-    "p_b1a31391b18d2b3a74e519853ddc32c508d1b2b8f16904a5debb6ca9db413af8": {
+    "p_9398b9ceb1ce683bf0584ab32e3f5032387e18a84e750a5993d1fca8e4577f85": {
       "PersistentGuid": "00000000000000000000000000000000",
       "PinType.ContainerType": "None",
       "PinType.PinCategory": "\"object\"",
@@ -13805,7 +13805,7 @@
       "PinType.bIsUObjectWrapper": "False",
       "PinType.bIsWeakPointer": "False",
       "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "ReferencePassThroughConnection": "TierOne 5A31777252BC4BD8AC1730B52AB0E20A",
+      "ReferencePassThroughConnection": "SetTankResearchTier 5A31777252BC4BD8AC1730B52AB0E20A",
       "bAdvancedView": "False",
       "bDefaultValueIsIgnored": "False",
       "bDefaultValueIsReadOnly": "False",

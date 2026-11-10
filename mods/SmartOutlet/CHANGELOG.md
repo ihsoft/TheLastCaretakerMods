@@ -13,4 +13,5 @@
 - Show enabled ports with a slow green pulse and disabled ports with a faster
   red pulse. Glow can be disabled per mode; normal restores the stock appearance.
 - Supply battery output at 80/20 and fresh/salt water tank input at 20/100,
-  plus optional Tier 1 research access for the salt water tank and its ingredients.
+  plus optional Tier 11 research access for the salt water tank and its ingredients,
+  alongside the fresh water tank.
