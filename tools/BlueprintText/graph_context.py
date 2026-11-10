@@ -46,7 +46,8 @@ def local_context(document, graph, nodes):
 
 
 def component_detail(document, selection):
-    objects = document.get('components', {}).get('objects', [])
+    native = document.get('nativeDefaults', {}).get('objects', [])
+    objects = document.get('components', {}).get('objects', []) + native
     matches = [obj for obj in objects if obj['id'] == selection]
     if not matches:
         matches = [obj for obj in objects if obj['name'] == selection]
@@ -59,10 +60,11 @@ def component_detail(document, selection):
         if expanded == owned:
             break
         owned = expanded
-    section = document['components']
+    section = document.get('components', {})
     return copy.deepcopy(dict(asset=document['asset'], view='component-detail', readOnly=True,
         object=root, ownedObjects=[obj for obj in objects if obj['id'] in owned and obj != root],
-        roles=[key for key in ('templates', 'generatedTemplates') if root['id'] in section.get(key, [])]))
+        roles=(['native-default-subobject'] if root in native else
+               [key for key in ('templates', 'generatedTemplates') if root['id'] in section.get(key, [])])))
 
 
 def component_context(document, graph, nodes):

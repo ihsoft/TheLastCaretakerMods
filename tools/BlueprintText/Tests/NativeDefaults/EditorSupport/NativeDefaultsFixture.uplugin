@@ -1,0 +1,6 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "CanContainContent": false,
+  "Modules": [{"Name": "BPTNativeDefaults", "Type": "Runtime", "LoadingPhase": "Default"}]
+}

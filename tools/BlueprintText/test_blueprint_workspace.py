@@ -17,6 +17,20 @@ from test_asset_text_codec import fixture, sequence_fixture
 
 
 class WorkspaceTests(unittest.TestCase):
+    def test_legacy_native_defaults_rejected_before_selected_package_mutation(self):
+        self.document['parent'] = '/Script/Fixture.NativeActor'
+        bw.write(self.source, self.document)
+        def engine(mode, name, **fields):
+            self.assertEqual(mode, 'ValidateLegacyDefaults')
+            self.assertEqual(self.file.read_bytes(), b'original')
+            self.assertFalse((self.ws.internal / 'recovery.json').exists())
+            raise RuntimeError('Legacy source omits nativeDefaults')
+        with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'engine_run', side_effect=engine):
+            with self.assertRaisesRegex(RuntimeError, 'Legacy source'):
+                self.ws.apply()
+        self.assertEqual(self.file.read_bytes(), b'original')
+        self.assertFalse((self.ws.internal / 'recovery.json').exists())
+
     def test_ready_ubt_rules_are_not_source_module_provider(self):
         with tempfile.TemporaryDirectory(dir=bw.OWNER) as root:
             project = Path(root) / 'Example.uproject'
@@ -466,6 +480,7 @@ class WorkspaceTests(unittest.TestCase):
         changed = self.changed()
         child = copy.deepcopy(self.document)
         child.update(asset='/Game/BP_Child', parent=self.document['asset'] + '.BP_Test_C')
+        child['nativeDefaults'] = {'objects': []}
         child_source = self.ws.root / 'blueprints/Child.json'
         bw.write(child_source, child)
         child_file = bw.target(self.project, child['asset'])

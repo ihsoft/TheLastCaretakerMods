@@ -417,6 +417,12 @@ class Workspace:
         reopened.mkdir()
         self.prepare(self.project)
         records = []
+        legacy = [doc for _, _, doc in entries if 'nativeDefaults' not in doc and doc['parent'] not in
+                  ('/Script/Engine.Actor', '/Script/CoreUObject.Object', '/Script/UMG.UserWidget')]
+        if legacy:
+            request = self.run / 'legacy-defaults-request.json'
+            write(request, dict(assets=legacy))
+            self.engine_run('ValidateLegacyDefaults', 'legacy-defaults', Input=request)
         for _, _, document in entries:
             file = target(self.project, document['asset'])
             backup = self.run / 'original' / (document['asset'][6:] + '.uasset')

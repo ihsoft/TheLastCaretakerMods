@@ -42,7 +42,7 @@ def with_type_reference_details(node, templates):
 
 def property_references(document):
     fields = {k: v for k, v in document.items() if k in (
-        'parent', 'defaults', 'variables', 'components', 'root', 'interfaces', 'widget', 'properties')}
+        'parent', 'defaults', 'variables', 'components', 'root', 'interfaces', 'widget', 'properties', 'nativeDefaults')}
     return references(fields)
 
 

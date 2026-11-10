@@ -88,7 +88,7 @@ and the node skeletons. The `Simulate*` actions are test fixtures only.
 [Invoke-BlueprintAssetText.ps1](BlueprintText/Invoke-BlueprintAssetText.ps1)
 exports a complete supported Blueprint as compact JSON. It carries event and
 function graphs (including construction logic), native variable descriptions,
-CDO defaults, Blueprint/graph properties, component object trees and templates,
+CDO defaults and native default subobjects, Blueprint/graph properties, component object trees and templates,
 native node properties and typed pins. Original object names and GUIDs are retained. Class
 aliases and shared pin templates reduce repetition without replacing the native
 property values. Some fields deliberately remain Unreal property text.
@@ -165,6 +165,23 @@ duplicate IDs, unresolved/cyclic owners and invalid template references.
 Simple direct-Actor assets can retain the legacy `root` section instead;
 `root` and `components` are mutually exclusive. Component data is preserved by
 the codec but is not a separate diagram in the graph viewer.
+
+The separate `nativeDefaults.objects` tree preserves constructor-created native
+default subobjects below the class default object (CDO), including nested objects.
+Rows use the same identity/property fields as component objects; `$cdo` is the
+root owner. Their property values are deltas against the actual inherited
+subobject archetype, including native-constructor initialization and parent
+Blueprint overrides, rather than against the component class CDO. Omitted
+properties inherit that baseline; explicit zero/null overrides remain meaningful.
+
+Import binds the existing constructor-created objects after compilation. Their
+names, classes, owners, flags and complete inventory must match; this section
+does not allocate or remove native components. Persistent CDO-owned objects
+outside native-class default-subobject trees are rejected. Transient objects and
+transient properties are outside this saved-state representation. An absent
+section compares equal only to an empty tree; it never substitutes for omitted
+nonempty state. Older pointer-only exports require a fresh export of the intact
+asset through the [workspace workflow](blueprint-workspace.md#workspace-coordination).
 
 Changed properties include their complete nested values, including zero-valued
 fields. Saved component references marked DuplicateTransient are retained;
@@ -354,7 +371,8 @@ lookup. Each resolved result contains the original object and its owned subtree;
 property references are preserved without fetching referenced assets.
 
 `--component` reads an exact object ID or an unambiguous object name from
-`components.objects`, including its owned subtree and template-list membership.
+`components.objects` or `nativeDefaults.objects`, including its owned subtree
+and template-list membership or `native-default-subobject` role.
 It is independent of graph selection and cannot be combined with graph/detail
 selectors. Legacy `root` representations have no component-object registry.
 
@@ -413,7 +431,8 @@ references. `-Action Import` reconstructs these same widget and interface sectio
 compiles/saves the Blueprint, and compares a fresh-process export with the source.
 This verifies represented state; it does not establish runtime equivalence or general lossless
 Blueprint support. Existing export exclusions still apply to macros, timelines,
-extensions, unsupported nested object families and inherited component overrides.
+extensions, unsupported nested object families and SCS inherited-component
+overrides stored in `InheritableComponentHandler`.
 
 To add a widget or animation, declare its objects and hierarchy in the complete
 source, then allocate its missing editor identity without changing existing GUIDs:

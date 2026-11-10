@@ -19,7 +19,7 @@ KINDS = {'K2Node_CallFunction': 'call', 'K2Node_Event': 'event',
          'K2Node_Self': 'self', 'K2Node_DynamicCast': 'cast'}
 PIN_SEPARATE = {'PinId', 'PinName', 'Direction', 'LinkedTo',
                 'DefaultValue', 'DefaultObject', 'DefaultTextValue'}
-FIELDS = {'schema', 'format', 'asset', 'objectName', 'parent', 'properties', 'variables', 'defaults', 'graphs', 'dependencies', 'root', 'components', 'interfaces', 'widget', 'editorRole'}
+FIELDS = {'schema', 'format', 'asset', 'objectName', 'parent', 'properties', 'variables', 'defaults', 'graphs', 'dependencies', 'root', 'components', 'interfaces', 'widget', 'editorRole', 'nativeDefaults'}
 
 
 def check_keys(obj, allowed, context):
@@ -45,20 +45,20 @@ def validate_interfaces(document):
         raise ValueError('Interface graph requires an owning interface')
 
 
-def validate_object_tree(rows):
+def validate_object_tree(rows, owners=('$blueprint', '$class')):
     objects = {}
     for row in rows:
         check_keys(row, {'id', 'name', 'class', 'outer', 'flags', 'properties'}, 'component object')
         if any(not isinstance(row[k], str) or not row[k] for k in ('id', 'name', 'class', 'outer')):
             raise ValueError('Component object identities must be nonempty strings')
-        if row['id'] in objects or row['id'] in ('$blueprint', '$class'):
+        if row['id'] in objects or row['id'] in owners:
             raise ValueError('Duplicate or reserved component object identity')
         if type(row['flags']) is not int or row['flags'] < 0:
             raise ValueError('Component flags must be a nonnegative integer')
         if not isinstance(row['properties'], dict) or any(not isinstance(v, str) for v in row['properties'].values()):
             raise ValueError('Component properties must contain native text values')
         objects[row['id']] = row
-    resolved, pending = {'$blueprint', '$class'}, set(objects)
+    resolved, pending = set(owners), set(objects)
     while pending:
         ready = {key for key in pending if objects[key]['outer'] in resolved}
         if not ready:
@@ -69,6 +69,10 @@ def validate_object_tree(rows):
 
 
 def validate_components(document):
+    if 'nativeDefaults' in document:
+        data = document['nativeDefaults']
+        check_keys(data, {'objects'}, 'native CDO defaults')
+        validate_object_tree(data['objects'], ('$cdo',))
     if sum(key in document for key in ('root', 'components', 'widget')) > 1:
         raise ValueError('Use exactly one of root, components or widget')
     if 'widget' in document:
@@ -473,6 +477,10 @@ def add_call(document, catalog, operation, node_id, graph_name):
 def compare(expected, actual):
     """Canonical field comparison; only node.pins mappings have significant key order."""
     expected, actual = compact(native(expected)), compact(native(actual))
+    # Older empty-parent sources have no native subobjects. Absence is compatible
+    # only with an empty set, never with an omitted nonempty native object tree.
+    for document in (expected, actual):
+        document.setdefault('nativeDefaults', {'objects': []})
     differences = []
     def visit(a, b, path):
         if isinstance(a, dict) and isinstance(b, dict):
@@ -529,7 +537,7 @@ def relocate(document, asset):
     """
     native(document)  # Validate before producing another editable source.
     if document['parent'] != '/Script/CoreUObject.Object' or any(
-            key in document for key in ('root', 'components', 'widget')):
+            key in document for key in ('root', 'components', 'widget')) or document.get('nativeDefaults', {}).get('objects'):
         raise ValueError('relocate currently supports direct UObject sources without component/widget state')
     pattern = r'/Game/(?:[A-Za-z0-9_]+/)*[A-Za-z0-9_]+'
     old = document['asset']

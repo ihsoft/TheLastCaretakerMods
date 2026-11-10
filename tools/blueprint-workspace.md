@@ -317,6 +317,13 @@ Inheritance ordering and compatible batches are tool-owned. Unsupported
 dependency arrangements produce a diagnostic rather than requiring an agent to
 invent a per-mod build procedure.
 
+Older custom-parent sources without `nativeDefaults` are checked before the
+selected-package write phase. If the asset has native default subobjects, Apply
+requires a fresh export of the intact asset into a new workspace; reapply the
+intended edits there. A pointer-only export cannot reconstruct missing subobject
+properties. Current exports carry that state, so ordinary Apply needs no manual
+native-component inspection or extra preparation step.
+
 If a failed Apply reports broken references between a selected Blueprint and a
 known mutually referencing Blueprint outside the selection, export both into a
 new workspace, reapply the intended edit and run Apply with both selected. The

@@ -371,6 +371,7 @@ bool ImportComponents(UBlueprint* BP,const FJsonObject& Data,const TSet<UClass*>
     }
     return true;
 }
+#include "BlueprintNativeDefaults.h"
 FString UnsupportedReason(const UBlueprint* BP)
 {
     const auto* Widget=Cast<UWidgetBlueprint>(BP);
@@ -473,6 +474,11 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
         Defaults->SetStringField(Var.VarName.ToString(),Text);
     }
     Root->SetObjectField(ATNames::Valuedefaults,Defaults);
+    auto NativeState=MakeShared<FJsonObject>();if(!ExportNativeDefaults(BP,NativeState))return false;
+    const FString ParentPath=BP->ParentClass->GetPathName();
+    if(NativeState->GetArrayField(Objects).Num() ||
+       (ParentPath!=TEXT("/Script/Engine.Actor") && ParentPath!=TEXT("/Script/CoreUObject.Object") && ParentPath!=TEXT("/Script/UMG.UserWidget")))
+        Root->SetObjectField(NativeDefaults,NativeState);
     Values Graphs;
     TSet<FString> DependencyPaths;
     TArray<UEdGraph*> AllGraphs;BP->GetAllGraphs(AllGraphs);
@@ -548,7 +554,7 @@ struct GraphFactory final : FCustomizableTextObjectFactory
 };
 UBlueprint* CreateImport(const FJsonObject& Root)
 {
-    if(!Keys(Root,{ATNames::Valueschema,ATNames::Valueformat,ATNames::Valueasset,ATNames::ValueobjectName,ATNames::Valueparent,ATNames::Valueproperties,ATNames::Valuevariables,ATNames::Valuedefaults,ATNames::Valuegraphs,Dependencies,RootState,Components,Interfaces,WidgetState,BlueprintPreviewNames::EditorRole}) ||
+    if(!Keys(Root,{ATNames::Valueschema,ATNames::Valueformat,ATNames::Valueasset,ATNames::ValueobjectName,ATNames::Valueparent,ATNames::Valueproperties,ATNames::Valuevariables,ATNames::Valuedefaults,ATNames::Valuegraphs,Dependencies,RootState,Components,Interfaces,WidgetState,NativeDefaults,BlueprintPreviewNames::EditorRole}) ||
        Root.GetIntegerField(ATNames::Valueschema)!=2 || Root.GetStringField(ATNames::Valueformat)!=ATNames::Valuenative_asset)return nullptr;
     const FString Asset=Root.GetStringField(ATNames::Valueasset);
     if(!Asset.StartsWith(ATNames::Value_Game_) || !FPackageName::IsValidLongPackageName(Asset))return nullptr;
@@ -832,6 +838,7 @@ bool Import(const FString& Path,bool Batch=false)
     TSet<UClass*> BatchClasses;
     for(UBlueprint* BP:Blueprints)BatchClasses.Add(BP->GeneratedClass);
     for(int32 I=0;I<Sources.Num();++I)if(!RestoreBatchObjectDefaults(Blueprints[I],*Sources[I],BatchClasses))return false;
+    for(int32 I=0;I<Sources.Num();++I)if(!RestoreNativeDefaults(Blueprints[I],*Sources[I]))return false;
     for(int32 I=0;I<Sources.Num();++I)if(!SaveImport(Blueprints[I],Sources[I]))return false;
     return true;
 }
@@ -882,6 +889,7 @@ int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
     if(Mode==ATNames::ValueImport)return AssetText::Import(Input)?0:3;
     if(Mode==AssetText::ImportBatchMode)return AssetText::Import(Input,true)?0:3;
     if(Mode==AssetText::ExportBatchMode)return AssetText::ExportBatch(Input,Output)?0:2;
+    if(Mode==AssetText::ValidateLegacyDefaultsMode)return AssetText::ValidateLegacyDefaults(Input)?0:3;
     if(Mode==AssetText::LabelsMode)return AssetText::ExportLabels(Output)?0:4;
     return 1;
 }

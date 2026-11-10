@@ -46,6 +46,7 @@ failure to resolve before interpreting the suite's result.
 | Member resolution, use search or declaration context | [Reference/context checks](BlueprintText/test_graph_references.py) and [preview navigation](BlueprintText/test_preview_graph_links.py): owner/scope/GUID identity, indirect-call classification, unresolved targets and source isolation. |
 | Reflected native call templates | [Offline request/factory checks](BlueprintText/test_call_templates.py), then [Test-CallTemplates.ps1](BlueprintText/Test-CallTemplates.ps1): actual engine metadata, strict Apply/reopen, false overrides, pure/exec pins, required reference inputs and rejection recovery. The class setter fixture executes the imported graph on isolated objects, checking compatible writes, null clearing, missing/incompatible no-ops and instance isolation; unrelated internal setters remain rejected. |
 | Component-template inherited values and overrides | [Test-ComponentDefaults.ps1](BlueprintText/Test-ComponentDefaults.ps1), described below. A comparison using the same exporter alone can miss an incorrectly reconstructed inherited value. |
+| Native CDO subobjects, inherited archetypes and legacy-source rejection | [Offline native-default checks](BlueprintText/test_native_defaults.py), then [Test-NativeDefaults.ps1](BlueprintText/Test-NativeDefaults.ps1): changed Apply/reopen, external asset and nested-object values, constructor defaults, parent/child overrides, zero/null resets, rejection before package writes and independent cooked-package readback. |
 | Structural review or field display | [Review comparison](BlueprintText/test_graph_review.py), [Details](BlueprintText/test_review_details.py), [review rendering](BlueprintText/test_review_graph.py) and [batch preview](BlueprintText/test_preview_index.py). Check both snapshots and source isolation. |
 | Graph presentation, navigation or interactions | [Renderer and JavaScript checks](blueprint-text.md#checks), [expressions](BlueprintText/test_graph_expressions.py), [function navigation](BlueprintText/test_preview_graph_links.py), [node search](BlueprintText/test_node_search.js). DOM stand-ins are not browser visual acceptance. |
 | Widget input, resources or interaction | [Widget checks](blueprint-text.md#checks); resource collection changes also need an isolated Widget Blueprint export/Preview with its real dependencies. |
@@ -73,6 +74,21 @@ then inspect that concrete behavior. Do not build Unreal or request game tests
 for a change confined to offline review. Conversely, successful rendering cannot
 accept a serializer change. Report exactly which boundary was checked and keep
 per-run measurements and results in temporary evidence, not this guide.
+
+For native CDO default-subobject preservation, run:
+
+```powershell
+./tools/BlueprintText/Test-NativeDefaults.ps1 `
+  -OutputRoot './Tmp/BlueprintText/test-native-defaults' `
+  -EngineRoot '<selected engine root>'
+```
+
+Use a fresh output directory. The runner owns the shared Unreal queue, builds its
+isolated native fixture, checks reflected values in fresh editor processes and
+reads the cooked packages through the canonical UAssetGUI binary. It requires
+that binary at `.tools/bin/UAssetGUI.exe`; no game installation is involved.
+The compact result covers this fixture's saved-state boundary, not arbitrary
+native classes or runtime gameplay. Preserve the diagnostic path on failure.
 
 ## Finish the shared change
 
