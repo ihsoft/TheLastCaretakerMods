@@ -115,7 +115,11 @@ def shared_module_providers(project):
     providers = []
     for identity in MODULE_NAMES:
         providers.extend((project.parent / 'Source').glob('*/' + identity + '.Build.cs'))
-        providers.extend((project.parent / 'Plugins').glob('*/Source/' + identity + '/' + identity + '.Build.cs'))
+        for path in (project.parent / 'Plugins').glob('*/Source/' + identity + '/' + identity + '.Build.cs'):
+            # Ready providers carry UBT discovery rules, not an editable source module.
+            manifest = path.parents[2] / 'editor-support.json'
+            if not (manifest.is_file() and read(manifest).get('kind') == 'Unreal editor support binaries'):
+                providers.append(path)
     return providers
 
 

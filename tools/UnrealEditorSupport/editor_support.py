@@ -11,6 +11,7 @@ import uuid
 ROOT = Path(__file__).resolve().parents[2]
 KIND = 'Unreal editor support binaries'
 MANIFEST = 'editor-support.json'
+PACKAGE_SCHEMA = 2
 IDENTIFIER = re.compile(r'[A-Za-z][A-Za-z0-9_]*\Z')
 
 
@@ -75,11 +76,22 @@ def descriptor(path):
     return value, names
 
 
+def precompiled_rules(name):
+    """UBT discovery for load-only editor support; never compile an empty replacement DLL."""
+    require(IDENTIFIER.fullmatch(name), 'Invalid module name')
+    return (f'using UnrealBuildTool;\npublic class {name} : ModuleRules\n{{\n'
+            f'    public {name}(ReadOnlyTargetRules Target) : base(Target)\n    {{\n'
+            '        if (Target.Type != TargetType.Editor || Target.Platform != UnrealTargetPlatform.Win64 ||\n'
+            '            Target.Configuration != UnrealTargetConfiguration.Development)\n'
+            '            throw new BuildException("Editor support requires Win64 Development Editor.");\n'
+            '        bUsePrecompiled = true;\n        bPrecompile = false;\n    }\n}\n')
+
+
 def package_info(package, build_id):
     files = tree(package)
     require(MANIFEST in files, 'Not a published editor-support package')
     info = read(package / MANIFEST)
-    require(info.get('kind') == KIND and info.get('schema') == 1, 'Unsupported support package manifest')
+    require(info.get('kind') == KIND and info.get('schema') in (1, PACKAGE_SCHEMA), 'Unsupported support package manifest')
     name = info.get('plugin')
     require(isinstance(name, str) and IDENTIFIER.fullmatch(name), 'Invalid package plugin name')
     require(info.get('engineBuildId') == build_id, 'Support plugin belongs to another editor build; rebuild it with the selected engine')
@@ -88,10 +100,14 @@ def package_info(package, build_id):
     require(native.get('BuildId') == build_id and set(native.get('Modules', {})) == set(names), 'Native module manifest disagrees with the package')
     require(info.get('modules') == names, 'Descriptor module list changed')
     expected = info.get('files', {})
+    rules = {f'Source/{n}/{n}.Build.cs': precompiled_rules(n).encode('utf-8') for n in names}
+    if info['schema'] == PACKAGE_SCHEMA:
+        require(all(files.get(path) == value for path, value in rules.items()), 'Missing or modified precompiled module rules')
     require(isinstance(expected, dict) and set(files) == set(expected) | {MANIFEST}, 'Unexpected or missing package files')
     for relative, length in expected.items():
         require(relative == name + '.uplugin' or relative == 'Binaries/Win64/UnrealEditor.modules' or
-                re.fullmatch(r'Binaries/Win64/[A-Za-z0-9_.-]+\.dll', relative), 'Package contains unsupported source, resource or path')
+                re.fullmatch(r'Binaries/Win64/[A-Za-z0-9_.-]+\.dll', relative) or
+                (info['schema'] == PACKAGE_SCHEMA and relative in rules), 'Package contains unsupported source, resource or path')
         require(type(length) is int and len(files[relative]) == length, f'Package file size changed: {relative}')
     for module, dll in native['Modules'].items():
         require(dll == 'UnrealEditor-' + module + '.dll' and 'Binaries/Win64/' + dll in expected,
@@ -137,7 +153,11 @@ def build_package(source, engine, output, runner=run):
     for file in (built / 'Binaries/Win64').iterdir():
         if file.is_file() and (file.suffix == '.dll' or file.name == 'UnrealEditor.modules'):
             shutil.copy2(file, binary / file.name)
-    info = dict(kind=KIND, schema=1, plugin=source.stem, modules=names, engineBuildId=engine_identity(engine),
+    for name in names:
+        rule = package / f'Source/{name}/{name}.Build.cs'
+        rule.parent.mkdir(parents=True)
+        rule.write_text(precompiled_rules(name), encoding='utf-8', newline='\n')
+    info = dict(kind=KIND, schema=PACKAGE_SCHEMA, plugin=source.stem, modules=names, engineBuildId=engine_identity(engine),
                 files={name: len(data) for name, data in tree(package).items()})
     write(package / MANIFEST, info)
     package_info(package, engine_identity(engine))
@@ -177,7 +197,7 @@ def recover(project):
     return True
 
 
-def probe(project, engine, names, output, runner=run):
+def probe(project, engine, names, output, runner=run, *, plugin=None):
     report = output / 'loaded.json'
     script = output / 'load-plugin.py'
     script.write_text('import unreal, json, ctypes\nfrom pathlib import Path\n' +
@@ -186,8 +206,12 @@ def probe(project, engine, names, output, runner=run):
                      f'for name in {names!r}:\n    unreal.load_module(name)\n' +
                      '    assert kernel.GetModuleHandleW("UnrealEditor-" + name + ".dll"), "Module DLL not loaded: " + name\n' +
                      f'Path({str(report)!r}).write_text(json.dumps({{"status":"passed","modules":{names!r}}}))\n', encoding='utf-8')
+    # Validate the plugin we just attached even when a previous UBT invocation
+    # disabled it in a target receipt. attach has already checked the project's
+    # explicit choice. The next ordinary project build replaces that stale receipt.
+    enabled = 'PythonScriptPlugin' + (',' + plugin if plugin else '')
     runner([engine / 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe', project,
-            '-EnablePlugins=PythonScriptPlugin', '-run=pythonscript', '-script=' + str(script),
+            '-EnablePlugins=' + enabled, '-run=pythonscript', '-script=' + str(script),
             '-unattended', '-nop4', '-nosplash', '-nullrhi', '-ddc=NoZenLocalFallback',
             '-abslog=' + str(output / 'load-unreal.log')], output / 'load.log')
     require(read(report) == {'status': 'passed', 'modules': names}, 'Editor did not confirm all support modules')
@@ -197,6 +221,11 @@ def attach(project, package, engine, output, loader=probe):
     require(not recovery_path(project).exists(), 'Interrupted preparation requires -Recover before another update')
     info, desc, desired = package_info(package, engine_identity(engine))
     name, names = info['plugin'], info['modules']
+    def load():
+        if loader is probe:
+            loader(project, engine, names, output, plugin=name)
+        else:
+            loader(project, engine, names, output)
     original = project.read_bytes()
     data = json.loads(original.decode('utf-8-sig'))
     require(not data.get('AdditionalPluginDirectories'), 'External plugin directories are outside the covered preparation path')
@@ -223,7 +252,7 @@ def attach(project, package, engine, output, loader=probe):
         references.append({'Name': name, 'Enabled': True})
     updated = (json.dumps(data, indent=2) + '\n').encode('utf-8') if not matched else original
     if old == desired and updated == original:
-        loader(project, engine, names, output)
+        load()
         return 'unchanged'
     owner = unlinked(project.parent / 'Saved/UnrealEditorSupport')
     stage = owner / ('transaction-' + uuid.uuid4().hex)
@@ -241,7 +270,7 @@ def attach(project, package, engine, output, loader=probe):
             destination.rename(stage / 'previous')
         replacement.rename(destination)
         project.write_bytes(updated)
-        loader(project, engine, names, output)
+        load()
         require(tree(destination) == desired and project.read_bytes() == updated, 'Installed support changed during editor load')
     except BaseException as error:
         try:

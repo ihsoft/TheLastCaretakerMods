@@ -38,8 +38,8 @@ class SupportTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def inventory(self):
-        support.write(self.package / support.MANIFEST, dict(kind=support.KIND, schema=1, plugin='ExampleSupport',
+    def inventory(self, schema=1):
+        support.write(self.package / support.MANIFEST, dict(kind=support.KIND, schema=schema, plugin='ExampleSupport',
             modules=['ExampleNative'], engineBuildId='test-editor',
             files={n: len(b) for n, b in support.tree(self.package).items() if n != support.MANIFEST}))
 
@@ -52,6 +52,47 @@ class SupportTests(unittest.TestCase):
         self.assertEqual(self.attach(), 'unchanged')
         self.assertEqual(support.tree(self.project.parent), before)
         self.assertEqual(support.read(self.project)['Description'], 'Preserve this')
+
+    def upgrade(self):
+        rule = self.package / 'Source/ExampleNative/ExampleNative.Build.cs'
+        rule.parent.mkdir(parents=True)
+        rule.write_bytes(support.precompiled_rules('ExampleNative').encode('utf-8'))
+        self.inventory(support.PACKAGE_SCHEMA)
+        return rule
+
+    def test_legacy_package_upgrades_and_reuses_precompiled_rules(self):
+        self.attach()
+        self.upgrade()
+        self.assertEqual(self.attach(), 'prepared')
+        self.assertEqual(self.attach(), 'unchanged')
+
+    def test_rule_tampering_and_missing_rule_rejected_before_mutation(self):
+        rule = self.upgrade()
+        rule.write_bytes(b'// not the precompiled contract')
+        self.inventory(support.PACKAGE_SCHEMA)
+        with self.assertRaisesRegex(ValueError, 'precompiled module rules'):
+            self.attach()
+        rule.unlink()
+        self.inventory(support.PACKAGE_SCHEMA)
+        with self.assertRaisesRegex(ValueError, 'precompiled module rules'):
+            self.attach()
+        self.assertEqual(self.project.read_bytes(), self.original)
+
+    def test_failed_schema_upgrade_restores_legacy_package(self):
+        self.attach()
+        before = support.tree(self.project.parent)
+        self.upgrade()
+        def fail(*args):
+            raise RuntimeError('upgrade load failure')
+        with self.assertRaisesRegex(RuntimeError, 'upgrade load'):
+            self.attach(fail)
+        self.assertEqual(support.tree(self.project.parent), before)
+
+    def test_load_probe_explicitly_checks_attached_plugin(self):
+        def runner(command, log):
+            self.assertIn('-EnablePlugins=PythonScriptPlugin,ExampleSupport', command)
+            support.write(self.output / 'loaded.json', {'status': 'passed', 'modules': ['ExampleNative']})
+        support.probe(self.project, self.engine, ['ExampleNative'], self.output, runner, plugin='ExampleSupport')
 
     def test_wrong_editor_build_before_mutation(self):
         support.write(self.engine / 'Engine/Binaries/Win64/UnrealEditor.modules', {'BuildId': 'other'})

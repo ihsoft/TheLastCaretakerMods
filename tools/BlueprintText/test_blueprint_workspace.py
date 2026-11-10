@@ -17,6 +17,19 @@ from test_asset_text_codec import fixture, sequence_fixture
 
 
 class WorkspaceTests(unittest.TestCase):
+    def test_ready_ubt_rules_are_not_source_module_provider(self):
+        with tempfile.TemporaryDirectory(dir=bw.OWNER) as root:
+            project = Path(root) / 'Example.uproject'
+            plugin = project.parent / 'Plugins/BlueprintTextWorkspace'
+            rule = plugin / 'Source/BlueprintText/BlueprintText.Build.cs'
+            rule.parent.mkdir(parents=True)
+            rule.write_text('// precompiled rules')
+            self.assertEqual(bw.shared_module_providers(project), [rule])
+            bw.write(plugin / 'editor-support.json', {'kind': 'unrelated document'})
+            self.assertEqual(bw.shared_module_providers(project), [rule])
+            bw.write(plugin / 'editor-support.json', {'kind': 'Unreal editor support binaries'})
+            self.assertEqual(bw.shared_module_providers(project), [])
+
     def setUp(self):
         bw.OWNER.mkdir(parents=True, exist_ok=True)
         self.temp = tempfile.TemporaryDirectory(dir=bw.OWNER)

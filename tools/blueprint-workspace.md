@@ -65,11 +65,16 @@ shared queue waits for Unreal to be free. Export, changed Apply and Preview
 prepare those dependencies and the BPT tooling themselves. No separate preparation,
 DLL selection or project build is needed before a normal workspace call.
 
-New consumers receive a ready `BlueprintTextWorkspace` plugin without C++ or
-build sources. Unchanged provider sources and editor identity reuse its binaries;
+New consumers receive a ready `BlueprintTextWorkspace` plugin without C++
+implementation sources. Its generated precompiled module rules support ordinary
+Win64 Development Editor C++ builds without disabling the plugin; they are not
+an editable source provider. Unchanged provider sources and editor identity reuse its binaries;
 changed inputs rebuild through the common support tool. This does not generate
 game assets or refresh a mod's DataAssets. `Prepare` remains available as an explicit
 dependency/tooling-only operation.
+Existing binary installations update their package format on preparation. If a
+previous build disabled the plugin, follow [receipt recovery](unreal-editor-support.md#recovery)
+before resuming asset operations.
 
 Existing explicit source providers keep their supported path: preparation
 refreshes the `BlueprintText` module from the shared template and builds their

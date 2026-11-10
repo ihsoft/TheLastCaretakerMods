@@ -69,13 +69,16 @@ The tool uses Unreal's `BuildPlugin -NoTargetPlatforms` in a shallow private bui
 directory below `Tmp/UnrealEditorSupport/`, independent of the evidence path's
 depth. This keeps compiler paths short enough for the covered providers under
 UBT's action-path length limit. The returned `package` contains the plugin
-descriptor, Win64 editor DLLs, `UnrealEditor.modules`, and `editor-support.json`. It contains no C++ source,
-build rules, targets, PDBs, import libraries or game assets. The private UAT build
+descriptor, Win64 editor DLLs, `UnrealEditor.modules`, `editor-support.json`, and
+generated `Source/<Module>/<Module>.Build.cs` rules for precompiled modules.
+These rules let an ordinary Win64 Development Editor C++ project build reuse the
+DLLs without rebuilding them or disabling the plugin. The package contains no
+C++ implementation, headers, project targets, PDBs, import libraries or game assets. The private UAT build
 tree is removed after successful packaging; build and load diagnostics remain.
 
 Project preparation installs the package under `Plugins/<PluginName>/` and adds
 its enabled reference to the `.uproject` when absent. It does not add project
-modules or a `Source` directory. The owning project should ignore this installed
+modules or a project-level `Source` directory. The owning project should ignore this installed
 plugin directory in its own `.gitignore`; retain and review the project descriptor
 and the owner-maintained plugin sources. Tool preparation does not change Git rules.
 
@@ -92,6 +95,10 @@ package for routine project preparation:
 Package mode does not invoke a compiler. An identical installation returns
 `unchanged` after loading the modules in a fresh editor process. Replacing a
 managed installation uses complete replacement at the same plugin identity.
+Current packages use manifest schema 2. Declared dependency preparation and BPT
+preparation rebuild older packaging once, then reuse it. Legacy schema-1 packages
+remain readable for loading and rollback, but do not support ordinary C++ builds;
+rebuild them from owner sources rather than adding rules to an installed package.
 
 ## Inputs, results and boundaries
 
@@ -99,6 +106,11 @@ managed installation uses complete replacement at the same plugin identity.
   The tested configuration is the local Win64 UE 5.8 editor. Binary packages
   must match the selected editor's own module `BuildId`. A mismatch requires
   rebuilding from source; version labels alone are not accepted as compatibility.
+- Ready packages support modular Win64 Development Editor builds and editor
+  loading/cooking. Their generated rules reject other target types, platforms
+  and configurations. They provide reflected editor support, not a C++ SDK:
+  consumer C++ code cannot include their omitted headers or link directly to
+  their native API. Monolithic and game-binary builds are outside this package.
 - `-OutputRoot` optionally selects a fresh directory below repository `Tmp/`.
   Otherwise the tool creates `Tmp/UnrealEditorSupport/prepare-<run>/`. Mod callers
   choosing output paths use `Tmp/<Mod>/`. Keep a returned package available while
@@ -130,13 +142,22 @@ Failure returns a nonzero exit and a diagnostic location. A failed compiler run
 retains `build-scratch.json` pointing to its private scratch. Do not treat an
 existing package or an old successful result as success for the failed call.
 
-The load check temporarily enables the engine's PythonScriptPlugin through the
-command line. It loads each declared native module and checks that its DLL is
+The load check temporarily enables PythonScriptPlugin and the requested support
+plugin through the command line, after rejecting an explicitly disabled project
+reference. This also permits preparation when an old build receipt disabled the
+plugin. It loads each declared native module and checks that its DLL is
 present in the editor process. It adds no Python dependency to the project
 descriptor. This verifies binary loading, not asset semantics or gameplay;
 consumer-specific export/cook/semantic and game tests still belong to consumers.
 
 ## Recovery
+
+If an earlier C++ build used `-DisablePlugin=<PluginName>`, remove that workaround,
+prepare the current package through the public tool, and run the ordinary project
+build. UBT then replaces the stale disabled-plugin receipt. For BPT, use workspace
+`Prepare` before that build, then resume the ordinary workspace actions. Do not
+edit receipts or binary manifests by hand. The preparation load check alone does
+not clear a stale receipt; normal editor/BPT launches need the subsequent build.
 
 On installation or editor-load failure, the tool restores the previous project
 descriptor and managed plugin. A recovery journal remains if the process was
@@ -163,7 +184,8 @@ python -B -m unittest discover -s tools/UnrealEditorSupport/tests -p "test_*.py"
 
 The engine test uses the checked-in, game-independent `SupportFixture` plugin.
 It exercises the public build/install path, repeat package reuse, and a project
-without C++ or build sources. A native DataAsset is saved with a changed value,
+without project C++ sources. The installed plugin carries only its generated
+precompiled rules beside the binary package. A native DataAsset is saved with a changed value,
 reopened in a fresh process under the same `/Script/SupportFixture` class identity,
 and cooked. All output stays in a fresh ignored directory; no game installation
 or maintained mod project is changed.
@@ -176,3 +198,10 @@ The test accepts `-EngineRoot`, `-OutputRoot`, and an optional `-PluginPackage`
 to reuse a previously built fixture package. It owns queue reservations for its
 engine operations. Successful results do not establish support for arbitrary
 third-party plugins, other engine builds or any particular game's class layout.
+
+[Test-CppProjectSupport.ps1](BlueprintText/Test-CppProjectSupport.ps1) covers a
+C++ consumer with both the native fixture and BPT ready providers: ordinary
+project builds, a real native recompile, package reuse, recovery from a disabled
+receipt, two changed strict Apply/reopen passes, independent component-value
+checks and cook. Run it with a fresh `-OutputRoot` below `Tmp/BlueprintText/`
+and the selected `-EngineRoot`; it owns the shared Unreal queue.

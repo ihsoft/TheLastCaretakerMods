@@ -58,7 +58,7 @@ foreach($stage in @('create','reopen','cook')) {
 & (Join-Path $repository 'tools/Invoke-UnrealQueued.ps1') -Operation 'Verify source-free support consumer assets' -FilePath pwsh -ArgumentList @('-NoProfile','-File',$worker,'-Project',$project,'-Engine',$EngineRoot,'-Probe',$probe,'-Root',$output)
 $cooked=Join-Path $output 'cooked/SupportTest/Content/Test/DA_Probe.uasset'
 if(-not (Test-Path $cooked)) { throw 'Missing cooked fixture asset.' }
-$sources=@(Get-ChildItem -LiteralPath (Join-Path $output 'consumer') -File -Recurse | Where-Object { $_.Extension -in @('.cpp','.h','.cs') })
-if($sources.Count) { throw 'Consumer contains C++ or build sources.' }
-@{status='passed';sourceFiles=0;repeat='unchanged';nativeIdentity='/Script/SupportFixture.SupportFixtureAsset';valueAfterReopen=73;cooked=$cooked;project=$project;package=$result.package} | ConvertTo-Json | Set-Content (Join-Path $output 'result.json')
+$sources=@(Get-ChildItem -LiteralPath (Join-Path $output 'consumer') -File -Recurse | Where-Object { $_.Extension -in @('.cpp','.h') })
+if($sources.Count) { throw 'Consumer contains C++ implementation sources.' }
+@{status='passed';implementationSourceFiles=$sources.Count;repeat='unchanged';nativeIdentity='/Script/SupportFixture.SupportFixtureAsset';valueAfterReopen=73;cooked=$cooked;project=$project;package=$result.package} | ConvertTo-Json | Set-Content (Join-Path $output 'result.json')
 Get-Content (Join-Path $output 'result.json')

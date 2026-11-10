@@ -40,7 +40,10 @@ class ProjectSupportTests(unittest.TestCase):
         support.write(package / 'Binaries/Win64/UnrealEditor.modules',
                       {'BuildId': identity, 'Modules': {'Native': 'UnrealEditor-Native.dll'}})
         (package / 'Binaries/Win64/UnrealEditor-Native.dll').write_bytes(self.header.read_bytes())
-        support.write(package / support.MANIFEST, dict(kind=support.KIND, schema=1, plugin='Support',
+        rule = package / 'Source/Native/Native.Build.cs'
+        rule.parent.mkdir(parents=True)
+        rule.write_bytes(support.precompiled_rules('Native').encode('utf-8'))
+        support.write(package / support.MANIFEST, dict(kind=support.KIND, schema=support.PACKAGE_SCHEMA, plugin='Support',
                       modules=['Native'], engineBuildId=identity,
                       files={name: len(value) for name, value in support.tree(package).items()}))
         return package
@@ -58,7 +61,8 @@ class ProjectSupportTests(unittest.TestCase):
         self.assertTrue(self.prepare()['built'])
         self.assertEqual(len(self.calls), 2)
         installed = support.tree(self.project.parent / 'Plugins/Support')
-        self.assertFalse(any(Path(name).suffix in ('.h', '.cpp', '.cs') for name in installed))
+        self.assertFalse(any(Path(name).suffix in ('.h', '.cpp') for name in installed))
+        self.assertEqual(installed['Source/Native/Native.Build.cs'], support.precompiled_rules('Native').encode('utf-8'))
         self.assertEqual(len(list((self.project.parent / 'Plugins').glob('*.uplugin'))), 0)
         self.assertEqual(len(support.read(self.project)['Plugins']), 1)
 
@@ -67,6 +71,27 @@ class ProjectSupportTests(unittest.TestCase):
         support.write(self.engine / 'Engine/Binaries/Win64/UnrealEditor.modules', {'BuildId': 'two'})
         self.assertTrue(self.prepare()['built'])
         self.assertEqual(len(self.calls), 2)
+
+    def test_old_packaging_snapshot_rebuilds_once(self):
+        self.prepare()
+        cache = self.project.parent / 'Saved/UnrealEditorSupport/inputs/Support.json'
+        old = support.read(cache)
+        old.pop('packageSchema')
+        support.write(cache, old)
+        self.assertTrue(self.prepare()['built'])
+        self.assertFalse(self.prepare()['built'])
+        self.assertEqual(len(self.calls), 2)
+
+    def test_legacy_package_reinstalled_under_current_cache_is_upgraded(self):
+        self.prepare()
+        installed = self.project.parent / 'Plugins/Support'
+        support.remove_owned(installed / 'Source', installed)
+        manifest = support.read(installed / support.MANIFEST)
+        manifest['schema'] = 1
+        manifest['files'] = {n: len(b) for n, b in support.tree(installed).items() if n != support.MANIFEST}
+        support.write(installed / support.MANIFEST, manifest)
+        self.assertTrue(self.prepare()['built'])
+        self.assertFalse(self.prepare()['built'])
 
     def test_owned_overlay_is_composed_without_changing_inputs(self):
         other = self.root / 'shared'

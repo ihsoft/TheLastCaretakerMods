@@ -43,12 +43,14 @@ def prepare_provider(project, engine, output, source, overlays=(), *, builder=No
     name = source.stem
     support.require(not support.recovery_path(project).exists(), 'Interrupted preparation requires -Recover')
     identity = support.engine_identity(engine)
-    snapshot = dict(schema=1, engineBuildId=identity,
+    snapshot = dict(schema=1, packageSchema=support.PACKAGE_SCHEMA, engineBuildId=identity,
                     files={key: base64.b64encode(value).decode('ascii') for key, value in files.items()})
     cache = support.unlinked(project.parent / 'Saved/UnrealEditorSupport/inputs' / (name + '.json'))
     installed = project.parent / 'Plugins' / name
     output.mkdir(parents=True)
     reused = cache.is_file() and support.read(cache) == snapshot and installed.is_dir()
+    if reused:
+        reused = support.read(installed / support.MANIFEST).get('schema') == support.PACKAGE_SCHEMA
     if reused:
         package = installed
     else:
