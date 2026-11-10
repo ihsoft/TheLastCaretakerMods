@@ -560,7 +560,10 @@ class, role, selection, diagnostic reason, dependencies and referencers. A
 record without source snapshots requires an explicit reason and unchanged
 status. Such records and unselected stubs go into the compact inventory at the
 bottom, not graph cards. A supported non-stub Blueprint can have a card even
-when it is not selected for Apply. Catalog dependency/referencer lists are not
+when it is not selected for Apply but belongs to the selected work's forward
+reference context. Workspace Preview excludes unrelated project assets; it is
+not a project inventory. Both Before and proposed source references contribute
+context, while reverse references alone do not expand it. Catalog dependency/referencer lists are not
 displayed as editable functionality.
 
 Asset references in editable source are displayed at their node/pin or named

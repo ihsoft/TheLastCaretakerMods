@@ -372,14 +372,20 @@ The compact result reports editable cards, listed assets, graphs, stubs, missing
 local dependencies and unsupported Blueprints. A collection failure is an error,
 not permission to present an incomplete preview as successful.
 
-The preview shows what can be changed through BPT. Supported Blueprint sources
-have graph/widget cards. References appear at their actual graph node, pin or
+The preview reviews the workspace selection and its relevant context. It includes
+selected sources, their forward dependencies, and assets referenced by the current
+proposal or original Before snapshot, with those assets' forward dependencies.
+Unrelated project assets, including test copies, are omitted. Reverse references
+alone do not bring another asset into the review. Selection is explicit; asset
+names are not used to guess whether something is a test.
+
+Supported Blueprint sources in that scope have graph/widget cards. References appear at their actual graph node, pin or
 named Blueprint property, with stub or missing-local-asset labels when known.
 Other assets, including DataAssets and unselected editor stubs, appear only in
 a compact reference list at the bottom. Their presence is not a claim of BPT
 editing support. In particular, a stub's empty graphs are not the original game
 implementation. An explicitly selected stub can still be reviewed as an editor
-contract. Discovered assets do not expand the workspace's Apply selection.
+contract. Discovered context does not expand the workspace's Apply selection.
 
 The same Preview call includes collapsed graphs automatically: an expandable
 tree, operation-to-child links, ancestor navigation, local/descendant counts and

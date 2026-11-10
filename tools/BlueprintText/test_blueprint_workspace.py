@@ -706,10 +706,11 @@ except ValueError:
 
     def catalog_fixture(self):
         selected = self.document['asset']
-        rows = [dict(asset=selected, role='unclassified', dependencies=[dict(asset='/Game/Parent', missing=False)]),
+        rows = [dict(asset=selected, role='unclassified', dependencies=[dict(asset='/Game/Parent', missing=False),
+                                                                      dict(asset='/Game/Item', missing=False)]),
                 dict(asset='/Game/Parent', role='stub', dependencies=[dict(asset=selected, missing=False)]),
                 dict(asset='/Game/Item', role='unclassified', dependencies=[dict(asset='/Game/Generator', missing=False)]),
-                dict(asset='/Game/Generator', role='stub', dependencies=[], reason='Unsupported UObject Blueprint'),
+                dict(asset='/Game/Generator', role='stub', dependencies=[dict(asset='/Game/RelevantMissing', missing=True)], reason='Unsupported UObject Blueprint'),
                 dict(asset='/Game/Other', role='unclassified', dependencies=[dict(asset='/Game/Missing', missing=True)])]
         for row in rows:
             row['class'] = 'Blueprint' if row['asset'] != '/Game/Item' else 'DataAsset'
@@ -828,7 +829,7 @@ except ValueError:
             result = self.ws.preview()
         summary = bw.read(Path(result['preview']).parent / 'summary.json')
         items = {r['asset']: r for r in summary['items']}
-        self.assertEqual(6, result['assets'])
+        self.assertEqual(5, result['assets'])
         self.assertEqual(2, result['stubs'])
         self.assertEqual(1, result['missingDependencies'])
         self.assertIn('/Game/Generator', result['unsupportedBlueprints'])
@@ -838,9 +839,49 @@ except ValueError:
         self.assertEqual(0, items['/Game/Parent']['graphs'])
         self.assertFalse(items['/Game/Parent']['displayed'])
         self.assertEqual(1, result['editableAssets'])
-        self.assertEqual(5, result['listedAssets'])
+        self.assertEqual(4, result['listedAssets'])
+        self.assertIn('/Game/RelevantMissing', items)
+        self.assertNotIn('/Game/Other', items)
+        self.assertNotIn('/Game/Missing', items)
         self.assertIn('Unsupported UObject', items['/Game/Generator']['context']['reason'])
         self.assertEqual(original, (self.ws.manifest.read_bytes(), self.ws.baseline(), self.file.read_bytes()))
+
+    def test_preview_excludes_unrelated_test_copies_and_reverse_references(self):
+        selected = self.document['asset']
+        rows = {selected: dict(asset=selected, role='unclassified', **{'class':'Blueprint'}, dependencies=[])}
+        for asset in ('/Game/Tests/CopyA', '/Game/Tests/CopyB'):
+            other = copy.deepcopy(self.document); other['asset'] = asset
+            native = self.ws.run / ('catalog/' + asset.rsplit('/',1)[-1] + '.native.json')
+            bw.write(native, bw.codec.native(other))
+            rows[asset] = dict(asset=asset, role='unclassified', **{'class':'Blueprint'}, native=str(native),
+                               dependencies=[dict(asset=selected, missing=False)])
+        with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'preview_catalog', return_value=rows):
+            result = self.ws.preview()
+        self.assertEqual((1, 1, 0), (result['assets'], result['editableAssets'], result['listedAssets']))
+        summary = bw.read(Path(result['preview']).parent / 'summary.json')
+        self.assertEqual([selected], [r['asset'] for r in summary['items']])
+        self.assertEqual([], summary['items'][0]['context']['referencedBy'])
+        self.assertEqual([selected], list(bw.read(Path(result['preview']).parent / 'asset-context.json')))
+        html = Path(result['preview']).read_text(encoding='utf-8')
+        self.assertNotIn('/Game/Tests/CopyA', html)
+        self.assertNotIn('/Game/Tests/CopyB', html)
+
+    def test_preview_keeps_before_and_proposed_references_without_registry_edges(self):
+        before = copy.deepcopy(self.document); after = copy.deepcopy(self.document)
+        # A named property in Before, a node property in the current proposal.
+        before['defaults']['Path'] = '/Game/BeforeOnly.Asset'
+        after['graphs'][0]['body']['nodes'][0]['properties']['FutureAssetField'] = '"/Game/Tests/Used.Asset"'
+        bw.write(self.ws.internal / 'before.json', before); bw.write(self.source, after)
+        rows = {a: dict(asset=a, role='unclassified', **{'class':'DataAsset'}, dependencies=[],
+                        reason='Dependency information only')
+                for a in (self.document['asset'], '/Game/BeforeOnly', '/Game/Tests/Used', '/Game/Unrelated')}
+        # Rendering this synthetic proposal is not needed to test its review scope.
+        with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'preview_catalog', return_value=rows), \
+             patch('render_preview_index.generate', return_value=dict(index=str(self.ws.run/'preview/index.html'),
+                   assets=3,graphs=1,editableAssets=1,listedAssets=2)):
+            self.ws.preview()
+        records = bw.read(self.ws.run / 'preview.json')['assets']
+        self.assertEqual({self.document['asset'], '/Game/BeforeOnly', '/Game/Tests/Used'}, {r['context']['asset'] for r in records})
 
     def test_preview_rejects_failed_or_incomplete_discovery(self):
         with patch.object(self.ws, 'prepare'), patch.object(self.ws, 'engine_run', side_effect=RuntimeError('catalog failed')):

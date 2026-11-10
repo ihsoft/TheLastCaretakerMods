@@ -600,6 +600,33 @@ class Workspace:
                                          reason='Missing dependency package in this editor project.')
         catalog.update(missing)
 
+        # Preview is a review of the selected work, not a project inventory.
+        # Include forward context from both snapshots (also before Apply), but
+        # never pull in unrelated assets merely because they refer to this work.
+        from preview_references import node_references, property_references, package
+        visible = set(selected)
+        for _, _, document in entries:
+            old = baseline.get(document['asset'])
+            snapshots = [document]
+            if old and old.get('before'):
+                snapshots.append(read(inside(self.internal, old['before'])))
+            for snapshot in snapshots:
+                visible.update(package(ref) for _, ref in property_references(snapshot))
+                for graph in snapshot['graphs']:
+                    for node in graph['body']['nodes']:
+                        visible.update(package(ref) for _, ref in node_references(node, snapshot['pinTemplates']))
+        pending = list(visible)
+        while pending:
+            asset = pending.pop()
+            for dependency in catalog.get(asset, {}).get('dependencies', []):
+                name = dependency['asset']
+                if name not in visible:
+                    visible.add(name)
+                    pending.append(name)
+        catalog = {a: row for a, row in catalog.items() if a in visible}
+        missing = {a: row for a, row in missing.items() if a in catalog}
+        referenced_by = {a: [r for r in refs if r in catalog] for a, refs in referenced_by.items() if a in catalog}
+
         def context(asset):
             row = catalog[asset]
             return dict(placeholder=row['role'] == 'stub', context=dict(
