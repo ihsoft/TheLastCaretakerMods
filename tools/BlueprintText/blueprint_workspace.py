@@ -775,7 +775,13 @@ class Workspace:
         project_data = read(self.project)
         if any(p.get('Name') == 'BlueprintTextWorkspace' and p.get('Enabled') is False for p in project_data.get('Plugins', [])):
             raise ValueError('Project explicitly disables BlueprintTextWorkspace; enable it before Prepare')
-        support_results = prepare_project(self.project, self.engine, self.run / 'project-support')
+        # Clean checkouts retain the required plugin reference but not its ready
+        # binaries. Dependency probes precede installation; exclude only this
+        # absent provider there, then let its own attach verify the full project.
+        pending_bpt = (not providers and not (self.project.parent / 'Plugins/BlueprintTextWorkspace').exists()
+                       and any(p.get('Name') == 'BlueprintTextWorkspace' for p in project_data.get('Plugins', [])))
+        support_results = prepare_project(self.project, self.engine, self.run / 'project-support',
+                                          disabled_plugins=('BlueprintTextWorkspace',) if pending_bpt else ())
         if not providers:
             result = prepare_provider(self.project, self.engine, self.run / 'bpt-support',
                                       HERE / 'EditorSupport/BlueprintTextWorkspace.uplugin',

@@ -99,8 +99,23 @@ class SupportTests(unittest.TestCase):
     def test_load_probe_explicitly_checks_attached_plugin(self):
         def runner(command, log):
             self.assertIn('-EnablePlugins=PythonScriptPlugin,ExampleSupport', command)
+            self.assertFalse(any(str(arg).startswith('-DisablePlugins=') for arg in command))
             support.write(self.output / 'loaded.json', {'status': 'passed', 'modules': ['ExampleNative']})
         support.probe(self.project, self.engine, ['ExampleNative'], self.output, runner, plugin='ExampleSupport')
+
+    def test_probe_exclusion_is_process_local_and_keeps_target_enabled(self):
+        before = self.project.read_bytes()
+        def runner(command, log):
+            self.assertIn('-EnablePlugins=PythonScriptPlugin,ExampleSupport', command)
+            self.assertIn('-DisablePlugins=PendingProvider', command)
+            support.write(self.output / 'loaded.json', {'status': 'passed', 'modules': ['ExampleNative']})
+        support.probe(self.project, self.engine, ['ExampleNative'], self.output, runner,
+                      plugin='ExampleSupport', disabled_plugins=('PendingProvider',))
+        self.assertEqual(self.project.read_bytes(), before)
+        for excluded in ('ExampleSupport', 'pythonscriptplugin', 'One,Two'):
+            with self.subTest(excluded=excluded), self.assertRaises(ValueError):
+                support.probe(self.project, self.engine, ['ExampleNative'], self.output,
+                              plugin='ExampleSupport', disabled_plugins=(excluded,))
 
     def test_wrong_editor_build_before_mutation(self):
         support.write(self.engine / 'Engine/Binaries/Win64/UnrealEditor.modules', {'BuildId': 'other'})

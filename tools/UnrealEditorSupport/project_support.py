@@ -33,7 +33,7 @@ def source_tree(source, overlays=()):
     return source, files
 
 
-def prepare_provider(project, engine, output, source, overlays=(), *, builder=None, loader=None):
+def prepare_provider(project, engine, output, source, overlays=(), *, builder=None, loader=None, disabled_plugins=()):
     builder = builder or support.build_package
     loader = loader or support.probe
     project, engine, output = map(support.unlinked, (project, engine, output))
@@ -60,7 +60,7 @@ def prepare_provider(project, engine, output, source, overlays=(), *, builder=No
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(value)
         package = builder(composed / source.name, engine, output)
-    status = support.attach(project, package, engine, output, loader)
+    status = support.attach(project, package, engine, output, loader, disabled_plugins=disabled_plugins)
     # Never mark changed sources current after a failed build, attach or load.
     temporary = cache.with_suffix('.writing')
     support.write(temporary, snapshot)
@@ -74,7 +74,7 @@ def prepare_provider(project, engine, output, source, overlays=(), *, builder=No
     return result
 
 
-def prepare_project(project, engine, output):
+def prepare_project(project, engine, output, *, disabled_plugins=()):
     """An absent declaration means no owner-supplied native dependencies."""
     project = support.unlinked(project)
     declaration = support.unlinked(project.parent / 'EditorSupport.json')
@@ -94,5 +94,6 @@ def prepare_project(project, engine, output):
         support.require(not modules.intersection(n.casefold() for n in provided), 'Duplicate project support module')
         names.add(source.stem.casefold()); modules.update(n.casefold() for n in provided)
         entries.append((source, entry.get('overlays', [])))
-    return [prepare_provider(project, engine, Path(output) / source.stem, source, overlays)
+    return [prepare_provider(project, engine, Path(output) / source.stem, source, overlays,
+                             disabled_plugins=disabled_plugins)
             for source, overlays in entries]

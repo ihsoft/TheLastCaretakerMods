@@ -13,6 +13,8 @@ own C++ sources. [C++ consumer acceptance](../BlueprintText/Test-CppProjectSuppo
 covers normal UBT builds with ready providers, stale receipt recovery and BPT
 write/reopen/cook. Generated precompiled rules are managed package files, not
 owner-maintained module sources.
+[Clean-checkout acceptance](../BlueprintText/Test-CleanProjectSupport.ps1)
+covers BPT-owned bootstrap across missing mandatory BPT and declared native support.
 `project_support.py` composes declared owner inputs and reuses ready providers;
 `tests/test_project_support.py` covers source changes, collisions and failed updates.
 Python callers hold the shared queue when calling these internal functions.

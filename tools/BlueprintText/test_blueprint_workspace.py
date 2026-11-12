@@ -177,7 +177,7 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_ready_provider_prepares_project_dependencies_without_project_build(self):
         events = []
-        with patch.object(bw, 'prepare_project', side_effect=lambda *args: events.append('project') or []) as dependencies, \
+        with patch.object(bw, 'prepare_project', side_effect=lambda *args, **kwargs: events.append('project') or []) as dependencies, \
              patch.object(bw, 'prepare_provider', side_effect=lambda *args: events.append('bpt') or {'built': True}) as provider, \
              patch.object(self.ws, 'command') as build:
             result = self.ws.prepare(self.project)
@@ -186,6 +186,32 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual(provider.call_args.args[3].name, 'BlueprintTextWorkspace.uplugin')
         build.assert_not_called()
         self.assertFalse((self.project.parent / 'Source').exists())
+
+    def test_missing_required_bpt_is_excluded_only_from_dependency_probe(self):
+        bw.write(self.project, {'Plugins': [{'Name': 'BlueprintTextWorkspace', 'Enabled': True}]})
+        before = self.project.read_bytes()
+        with patch.object(bw, 'prepare_project', return_value=[]) as dependencies, \
+             patch.object(bw, 'prepare_provider', return_value={'built': True}) as provider:
+            self.ws.prepare(self.project)
+        self.assertEqual(dependencies.call_args.kwargs, {'disabled_plugins': ('BlueprintTextWorkspace',)})
+        self.assertNotIn('disabled_plugins', provider.call_args.kwargs)
+        self.assertEqual(self.project.read_bytes(), before)
+
+    def test_present_or_unreferenced_bpt_is_not_excluded(self):
+        for present in (False, True):
+            if present:
+                bw.write(self.project, {'Plugins': [{'Name': 'BlueprintTextWorkspace', 'Enabled': True}]})
+                # Even an incomplete installation must not be hidden by bootstrap.
+                (self.project.parent / 'Plugins/BlueprintTextWorkspace').mkdir(parents=True)
+            with self.subTest(present=present), patch.object(bw, 'prepare_project', return_value=[]) as dependencies:
+                self.ws.prepare(self.project)
+            self.assertEqual(dependencies.call_args.kwargs, {'disabled_plugins': ()})
+
+    def test_explicitly_disabled_bpt_rejects_before_dependencies(self):
+        bw.write(self.project, {'Plugins': [{'Name': 'BlueprintTextWorkspace', 'Enabled': False}]})
+        with patch.object(bw, 'prepare_project') as dependencies, self.assertRaisesRegex(ValueError, 'explicitly disables'):
+            self.ws.prepare(self.project)
+        dependencies.assert_not_called()
 
     def test_ready_provider_failure_prevents_export(self):
         # Export must be a complete cold-start entry point, not require Prepare first.

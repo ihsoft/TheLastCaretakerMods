@@ -16,6 +16,7 @@ failure handling.
 | Transition a literal call to optional arguments without changing its values | `BlueprintText/asset_text_codec.py use-arguments` | [Optional arguments](blueprint-text.md#optional-call-arguments) |
 | Make function parameter defaults explicit, distinguishing empty from absent | `BlueprintText/asset_text_codec.py use-parameter-defaults` | [Optional arguments](blueprint-text.md#optional-call-arguments) |
 | Check argument inheritance, explicit overrides, reconstruction and cooked stripping | `BlueprintText/Test-Arguments.ps1` | [BPT maintenance checks](blueprint-text-maintenance.md#choose-validation-by-the-change) |
+| Check BPT preparation from a clean project checkout with native support | `BlueprintText/Test-CleanProjectSupport.ps1` | [BPT maintenance checks](blueprint-text-maintenance.md#choose-validation-by-the-change) |
 | Read BPT graphs, exact node/pin details or local/component context without Unreal | `BlueprintText/graph_hierarchy.py` | [Source reading](blueprint-text.md#read-graphs-without-unreal) |
 | Find BPT calls, callback references and variable accesses in explicit source files | `BlueprintText/graph_references.py` | [Member-use search](blueprint-text.md#find-member-uses) |
 | Check nested BPT graphs with strict import, executable fixtures and preview | `BlueprintText/Test-NestedGraphs.ps1` | [Collapsed graph checks](blueprint-text.md#collapsed-graphs) |

@@ -124,11 +124,29 @@ class ProjectSupportTests(unittest.TestCase):
         support.remove_owned(self.project.parent / 'Plugins/Support', self.project.parent)
         self.assertTrue(self.prepare()['built'])
 
+    def test_intermediate_probe_exclusion_preserves_required_reference_and_rollback(self):
+        support.write(self.project, {'Plugins': [{'Name': 'PendingProvider', 'Enabled': True}]})
+        def load(project, engine, names, output, **options):
+            self.assertEqual(names, ['Native'])
+            self.assertEqual(options, {'disabled_plugins': ('PendingProvider',)})
+            self.assertIn({'Name': 'PendingProvider', 'Enabled': True}, support.read(project)['Plugins'])
+        self.prepare(loader=load, disabled_plugins=('PendingProvider',))
+        before = support.tree(self.project.parent)
+        self.header.write_bytes(b'changed')
+        def fail(*args, **options):
+            load(*args, **options)
+            raise RuntimeError('unrelated missing module')
+        with self.assertRaisesRegex(RuntimeError, 'unrelated missing module'):
+            self.prepare(loader=fail, disabled_plugins=('PendingProvider',))
+        self.assertEqual(support.tree(self.project.parent), before)
+
     def test_project_declaration_resolves_owners_and_rejects_duplicate_modules(self):
         support.write(self.project.parent / 'EditorSupport.json', {'schema': 1, 'plugins': [{'source': str(self.source)}]})
         with patch.object(projects, 'prepare_provider', return_value={'status': 'prepared'}) as call:
-            self.assertEqual(len(projects.prepare_project(self.project, self.engine, self.root / 'declared')), 1)
+            self.assertEqual(len(projects.prepare_project(self.project, self.engine, self.root / 'declared',
+                                                        disabled_plugins=('PendingProvider',))), 1)
             self.assertEqual(call.call_args.args[3], self.source)
+            self.assertEqual(call.call_args.kwargs, {'disabled_plugins': ('PendingProvider',)})
         support.write(self.project.parent / 'EditorSupport.json', {'schema': 1, 'plugins': [{'source': str(self.source)}] * 2})
         with patch.object(projects, 'prepare_provider') as call, self.assertRaises(ValueError):
             projects.prepare_project(self.project, self.engine, self.root / 'invalid')

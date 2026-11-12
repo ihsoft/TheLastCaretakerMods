@@ -197,7 +197,12 @@ def recover(project):
     return True
 
 
-def probe(project, engine, names, output, runner=run, *, plugin=None):
+def probe(project, engine, names, output, runner=run, *, plugin=None, disabled_plugins=()):
+    require(all(IDENTIFIER.fullmatch(name) for name in disabled_plugins),
+            'Invalid plugin name in load-probe exclusions')
+    require(not {name.casefold() for name in disabled_plugins}.intersection(
+        name.casefold() for name in ('PythonScriptPlugin', plugin) if name),
+        'Cannot exclude a plugin required by the load probe')
     report = output / 'loaded.json'
     script = output / 'load-plugin.py'
     script.write_text('import unreal, json, ctypes\nfrom pathlib import Path\n' +
@@ -210,22 +215,26 @@ def probe(project, engine, names, output, runner=run, *, plugin=None):
     # disabled it in a target receipt. attach has already checked the project's
     # explicit choice. The next ordinary project build replaces that stale receipt.
     enabled = 'PythonScriptPlugin' + (',' + plugin if plugin else '')
+    # A caller preparing another missing provider may exclude it from this
+    # intermediate process only; that caller must finish with an unexcluded load.
+    excluded = ['-DisablePlugins=' + ','.join(disabled_plugins)] if disabled_plugins else []
     runner([engine / 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe', project,
-            '-EnablePlugins=' + enabled, '-run=pythonscript', '-script=' + str(script),
+            '-EnablePlugins=' + enabled, *excluded, '-run=pythonscript', '-script=' + str(script),
             '-unattended', '-nop4', '-nosplash', '-nullrhi', '-ddc=NoZenLocalFallback',
             '-abslog=' + str(output / 'load-unreal.log')], output / 'load.log')
     require(read(report) == {'status': 'passed', 'modules': names}, 'Editor did not confirm all support modules')
 
 
-def attach(project, package, engine, output, loader=probe):
+def attach(project, package, engine, output, loader=probe, *, disabled_plugins=()):
     require(not recovery_path(project).exists(), 'Interrupted preparation requires -Recover before another update')
     info, desc, desired = package_info(package, engine_identity(engine))
     name, names = info['plugin'], info['modules']
     def load():
+        options = dict(disabled_plugins=disabled_plugins) if disabled_plugins else {}
         if loader is probe:
-            loader(project, engine, names, output, plugin=name)
+            loader(project, engine, names, output, plugin=name, **options)
         else:
-            loader(project, engine, names, output)
+            loader(project, engine, names, output, **options)
     original = project.read_bytes()
     data = json.loads(original.decode('utf-8-sig'))
     require(not data.get('AdditionalPluginDirectories'), 'External plugin directories are outside the covered preparation path')

@@ -72,6 +72,12 @@ an editable source provider. Unchanged provider sources and editor identity reus
 changed inputs rebuild through the common support tool. This does not generate
 game assets or refresh a mod's DataAssets. `Prepare` remains available as an explicit
 dependency/tooling-only operation.
+Projects with saved BPT call nodes keep `BlueprintTextWorkspace` as a required,
+enabled plugin (`Enabled: true`, without `Optional: true`). On a clean checkout,
+the same workspace preparation installs declared native support and BPT even
+when its plugin directory is absent. Keep the required reference in the project;
+no manual plugin disabling or DLL copying is needed. Preparation finishes by
+loading BPT with the project dependencies enabled.
 Existing binary installations update their package format on preparation. If a
 previous build disabled the plugin, follow [receipt recovery](unreal-editor-support.md#recovery)
 before resuming asset operations.
