@@ -674,6 +674,8 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
     lines = [title] + details
     lines.extend('Input: ' + hint for hint in hidden_inputs)
     values = {**node.get('defaults', {}), **node.get('arguments', {})}
+    object_values = input_object_values(node, pin_templates or {})
+    values.update(object_values)
     for alias, pin in node.get('pins', {}).items():
         if alias.startswith('in:') and 'DefaultTextValue' in pin:
             values[alias] = text_literal(pin['DefaultTextValue'])
@@ -683,7 +685,14 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
             continue
         reference = node.get('_inputReferences', {}).get(key)
         suffix = (' [STUB]' if reference.get('stub') else ' [not in project]' if reference.get('missing') else '') if reference else ''
-        lines.append(CardLine(f"Input: {key.removeprefix('in:')} = {json.dumps(value, ensure_ascii=False)}" + suffix,
+        if key in object_values:
+            name = object_label(value)
+            if pin_category(node, key, pin_templates or {}) in ('class', 'softclass'):
+                name = name.removesuffix('_C')
+            displayed = readable_name(name)
+        else:
+            displayed = json.dumps(value, ensure_ascii=False)
+        lines.append(CardLine(f"Input: {key.removeprefix('in:')} = {displayed}" + suffix,
                               reference=reference))
     lines.extend(output_lines(node, pin_templates or {}, connected_outputs))
     if is_disabled(node):
@@ -718,9 +727,26 @@ def description_key(line, index):
 def description_fields(node, templates, parent):
     # Include stored defaults regardless of wiring, so a link-only edit does not
     # turn an unchanged default into a changed description when it becomes visible.
-    return {description_key(line, i): line for i, line in enumerate(
+    result = {description_key(line, i): line for i, line in enumerate(
         node_lines({k:v for k,v in node.items() if k != '_inputReferences'}, set(),
                    pin_templates=templates, parent=parent, wrap=False))}
+    # Equal display names can refer to different packages; review exact identities.
+    for alias, value in input_object_values(node, templates).items():
+        key = 'Input: ' + alias.removeprefix('in:')
+        if key in result:
+            result[key] = key + ' = ' + value
+    return result
+
+
+def input_object_values(node, templates):
+    values = {}
+    for alias, pin in node.get('pins', {}).items():
+        metadata = {**templates.get(pin.get('type'), {}), **pin}
+        value = metadata.get('DefaultObject')
+        if (alias.startswith('in:') and value and native_string(value) != 'None' and
+                not is_implicit_target(node, templates, f'pins / {alias} / DefaultObject')):
+            values[alias] = value
+    return values
 
 
 def with_input_references(node, templates, owner, context):
@@ -728,7 +754,9 @@ def with_input_references(node, templates, owner, context):
     candidates = defaultdict(list)
     for field, target in node_references(node, templates):
         parts = field.split(' / ')
-        if (len(parts) == 2 and parts[0] in ('defaults', 'arguments') and
+        input_field = ((len(parts) == 2 and parts[0] in ('defaults', 'arguments')) or
+                       (len(parts) == 3 and parts[0] == 'pins' and parts[2] == 'DefaultObject'))
+        if (input_field and
                 parts[1].startswith('in:') and reference_package(target) != owner):
             candidates[parts[1]].append(dict(node=node['id'], field=field, target=target,
                                             **context.get(reference_package(target), {})))

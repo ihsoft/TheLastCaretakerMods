@@ -342,6 +342,75 @@ class GraphRenderingTests(unittest.TestCase):
         self.assertEqual(row.get('class'), 'review-changed-line')
         self.assertIn('Previously:', row.find('{*}title').text)
 
+    def test_typed_asset_input_keeps_link_and_role_in_its_folded_step(self):
+        target = '/Game/Containers/BP_Inventory_PlayerBox_Large.BP_Inventory_PlayerBox_Large_C'
+        raw = '"/Script/Engine.BlueprintGeneratedClass\'' + target + '\'"'
+        document = {'schema': 1, 'asset': '/Game/Test', 'pinTemplates': {
+            'value': {'PinType.PinCategory': '"class"'},
+            'bool': {'PinType.PinCategory': '"bool"'}}, 'nodes': [
+                dict(id='GetClass', kind='call', operation='GetObjectClass',
+                     properties={'bDefaultsToPureFunc': 'True'}, pins={'out:result': {'type': 'value'}}),
+                dict(id='ExactClass', kind='call', operation='EqualEqual_ClassClass',
+                     properties={'bDefaultsToPureFunc': 'True'},
+                     pins={'in:left': {'type': 'value'}, 'in:right': {'type': 'value', 'DefaultObject': raw},
+                           'out:result': {'type': 'bool'}})],
+            'links': [{'from': 'GetClass.out:result', 'to': 'ExactClass.in:left'}]}
+        for category in ('class', 'object'):
+            for in_template in (False, True):
+                source = copy.deepcopy(document)
+                source['pinTemplates']['value']['PinType.PinCategory'] = json.dumps(category)
+                if in_template:
+                    source['pinTemplates']['literal'] = dict(source['pinTemplates']['value'], DefaultObject=raw)
+                    source['nodes'][1]['pins']['in:right'] = {'type': 'literal'}
+                original = copy.deepcopy(source)
+                for role in ({}, {'stub': True}, {'missing': True}):
+                    context = {target.split('.')[0]: dict(role, href='../index.html#asset-001')}
+                    for view in ('simplified', 'full', 'expressions'):
+                        for direction in ('TB', 'LR'):
+                            with self.subTest(category=category, template=in_template, role=role, view=view, direction=direction):
+                                svg = ET.fromstring(render(source, view=view, direction=direction, asset_context=context)[0])
+                                links = svg.findall('.//{*}a[@class="asset-reference"]')
+                                self.assertTrue(links)
+                                self.assertTrue(all(a.get('href') == '../index.html#asset-001' for a in links))
+                                rows = [visible_text(a.find('{*}text')) for a in links]
+                                linked = ' '.join(rows)
+                                self.assertEqual(linked.count('Input: right = '), 1)
+                                self.assertIn('BP Inventory Player Box Large', linked)
+                                self.assertEqual(linked.count('[STUB]'), int('stub' in role))
+                                self.assertEqual(linked.count('[not in project]'), int('missing' in role))
+                                for a in links:
+                                    self.assertIn(target, ''.join(a.itertext()))
+                                labels = ' '.join(visible_text(t) for t in svg.findall('.//{*}text'))
+                                self.assertNotIn('ExactClass /', labels)
+                                self.assertNotIn('in:right', labels)
+                                self.assertNotIn('→', linked)
+                                self.assertLess(labels.index('Input: right'), labels.index('Output: bool'))
+                                if view == 'simplified':
+                                    self.assertLess(labels.index('2.'), labels.index('Input: right'))
+                self.assertEqual(source, original)
+        # Renaming only the package must still highlight a changed input.
+        before = copy.deepcopy(document)
+        before['nodes'][1]['pins']['in:right']['DefaultObject'] = raw.replace('/Game/Containers/', '/Game/Old/')
+        for view in ('simplified', 'full', 'expressions'):
+            svg = ET.fromstring(render(document, before=before, view=view,
+                review={'changed': ['ExactClass']}, asset_context={target.split('.')[0]: {'href': '#asset'}})[0])
+            row = svg.find('.//{*}a[@class="asset-reference"]/{*}text')
+            self.assertEqual(row.get('class'), 'review-changed-line')
+            self.assertIn('/Game/Old/', row.find('{*}title').text)
+
+    def test_typed_input_presentation_keeps_implicit_library_target_hidden(self):
+        target = '/Game/BFL_Test.Default__BFL_Test_C'
+        document = {'schema': 1, 'asset': '/Game/Test', 'pinTemplates': {
+            'hidden': {'PinType.PinCategory': '"object"', 'bHidden': 'True'}},
+            'nodes': [dict(id='Call', kind='call', properties={
+                'FunctionReference': '(MemberParent="/Game/BFL_Test.BFL_Test_C",MemberName="Check")'},
+                pins={'in:target': {'type': 'hidden', 'name': 'self', 'DefaultObject': target}})], 'links': []}
+        for view in ('simplified', 'full', 'expressions'):
+            svg = ET.fromstring(render(document, view=view)[0])
+            labels = ' '.join(visible_text(t) for t in svg.findall('.//{*}text'))
+            self.assertNotIn('Input: target', labels)
+            self.assertEqual('Default__BFL_Test_C' in labels, view == 'full')
+
     def test_getter_chain_keeps_type_references_in_details_and_full(self):
         rule = '/Game/Settings/BP_Rule.BP_Rule_C'
         document = {'schema': 1, 'asset': '/Game/Test', 'pinTemplates': {

@@ -746,7 +746,10 @@ Blueprint property, with exact paths in tooltips and links to preview entries
 when available. Stub markers come from the supplied project context.
 When an input literal contains one asset reference, its displayed value carries
 the link, including inside a folded chain's own step; no duplicate reference
-line is appended to the card.
+line is appended to the card. Typed object/class inputs (`DefaultObject`) appear
+at the same input position with a readable object name; their exact reference
+remains in the tooltip and Details. Review compares exact references even when
+their displayed names match.
 Simplified and Expressions cards omit technical pin-type and member-owner links;
 these remain resolved in node Details (`_typeReferences`) and visible in Full.
 Chosen asset values (including class defaults) retain their links in every view.
