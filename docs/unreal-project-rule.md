@@ -18,6 +18,48 @@ as the bidirectional text editing and Git review interface for Blueprints.
 Commit its synchronized text representation alongside the corresponding project
 assets. BPT is an intentional duplicate, not a second source of truth.
 
+## Project layout and temporary data
+
+Keep each mod's maintained Unreal project in its own `mods/<Mod>/Project/`
+directory. Place the `.uproject` and its project-owned inputs there. Do not mix
+Unreal project directories with mod-level documentation, release scripts,
+packaging inputs or other files at the mod root. Existing flat layouts require
+an explicit, scoped migration that updates their consumers; they are not a
+pattern for new projects or reorganizations.
+
+The maintained Project directory contains repository source: authored assets,
+synchronized BPT, required project configuration, editor-support sources and
+test sources. Deliberately authored reusable test assets also belong in source,
+with a test-only package boundary that excludes them from the release.
+The fact that an asset or configuration file was written by an editor does not
+make it temporary; its role in the maintained project determines ownership.
+
+Keep `Content/` and `Config/` source-only. Do not hide per-run fixtures, temporary
+INI files or incidental editor settings there with Git exclusions. Required
+configuration belongs in version control. Within the maintained project, only
+`Intermediate/` may serve as an explicitly temporary, Git-ignored directory;
+do not accumulate other generated directories beside the sources.
+
+Run tests and builds against disposable copies of the maintained project under
+the owning mod's `Tmp/<Mod>/` directory. Copy current source inputs, including
+intended uncommitted changes, rather than regenerating assets or copying stale
+execution output. Prepare plugins and run Unreal in the copy, so caches, logs,
+generated configuration, test fixtures and cook output stay outside the source
+project. Test and build runs must not write results back into the source project.
+Test code and reusable fixtures remain repository data; data created by a test
+run belongs to that run.
+
+Use a working copy for interactive Unreal/BPT authoring as well: directly
+opening the maintained project in Unreal recreates standard generated folders.
+Before accepting authoring changes, check for concurrent source edits and review
+the exact changes. Transfer only intentionally changed saved assets, synchronized
+BPT and deliberately authored configuration or other source files. Never copy
+the whole working project back. A working copy is not a second source of truth.
+
+Follow the [generated-output lifecycle](artifact-lifecycle-rule.md) for cleanup
+and failure evidence. Keep concrete copy, test, build and authoring commands in
+the owning mod or tool guide; do not duplicate them in this rule.
+
 ## Shared Unreal execution
 
 Agents share one Unreal execution resource across projects. Reserve the
