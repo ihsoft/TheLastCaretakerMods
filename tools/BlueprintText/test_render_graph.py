@@ -298,6 +298,50 @@ class GraphRenderingTests(unittest.TestCase):
             self.assertIn('/Game/Gyro.Gyro_C', svg)
         self.assertEqual(original, document)
 
+    def test_literal_asset_link_stays_on_its_input_inside_chain(self):
+        target = '/Game/Blueprints/DamageTypes/BP_DamageTypePhysicalForce.BP_DamageTypePhysicalForce_C'
+        document = {'schema': 1, 'asset': '/Game/Test', 'pinTemplates': {
+            'string': {'PinType.PinCategory': '"string"'},
+            'path': {'PinType.PinCategory': '"struct"'},
+            'class': {'PinType.PinCategory': '"softclass"'}}, 'nodes': [
+                dict(id='K2Node_CallFunction_0', kind='call', operation='MakeSoftClassPath',
+                     properties={'bDefaultsToPureFunc': 'True'}, defaults={'in:PathString': target},
+                     pins={'in:PathString': {'type': 'string'}, 'out:SoftClassPath': {'type': 'path'}}),
+                dict(id='K2Node_CallFunction_1', kind='call', operation='ToSoftClassReference',
+                     properties={'bDefaultsToPureFunc': 'True'},
+                     pins={'in:SoftClassPath': {'type': 'path'}, 'out:ReturnValue': {'type': 'class'}})],
+            'links': [{'from': 'K2Node_CallFunction_0.out:SoftClassPath',
+                       'to': 'K2Node_CallFunction_1.in:SoftClassPath'}]}
+        context = {target.split('.')[0]: dict(stub=True, href='../index.html#asset-001')}
+        for field in ('defaults', 'arguments'):
+            source = copy.deepcopy(document)
+            source['nodes'][0][field] = source['nodes'][0].pop('defaults')
+            original = copy.deepcopy(source)
+            for view in ('simplified', 'full', 'expressions'):
+                for direction in ('TB', 'LR'):
+                    with self.subTest(field=field, view=view, direction=direction):
+                        svg = ET.fromstring(render(source, view=view, direction=direction, asset_context=context)[0])
+                        links = svg.findall('.//{*}a[@class="asset-reference"]')
+                        self.assertTrue(links)
+                        self.assertTrue(all(a.get('href') == '../index.html#asset-001' for a in links))
+                        linked = ''.join(visible_text(a.find('{*}text')) for a in links)
+                        self.assertIn('Input: PathString = ', linked)
+                        self.assertIn(target, linked)
+                        self.assertIn('[STUB]', linked)
+                        labels = ''.join(visible_text(t) for t in svg.findall('.//{*}text'))
+                        self.assertNotIn('K2Node_CallFunction_0 /', labels)
+                        self.assertNotIn('in:PathString →', labels)
+                        if view == 'simplified':
+                            self.assertLess(labels.index('[STUB]'), labels.index('2.'))
+            self.assertEqual(source, original)
+        before = copy.deepcopy(document)
+        before['nodes'][0]['defaults']['in:PathString'] = '/Game/Old.Old_C'
+        svg = ET.fromstring(render(document, before=before,
+            review={'changed': ['K2Node_CallFunction_0']}, asset_context=context)[0])
+        row = svg.find('.//{*}a[@class="asset-reference"]/{*}text')
+        self.assertEqual(row.get('class'), 'review-changed-line')
+        self.assertIn('Previously:', row.find('{*}title').text)
+
     def test_getter_chain_keeps_type_references_in_details_and_full(self):
         rule = '/Game/Settings/BP_Rule.BP_Rule_C'
         document = {'schema': 1, 'asset': '/Game/Test', 'pinTemplates': {

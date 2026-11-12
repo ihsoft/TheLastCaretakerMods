@@ -92,7 +92,7 @@ def input_literal(graph, node, name):
     alias = input_alias(node, name)
     if alias is None or incoming(graph, node, alias):
         return None
-    return node.get('defaults', {}).get(alias)
+    return node.get('arguments', {}).get(alias, node.get('defaults', {}).get(alias))
 
 
 def target_owner(document, graph, node, name, default_self=False):

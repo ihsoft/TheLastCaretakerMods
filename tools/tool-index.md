@@ -29,6 +29,6 @@ rules remain in the [repository index](../AGENTS.md).
 | View or render one exported Blueprint graph offline | [Graph preview](blueprint-text.md#view-one-graph) |
 | Read a BPT graph compactly and reveal exact node/pin details | [Source reading](blueprint-text.md#read-graphs-without-unreal) |
 | Find BPT callers, callbacks and variable accesses across selected sources | [Member-use search](blueprint-text.md#find-member-uses) |
-| Create ordinary native BPT calls from reflected pin definitions | [Native call templates](blueprint-workspace.md#create-reflected-native-call-nodes) |
+| Create native or pure static Blueprint library calls from reflected pin definitions | [Call templates](blueprint-workspace.md#create-reflected-native-call-nodes) |
 | Preview and annotate an exported HUD widget layout | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Browse exported Blueprints or review an explicitly marked set of changes | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |

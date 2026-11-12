@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Export/rebuild supported schema-2 Actor/Widget Blueprints in an isolated editor project.
+Export/rebuild supported schema-2 Actor/Widget/Object/function-library Blueprints in an isolated editor project.
 Export writes a complete compact source. Import requires an absent target asset,
 compiles/saves it, then exports it in a fresh process and compares every represented field.
 ImportBatch takes {"assets":["relative/source.json",...]} and reconstructs mutually

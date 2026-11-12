@@ -71,8 +71,8 @@ def descriptor(path):
     names = [m.get('Name') for m in modules]
     require(names and all(isinstance(n, str) and IDENTIFIER.fullmatch(n) for n in names), 'Invalid module names')
     require(len(set(n.casefold() for n in names)) == len(names), 'Duplicate module names')
-    require(all(m.get('Type') in ('Runtime', 'Editor') and m.get('LoadingPhase', 'Default') == 'Default' for m in modules),
-            'Only Runtime/Editor modules with Default loading are covered')
+    require(all(m.get('Type') in ('Runtime', 'Editor', 'UncookedOnly') and m.get('LoadingPhase', 'Default') == 'Default' for m in modules),
+            'Only Runtime/Editor/UncookedOnly modules with Default loading are covered')
     return value, names
 
 

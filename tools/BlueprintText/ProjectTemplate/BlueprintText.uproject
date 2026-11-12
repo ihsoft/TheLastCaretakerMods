@@ -6,7 +6,7 @@
   "Modules": [
     {
       "Name": "BlueprintText",
-      "Type": "Editor",
+      "Type": "UncookedOnly",
       "LoadingPhase": "Default"
     }
   ],

@@ -65,7 +65,15 @@ owner's policy requires a new snapshot.
 | `GetString` | `Name`, `Default = ""` | Decoded string or Default. |
 
 The getters are pure and do not read files or mutate the cache. Unconnected
-optional input pins use the defaults above. Numeric bounds are inclusive and
+optional input pins use the defaults above. With the [BPT argument contract](../../../blueprint-text.md#optional-call-arguments),
+omit unneeded overrides at calls: for a positive capacity with fallback 200,
+set only `Name`, `Default=200`, and `Min=1`; omit `Max` when the caller has no
+upper-bound requirement. A required fixed bound must be passed even if it
+equals the parser's default; do not copy defaults merely for completeness.
+The public entry declarations now use `parameterDefaults`, including the
+explicitly empty GetString fallback; Name and Section remain required.
+Transition old literal calls
+explicitly before removing their keys. Numeric bounds are inclusive and
 apply to the represented result. Invalid/reversed bounds, overflow, nonfinite
 input, fractional integers, and nonzero numbers that underflow to zero return
 Default. Values are never clamped; Default itself is returned unchanged.

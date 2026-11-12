@@ -3,9 +3,9 @@
 Prepare, export, safely apply, or preview complete compact Blueprint JSON in an existing project.
 Preview refreshes project dependencies in Unreal, then renders offline. MarkStubs
 persists an explicit role on existing unselected dependencies. Warn before engine work.
-AddSource copies a reusable UObject source to -Asset in the workspace; it is offline.
+AddSource copies a reusable UObject/function-library source to -Asset in the workspace; it is offline.
 Collapse extracts explicit -Node IDs from -Graph into -Name; it is offline.
-CallTemplates reflects a batch of -Operation native functions in the selected
+CallTemplates reflects a batch of -Operation native or pure static Blueprint library functions in the selected
 source parent context; it launches Unreal but does not edit Blueprint sources/assets.
 Edit workspace.json and blueprints/*.json. Recover restores interrupted asset writes.
 #>

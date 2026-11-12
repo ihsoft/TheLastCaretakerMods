@@ -19,6 +19,8 @@
 #include "GameFramework/Actor.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
+#include "K2Node_FunctionEntry.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
@@ -38,6 +40,7 @@
 #include "Internationalization/Culture.h"
 #include "WidgetPreviewResources.h"
 #include "BlueprintNestedGraphs.h"
+#include "BlueprintTextCallFunction.h"
 
 namespace ATNames
 {
@@ -128,9 +131,13 @@ const TSet<FName> ObjectDefaultOwned;
 // Start with ordinary direct UObject Blueprints. Other native UObject families
 // can have additional owned state and are not implicitly supported by this path.
 bool IsPlainObject(const UClass* Parent) { return Parent==UObject::StaticClass(); }
+bool IsFunctionLibrary(const UBlueprint* BP)
+{
+    return BP && BP->ParentClass==UBlueprintFunctionLibrary::StaticClass() && BP->BlueprintType==BPTYPE_FunctionLibrary;
+}
 const TSet<FName>& DefaultExclusions(const UBlueprint* BP)
 {
-    return IsPlainObject(BP->ParentClass) ? ObjectDefaultOwned : DefaultOwned;
+    return (IsPlainObject(BP->ParentClass) || IsFunctionLibrary(BP)) ? ObjectDefaultOwned : DefaultOwned;
 }
 constexpr TCHAR LabelsMode[] = TEXT("Labels");
 
@@ -376,7 +383,8 @@ FString UnsupportedReason(const UBlueprint* BP)
 {
     const auto* Widget=Cast<UWidgetBlueprint>(BP);
     if(!BP || !BP->ParentClass ||
-       !(Widget?BP->ParentClass->IsChildOf(UUserWidget::StaticClass()):(BP->ParentClass->IsChildOf(AActor::StaticClass()) || IsPlainObject(BP->ParentClass))) || BP->BlueprintType!=BPTYPE_Normal ||
+       !(IsFunctionLibrary(BP) || (BP->BlueprintType==BPTYPE_Normal &&
+         (Widget?BP->ParentClass->IsChildOf(UUserWidget::StaticClass()):(BP->ParentClass->IsChildOf(AActor::StaticClass()) || IsPlainObject(BP->ParentClass))))) ||
        BP->MacroGraphs.Num() || BP->DelegateSignatureGraphs.Num() || BP->Timelines.Num() ||
        BP->ComponentClassOverrides.Num() ||
        BP->GetExtensions().Num() || (!Widget && BP->GeneratedVariables.Num()) || BP->InheritableComponentHandler)
@@ -388,11 +396,24 @@ FString UnsupportedReason(const UBlueprint* BP)
     }
     if(Widget && !Widget->WidgetTree)
         return TEXT("Widget export requires a WidgetTree.");
-    if(IsPlainObject(BP->ParentClass))
+    if(IsFunctionLibrary(BP))
+    {
+        if(BP->NewVariables.Num() || BP->UbergraphPages.Num() || BP->ImplementedInterfaces.Num())
+            return TEXT("Function library must contain functions only, without member variables, event graphs or interfaces.");
+        for(const UEdGraph* Graph:BP->FunctionGraphs)
+        {
+            const UK2Node_FunctionEntry* Entry=nullptr;
+            for(const UEdGraphNode* Node:Graph->Nodes)if(auto* Candidate=Cast<UK2Node_FunctionEntry>(Node))
+            {if(Entry)return TEXT("Function library requires one entry per function.");Entry=Candidate;}
+            if(!Entry || (Entry->GetExtraFlags() & (FUNC_Static|FUNC_BlueprintPure))!=(FUNC_Static|FUNC_BlueprintPure))
+                return TEXT("Function library currently supports pure static functions only.");
+        }
+    }
+    if(IsPlainObject(BP->ParentClass) || IsFunctionLibrary(BP))
     {
         const auto* Generated=Cast<UBlueprintGeneratedClass>(BP->GeneratedClass);
         if(BP->SimpleConstructionScript || BP->ComponentTemplates.Num() || (Generated && Generated->ComponentTemplates.Num()))
-            return TEXT("Plain Object Blueprint cannot contain actor component state.");
+            return TEXT("Object/function library Blueprint cannot contain actor component state.");
     }
     else if(!Widget && !BP->SimpleConstructionScript)return TEXT("Blueprint export requires a SimpleConstructionScript.");
     return BlueprintNestedGraphs::Validate(BP);
@@ -401,6 +422,18 @@ bool Supported(const UBlueprint* BP)
 {
     const FString Reason=UnsupportedReason(BP);
     if(!Reason.IsEmpty()){UE_LOG(LogTemp,Error,TEXT("%s"),*Reason);return false;}
+    return true;
+}
+bool CheckCallArguments(UBlueprint* BP)
+{
+    TArray<UEdGraph*> Graphs;BP->GetAllGraphs(Graphs);
+    for(UEdGraph* Graph:Graphs)for(UEdGraphNode* Node:Graph->Nodes)
+        if(auto* Call=Cast<UBlueprintTextCallFunction>(Node))
+        {
+            FString Error;
+            if(!Call->CheckArguments(Error))
+            {UE_LOG(LogTemp,Error,TEXT("%s.%s: %s"),*Graph->GetName(),*Call->GetName(),*Error);return false;}
+        }
     return true;
 }
 bool Export(const FString& Asset, const FString& Path, const FString& PreviewResources=FString())
@@ -418,7 +451,7 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
             }
     }
     if(!BP){UE_LOG(LogTemp,Error,TEXT("No Blueprint found in package: %s"),*Asset);return false;}
-    if(!Supported(BP) || !BP->GeneratedClass)return false;
+    if(!Supported(BP) || !BP->GeneratedClass || !CheckCallArguments(BP))return false;
     auto Root=MakeShared<FJsonObject>();
     Root->SetNumberField(ATNames::Valueschema,2);Root->SetStringField(ATNames::Valueformat,ATNames::Valuenative_asset);
     Root->SetStringField(ATNames::Valueasset,Asset);Root->SetStringField(ATNames::Valueparent,BP->ParentClass->GetPathName());
@@ -441,7 +474,7 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
         Data->SetArrayField(Objects,ExportObjectTree(BP,Roots));
         Root->SetObjectField(WidgetState,Data);
     }
-    else if(IsPlainObject(BP->ParentClass))
+    else if(IsPlainObject(BP->ParentClass) || IsFunctionLibrary(BP))
     {
         // UObject has no construction tree. Variables, defaults and graphs below
         // are the complete supported state; do not synthesize an Actor root.
@@ -477,7 +510,7 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
     auto NativeState=MakeShared<FJsonObject>();if(!ExportNativeDefaults(BP,NativeState))return false;
     const FString ParentPath=BP->ParentClass->GetPathName();
     if(NativeState->GetArrayField(Objects).Num() ||
-       (ParentPath!=TEXT("/Script/Engine.Actor") && ParentPath!=TEXT("/Script/CoreUObject.Object") && ParentPath!=TEXT("/Script/UMG.UserWidget")))
+       (ParentPath!=TEXT("/Script/Engine.Actor") && ParentPath!=TEXT("/Script/CoreUObject.Object") && ParentPath!=TEXT("/Script/Engine.BlueprintFunctionLibrary") && ParentPath!=TEXT("/Script/UMG.UserWidget")))
         Root->SetObjectField(NativeDefaults,NativeState);
     Values Graphs;
     TSet<FString> DependencyPaths;
@@ -568,14 +601,18 @@ UBlueprint* CreateImport(const FJsonObject& Root)
     {UE_LOG(LogTemp,Error,TEXT("Import requires an absent target asset; preserve/move the test baseline first: %s"),*Asset);return nullptr;}
     UClass* Parent=LoadObject<UClass>(nullptr,*Root.GetStringField(ATNames::Valueparent));
     const bool IsWidget=Root.HasField(WidgetState);
-    if(!Parent || !(IsWidget?Parent->IsChildOf(UUserWidget::StaticClass()):(Parent->IsChildOf(AActor::StaticClass()) || IsPlainObject(Parent))))
+    const bool Library=Parent==UBlueprintFunctionLibrary::StaticClass();
+    FString Type;Root.GetObjectField(ATNames::Valueproperties)->TryGetStringField(TEXT("BlueprintType"),Type);
+    if((Library && Type!=TEXT("BPTYPE_FunctionLibrary")) || (!Library && !Type.IsEmpty() && Type!=TEXT("BPTYPE_Normal")))
+    {UE_LOG(LogTemp,Error,TEXT("BlueprintType does not match a supported parent/type pair."));return nullptr;}
+    if(!Parent || !(Library || (IsWidget?Parent->IsChildOf(UUserWidget::StaticClass()):(Parent->IsChildOf(AActor::StaticClass()) || IsPlainObject(Parent)))))
     {UE_LOG(LogTemp,Error,TEXT("Missing or incompatible parent class for %s: %s"),*Asset,*Root.GetStringField(ATNames::Valueparent));return nullptr;}
-    if(IsPlainObject(Parent) && (Root.HasField(RootState) || Root.HasField(Components) || IsWidget))
+    if((IsPlainObject(Parent) || Library) && (Root.HasField(RootState) || Root.HasField(Components) || IsWidget))
     {UE_LOG(LogTemp,Error,TEXT("Plain Object Blueprint must omit root, components and widget sections."));return nullptr;}
     UPackage* Package=CreatePackage(*Asset);
     FString Role;
     if(Root.HasField(BlueprintPreviewNames::EditorRole) && (!Root.TryGetStringField(BlueprintPreviewNames::EditorRole,Role) || Role!=BlueprintPreviewNames::Stub))return nullptr;
-    auto* BP=FKismetEditorUtilities::CreateBlueprint(Parent,Package,*ObjectName,BPTYPE_Normal,
+    auto* BP=FKismetEditorUtilities::CreateBlueprint(Parent,Package,*ObjectName,Library?BPTYPE_FunctionLibrary:BPTYPE_Normal,
         IsWidget?UWidgetBlueprint::StaticClass():UBlueprint::StaticClass(),
         IsWidget?UWidgetBlueprintGeneratedClass::StaticClass():UBlueprintGeneratedClass::StaticClass(),ATNames::ValueBlueprintAssetText);
     if(BP && !Role.IsEmpty())Package->GetMetaData().SetValue(BP,BlueprintPreviewNames::RoleMetadata,*Role);
@@ -618,7 +655,7 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root,const TSe
         for(UWidgetAnimation* Animation:Widget->Animations)CheckIdentity(Animation);
         if(MissingIdentity)return false;
     }
-    else if(IsPlainObject(BP->ParentClass))
+    else if(IsPlainObject(BP->ParentClass) || IsFunctionLibrary(BP))
     {
         if(Root->HasField(Components) || Root->HasField(RootState))return false;
     }
@@ -710,7 +747,11 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root,const TSe
             InterfaceOwners.Remove(Name);
         }
         else return false;
-        GraphFactory Factory;Factory.ProcessBuffer(Graph,RF_Transactional,G->GetStringField(ATNames::Valuetext));
+        FString NodeText=G->GetStringField(ATNames::Valuetext);
+        // The retained legacy provider has a different /Script identity.
+        NodeText.ReplaceInline(TEXT("Begin Object Class=/Script/BlueprintText.BlueprintTextCallFunction "),
+            *(TEXT("Begin Object Class=")+UBlueprintTextCallFunction::StaticClass()->GetPathName()+TEXT(" ")));
+        GraphFactory Factory;Factory.ProcessBuffer(Graph,RF_Transactional,NodeText);
         UEdGraphPin::ResolveAllPinReferences();
         if(Graph->Nodes.Num()!=G->GetIntegerField(ATNames::ValuenodeCount))
         {UE_LOG(LogTemp,Error,TEXT("Native node count mismatch in %s"),*Graph->GetName());return false;}
@@ -831,6 +872,24 @@ bool Import(const FString& Path,bool Batch=false)
     for(UBlueprint* BP:Blueprints)FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     for(UBlueprint* BP:Blueprints)FBlueprintCompilationManager::QueueForCompilation(BP);
     FBlueprintCompilationManager::FlushCompilationQueueAndReinstance();
+    // All final declarations now exist, including peers changed in this batch.
+    bool HasArguments=false;
+    for(UBlueprint* BP:Blueprints)
+    {
+        TArray<UEdGraph*> Graphs;BP->GetAllGraphs(Graphs);
+        for(UEdGraph* Graph:Graphs)for(UEdGraphNode* Node:Graph->Nodes)
+            if(auto* Call=Cast<UBlueprintTextCallFunction>(Node))
+            {
+                FString Error;HasArguments=true;
+                if(!Call->RefreshArguments(Error)){UE_LOG(LogTemp,Error,TEXT("%s"),*Error);return false;}
+            }
+    }
+    if(HasArguments)
+    {
+        for(UBlueprint* BP:Blueprints)FBlueprintCompilationManager::QueueForCompilation(BP);
+        FBlueprintCompilationManager::FlushCompilationQueueAndReinstance();
+        for(UBlueprint* BP:Blueprints)if(!CheckCallArguments(BP))return false;
+    }
     for(UBlueprint* BP:Blueprints)if(BP->Status==BS_Error || !BP->GeneratedClass)
     {UE_LOG(LogTemp,Error,TEXT("Rebuilt Blueprint failed compilation: %s"),*BP->GetPathName());return false;}
     // Validate every post-compile default/template before saving any package.
@@ -861,6 +920,8 @@ bool ExportBatch(const FString& Path,const FString& Folder)
 #include "BlueprintNestedGraphTests.h"
 #include "BlueprintCallTemplates.h"
 #include "BlueprintCallTemplateTests.h"
+#include "BlueprintArgumentTests.h"
+#include "BlueprintFunctionLibraryTests.h"
 
 UBlueprintAssetTextCommandlet::UBlueprintAssetTextCommandlet(){IsClient=false;IsServer=false;IsEditor=true;LogToConsole=true;}
 int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
@@ -869,6 +930,15 @@ int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
     FParse::Value(*Params,ATNames::ValueMode_,Mode);FParse::Value(*Params,ATNames::ValueInput_,Input);
     FParse::Value(*Params,ATNames::ValueOutput_,Output);FParse::Value(*Params,ATNames::ValueAsset_,Asset);
     FString PreviewResources;FParse::Value(*Params,WidgetPreviewResources::ResourcesArgument,PreviewResources);
+    if(Mode==TEXT("FunctionLibraryFixture"))return BlueprintFunctionLibraryTests::Fixture()?0:9;
+    if(Mode==TEXT("FunctionLibraryCheck"))return BlueprintFunctionLibraryTests::Check(FParse::Param(*Params,TEXT("Changed")))?0:9;
+    if(Mode==TEXT("ArgumentFixture"))return BlueprintArgumentTests::Fixture()?0:8;
+    if(Mode==TEXT("ArgumentRejectCorruption"))return BlueprintArgumentTests::RejectCorruption()?0:8;
+    if(Mode==TEXT("ArgumentCheck") || Mode==TEXT("ArgumentReconstruct"))
+    {
+        int32 Expected=7;FParse::Value(*Params,TEXT("Expected="),Expected);
+        return BlueprintArgumentTests::Check(Expected,Mode==TEXT("ArgumentReconstruct"))?0:8;
+    }
     if(Mode==BlueprintCallTemplates::Mode)return BlueprintCallTemplates::Build(Input,Output)?0:7;
     if(Mode==BlueprintCallTemplateTests::FixtureMode)return BlueprintCallTemplateTests::Fixture()?0:7;
     if(Mode==BlueprintCallTemplateTests::CheckMode)return BlueprintCallTemplateTests::Check()?0:7;

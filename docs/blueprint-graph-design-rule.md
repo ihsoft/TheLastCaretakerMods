@@ -31,6 +31,19 @@ needed by serialization or detailed inspection but not by the main reading task,
 improve the preview's presentation and keep the detail accessible through Full
 or Details. Hiding a necessary decision or failure path is not simplification.
 
+Callers state their own requirements. If a maximum must be 1000, pass 1000 even
+when the callee happens to default to 1000. If the caller has no maximum
+requirement, omit that argument and let the callee supply its own default;
+BPT rejects the omission if that parameter has no default. Do not ask an agent
+to enumerate or compare callee defaults before deciding what its caller needs.
+The [BPT argument contract](../tools/blueprint-text.md#optional-call-arguments)
+preserves this difference between a fixed requirement and reliance on the callee.
+
+For simple Unreal arithmetic and logic, write every operand explicitly as a
+value or connection. Express `1 + 1` with both operands, even if an engine
+function happens to default one of them to 1. This is graph-writing style,
+separate from BPT's ability to represent optional arguments.
+
 Low noise is one part of readability. Meaningful names, clear responsibility
 boundaries, visible execution order, readable expressions and useful navigation
 must let the reader follow intent, conditions and effects without repeatedly

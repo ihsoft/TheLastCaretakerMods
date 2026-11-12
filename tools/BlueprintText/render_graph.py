@@ -16,7 +16,7 @@ from pathlib import Path
 from function_labels import lookup as lookup_function_label
 from review_details import render_details
 from preview_references import node_references, package as reference_package, label as reference_label
-from preview_references import is_type_reference, with_type_reference_details
+from preview_references import is_type_reference, is_implicit_target, with_type_reference_details
 from graph_hierarchy import select_graph, graph_key
 from asset_text_codec import split_fields
 from graph_expressions import fold_expressions, format_expression
@@ -369,7 +369,8 @@ def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data
             for index, line in enumerate(step):
                 key = description_key(line, index)
                 if key in current and current[key] != previous.get(key):
-                    step[index] = CardLine(line, previous=previous.get(key, '(not present)'))
+                    step[index] = CardLine(line, reference=getattr(line, 'reference', None),
+                                           previous=previous.get(key, '(not present)'))
             if part.get('_graphLink'):
                 step[0] = CardLine(step[0], reference=part['_graphLink'], previous=getattr(step[0], 'previous', None))
         replacement = dict(chain[-1], _foldedNodes=chain, _foldedLinks=links, _foldedSteps=steps, _chainKind=mode)
@@ -487,7 +488,7 @@ def output_default(node, alias, templates):
     metadata = templates.get(node.get('pins', {}).get(alias, {}).get('type'), {})
     if metadata.get('bDefaultValueIsIgnored') == 'True':
         return None
-    return node.get('defaults', {}).get(alias)
+    return node.get('parameterDefaults', {}).get(alias, node.get('defaults', {}).get(alias))
 
 
 def hidden_advanced_output(node, alias, templates, connected):
@@ -672,7 +673,7 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
     # All IDs remain in the tooltip and link identity, not the visible node label.
     lines = [title] + details
     lines.extend('Input: ' + hint for hint in hidden_inputs)
-    values = dict(node.get("arguments", node.get("defaults", {})))
+    values = {**node.get('defaults', {}), **node.get('arguments', {})}
     for alias, pin in node.get('pins', {}).items():
         if alias.startswith('in:') and 'DefaultTextValue' in pin:
             values[alias] = text_literal(pin['DefaultTextValue'])
@@ -680,7 +681,10 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
         metadata = (pin_templates or {}).get(node.get("pins", {}).get(key, {}).get("type"), {})
         if key.startswith("out:") or key.removeprefix("in:") in connected_inputs or metadata.get("bDefaultValueIsIgnored") == "True":
             continue
-        lines.append(f"Input: {key.removeprefix('in:')} = {json.dumps(value, ensure_ascii=False)}")
+        reference = node.get('_inputReferences', {}).get(key)
+        suffix = (' [STUB]' if reference.get('stub') else ' [not in project]' if reference.get('missing') else '') if reference else ''
+        lines.append(CardLine(f"Input: {key.removeprefix('in:')} = {json.dumps(value, ensure_ascii=False)}" + suffix,
+                              reference=reference))
     lines.extend(output_lines(node, pin_templates or {}, connected_outputs))
     if is_disabled(node):
         lines.append("DISABLED")
@@ -715,7 +719,22 @@ def description_fields(node, templates, parent):
     # Include stored defaults regardless of wiring, so a link-only edit does not
     # turn an unchanged default into a changed description when it becomes visible.
     return {description_key(line, i): line for i, line in enumerate(
-        node_lines(node, set(), pin_templates=templates, parent=parent, wrap=False))}
+        node_lines({k:v for k,v in node.items() if k != '_inputReferences'}, set(),
+                   pin_templates=templates, parent=parent, wrap=False))}
+
+
+def with_input_references(node, templates, owner, context):
+    """Link a displayed literal at its input, including within folded steps."""
+    candidates = defaultdict(list)
+    for field, target in node_references(node, templates):
+        parts = field.split(' / ')
+        if (len(parts) == 2 and parts[0] in ('defaults', 'arguments') and
+                parts[1].startswith('in:') and reference_package(target) != owner):
+            candidates[parts[1]].append(dict(node=node['id'], field=field, target=target,
+                                            **context.get(reference_package(target), {})))
+    # A line containing several asset paths keeps its separate per-target links.
+    refs = {alias: values[0] for alias, values in candidates.items() if len(values) == 1}
+    return dict(node, _inputReferences=refs) if refs else node
 
 
 def is_disabled(node):
@@ -764,6 +783,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         raise ValueError("Expected view simplified/full/expressions and direction TB/LR.")
     all_nodes, all_edges, owner, graph = load_graph(document, selection)
     all_nodes = [with_type_reference_details(n, document.get('pinTemplates', {})) for n in all_nodes]
+    all_nodes = [with_input_references(n, document.get('pinTemplates', {}), owner, asset_context) for n in all_nodes]
     terminal = terminal_exit_ids(all_nodes, all_edges, document.get('pinTemplates', {}))
     all_nodes = [dict(n, _graphNeverContinues=True)
                  if n['id'] in terminal and '_graphNeverContinues' not in n else n for n in all_nodes]
@@ -845,10 +865,12 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             for note in notes[0]:
                 lines_by_id[node_id].extend(CardLine(part, note.unconnected_output) for part in textwrap.wrap(note, 42))
         # Keep each target at its actual node/pin/property, including folded steps.
-        seen_references = set()
+        seen_references = {(ref.get('node'), ref['field'], ref['target'])
+                           for line in lines_by_id[node_id]
+                           if (ref := getattr(line, 'reference', None)) and ref.get('node')}
         for part in node.get('_foldedNodes', [node]):
             for field, target in node_references(part, document.get('pinTemplates', {})):
-                if view != 'full' and is_type_reference(field):
+                if view != 'full' and (is_type_reference(field) or is_implicit_target(part, document.get('pinTemplates', {}), field)):
                     continue
                 if reference_package(target) == owner or (part['id'], field, target) in seen_references:
                     continue

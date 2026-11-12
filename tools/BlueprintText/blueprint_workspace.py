@@ -59,6 +59,12 @@ def write(path, data):
     temporary.replace(path)
 
 
+def replace_bytes(path, content):
+    temporary = path.with_name(path.name + '.writing')
+    temporary.write_bytes(content)
+    temporary.replace(path)
+
+
 def inside(root, value):
     root, path = Path(root).resolve(), (Path(root) / value).resolve()
     if not path.is_relative_to(root) or path == root:
@@ -393,6 +399,13 @@ class Workspace:
                 if file.read_bytes() != backup.read_bytes():
                     raise RuntimeError('Recovery copy verification failed: ' + str(file))
         write(self.internal / 'baseline.json', journal['baseline'])
+        for row in journal.get('argumentSources', []):
+            source = inside(self.root, row['source'])
+            original = inside(self.internal, row['original']).read_bytes()
+            refreshed = inside(self.internal, row['refreshed']).read_bytes()
+            if source.read_bytes() == refreshed:
+                replace_bytes(source, original)
+            # A subsequent human edit is a pending proposal, not ours to overwrite.
         journal_path.unlink()
         return True
 
@@ -418,7 +431,7 @@ class Workspace:
         self.prepare(self.project)
         records = []
         legacy = [doc for _, _, doc in entries if 'nativeDefaults' not in doc and doc['parent'] not in
-                  ('/Script/Engine.Actor', '/Script/CoreUObject.Object', '/Script/UMG.UserWidget')]
+                  ('/Script/Engine.Actor', '/Script/CoreUObject.Object', '/Script/UMG.UserWidget', '/Script/Engine.BlueprintFunctionLibrary')]
         if legacy:
             request = self.run / 'legacy-defaults-request.json'
             write(request, dict(assets=legacy))
@@ -434,6 +447,7 @@ class Workspace:
             records.append(dict(asset=document['asset'], backup=str(backup.relative_to(self.internal)) if file.exists() else None))
         journal = self.internal / 'recovery.json'
         recovery = dict(project=str(self.project), assets=records, baseline=baseline, restoreRequired=False)
+        proposal_bytes = {str(source): source.read_bytes() for _, source, _ in entries}
         write(journal, recovery)
         try:
             self.check(entries)
@@ -456,6 +470,7 @@ class Workspace:
                     write(diagnostic, differences)
                     raise ValueError('Represented fields differ after fresh-process export: ' + str(diagnostic))
             updated = {}
+            refreshes = []
             for i, (_, source, document) in enumerate(entries):
                 asset = document['asset']
                 byte_path = self.run / 'accepted' / f'{i}.uasset'
@@ -463,6 +478,17 @@ class Workspace:
                 shutil.copyfile(target(self.project, asset), byte_path)
                 updated[asset] = dict(source=str(source.relative_to(self.root)), bytes=str(byte_path.relative_to(self.internal)),
                                       before=baseline.get(asset, {}).get('before'), accepted=str((self.run / f'reopened-{i}.json').relative_to(self.internal)))
+                if any('arguments' in n for g in document['graphs'] for n in g['body']['nodes']):
+                    if source.read_bytes() != proposal_bytes[str(source)]:
+                        raise ValueError('Source changed during Apply: ' + str(source))
+                    original = self.run / f'argument-source-{i}.json'
+                    original.write_bytes(proposal_bytes[str(source)])
+                    refreshes.append(dict(source=str(source.relative_to(self.root)), original=str(original.relative_to(self.internal)),
+                                          refreshed=str((self.run / f'reopened-{i}.json').relative_to(self.internal))))
+            recovery['argumentSources'] = refreshes
+            write(journal, recovery)
+            for row in refreshes:
+                replace_bytes(inside(self.root, row['source']), inside(self.internal, row['refreshed']).read_bytes())
             write(self.internal / 'baseline.json', updated)
             journal.unlink()
         except BaseException:
@@ -504,8 +530,8 @@ class Workspace:
 
     def call_templates(self, operations, asset=None):
         if not operations or len(set(operations)) != len(operations) or any(
-                not re.fullmatch(r'/Script/[A-Za-z0-9_]+\.[A-Za-z0-9_]+::[A-Za-z0-9_]+', op) for op in operations):
-            raise ValueError('CallTemplates requires distinct /Script/Module.Class::Function operations')
+                not re.fullmatch(r'/(?:Script/[A-Za-z0-9_]+|Game/(?:[A-Za-z0-9_]+/)*[A-Za-z0-9_]+)\.[A-Za-z0-9_]+::[A-Za-z0-9_]+', op) for op in operations):
+            raise ValueError('CallTemplates requires distinct native or /Game library class::Function operations')
         _, entries = self.load()
         selected = [doc for _, _, doc in entries if asset is None or doc['asset'] == asset]
         if len(selected) != 1:
@@ -586,6 +612,9 @@ class Workspace:
         # widgets in its exports so their images are current, independently of Apply.
         catalog = self.preview_catalog([d['asset'] for _, _, d in entries if 'widget' not in d])
         baseline, records = self.baseline(), []
+        from call_arguments import preview_documents
+        from graph_review import review_marks
+        views = {d['asset']: d for d in preview_documents([d for _, _, d in entries])}
         selected = {d['asset'] for _, _, d in entries}
         referenced_by = {a: [] for a in catalog}
         missing = {}
@@ -638,6 +667,11 @@ class Workspace:
         for item, source, document in entries:
             record = dict(item, source=str(source))
             asset = document['asset']
+            document = views[asset]
+            if any('arguments' in n for g in document['graphs'] for n in g['body']['nodes']):
+                view_source = self.run / 'argument-views' / (asset[6:] + '.json')
+                write(view_source, document)
+                record['source'] = str(view_source)
             if asset not in catalog:
                 if asset in baseline or target(self.project, asset).exists():
                     raise ValueError('Project catalog omitted selected asset: ' + asset)
@@ -663,7 +697,7 @@ class Workspace:
                     raise ValueError('Preview catalog omitted current widget resources: ' + asset)
                 record['resources'] = str(resources)
             before = inside(self.internal, old['before']) if old and old.get('before') else None
-            if before and codec.compare(read(before), document):
+            if before and (codec.compare(read(before), document) or review_marks(read(before), document)):
                 record.update(before=str(before), status='changed')
             elif not before:
                 record['status'] = 'added'
@@ -752,6 +786,17 @@ class Workspace:
         # New consumers and migrated projects use the ready provider above.
         module = providers[0].parent
         module_backup = self.refresh_module(module)
+        # K2 nodes belong to an UncookedOnly module, also in legacy source providers.
+        descriptors = [self.project, *module.parent.parent.glob('*.uplugin')]
+        for descriptor in descriptors:
+            data = read(descriptor)
+            owned = [m for m in data.get('Modules', []) if m.get('Name') in MODULE_NAMES]
+            if any(m.get('Type') == 'Editor' for m in owned):
+                write(self.run / ('original-' + descriptor.name), data)
+                for row in owned:
+                    if row.get('Type') == 'Editor':
+                        row['Type'] = 'UncookedOnly'
+                write(descriptor, data)
         editor_targets = []
         for path in (self.project.parent / 'Source').glob('*.Target.cs'):
             if re.search(r'Type\s*=\s*TargetType\.Editor', path.read_text(encoding='utf-8-sig')):

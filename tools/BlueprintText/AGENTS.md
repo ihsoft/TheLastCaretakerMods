@@ -12,6 +12,9 @@ and previews for human understanding, including minimal nonessential noise,
 while preserving execution and data-evaluation boundaries.
 The [INI parser library](Library/IniFileParser/AGENTS.md) owns the flat and sectioned
 parsers, their integration, public getters, formats, and focused validation.
+For shared stateless pure operations, use a [Blueprint Function Library](../blueprint-text.md#blueprint-function-libraries).
+AddSource accepts its empty starter; CallTemplates reflects saved library functions.
+Keep library declarations and affected callers together when changing signatures.
 BlueprintText is the recommended Blueprint authoring workflow. Packaging and
 installation remain the mod producer's responsibility. Keep disposable tool-test
 projects and working results under `Tmp/BlueprintText/`; keep the catalogue cache
@@ -51,6 +54,15 @@ Blueprint preservation from the bounded tests.
   shared interface cannot perform the requested operation, report the missing
   capability or fix the shared tool. Focused tool-development test fixtures are
   separate from ordinary mod work.
+- When authoring function calls, follow [optional arguments](../blueprint-text.md#optional-call-arguments).
+  State what the caller requires; do not enumerate or compare callee defaults
+  to decide what to pass. An omitted input uses an existing declaration default;
+  if there is none, BPT diagnoses the missing required argument. For simple
+  Unreal arithmetic/logic, always provide every operand explicitly. Templates
+  for KismetMathLibrary retain explicit operands. New templates use `arguments`.
+  An explicit value, even equal to that default, fixes the caller's value.
+  Older `defaults` calls require the documented explicit transition; do not
+  assume deleting a legacy value enables inheritance.
 - For ordinary native call nodes outside the math catalogue, use
   [CallTemplates](../blueprint-workspace.md#create-reflected-native-call-nodes)
   and the shared insertion factory. Preserve reflected pin metadata when editing

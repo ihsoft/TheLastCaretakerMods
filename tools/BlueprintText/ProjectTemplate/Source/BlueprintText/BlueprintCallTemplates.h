@@ -31,7 +31,7 @@ constexpr TCHAR StructMetadata[]=TEXT("CustomStructureParam");
 constexpr TCHAR EnumExecMetadata[]=TEXT("ExpandEnumAsExecs");
 constexpr TCHAR BoolExecMetadata[]=TEXT("ExpandBoolAsExecs");
 constexpr TCHAR DynamicTypeMetadata[]=TEXT("DeterminesOutputType");
-constexpr TCHAR CoverageText[]=TEXT("Ordinary native CallFunction nodes with concrete pins in the selected parent context; no latent, wildcard, event or special-node synthesis. Internal allowlist: Actor.AddComponentByClass, KismetSystemLibrary.SetClassPropertyByName.");
+constexpr TCHAR CoverageText[]=TEXT("Ordinary native or supported pure static Blueprint library CallFunction nodes with concrete pins in the selected parent context; no latent, wildcard, event or special-node synthesis. Internal allowlist: Actor.AddComponentByClass, KismetSystemLibrary.SetClassPropertyByName.");
 
 bool Build(const FString& Input,const FString& Output)
 {
@@ -40,7 +40,8 @@ bool Build(const FString& Input,const FString& Output)
     auto* ParentClass=LoadObject<UClass>(nullptr,*Request->GetStringField(Parent));
     if(!ParentClass){UE_LOG(LogTemp,Error,TEXT("CallTemplates parent class is unavailable."));return false;}
     auto* BP=FKismetEditorUtilities::CreateBlueprint(ParentClass,GetTransientPackage(),
-        MakeUniqueObjectName(GetTransientPackage(),UBlueprint::StaticClass(),ContextName),BPTYPE_Normal);
+        MakeUniqueObjectName(GetTransientPackage(),UBlueprint::StaticClass(),ContextName),
+        ParentClass==UBlueprintFunctionLibrary::StaticClass()?BPTYPE_FunctionLibrary:BPTYPE_Normal);
     if(!BP)return false;
     auto* Graph=FBlueprintEditorUtils::CreateNewGraph(BP,ContextGraph,UEdGraph::StaticClass(),UEdGraphSchema_K2::StaticClass());
     FBlueprintEditorUtils::AddFunctionGraph(BP,Graph,false,static_cast<UFunction*>(nullptr));
@@ -49,15 +50,19 @@ bool Build(const FString& Input,const FString& Output)
     for(const auto& Value:Request->GetArrayField(Operations))
     {
         const FString Operation=Value->AsString();FString ClassPath,FunctionName;
-        if(!Operation.Split(Separator,&ClassPath,&FunctionName) || !ClassPath.StartsWith(NativePrefix) || Seen.Contains(Operation))
-        {UE_LOG(LogTemp,Error,TEXT("CallTemplates requires distinct /Script/Module.Class::Function identities: %s"),*Operation);return false;}
+        if(!Operation.Split(Separator,&ClassPath,&FunctionName) ||
+           !(ClassPath.StartsWith(NativePrefix) || ClassPath.StartsWith(TEXT("/Game/"))) || Seen.Contains(Operation))
+        {UE_LOG(LogTemp,Error,TEXT("CallTemplates requires distinct native or /Game library class::Function identities: %s"),*Operation);return false;}
         Seen.Add(Operation);
         auto* Class=LoadObject<UClass>(nullptr,*ClassPath);
         auto* Function=Class?Class->FindFunctionByName(*FunctionName):nullptr;
-        if(!Function || Function->GetOuterUClass()!=Class || !Function->HasAnyFunctionFlags(FUNC_Native) ||
+        const auto* Library=Class?Cast<UBlueprint>(Class->ClassGeneratedBy):nullptr;
+        const bool LibraryCall=AssetText::IsFunctionLibrary(Library) && AssetText::UnsupportedReason(Library).IsEmpty() &&
+            Function && Function->HasAllFunctionFlags(FUNC_Static|FUNC_BlueprintPure);
+        if(!Function || Function->GetOuterUClass()!=Class || (!Function->HasAnyFunctionFlags(FUNC_Native) && !LibraryCall) ||
            !Function->HasAnyFunctionFlags(FUNC_BlueprintCallable|FUNC_BlueprintPure) ||
            Function->HasAnyFunctionFlags(FUNC_Event|FUNC_Delegate|FUNC_Private|FUNC_Protected))
-        {UE_LOG(LogTemp,Error,TEXT("CallTemplates requires an ordinary callable native function on its declaring class: %s"),*Operation);return false;}
+        {UE_LOG(LogTemp,Error,TEXT("CallTemplates requires an ordinary native function or supported pure static Blueprint library function on its declaring class: %s"),*Operation);return false;}
         for(const TCHAR* Metadata:{LatentMetadata,ArrayMetadata,MapMetadata,SetMetadata,StructMetadata,
                                   EnumExecMetadata,BoolExecMetadata,DynamicTypeMetadata})
             if(Function->HasMetaData(Metadata))
@@ -77,6 +82,13 @@ bool Build(const FString& Input,const FString& Output)
         TSet<UObject*> Selection;Selection.Add(Call);FString Native;
         FEdGraphUtilities::ExportNodesToText(Selection,Native);
         auto Entry=MakeShared<FJsonObject>();Entry->SetStringField(Identity,Operation);
+        auto Defaults=MakeShared<FJsonObject>();
+        for(const auto* Pin:Call->Pins)if(UBlueprintTextCallFunction::IsArgument(Pin))
+        {
+            FString DeclaredValue;
+            if(UBlueprintTextCallFunction::DeclarationDefault(Function,Pin->PinName,DeclaredValue))Defaults->SetStringField(Pin->PinName.ToString(),DeclaredValue);
+        }
+        Entry->SetObjectField(TEXT("declarationDefaults"),Defaults);
         Entry->SetStringField(Insertion,Native);Entry->SetBoolField(Pure,Call->IsNodePure());
         Entry->SetArrayField(Required,Connections);Result.Add(MakeShared<FJsonValueObject>(Entry));
     }

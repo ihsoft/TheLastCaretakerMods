@@ -35,7 +35,10 @@ def edited(document, catalog):
         graph['body']['links'].append({'from': a + '.' + alias(a, 'out', pin_a), 'to': b + '.' + alias(b, 'in', pin_b)})
 
     def value(node, pin, value):
-        nodes[node].setdefault('defaults', {})[alias(node, 'in', pin)] = value
+        key = alias(node, 'in', pin)
+        import call_arguments
+        field = 'arguments' if call_arguments.governed(nodes[node], key, document['pinTemplates']) else 'defaults'
+        nodes[node].setdefault(field, {})[key] = value
 
     nodes['Add']['pins'][alias('Add', 'in', 'Class')]['DefaultObject'] = '"/Script/Engine.BoxComponent"'
     value('Add', 'bDeferredFinish', 'false')

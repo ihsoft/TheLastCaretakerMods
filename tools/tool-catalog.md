@@ -11,14 +11,18 @@ failure handling.
 | Validate a cooked/re-extracted VoyageItem against its original and recipe | `Test-VoyageItemPatch.ps1` | [VoyageItem project updates](voyage-item-patch.md) |
 | Import/export Blueprint text or discover operations | `BlueprintText/Invoke-BlueprintText.ps1` | [BlueprintText](blueprint-text.md) |
 | Operate a Blueprint JSON workspace in an existing project | `BlueprintText/Invoke-BlueprintWorkspace.ps1` | [Blueprint workspace](blueprint-workspace.md) |
-| Generate reflected ordinary native call templates for a workspace source | `BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action CallTemplates` | [Native call templates](blueprint-workspace.md#create-reflected-native-call-nodes) |
+| Generate native or pure static Blueprint library call templates for a workspace source | `BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action CallTemplates` | [Call templates](blueprint-workspace.md#create-reflected-native-call-nodes) |
 | Check native call templates through strict Apply and fresh-process inspection | `BlueprintText/Test-CallTemplates.ps1` | [Blueprint checks](blueprint-text.md#checks) |
+| Transition a literal call to optional arguments without changing its values | `BlueprintText/asset_text_codec.py use-arguments` | [Optional arguments](blueprint-text.md#optional-call-arguments) |
+| Make function parameter defaults explicit, distinguishing empty from absent | `BlueprintText/asset_text_codec.py use-parameter-defaults` | [Optional arguments](blueprint-text.md#optional-call-arguments) |
+| Check argument inheritance, explicit overrides, reconstruction and cooked stripping | `BlueprintText/Test-Arguments.ps1` | [BPT maintenance checks](blueprint-text-maintenance.md#choose-validation-by-the-change) |
 | Read BPT graphs, exact node/pin details or local/component context without Unreal | `BlueprintText/graph_hierarchy.py` | [Source reading](blueprint-text.md#read-graphs-without-unreal) |
 | Find BPT calls, callback references and variable accesses in explicit source files | `BlueprintText/graph_references.py` | [Member-use search](blueprint-text.md#find-member-uses) |
 | Check nested BPT graphs with strict import, executable fixtures and preview | `BlueprintText/Test-NestedGraphs.ps1` | [Collapsed graph checks](blueprint-text.md#collapsed-graphs) |
 | Extract selected BPT nodes offline into a collapsed graph | `BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action Collapse` | [Workspace Collapse](blueprint-workspace.md#extract-an-operation-into-a-collapsed-graph) |
 | Check Collapse with strict Apply and executable isolated fixtures | `BlueprintText/Test-CollapseGraphs.ps1` | [Collapsed graph checks](blueprint-text.md#collapsed-graphs) |
-| Import/export supported Actor/Widget/direct UObject Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintText/Invoke-BlueprintAssetText.ps1` | [BlueprintText](blueprint-text.md#schema-2-blueprints) |
+| Import/export supported Actor/Widget/direct UObject/function-library Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintText/Invoke-BlueprintAssetText.ps1` | [BlueprintText](blueprint-text.md#schema-2-blueprints) |
+| Check Blueprint Function Libraries, two Actor consumers, signature changes and cook | `BlueprintText/Test-FunctionLibrary.ps1` | [Function libraries](blueprint-text.md#blueprint-function-libraries) |
 | Import and execute the reusable INI parser in a disposable project | `BlueprintText/Test-IniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/AGENTS.md#validation-and-maintenance) |
 | Validate the sectioned INI parser and flat compatibility in a disposable project | `BlueprintText/Test-SectionedIniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/AGENTS.md#validation-and-maintenance) |
 | Check asset-text round trips in a disposable prepared project | `BlueprintText/test_asset_text_roundtrip.py` | [Blueprint checks](blueprint-text.md#checks) |

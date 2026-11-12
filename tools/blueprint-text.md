@@ -117,7 +117,8 @@ inference about the asset's completeness or release ownership. See the
 
 The import/export boundary is an ordinary Actor-derived or Widget Blueprint with
 a native or available Blueprint parent, or a normal Blueprint directly derived
-from `/Script/CoreUObject.Object`. Other UObject families and UObject Blueprint
+from `/Script/CoreUObject.Object`, or a pure static Blueprint Function Library
+as described below. Other UObject families and UObject Blueprint
 inheritance are not yet covered. A direct Object Blueprint omits `root`,
 `components` and `widget`; these sections are rejected on import. It retains
 member variables (including containers), CDO defaults and ordinary function
@@ -137,7 +138,7 @@ round-trip of a placeholder or function donor does not validate replacement of
 the cooked stock package. Maps, fonts, textures, Input Actions and Input Mappings
 are dependencies or separate asset types, not Blueprint conversion targets.
 
-Create instances with `Construct Object from Class`, provide an `Outer`, and
+For direct Object Blueprints, create instances with `Construct Object from Class`, provide an `Outer`, and
 retain the result in an object-reference variable while it is needed. Each
 instance owns its own variables; `Outer` alone is not a lifetime guarantee.
 File loading remains a normal callable runtime dependency, not a feature
@@ -153,6 +154,62 @@ prepared with `Invoke-BlueprintText.ps1 -Action Prepare`. It covers Object
 functions/defaults, a string map, an Actor consumer constructing two instances,
 independent member values and a retained reference across garbage collection.
 These are editor tests, not cooked-game validation.
+
+### Blueprint Function Libraries
+
+Schema 2 supports stateless libraries whose exact parent is
+`/Script/Engine.BlueprintFunctionLibrary` and whose `properties.BlueprintType`
+is `BPTYPE_FunctionLibrary`. Their ordinary function entries retain both
+`FUNC_Static` and `FUNC_BlueprintPure` in `ExtraFlags`; graph identity, parameter
+types, local variables, results and external class references use the existing
+representations. Member variables, instance defaults, component/widget state,
+event graphs and implemented interfaces are rejected. Impure library functions,
+library subclasses and other UObject families are outside this boundary.
+
+Use a library for shared pure calculations or predicates, called by name with
+their inputs. Consumers do not construct an instance, locate a manager or obtain
+a CDO manually. Preserve Unreal's generated hidden target/world-context pins in
+the complete source; these are engine implementation details, not extra authored
+graph operations. Simplified preview keeps the hidden CDO reference in Details;
+Full shows the exact reference. Connect the Actor input in predicates such as `IsLarge(Actor)`.
+
+Start a new library with the empty shared source:
+
+```powershell
+& $tool -Action AddSource -ProjectFile $project -WorkspaceRoot $work `
+  -SourcePath './tools/BlueprintText/Library/BFL_FunctionLibrary.json' `
+  -Asset '/Game/Mods/Example/BFL_Types'
+```
+
+Author its function graphs in the staged source, then use ordinary Apply.
+AddSource also relocates an exported supported library; as with Object sources,
+it retains its object identity and rewrites owned references, not string data.
+External Blueprint classes must already exist in the project. An existing
+library and its Actor consumers use ordinary Export/Apply/Preview together.
+
+Once the library declaration is saved in the project, request its call nodes
+through [CallTemplates](blueprint-workspace.md#create-reflected-native-call-nodes),
+using the generated class's exact object path, for example
+`/Game/Mods/Example/BFL_Types.BFL_FunctionLibrary_C::IsLarge` for the relocated
+empty source above. Use `add-call` to insert the reflected node. The factory
+reads the saved declaration, not unapplied source edits. A changed name or
+signature requires corresponding edits in callers; include the library and
+affected callers in the same Apply selection. Strict fresh-process comparison
+still rejects unrepresented reconstruction changes.
+
+The [optional argument contract](#optional-call-arguments) also applies to
+supported scalar inputs on library calls. Defaults belong to the declaration;
+explicit equal values remain fixed requirements. This does not make Actor or
+other object-reference inputs part of scalar argument inheritance.
+
+`Test-FunctionLibrary.ps1` exercises two Actor consumers, external Medium/Large
+class references and their descendants, null/unrelated inputs, reflected call
+insertion, joint function/input rename, changed optional defaults, fresh reopen,
+AddSource and Preview. It cooks the library and consumers and independently
+checks that editor BPT state is absent. This is editor execution and cooked
+serialization evidence, not a test in the game.
+
+### Component trees
 
 The `components` section contains `objects`, the `scs` root identity, and
 `templates` / `generatedTemplates` reference lists. Each object declares `id`,
@@ -226,15 +283,132 @@ python -B tools/BlueprintText/asset_text_codec.py add-call $source --catalog too
 
 Use an existing GraphGuid or unambiguous graph name. The command allocates IDs
 and merges pin metadata;
-edit the new node's defaults and links in the resulting complete source.
+edit the new node's `arguments` overrides and links in the resulting complete source.
 `template` produces a standalone insertion fragment. `compact`, `native` and
 `compare` perform offline conversion and comparison; use `--help` for arguments.
 New operations belong in shared discovery/serialization, not a per-mod builder.
-For ordinary native functions beyond the initial math catalogue, request
+For ordinary native functions beyond the initial math catalogue and supported
+pure static Blueprint library functions, request
 [workspace CallTemplates](blueprint-workspace.md#create-reflected-native-call-nodes)
 and pass its returned catalogue to the same `add-call` command. Reflected pin
-metadata supplies pure/exec structure, native defaults and reference requirements;
+metadata supplies pure/exec structure, declaration defaults and reference requirements;
 do not reconstruct those fields manually from a function's name or C++ signature.
+
+### Optional call arguments
+
+For function calls, **state the caller's requirements**. Do not enumerate or
+compare callee defaults to choose the values to pass. A caller that needs a
+maximum of 1000 passes 1000 even if the callee currently defaults to 1000;
+a caller with no maximum requirement omits it. The tool accepts that omission
+only if the declaration supplies a default. Simple Unreal arithmetic and logic
+must show all operands explicitly under the [graph-writing rule](../docs/blueprint-graph-design-rule.md).
+The presence of a node's `arguments` object opts that ordinary `call` into the
+new contract. For example:
+
+```json
+"arguments": {
+  "in:Name": "LargeContainerMaxWeightKg",
+  "in:Default": "200.0",
+  "in:Min": "1.0"
+}
+```
+
+Here `GetFloat.Max` is omitted and uses its declared `FLT_MAX`. There is no
+repeated upper-bound literal. `arguments: {}` requests declaration defaults for
+unconnected inputs; it fails when any required argument is missing.
+For each supported input, a wire supplies the expression; without a wire an
+absent key uses the declaration default and a present string fixes an override.
+`"0"`, `"false"`, `""`, and an explicit value equal to today's default are real
+overrides. Wiring an input takes precedence over its retained disconnected value.
+Delete its override key to return to inheritance; do not set it to today's
+default as a substitute. Keep the complete pins and their engine metadata.
+
+The initial boundary is ordinary Blueprint/native function calls with unsplit,
+non-reference, non-container `int`, `int64`, `real` (float/double), `bool`, or
+`string` input pins whose defaults Unreal does not mark ignored. The function's
+default is used only when declared. Without one, a value or connection is
+required: BPT does not supply an implicit zero, false or empty string by type.
+Execution, target, output, reference, wildcard, enum, object/class, FText,
+struct and container pins keep their existing representation and requirements.
+Their defaults, when needed, remain in `defaults` or the typed pin fields.
+Do not duplicate a governed input in both `arguments` and `defaults`.
+Collapsed graph tunnel boundaries, events and macro definitions are not covered
+by this argument contract. Calls *inside* a supported graph can use it.
+
+New `template` and `add-call` results use this contract automatically. Reflected
+native declaration defaults may be omitted by the factory; KismetMathLibrary
+templates retain every literal operand explicitly for readable arithmetic and
+logic. A template's operand is a starting value for the author to set according
+to the required calculation, not a reason to rely on a native default. For an
+existing ordinary call, use the offline explicit transition:
+
+```powershell
+python -B tools/BlueprintText/asset_text_codec.py use-arguments $source `
+  --graph InitializeSettings --id ReadLargeCapacity --output "$work/edited.json"
+```
+
+The transition preserves every existing governed literal as an override.
+Remove only keys that should follow the declaration (for example `in:Max`),
+replace the workspace source with the complete edited document, then Apply.
+Legacy calls without `arguments` keep their old literal semantics; deleting
+one of their `defaults` entries is not a supported inheritance operation.
+Older tools reject the new field rather than silently losing its meaning.
+
+Function entry nodes can declare defaults with `parameterDefaults`, keyed by
+their output parameter aliases. Its presence makes absent parameters required:
+
+```json
+"parameterDefaults": {
+  "out:Default": "0.0",
+  "out:Min": "-3.4028234663852886e38",
+  "out:Max": "3.4028234663852886e38"
+}
+```
+
+In this `GetFloat` declaration `Name` is required. An explicit `""` in this map
+declares an empty-string default; absence means no default. Do not repeat these
+governed parameter values in the entry's `defaults` or native user-pin metadata;
+the codec materializes that engine representation. `use-parameter-defaults`,
+with the same `--graph`, `--id`, `--output` interface as `use-arguments`, moves
+nonempty old entry values into this map. The declaration's author then chooses
+which defaults belong in its API, including any empty-string defaults. This is
+declaration authoring, not a preliminary step for every caller. Existing
+declarations without the map retain their nonempty native defaults; their
+ambiguous empty defaults require an explicit declaration. Native C++ defaults
+come from reflected declaration metadata, including explicitly empty defaults.
+
+Apply stores intent in an uncooked BPT call node, resolves the current function
+declaration and materializes Unreal's pin values before compilation. Save,
+fresh export and normal node reconstruction preserve explicit equal overrides.
+Fresh export checks actual pin values against the declaration and overrides;
+stale or invalid state is an error, not silently repaired by the exporter.
+Strict comparison checks intent and overrides. Only the derived declaration
+snapshot (`declarationDefaults` and `AutogeneratedDefaultValue` on governed inputs) is excluded from
+that comparison, because the engine independently verifies it. Successful
+Apply refreshes these callers' source snapshots from the checked export;
+recovery retains subsequent author edits and rolls back its own refreshes.
+These snapshots are tool-owned: edit `arguments` for caller intent or
+`parameterDefaults` on the declaration, not the cached default values.
+
+Changing a declaration updates inheriting callers when those callers are
+updated and compiled. Include the affected callers in the workspace Apply
+selection; the tool never expands its write set silently. This is not a runtime
+lookup, an update of already shipped bytecode, or synchronization of independent
+imported library copies. Editing a pin value in Unreal records an explicit
+override; use BPT key deletion to request inheritance, even after an editor
+reset to the current default.
+
+Cards show explicit arguments; Details and `--node ... --pin ...` expose the
+inherited default and declaration. Explicit equal overrides remain visible.
+Review marks a caller when a default it inherits changes; an unused default
+change does not mark a wired or explicitly overridden input. Selected proposed
+declarations resolve before Apply as a view-only operation.
+Unavailable declarations retain their last exported snapshot; only Apply and
+fresh engine validation establish the compiled result.
+
+The project must retain the prepared BPT tooling to edit these uncooked nodes.
+The shared module uses `UncookedOnly`; cook strips the editor nodes and their
+argument state, leaving ordinary Blueprint calls without a BPT runtime module.
 
 ### Collapsed graphs
 
@@ -323,7 +497,8 @@ retain the ownership context. It omits known editor layout, redundant GUIDs,
 pin-template indirection and known inactive metadata. It does not fold flow,
 infer reachability, resolve callbacks or simulate execution.
 
-Unconnected input defaults remain visible, including zero and empty strings;
+Explicit unconnected input values remain visible, including zero and empty strings;
+inherited [optional arguments](#optional-call-arguments) are available in pin details.
 connected, ignored and ordinary output defaults are not presented as runtime
 values. Entry/tunnel `signatureDefaults` describe the declared signature.
 Referenced own variables include their declaration and, when exported, their
@@ -569,6 +744,9 @@ displayed as editable functionality.
 Asset references in editable source are displayed at their node/pin or named
 Blueprint property, with exact paths in tooltips and links to preview entries
 when available. Stub markers come from the supplied project context.
+When an input literal contains one asset reference, its displayed value carries
+the link, including inside a folded chain's own step; no duplicate reference
+line is appended to the card.
 Simplified and Expressions cards omit technical pin-type and member-owner links;
 these remain resolved in node Details (`_typeReferences`) and visible in Full.
 Chosen asset values (including class defaults) retain their links in every view.

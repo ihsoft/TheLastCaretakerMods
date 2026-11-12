@@ -4,6 +4,8 @@ No source rewriting, engine queries, execution simulation or preview inspection.
 Unknown native properties remain visible; only explicit boilerplate is omitted.
 """
 import copy
+import call_arguments
+import parameter_defaults
 
 from asset_text_codec import fields, unquote
 from graph_hierarchy import graph_key, inspect_graphs
@@ -75,6 +77,8 @@ def checked_graph(document, graph):
             endpoints[endpoint] = (node, alias)
         if set(node.get('defaults', {})) - set(node['pins']):
             raise ValueError('Default refers to an unknown pin: ' + identity)
+        call_arguments.validate(node, document['pinTemplates'])
+        parameter_defaults.validate(node, document['pinTemplates'])
     seen = set()
     for link in graph['body']['links']:
         a, b = link['from'], link['to']
@@ -107,8 +111,12 @@ def compact_pin(document, node, alias, connected):
     # Output, connected and ignored defaults are stored metadata, not values
     # produced at runtime. Entry signatures expose them separately below.
     if alias.startswith('in:') and node['id'] + '.' + alias not in connected and metadata.get('bDefaultValueIsIgnored') != 'True':
-        if alias in node.get('defaults', {}):
+        if alias in node.get('arguments', {}):
+            result['override'] = node['arguments'][alias]
+        elif alias in node.get('defaults', {}):
             result['default'] = node['defaults'][alias]
+        elif call_arguments.governed(node, alias, document['pinTemplates']):
+            result['argumentMode'] = 'declaration-default' if alias in node.get('declarationDefaults', {}) else 'required'
         for key in ('DefaultObject', 'DefaultTextValue'):
             if key in pin:
                 result[key] = pin[key]
@@ -116,6 +124,11 @@ def compact_pin(document, node, alias, connected):
     entry = cls == '/Script/BlueprintGraph.K2Node_FunctionEntry' or (
         cls == '/Script/BlueprintGraph.K2Node_Tunnel' and node.get('properties', {}).get('bCanHaveOutputs') == 'True')
     if entry and alias.startswith('out:'):
+        if 'parameterDefaults' in node and parameter_defaults.supported(alias,metadata):
+            if alias in node['parameterDefaults']:
+                result['parameterDefault'] = node['parameterDefaults'][alias]
+            else:
+                result['required'] = True
         stored = {key: pin[key] for key in ('DefaultObject', 'DefaultTextValue') if key in pin}
         if alias in node.get('defaults', {}):
             stored['DefaultValue'] = node['defaults'][alias]
@@ -201,6 +214,13 @@ def inspect_source(document, selection=None, *, view='compact', node_ids=None, p
                           template=document['pinTemplates'][data['type']])
             if pin in node.get('defaults', {}):
                 result['storedDefault'] = node['defaults'][pin]
+            if call_arguments.governed(node, pin, document['pinTemplates']):
+                result['argument'] = dict(mode='override' if pin in node['arguments'] else 'declaration-default' if pin in node.get('declarationDefaults', {}) else 'required',
+                    declaration=member_reference(node['properties'].get('FunctionReference', '')))
+                if pin in node.get('declarationDefaults', {}):
+                    result['argument']['declarationDefault'] = node['declarationDefaults'][pin]
+                if pin in node['arguments']:
+                    result['argument']['value'] = node['arguments'][pin]
             selected_endpoints = {endpoint}
         else:
             result.update(view='node-detail', nodes=selected,

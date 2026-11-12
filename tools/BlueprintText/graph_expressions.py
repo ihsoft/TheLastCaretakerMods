@@ -94,7 +94,7 @@ def literal(node, alias, kind, templates):
     pin = node['pins'][alias]
     if templates.get(pin['type'], {}).get('bDefaultValueIsIgnored') == 'True':
         return None
-    value = node.get('defaults', {}).get(alias)
+    value = node.get('arguments', {}).get(alias, node.get('defaults', {}).get(alias))
     if not isinstance(value, str):
         return None
     if kind == 'bool':

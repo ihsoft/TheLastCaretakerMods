@@ -1,5 +1,6 @@
 """Locate literal asset references in editable BPT fields, not registry dependencies."""
 import re
+import call_arguments
 
 ASSET_PATH = re.compile(r'/[A-Za-z0-9_]+(?:/[A-Za-z0-9_]+)+(?:\.[A-Za-z0-9_]+)?')
 
@@ -33,11 +34,32 @@ def is_type_reference(field):
             'VariableReference', 'FunctionReference', 'EventReference', 'DelegateReference'))
 
 
+def is_implicit_target(node, templates, field):
+    parts = field.split(' / ')
+    if len(parts) != 3 or parts[0] != 'pins' or parts[2] != 'DefaultObject':
+        return False
+    pin = node.get('pins', {}).get(parts[1], {})
+    return (parts[1] in ('in:target', 'in:self') and pin.get('name', 'self') == 'self' and
+            templates.get(pin.get('type'), {}).get('bHidden') == 'True' and
+            'FunctionReference' in node.get('properties', {}))
+
+
 def with_type_reference_details(node, templates):
     """View-only metadata keeps resolved pin types accessible in node Details."""
     refs = [dict(field=field, target=target) for field, target in node_references(node, templates)
-            if is_type_reference(field)]
-    return dict(node, _typeReferences=refs) if refs else node
+            if is_type_reference(field) or is_implicit_target(node, templates, field)]
+    result = dict(node, _typeReferences=refs) if refs else node
+    if 'arguments' in node:
+        details = {}
+        for alias, pin in node.get('pins', {}).items():
+            if call_arguments.governed(node, alias, templates):
+                defaults = node.get('declarationDefaults', {})
+                details[alias] = dict(mode='override' if alias in node['arguments'] else 'declaration-default' if alias in defaults else 'required',
+                    declaration=node.get('properties', {}).get('FunctionReference', ''))
+                if alias in defaults:
+                    details[alias]['declarationDefault'] = defaults[alias]
+        result = dict(result, _argumentDetails=details)
+    return result
 
 
 def property_references(document):

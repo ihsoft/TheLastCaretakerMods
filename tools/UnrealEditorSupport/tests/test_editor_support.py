@@ -53,6 +53,14 @@ class SupportTests(unittest.TestCase):
         self.assertEqual(support.tree(self.project.parent), before)
         self.assertEqual(support.read(self.project)['Description'], 'Preserve this')
 
+    def test_uncooked_node_provider_attaches_and_keeps_precompiled_editor_boundary(self):
+        path=self.package/'ExampleSupport.uplugin'
+        descriptor=support.read(path);descriptor['Modules'][0]['Type']='UncookedOnly'
+        support.write(path,descriptor);self.upgrade()
+        self.assertEqual(self.attach(),'prepared')
+        self.assertEqual(support.read(self.project.parent/'Plugins/ExampleSupport/ExampleSupport.uplugin')['Modules'][0]['Type'],'UncookedOnly')
+        self.assertIn('TargetType.Editor',support.precompiled_rules('ExampleNative'))
+
     def upgrade(self):
         rule = self.package / 'Source/ExampleNative/ExampleNative.Build.cs'
         rule.parent.mkdir(parents=True)

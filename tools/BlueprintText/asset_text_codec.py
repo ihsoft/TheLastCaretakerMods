@@ -11,6 +11,8 @@ import re
 import uuid
 from pathlib import Path
 from graph_hierarchy import validate_hierarchy, select_graph
+import call_arguments
+import parameter_defaults
 
 
 KINDS = {'K2Node_CallFunction': 'call', 'K2Node_Event': 'event',
@@ -69,6 +71,15 @@ def validate_object_tree(rows, owners=('$blueprint', '$class')):
 
 
 def validate_components(document):
+    library = document.get('parent') == '/Script/Engine.BlueprintFunctionLibrary'
+    library_type = document.get('properties', {}).get('BlueprintType') == 'BPTYPE_FunctionLibrary'
+    if library != library_type:
+        raise ValueError('Function library requires its exact parent and BlueprintType')
+    if library and (document.get('variables') or document.get('defaults') or document.get('interfaces') or
+                    any(key in document for key in ('root', 'components', 'widget')) or
+                    any(g['kind'] not in ('function', 'collapsed') for g in document.get('graphs', [])) or
+                    document.get('nativeDefaults', {}).get('objects')):
+        raise ValueError('Function library must contain functions only, without instance/component state')
     if 'nativeDefaults' in document:
         data = document['nativeDefaults']
         check_keys(data, {'objects'}, 'native CDO defaults')
@@ -247,7 +258,7 @@ def pin_alias(node, pin):
     alias = {'execute': 'exec', 'ReturnValue': 'result', 'self': 'target'}.get(name, name)
     if name.startswith('then_') and name[5:].isdigit():
         alias = 'then' + name[5:]
-    if node['class'].endswith('.K2Node_CallFunction'):
+    if node['class'] in (call_arguments.LEGACY_CLASS, *call_arguments.CALL_CLASSES):
         inputs = [unquote(p['PinName']) for p in node['pins']
                   if p.get('Direction') != '"EGPD_Output"' and p.get('PinType.PinCategory') != '"exec"'
                   and unquote(p['PinName']) != 'self' and p.get('bHidden') != 'True']
@@ -293,12 +304,23 @@ def compact(document):
                 lookup[key], all_pins[endpoint] = endpoint, pin
         output, links = [], []
         for node in sorted(nodes, key=lambda n: n['id']):
+            declaration = parameter_defaults.decode(node)
+            managed = node['class'] in call_arguments.CALL_CLASSES
+            if managed:
+                node['class'] = call_arguments.LEGACY_CLASS
             short = node['class'].rsplit('.', 1)[-1]
             kind = KINDS.get(short, short.removeprefix('K2Node_'))
             if kind in result['classes'] and result['classes'][kind] != node['class']:
                 raise ValueError('Conflicting node class alias')
             result['classes'][kind] = node['class']
             item = {'id': node['id'], 'kind': kind, 'properties': node['properties'], 'pins': {}}
+            if declaration is not None:
+                item['parameterDefaults'] = declaration
+            if managed:
+                overrides = json.loads(unquote(item['properties'].pop(call_arguments.STATE, '"{}"')))
+                declared_defaults = json.loads(unquote(item['properties'].pop(call_arguments.DECLARATION_STATE, '"{}"')))
+                item['arguments'] = {}
+                item['declarationDefaults'] = {}
             defaults = {}
             for pin in node['pins']:
                 endpoint = lookup[node['id'], pin['PinId']]
@@ -308,12 +330,16 @@ def compact(document):
                 name = unquote(pin['PinName'])
                 if name != alias.split(':', 1)[1]:
                     p['name'] = name
-                if 'DefaultValue' in pin:
+                if 'DefaultValue' in pin and not (managed and call_arguments.eligible(alias, pin)):
                     defaults[alias] = unquote(pin['DefaultValue'])
                 for key in ('DefaultObject', 'DefaultTextValue'):
                     if key in pin:
                         p[key] = pin[key]
                 item['pins'][alias] = p
+                if managed and name in overrides:
+                    item['arguments'][alias] = overrides[name]
+                if managed and name in declared_defaults:
+                    item['declarationDefaults'][alias] = declared_defaults[name]
                 linked = pin.get('LinkedTo', '()')
                 for reference in split_fields(linked[1:-1]):
                     other = tuple(reference.split())
@@ -332,6 +358,11 @@ def compact(document):
                 item['defaults'] = defaults
             if node['custom']:
                 item['custom'] = node['custom']
+            if managed and len(item['arguments']) != len(overrides):
+                raise ValueError('BPT override refers to an unknown pin')
+            if managed and len(item['declarationDefaults']) != len(declared_defaults):
+                raise ValueError('BPT declaration snapshot refers to an unknown pin')
+            call_arguments.validate(item, result['pinTemplates'])
             output.append(item)
         del graph['text'], graph['nodeCount']
         graph['format'] = 'compact'
@@ -363,7 +394,9 @@ def native(document):
         if len({n['id'] for n in nodes}) != len(nodes):
             raise ValueError('Duplicate node ID')
         for node in nodes:
-            check_keys(node, {'id', 'kind', 'properties', 'pins', 'defaults', 'custom'}, 'node')
+            check_keys(node, {'id', 'kind', 'properties', 'pins', 'defaults', 'arguments', 'declarationDefaults', 'parameterDefaults', 'custom'}, 'node')
+            call_arguments.validate(node, document['pinTemplates'])
+            parameter_defaults.validate(node, document['pinTemplates'])
             if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', node['id']):
                 raise ValueError('Schema-2 node IDs must be Unreal object names')
             for alias, pin in node['pins'].items():
@@ -389,8 +422,21 @@ def native(document):
         blocks = []
         for node in nodes:
             cls = document['classes'][node['kind']]
+            if 'arguments' in node:
+                if cls != call_arguments.LEGACY_CLASS or set(node['properties']) & {call_arguments.STATE,call_arguments.DECLARATION_STATE}:
+                    raise ValueError('arguments requires an ordinary call without raw BPT state')
+                cls = call_arguments.CALL_CLASS
             lines = [f'Begin Object Class={cls} Name={quote(node["id"])}']
-            lines += [f'   {k}={v}' for k, v in node['properties'].items()]
+            props = copy.deepcopy(node['properties'])
+            declared = {node['pins'][a].get('name',a[4:]): v for a,v in node.get('parameterDefaults',{}).items()}
+            if 'parameterDefaults' in node:
+                parameter_defaults.metadata(props, sorted(declared))
+            lines += [f'   {k}={v}' for k, v in props.items()]
+            if 'arguments' in node:
+                state = {node['pins'][k].get('name', k[3:]): v for k, v in node['arguments'].items()}
+                lines.append(f'   {call_arguments.STATE}={quote(json.dumps(state, sort_keys=True))}')
+                declared_snapshot = {node['pins'][k].get('name',k[3:]): v for k,v in node.get('declarationDefaults',{}).items()}
+                lines.append(f'   {call_arguments.DECLARATION_STATE}={quote(json.dumps(declared_snapshot, sort_keys=True))}')
             if set(node.get('defaults', {})) - set(node['pins']):
                 raise ValueError('Default refers to an unknown pin')
             for alias, pin in node['pins'].items():
@@ -403,6 +449,14 @@ def native(document):
                 p.update(template)
                 if alias in node.get('defaults', {}):
                     p['DefaultValue'] = quote(node['defaults'][alias])
+                if call_arguments.governed(node, alias, document['pinTemplates']):
+                    p['DefaultValue'] = quote(node['arguments'].get(alias, unquote(p.get('AutogeneratedDefaultValue', '""'))))
+                if alias in node.get('parameterDefaults', {}):
+                    p['DefaultValue'] = p['AutogeneratedDefaultValue'] = quote(node['parameterDefaults'][alias])
+                elif 'parameterDefaults' in node and parameter_defaults.supported(alias, template):
+                    # A required parameter has no serialized declaration default.
+                    p.pop('DefaultValue', None)
+                    p.pop('AutogeneratedDefaultValue', None)
                 for key in ('DefaultObject', 'DefaultTextValue'):
                     if key in pin:
                         p[key] = pin[key]
@@ -414,7 +468,11 @@ def native(document):
                 if connections[endpoint]:
                     p['LinkedTo'] = '(' + ''.join(f'{n} {i},' for n, i in sorted(connections[endpoint])) + ')'
                 lines.append('   CustomProperties Pin (' + ','.join(f'{k}={v}' for k, v in p.items()) + ',)')
-            lines += ['   ' + line for line in node.get('custom', [])]
+            custom = node.get('custom', [])
+            if 'parameterDefaults' in node:
+                names = {p.get('name', a[4:]) for a,p in node['pins'].items() if parameter_defaults.supported(a, document['pinTemplates'][p['type']])}
+                custom = parameter_defaults.user_pins(custom, declared, names)
+            lines += ['   ' + line for line in custom]
             lines.append('End Object')
             blocks.append('\n'.join(lines))
         del graph['format'], graph['body']
@@ -436,6 +494,14 @@ def template(catalog, operation, node_id):
                     {'name': 'EventGraph', 'kind': 'event', 'properties': {}, 'nodeCount': 1, 'text': entries[0]['nativeInsertion']}]}
     data = compact(envelope)
     n = data['graphs'][0]['body']['nodes'][0]
+    call_arguments.enable(n, data['pinTemplates'])
+    snapshot = entries[0].get('declarationDefaults', {})
+    n['declarationDefaults'] = {a:snapshot[p.get('name',a[3:])] for a,p in n['pins'].items() if p.get('name',a[3:]) in snapshot}
+    # Arithmetic/logic always shows its operands. Other native calls can omit
+    # declared defaults without asking the author to enumerate them first.
+    if 'KismetMathLibrary' not in n['properties'].get('FunctionReference',''):
+        for alias in n['declarationDefaults']:
+            n['arguments'].pop(alias,None)
     n['id'] = node_id
     n['properties']['NodeGuid'] = uuid.uuid4().hex.upper()
     for pin in n['pins'].values():
@@ -476,7 +542,22 @@ def add_call(document, catalog, operation, node_id, graph_name):
 
 def compare(expected, actual):
     """Canonical field comparison; only node.pins mappings have significant key order."""
-    expected, actual = compact(native(expected)), compact(native(actual))
+    def comparison_source(document):
+        document = copy.deepcopy(document)
+        # Declaration snapshots are independently checked against materialized pins
+        # by the engine exporter. They may change when a selected callee changes.
+        # Intent and explicit overrides still participate in strict comparison.
+        for graph in document['graphs']:
+            for node in graph['body']['nodes']:
+                if 'arguments' in node:
+                    node.pop('declarationDefaults',None)
+                for alias, pin in node['pins'].items():
+                    if call_arguments.governed(node, alias, document['pinTemplates']):
+                        key = '__argument_' + pin['id']
+                        document['pinTemplates'][key] = {k:v for k,v in document['pinTemplates'][pin['type']].items() if k != 'AutogeneratedDefaultValue'}
+                        pin['type'] = key
+        return compact(native(document))
+    expected, actual = comparison_source(expected), comparison_source(actual)
     # Older empty-parent sources have no native subobjects. Absence is compatible
     # only with an empty set, never with an omitted nonempty native object tree.
     for document in (expected, actual):
@@ -529,16 +610,16 @@ def register_widget(document, name):
 
 
 def relocate(document, asset):
-    """Copy a plain Object source into a new package, retaining its object identity.
+    """Copy a plain Object or function library into a new package, retaining object identity.
 
     Only known reference fields are rewritten. Unknown fields mentioning the old
     package fail closed; string/text defaults and editor annotations stay literal.
     This is intentionally narrower than arbitrary Unreal property serialization.
     """
     native(document)  # Validate before producing another editable source.
-    if document['parent'] != '/Script/CoreUObject.Object' or any(
+    if document['parent'] not in ('/Script/CoreUObject.Object', '/Script/Engine.BlueprintFunctionLibrary') or any(
             key in document for key in ('root', 'components', 'widget')) or document.get('nativeDefaults', {}).get('objects'):
-        raise ValueError('relocate currently supports direct UObject sources without component/widget state')
+        raise ValueError('relocate currently supports direct UObject/function library sources without component/widget state')
     pattern = r'/Game/(?:[A-Za-z0-9_]+/)*[A-Za-z0-9_]+'
     old = document['asset']
     if not re.fullmatch(pattern, old) or not isinstance(asset, str) or not re.fullmatch(pattern, asset):
@@ -677,7 +758,7 @@ def batch_sources(manifest, folder):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('compact', 'native', 'template', 'add-call', 'compare', 'batch-native', 'batch-compare', 'register-widget', 'relocate'))
+    parser.add_argument('mode', choices=('compact', 'native', 'template', 'add-call', 'use-arguments', 'use-parameter-defaults', 'compare', 'batch-native', 'batch-compare', 'register-widget', 'relocate'))
     parser.add_argument('input', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--operation')
@@ -707,6 +788,13 @@ def main():
             if not args.id:
                 raise ValueError('register-widget requires --id NAME')
             output = register_widget(data, args.id)
+        elif args.mode in ('use-arguments','use-parameter-defaults'):
+            graph = select_graph(data, args.graph)
+            nodes = [n for n in graph['body']['nodes'] if n['id'] == args.id]
+            if len(nodes) != 1:
+                raise ValueError(args.mode + ' requires --graph and one existing --id')
+            (call_arguments if args.mode == 'use-arguments' else parameter_defaults).enable(nodes[0], data['pinTemplates'])
+            output = compact(native(data))
         elif args.mode.startswith('batch-'):
             if any((args.input.parent / path).resolve() == args.output.resolve() for path in data.get('assets', [])):
                 raise ValueError('Output must not overwrite a batch source')

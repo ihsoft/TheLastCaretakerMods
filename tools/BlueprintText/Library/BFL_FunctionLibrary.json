@@ -1,0 +1,18 @@
+{
+  "schema": 2,
+  "format": "compact-asset",
+  "asset": "/Game/BlueprintTextLibrary/BFL_FunctionLibrary",
+  "parent": "/Script/Engine.BlueprintFunctionLibrary",
+  "properties": {
+    "BlueprintType": "BPTYPE_FunctionLibrary",
+    "BlueprintSystemVersion": "2",
+    "bLegacyNeedToPurgeSkelRefs": "False",
+    "BlueprintGuid": "F02A45317C284EA39A5EF29529CE8814"
+  },
+  "variables": [],
+  "defaults": {},
+  "dependencies": [],
+  "classes": {},
+  "pinTemplates": {},
+  "graphs": []
+}

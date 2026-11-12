@@ -115,14 +115,17 @@ rebuild them from owner sources rather than adding rules to an installed package
   Otherwise the tool creates `Tmp/UnrealEditorSupport/prepare-<run>/`. Mod callers
   choosing output paths use `Tmp/<Mod>/`. Keep a returned package available while
   it has consumers; retained storage follows the normal artifact lifecycle rule.
-- The supported input is a native-only plugin with `Runtime` and/or `Editor`
+- The supported input is a native-only plugin with `Runtime`, `Editor`, or `UncookedOnly`
   modules and `Default` loading. Content plugins, external project plugin
   directories and hot-reload module binaries are outside this interface.
   Required engine plugin dependencies belong in the supplied `.uplugin`.
 - Keep game-facing reflected classes in a `Runtime` module even when the
   support binaries are used only in the editor. Classifying those definitions
   as editor-only can make their functions illegal in gameplay Blueprints.
-  Commandlets and editing utilities can remain in `Editor` modules. Plugin
+  Commandlets and editing utilities can remain in `Editor` modules. Custom K2
+  authoring nodes belong in `UncookedOnly`, so they can compile gameplay
+  Blueprints and be stripped by cook. Ready rules still target Win64 Development
+  Editor; this does not add game-target native binaries. Plugin
   sources must satisfy Unreal's plugin compilation rules, including explicit
   categories for exposed properties/functions. Plugin modules use ordinary
   module registration, not primary-game registration.

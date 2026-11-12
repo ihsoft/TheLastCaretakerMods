@@ -4,5 +4,5 @@
   "VersionName": "1",
   "FriendlyName": "Blueprint text workspace",
   "CanContainContent": false,
-  "Modules": [{"Name": "BlueprintText", "Type": "Editor", "LoadingPhase": "Default"}]
+  "Modules": [{"Name": "BlueprintText", "Type": "UncookedOnly", "LoadingPhase": "Default"}]
 }
