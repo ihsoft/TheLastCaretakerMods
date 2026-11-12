@@ -3,10 +3,26 @@
   "settings": [
     {
       "id": "LargeContainerMaxWeightKg",
-      "runtimeName": "ConfiguredMaxWeightKg",
+      "runtimeName": "LargeCapacity",
       "type": "number",
       "storage": "float",
       "default": 200,
+      "minimum": 1
+    },
+    {
+      "id": "MediumContainerMaxWeightKg",
+      "runtimeName": "MediumCapacity",
+      "type": "number",
+      "storage": "float",
+      "default": 100,
+      "minimum": 1
+    },
+    {
+      "id": "SmallContainerMaxWeightKg",
+      "runtimeName": "SmallCapacity",
+      "type": "number",
+      "storage": "float",
+      "default": 50,
       "minimum": 1
     }
   ]

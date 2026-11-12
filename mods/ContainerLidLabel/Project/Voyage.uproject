@@ -1,0 +1,23 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Description": "ContainerLidLabel maintained DML Blueprint project",
+  "Plugins": [
+    {
+      "Name": "PythonScriptPlugin",
+      "Enabled": true
+    },
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    },
+    {
+      "Name": "ContainerLidLabelSupport",
+      "Enabled": true
+    },
+    {
+      "Name": "BlueprintTextWorkspace",
+      "Enabled": true
+    }
+  ]
+}

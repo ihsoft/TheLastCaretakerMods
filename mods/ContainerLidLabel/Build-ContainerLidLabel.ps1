@@ -1,337 +1,74 @@
-# HAND-WRITTEN RELEASE PRODUCER. Builds the editor generator, cooks the exact
-# replacement, relocates a freshly extracted stock parent, packages the two
-# runtime assets, and publishes a manifest-validated release. It never installs.
-
+# Cooks the maintained Blueprint project and packages its four additive assets.
+[CmdletBinding()]
 param(
-    [ValidatePattern('^[0-9A-Za-z][0-9A-Za-z._-]*$')]
-    [string]$Version,
-    [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
-    [string]$EngineRoot = 'K:\Epic Games\UE_5.8',
+    [string]$EngineRoot = 'P:/UnrealEngine/UE_5.8',
+    [string]$GameRoot = 'P:/SteamLibrary/steamapps/common/Voyage',
     [string]$OutputRoot,
     [switch]$AllowDirtySource,
-    [switch]$FinalizeExisting,
     [switch]$IgnorePinnedGameVersion
 )
-
 $ErrorActionPreference = 'Stop'
-$retocVersion = 'UE5_8'
-$containerName = 'ContainerLidLabel_P'
-$sourcePackage = '/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Large'
-$relocatedPackage = '/Game/Mods/ContainerLidLabel/StockOrigin/BP_Inventory_PlayerBox_Large'
-$assetName = 'BP_Inventory_PlayerBox_Large'
-$assetFilter = 'Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Large'
-
-$modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
-$repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
-$publishedVersionText = (Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw).Trim()
-if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
-    throw 'ContainerLidLabel version.txt must contain a non-negative integer.'
+Set-StrictMode -Version Latest
+$modRoot = $PSScriptRoot
+$repo = (Resolve-Path (Join-Path $modRoot '../..')).Path
+$owner = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/ContainerLidLabel'))
+if (-not $OutputRoot) { $OutputRoot = Join-Path $owner ('build-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')) }
+$output = [IO.Path]::GetFullPath($OutputRoot)
+if (-not $output.StartsWith($owner + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'OutputRoot must stay under Tmp/ContainerLidLabel' }
+if (Test-Path -LiteralPath $output) { throw 'Use a new output directory' }
+[IO.Directory]::CreateDirectory($output) | Out-Null
+$project = & (Join-Path $modRoot 'New-ContainerLidLabelProjectCopy.ps1') -Destination (Join-Path $output 'Project')
+$projectRoot = Split-Path -Parent $project
+$bptWorkspace = Join-Path $repo ('Tmp/BlueprintText/ContainerLidLabel-build-' + [guid]::NewGuid().ToString('N'))
+& (Join-Path $repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $bptWorkspace
+$fingerprintPath = Join-Path $output 'game-fingerprint.json'
+& (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
+$fingerprint = Get-Content $fingerprintPath -Raw | ConvertFrom-Json
+& (Join-Path $repo 'tools/Assert-VoyageModGameBuild.ps1') -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) -IgnorePinnedGameVersion:$IgnorePinnedGameVersion | Out-Null
+$versionText = (Get-Content (Join-Path $modRoot 'version.txt') -Raw).Trim()
+if ($versionText -cnotmatch '^(0|[1-9][0-9]*)$') { throw 'Invalid published version' }
+$version = 'V' + ([int]$versionText + 1)
+$names = @('ModActor', 'BP_ContainerLidDisplay', 'BFL_ContainerTypes', 'Settings/BP_IniFileParser')
+$packages = @($names | ForEach-Object { '/Game/Mods/ContainerLidLabel/' + $_ })
+$cooked = Join-Path $projectRoot 'Saved/Cooked/Windows/Voyage/Content/Mods/ContainerLidLabel'
+foreach ($name in $names) {
+    if (-not (Test-Path (Join-Path $projectRoot "Content/Mods/ContainerLidLabel/$name.uasset"))) { throw "Apply the maintained BPT first: $name" }
 }
-$canonicalVersion = 'V' + ([int]$publishedVersionText + 1)
-if (-not [string]::IsNullOrWhiteSpace($Version) -and $Version -cne $canonicalVersion) {
-    throw "Version is derived from version.txt and must be $canonicalVersion. Use OutputRoot to label a temporary run."
-}
-$Version = $canonicalVersion
-$tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp\ContainerLidLabel'))
-$configSource = Join-Path $modRoot 'Assets\ContainerLidLabel.ini'
-$settingsSchema = Join-Path $modRoot 'Settings\ContainerLidLabel.settings.json'
-$settingsGenerator = Join-Path $modRoot 'Build\New-ContainerLidLabelSettings.ps1'
-$generatedSettingsDirectory = Join-Path $modRoot 'Intermediate\GeneratedSettings'
-$generatedSettingsHeader = Join-Path $generatedSettingsDirectory 'ContainerLidLabelSettings.generated.h'
-$generatedSettingsIni = Join-Path $generatedSettingsDirectory 'ContainerLidLabel.ini'
-& $settingsGenerator -SchemaPath $settingsSchema -DefaultIniPath $configSource `
-    -HeaderPath $generatedSettingsHeader -IniPath $generatedSettingsIni
-$testSchema = Join-Path $repoRoot 'tools\VoyageModSettings\Tests\VoyageModSettingsTest.settings.json'
-$testIni = Join-Path $repoRoot 'tools\VoyageModSettings\Tests\VoyageModSettingsTest.ini'
-$testHeader = Join-Path $generatedSettingsDirectory 'VoyageModSettingsTestSettings.generated.h'
-$testIniCopy = Join-Path $generatedSettingsDirectory 'VoyageModSettingsTest.ini'
-& (Join-Path $repoRoot 'tools\New-VoyageModSettings.ps1') `
-    -SchemaPath $testSchema -DefaultIniPath $testIni `
-    -HeaderPath $testHeader -IniPath $testIniCopy `
-    -GeneratedBy 'tools/VoyageModSettings/Tests/VoyageModSettingsTest.settings.json' | Out-Null
-if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
-    $stamp = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
-    $OutputRoot = Join-Path $tmpRoot "releases\ContainerLidLabel-$Version-$stamp"
-}
-$releaseRoot = [IO.Path]::GetFullPath($OutputRoot)
-$tmpPrefix = $tmpRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
-if (-not $releaseRoot.StartsWith($tmpPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-    throw "OutputRoot must stay below $tmpRoot"
-}
-if ($FinalizeExisting) {
-    Write-Host 'Finalize 1/4 Loading prior validation evidence'
-    if (-not (Test-Path -LiteralPath $releaseRoot -PathType Container)) {
-        throw "FinalizeExisting requires an existing OutputRoot: $releaseRoot"
+$editor = Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe'
+$cookLog = Join-Path $output 'cook.log'
+& (Join-Path $repo 'tools/Invoke-UnrealQueued.ps1') -Operation 'Cook ContainerLidLabel' -FilePath $editor -ArgumentList @($project,'-run=cook','-targetplatform=Windows','-unversioned','-SkipZenStore',('-Package=' + ($packages -join '+')),'-CookSinglePackageNoRefs','-unattended','-nop4','-nosplash','-nullrhi','-ddc=NoZenLocalFallback',('-abslog=' + $cookLog)) > (Join-Path $output 'cook-console.log')
+if (Select-String -LiteralPath $cookLog -Pattern 'LogBlueprint: Error:|LogLinker: Error:|LogCook: Error:' -Quiet) { throw "Cook errors: $cookLog" }
+$stage = Join-Path $output 'stage'
+$stageAssets = Join-Path $stage 'Voyage/Content/Mods/ContainerLidLabel'
+[IO.Directory]::CreateDirectory($stageAssets) | Out-Null
+foreach ($name in $names) {
+    foreach ($ext in @('.uasset','.uexp')) {
+        $destination = Join-Path $stageAssets ($name + $ext)
+        [IO.Directory]::CreateDirectory((Split-Path -Parent $destination)) | Out-Null
+        Copy-Item -LiteralPath (Join-Path $cooked ($name + $ext)) -Destination $destination
     }
 }
-else {
-    if (Test-Path -LiteralPath $releaseRoot) { throw "OutputRoot already exists: $releaseRoot" }
-    New-Item -ItemType Directory -Path $releaseRoot | Out-Null
-}
-
-$project = Join-Path $modRoot 'Voyage.uproject'
-$buildBatch = Join-Path $EngineRoot 'Engine\Build\BatchFiles\Build.bat'
-$editor = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
-$retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
-$fingerprinter = Join-Path $repoRoot 'tools\Get-VoyageBuildFingerprint.ps1'
-$extractor = Join-Path $repoRoot 'tools\Extract-VoyagePackage.ps1'
-$containerTester = Join-Path $repoRoot 'tools\Test-VoyageContainer.ps1'
-$manifestProducer = Join-Path $repoRoot 'tools\New-VoyageReleaseManifest.ps1'
-$releaseInstaller = Join-Path $repoRoot 'tools\Install-VoyageRelease.ps1'
-foreach ($required in @($project, $buildBatch, $editor, $retoc, $fingerprinter, $extractor, $containerTester, $manifestProducer, $releaseInstaller)) {
-    if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Required file was not found: $required" }
-}
-if ($sourcePackage.Length -ne $relocatedPackage.Length) { throw 'Relocation paths must have equal byte lengths.' }
-
-function Invoke-LoggedProcess {
-    param([string]$FilePath, [string[]]$Arguments, [string]$Name)
-    $logRoot = Join-Path $releaseRoot 'logs'
-    New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
-    $stdout = Join-Path $logRoot "$Name.stdout.log"
-    $stderr = Join-Path $logRoot "$Name.stderr.log"
-    $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -Wait -PassThru `
-        -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-    if ($process.ExitCode -ne 0) {
-        Get-Content -LiteralPath $stdout -Tail 50 -ErrorAction SilentlyContinue
-        Get-Content -LiteralPath $stderr -Tail 50 -ErrorAction SilentlyContinue
-        throw "$Name failed with exit code $($process.ExitCode). Logs: $logRoot"
-    }
-}
-
-function Find-Offsets {
-    param([byte[]]$Bytes, [byte[]]$Sequence)
-    $matches = [Collections.Generic.List[int]]::new()
-    for ($offset = 0; $offset -le $Bytes.Length - $Sequence.Length; $offset++) {
-        $match = $true
-        for ($index = 0; $index -lt $Sequence.Length; $index++) {
-            if ($Bytes[$offset + $index] -ne $Sequence[$index]) { $match = $false; break }
-        }
-        if ($match) { $matches.Add($offset); $offset += $Sequence.Length - 1 }
-    }
-    return $matches
-}
-
-if ($FinalizeExisting) {
-    $packageRoot = Join-Path $releaseRoot 'package'
-    $utoc = Join-Path $packageRoot "$containerName.utoc"
-    $archive = Join-Path $releaseRoot "ContainerLidLabel-$Version.zip"
-    $releaseConfig = Join-Path $releaseRoot 'ContainerLidLabel.ini'
-    $releaseManifestPath = Join-Path $releaseRoot 'release-manifest.json'
-    $expectedList = Join-Path $releaseRoot 'expected-packages.txt'
-    $stockUexp = Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'work\stock-extraction') `
-        -Recurse -File -Filter "$assetName.uexp" | Select-Object -First 1
-    $relocatedUexp = Join-Path $releaseRoot "work\stage\Voyage\Content\Mods\ContainerLidLabel\StockOrigin\$assetName.uexp"
-    foreach ($required in @($utoc, $archive, $releaseConfig, $releaseManifestPath, $expectedList, $stockUexp.FullName, $relocatedUexp)) {
-        if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "FinalizeExisting input missing: $required" }
-    }
-    $containerCheckOutput = @(& $containerTester -Container $utoc -ExpectedPackageList $expectedList -OutputRoot (Join-Path $releaseRoot 'container-check'))
-    $containerCheck = @($containerCheckOutput | Where-Object { $null -ne $_.PSObject.Properties['status'] }) | Select-Object -Last 1
-    if ($null -eq $containerCheck -or $containerCheck.status -cne 'passed' -or
-        $containerCheck.packageCount -ne 2 -or $containerCheck.packageSetMatches -ne $true) {
-        throw 'FinalizeExisting container revalidation failed.'
-    }
-    Write-Host 'Finalize 2/4 Validating release archive and manifest'
-    $releaseRecord = Get-Content -LiteralPath $releaseManifestPath -Raw | ConvertFrom-Json
-    if ([int]$releaseRecord.schemaVersion -notin @(4, 5) -or
-        [string]$releaseRecord.mod -cne 'ContainerLidLabel' -or
-        [string]$releaseRecord.version -cne $Version -or
-        [string]$releaseRecord.gameFingerprint.steamBuildId -cnotmatch '^[0-9]+$') {
-        throw "FinalizeExisting rejected release identity: $releaseManifestPath"
-    }
-    & $releaseInstaller -ReleaseManifest $releaseManifestPath -GameRoot $GameRoot -ValidateOnly | Out-Null
-    if (-not [Linq.Enumerable]::SequenceEqual(
-        [byte[]][IO.File]::ReadAllBytes($stockUexp.FullName),
-        [byte[]][IO.File]::ReadAllBytes($relocatedUexp))) {
-        throw 'FinalizeExisting found a changed relocated stock export payload.'
-    }
-    if ([IO.File]::ReadAllText($configSource) -cne [IO.File]::ReadAllText($releaseConfig)) {
-        throw 'FinalizeExisting found a changed shipped config.'
-    }
-    Write-Host 'Finalize 3/4 Recording semantic build evidence'
-    $payload = @(
-        (Join-Path $packageRoot "$containerName.pak"),
-        (Join-Path $packageRoot "$containerName.ucas"),
-        $utoc,
-        $releaseConfig,
-        $archive,
-        $releaseManifestPath)
-    $buildManifest = [ordered]@{
-        schemaVersion = 1; status = 'succeeded'; mod = 'ContainerLidLabel'; version = $Version
-        createdUtc = [DateTime]::UtcNow.ToString('o'); steamBuildId = [string]$releaseRecord.gameFingerprint.steamBuildId
-        engine = '5.8.2'; retocEngineVersion = $retocVersion
-        runtimePackages = [IO.File]::ReadAllLines($expectedList)
-        config = [ordered]@{ path = $releaseConfig }
-        relocation = [ordered]@{ source = $sourcePackage; destination = $relocatedPackage; replacementCount = 2 }
-        containerCheckReport = $containerCheck.reportPath; releaseManifest = $releaseManifestPath
-        files = @($payload | ForEach-Object { $item = Get-Item -LiteralPath $_; [ordered]@{ path = $item.FullName; length = $item.Length } })
-    }
-    $buildManifestPath = Join-Path $releaseRoot 'build-manifest.json'
-    Write-Host 'Finalize 3b/4 Serializing build evidence'
-    [IO.File]::WriteAllText($buildManifestPath, ($buildManifest | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
-    Write-Host 'Finalize 4/4 Build identity recorded'
-    [pscustomobject]@{ status = 'succeeded'; releaseRoot = $releaseRoot; releaseManifest = $releaseManifestPath; buildManifest = $buildManifestPath; container = $utoc; archive = $archive; packageCount = 2 }
-    exit 0
-}
-
-Write-Host '1/8 Validating game fingerprint'
-$fingerprintPath = Join-Path $releaseRoot 'game-fingerprint.json'
-& $fingerprinter -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
-$fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
-$gameBuild = & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') `
-    -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
-    -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
-
-Write-Host '2/8 Building editor generator'
-Invoke-LoggedProcess -FilePath $buildBatch -Name 'editor-build' -Arguments @(
-    'VoyageEditor', 'Win64', 'Development', ('-Project="{0}"' -f $project), '-WaitMutex', '-NoHotReload')
-
-Write-Host '3/8 Generating Blueprint assets'
-$releaseConfig = Join-Path $releaseRoot 'ContainerLidLabel.ini'
-Copy-Item -LiteralPath $generatedSettingsIni -Destination $releaseConfig
-$content = [IO.Path]::GetFullPath((Join-Path $modRoot 'Content'))
-$contentPrefix = $modRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
-if (-not $content.StartsWith($contentPrefix, [StringComparison]::OrdinalIgnoreCase) -or
-    (Split-Path -Leaf $content) -cne 'Content') { throw "Unsafe generated Content path: $content" }
-if (Test-Path -LiteralPath $content) {
-    $item = Get-Item -LiteralPath $content -Force
-    if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Refusing reparse point: $content" }
-    Remove-Item -LiteralPath $content -Recurse -Force
-}
-Invoke-LoggedProcess -FilePath $editor -Name 'generate' -Arguments @(
-    ('"{0}"' -f $project), '-run=GenerateContainerLidLabel',
-    '-unattended', '-nop4', '-nosplash', '-nullrhi', '-nosound')
-
-Write-Host '4/8 Cooking exact replacement package'
-Invoke-LoggedProcess -FilePath $editor -Name 'cook' -Arguments @(
-    ('"{0}"' -f $project), '-run=cook', '-targetplatform=Windows', '-SkipZenStore',
-    ('-Package={0}' -f $sourcePackage), '-CookSinglePackageNoRefs', '-unattended', '-nop4', '-nosplash', '-nullrhi',
-    '-ddc=NoZenLocalFallback', ('-LocalDataCachePath="{0}"' -f (Join-Path $modRoot 'DerivedDataCache')))
-
-Write-Host '5/8 Extracting and relocating the exact stock parent'
-$work = Join-Path $releaseRoot 'work'
-$extractRoot = Join-Path $work 'stock-extraction'
-$extraction = & $extractor -Filter $assetFilter -GameRoot $GameRoot -RetocEngineVersion $retocVersion -OutputRoot $extractRoot
-$originalRoot = $extraction.outputPath
-$originalDir = Join-Path $originalRoot 'Voyage\Content\Blueprints\Interactives\Containers'
-$sourceUasset = Join-Path $originalDir "$assetName.uasset"
-$sourceUexp = Join-Path $originalDir "$assetName.uexp"
-$scriptObjects = Join-Path $originalRoot 'scriptobjects.bin'
-foreach ($required in @($sourceUasset, $sourceUexp, $scriptObjects)) {
-    if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Extraction output missing: $required" }
-}
-
-$stage = Join-Path $work 'stage'
-$childStage = Join-Path $stage 'Voyage\Content\Blueprints\Interactives\Containers'
-$parentStage = Join-Path $stage 'Voyage\Content\Mods\ContainerLidLabel\StockOrigin'
-$packageRoot = Join-Path $releaseRoot 'package'
-New-Item -ItemType Directory -Path $childStage, $parentStage, $packageRoot -Force | Out-Null
-$cookedDir = Join-Path $modRoot 'Saved\Cooked\Windows\Voyage\Content\Blueprints\Interactives\Containers'
-Copy-Item -LiteralPath (Join-Path $cookedDir "$assetName.uasset") -Destination $childStage
-Copy-Item -LiteralPath (Join-Path $cookedDir "$assetName.uexp") -Destination $childStage
-
-$bytes = [IO.File]::ReadAllBytes($sourceUasset)
-$originalBytes = [byte[]]$bytes.Clone()
-$find = [Text.Encoding]::ASCII.GetBytes($sourcePackage)
-$replace = [Text.Encoding]::ASCII.GetBytes($relocatedPackage)
-$matches = @(Find-Offsets -Bytes $bytes -Sequence $find)
-if ($matches.Count -ne 2 -or @(Find-Offsets -Bytes $bytes -Sequence $replace).Count -ne 0) {
-    throw "Stock relocation precondition failed: source=$($matches.Count), destination=$(@(Find-Offsets -Bytes $bytes -Sequence $replace).Count)"
-}
-foreach ($offset in $matches) { [Array]::Copy($replace, 0, $bytes, $offset, $replace.Length) }
-if ($bytes.Length -ne $originalBytes.Length -or
-    @(Find-Offsets -Bytes $bytes -Sequence $find).Count -ne 0 -or
-    @(Find-Offsets -Bytes $bytes -Sequence $replace).Count -ne 2) {
-    throw 'Stock relocation postcondition failed.'
-}
-$relocatedUasset = Join-Path $parentStage "$assetName.uasset"
-$relocatedUexp = Join-Path $parentStage "$assetName.uexp"
-[IO.File]::WriteAllBytes($relocatedUasset, $bytes)
-Copy-Item -LiteralPath $sourceUexp -Destination $relocatedUexp
-if (-not [Linq.Enumerable]::SequenceEqual(
-    [byte[]][IO.File]::ReadAllBytes($sourceUexp),
-    [byte[]][IO.File]::ReadAllBytes($relocatedUexp))) {
-    throw 'Relocation changed the stock export payload.'
-}
-Copy-Item -LiteralPath $scriptObjects -Destination (Join-Path $stage 'scriptobjects.bin')
-
-Write-Host '6/8 Packaging and verifying exact two-package container'
-$utoc = Join-Path $packageRoot "$containerName.utoc"
-& $retoc to-zen --version $retocVersion $stage $utoc
-if ($LASTEXITCODE -ne 0) { throw "retoc to-zen failed with exit code $LASTEXITCODE" }
-$expectedList = Join-Path $releaseRoot 'expected-packages.txt'
-[IO.File]::WriteAllLines($expectedList, @(
-    '../../../Voyage/Content/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Large.uasset',
-    '../../../Voyage/Content/Mods/ContainerLidLabel/StockOrigin/BP_Inventory_PlayerBox_Large.uasset'))
-$containerCheckOutput = @(& $containerTester -Container $utoc -ExpectedPackageList $expectedList -OutputRoot (Join-Path $releaseRoot 'container-check'))
-$containerCheck = @($containerCheckOutput | Where-Object { $null -ne $_.PSObject.Properties['status'] }) | Select-Object -Last 1
-if ($null -eq $containerCheck) { throw 'Container validator did not return a structured result.' }
-if ($containerCheck.status -cne 'passed' -or $containerCheck.packageCount -ne 2 -or $containerCheck.packageSetMatches -ne $true) {
-    throw "Container validation failed. Report: $($containerCheck.reportPath)"
-}
-
-Write-Host '7/8 Creating ZIP and validated release manifest'
-$archive = Join-Path $releaseRoot "ContainerLidLabel-$Version.zip"
-& (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
-    -Container $utoc -Archive $archive -AdditionalFile $releaseConfig | Out-Null
-$manifestArgs = @{
-    ReleaseRoot = $releaseRoot
-    Mod = 'ContainerLidLabel'
-    Version = $Version
-    ModVersion = $Version
-    Container = $utoc
-    Archive = $archive
-    SourcePath = @($modRoot)
-    GameRoot = $GameRoot
-    AsJson = $true
-}
-if ($AllowDirtySource) { $manifestArgs.AllowDirtySource = $true }
-& $manifestProducer @manifestArgs | Out-Null
-$releaseManifestPath = Join-Path $releaseRoot 'release-manifest.json'
-if (-not (Test-Path -LiteralPath $releaseManifestPath -PathType Leaf)) {
-    throw "Validated release manifest was not produced: $releaseManifestPath"
-}
-
-Write-Host '8/8 Recording build identity'
-$payload = @(
-    (Join-Path $packageRoot "$containerName.pak"),
-    (Join-Path $packageRoot "$containerName.ucas"),
-    $utoc,
-    $releaseConfig,
-    $archive,
-    $releaseManifestPath)
-$buildManifest = [ordered]@{
-    schemaVersion = 1
-    mod = 'ContainerLidLabel'
-    version = $Version
-    createdUtc = [DateTime]::UtcNow.ToString('o')
-    steamBuildId = [string]$fingerprint.steam.buildId
-    ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
-    engine = '5.8.2'
-    retocEngineVersion = $retocVersion
-    runtimePackages = [IO.File]::ReadAllLines($expectedList)
-    config = [ordered]@{ path = $releaseConfig }
-    relocation = [ordered]@{
-        source = $sourcePackage
-        destination = $relocatedPackage
-        replacementCount = 2
-        sourceLength = $originalBytes.Length
-        relocatedLength = $bytes.Length
-    }
-    containerCheckReport = $containerCheck.reportPath
-    releaseManifest = $releaseManifestPath
-    files = @($payload | ForEach-Object {
-        $item = Get-Item -LiteralPath $_
-        [ordered]@{ path = $item.FullName; length = $item.Length }
-    })
-}
-$buildManifestPath = Join-Path $releaseRoot 'build-manifest.json'
-[IO.File]::WriteAllText($buildManifestPath, ($buildManifest | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
-[pscustomobject]@{
-    status = 'succeeded'
-    releaseRoot = $releaseRoot
-    releaseManifest = $releaseManifestPath
-    buildManifest = $buildManifestPath
-    container = $utoc
-    archive = $archive
-    packageCount = $containerCheck.packageCount
-}
+$package = Join-Path $output 'package'
+[IO.Directory]::CreateDirectory($package) | Out-Null
+$ini = Join-Path $package 'ContainerLidLabel.ini'
+Import-Module (Join-Path $repo 'tools/VoyageModSettings/VoyageModSettings.psm1') -Force
+$validatedSettings = @(Read-VoyageModSettingsSchema -SchemaPath (Join-Path $modRoot 'Settings/ContainerLidLabel.settings.json') -DefaultIniPath (Join-Path $modRoot 'Assets/ContainerLidLabel.ini'))
+Copy-Item -LiteralPath (Join-Path $modRoot 'Assets/ContainerLidLabel.ini') -Destination $ini
+$utoc = Join-Path $package 'ContainerLidLabel.utoc'
+& (Join-Path $repo '.tools/bin/retoc.exe') to-zen --version UE5_8 $stage $utoc > (Join-Path $output 'retoc.log')
+if ($LASTEXITCODE -ne 0) { throw 'retoc conversion failed' }
+$expected = Join-Path $output 'expected-packages.txt'
+@($names | ForEach-Object { '../../../Voyage/Content/Mods/ContainerLidLabel/' + $_ + '.uasset' }) | Set-Content $expected -Encoding ascii
+$check = & (Join-Path $repo 'tools/Test-VoyageContainer.ps1') -Container $utoc -ExpectedPackageList $expected -OutputRoot (Join-Path $output 'container-check')
+$zip = Join-Path $output ('ContainerLidLabel-' + $version + '.zip')
+& (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') -Container $utoc -Archive $zip -LogicMods -AdditionalFile $ini -AdditionalDestination 'Voyage/Content/Paks/LogicMods/ContainerLidLabel.ini' | Out-Null
+$manifest = & (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod ContainerLidLabel -Version $version -Container $utoc -Archive $zip -SourcePath $modRoot -GameRoot $GameRoot -LogicMods -AllowDirtySource:$AllowDirtySource
+$result = [ordered]@{status='built';archive=$zip;releaseManifest=$manifest.manifestPath;entryClass='/Game/Mods/ContainerLidLabel/ModActor.ModActor_C';steamBuildId=[string]$fingerprint.steam.buildId;packages=$packages;containerCheck=$check;runtimeIni='Voyage/Content/Paks/LogicMods/ContainerLidLabel.ini';gameplayValidated=$false}
+$result | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $output 'build-result.json') -Encoding utf8
+$stageAbsolute = (Resolve-Path -LiteralPath $stage).Path
+if (-not $stageAbsolute.StartsWith($output + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe scratch path' }
+Remove-Item -LiteralPath $stageAbsolute -Recurse -Force
+$projectAbsolute = (Resolve-Path -LiteralPath $projectRoot).Path
+if ($projectAbsolute -ne (Join-Path $output 'Project')) { throw 'Unsafe build scratch path' }
+Remove-Item -LiteralPath $projectAbsolute -Recurse -Force
+$result | ConvertTo-Json -Depth 8

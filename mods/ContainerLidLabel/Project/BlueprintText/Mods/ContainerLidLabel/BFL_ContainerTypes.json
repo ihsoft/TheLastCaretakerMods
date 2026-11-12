@@ -1,0 +1,657 @@
+{
+  "schema": 2,
+  "format": "compact-asset",
+  "asset": "/Game/Mods/ContainerLidLabel/BFL_ContainerTypes",
+  "parent": "/Script/Engine.BlueprintFunctionLibrary",
+  "properties": {
+    "BlueprintType": "BPTYPE_FunctionLibrary",
+    "BlueprintSystemVersion": "2",
+    "bLegacyNeedToPurgeSkelRefs": "False",
+    "BlueprintGuid": "893929F2DBEA41F98009F6688CA2BA69"
+  },
+  "variables": [],
+  "defaults": {},
+  "graphs": [
+    {
+      "name": "IsLarge",
+      "kind": "function",
+      "properties": {
+        "GraphGuid": "0E8D8E54D6F74835986132B4676BB272"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "ExactClass",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"EqualEqual_ClassClass\")",
+              "NodeGuid": "2C19AB977D8D4352AF325F8B0880B6DE"
+            },
+            "pins": {
+              "in:target": {
+                "id": "31068D52D1D9493AB8D008522D0D24BF",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "51318CE788ED4E36B20FE3E66E3D056D",
+                "type": "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "B0A4EB752724408F978F5442C1EFBF65",
+                "type": "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f",
+                "name": "B",
+                "DefaultObject": "\"/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Large.BP_Inventory_PlayerBox_Large_C\""
+              },
+              "out:result": {
+                "id": "12412A52E96E4FD2842E6CFFF0DE9B06",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "arguments": {},
+            "declarationDefaults": {},
+            "defaults": {
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_0",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.GameplayStatics'\",MemberName=\"GetObjectClass\")",
+              "NodePosX": "20",
+              "NodeGuid": "6D1B2E0AD58D4CA1B09AF9DDAF4CA1D1"
+            },
+            "pins": {
+              "in:target": {
+                "id": "92627C574B7249158EC6BC4322A67B1A",
+                "type": "p_adddc404e6cb74568f4fa0ff7a319018e1bcbcff87bbf3cc18ccdaa0211acb16",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__GameplayStatics\""
+              },
+              "in:Object": {
+                "id": "742564979D614CA8BFABB5F6DF97F9E2",
+                "type": "p_f28ac20dffb6cea691bdc6de1853f3113b944b6df5c73999021bbff4b099a407"
+              },
+              "out:result": {
+                "id": "EC223977459744E0B8C92A4085F46D06",
+                "type": "p_2dbbce0f989e768368c3915c0504216cd16ef08e87187d1259f6c29d332de6b1",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "K2Node_FunctionEntry_0",
+            "kind": "FunctionEntry",
+            "properties": {
+              "ExtraFlags": "268443648",
+              "FunctionReference": "(MemberName=\"IsLarge\")",
+              "NodePosX": "20",
+              "NodeGuid": "911B6DB6C513472FACD2B9565299A1E7"
+            },
+            "pins": {
+              "out:then": {
+                "id": "245C98F2817C40A99DE16F7D33D792DC",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:Actor": {
+                "id": "56B9B0D9DF9042D5B046B03B09754F8D",
+                "type": "p_ad5da19e14dc420faf4815f64d1a1b51203d2f7dba4a19c13340f70288968a6f"
+              },
+              "out:__WorldContext": {
+                "id": "C42F23E5A7A44869A0B49A0B658B153F",
+                "type": "p_137dae0f38cb3af05e303cdbe8d61b512d056e8ea7fb764a4466b638ff2542d5"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Actor\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.Actor'\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_FunctionResult_0",
+            "kind": "FunctionResult",
+            "properties": {
+              "NodePosX": "20",
+              "NodeGuid": "F9653037E9E441CCABF1E8471A47D532"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "9DC6889505C04E0CBB0921D2964F8A56",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:result": {
+                "id": "8B87A5FBC7EF4DEF9F93CF46BDEE531D",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:result": "false"
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"ReturnValue\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input,PinDefaultValue=\"false\")"
+            ]
+          }
+        ],
+        "links": [
+          {
+            "from": "ExactClass.out:result",
+            "to": "K2Node_FunctionResult_0.in:result"
+          },
+          {
+            "from": "K2Node_CallFunction_0.out:result",
+            "to": "ExactClass.in:left"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:Actor",
+            "to": "K2Node_CallFunction_0.in:Object"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:then",
+            "to": "K2Node_FunctionResult_0.in:exec"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IsMedium",
+      "kind": "function",
+      "properties": {
+        "GraphGuid": "F1FD03950A2044BBB7938015463EF749"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "ExactClass",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"EqualEqual_ClassClass\")",
+              "NodeGuid": "7F313CD7008E4CABA4844E5F465876B1"
+            },
+            "pins": {
+              "in:target": {
+                "id": "D5CF3ECCABCD485DA6A87687FEF352E6",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "E1E9D613EAB04EDAB0E26A2E8D275CE9",
+                "type": "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "E6F34F9A78114397959428ECCBF31ED6",
+                "type": "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f",
+                "name": "B",
+                "DefaultObject": "\"/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C\""
+              },
+              "out:result": {
+                "id": "10C4AAFDEE7C4C918797AD598185C829",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "arguments": {},
+            "declarationDefaults": {},
+            "defaults": {
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_0",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.GameplayStatics'\",MemberName=\"GetObjectClass\")",
+              "NodePosX": "20",
+              "NodeGuid": "9ED9085E586C484EA0D077D786275D00"
+            },
+            "pins": {
+              "in:target": {
+                "id": "6CC2B3EEC78D41F1875495FCD9363935",
+                "type": "p_adddc404e6cb74568f4fa0ff7a319018e1bcbcff87bbf3cc18ccdaa0211acb16",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__GameplayStatics\""
+              },
+              "in:Object": {
+                "id": "E3B177889AD444AA97A24445D6594591",
+                "type": "p_f28ac20dffb6cea691bdc6de1853f3113b944b6df5c73999021bbff4b099a407"
+              },
+              "out:result": {
+                "id": "A17E19334FF14E4C82F7326DEC13DA94",
+                "type": "p_2dbbce0f989e768368c3915c0504216cd16ef08e87187d1259f6c29d332de6b1",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "K2Node_FunctionEntry_0",
+            "kind": "FunctionEntry",
+            "properties": {
+              "ExtraFlags": "268443648",
+              "FunctionReference": "(MemberName=\"IsMedium\")",
+              "NodePosX": "20",
+              "NodeGuid": "EF912C8FD58045E3830D10B3AC82A4C1"
+            },
+            "pins": {
+              "out:then": {
+                "id": "E5A67C00003D46B8A1A5267451E86C0D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:Actor": {
+                "id": "DC622D010D1640C89951AA69D048FCAA",
+                "type": "p_ad5da19e14dc420faf4815f64d1a1b51203d2f7dba4a19c13340f70288968a6f"
+              },
+              "out:__WorldContext": {
+                "id": "137A62029A434F4B9B53313E4C320945",
+                "type": "p_137dae0f38cb3af05e303cdbe8d61b512d056e8ea7fb764a4466b638ff2542d5"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Actor\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.Actor'\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_FunctionResult_0",
+            "kind": "FunctionResult",
+            "properties": {
+              "NodePosX": "20",
+              "NodeGuid": "2761932A1BAC4593A9F5A80E4D5AB57C"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "1084ACCEB83A4FAEAA47B7996097BA40",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:result": {
+                "id": "F23A3F74A1F24DB5A162EE809274FEFB",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:result": "false"
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"ReturnValue\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input,PinDefaultValue=\"false\")"
+            ]
+          }
+        ],
+        "links": [
+          {
+            "from": "ExactClass.out:result",
+            "to": "K2Node_FunctionResult_0.in:result"
+          },
+          {
+            "from": "K2Node_CallFunction_0.out:result",
+            "to": "ExactClass.in:left"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:Actor",
+            "to": "K2Node_CallFunction_0.in:Object"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:then",
+            "to": "K2Node_FunctionResult_0.in:exec"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IsSmall",
+      "kind": "function",
+      "properties": {
+        "GraphGuid": "A4FD56F17DA24C49AAEF0322E447F127"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "ExactClass",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"EqualEqual_ClassClass\")",
+              "NodeGuid": "C64B0E0459184B32889E2532399F9F82"
+            },
+            "pins": {
+              "in:target": {
+                "id": "84020603B21449F59735726D1CEE9B53",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "C66AF86483714DD1BCD056416E52C214",
+                "type": "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "30F303AD273547C2B124AF5A86C51C58",
+                "type": "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f",
+                "name": "B",
+                "DefaultObject": "\"/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Small.BP_Inventory_PlayerBox_Small_C\""
+              },
+              "out:result": {
+                "id": "71D309A9773E439F8C0AA2D333D60612",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "arguments": {},
+            "declarationDefaults": {},
+            "defaults": {
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_0",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.GameplayStatics'\",MemberName=\"GetObjectClass\")",
+              "NodePosX": "20",
+              "NodeGuid": "FE9E82AE3CBD4AC0B42EA046DCA6D713"
+            },
+            "pins": {
+              "in:target": {
+                "id": "11825D6A42E5425AAB1BF396DC62B635",
+                "type": "p_adddc404e6cb74568f4fa0ff7a319018e1bcbcff87bbf3cc18ccdaa0211acb16",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__GameplayStatics\""
+              },
+              "in:Object": {
+                "id": "1E0F0F97E77046EA9934E4F0714F2820",
+                "type": "p_f28ac20dffb6cea691bdc6de1853f3113b944b6df5c73999021bbff4b099a407"
+              },
+              "out:result": {
+                "id": "BD384D41A6D44E80ABD247F3B8741B58",
+                "type": "p_2dbbce0f989e768368c3915c0504216cd16ef08e87187d1259f6c29d332de6b1",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "K2Node_FunctionEntry_0",
+            "kind": "FunctionEntry",
+            "properties": {
+              "ExtraFlags": "268443648",
+              "FunctionReference": "(MemberName=\"IsSmall\")",
+              "NodePosX": "20",
+              "NodeGuid": "E9EA562A8ECA4C388DB0E408D88B537D"
+            },
+            "pins": {
+              "out:then": {
+                "id": "711A32A1510642E8BFCE1F13E91EFEFB",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:Actor": {
+                "id": "EC8C84C805504782BC3A011A83163A68",
+                "type": "p_ad5da19e14dc420faf4815f64d1a1b51203d2f7dba4a19c13340f70288968a6f"
+              },
+              "out:__WorldContext": {
+                "id": "4620D7630068484EAB765B6E4E8AB33D",
+                "type": "p_137dae0f38cb3af05e303cdbe8d61b512d056e8ea7fb764a4466b638ff2542d5"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Actor\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.Actor'\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_FunctionResult_0",
+            "kind": "FunctionResult",
+            "properties": {
+              "NodePosX": "20",
+              "NodeGuid": "44EBAAB2A4E24C18B5EE8647E5DEC361"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "435E35ECD86149A898D5F0C02486A18C",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:result": {
+                "id": "BB8BF97198D14AC29AA73AE39808792D",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:result": "false"
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"ReturnValue\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Input,PinDefaultValue=\"false\")"
+            ]
+          }
+        ],
+        "links": [
+          {
+            "from": "ExactClass.out:result",
+            "to": "K2Node_FunctionResult_0.in:result"
+          },
+          {
+            "from": "K2Node_CallFunction_0.out:result",
+            "to": "ExactClass.in:left"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:Actor",
+            "to": "K2Node_CallFunction_0.in:Object"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:then",
+            "to": "K2Node_FunctionResult_0.in:exec"
+          }
+        ]
+      }
+    }
+  ],
+  "dependencies": [
+    "/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C",
+    "/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Large.BP_Inventory_PlayerBox_Large_C",
+    "/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox_Small.BP_Inventory_PlayerBox_Small_C",
+    "/Script/Engine.Default__GameplayStatics",
+    "/Script/Engine.Default__KismetMathLibrary"
+  ],
+  "pinTemplates": {
+    "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0": {
+      "AutogeneratedDefaultValue": "\"false\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_adddc404e6cb74568f4fa0ff7a319018e1bcbcff87bbf3cc18ccdaa0211acb16": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.GameplayStatics'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"class\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/CoreUObject.Object'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_2dbbce0f989e768368c3915c0504216cd16ef08e87187d1259f6c29d332de6b1": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"class\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.Actor'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_137dae0f38cb3af05e303cdbe8d61b512d056e8ea7fb764a4466b638ff2542d5": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/CoreUObject.Object'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_f28ac20dffb6cea691bdc6de1853f3113b944b6df5c73999021bbff4b099a407": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/CoreUObject.Object'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "True",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_ad5da19e14dc420faf4815f64d1a1b51203d2f7dba4a19c13340f70288968a6f": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.Actor'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    }
+  },
+  "classes": {
+    "call": "/Script/BlueprintGraph.K2Node_CallFunction",
+    "FunctionEntry": "/Script/BlueprintGraph.K2Node_FunctionEntry",
+    "FunctionResult": "/Script/BlueprintGraph.K2Node_FunctionResult"
+  }
+}

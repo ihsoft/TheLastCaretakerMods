@@ -1,0 +1,809 @@
+{
+  "schema": 2,
+  "format": "compact-asset",
+  "asset": "/Game/UI/Game/Inventory/BP_PlayerBox_Text",
+  "parent": "/Script/UMG.UserWidget",
+  "editorRole": "stub",
+  "properties": {
+    "BlueprintSystemVersion": "2",
+    "bLegacyNeedToPurgeSkelRefs": "False",
+    "BlueprintGuid": "34F8E2FB409ABF4C5D62038935792495"
+  },
+  "widget": {
+    "tree": "BP_PlayerBox_Text:WidgetTree",
+    "objects": [
+      {
+        "id": "BP_PlayerBox_Text:WidgetTree",
+        "name": "WidgetTree",
+        "class": "/Script/UMG.WidgetTree",
+        "outer": "$blueprint",
+        "flags": 262153,
+        "properties": {}
+      }
+    ]
+  },
+  "variables": [
+    {
+      "VarName": "\"TextBlock\"",
+      "VarGuid": "C413B23D4E02DF7A8E2E16AA3CEEEDC5",
+      "VarType": "(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"Text Block\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"TextBlock_1\"",
+      "VarGuid": "C9D61B3E4A0297C609ECFA8E7659331F",
+      "VarType": "(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"Text Block 1\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"TestText\"",
+      "VarGuid": "499BEAE827544EBA993CF04722BF7FDC",
+      "VarType": "(PinCategory=\"text\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"TestText\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "73733"
+    },
+    {
+      "VarName": "\"TestFont\"",
+      "VarGuid": "6EAF360B26B84E0E87C2409404CB57F4",
+      "VarType": "(PinCategory=\"struct\",PinSubCategoryObject=\"/Script/CoreUObject.ScriptStruct'/Script/SlateCore.SlateFontInfo'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"TestFont\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "73733"
+    },
+    {
+      "VarName": "\"TestSmall\"",
+      "VarGuid": "56DDB4F9FF6E4289A320623D306F69A5",
+      "VarType": "(PinCategory=\"bool\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"TestSmall\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "73733"
+    }
+  ],
+  "defaults": {
+    "bHasScriptImplementedTick": "False",
+    "bHasScriptImplementedPaint": "False",
+    "TextBlock": "None",
+    "TextBlock_1": "None",
+    "TestText": "",
+    "TestFont": "(FontObject=None,FontMaterial=None,OutlineSettings=(OutlineSize=0,bMiteredCorners=False,bSeparateFillAlpha=False,bApplyOutlineToDropShadows=False,OutlineMaterial=None,OutlineColor=(R=0.000000,G=0.000000,B=0.000000,A=1.000000)),TypefaceFontName=\"\",Size=24.000000,LetterSpacing=0,SkewAmount=0.000000,bForceMonospaced=False,bMaterialIsStencil=False,MonospacedWidth=1.000000)",
+    "TestSmall": "False"
+  },
+  "graphs": [
+    {
+      "name": "SetSize",
+      "kind": "function",
+      "properties": {
+        "GraphGuid": "98F6A5674C31F90254FC39A7E27EDA67"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "CreateTextBlock",
+            "kind": "GenericCreateObject",
+            "properties": {
+              "NodePosX": "680",
+              "NodeGuid": "3ADA258864A94F6290B6FFA18721F00C"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "945C33F825BD4FFBA8B55EE19D21E113",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "864FED37EF0D474BAC0ACF60149B781B",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:Class": {
+                "id": "1F746E9653FB469392DE1A8FBB04828D",
+                "type": "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f",
+                "DefaultObject": "\"/Script/UMG.TextBlock\""
+              },
+              "out:result": {
+                "id": "B213955456A6422EB75947C47DC41C29",
+                "type": "p_a4b4e4aeee41a198351f436cdbd7609202c383a12765bbae3c996ffeeb829ad5",
+                "name": "ReturnValue"
+              },
+              "in:target": {
+                "id": "9CFD06C143A540E4A72FFF9954FBA093",
+                "type": "p_2f092b9d5cea8ffa430df55daaf95bb35c15cf030b0a9a6824aa20f284f322fb",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "CreateTextBlockSelf",
+            "kind": "self",
+            "properties": {
+              "NodePosX": "1020",
+              "NodeGuid": "AC0F00A0507B4CA38419E3C12673E382"
+            },
+            "pins": {
+              "out:target": {
+                "id": "2E4B40203B254B61A548152228406259",
+                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "CreateTextBlock_1",
+            "kind": "GenericCreateObject",
+            "properties": {
+              "NodePosX": "1700",
+              "NodeGuid": "0854FA1B2E684B639B5ED3F4CA952227"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "4481B9FB93104AE887D930AD69EC9F51",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "2B0B0C981E7D4CEFBB86BEF6795721E3",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:Class": {
+                "id": "F314E11B5EF1488196BFB3E26BD8DD4F",
+                "type": "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f",
+                "DefaultObject": "\"/Script/UMG.TextBlock\""
+              },
+              "out:result": {
+                "id": "5C171869660848AF9AE9982914A7ED1C",
+                "type": "p_a4b4e4aeee41a198351f436cdbd7609202c383a12765bbae3c996ffeeb829ad5",
+                "name": "ReturnValue"
+              },
+              "in:target": {
+                "id": "B5B6AF3E21EF4BF7BE8DC4D40462384C",
+                "type": "p_2f092b9d5cea8ffa430df55daaf95bb35c15cf030b0a9a6824aa20f284f322fb",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "CreateTextBlock_1Self",
+            "kind": "self",
+            "properties": {
+              "NodePosY": "260",
+              "NodeGuid": "AD0738E5059F4B0A854AB063E93DD3B7"
+            },
+            "pins": {
+              "out:target": {
+                "id": "498EA35656BC40968290606DFCD94E8F",
+                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_FunctionEntry_0",
+            "kind": "FunctionEntry",
+            "properties": {
+              "ExtraFlags": "201457664",
+              "FunctionReference": "(MemberName=\"SetSize\")",
+              "NodeGuid": "8575A1C54EC77C5A17B031B4E38805BB"
+            },
+            "pins": {
+              "out:then": {
+                "id": "DA0D7AD8434752FFFC557693227CBB59",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:IsSmallContainer": {
+                "id": "ABA1F1804CF1E53342A9CAA19A171F30",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"IsSmallContainer\",PinType=(PinCategory=\"bool\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "WriteTestSmall",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"TestSmall\",MemberGuid=56DDB4F9FF6E4289A320623D306F69A5,bSelfContext=True)",
+              "NodePosX": "340",
+              "NodeGuid": "15E4C716E1B144BEBF704CBF720C4F24"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "4DE1717A02624CB5BBF338C59CDAFEB1",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "15A114B3DB7D4E478E133CD03E021212",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:TestSmall": {
+                "id": "F3CB9F399B37473D941A9DC51843B25B",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:Output_Get": {
+                "id": "F05E39B70D274D7CA6457370FDEE0928",
+                "type": "p_b2a7bd72f8a232636d2a3951831b0b467cc223b358b7bdc1ec0304d59059c0f2"
+              },
+              "in:target": {
+                "id": "489876E7B23746019E829920CA481A6D",
+                "type": "p_ef5c7f2c15723b19d7e00232fa862d1b835b8402255a0466b46d0fbc9b076094",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:TestSmall": "false",
+              "out:Output_Get": "false"
+            }
+          },
+          {
+            "id": "WriteTextBlock",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"TextBlock\",MemberGuid=C413B23D4E02DF7A8E2E16AA3CEEEDC5,bSelfContext=True)",
+              "NodePosX": "1360",
+              "NodeGuid": "FD8B85E7D4E043DC88AF7F68187D1D28"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "43824830CBE14EF6A61DDEC0E44E5316",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "B5F6121E85844C22B3992DA430390670",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:TextBlock": {
+                "id": "C469AD9C78A74DEB80BE25758E296347",
+                "type": "p_a4b4e4aeee41a198351f436cdbd7609202c383a12765bbae3c996ffeeb829ad5"
+              },
+              "out:Output_Get": {
+                "id": "931B9F114B294151B6A31E5D68964EA7",
+                "type": "p_2a602fe379971c6386eba81b8293de6f52c5f885a2baef1fbee80816b03b7869"
+              },
+              "in:target": {
+                "id": "AE134D47F1554211825000D8F1BA4657",
+                "type": "p_ef5c7f2c15723b19d7e00232fa862d1b835b8402255a0466b46d0fbc9b076094",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "WriteTextBlock_1",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"TextBlock_1\",MemberGuid=C9D61B3E4A0297C609ECFA8E7659331F,bSelfContext=True)",
+              "NodePosX": "340",
+              "NodePosY": "260",
+              "NodeGuid": "FBEA8ADBB73E4FD8A71D8F5FCD6633A6"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "CE3D288B40C44CD9963B8E81D9978038",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "4BD45FC949FE4C3781FAB55DB264F2ED",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:TextBlock_1": {
+                "id": "F764182E6F3149F1AC71BBB6462237DC",
+                "type": "p_a4b4e4aeee41a198351f436cdbd7609202c383a12765bbae3c996ffeeb829ad5"
+              },
+              "out:Output_Get": {
+                "id": "8F0D0DF31A5540F59C5AA368C9994C2B",
+                "type": "p_2a602fe379971c6386eba81b8293de6f52c5f885a2baef1fbee80816b03b7869"
+              },
+              "in:target": {
+                "id": "CCCC1551D94D4A359BD0149B060C10BA",
+                "type": "p_ef5c7f2c15723b19d7e00232fa862d1b835b8402255a0466b46d0fbc9b076094",
+                "name": "self"
+              }
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "CreateTextBlock.out:result",
+            "to": "WriteTextBlock.in:TextBlock"
+          },
+          {
+            "from": "CreateTextBlock.out:then",
+            "to": "WriteTextBlock.in:exec"
+          },
+          {
+            "from": "CreateTextBlockSelf.out:target",
+            "to": "CreateTextBlock.in:target"
+          },
+          {
+            "from": "CreateTextBlock_1.out:result",
+            "to": "WriteTextBlock_1.in:TextBlock_1"
+          },
+          {
+            "from": "CreateTextBlock_1.out:then",
+            "to": "WriteTextBlock_1.in:exec"
+          },
+          {
+            "from": "CreateTextBlock_1Self.out:target",
+            "to": "CreateTextBlock_1.in:target"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:IsSmallContainer",
+            "to": "WriteTestSmall.in:TestSmall"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:then",
+            "to": "WriteTestSmall.in:exec"
+          },
+          {
+            "from": "WriteTestSmall.out:then",
+            "to": "CreateTextBlock.in:exec"
+          },
+          {
+            "from": "WriteTextBlock.out:then",
+            "to": "CreateTextBlock_1.in:exec"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SetFont",
+      "kind": "function",
+      "properties": {
+        "GraphGuid": "7B1E70874F3096E54BB2E9803A880E80"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "K2Node_FunctionEntry_0",
+            "kind": "FunctionEntry",
+            "properties": {
+              "ExtraFlags": "201457664",
+              "FunctionReference": "(MemberName=\"SetFont\")",
+              "NodeGuid": "FC8801D54FE836D626B5DAAA3FBC8F5C"
+            },
+            "pins": {
+              "out:then": {
+                "id": "F8C7272C435AD5623D4DA6B2B896BE2D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:Font": {
+                "id": "F6E6F6E1450A982093ED9BB82E3C29D0",
+                "type": "p_0102920a14290656ebd713d96616ab7631949d71a2734037e30281aa5c45ef7f"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Font\",PinType=(PinCategory=\"struct\",PinSubCategoryObject=\"/Script/CoreUObject.ScriptStruct'/Script/SlateCore.SlateFontInfo'\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "WriteTestFont",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"TestFont\",MemberGuid=6EAF360B26B84E0E87C2409404CB57F4,bSelfContext=True)",
+              "NodePosX": "340",
+              "NodeGuid": "A93EF08467754C31B42CDB32378B3D29"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "21E3073BE45E40D4A8D75D46E8A0AFF9",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "F222BC05207D4B3581A1BDEB8C4E569F",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:TestFont": {
+                "id": "CA2ECD615378477997E63FF5D4673FDC",
+                "type": "p_0102920a14290656ebd713d96616ab7631949d71a2734037e30281aa5c45ef7f"
+              },
+              "out:Output_Get": {
+                "id": "AC5BD497BC7D40B190D38294BA28AF96",
+                "type": "p_a4d841d5295e65e6145aec8ef5432a8851d0741c93816e1479057fca3a1f2ec8"
+              },
+              "in:target": {
+                "id": "74D7C9FBDA9F45DA89A10B9ABE26EDEA",
+                "type": "p_ef5c7f2c15723b19d7e00232fa862d1b835b8402255a0466b46d0fbc9b076094",
+                "name": "self"
+              }
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "K2Node_FunctionEntry_0.out:Font",
+            "to": "WriteTestFont.in:TestFont"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:then",
+            "to": "WriteTestFont.in:exec"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SetText",
+      "kind": "function",
+      "properties": {
+        "GraphGuid": "DBC5FB9448AC7D11D88550AB93F9EC19"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "K2Node_FunctionEntry_0",
+            "kind": "FunctionEntry",
+            "properties": {
+              "ExtraFlags": "201457664",
+              "FunctionReference": "(MemberName=\"SetText\")",
+              "NodeGuid": "0D5A959C4AA0965C91093CBB969E8739"
+            },
+            "pins": {
+              "out:then": {
+                "id": "2827AFCD44A4986520007586AA8DDAA8",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:Text": {
+                "id": "FD97D34146E27333848751859A4C2CFD",
+                "type": "p_18af6e7815cce4023974f11fe644f612d1d3f48c3f8d3ec47d97f0ac5a7895f1"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"Text\",PinType=(PinCategory=\"text\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "WriteTestText",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"TestText\",MemberGuid=499BEAE827544EBA993CF04722BF7FDC,bSelfContext=True)",
+              "NodePosX": "340",
+              "NodeGuid": "2C65422ACA3645E3860115D57A77F202"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "3D58A8FC02E5412F9C5BAB55F99D08D0",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "545DF3AA76C348088B0C1FFBA2348C1E",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:TestText": {
+                "id": "C1B910EC281A4414BB0D10C68B91D395",
+                "type": "p_18af6e7815cce4023974f11fe644f612d1d3f48c3f8d3ec47d97f0ac5a7895f1"
+              },
+              "out:Output_Get": {
+                "id": "CA291250F365465885D261B34F06AB14",
+                "type": "p_087fa6554386bb24bde923fadf51de362b204389fac9c704cfb19c58333c266f"
+              },
+              "in:target": {
+                "id": "52762340D97F4A62B3E3D4E2CBD6C12E",
+                "type": "p_ef5c7f2c15723b19d7e00232fa862d1b835b8402255a0466b46d0fbc9b076094",
+                "name": "self"
+              }
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "K2Node_FunctionEntry_0.out:Text",
+            "to": "WriteTestText.in:TestText"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:then",
+            "to": "WriteTestText.in:exec"
+          }
+        ]
+      }
+    }
+  ],
+  "dependencies": [
+    "/Script/UMG.TextBlock"
+  ],
+  "pinTemplates": {
+    "p_b2a7bd72f8a232636d2a3951831b0b467cc223b358b7bdc1ec0304d59059c0f2": {
+      "AutogeneratedDefaultValue": "\"false\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0": {
+      "AutogeneratedDefaultValue": "\"false\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_ef5c7f2c15723b19d7e00232fa862d1b835b8402255a0466b46d0fbc9b076094": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/UMG.WidgetBlueprintGeneratedClass'/Game/UI/Game/Inventory/BP_PlayerBox_Text.BP_PlayerBox_Text_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_2f092b9d5cea8ffa430df55daaf95bb35c15cf030b0a9a6824aa20f284f322fb": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "\"Outer\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/CoreUObject.Object'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_2a602fe379971c6386eba81b8293de6f52c5f885a2baef1fbee80816b03b7869": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a4d841d5295e65e6145aec8ef5432a8851d0741c93816e1479057fca3a1f2ec8": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/SlateCore.SlateFontInfo'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_087fa6554386bb24bde923fadf51de362b204389fac9c704cfb19c58333c266f": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"text\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"class\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/CoreUObject.Object'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a4b4e4aeee41a198351f436cdbd7609202c383a12765bbae3c996ffeeb829ad5": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"self\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_0102920a14290656ebd713d96616ab7631949d71a2734037e30281aa5c45ef7f": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/SlateCore.SlateFontInfo'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_18af6e7815cce4023974f11fe644f612d1d3f48c3f8d3ec47d97f0ac5a7895f1": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"text\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    }
+  },
+  "classes": {
+    "GenericCreateObject": "/Script/BlueprintGraph.K2Node_GenericCreateObject",
+    "self": "/Script/BlueprintGraph.K2Node_Self",
+    "FunctionEntry": "/Script/BlueprintGraph.K2Node_FunctionEntry",
+    "setVariable": "/Script/BlueprintGraph.K2Node_VariableSet"
+  }
+}

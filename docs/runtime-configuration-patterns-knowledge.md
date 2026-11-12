@@ -2,7 +2,7 @@
 
 This is a reusable implementation recipe, not a claim that every game class has
 the same events or native API. Railgun and StableGyro implement the canonical
-INI/schema and reload pattern; ContainerLidLabel demonstrates a narrower cache.
+INI/schema and reload pattern; ContainerLidLabel demonstrates a manager-owned snapshot.
 A strictly session-lived single-read owner and one shared snapshot for multiple
 helpers are proposed standards, not behavior established in all three mods.
 
@@ -36,9 +36,9 @@ received the value. An entry reload does not justify duplicate reads by several
 helpers on the same entry; give them one effective snapshot. If no suitable
 session-lived owner exists, a class default object (CDO) cache can avoid a read
 per instance, but it has a weaker contract: class unload/reload may reread the
-INI. The current [ContainerLidLabel cache](../mods/ContainerLidLabel/ARCHITECTURE.md)
-is once per loaded class, **not guaranteed once per game process**. Do not
-describe it as a strict session snapshot without changing that ownership.
+INI. [ContainerLidLabel](../mods/ContainerLidLabel/ARCHITECTURE.md#settings-ownership)
+uses its DML ModActor as the snapshot owner: one parser load at initialization,
+then stored instance values for existing and subsequently discovered containers.
 
 ## Author one settings contract
 
@@ -137,11 +137,11 @@ mutation, preserves a temporary exact recovery copy, and reads back the final
 file. The shared [release policy](release-and-installation-rule.md) owns the
 transaction and rollback lifetime.
 
-Railgun and StableGyro already merge active settings on installation. The
-ContainerLidLabel installer does **not** manage its external INI; its
-[configuration contract](../mods/ContainerLidLabel/CONFIGURATION.md)
-requires a separate backup and migration. That is not the pattern to copy for
-a new configurable mod.
+Railgun and StableGyro merge active settings on installation.
+[ContainerLidLabel's owning installer](../mods/ContainerLidLabel/Install-ContainerLidLabel.ps1)
+also preserves its user INI and handles its documented migration to LogicMods.
+Use the mod's entry point so container installation and settings recovery remain
+part of the same guarded operation.
 
 ## Short path for a coding agent
 

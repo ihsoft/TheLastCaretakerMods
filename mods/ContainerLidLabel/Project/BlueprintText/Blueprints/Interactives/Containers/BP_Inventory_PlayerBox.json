@@ -1,0 +1,186 @@
+{
+  "schema": 2,
+  "format": "compact-asset",
+  "asset": "/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox",
+  "parent": "/Script/Engine.Actor",
+  "editorRole": "stub",
+  "properties": {
+    "BlueprintSystemVersion": "2",
+    "bLegacyNeedToPurgeSkelRefs": "False",
+    "BlueprintGuid": "DB49F101549742D5BAC67ACADF43E862"
+  },
+  "components": {
+    "objects": [
+      {
+        "id": "BP_Inventory_PlayerBox_C:DefaultSceneRoot_GEN_VARIABLE",
+        "name": "DefaultSceneRoot_GEN_VARIABLE",
+        "class": "/Script/Engine.SceneComponent",
+        "outer": "$class",
+        "flags": 41,
+        "properties": {
+          "bVisualizeComponent": "True"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:LeftIconPlane_GEN_VARIABLE",
+        "name": "LeftIconPlane_GEN_VARIABLE",
+        "class": "/Script/Engine.StaticMeshComponent",
+        "outer": "$class",
+        "flags": 41,
+        "properties": {
+          "StaticMesh": "/Script/Engine.StaticMesh'/Engine/BasicShapes/Plane.Plane'",
+          "bGenerateOverlapEvents": "False"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:PlayerBox_Lid_GEN_VARIABLE",
+        "name": "PlayerBox_Lid_GEN_VARIABLE",
+        "class": "/Script/Engine.StaticMeshComponent",
+        "outer": "$class",
+        "flags": 41,
+        "properties": {}
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:ResourceMeter_GEN_VARIABLE",
+        "name": "ResourceMeter_GEN_VARIABLE",
+        "class": "/Script/Engine.StaticMeshComponent",
+        "outer": "$class",
+        "flags": 41,
+        "properties": {
+          "StaticMesh": "/Script/Engine.StaticMesh'/Engine/BasicShapes/Plane.Plane'",
+          "bGenerateOverlapEvents": "False"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:RightIconPlane_GEN_VARIABLE",
+        "name": "RightIconPlane_GEN_VARIABLE",
+        "class": "/Script/Engine.StaticMeshComponent",
+        "outer": "$class",
+        "flags": 41,
+        "properties": {
+          "StaticMesh": "/Script/Engine.StaticMesh'/Engine/BasicShapes/Plane.Plane'",
+          "bGenerateOverlapEvents": "False"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0",
+        "name": "SimpleConstructionScript_0",
+        "class": "/Script/Engine.SimpleConstructionScript",
+        "outer": "$class",
+        "flags": 8,
+        "properties": {
+          "RootNodes": "(\"/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_1'\")",
+          "AllNodes": "(\"/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_1'\",\"/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_2'\",\"/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_3'\",\"/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_4'\",\"/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_5'\")",
+          "DefaultSceneRootNode": "/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_0'"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_0",
+        "name": "SCS_Node_0",
+        "class": "/Script/Engine.SCS_Node",
+        "outer": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0",
+        "flags": 8,
+        "properties": {
+          "ComponentClass": "/Script/CoreUObject.Class'/Script/Engine.SceneComponent'",
+          "ComponentTemplate": "/Script/Engine.SceneComponent'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:DefaultSceneRoot_GEN_VARIABLE'",
+          "CategoryName": "NSLOCTEXT(\"SCS\", \"Default\", \"Default\")",
+          "VariableGuid": "8EC9492C1E7A4266A9D9D4E1337F535B",
+          "InternalVariableName": "DefaultSceneRoot"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_1",
+        "name": "SCS_Node_1",
+        "class": "/Script/Engine.SCS_Node",
+        "outer": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0",
+        "flags": 8,
+        "properties": {
+          "ComponentClass": "/Script/CoreUObject.Class'/Script/Engine.StaticMeshComponent'",
+          "ComponentTemplate": "/Script/Engine.StaticMeshComponent'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:PlayerBox_Lid_GEN_VARIABLE'",
+          "CategoryName": "NSLOCTEXT(\"SCS\", \"Default\", \"Default\")",
+          "ChildNodes": "(\"/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_2'\",\"/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_3'\",\"/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_4'\",\"/Script/Engine.SCS_Node'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_5'\")",
+          "VariableGuid": "34A73ED9FA4D42F1B7BA42430FCC2411",
+          "InternalVariableName": "PlayerBox_Lid"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_2",
+        "name": "SCS_Node_2",
+        "class": "/Script/Engine.SCS_Node",
+        "outer": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0",
+        "flags": 8,
+        "properties": {
+          "ComponentClass": "/Script/CoreUObject.Class'/Script/Voyage.VoyageInventoryWeightLimitedComponent'",
+          "ComponentTemplate": "/Script/Voyage.VoyageInventoryWeightLimitedComponent'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:VoyageInventoryWeightLimited_GEN_VARIABLE'",
+          "CategoryName": "NSLOCTEXT(\"SCS\", \"Default\", \"Default\")",
+          "VariableGuid": "A9E2699C8F9D4087A03E6E768ED910C8",
+          "InternalVariableName": "VoyageInventoryWeightLimited"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_3",
+        "name": "SCS_Node_3",
+        "class": "/Script/Engine.SCS_Node",
+        "outer": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0",
+        "flags": 8,
+        "properties": {
+          "ComponentClass": "/Script/CoreUObject.Class'/Script/Engine.StaticMeshComponent'",
+          "ComponentTemplate": "/Script/Engine.StaticMeshComponent'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:LeftIconPlane_GEN_VARIABLE'",
+          "CategoryName": "NSLOCTEXT(\"SCS\", \"Default\", \"Default\")",
+          "VariableGuid": "E019DEE1EA0243838C6A464D0F709B17",
+          "InternalVariableName": "LeftIconPlane"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_4",
+        "name": "SCS_Node_4",
+        "class": "/Script/Engine.SCS_Node",
+        "outer": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0",
+        "flags": 8,
+        "properties": {
+          "ComponentClass": "/Script/CoreUObject.Class'/Script/Engine.StaticMeshComponent'",
+          "ComponentTemplate": "/Script/Engine.StaticMeshComponent'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:RightIconPlane_GEN_VARIABLE'",
+          "CategoryName": "NSLOCTEXT(\"SCS\", \"Default\", \"Default\")",
+          "VariableGuid": "CE919CF7F991444C9BF60A2E22E6FEBF",
+          "InternalVariableName": "RightIconPlane"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0.SCS_Node_5",
+        "name": "SCS_Node_5",
+        "class": "/Script/Engine.SCS_Node",
+        "outer": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0",
+        "flags": 8,
+        "properties": {
+          "ComponentClass": "/Script/CoreUObject.Class'/Script/Engine.StaticMeshComponent'",
+          "ComponentTemplate": "/Script/Engine.StaticMeshComponent'/Game/Blueprints/Interactives/Containers/BP_Inventory_PlayerBox.BP_Inventory_PlayerBox_C:ResourceMeter_GEN_VARIABLE'",
+          "CategoryName": "NSLOCTEXT(\"SCS\", \"Default\", \"Default\")",
+          "VariableGuid": "B7A8C0587A924178A3BC0966D350F0A4",
+          "InternalVariableName": "ResourceMeter"
+        }
+      },
+      {
+        "id": "BP_Inventory_PlayerBox_C:VoyageInventoryWeightLimited_GEN_VARIABLE",
+        "name": "VoyageInventoryWeightLimited_GEN_VARIABLE",
+        "class": "/Script/Voyage.VoyageInventoryWeightLimitedComponent",
+        "outer": "$class",
+        "flags": 41,
+        "properties": {
+          "Name": "INVTEXT(\"Editor container\")",
+          "IconPaletteData": "/Script/CoreUObject.Object'/Script/CoreUObject.Default__Object'"
+        }
+      }
+    ],
+    "scs": "BP_Inventory_PlayerBox_C:SimpleConstructionScript_0",
+    "templates": [],
+    "generatedTemplates": []
+  },
+  "variables": [],
+  "defaults": {
+    "bActorEnableCollision": "False"
+  },
+  "graphs": [],
+  "dependencies": [],
+  "pinTemplates": {},
+  "classes": {}
+}

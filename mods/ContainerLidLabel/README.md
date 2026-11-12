@@ -1,7 +1,14 @@
 # ContainerLidLabel
 
-Adds configurable name, icons, and mass display to large container lids.
+DML mod adding names and icons to the lids of large, medium and small containers,
+with independently configurable capacities.
+
+Build from the repository root (see [build details](BUILD.md)):
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/ContainerLidLabel/Build-ContainerLidLabel.ps1
+$hostExe = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
+& ./tools/Invoke-UnrealQueued.ps1 -Operation 'Build ContainerLidLabel' `
+  -FilePath (Join-Path $PSHOME $hostExe) `
+  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',
+    'mods/ContainerLidLabel/Build-ContainerLidLabel.ps1')
 ```
