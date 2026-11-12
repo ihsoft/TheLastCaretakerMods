@@ -13,6 +13,12 @@ schemas, edit assets, generate Blueprint graphs, cook a release or install a mod
 into the game. BPT workspaces and the VoyageItem updater prepare declared project
 dependencies through this mechanism; other producers must call it explicitly.
 
+Loading or cooking an asset through native mirrors does not establish that its
+fields are editable in the standard Unreal Details panel. That requires editor
+property exposure, including nested fields. The owner selects an authoring path
+for those asset types; native preparation does not add arbitrary DataAsset
+editing to BPT.
+
 ## Prepare declared project dependencies
 
 Place `EditorSupport.json` beside the `.uproject`. Each entry names an

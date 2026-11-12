@@ -50,9 +50,17 @@ file through the normal release/installation workflow.
 ## Blueprint interface
 
 Construct the imported class with **Construct Object from Class**, supply an
-Outer, and retain the resulting object reference in the owner. Call `Load` once
+Outer, and keep the resulting reference alive through its last use. Call `Load` once
 with the chosen file path, then use the getters. Call `Reload` only when the
 owner's policy requires a new snapshot.
+
+For one synchronous function that constructs the parser, loads the file, reads
+the getters and stores only effective values, wire the construction result
+directly to those consumers. No persistent parser member or loaded flag is
+needed solely for that sequence. Retain the parser in an owner reference when
+later calls need its cache or `Reload`. `Outer` alone does not keep it alive;
+latent or deferred uses require a reference that survives until those uses.
+Parser lifetime and the owner's settings read policy are separate decisions.
 
 | Function | Inputs and defaults | Result |
 | --- | --- | --- |

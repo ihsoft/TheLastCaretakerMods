@@ -24,16 +24,32 @@ changes before publication and never include it in the Vortex ZIP.
 
 ## Runtime INI preparation
 
-Use the owning mod's public producer for normal builds. Its small settings
-adapter calls [`New-VoyageModSettings.ps1`](New-VoyageModSettings.ps1) with a
-canonical default INI, schema, generated header path, and copied INI path.
-The legacy `-CollectionKind` parameter is accepted for adapter compatibility;
-generation now always emits the common C++ array table. The tool validates
+Use the owning mod's public producer for normal builds. For maintained BPT
+graphs, import [VoyageModSettings.psm1](VoyageModSettings/VoyageModSettings.psm1)
+and call its exported `Read-VoyageModSettingsSchema`. It validates
 case-sensitive keys, number/boolean/quoted-string values, schema fallbacks,
-optional inclusive ranges, final storage, and duplicate-free repository INI,
-then copies the INI unchanged.
-`-GeneratedBy` names the mod adapter in the header comment. It writes no game
-files and requires no installed game or tool-version precheck.
+optional inclusive ranges, final storage, and duplicate-free repository INI.
+It returns normalized setting records and writes no files. Validation errors
+throw; only after success should the producer copy the canonical INI unchanged
+to its output directory, distinct from the input paths:
+
+```powershell
+$ErrorActionPreference = 'Stop'
+Import-Module ./tools/VoyageModSettings/VoyageModSettings.psm1 -Force
+$null = Read-VoyageModSettingsSchema `
+    -SchemaPath './mods/MyMod/Settings/MyMod.settings.json' `
+    -DefaultIniPath './mods/MyMod/Assets/MyMod.ini'
+$preparedDirectory = './Tmp/MyMod/settings'
+$null = New-Item -ItemType Directory -Path $preparedDirectory -Force
+Copy-Item -LiteralPath './mods/MyMod/Assets/MyMod.ini' `
+    -Destination (Join-Path $preparedDirectory 'MyMod.ini')
+```
+
+The [BPT INI library](BlueprintText/Library/IniFileParser/AGENTS.md) supplies the
+runtime parser; the consuming graphs own getters, fallbacks and application of
+values. This preparation path generates no header or graph and needs no separate
+mod adapter. It writes no game files and requires no installed game or
+tool-version precheck.
 
 A minimal numeric schema entry is:
 
@@ -53,6 +69,15 @@ string entries use JSON `true`/`false` and a JSON string as their required
 schema fallback. The distributed INI owns player comments, order, formatting,
 and shipped values.
 
+### C++ generator consumers
+
+Existing procedural consumers can call
+[`New-VoyageModSettings.ps1`](New-VoyageModSettings.ps1) with `-SchemaPath`,
+`-DefaultIniPath`, `-HeaderPath`, `-IniPath` and `-GeneratedBy`. It uses the same
+validator, copies the INI unchanged and emits the common C++ array table.
+`-GeneratedBy` names the adapter in the header comment. Legacy `-CollectionKind`
+is accepted for compatibility; it no longer selects a different table layout.
+
 An editor generator adds `tools/VoyageModSettings/Public` to its include paths,
 includes `VoyageModSettingsGraph.h`, and includes its generated header inside a
 small mod namespace. After creating the Blueprint and before adding graphs that
@@ -71,6 +96,8 @@ check(VoyageModSettings::Graph::AddSettingsLoader(
 `AddSettingsLoader` owns the parser/compile/loader/compile ordering. The cooked
 Blueprint carries those graphs, so players do not install a shared runtime mod.
 The mod keeps its existing lifecycle trigger and application setters.
+
+### Existing user INI
 
 For an existing user INI, [`Merge-VoyageModIni.ps1`](Merge-VoyageModIni.ps1)
 prepares a **new** file from `-TemplatePath`, `-CurrentPath`, and a fresh

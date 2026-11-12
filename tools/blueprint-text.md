@@ -139,8 +139,11 @@ the cooked stock package. Maps, fonts, textures, Input Actions and Input Mapping
 are dependencies or separate asset types, not Blueprint conversion targets.
 
 For direct Object Blueprints, create instances with `Construct Object from Class`, provide an `Outer`, and
-retain the result in an object-reference variable while it is needed. Each
-instance owns its own variables; `Outer` alone is not a lifetime guarantee.
+keep a reference alive through the last use. A synchronous function can pass the
+construction result directly to its consumers; a member variable is not required
+solely to hold that result. Later callbacks or deferred work need a reference
+whose lifetime covers those uses. Each instance owns its own variables;
+`Outer` alone is not a lifetime guarantee.
 File loading remains a normal callable runtime dependency, not a feature
 provided by UObject support itself.
 
@@ -154,6 +157,24 @@ prepared with `Invoke-BlueprintText.ps1 -Action Prepare`. It covers Object
 functions/defaults, a string map, an Actor consumer constructing two instances,
 independent member values and a retained reference across garbage collection.
 These are editor tests, not cooked-game validation.
+
+### Empty and absent graphs
+
+Graph contents, graph identity and Blueprint identity are separate:
+
+| State | Meaning |
+| --- | --- |
+| Disabled starter event | The node is still stored, with disabled state; it has not been removed. |
+| Isolated pure computation with no consumed result | Its presence does not establish executed work; it still counts as a stored node. |
+| FunctionEntry | The function's entry and declaration boundary, not a standalone operation. Its signature may still be needed by callers. |
+| Graph record with no nodes | The graph still exists. Zero nodes does not mean Removed in review. |
+| Graph absent from the proposed `graphs` array | That graph is absent; review can show its removal when it existed in Before. The Blueprint itself can remain. |
+
+A Blueprint with `graphs: []` can still supply a referenced class/package
+identity, inherited behavior, CDO/native defaults and SCS/components. Absence of
+authored graphs does not establish that the Blueprint is unused or removable.
+See the [semantic preservation rule](../docs/blueprint-graph-design-rule.md#preserve-execution-semantics)
+before removing graph content or parent calls.
 
 ### Blueprint Function Libraries
 

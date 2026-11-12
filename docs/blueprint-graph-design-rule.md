@@ -157,6 +157,11 @@ Use a straight execution chain for ordered calls. Use Sequence when the graph
 actually needs separately dispatched branches; Sequence is not a generic way to
 preserve the termination behavior of an extracted operation.
 
+Distinguish [empty and absent graphs](../tools/blueprint-text.md#empty-and-absent-graphs)
+from an unused Blueprint. A Construction Script containing only a parent call
+is not proven empty by its node count: establish the actual parent's behavior.
+An empty editor stub does not establish empty behavior in the shipping parent.
+
 ## Justify casts and validity checks
 
 Unnecessary checks and casts add apparent decisions that the human must interpret.
@@ -207,6 +212,9 @@ expected runtime condition. Removing an existing failure gate can change behavio
 even when successful execution is identical; identify and obtain agreement on
 that change instead of presenting it as a mechanical extraction. The shared
 [error-handling rule](error-handling-rule.md) still applies.
+
+For the limits of development diagnostics and early HUD notifications, see
+[Shipping feedback](vehicle-and-hud-modding-patterns-knowledge.md#feedback-before-the-hud-is-available).
 
 ## Keep the change reviewable
 

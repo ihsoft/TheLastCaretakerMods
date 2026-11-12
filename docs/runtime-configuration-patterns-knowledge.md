@@ -97,28 +97,27 @@ needs game checks of its own lifecycle and value application.
    for a game Blueprint override. Avoid polling for an owner or settings file
    when a lifecycle event or direct reference suffices.
 
-The shared [settings generator](../tools/New-VoyageModSettings.ps1) validates
-either schema shape, copies the default INI byte for byte, and emits one generic
-runtime table. The shared Blueprint graph generator in
-`tools/VoyageModSettings/Public` creates typed members and the parser/loader;
-each cooked mod contains its own generated graph and has no separately
-installed runtime dependency. StableGyro instead maintains a mod-owned BPT parser
-and consuming loaders in its Unreal project; its producer uses the shared schema validator
-without generating headers or graphs. Mod-local scripts retain existing public
-build interfaces. The shared
+The [INI preparation guide](../tools/mod-setup.md#runtime-ini-preparation)
+documents the shared `Read-VoyageModSettingsSchema` validator and copying the
+canonical INI without generating headers or graphs. Maintained BPT consumers
+use this path with their mod-owned parser and loaders. Existing C++ consumers
+can use the same validation through `New-VoyageModSettings.ps1`, which also
+emits a runtime table for `tools/VoyageModSettings/Public` graph generation.
+Both paths keep the runtime implementation inside the mod; neither requires
+a separately installed shared runtime package. The shared
 [INI merger](../tools/Merge-VoyageModIni.ps1) prepares a new file without
 changing the installed one: it keeps player values and comments, removes only
 explicitly retired keys/comments, and adds missing defaults. The owning
 installer performs the game-process check, replacement, readback, and rollback.
-The current concrete inputs and thin adapters are
+Concrete inputs and their owning producers are
 [Railgun INI](../mods/Railgun/Assets/Railgun.ini),
 [Railgun schema](../mods/Railgun/Settings/Railgun.settings.json),
-[Railgun generator](../mods/Railgun/Build/New-RailgunSettings.ps1),
+[Railgun producer](../mods/Railgun/Build-Railgun.ps1),
 [StableGyro INI](../mods/StableGyro/Assets/StableGyro.ini),
 [StableGyro schema](../mods/StableGyro/Settings/StableGyro.settings.json), and
 [StableGyro settings contract](../mods/StableGyro/MOD-RULES.md#settings-contract), plus
 [ContainerLidLabel schema](../mods/ContainerLidLabel/Settings/ContainerLidLabel.settings.json)
-and [generator](../mods/ContainerLidLabel/Build/New-ContainerLidLabelSettings.ps1).
+and [producer](../mods/ContainerLidLabel/Build-ContainerLidLabel.ps1).
 The normal build entry points remain `Build-Railgun.ps1` and
 `Build-StableGyro.ps1`; a coder adding a setting edits the INI, schema and
 runtime consumer, then runs that entry point. Their exact

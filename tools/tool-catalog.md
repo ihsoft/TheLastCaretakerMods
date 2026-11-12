@@ -33,6 +33,7 @@ failure handling.
 | Preview an exported HUD layout and copy review adjustments | `BlueprintText/Render-WidgetPreview.ps1` | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
 | Generate a settings header and INI | `New-VoyageModSettings.ps1` | [Mod setup](mod-setup.md) |
+| Validate a settings schema and default INI without generating C++ | `VoyageModSettings/VoyageModSettings.psm1` → `Read-VoyageModSettingsSchema` | [INI preparation](mod-setup.md#runtime-ini-preparation) |
 | Merge an existing user INI | `Merge-VoyageModIni.ps1` | [Mod setup](mod-setup.md) |
 | Get the installed Steam build ID | `Get-VoyageBuildFingerprint.ps1` | [Mappings](mappings.md) |
 | Check a mod's game-build pin | `Assert-VoyageModGameBuild.ps1` | [Release build](release-build.md) |
