@@ -29,9 +29,12 @@ $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $output = [IO.Path]::GetFullPath($OutputPath)
 $expectedName = $Material.Split('/')[-1] + '.materialpack.zip'
 $artifacts = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')) + [IO.Path]::DirectorySeparatorChar
-if (-not $output.StartsWith($artifacts, [StringComparison]::OrdinalIgnoreCase) -or
+$temporary = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp')) + [IO.Path]::DirectorySeparatorChar
+$supportedRoot = $output.StartsWith($temporary, [StringComparison]::OrdinalIgnoreCase) -or
+    $output.StartsWith($artifacts, [StringComparison]::OrdinalIgnoreCase)
+if (-not $supportedRoot -or
     [IO.Path]::GetFileName($output) -cne $expectedName) {
-    throw "Game-derived material pack must be a fresh artifacts/.../$expectedName path."
+    throw "Game-derived material pack must be a fresh $expectedName path below repository Tmp, or below artifacts only when retention was explicitly justified."
 }
 $evidence = $output + '.evidence'
 if ((Test-Path -LiteralPath $output) -or (Test-Path -LiteralPath $evidence)) { throw 'Output/evidence already exists; choose a new output path.' }

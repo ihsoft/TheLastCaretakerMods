@@ -49,6 +49,7 @@ failure handling.
 | Render material previews | `Export-VoyageMaterialPreview.ps1` | [Material export](material-export.md) |
 | Package one material | `Export-VoyageMaterialPack.ps1` | [Material export](material-export.md) |
 | Package a material batch | `Export-VoyageMaterialBundle.ps1` | [Material export](material-export.md) |
+| Check material export destinations and existing-output protection without game data | `VoyageMaterialLibrary/Test-OutputPaths.ps1` | [Output-path regression](material-export.md#output-path-regression) |
 | Inspect a GLB or owning model registry | `glb/inspect_glb.py` | [GLB tools](glb-tools.md) |
 | Preview a GLB | `glb/preview_glb.py` | [GLB tools](glb-tools.md) |
 | Preview imported material swatches | `glb/preview_material_glb.py` | [GLB tools](glb-tools.md) |

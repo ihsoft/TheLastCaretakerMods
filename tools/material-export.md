@@ -23,18 +23,17 @@ suffixes, wildcards, or fragments. For batch calls through
 `powershell.exe -File`, use `-MaterialsFile` with a UTF-8 JSON array of unique
 strings.
 
-## Output location and current limitation
+## Output location
 
 The [artifact lifecycle](../docs/artifact-lifecycle-rule.md) requires `Tmp/`
 for ordinary one-cycle exports; retention under `artifacts/` needs a concrete
 continuing consumer. A reusable exchange format alone does not justify retention.
 
-The four current wrappers accept only fresh output paths under `artifacts/`
-and reject `Tmp/`. This is a tool limitation, not an exception to that policy.
-The examples below apply only to an export whose retention is already justified;
-replace `<registered-family>` with its owning artifact family. For a temporary-only
-request, report the unsupported output destination rather than inventing a
-retention reason or routing temporary files through `artifacts/`.
+All four wrappers accept fresh paths below repository `Tmp/`, or below ignored
+`artifacts/` when retention is justified. They reject other destinations,
+incorrect extensions or required archive names, and existing output/evidence
+paths. Mod callers choose `Tmp/<Mod>/`; standalone exports may use
+`Tmp/material-export/`. Evidence is written beside the selected output.
 
 ## GLB and preview
 
@@ -42,12 +41,12 @@ retention reason or routing temporary files through `artifacts/`.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Export-VoyageMaterialsGlb.ps1 `
   -MaterialsFile tools\VoyageMaterialLibrary\socket-materials.example.json `
   -MaterialMode PbrApproximation `
-  -OutputPath 'artifacts\<registered-family>\socket-materials.glb'
+  -OutputPath 'Tmp\material-export\samples\socket-materials.glb'
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Export-VoyageMaterialPreview.ps1 `
   -MaterialsFile tools\VoyageMaterialLibrary\socket-materials.example.json `
   -MaterialMode BakeReconstructed `
-  -OutputPath 'artifacts\<registered-family>\socket-materials.png'
+  -OutputPath 'Tmp\material-export\preview\socket-materials.png'
 ```
 
 The GLB contains sample geometry so ordinary importers retain its materials;
@@ -63,13 +62,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Export-VoyageMater
   -MaterialMode BakeReconstructed `
   -Profile Full `
   -SourceTextures MetadataOnly `
-  -OutputPath 'artifacts\<registered-family>\MI_Material.materialpack.zip'
+  -OutputPath 'Tmp\material-export\pack\MI_Material.materialpack.zip'
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Export-VoyageMaterialBundle.ps1 `
   -MaterialsFile tools\VoyageMaterialLibrary\socket-materials.example.json `
   -BundleName MaterialCandidates `
   -MaterialMode BakeReconstructed `
-  -OutputPath 'artifacts\<registered-family>\MaterialCandidates.materialbundle.zip'
+  -OutputPath 'Tmp\material-export\bundle\MaterialCandidates.materialbundle.zip'
 ```
 
 The pack contains no model or GLB. It carries one material's preview, bounded
@@ -100,3 +99,12 @@ complete extraction. Read detailed evidence only for the reported material or
 failure. Inspect source after a reproducible wrapper failure or for explicit
 tool development. Source changes are published through
 `VoyageMaterialLibrary/Publish.ps1` and then exercised through the public wrapper.
+
+## Output-path regression
+
+For changes to wrapper output handling, run
+`powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/VoyageMaterialLibrary/Test-OutputPaths.ps1`.
+It exercises the four public scripts in an isolated temporary repository layout,
+including bundle-to-pack calls, and stops before game inspection or rendering.
+It checks destination acceptance and rejection and preservation of existing
+output/evidence; it does not replace a real export when export behavior changes.

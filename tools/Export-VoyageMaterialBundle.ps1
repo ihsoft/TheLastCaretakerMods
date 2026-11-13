@@ -36,9 +36,12 @@ if ($BundleName -notmatch '^[A-Za-z0-9_.-]+$' -or $BundleName -in '.', '..') {
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $output = [IO.Path]::GetFullPath($OutputPath)
 $artifacts = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')) + [IO.Path]::DirectorySeparatorChar
+$temporary = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp')) + [IO.Path]::DirectorySeparatorChar
+$supportedRoot = $output.StartsWith($temporary, [StringComparison]::OrdinalIgnoreCase) -or
+    $output.StartsWith($artifacts, [StringComparison]::OrdinalIgnoreCase)
 $expectedName = $BundleName + '.materialbundle.zip'
-if (-not $output.StartsWith($artifacts, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($output) -cne $expectedName) {
-    throw "Game-derived material bundle must be a fresh artifacts/.../$expectedName path."
+if (-not $supportedRoot -or [IO.Path]::GetFileName($output) -cne $expectedName) {
+    throw "Game-derived material bundle must be a fresh $expectedName path below repository Tmp, or below artifacts only when retention was explicitly justified."
 }
 $evidence = $output + '.evidence'
 if ((Test-Path -LiteralPath $output) -or (Test-Path -LiteralPath $evidence)) { throw 'Output/evidence already exists; choose a new output path.' }

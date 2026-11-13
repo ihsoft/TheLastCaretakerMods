@@ -27,8 +27,11 @@ if ($Materials.Count -eq 0 -or $Materials.Count -gt 128 -or
 }
 $output = [IO.Path]::GetFullPath($OutputPath)
 $artifacts = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')) + [IO.Path]::DirectorySeparatorChar
-if (-not $output.StartsWith($artifacts, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetExtension($output) -ine '.glb') {
-    throw 'Game-derived GLB output must be a fresh .glb path below this repository artifacts directory.'
+$temporary = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp')) + [IO.Path]::DirectorySeparatorChar
+$supportedRoot = $output.StartsWith($temporary, [StringComparison]::OrdinalIgnoreCase) -or
+    $output.StartsWith($artifacts, [StringComparison]::OrdinalIgnoreCase)
+if (-not $supportedRoot -or [IO.Path]::GetExtension($output) -ine '.glb') {
+    throw 'Game-derived GLB output must be a fresh .glb path below repository Tmp, or below artifacts only when retention was explicitly justified.'
 }
 $evidence = $output + '.evidence'
 if ((Test-Path -LiteralPath $output) -or (Test-Path -LiteralPath $evidence)) { throw 'Output/evidence already exists; choose a new output path.' }

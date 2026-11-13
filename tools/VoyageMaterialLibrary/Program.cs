@@ -124,7 +124,6 @@ internal static partial class Program
                     materialMode == "BakeReconstructed" ? "reconstructed-bake" : "approximate",
                 materialMode,
                 steamBuildId = build, mappingPath = Path.GetFullPath(Str("mappingPath")),
-                stockContainers = fingerprint["containers"]!.AsArray().Where(x => StockProvider.IsStock(x!["name"]!.GetValue<string>())).Select(x => x!.DeepClone()).ToArray(),
                 materials = reports, textures = textureCache.Values, materialPipeline,
                 note = materialMode == "BakeReconstructed" && sourceArtifactPolicy == "embedded"
                     ? "One UV sample panel per material; known cooked-parameter recipes are reconstructed. All decodable Texture2D inputs are embedded as machine-indexed source artifacts."
