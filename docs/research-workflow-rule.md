@@ -15,8 +15,8 @@ backlog only when those pointers are insufficient.
 
 ## Start with the question and its owner
 
-1. State the behavior or contract that is unknown and identify the mod that
-   owns the question. Read its current rules and relevant architecture or
+1. State the behavior or contract that is unknown and identify the owning mod,
+   tool, or repository area. Read its current rules and relevant architecture or
    research notes. Use shared patterns and [research pitfalls](research-pitfalls-knowledge.md)
    only where they address that question; do not read every large document by
    default.
@@ -57,12 +57,16 @@ On completion, use the backlog to formulate the final durable documentation.
 Document the resulting verified contracts, not the investigation chronology.
 An explicit user request to establish a general process rule may be handled
 immediately; it does not authorize premature documentation of the implementation.
+The initial [new-mod skeleton](new-mod-rule.md#create-the-minimal-directory)
+may state the goal and unknown implementation status before research is complete;
+it does not establish a design or game contract.
 
 Work history is overhead. Use a backlog only for a large investigation or a
 prolonged fix that needs continuity across compaction or work sessions. Keep it
-local, with the owning mod, outside `Tmp/` so routine cleanup cannot remove it,
-and ignore it in Git. Never commit the backlog or turn it into repository
-documentation, including JSON metadata or a narrative of completed checks.
+local, with the owning mod or tool; repository-wide work may keep its note in
+the relevant repository area. Keep it outside `Tmp/` so routine cleanup cannot
+remove it, and ignore it in Git. Never commit the backlog or turn it into
+repository documentation, including JSON metadata or a narrative of completed checks.
 
 Keep a short restart section with the current checkpoint, established evidence,
 pending gates, next action, and links to the owning sources. Include an open

@@ -154,8 +154,7 @@ they were installed or tested in game.
 Only published releases belong in `artifacts/installations/`. After the exact
 ZIP is confirmed public on Nexus and `version.txt` has advanced to `N`, retain
 that ZIP and its original release manifest under
-`artifacts/installations/<Mod>-V<N>/`, for example
-`artifacts/installations/Railgun-V5/`. The directory identifies the published
+`artifacts/installations/<Mod>-V<N>/`. The directory identifies the published
 release version, not a timestamp or installation run. Refuse to reuse an
 existing version directory for a different ZIP. Keep the selected ZIP there
 for later identification or rollback. The ZIP is the retained payload; loose
@@ -193,7 +192,7 @@ An installer may create a transaction record and copy existing files under
 `Tmp/<Mod>/installations/` while an installation or coupled settings edit is in
 progress. These are short-lived recovery data for an interrupted operation, not a package to
 choose for rollback after testing. Never put them in the versioned release
-directory. Railgun's settings backup has the same limited purpose: preserve
+directory. A settings backup has the same limited purpose: preserve
 the user's INI through the settings mutation, then discard the operation
 record once it has completed. Keep failure evidence in `Tmp/` only while it is
 needed to resolve that failure.
@@ -203,3 +202,6 @@ backup existing targets, install from a validated manifest, read back every
 installed file, and restore or stop with explicit recovery evidence on failure.
 Follow the [shared installer contract](../tools/release-installation.md#release-installation)
 and any owning mod's additional layout or settings contract.
+Do not silently change loader configuration. Report the installed package,
+physical destination, installation manifest and any unresolved recovery state
+before requesting its gameplay test.

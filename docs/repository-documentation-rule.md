@@ -32,10 +32,27 @@
   compatibility constraints may distinguish versions; they are not a work log.
 - Shared `docs/` content must have a concrete or reasonably expected use across
   mods. Keep mod-only contracts under the owning `mods/<mod>/`.
-  Write reusable conclusions without tying them to one mod; link to a mod as an
-  example when useful. Do not keep task histories or per-run measurements in the
-  shared reading path. Explicitly requested diagnostics use the opt-in method
-  linked from the subagent workflow.
+  Write reusable conclusions without tying them to one mod. Link to a mod example
+  only when it adds something the shared explanation does not provide, such as
+  a rare special case that does not justify expanding the shared document;
+  explain that value at the link. Do not keep task histories or per-run
+  measurements in the shared reading path. For explicitly requested resource
+  diagnostics, use the [agent work measurement method](agent-work-measurement-rule.md).
+- Root and mod `AGENTS.md` files are compact indexes, not collections of full
+  rules or architecture descriptions. Keep substantive guidance in its owning
+  document. Explain each link by the task or decision it helps with, so an agent
+  can choose whether to read it before loading the target. Do not require reading
+  every indexed document or following every link unconditionally. The same
+  selective-reading principle applies to links within shared and mod documents;
+  identify required dependencies by the operation that makes them relevant.
+- Shared guidance remains applicable until there are reasonable grounds to doubt
+  it on the current game version. An update alone does not invalidate a document
+  or require repeating its research. A verified game version may qualify the
+  evidence for a specific claim; it must not become a blanket prerequisite for
+  using the document. Record demonstrated compatibility limits on the affected
+  contract, mapping, or artifact rather than pinning the whole document to a
+  game version. Recheck affected claims when observed behavior, changed source
+  contracts, or tool diagnostics give reason to doubt them.
 - Repository-level README files are short folder labels. The tool index routes
   tasks to focused guides; the tool catalog records public entry points. Those
   guides contain only verified, established capabilities, current interfaces,
@@ -48,14 +65,16 @@
   and generated manifests only when those identities matter under the shared
   [hash rule](hash-usage-rule.md).
   Promote validated conclusions as general contracts without candidate labels;
-  retain version/fingerprint restrictions when they determine applicability.
+  retain demonstrated version/fingerprint restrictions on the specific contracts
+  or artifacts whose applicability they determine.
   Durable documentation describes accepted repository state. Until the requested
   end state and its required acceptance checks pass, keep findings and proposed
   contracts in the ignored backlog, not in documentation edits, including
   uncommitted drafts. Follow the
   [research workflow](research-workflow-rule.md#working-backlogs-for-large-tasks)
-  for final documentation derived from that backlog. Describe capabilities only
-  at the level supported by their
+  for final documentation derived from that backlog and the boundaries for an
+  initial mod skeleton or an explicitly requested process rule. Describe
+  capabilities only at the level supported by their
   evidence; build, structural, installation and clean-load success do not
   establish gameplay behavior.
 - Before committing documentation, make every link to a repository-local file
@@ -85,25 +104,24 @@
   intermediate behavior. It is not an architecture, knowledge, rule, work log,
   or release payload file.
 - Describe finished mods by their current behavior and necessary compatibility
-  boundaries. Keep exact selected release packages with artifacts.
+  boundaries. Keep exact published release packages with artifacts; selected
+  unpublished candidates follow the release workflow below.
 - The repository-wide [release and installation workflow](../docs/release-and-installation-rule.md)
   owns published-version identity, candidate retention, installation evidence,
   and installed-file layout for every mod. Mod-local rules may add necessary
   payload or migration contracts, but may not redefine those shared identities.
-- Autonomous DonkLift rules live in
-  `mods/DonkLiftKeyboardControl/MOD-RULES.md`; its `AGENTS.md` indexes them.
-- The preserved UE4SS/Lua DonkLift implementation is a separate alternative
-  under `mods/DonkLiftKeyboardControlUE4SS`; it is not a dependency of the
-  autonomous mod.
-- Shared Voyage vehicle/HUD patterns belong in
-  `docs/vehicle-and-hud-modding-patterns-knowledge.md`. Evidence and object-specific
-  findings remain in the architecture and research documents.
 - Current source, the closest rules, durable documentation, and the latest
   game-validated Git checkpoint are sources of truth. Chat history and local
   extracted artifacts are not.
 - Keep rules minimal and owned: remove obsolete or counterproductive rules,
   merge duplicates, and put command syntax and implementation conventions in
-  the owning tool documentation rather than repeating them here. Replace a
-  rule only after preserving its still-valid safety/data contract. Record the
+  the owning tool documentation rather than repeating them here. A short context
+  summary with a link is sufficient where another document owns the detail;
+  do not copy substantial explanations without a concrete need. Use enough
+  detail to make scope, obligations, and exceptions clear, without padding or
+  shortening away necessary meaning. Check changed guidance against its owning
+  shared and local rules, and resolve contradictions instead of leaving competing
+  instructions in place. Replace a rule only after preserving its still-valid
+  safety/data contract. Record the
   reason and verification with the change; do not retain a chronological
   history of superseded rules in the normal agent reading path.

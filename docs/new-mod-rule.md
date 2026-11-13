@@ -14,11 +14,6 @@ Investigate how to achieve the requested behavior only after identifying the
 object that owns it. Do not invent a game-build pin or choose an Unreal project,
 loader, override, or producer from the feature description alone.
 
-For example, a request to recolor all large containers can start from the
-[ContainerLidLabel architecture](../mods/ContainerLidLabel/ARCHITECTURE.md),
-which identifies the stock Large container Blueprint. That identity does not
-yet establish which material or component to change for the requested color.
-
 ## Create the minimal directory
 
 Once the mod has a name and one-sentence goal, call the public
@@ -28,8 +23,10 @@ creates `mods/<Mod>/` with only:
 - `AGENTS.md`: a short index to the repository index and local architecture.
   Add links when real mod-specific documents appear.
 - `ARCHITECTURE.md`: the goal and an explicit statement that no implementation
-  or game contract has been established yet. Replace that statement with the
-  current design and its known boundaries as evidence arrives.
+  or game contract has been established yet. Keep intermediate findings in the
+  working context or an ignored backlog. Replace the initial statement with
+  the accepted design and its known boundaries after the requested result and
+  required acceptance checks pass, following the research workflow below.
 - `README.md`: a short folder label, marked planned until the mod works. Add
   the command-line candidate build command when a public producer exists.
 - `version.txt`: `0`, because no numbered `V1` release has been published.

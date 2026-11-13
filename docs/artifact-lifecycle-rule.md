@@ -83,12 +83,10 @@ output does not substitute for either.
 
 ## Game-derived output and Git
 
-Do not commit data reproducible from the installed game: extracted assets,
-JSON, `.jmap`, pseudocode, raw reports, disassembly, cooked packages, container
-inventories, or installed-file backups. The reviewed `.usmap` registry under
-`mappings/Voyage/` is the explicit exception. User-authored mod assets are
-ordinary source inputs; that does not make extracted game meshes or materials
-committable. Storage lifetime does not change these Git boundaries.
+The [game-derived data rule](game-derived-data-rule.md) owns Git eligibility,
+including the exceptions for reviewed mappings and required maintained-project
+inputs. Storage lifetime does not make an otherwise excluded extraction or
+generated report committable.
 
 Bind retained game-derived inputs to the relevant Steam build ID and asset
 contract. Revalidate them when that contract changes. Engine-only conclusions

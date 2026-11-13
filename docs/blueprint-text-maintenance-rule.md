@@ -74,7 +74,8 @@ Keep unresolved findings in an ignored backlog under the
 current sources before treating them as restrictions.
 
 When resuming this role, read the local
-[BPT index](../tools/BlueprintText/AGENTS.md), any active backlog's restart section,
-and the relevant current implementation and checks. Expertise is maintained by
+[BPT index](../tools/BlueprintText/AGENTS.md) and any active backlog's restart section.
+Read implementation and checks when the current maintenance or diagnosis task
+requires them. Expertise is maintained by
 verified repository contracts, not an assumption that an earlier chat examined
 every possible Blueprint or engine behavior.

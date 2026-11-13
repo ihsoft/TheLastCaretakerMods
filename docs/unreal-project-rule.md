@@ -1,7 +1,8 @@
 # Unreal project ownership
 
-For mods adopting the Unreal-project authoring workflow, the Unreal project is
-the source of truth and contains all asset content that will enter the mod
+The recommended development workflow is a maintained Unreal project with BPT
+for Blueprint authoring. In this workflow, the project is the source of truth
+and contains all asset content that will enter the mod
 release: Blueprints, models, textures, materials, and every other shipped asset.
 The release producer cooks and packages that project content. The project is a
 maintained source asset store, not disposable output recreated on every build.
@@ -56,6 +57,13 @@ the exact changes. Transfer only intentionally changed saved assets, synchronize
 BPT and deliberately authored configuration or other source files. Never copy
 the whole working project back. A working copy is not a second source of truth.
 
+Refreshing game-derived project inputs is a source-update stage, separate from
+the disposable build. Review and accept the refreshed assets, owned patches,
+provenance and synchronized BPT into the maintained project through the same
+authoring boundary before taking the build copy. A build must not silently
+substitute refreshed release assets or write them back as build output.
+Accepting a source update does not itself authorize a commit or establish gameplay.
+
 Follow the [generated-output lifecycle](artifact-lifecycle-rule.md) for cleanup
 and failure evidence. Keep concrete copy, test, build and authoring commands in
 the owning mod or tool guide; do not duplicate them in this rule.
@@ -89,7 +97,9 @@ revalidation, rather than treating all project content as disposable extraction
 output. Keep intermediate dumps ignored and exclude editor-only placeholders
 from the release payload.
 
-Existing procedural producers remain descriptions of the current implementation
-until their mod is explicitly migrated. Migration must establish the maintained
-project, preserve required dependencies, and replace destructive regeneration
-of authored assets. Do not infer that a documentation change has migrated a mod.
+Pre-migration implementations and their temporary constraints belong in the
+owning mod's documentation, not in shared rules as alternative development
+patterns. Migration to the recommended workflow is explicit, scoped work:
+establish the maintained project, preserve required dependencies, and replace
+destructive regeneration of authored assets. A documentation change alone
+does not migrate a mod.

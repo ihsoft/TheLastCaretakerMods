@@ -23,7 +23,8 @@
   do not search for separate gameplay-validation evidence for them.
 - A successful compile, cook, container verification, clean log, or load is
   not gameplay/UI validation. Require a real-game test proportional to the
-  changed behavior.
+  changed behavior. Save/load and removal compatibility are separate claims
+  and require their own tests.
 - Until that real-game test confirms the intended behavior, keep the candidate's
   implementation, configuration, and build changes uncommitted. Keep proposed
   architecture, rules, knowledge, and other current-state documentation in an
@@ -34,5 +35,6 @@
   authorization. An explicit user request for an unvalidated checkpoint is the
   only exception and must preserve the missing validation boundary.
 - If an experiment removes control, causes autonomous behavior, corrupts UI,
-  or crashes, restore the last checkpoint instead of layering speculative
-  fixes on the unknown state.
+  or crashes, restore the previous known-good package through the
+  [installation and rollback workflow](release-and-installation-rule.md#installation-and-rollback)
+  instead of layering speculative fixes on the unknown installed state.

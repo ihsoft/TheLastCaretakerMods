@@ -15,14 +15,14 @@ A hash is allowed only when it directly implements one of these contracts:
   it never installs a bad copy, restores a damaged backup, or deletes a file it
   no longer owns. Keep these digests inside the operation and its temporary
   recovery evidence; discard them after successful cleanup.
-- **Exact published-archive identity.** A release manifest may retain one
-  digest for the final ZIP that was tested and published. This distinguishes
-  that immutable player-facing file from a rebuilt archive with the same name.
+- **Exact release-archive identity.** A release manifest may retain one digest
+  for the final candidate ZIP from creation through testing and publication.
+  This distinguishes the selected archive from a rebuilt ZIP with the same name;
+  the digest does not itself establish testing or publication status.
   Do not also retain hashes for every file already contained in that ZIP.
 - **A real time-of-check/time-of-use gate.** A producer may hash an input when
   it must prove that the same bytes cross a process or phase boundary after
-  validation. The Railgun cook list's Core SHA-1 is such an explicit producer
-  contract. Do not generalize one bounded gate into hashes for every input.
+  validation. Do not generalize one bounded gate into hashes for every input.
 - **Content-addressed storage or deduplication.** A digest may be an internal
   cache key when byte identity actually determines lookup, reuse, or
   invalidation. Keep it internal unless a caller must supply that key.

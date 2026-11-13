@@ -119,8 +119,8 @@ Concrete inputs and their owning producers are
 [ContainerLidLabel schema](../mods/ContainerLidLabel/Settings/ContainerLidLabel.settings.json)
 and [producer](../mods/ContainerLidLabel/Build-ContainerLidLabel.ps1).
 The normal build entry points remain `Build-Railgun.ps1` and
-`Build-StableGyro.ps1`; a coder adding a setting edits the INI, schema and
-runtime consumer, then runs that entry point. Their exact
+`Build-StableGyro.ps1`; adding a setting requires editing the INI, schema and
+runtime consumer, then running that entry point. Their exact
 mod-owned additions are described in the [Railgun settings contract](../mods/Railgun/ARCHITECTURE.md#settings-parser)
 and [StableGyro rules](../mods/StableGyro/MOD-RULES.md).
 
@@ -143,7 +143,7 @@ also preserves its user INI beside the LogicMods payload.
 Use the mod's entry point so container installation and settings recovery remain
 part of the same guarded operation.
 
-## Short path for a coding agent
+## Adding a setting
 
 When asked to add an INI or a setting, use the mod's documented public build
 path, not a fresh investigation of INI loading:

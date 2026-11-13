@@ -17,9 +17,10 @@
 - Editor-only mirrors must reproduce exact `/Script` module/class/function,
   property, struct, and enum identities needed by cooked assets. Convenient
   invented members are unsafe.
-- A relocated original Blueprint is a snapshot of one game version. Never keep
-  it in Git or assume a previously built replacement inherits later game
-  changes automatically.
+- A relocated original Blueprint does not inherit later game changes
+  automatically. Its Git eligibility, provenance and refresh requirements
+  follow the [game-derived data rule](game-derived-data-rule.md), including
+  the maintained-project exception when applicable.
 - Identify UI elements by stable UObject/action identity where possible, not
   child index, rendered key text, or localized label.
 - Treat the shared-pattern document as a starting model for another vehicle,

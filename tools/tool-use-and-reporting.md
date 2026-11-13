@@ -1,7 +1,8 @@
-# Tool use and coding-agent reports
+# Tool use and reporting
 
-Coding-agent handoffs follow the [shared subagent workflow](../docs/subagent-workflow-rule.md).
-Include a compact tool-use report:
+For game-asset and release work covered by the
+[toolchain coverage rule](../docs/game-derived-data-rule.md), include a compact
+tool-use report in the task result:
 
 ```text
 Operations: <intent -> public tool -> result/evidence>

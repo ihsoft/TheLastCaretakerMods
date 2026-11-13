@@ -102,6 +102,16 @@ with their owning mod. Extend an existing semantic group before adding another;
 consuming generators address semantic roles rather than raw reflected pins such
 as `A`, `B`, or `bPickA`.
 
+In C++ generator code, replace every repeated `TEXT("...")` literal with a
+named constant. Also name a single-use literal when it represents a logical
+contract, tuning value, asset identity, or naturally belongs to an existing
+constant group. Keep reusable engine-level names in shared headers under
+`tools/` and game- or mod-specific values with their owner. Keep diagnostic and
+assertion format strings inline even when repeated; they are messages, not
+shared identities or contracts. Helpers may store raw reflected pin names
+internally, but call sites use semantic roles such as left/right operands or
+select condition/true/false values.
+
 ## Maintain tool documentation
 
 When adding or changing a reusable public tool, update its

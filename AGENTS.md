@@ -17,7 +17,8 @@ do not load every document just because it is indexed here.
 ## Repository and process rules
 
 - [Documentation ownership](docs/repository-documentation-rule.md): what belongs
-  in shared docs, mod docs, an ignored backlog, or generated storage.
+  where when editing guidance; consistency, duplication, index/link design,
+  and applicability across game updates.
 - [Starting a new mod](docs/new-mod-rule.md): find related game knowledge and
   create a minimal, honest mod directory before selecting an implementation.
 - [Unreal project ownership](docs/unreal-project-rule.md): complete release asset
@@ -44,8 +45,6 @@ do not load every document just because it is indexed here.
   source conventions, and cleanup boundaries.
 - [Hash usage](docs/hash-usage-rule.md): the closed set of justified digest
   uses and the default prohibition on hash-based provenance and preflights.
-- [Subagent workflow](docs/subagent-workflow-rule.md): when and how to delegate,
-  report, review, and hand off installation.
 - [Agent work measurement](docs/agent-work-measurement-rule.md): optional
   diagnostics when the user asks for resource accounting.
 - [Vehicle and HUD rules](docs/vehicle-and-hud-rule.md): shared implementation

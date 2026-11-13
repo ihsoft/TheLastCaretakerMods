@@ -7,18 +7,19 @@
   fact that a file is reproducible does not determine whether it is temporary
   or worth retaining. Exceptions to the commit rule are the
   explicitly reviewed `.usmap` registry under `mappings/Voyage/` and the
-  maintained project inputs described below. User-authored
-  mod assets, including `mods/Railgun/Assets/Model/Railgun.glb`, are ordinary
+  maintained project inputs described below. User-authored mod assets are ordinary
   source inputs; this does not authorize retaining unrelated extracted game data.
 - A mod adopting the [maintained Unreal project workflow](unreal-project-rule.md)
   may track the game-derived editor assets and compilation stubs required by its
   implementation, including complete derived meshes and patched DataAssets.
   Record their source build, engine, reconstruction method and revalidation
   condition in the mod's provenance document. Keep intermediate extractions,
-  reports and cooked output ignored. A release must refresh its supported
-  game-derived inputs and reapply the owned patch, or fail; an old project asset
-  is not a fallback after an unsuccessful refresh. Editor stubs must remain
-  excluded from the release payload.
+  reports and cooked output ignored. Before release, refresh supported
+  game-derived inputs and reapply the owned patch through the project's explicit
+  update stage. Accept the changed source assets and synchronized BPT before
+  taking the build copy, as required by the maintained-project workflow.
+  A failed refresh blocks release; an old project asset is not a fallback.
+  Editor stubs must remain excluded from the release payload.
 - Apply the shared [generated-output lifecycle](../docs/artifact-lifecycle-rule.md):
   `Tmp/` holds one-cycle output by default, while ignored `artifacts/` is for
   generated output with a concrete use beyond the current research, feature,
@@ -73,7 +74,8 @@
   and unrelated development are outside this metric. Do not inflate or dilute the
   metric with reasoning, source editing, documentation, or genuinely novel
   diagnosis after a black-box failure. Report uncovered operations and their
-  impact in the task's tool-use report instead of normalizing ad-hoc commands.
+  impact using the [tool-use report and counting method](../tools/tool-use-and-reporting.md)
+  instead of normalizing ad-hoc commands.
 - The pipeline's primary outcome is low agent effort and low context/token use
   for ordinary predictable work, while preserving correctness, provenance and
   safety gates. A black-box wrapper is only one means to that outcome: it is not
@@ -107,12 +109,6 @@
   or speculative convenience work when it offers only a small improvement
   without a repeated failure, material risk reduction, or clear user need;
   work performed merely to keep improving the pipeline is itself a failure mode.
-- Triage cross-agent questions and pause/release requests before continuing a
-  long local pipeline investigation. Give the owning feature agent the smallest
-  decision, evidence, or explicit resume signal needed to keep independent work
-  moving, then continue pipeline work in parallel. Do not make another agent
-  wait merely because the pipeline owner is documenting or developing an
-  unrelated tool; use the Git semaphore only for the short shared mutation.
 - Public build, release, extraction, and packaging scripts must support Windows
   PowerShell 5.1 unless their documented interface explicitly says otherwise.
   Parse and smoke-test the public `-File` entry point with `powershell.exe`;
@@ -148,10 +144,6 @@
   [toolchain knowledge](../docs/voyage-cooked-asset-toolchain-knowledge.md); the
   workflow and validation ladder live in
   [toolchain rules](../docs/voyage-cooked-asset-toolchain-rule.md).
-- Durable findings about the Boat's Diesel socket hover card live in
-  `docs/boat-resource-socket-architecture-knowledge.md`; active feature work belongs with
-  the owning mod, using an ignored local backlog only when the task is large
-  enough to need one.
 - Before reusing a saved game-derived input, compare the installed game's Steam
   build ID with its provenance. A producer that identifies
   the game and re-extracts current stock inputs during the run satisfies this
@@ -169,8 +161,7 @@
   governed only by the engine or serialization format.
 - If that retry cannot resolve reviewed mappings for the installed game, use
   `Get-VoyageMappings.ps1` to confirm the gap, then ask the user whether to
-  update mappings or delegate that work; obtain the user's model choice before
-  spawning a mapping agent. Retry the producer after the mapping is ready.
+  update mappings. Retry the producer after the mapping is ready.
   Investigate source and game contracts only when the normal build path still
   fails or the game test reveals a problem. A successful build provides a
   structurally checked candidate; offer a real-game test next. A successful
@@ -204,4 +195,4 @@
   contract is game-specific, engine version, reconstruction method/tools, and
   revalidation condition. If the
   format cannot contain comments, record the same metadata in its owning
-  README or registry.
+  source-provenance document or registry.
