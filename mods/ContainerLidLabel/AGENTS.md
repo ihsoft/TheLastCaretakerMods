@@ -9,10 +9,11 @@ Start with the [repository index](../../AGENTS.md) and its shared rules.
   Use the shared [BPT workflow](../../tools/blueprint-workspace.md) for edits.
 - [Build and validation](BUILD.md): the public candidate builder, editor tests,
   package boundary, and installation entry point.
-- [Game-derived contracts](GAME_DERIVED_SOURCES.md): source identities,
-  editor stand-ins, evidence boundaries, and revalidation.
-- [Configuration](CONFIGURATION.md): LogicMods INI, defaults, snapshot ownership,
-  and preservation of player settings.
+- [Editor dependencies and provenance](ARCHITECTURE.md#editor-dependencies-and-provenance):
+  follow the shared [game-derived data rule](../../docs/game-derived-data-rule.md).
+- Settings: [schema](Settings/ContainerLidLabel.settings.json) and
+  [distributed INI](Assets/ContainerLidLabel.ini); follow the shared
+  [configuration pattern](../../docs/runtime-configuration-patterns-knowledge.md).
 - [Changelog](CHANGELOG.md): cumulative player-facing changes for publication.
 
 The maintained Blueprint project is the implementation. Builds cook copies of saved assets;

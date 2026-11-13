@@ -1,5 +1,5 @@
 #pragma once
-// Editor-only mirrors; source contracts are in GAME_DERIVED_SOURCES.md.
+// Editor-only mirrors; provenance is in ARCHITECTURE.md, Editor dependencies and provenance.
 // Implementations below serve editor tests only; no native module is shipped.
 #include "Components/SceneComponent.h"
 #include "Kismet/BlueprintFunctionLibrary.h"

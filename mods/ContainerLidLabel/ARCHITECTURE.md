@@ -34,9 +34,10 @@ query includes Large and Small. The same `HandleContainer` processes subsequent
 Restored events immediately. There is no manager Tick, work queue, tracked set,
 periodic scan, or per-container INI read.
 
-On the supported game build, the inspected public spawn paths emit Restored
-followed by Spawned for the same actor; persistence restoration also has a path
-that emits Restored without Spawned. Subscribing only to Restored covers those
+On the supported game build, the inspected SpawnRuntimeActorFromClass and
+SpawnRuntimeActorFromData paths emit Restored in their common creation core,
+then Spawned in their wrappers for the same actor. Persistence restoration also
+uses that core without the Spawned wrapper. Subscribing only to Restored covers those
 paths without a second handler for the public spawn pair. This is a bounded
 lifecycle contract, not a generic deduplication service for arbitrary repeated
 notifications or repeated manual Start calls.
@@ -56,12 +57,14 @@ display; the mod introduces no persistent container state.
 
 ## Settings ownership
 
-One parser is constructed and loaded during manager initialization. The three
-effective capacities are stored in that ModActor instance and reused for its
-containers. There is no CDO cache or settings-loaded flag. GetFloat calls specify
-Name, Default and Min=1; Max is omitted and follows the parser declaration.
-The file path, fallback values and restart policy belong to
-[configuration](CONFIGURATION.md).
+ModActor constructs one parser and reads
+`Voyage/Content/Paks/LogicMods/ContainerLidLabel.ini` at initialization, storing
+effective capacities in its own fields for all containers. Editing the INI
+requires a game restart; there is no per-container read or CDO cache.
+The [schema](Settings/ContainerLidLabel.settings.json) owns keys, bindings,
+fallbacks and bounds. It is a build-time contract, not a runtime-loaded file:
+keep the authored Blueprint getters aligned with it. The unused Max argument
+remains omitted, using the parser's declaration default.
 
 ## Lid presentation
 
@@ -95,12 +98,30 @@ loaded texture path with the current selection before assigning IconTexture
 and showing the plane. Cleared, invalid or superseded selections stay hidden.
 This loader does not poll or add a container-processing queue.
 
-## Native code boundary
+## Editor dependencies and provenance
+
+The editor stand-ins were authored from stock contracts for Steam build 25982825
+(Update 6 beta, Voyage.exe 5.8.2.0) using UE 5.8.2. The current accepted build pin
+is maintained separately in [game-build.json](game-build.json).
+Native mirrors derive from reviewed mappings, stock Blueprint bytecode and
+native registration; the Blueprint stand-ins are authored through BPT.
+
+| Editor input | Reconstruction and limitation |
+| --- | --- |
+| The three container classes listed above | Compilation/test stand-ins from stock summaries and component contracts. Stock Large and Small inherit PlayerBox; the editor Small preserves that relation, while Base/Large use Actor and omit the full game hierarchy. |
+| `/Game/UI/Game/Inventory/BP_PlayerBox_Text` | Authored UserWidget stand-in providing SetText/SetFont/SetSize and fields used by editor tests; runtime resolves the game's widget. |
+| `/Game/UI/VoyageRoboto` | Authored font placeholder for the stock identity, excluded from release. |
+
+Revalidate affected stand-ins when game updates or observations change class
+hierarchy, component names, native signatures, icon palettes or lifecycle
+contracts. The simplified editor hierarchy and event emitters do not establish
+stock event ordering or rendering; see the [validation boundary](BUILD.md#editor-checks).
 
 The only mod-owned native module is the editor support module named `Voyage`,
 which supplies matching `/Script/Voyage` identities for compilation and tests.
-It is not shipped. InventoryContracts.h and PersistentContracts.h hold the
-minimal native API stand-ins; Voyage.cpp only registers the module.
+It is not shipped. [InventoryContracts.h](Project/EditorSupport/Source/Voyage/InventoryContracts.h)
+and [PersistentContracts.h](Project/EditorSupport/Source/Voyage/PersistentContracts.h)
+hold the minimal native API stand-ins; Voyage.cpp only registers the module.
 
 Beyond reflected declarations, their implementations simulate file reading,
 capacity writes and editor inventory state. Nine Test-prefixed methods drive
