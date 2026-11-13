@@ -7,7 +7,7 @@ the role manifest, but must not alter GLB geometry unless explicitly requested.
 
 - [Architecture](ARCHITECTURE.md):
   the current station, weapon, HUD, item, skill, registry, and their data flow.
-  Read before changing behavior or deciding what to change in the source.
+  Read when changing behavior, asset ownership or game contracts.
 - [Project layout, build and tests](BUILD.md): maintained `Project/`, disposable
   working copies, public commands and accepting authoring changes.
   Use the shared [BPT workflow](../../tools/blueprint-workspace.md) for graph edits.
@@ -17,6 +17,9 @@ the role manifest, but must not alter GLB geometry unless explicitly requested.
   component, reload policy and schema bindings.
 - [Candidate producer](Build-Railgun.ps1): use `-Install` for a routine game
   candidate so the owned INI is installed with the container.
+- [Installer](Install-Railgun.ps1): install an existing candidate without rebuilding;
+  [installation details](BUILD.md#install-an-existing-candidate) cover INI migration
+  and dirty-source policy.
 - [Settings integration test](Test-Railgun.ps1): execute the saved Blueprint
   loader in a disposable project without cooking or installing a candidate.
 - [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.

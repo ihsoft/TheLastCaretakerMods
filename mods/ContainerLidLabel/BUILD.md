@@ -18,7 +18,10 @@ $hostExe = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
 ```
 
 [Build-ContainerLidLabel.ps1](Build-ContainerLidLabel.ps1) prepares and cooks a copy
-of [Project](Project/Voyage.uproject), returning the ZIP and release manifest.
+of [Project](Project/Voyage.uproject), using the
+[shared pipeline](../../tools/mod-setup.md#shared-mod-pipeline) for copies and cook.
+It returns `status: built`, `archivePath`, `releaseManifestPath` and
+`validationSummaryPath`.
 OutputRoot must be fresh and below `Tmp/ContainerLidLabel`; omit it for an automatic
 run directory. EngineRoot and GameRoot override local installations;
 AllowDirtySource permits uncommitted inputs. The
@@ -36,8 +39,8 @@ $hostExe = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
 ```
 
 [Test-ContainerLidLabel.ps1](Test-ContainerLidLabel.ps1) prepares its own project
-copy and returns the report path, requiring `status: passed`. EngineRoot is
-configurable; an explicit OutputRoot must be a fresh direct child of
+copy through the shared test runner and returns `reportPath` with
+`status: passed`. EngineRoot is configurable; an explicit OutputRoot must be fresh below
 `Tmp/ContainerLidLabel`. Use this runner rather than launching ValidateEditor.py directly.
 The suite checks discovery/filtering, capacity snapshots, presentation events,
 attachment and cleanup on synthetic actors. It does not validate stock event
@@ -61,8 +64,10 @@ payload and user settings:
 
 ```powershell
 & ./mods/ContainerLidLabel/Install-ContainerLidLabel.ps1 `
-  -ReleaseManifest 'Tmp/ContainerLidLabel/candidate/release-manifest.json'
+  -ReleaseManifest 'Tmp/ContainerLidLabel/candidate/release-manifest.json' `
+  -AllowDirtySource
 ```
 
+Omit `-AllowDirtySource` for a candidate built from clean source.
 Existing LogicMods INI values are preserved on updates. Recovery follows the shared
 [INI installation contract](../../docs/runtime-configuration-patterns-knowledge.md#install-and-migrate-a-user-edited-ini).

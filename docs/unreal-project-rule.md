@@ -1,4 +1,11 @@
-# Unreal project ownership
+# Mod setup and Unreal project ownership
+
+Use this setup when creating or unifying a mod that maintains Unreal assets.
+The [new-mod workflow](new-mod-rule.md) owns the earlier, implementation-free
+skeleton. The layout and command conventions below are the target for new
+implementations and explicit migrations; they do not assert that every existing
+mod already implements the same interface. Until migrated, use its documented
+public commands.
 
 The recommended development workflow is a maintained Unreal project with BPT
 for Blueprint authoring. In this workflow, the project is the source of truth
@@ -18,19 +25,112 @@ Use [BlueprintText (BPT)](../tools/blueprint-workspace.md#source-of-truth-and-gi
 as the bidirectional text editing and Git review interface for Blueprints.
 Commit its synchronized text representation alongside the corresponding project
 assets. BPT is an intentional duplicate, not a second source of truth.
+Prepare required resources, parents and native dependencies before graph work.
+Do not introduce a per-mod C++ graph builder for routine Blueprint authoring.
+A procedural step is appropriate only when the supported declarative format
+cannot express the required state or would be disproportionately complex;
+keep that exception bounded and explicit.
+
+## Standard mod layout
+
+Use the mod directory name as the stable technical identifier in script names
+and `Tmp/<Mod>/`. A display name may contain spaces without changing that identity.
+Create optional paths only for actual inputs or supported operations; do not
+create empty folders or placeholder scripts to complete the table.
+
+| Path below `mods/<Mod>/` | Owner and applicability |
+| --- | --- |
+| `AGENTS.md`, `ARCHITECTURE.md`, `BUILD.md`, `README.md` | The four [document roles](repository-documentation-rule.md); document local contracts and commands without copying shared rules. |
+| `CHANGELOG.md`, `version.txt` | Publication input and published version under the [release workflow](release-and-installation-rule.md). |
+| `Project/Voyage.uproject` | Maintained project descriptor. |
+| `Project/Content/` | Saved release assets and required editor dependencies; distinguish their package ownership explicitly. |
+| `Project/BlueprintText/` | Synchronized BPT, mirroring virtual asset paths. |
+| `Project/Config/` | Deliberately maintained project configuration, when needed. |
+| `Project/EditorSupport.json`, `Project/EditorSupport/` | Native editor dependencies, when needed; use the [shared dependency declaration](../tools/unreal-editor-support.md#prepare-declared-project-dependencies). |
+| `Assets/` | External authoring inputs and distributable files such as `<Mod>.ini`; saved Unreal assets belong in `Project/Content/`. |
+| `Settings/` | Settings schemas, bindings or focused template checks when the configuration requires them. |
+| `Build/` | Mod-specific packaging inputs, serialization adapters and package checks, only where shared tools do not cover the contract; never build output. |
+| `slideshow/` | Publication media, when available. |
+| `game-build.json` | Accepted source-build pin when a game-bound contract requires it; provenance and update handling remain with the [game-derived data rule](game-derived-data-rule.md). |
+
+The public scripts below live at the mod root. Internal helpers stay with their
+owning responsibility instead of creating a second set of root-level build or
+test commands. Ignore rules belong to the owning mod or project under the
+[repository hygiene rule](repository-hygiene-rule.md).
+
+Virtual package paths are a separate contract from this filesystem layout.
+Use `/Game/Mods/<Mod>/` for ordinary owned content, but preserve stock-reference
+identities and any native discovery roots required by an asset consumer. An
+on-disk reorganization must not silently rename runtime packages, classes or
+saved-state identities. The release inventory must exclude editor support,
+stock stand-ins and test-only assets.
+
+## Public command conventions
+
+Use one public entry point per operation. These names and common fields define
+the migration target, not an additional tool API already supplied by the
+skeleton generator. `BUILD.md` records the interface actually available.
+
+| Entry point | Contract |
+| --- | --- |
+| `New-<Mod>ProjectCopy.ps1 -Destination <path>` | Copy maintained inputs to a fresh working project below `Tmp/<Mod>/`, including intended uncommitted source. Return the copied `.uproject` path. Do not launch Unreal. |
+| `Build-<Mod>.ps1` | Produce and validate one candidate from a disposable copy. Return `status: built`, `archivePath`, `releaseManifestPath` and `validationSummaryPath`. Do not install by default. |
+| `Test-<Mod>.ps1` | Run the mod's supported automated checks, creating a disposable project only for checks that need Unreal. Return `status: passed` and `reportPath`, with coverage and limitations in the report. Do not cook a release or install it as an implicit test step. |
+| `Install-<Mod>.ps1 -ReleaseManifest <path>` | Provide the mod-owned installation policy when settings or other coupled payloads require it. Install the supplied candidate without rebuilding. For a standard container-only payload, use the shared installer directly instead of creating a pass-through wrapper. |
+
+Build and test accept `-OutputRoot` for a fresh run directory anywhere below
+`Tmp/<Mod>/`; omission allocates one automatically. Engine-consuming entry points
+accept `-EngineRoot`; operations that inspect or install the game accept
+`-GameRoot`. Build exposes `-AllowDirtySource` and, when a source-build pin is
+used, `-IgnorePinnedGameVersion`; installation forwards the applicable dirty
+candidate policy. These flags retain the meanings in the shared release workflow.
+Local installation defaults must be overridable; do not bake a particular
+workstation path into the shared setup.
+
+Return one compact structured success result, with detailed diagnostics in the
+run directory. Missing or failed required reports fail the command rather than
+yielding a success result. Keep the common path field names even when adding
+mod-specific fields. Test implementations may use different languages or engine
+entry points without changing the public test interface.
+
+A convenience `Build -Install` may call the same installation implementation
+after building; it must not be the only way to install an existing candidate.
+Source-update helpers, when needed, use a focused `Update-<Mod><Subject>.ps1`
+name and remain explicit authoring operations, separate from build and test.
+
+## Shared mechanics and mod-owned contracts
+
+Mod entry points select inputs and checks; reusable execution belongs in shared
+tools. Do not copy another mod's producer or project-copy implementation as a
+template. Reuse the existing public tools for BPT and dependency preparation,
+the Unreal queue, game/mapping resolution, container verification, archive
+creation and release installation. Find the supported entry point through the
+[tool index](../tools/tool-index.md).
+
+Use the [shared mod pipeline](../tools/mod-setup.md#shared-mod-pipeline) for
+working copies, run paths, editor-test orchestration, ordinary additive cook
+and cleanup. Keep path containment, linked-path rejection, source selection and
+failure evidence there rather than in per-mod copies. Extend that shared owner
+when a recurring mechanism is missing and has an established consumer; keep
+mod entry points thin. The skeleton tool still creates only the minimal mod
+skeleton, not an implemented project or complete producer.
+
+The mod still owns its package inventory, runtime entry identity, settings
+policy, native mirrors, behavioral assertions and any required serialization
+adapter. Keep those as data or focused code consumed by the shared mechanism.
+Use `EditorSupport.json` for supported native dependency declarations rather
+than inventing another loader. Do not force every mod to use DML, a flat settings
+schema, a native commandlet or a particular cook profile. A real consumer
+contract justifies such differences; copied orchestration does not.
 
 ## Project layout and temporary data
 
-Keep each mod's maintained Unreal project in its own `mods/<Mod>/Project/`
-directory. Place the `.uproject` and its project-owned inputs there. Do not mix
-Unreal project directories with mod-level documentation, release scripts,
-packaging inputs or other files at the mod root. Existing flat layouts require
-an explicit, scoped migration that updates their consumers; they are not a
-pattern for new projects or reorganizations.
+Keep project-owned inputs under `Project/`, separate from mod-level documents,
+release scripts and packaging inputs. Existing flat layouts require an explicit
+migration that updates their consumers.
 
-The maintained Project directory contains repository source: authored assets,
-synchronized BPT, required project configuration, editor-support sources and
-test sources. Deliberately authored reusable test assets also belong in source,
+The maintained project contains repository source. Deliberately authored
+reusable test assets also belong in source,
 with a test-only package boundary that excludes them from the release.
 The fact that an asset or configuration file was written by an editor does not
 make it temporary; its role in the maintained project determines ownership.
@@ -96,6 +196,23 @@ stubs. Retain required source assets in the project, with bounded refresh or
 revalidation, rather than treating all project content as disposable extraction
 output. Keep intermediate dumps ignored and exclude editor-only placeholders
 from the release payload.
+
+## Unifying an existing mod
+
+First identify its actual source inputs, public callers, release inventory and
+runtime identities. Map them to the layout and operations above. Migrate one
+coherent operation at a time: replace duplicated mechanics with a shared owner,
+update callers and `BUILD.md`, and remove the superseded path once consumers
+have moved. Keep only necessary temporary compatibility adapters, with their
+remaining callers identified in the migration work; do not leave two canonical
+producers. Do not copy implementation from a named mod as the normative design.
+
+Validate at the changed boundary: copy and path rejection for a copy helper,
+actual suites and report failures for a test runner, package inventory and
+archive/manifest checks for a producer, and preservation/recovery for an
+installer. Preserve editor-only exclusions and the source/working-copy boundary.
+Changing behavior, runtime identity or serialization also requires the applicable
+game acceptance. A filename-only change does not itself require a new game test.
 
 Pre-migration implementations and their temporary constraints belong in the
 owning mod's documentation, not in shared rules as alternative development

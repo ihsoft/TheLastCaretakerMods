@@ -119,7 +119,8 @@ stock event ordering or rendering; see the [validation boundary](BUILD.md#editor
 
 The only mod-owned native module is the editor support module named `Voyage`,
 which supplies matching `/Script/Voyage` identities for compilation and tests.
-It is not shipped. [InventoryContracts.h](Project/EditorSupport/Source/Voyage/InventoryContracts.h)
+Native code is limited to editor contracts and the explicit test helpers below;
+it is not shipped. [InventoryContracts.h](Project/EditorSupport/Source/Voyage/InventoryContracts.h)
 and [PersistentContracts.h](Project/EditorSupport/Source/Voyage/PersistentContracts.h)
 hold the minimal native API stand-ins; Voyage.cpp only registers the module.
 

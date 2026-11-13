@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([Parameter(Mandatory=$true)][string]$Container, [Parameter(Mandatory=$true)][string]$OutputRoot, [Parameter(Mandatory=$true)][string]$ModelInventory, [Parameter(Mandatory=$true)][string]$AmmoSourceJson)
+param([Parameter(Mandatory=$true)][string]$Container, [Parameter(Mandatory=$true)][string]$OutputRoot, [Parameter(Mandatory=$true)][string]$ModelInventory, [Parameter(Mandatory=$true)][string]$AmmoSourceJson, [string]$GameRoot = 'P:/SteamLibrary/steamapps/common/Voyage')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
@@ -26,7 +26,7 @@ $shotSoundPackage = '/Game/Mods/Railgun/Station/S_RailgunShotBlast'
 $stockSfxSoundClassPackage = '/Game/Audio/Shares/SoundClasses/SC_SFX'
 function Read-Candidate([string]$Query) {
     $result = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
-        -Query $Query -Source Mod -ModContainer $Container `
+        -Query $Query -Source Mod -ModContainer $Container -GameRoot $GameRoot `
         -ModInspectionRoot (Join-Path $output 'asset-inspections') `
         -AsJson) | ConvertFrom-Json
     $script:evidence += $result

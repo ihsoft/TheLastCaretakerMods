@@ -11,16 +11,12 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $modRoot = $PSScriptRoot
 $repo = (Resolve-Path (Join-Path $modRoot '../..')).Path
-$owner = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/ContainerLidLabel'))
-if (-not $OutputRoot) { $OutputRoot = Join-Path $owner ('build-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')) }
-$output = [IO.Path]::GetFullPath($OutputRoot)
-if (-not $output.StartsWith($owner + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'OutputRoot must stay under Tmp/ContainerLidLabel' }
-if (Test-Path -LiteralPath $output) { throw 'Use a new output directory' }
-[IO.Directory]::CreateDirectory($output) | Out-Null
+Import-Module (Join-Path $repo 'tools/VoyageModPipeline.psm1')
+$output = New-VoyageModRun -ModRoot $modRoot -OutputRoot $OutputRoot
 $project = & (Join-Path $modRoot 'New-ContainerLidLabelProjectCopy.ps1') -Destination (Join-Path $output 'Project')
 $projectRoot = Split-Path -Parent $project
 $bptWorkspace = Join-Path $repo ('Tmp/BlueprintText/ContainerLidLabel-build-' + [guid]::NewGuid().ToString('N'))
-& (Join-Path $repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $bptWorkspace
+& (Join-Path $repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $bptWorkspace > (Join-Path $output 'prepare.log')
 $fingerprintPath = Join-Path $output 'game-fingerprint.json'
 & (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
 $fingerprint = Get-Content $fingerprintPath -Raw | ConvertFrom-Json
@@ -30,45 +26,20 @@ if ($versionText -cnotmatch '^(0|[1-9][0-9]*)$') { throw 'Invalid published vers
 $version = 'V' + ([int]$versionText + 1)
 $names = @('ModActor', 'BP_ContainerLidDisplay', 'BFL_ContainerTypes', 'Settings/BP_IniFileParser')
 $packages = @($names | ForEach-Object { '/Game/Mods/ContainerLidLabel/' + $_ })
-$cooked = Join-Path $projectRoot 'Saved/Cooked/Windows/Voyage/Content/Mods/ContainerLidLabel'
-foreach ($name in $names) {
-    if (-not (Test-Path (Join-Path $projectRoot "Content/Mods/ContainerLidLabel/$name.uasset"))) { throw "Apply the maintained BPT first: $name" }
-}
-$editor = Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe'
-$cookLog = Join-Path $output 'cook.log'
-& (Join-Path $repo 'tools/Invoke-UnrealQueued.ps1') -Operation 'Cook ContainerLidLabel' -FilePath $editor -ArgumentList @($project,'-run=cook','-targetplatform=Windows','-unversioned','-SkipZenStore',('-Package=' + ($packages -join '+')),'-CookSinglePackageNoRefs','-unattended','-nop4','-nosplash','-nullrhi','-ddc=NoZenLocalFallback',('-abslog=' + $cookLog)) > (Join-Path $output 'cook-console.log')
-if (Select-String -LiteralPath $cookLog -Pattern 'LogBlueprint: Error:|LogLinker: Error:|LogCook: Error:' -Quiet) { throw "Cook errors: $cookLog" }
-$stage = Join-Path $output 'stage'
-$stageAssets = Join-Path $stage 'Voyage/Content/Mods/ContainerLidLabel'
-[IO.Directory]::CreateDirectory($stageAssets) | Out-Null
-foreach ($name in $names) {
-    foreach ($ext in @('.uasset','.uexp')) {
-        $destination = Join-Path $stageAssets ($name + $ext)
-        [IO.Directory]::CreateDirectory((Split-Path -Parent $destination)) | Out-Null
-        Copy-Item -LiteralPath (Join-Path $cooked ($name + $ext)) -Destination $destination
-    }
-}
-$package = Join-Path $output 'package'
-[IO.Directory]::CreateDirectory($package) | Out-Null
-$ini = Join-Path $package 'ContainerLidLabel.ini'
+$cook = Invoke-VoyageModCook -ModRoot $modRoot -ProjectFile $project -EngineRoot $EngineRoot -OutputRoot $output -Packages $packages -ParserVersion UE5_8
+$utoc = $cook.container
+$check = $cook.validation
+$ini = Join-Path $output 'ContainerLidLabel.ini'
 Import-Module (Join-Path $repo 'tools/VoyageModSettings/VoyageModSettings.psm1') -Force
-$validatedSettings = @(Read-VoyageModSettingsSchema -SchemaPath (Join-Path $modRoot 'Settings/ContainerLidLabel.settings.json') -DefaultIniPath (Join-Path $modRoot 'Assets/ContainerLidLabel.ini'))
+$null = Read-VoyageModSettingsSchema -SchemaPath (Join-Path $modRoot 'Settings/ContainerLidLabel.settings.json') -DefaultIniPath (Join-Path $modRoot 'Assets/ContainerLidLabel.ini')
 Copy-Item -LiteralPath (Join-Path $modRoot 'Assets/ContainerLidLabel.ini') -Destination $ini
-$utoc = Join-Path $package 'ContainerLidLabel.utoc'
-& (Join-Path $repo '.tools/bin/retoc.exe') to-zen --version UE5_8 $stage $utoc > (Join-Path $output 'retoc.log')
-if ($LASTEXITCODE -ne 0) { throw 'retoc conversion failed' }
-$expected = Join-Path $output 'expected-packages.txt'
-@($names | ForEach-Object { '../../../Voyage/Content/Mods/ContainerLidLabel/' + $_ + '.uasset' }) | Set-Content $expected -Encoding ascii
-$check = & (Join-Path $repo 'tools/Test-VoyageContainer.ps1') -Container $utoc -ExpectedPackageList $expected -OutputRoot (Join-Path $output 'container-check')
 $zip = Join-Path $output ('ContainerLidLabel-' + $version + '.zip')
 & (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') -Container $utoc -Archive $zip -LogicMods -AdditionalFile $ini -AdditionalDestination 'Voyage/Content/Paks/LogicMods/ContainerLidLabel.ini' | Out-Null
-$manifest = & (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod ContainerLidLabel -Version $version -Container $utoc -Archive $zip -SourcePath $modRoot -GameRoot $GameRoot -LogicMods -AllowDirtySource:$AllowDirtySource
-$result = [ordered]@{status='built';archive=$zip;releaseManifest=$manifest.manifestPath;entryClass='/Game/Mods/ContainerLidLabel/ModActor.ModActor_C';steamBuildId=[string]$fingerprint.steam.buildId;packages=$packages;containerCheck=$check;runtimeIni='Voyage/Content/Paks/LogicMods/ContainerLidLabel.ini';gameplayValidated=$false}
+$manifest = & (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod ContainerLidLabel -Version $version -Container $utoc -Archive $zip -SourcePath @($modRoot,(Join-Path $repo 'tools/VoyageModPipeline.psm1')) -GameRoot $GameRoot -LogicMods -AllowDirtySource:$AllowDirtySource
+$summaryPath = Join-Path $output 'validation-summary.json'
+[ordered]@{status='passed';container=$check;runtime='pending'} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
+$result = [ordered]@{status='built';archivePath=$zip;releaseManifestPath=$manifest.manifestPath;validationSummaryPath=$summaryPath;entryClass='/Game/Mods/ContainerLidLabel/ModActor.ModActor_C';steamBuildId=[string]$fingerprint.steam.buildId;packages=$packages;containerCheck=$check;runtimeIni='Voyage/Content/Paks/LogicMods/ContainerLidLabel.ini';gameplayValidated=$false}
 $result | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $output 'build-result.json') -Encoding utf8
-$stageAbsolute = (Resolve-Path -LiteralPath $stage).Path
-if (-not $stageAbsolute.StartsWith($output + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe scratch path' }
-Remove-Item -LiteralPath $stageAbsolute -Recurse -Force
-$projectAbsolute = (Resolve-Path -LiteralPath $projectRoot).Path
-if ($projectAbsolute -ne (Join-Path $output 'Project')) { throw 'Unsafe build scratch path' }
-Remove-Item -LiteralPath $projectAbsolute -Recurse -Force
+Remove-VoyageModScratch -ModRoot $modRoot -RunRoot $output -Path $cook.stage
+Remove-VoyageModScratch -ModRoot $modRoot -RunRoot $output -Path $projectRoot
 $result | ConvertTo-Json -Depth 8

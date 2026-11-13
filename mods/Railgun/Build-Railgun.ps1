@@ -1,5 +1,8 @@
 [CmdletBinding()]
 param([string]$OutputRoot = '', [switch]$Install,
+    [string]$EngineRoot = 'K:/Epic Games/UE_5.8',
+    [string]$GameRoot = 'P:/SteamLibrary/steamapps/common/Voyage',
+    [switch]$AllowDirtySource,
     [switch]$IgnorePinnedGameVersion,
     [string]$ArtifactVersion = '',
     [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
@@ -10,7 +13,8 @@ if ($Install -and @(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
     throw 'Voyage must be closed before a Railgun build that installs its candidate.'
 }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$engine = 'K:\Epic Games\UE_5.8\Engine'
+Import-Module (Join-Path $repo 'tools/VoyageModPipeline.psm1')
+$engine = Join-Path $EngineRoot 'Engine'
 $editor = Join-Path $engine 'Binaries/Win64/UnrealEditor-Cmd.exe'
 $itemDiscoveryRoot = '/Game/Data/Assets'
 $skillDiscoveryRoot = '/Game/Data/Assets/Skill'
@@ -29,19 +33,8 @@ $defaultVersion = if ($ArtifactVersion) {
 } else {
     'build-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
 }
-$tmpOwnerRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/Railgun'))
-$tmpBoundary = $tmpOwnerRoot + [IO.Path]::DirectorySeparatorChar
-if (-not $OutputRoot) {
-    $OutputRoot = Join-Path $tmpOwnerRoot (
-        $defaultVersion + '-' + [Guid]::NewGuid().ToString('N'))
-}
-$output = [IO.Path]::GetFullPath($OutputRoot)
-if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'OutputRoot must be a fresh directory below repository Tmp/Railgun.'
-}
-if (Test-Path -LiteralPath $output) { throw 'OutputRoot already exists.' }
+$output = New-VoyageModRun -ModRoot $PSScriptRoot -OutputRoot $OutputRoot -Kind $defaultVersion
 $version = $releaseVersion
-$null = New-Item -ItemType Directory -Path $output
 $project = & (Join-Path $PSScriptRoot 'New-RailgunProjectCopy.ps1') -Destination (Join-Path $output 'Project')
 $projectRoot = Split-Path -Parent $project
 $bptWorkspace = Join-Path $repo ('Tmp/BlueprintText/Railgun-build-' + [Guid]::NewGuid().ToString('N'))
@@ -60,6 +53,7 @@ Copy-Item -LiteralPath $settingsDefaults -Destination $preparedSettingsIni
 $sourcePaths = @(
     'mods/Railgun',
     'tools/Get-VoyageAssetJson.ps1',
+    'tools/VoyageModPipeline.psm1',
     'tools/Get-VoyageBuildFingerprint.ps1',
     'tools/Get-VoyageMappings.ps1',
     'tools/Install-VoyageRelease.ps1',
@@ -99,19 +93,11 @@ function Get-RailgunSourceStatus {
     @(& git -C $repo status --porcelain -- $sourcePaths)
 }
 $sourceStatus = @(Get-RailgunSourceStatus)
-$fingerprint = (& (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -OutputPath (Join-Path $output 'fingerprint.json')) | ConvertFrom-Json
+$fingerprint = (& (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -GameRoot $GameRoot -OutputPath (Join-Path $output 'fingerprint.json')) | ConvertFrom-Json
 $gameBuild = & (Join-Path $repo 'tools/Assert-VoyageModGameBuild.ps1') `
     -ModRoot $PSScriptRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) `
     -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
-if ($Install) {
-    $legacyAutoload = [IO.Path]::GetFullPath((Join-Path $fingerprint.gameRoot `
-        'Voyage/Content/Paks/Railgun.autoload'))
-    if (Test-Path -LiteralPath $legacyAutoload -PathType Leaf) {
-        throw ('Legacy Railgun.autoload is still installed. Refusing a loader-free ' +
-            'Railgun install until the reviewed one-time recoverable migration retires it.')
-    }
-}
-$mapping = & (Join-Path $repo 'tools/Get-VoyageMappings.ps1')
+$mapping = & (Join-Path $repo 'tools/Get-VoyageMappings.ps1') -GameRoot $GameRoot
 if ([string]$mapping.steamBuildId -cne [string]$fingerprint.steam.buildId -or
     $serializationContract.engineVersion -cne $mapping.engineVersion) {
     throw 'Railgun selected mapping does not match the installed game or parser profile.'
@@ -126,76 +112,6 @@ function Invoke-NativeStage([string]$Name, [string]$Executable, [string[]]$Nativ
     if ($LASTEXITCODE -ne 0) { throw "$Name failed ($LASTEXITCODE); log: $log" }
     Write-Host "$Name passed; log: $log"
 }
-function Update-RailgunSettings([string]$TemplatePath, [string]$SettingsPath) {
-    $tool = Join-Path $repo 'tools/Merge-VoyageModIni.ps1'
-    $stage = $SettingsPath + '.railgun-' + [guid]::NewGuid().ToString('N') + '.tmp'
-    $merged = $SettingsPath + '.railgun-' + [guid]::NewGuid().ToString('N') + '.tmp'
-    $backup = $SettingsPath + '.railgun-' + [guid]::NewGuid().ToString('N') + '.bak'
-    $source = $SettingsPath
-    $migratedEnergy = $false
-    try {
-        $lines = [IO.File]::ReadAllLines($SettingsPath)
-        $hasNewEnergy = @($lines | Where-Object { $_ -match '^\s*FullChargeEnergyKWh\s*=' }).Count -gt 0
-        $defaultLine = @([IO.File]::ReadAllLines($TemplatePath) |
-            Where-Object { $_ -match '^\s*FullChargeEnergyKWh\s*=' })
-        $defaultEnergy = 0.0
-        if ($defaultLine.Count -ne 1 -or
-            -not [double]::TryParse(($defaultLine[0] -split '=', 2)[1].Trim(),
-                [Globalization.NumberStyles]::Float,
-                [Globalization.CultureInfo]::InvariantCulture, [ref]$defaultEnergy)) {
-            throw 'Settings template has no valid FullChargeEnergyKWh default.'
-        }
-        $rewritten = New-Object 'System.Collections.Generic.List[string]'
-        foreach ($line in $lines) {
-            if ($line -match '^\s*FullChargeEnergyKJ\s*=\s*(.*?)\s*$') {
-                $migratedEnergy = $true
-                if (-not $hasNewEnergy) {
-                    $legacy = 0.0
-                    if (-not [double]::TryParse($matches[1].Trim(),
-                        [Globalization.NumberStyles]::Float,
-                        [Globalization.CultureInfo]::InvariantCulture, [ref]$legacy)) {
-                        $legacy = 500.0
-                    }
-                    $converted = if ([Math]::Abs($legacy - 500.0) -lt 0.000001) {
-                        $defaultEnergy
-                    } else { $legacy / 1000.0 }
-                    $value = $converted.ToString('0.###############',
-                        [Globalization.CultureInfo]::InvariantCulture)
-                    $rewritten.Add('FullChargeEnergyKWh=' + $value)
-                    $hasNewEnergy = $true
-                }
-                continue
-            }
-            $rewritten.Add($line)
-        }
-        if ($migratedEnergy) {
-            [IO.File]::WriteAllLines($stage, $rewritten,
-                (New-Object System.Text.UTF8Encoding($false)))
-            $source = $stage
-        }
-        $result = & $tool -TemplatePath $TemplatePath -CurrentPath $source `
-            -OutputPath $merged -RetiredKeys @('OfflineDischargeKW','OpticsMousePercent') `
-            -DefaultsComment '# Defaults added by a newer Railgun build.'
-        if ($result.Changed -or $migratedEnergy) {
-            if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
-                    -ErrorAction SilentlyContinue).Count -gt 0) {
-                throw 'Game started; Railgun settings update refused.'
-            }
-            [IO.File]::Replace($merged, $SettingsPath, $backup, $true)
-        }
-        $added = @($result.AddedKeys)
-        if ($migratedEnergy -and $added -cnotcontains 'FullChargeEnergyKWh') {
-            $added = @('FullChargeEnergyKWh') + $added
-        }
-        return [pscustomobject]@{
-            AddedKeys=$added; RemovedKeys=@($result.RemovedKeys)
-        }
-    } finally {
-        foreach ($path in @($stage,$merged,$backup)) {
-            if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
-        }
-    }
-}
 $content = Join-Path $projectRoot 'Content'
 if (-not (Test-Path -LiteralPath $content -PathType Container)) {
     throw 'Maintained Railgun Content is missing. Restore project assets before building.'
@@ -204,7 +120,7 @@ $ddc = [IO.Path]::GetFullPath($CacheRoot)
 [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'Process')
 $null = New-Item -ItemType Directory -Path $ddc -Force
 & (Join-Path $repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare `
-    -ProjectFile $project -WorkspaceRoot $bptWorkspace -EngineRoot (Split-Path -Parent $engine)
+    -ProjectFile $project -WorkspaceRoot $bptWorkspace -EngineRoot (Split-Path -Parent $engine) > (Join-Path $output 'prepare.log')
 $settingsValidationPath = Join-Path $output 'settings-validation.json'
 Invoke-NativeStage 'test-settings' $editor @($project,'-run=TestRailgunSettings',('-Schema=' + $settingsSchema),('-Output=' + $settingsValidationPath),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'test-settings-unreal.log')))
 $ammoNativePath = Join-Path $output 'ammo-project.json'
@@ -537,7 +453,7 @@ $verify = & (Join-Path $repo 'tools/Test-VoyageContainer.ps1') `
     -OutputRoot $containerCheckRoot
 if ($verify.status -ne 'passed' -or -not $verify.packageSetMatches) { throw 'Container verification failed.' }
 $cloneInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
-    $cloneRelative -Source Mod -ModContainer $container `
+    $cloneRelative -Source Mod -ModContainer $container -GameRoot $GameRoot `
     -ModInspectionRoot $modInspectionRoot -AsJson) | ConvertFrom-Json
 $cloneExports = Get-Content -LiteralPath $cloneInspection.jsonPath -Raw | ConvertFrom-Json
 $cloneItems = @($cloneExports | Where-Object { $_.Type -ceq 'VoyageItemAmmo' -and $_.Name -ceq $newName })
@@ -557,7 +473,7 @@ if ($cloneItems[0].Package -cne $newPackage -or
 }
 $pickupRelative = $ammoPickupPackage.Replace('/Game/', 'Voyage/Content/')
 $pickupInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
-    $pickupRelative -Source Mod -ModContainer $container `
+    $pickupRelative -Source Mod -ModContainer $container -GameRoot $GameRoot `
     -ModInspectionRoot $modInspectionRoot -AsJson) | ConvertFrom-Json
 $pickupDocument = Get-Content -LiteralPath $pickupInspection.jsonPath -Raw |
     ConvertFrom-Json
@@ -628,7 +544,7 @@ foreach ($pickupPart in $expectedPickupParts) {
     }
 }
 $gunInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
-    $gunRelative -Source Mod -ModContainer $container `
+    $gunRelative -Source Mod -ModContainer $container -GameRoot $GameRoot `
     -ModInspectionRoot $modInspectionRoot -AsJson) | ConvertFrom-Json
 $gunExports = Get-Content -LiteralPath $gunInspection.jsonPath -Raw | ConvertFrom-Json
 $gunItems = @($gunExports | Where-Object { $_.Type -ceq 'VoyageItem' -and $_.Name -ceq $newGunName })
@@ -646,7 +562,7 @@ if (-not $skillPackage.StartsWith($skillDiscoveryRoot + '/', [StringComparison]:
     throw 'A Railgun primary asset escaped its confirmed AssetManager discovery root.'
 }
 $skillInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
-    $skillRelative -Source Mod -ModContainer $container `
+    $skillRelative -Source Mod -ModContainer $container -GameRoot $GameRoot `
     -ModInspectionRoot $modInspectionRoot -AsJson) | ConvertFrom-Json
 $skillExports = @(Get-Content -LiteralPath $skillInspection.jsonPath -Raw | ConvertFrom-Json)
 $skillAssets = @($skillExports | Where-Object { $_.Type -ceq 'VoyageSkill' -and $_.Name -ceq 'DA_Skill_Railgun' })
@@ -661,7 +577,7 @@ if ($skillAssets[0].Package -cne $skillPackage -or
 }
 $semantic = & (Join-Path $PSScriptRoot 'Build/Test-RailgunPackage.ps1') `
     -Container $container -OutputRoot (Join-Path $output 'semantic') `
-    -ModelInventory $inventoryPath -AmmoSourceJson $ammoReadbackPath
+    -ModelInventory $inventoryPath -AmmoSourceJson $ammoReadbackPath -GameRoot $GameRoot
 if ($semantic.status -ne 'passed') { throw 'Railgun semantic validation failed.' }
 $containerReport = Get-Content -LiteralPath $verify.reportPath -Raw | ConvertFrom-Json
 $bulkChunks = @($containerReport.chunkTypes | Where-Object { $_.type -ceq 'BulkData' } | ForEach-Object { $_.count } | Measure-Object -Sum).Sum
@@ -749,12 +665,12 @@ $releaseSourcePaths = @($sourcePaths | ForEach-Object {
 $release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
     -ReleaseRoot $releaseStaging -Mod Railgun -Version $version -Container $container `
     -Archive $archivePath -SourcePath $releaseSourcePaths `
-    -ContentPluginDescriptor $descriptor -AllowDirtySource -AsJson) |
+    -ContentPluginDescriptor $descriptor -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource -AsJson) |
     ConvertFrom-Json
 $manifestPath = Join-Path $releaseStaging 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Manifest producer did not publish the candidate.' }
 $publicationValidation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
-    -ReleaseManifest $manifestPath -ValidateOnly -AllowDirtySource
+    -ReleaseManifest $manifestPath -GameRoot $GameRoot -ValidateOnly -AllowDirtySource:$AllowDirtySource
 if (-not [bool]$publicationValidation.validated) {
     throw 'Prepared Railgun release did not pass installation validation.'
 }
@@ -762,170 +678,14 @@ $installation = $null
 $settingsInstallation = $null
 $restoreValidation = $null
 if ($Install) {
-    $installation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
-        -ReleaseManifest $manifestPath -AllowDirtySource `
-        -KeepRecoveryEvidence
-    $settingsPath = Join-Path $installation.paksDirectory 'Railgun.ini'
-    $settingsTemplatePath = Join-Path $payload 'Railgun.ini'
-    $settingsEvidenceDirectory = Split-Path -Parent `
-        $installation.installManifestPath
-    $settingsRecordPath = Join-Path $settingsEvidenceDirectory `
-        'settings-installation.json'
-    $settingsBackupDirectory = Join-Path $settingsEvidenceDirectory `
-        'settings-previous'
-    $settingsBackupPath = Join-Path $settingsBackupDirectory 'Railgun.ini'
-    $settingsExisted = Test-Path -LiteralPath $settingsPath -PathType Leaf
-    $settingsPreviousHash = if ($settingsExisted) {
-        (Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash
-    } else { $null }
-    $settingsBackupVerified = $false
-    try {
-        if ($settingsExisted) {
-            $null = New-Item -ItemType Directory -Path `
-                $settingsBackupDirectory
-            Copy-Item -LiteralPath $settingsPath `
-                -Destination $settingsBackupPath
-            if ((Get-FileHash -LiteralPath $settingsBackupPath `
-                    -Algorithm SHA256).Hash -cne $settingsPreviousHash) {
-                throw 'Railgun settings backup hash mismatch.'
-            }
-            $settingsBackupVerified = $true
-        }
-        if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
-                -ErrorAction SilentlyContinue).Count -gt 0) {
-            throw 'Game started after container installation; settings mutation refused.'
-        }
-        $settingsProcessCheckedAtUtc = [DateTime]::UtcNow.ToString('o')
-        $addedKeys = @()
-        $removedKeys = @()
-        if (-not $settingsExisted) {
-            $temporarySettingsPath = $settingsPath + '.railgun-' +
-                [guid]::NewGuid().ToString('N') + '.tmp'
-            try {
-                Copy-Item -LiteralPath $settingsTemplatePath `
-                    -Destination $temporarySettingsPath
-                [IO.File]::Move($temporarySettingsPath, $settingsPath)
-            } finally {
-                if (Test-Path -LiteralPath $temporarySettingsPath) {
-                    Remove-Item -LiteralPath $temporarySettingsPath -Force
-                }
-            }
-            if ((Get-FileHash -LiteralPath $settingsPath `
-                    -Algorithm SHA256).Hash -cne
-                (Get-FileHash -LiteralPath $settingsTemplatePath `
-                    -Algorithm SHA256).Hash) {
-                throw 'Created Railgun settings readback hash mismatch.'
-            }
-        } else {
-            $settingsUpdate = Update-RailgunSettings $settingsTemplatePath `
-                $settingsPath
-            $removedKeys = @($settingsUpdate.RemovedKeys)
-            $addedKeys = @($settingsUpdate.AddedKeys)
-        }
-        if (@([IO.File]::ReadAllLines($settingsPath) | Where-Object {
-                $_ -match '^\s*(?:OfflineDischargeKW|OpticsMousePercent)\s*='
-            }).Count -ne 0) {
-            throw 'A deprecated Railgun setting remains installed.'
-        }
-        $settingsInstallation = [pscustomobject]@{
-            schemaVersion=1
-            status='installed'
-            path=$settingsPath
-            created=(-not $settingsExisted)
-            previousExisted=$settingsExisted
-            previousSha256=$settingsPreviousHash
-            previousBackupPath=$(if ($settingsExisted) {
-                $settingsBackupPath
-            } else { $null })
-            addedKeys=$addedKeys
-            removedKeys=$removedKeys
-            processCheckedAtUtc=$settingsProcessCheckedAtUtc
-            installedAtUtc=[DateTime]::UtcNow.ToString('o')
-            releaseInstallManifestPath=$installation.installManifestPath
-        }
-        $settingsInstallation | ConvertTo-Json -Depth 5 |
-            Set-Content -LiteralPath $settingsRecordPath -Encoding UTF8
-        $settingsInstallation | Add-Member -NotePropertyName recordPath `
-            -NotePropertyValue $settingsRecordPath
-    } catch {
-        $settingsFailure = $_
-        if (@(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
-                -ErrorAction SilentlyContinue).Count -gt 0) {
-            throw ('Railgun settings failed and the game is now running; ' +
-                'installed containers were not restored. Actual error: ' +
-                $settingsFailure.Exception.Message)
-        }
-        $settingsRollbackError = $null
-        try {
-            if ($settingsExisted -and $settingsBackupVerified) {
-                Copy-Item -LiteralPath $settingsBackupPath `
-                    -Destination $settingsPath -Force
-                if ((Get-FileHash -LiteralPath $settingsPath `
-                        -Algorithm SHA256).Hash -cne $settingsPreviousHash) {
-                    throw 'Railgun settings rollback hash mismatch.'
-                }
-            } elseif (-not $settingsExisted -and
-                (Test-Path -LiteralPath $settingsPath)) {
-                Remove-Item -LiteralPath $settingsPath -Force
-            }
-        } catch {
-            $settingsRollbackError = $_.Exception.Message
-        }
-        $releaseRollbackError = $null
-        try {
-            $null = & (Join-Path $repo `
-                'tools/Restore-VoyageReleaseInstallation.ps1') `
-                -InstallManifest $installation.installManifestPath
-        } catch {
-            $releaseRollbackError = $_.Exception.Message
-        }
-        if ($null -ne $settingsRollbackError -or
-            $null -ne $releaseRollbackError) {
-            throw ('Railgun settings/install recovery failed. Settings=' +
-                [string]$settingsRollbackError + '; release=' +
-                [string]$releaseRollbackError + '; original=' +
-                $settingsFailure.Exception.Message)
-        }
-        throw ('Railgun settings failed; prior settings and release were ' +
-            'restored. Actual error: ' + $settingsFailure.Exception.Message)
-    }
-    $restoreValidation = & (Join-Path $repo `
-        'tools/Restore-VoyageReleaseInstallation.ps1') `
-        -InstallManifest $installation.installManifestPath -ValidateOnly
-    if (-not [bool]$restoreValidation.validated) {
-        throw 'Installed Railgun release did not pass restore validation.'
-    }
-    if (-not $output.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase) -or
-        [IO.Path]::GetFullPath($output) -ceq $tmpOwnerRoot) {
-        throw 'Refusing to remove an unowned Railgun scratch path.'
-    }
-    $temporaryInstallRoot = [IO.Path]::GetFullPath(
-        (Join-Path $repo 'Tmp/Railgun/installations'))
-    $installationOperationRoot = [IO.Path]::GetFullPath(
-        (Split-Path -Parent $installation.installManifestPath))
-    $temporaryInstallBoundary = $temporaryInstallRoot.TrimEnd('\') + '\'
-    if (-not $installationOperationRoot.StartsWith($temporaryInstallBoundary,
-            [StringComparison]::OrdinalIgnoreCase) -or
-        $installationOperationRoot -ceq $temporaryInstallRoot) {
-        throw 'Refusing to remove installation state outside Tmp/Railgun/installations.'
-    }
-    [IO.Directory]::Delete($installationOperationRoot, $true)
-    $installation.installManifestPath = $null
-    $settingsInstallation = [pscustomobject]@{
-        status = 'installed'
-        path = $settingsPath
-    }
-    Write-Host 'Railgun installed successfully; container files were read back and settings are present.'
+    $installed = & (Join-Path $PSScriptRoot 'Install-Railgun.ps1') -ReleaseManifest $manifestPath -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource
+    $installation = $installed.installation
+    $settingsInstallation = $installed.settingsInstallation
+    $restoreValidation = $installed.restoreValidation
 }
-$resolvedProject = (Resolve-Path -LiteralPath $projectRoot).Path
-if ($resolvedProject -ne (Join-Path $output 'Project') -or
-    -not $resolvedProject.StartsWith($tmpBoundary, [StringComparison]::OrdinalIgnoreCase) -or
-    ((Get-Item -LiteralPath $resolvedProject -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-    throw 'Unsafe build project cleanup path.'
-}
-Remove-Item -LiteralPath $resolvedProject -Recurse -Force
+Remove-VoyageModScratch -ModRoot $PSScriptRoot -RunRoot $output -Path $projectRoot
 [pscustomobject]@{
-    status = $(if ($Install) { 'installed' } else { 'prepared-not-installed' })
+    status = $(if ($Install) { 'installed' } else { 'built' })
     releaseManifestPath = $manifestPath
     archivePath = $archivePath
     validationSummaryPath = $validationSummaryPath

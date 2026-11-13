@@ -10,6 +10,7 @@ validation; Unreal fixtures live in `Project/Tests/`.
 
 [Build-SmartOutlet.ps1](Build-SmartOutlet.ps1) and
 [Test-SmartOutlet.ps1](Test-SmartOutlet.ps1) create fresh working projects
+through the [shared pipeline](../../tools/mod-setup.md#shared-mod-pipeline)
 from current source, prepare their native/BPT dependencies and run Unreal only
 in those copies. Both accept `-EngineRoot` and a fresh `-OutputRoot` below
 `Tmp/SmartOutlet/`. They delete the working project after success, retain useful
@@ -29,7 +30,9 @@ $shell = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
 ```
 
 Add `-AllowDirtySource` to the producer's arguments for uncommitted source.
-Building does not install the candidate. For editor checks:
+Building does not install the candidate. Its result has `status: built`,
+`archivePath`, `releaseManifestPath` and `validationSummaryPath`.
+For editor checks:
 
 ```powershell
 $shell = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }

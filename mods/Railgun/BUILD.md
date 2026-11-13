@@ -32,7 +32,8 @@ Changing an external GLB, image or sound alone does not update its saved release
 representation in `Project/Content/`; accept the corresponding focused asset
 edit before building.
 
-[New-RailgunProjectCopy.ps1](New-RailgunProjectCopy.ps1) copies current maintained
+[New-RailgunProjectCopy.ps1](New-RailgunProjectCopy.ps1) uses the
+[shared pipeline](../../tools/mod-setup.md#shared-mod-pipeline) to copy current maintained
 inputs, including uncommitted edits, into a fresh directory below `Tmp/Railgun/`.
 It returns the copied `.uproject` path. Build and test entry points create their
 own copies and remove them on success, retaining reports and candidate packages.
@@ -69,7 +70,9 @@ $hostExe = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
 Omit `-Install` to prepare only. `-OutputRoot` selects a fresh directory below
 `Tmp/Railgun/`; `-ArtifactVersion` labels that run, not the release version.
 The archive name remains `Railgun-V<N>.zip`.
-The producer uses the reviewed UE 5.8.2 installation at `K:/Epic Games/UE_5.8`.
+`-AllowDirtySource` explicitly permits uncommitted inputs, including when
+building with `-Install`. `-EngineRoot` and `-GameRoot` override local installation
+paths. The default editor is the reviewed UE 5.8.2 installation at `K:/Epic Games/UE_5.8`.
 `-CacheRoot` selects external engine cache storage.
 The parser profile is `UE5_8`; the accepted source-build pin lives in
 [game-build.json](game-build.json). On a pin mismatch, follow the shared
@@ -80,7 +83,7 @@ The producer validates the settings schema, executes the saved Blueprint loader,
 reads the primary DataAssets and model, cooks the owned inventory, converts the
 required cooked serialization and verifies the final container, registry, ZIP
 and release manifest. The registry is derived from fresh owned DataAsset
-readbacks. The result returns `archivePath`, `releaseManifestPath` and
+readbacks. A build-only result has `status: built` and returns `archivePath`, `releaseManifestPath` and
 `validationSummaryPath`; the summary includes the settings-loader result.
 
 The release ZIP contains the `Railgun.pak/.utoc/.ucas` triplet and `Railgun.ini`
@@ -99,11 +102,28 @@ $hostExe = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
 ```
 
 [Test-Railgun.ps1](Test-Railgun.ps1) accepts `-EngineRoot` and a fresh
-`-OutputRoot` below `Tmp/Railgun/`. On success, its `report` points to
+`-OutputRoot` below `Tmp/Railgun/`. On success, its `reportPath` points to
 `settings-validation.json` with status `passed`. It covers saved
 Blueprint execution with missing/custom/invalid values, inclusive bounds,
 explicit zero, key case and reload/reset behavior. Game lifecycle remains a
 separate acceptance boundary.
+
+## Install an existing candidate
+
+[Install-Railgun.ps1](Install-Railgun.ps1) installs the supplied release manifest
+without rebuilding. It reads the INI template from that candidate's ZIP,
+preserves player values and applies the owned retired-key and energy-unit
+migrations. Container and settings recovery remain coupled. A legacy
+`Railgun.autoload` blocks installation until its recoverable migration is handled.
+
+```powershell
+./mods/Railgun/Install-Railgun.ps1 -ReleaseManifest '<returned releaseManifestPath>'
+```
+
+Pass `-AllowDirtySource` when the candidate contains uncommitted source;
+`-GameRoot` overrides the game installation. The game must be closed.
+`Build-Railgun.ps1 -Install` delegates to this same installer after a successful
+build and returns `status: installed`.
 
 ## Primary DataAsset serialization
 

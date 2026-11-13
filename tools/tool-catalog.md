@@ -33,6 +33,8 @@ failure handling.
 | Generate graph/widget previews and an index with automatic node comparison for changed snapshots | `BlueprintText/Render-BlueprintPreviews.ps1` | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |
 | Preview an exported HUD layout and copy review adjustments | `BlueprintText/Render-WidgetPreview.ps1` | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
+| Share maintained-project copies, run paths, editor tests and additive cook | `VoyageModPipeline.psm1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
+| Check shared mod execution and installation failure boundaries offline | `Test-VoyageModPipeline.ps1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
 | Maintain generated settings in an existing procedural producer | `New-VoyageModSettings.ps1` | [Compatibility interface](VoyageModSettings/legacy-generation.md) |
 | Validate a settings schema and default INI without generating C++ | `VoyageModSettings/VoyageModSettings.psm1` → `Read-VoyageModSettingsSchema` | [INI preparation](mod-setup.md#runtime-ini-preparation) |
 | Merge an existing user INI | `Merge-VoyageModIni.ps1` | [Mod setup](mod-setup.md) |

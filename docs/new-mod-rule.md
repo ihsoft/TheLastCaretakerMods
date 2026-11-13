@@ -44,19 +44,17 @@ investigation may use an ignored backlog under the mod, following the
 
 ## Advance the mod
 
-For mods that author Blueprints, use the shared
-[BlueprintText workflow](../tools/blueprint-workspace.md) as the recommended
-authoring path. Follow the [Unreal project ownership rule](unreal-project-rule.md):
-the project contains the complete release asset content and is the source of
-truth. Agents export, edit JSON and apply changes back to that project; commit
-synchronized BPT alongside Blueprint assets for Git review. Shared tools validate
-changes and generate user-facing previews. Prepare required resources, parents
-and native dependencies in the Unreal project first. Do not introduce a per-mod
-C++ graph builder merely to create or update Blueprint graphs. A procedural
-step can remain appropriate when the supported declarative format cannot express
-the needed state or would be disproportionately complex; keep that exception
-bounded and explicit. This authoring choice does not replace the mod's packaging,
-installation or game-validation requirements.
+Once the implementation needs an Unreal project, use the
+[standard mod setup](unreal-project-rule.md#standard-mod-layout) for folders,
+public operations and the boundary between shared mechanics and mod-owned code.
+The skeleton command does not create that implementation. For an existing mod,
+use the [unification procedure](unreal-project-rule.md#unifying-an-existing-mod)
+instead of recreating its directory or copying another mod's scripts.
+
+For Blueprint authoring, follow the shared
+[BPT workflow](../tools/blueprint-workspace.md) after preparing the required
+project dependencies. The setup rule owns project authority and the boundary
+for focused source-update operations; the BPT guide owns export/edit/apply.
 
 Add `BUILD.md` when supported authoring or build operations exist, and index
 those entry points from `AGENTS.md`. Keep the architecture and README honest

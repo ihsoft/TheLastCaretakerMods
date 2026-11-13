@@ -21,8 +21,9 @@ do not load every document just because it is indexed here.
   and applicability across game updates.
 - [Starting a new mod](docs/new-mod-rule.md): find related game knowledge and
   create a minimal, honest mod directory before selecting an implementation.
-- [Unreal project ownership](docs/unreal-project-rule.md): complete release asset
-  content, project authority, focused update scripts, and the shared Unreal queue.
+- [Mod setup and Unreal project ownership](docs/unreal-project-rule.md): standard
+  folders and public commands when creating or unifying a mod; source ownership,
+  working copies and the shared Unreal queue.
 - [BlueprintText](tools/blueprint-workspace.md): bidirectional Blueprint editing
   through JSON, with synchronized text committed for Git review.
 - [BPT specialist decisions](docs/blueprint-text-maintenance-rule.md): shared

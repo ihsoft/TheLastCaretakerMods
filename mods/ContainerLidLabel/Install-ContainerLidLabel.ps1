@@ -2,13 +2,14 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$ReleaseManifest,
-    [string]$GameRoot = 'P:/SteamLibrary/steamapps/common/Voyage'
+    [string]$GameRoot = 'P:/SteamLibrary/steamapps/common/Voyage',
+    [switch]$AllowDirtySource
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $installer = Join-Path $repo 'tools/Install-VoyageRelease.ps1'
-$plan = & $installer -ReleaseManifest $ReleaseManifest -GameRoot $GameRoot -AllowDirtySource -ValidateOnly
+$plan = & $installer -ReleaseManifest $ReleaseManifest -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource -ValidateOnly
 $logic = [IO.Path]::GetFullPath((Join-Path $GameRoot 'Voyage/Content/Paks/LogicMods'))
 if ($plan.mod -cne 'ContainerLidLabel' -or -not [StringComparer]::OrdinalIgnoreCase.Equals($plan.paksDirectory, $logic)) { throw 'Expected ContainerLidLabel LogicMods candidate' }
 function Assert-Closed {
@@ -51,7 +52,7 @@ $iniChanged = $false
 try {
     Assert-Closed
     if ($targetExisted -and (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -cne $previousHash) { throw 'INI changed while preparing installation' }
-    $installed = & $installer -ReleaseManifest $ReleaseManifest -GameRoot $GameRoot -AllowDirtySource -KeepRecoveryEvidence
+    $installed = & $installer -ReleaseManifest $ReleaseManifest -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource -KeepRecoveryEvidence
     $state.installManifest = $installed.installManifestPath
     $state.status = 'containers-installed'
     $state | ConvertTo-Json | Set-Content -LiteralPath $statePath
