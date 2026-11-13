@@ -103,7 +103,11 @@ Passing a lower level never implies a higher one:
 2. the mapping passes header, payload, required-schema, and Steam build
    gates;
 3. the asset opens with no unexpected `RawExport` fallback;
-4. unchanged save is binary-equal and reopens;
+4. unchanged save reopens and preserves the reviewed package semantics;
+   require binary equality only when the selected save path's contract promises
+   it. Otherwise compare the relevant structure and values, allowing differences
+   only under an established normalization contract; see
+   [roundtrip boundaries](voyage-cooked-asset-toolchain-knowledge.md#known-boundaries);
 5. independent CUE4Parse inspection agrees with the intended structure;
 6. retoc converts, verifies, and reports the exact semantic inventory;
 7. an independent rebuild has equivalent reviewed package structure and
