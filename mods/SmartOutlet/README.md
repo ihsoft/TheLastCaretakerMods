@@ -4,7 +4,11 @@ Select smart input, smart output or normal on each supported storage socket
 with V (Interact 3). Smart modes use fill thresholds, saved state and a pulsing
 green/red indicator. Requires DML.
 
-Build a candidate from the repository root:
+Settings: [SmartOutlet.ini](Assets/SmartOutlet.ini), with comments describing
+available modes and thresholds. Installed at
+`<game directory>/Voyage/Content/Paks/LogicMods/SmartOutlet.ini`.
+
+Build a candidate from the repository root (see [build details](BUILD.md)):
 
 ```powershell
 $shell = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }

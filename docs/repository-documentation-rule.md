@@ -87,6 +87,17 @@
   output are not links to existing resources. During an uncommitted
   investigation, local working files may link to each other; resolve such links
   before committing the documents that contain them.
+- Mod documentation uses four core names with distinct responsibilities:
+  `AGENTS.md` indexes task-specific entry points; `ARCHITECTURE.md` owns behavior,
+  state, implementation constraints and dependency contracts; `BUILD.md` owns
+  source layout, authoring, build, validation and installation entry points;
+  `README.md` supplies the short public description and candidate build command.
+  Create `BUILD.md` when supported authoring or build operations exist, not as
+  an empty promise in a new skeleton. Put editor-input provenance in a focused
+  architecture section; a separate provenance document is justified when its
+  size or independent use warrants it. Other focused documents are allowed for
+  the same reason, but must not compete with these owners. `CHANGELOG.md`
+  remains separate publication input under the rule below.
 - A README is a short label for its directory, not an agent knowledge source.
   Each mod has one `README.md` with a brief description and the command to
   build a candidate from the command line. If no supported build command

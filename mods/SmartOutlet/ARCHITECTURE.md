@@ -123,13 +123,13 @@ for the shader packaging contract.
 ## Source and package boundaries
 
 The [maintained project](Project/Voyage.uproject) owns the assets; the
-[development guide](DEVELOPMENT.md) owns working-copy and validation commands.
+[build guide](BUILD.md) owns working-copy and validation commands.
 `Project/EditorSupport/Source/Voyage/` supplies minimal editor-only reflection
 mirrors. Required stock input/widget identities are
-compilation stubs; their [provenance](SOURCE-PROVENANCE.md) owns reconstruction
-and revalidation boundaries.
-Their test getters and
-notification counter do not enter the game. `ModuleSocketIOData` is deliberately
+compilation stubs; [editor provenance](#editor-dependencies-and-provenance)
+owns reconstruction and revalidation boundaries.
+Their test getters and notification counter do not enter the game.
+`ModuleSocketIOData` is deliberately
 partial: use member writes by reference, never serialize a complete native
 socket or replace its full Port value from this mirror.
 
@@ -143,27 +143,34 @@ stock mesh, or stock material. `EditorBootstrap` is an editor-only BPT stub
 excluded from the release inventory. Project configuration enables SM6 and
 inline material shader code; it is not installed as game configuration.
 
-The installer preserves existing sectioned INI text, including omitted modes,
-comments and unknown settings. Legacy numbered port rules migrate to class/mode
-profiles without adding modes; conflicting rules for one class/mode stop the
-installation. Socket names are not configuration selectors. Original INI and
-container recovery data last through the coupled installation and are removed
-after both writes succeed; failed operations report their recovery location.
-`-ResetSettings` explicitly replaces settings with the candidate's defaults.
+## Editor dependencies and provenance
 
-## Validation boundary
+The editor identities were reconstructed from Voyage Steam build 25982825,
+UE 5.8, through reviewed mappings, asset summaries and native reflection
+inspection. The native mirrors under `Project/EditorSupport/Source/Voyage`
+describe only fields, functions and delegates used by compiled Blueprint
+bytecode and editor fixtures. They are not
+native ABI replacements and no native module ships. Revalidate affected owners,
+signatures and enum values when the game contract changes or current inspection
+disagrees. The producer's game pin and mapping resolver own build selection.
 
-Editor tests execute the compiled Blueprints against native mirrors: input and
-output hysteresis, per-port independence, configuration and discovery, latch
-snapshots, bandwidth preservation, notifications, reconciliation and visual
-cleanup. They also check optional mode profiles, class lookup, mode selection,
-hint text, HUD attachment/gating, input debouncing, research and restoration.
-Offline checks cover settings migration and preservation. These tests do not
-simulate native network transfer or the game save pipeline.
+The following project assets are identity-only editor stubs, created through
+Unreal factories rather than copied from cooked game content:
 
-Changes to native flow, attachment/restoration or persistence require their
-corresponding game tests; editor mirrors cannot establish those contracts.
-Recheck affected identities and notification behavior when the native contract
-changes. Technical identity changes require a fresh DML discovery/load check.
-Candidate acceptance belongs to release evidence under the
-[shared release workflow](../../docs/release-and-installation-rule.md).
+| Virtual package | Editor identity |
+| --- | --- |
+| `/Game/Game/Input/Character/IAV_InteractThree` | Boolean InputAction; stock third interaction action. |
+| `/Game/Game/Input/Character/DA_Input_Context_Character` | VoyageInputContextAsset. |
+| `/Game/UI/Game/Inputs/BP_ButtonInfoDetailed_Vertical` | Widget Blueprint with VoyageButtonInfoWidget parent. |
+| `/Game/UI/Game/Inputs/BP_ButtonInfo_Vertical_Container` | Widget Blueprint with VoyageButtonInfoContainerWidget parent. |
+
+These saved project assets are compilation dependencies, excluded from the
+producer's explicit package allowlist. The game supplies their full
+runtime content. The widget parents come from stock generated-class metadata;
+the button-info container's class property and SetActions signature come from
+native reflection. UI selection uses the native detector and character HUD
+contracts described in [input and HUD](#input-and-hud).
+
+All release assets under `/Game/Mods/SmartOutlet` are mod-authored; the
+sectioned parser is a relocated copy of the shared BPT library. For editor
+coverage and required game checks, see the [validation boundary](BUILD.md#validation-boundary).

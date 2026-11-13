@@ -33,10 +33,11 @@ creates `mods/<Mod>/` with only:
 - `CHANGELOG.md`: an empty `Next` section for future player-facing release
   notes; it is publication input and never part of the release ZIP.
 
-The scaffold does not create `MOD-RULES.md`, `game-build.json`, provenance
+The scaffold does not create `BUILD.md`, `game-build.json`, provenance
 files, build scripts, an Unreal project, or a generic backlog. Add each only
-when the chosen implementation needs it. `MOD-RULES.md` holds durable local
-constraints; `game-build.json` belongs to a game-bound contract; source
+when the chosen implementation needs it. Keep durable local constraints in
+architecture, following the [mod document roles](repository-documentation-rule.md);
+`game-build.json` belongs to a game-bound contract; source
 provenance belongs with actual game-derived inputs. A large active
 investigation may use an ignored backlog under the mod, following the
 [research workflow](research-workflow-rule.md#working-backlogs-for-large-tasks).
@@ -57,7 +58,9 @@ the needed state or would be disproportionately complex; keep that exception
 bounded and explicit. This authoring choice does not replace the mod's packaging,
 installation or game-validation requirements.
 
-Keep the architecture and README honest about what exists. A planned skeleton
+Add `BUILD.md` when supported authoring or build operations exist, and index
+those entry points from `AGENTS.md`. Keep the architecture and README honest
+about what exists. A planned skeleton
 does not claim a working mod, a supported game Update, or a release. When a
 public producer exists, follow the [release workflow](release-and-installation-rule.md):
 build first, diagnose only an actual failure, and seek a proportional game test

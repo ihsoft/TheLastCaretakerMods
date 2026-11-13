@@ -21,7 +21,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Assets/SmartOutlet.ini') -Desti
 $previousOutput = $env:SMARTOUTLET_TEST_OUTPUT
 try {
     $env:SMARTOUTLET_TEST_OUTPUT = $output
-    & (Join-Path $repo 'tools/Invoke-UnrealQueued.ps1') -Operation 'Validate SmartOutlet Blueprints' `
+    & (Join-Path $repo 'tools/Invoke-UnrealQueued.ps1') -Operation 'Test SmartOutlet Blueprints' `
         -FilePath (Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe') `
         -ArgumentList @($project, '-run=pythonscript', ('-script=' + (Join-Path $output 'Project/Tests/RunAll.py')),
             '-unattended', '-nop4', '-nosplash', '-nullrhi', ('-abslog=' + $log)) `
