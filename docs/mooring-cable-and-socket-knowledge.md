@@ -1,9 +1,10 @@
 # Mooring cables and socket lifecycle (observed contracts)
 
 These findings describe the shared Voyage socket/cable layer inspected on
-Steam build `25982825`. Runtime validation covers the StableGyro implementation;
-it does not establish every vehicle's reeling, release action or load ordering.
-Recheck the relevant native and asset contracts for another game build or owner.
+Steam build `25982825`. Runtime validation covers the optional Gyro endpoint
+arrangement described below, not every vehicle's reeling, release action or load
+ordering. Check applicability for a new consumer; revalidate affected contracts
+when current evidence disagrees or relevant behavior changes.
 
 ## Socket, cable and decoration are separate objects
 
@@ -77,9 +78,10 @@ types and pre-existing orphan attachments need their own verification.
 ## Saved endpoint identity and disabled optional ports
 
 When a saved connection refers to an optional endpoint, removing or omitting
-that endpoint can leave an unresolved reference. StableGyro's game test exposed
-a long load stall and leftover attachment pads with that approach. A working
-alternative keeps endpoint names and SocketIDs stable in both modes, restores
+that endpoint can leave an unresolved reference. In the tested optional-port
+arrangement, omitting endpoints produced a long load stall and leftover
+attachment pads. A working alternative keeps endpoint names and SocketIDs
+stable in both modes, restores
 the endpoint, disconnects it natively, then hides and disables local interaction.
 This preserves reference resolution; it is not a general mod-removal migration.
 
@@ -100,8 +102,8 @@ reevaluated for length and element access on every iteration.
 
 Use the public [asset inspection](../tools/asset-inspection.md) and
 [executable inspection](../tools/executable-inspection.md) tools for the exact
-socket, cable and consumer. [StableGyro source provenance](../mods/StableGyro/GAME_DERIVED_SOURCES.md)
-records the inspected owners and native locations;
-[its architecture](../mods/StableGyro/ARCHITECTURE.md) records the implemented
-pattern and game-test boundaries. For action identity, availability and hold
+socket, cable and consumer. When exact native locations for the inspected Gyro
+case are useful, [StableGyro source provenance](../mods/StableGyro/GAME_DERIVED_SOURCES.md)
+is an optional reference, not a template for another consumer.
+For action identity, availability and hold
 semantics, see [vehicle action patterns](vehicle-and-hud-modding-patterns-knowledge.md#action-execution-and-action-presentation-are-separate-contracts).

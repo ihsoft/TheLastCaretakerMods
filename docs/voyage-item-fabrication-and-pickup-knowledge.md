@@ -9,11 +9,8 @@ build; static facts, runtime coverage and inferences are distinguished below.
 Where a section refers to exact binary/schema evidence, it was obtained with
 parser profile `UE5_8` from a prior game snapshot. Its exact Steam build ID
 belongs with the extracted input's provenance and gates reuse of that input,
-not the general ownership and event patterns. A changed Update calls for
-checking affected contracts, not repeating the whole investigation.
-An optional implementation example is the
-[Railgun architecture](../mods/Railgun/ARCHITECTURE.md), which owns its item
-values and release evidence, not the general contracts described here.
+not the general ownership and event patterns. Recheck affected contracts when
+changed assets, diagnostics or behavior give reason to doubt them.
 
 ## Distinct contracts
 
@@ -64,9 +61,9 @@ limit, or equate drop grouping with inventory stack capacity.
 functional fabrication/pickup but yielded the native/class default `9.0`,
 displayed as `9mm`. Explicit `45.0` displayed as `45mm`.
 
-Do not use removal as a tooltip-hiding mechanism or attempt to put a semantic
-string such as `Railgun` into this numeric property. An item-specific text
-override or hiding mechanism would require separate consumer research and
+Do not use removal as a tooltip-hiding mechanism or attempt to put a weapon
+name into this numeric property. An item-specific text override or hiding
+mechanism would require separate consumer research and
 validation; changing a shared formatter would affect other items.
 
 ## Validation boundary
@@ -87,10 +84,9 @@ Stored object/custom versions are a package-format contract, not a runtime
 dependency on another item. Validate converted values and references against
 fresh source/cook readbacks rather than historical property or import counts.
 
-[Railgun's producer](../mods/Railgun/BUILD.md#primary-dataasset-serialization)
-reads the saved DataAssets natively, compares them with fresh cook, then checks
-the converted cooked graph. Arbitrary edits still require packaging, reference
-resolution and affected gameplay-consumer checks.
+Compare native saved-asset readback with fresh cook, then the converted graph
+with that cook. Arbitrary edits still require packaging, reference resolution
+and affected gameplay-consumer checks.
 
 For this filtered UE5.8 import layout, encode an unset import `PackageName` as
 the explicit FName `"None"`, not JSON `null`. In the reviewed writer, a null
@@ -104,7 +100,7 @@ JSON roundtrips: fields such as name-map hashes can be recomputed by the writer.
 
 ### Inventory change notifications
 
-On the fingerprint above, `VoyageBaseInventoryComponent` declares reflected
+In the inspected schema, `VoyageBaseInventoryComponent` declares reflected
 multicast delegates including `OnInventoryChanged`, `OnInventoryAdd`,
 `OnInventoryRemove` and `OnInventorySlotChanged`. These are not absent merely
 because a mod's partial editor mirror does not declare them.
@@ -125,11 +121,10 @@ parameters. The delegate property owner is
 The exact inherited `/Script/Voyage.PersistentInterface:OnPersistentActorPostLoad`
 event (integer `Version` parameter) defers a visualization update with
 `DelayUntilNextTick`; that post-load branch does not itself rebind the delegate.
-Railgun uses this event-driven pattern for stack additions/removals,
-deposit-all, independent gun instances, and empty or partial inventories
-across save/load. The owning [magazine contract](../mods/Railgun/ARCHITECTURE.md#magazine-inventory)
-describes that behavior. It does not establish every native broadcast site or
-other modules' lifecycle contracts.
+Runtime coverage of this event-driven pattern includes stack additions/removals,
+deposit-all, independent instances and empty or partial inventories across
+save/load. It does not establish every native broadcast site or other modules'
+lifecycle contracts.
 
 ### Manual transfer between character and module inventories
 
@@ -193,13 +188,10 @@ defence against synchronous callbacks, not proof that all delegates broadcast
 synchronously on every native path.
 
 See [action/hint ownership](vehicle-and-hud-modding-patterns-knowledge.md#action-execution-and-action-presentation-are-separate-contracts).
-Optional implementation examples (Railgun):
-[transfer and lifecycle](../mods/Railgun/Project/BlueprintText/Mods/Railgun/Station/BP_RailgunOperator.json)
-and [native inventory mirror](../mods/Railgun/Project/EditorSupport/Source/Voyage/VoyageBaseInventoryComponent.h).
 
 ### Native removal and compensating resource additions
 
-Bounded native inspection on the fingerprint above establishes that
+Bounded native inspection establishes that
 `VoyageBaseInventoryComponent.RemoveItem` returns the number actually removed,
 not the remaining inventory or the unfulfilled request. The weight-limited
 subclass uses the same implementation. For a request of one item, return `1`
@@ -224,12 +216,13 @@ transplant executable addresses into runtime code.
 Reproduce by locating the reflected native registration with
 `Invoke-VoyageExecutableInspector.ps1`, then following the bounded thunk,
 constructor/vtable and implementation with `Inspect-VoyageNativeMemberAccess.py`.
-Static evidence is retained below ignored
-`artifacts/railgun/ammo-fire-native-20260928/`; revalidate on a changed fingerprint.
+Raw inspection output follows the [artifact lifecycle](artifact-lifecycle-rule.md).
+Exact addresses and extracted inputs retain their build provenance; recheck the
+general contract when current evidence disagrees.
 
 ### Component and interaction contract
 
-Static inspection on the fingerprint above identifies the displayed Diesel
+Static inspection identifies the displayed Diesel
 Refinery as `/Game/Blueprints/Modules/Generators/BP_Module_DieselGenerator`;
 Portable Petrol Refinery is `BP_Module_PetrolGenerator_Portable` in the same
 directory. These are inventory references, not donors for fuel-conversion
@@ -284,30 +277,24 @@ Inventory object identity and effective capacity are separate contracts. A
 serialized `MaxWeightLimit` value does not by itself recompute the effective
 weight budget used by UI and admission checks.
 
-Bounded native inspection on the same fingerprint confirms that
+Bounded native inspection confirms that
 `SetMaxWeightLimit` stores the base field and then runs a separate recomputation:
 it initializes another internal value from that field and adds entries from a
 modifier collection. Direct serialized property assignment does not execute
 that setter path. The stock setup call is consequently meaningful and must not
-be dropped as an apparent redundant assignment. Railgun calls the native
-setter from the module actor's `ReceiveBeginPlay` to apply its 23.4 kg effective
-capacity. This implementation reuses the existing event path and neither clears
-nor recreates the inventory. It does not implement a separate post-load hook.
+be dropped as an apparent redundant assignment. Applying the limit through the
+setter does not require clearing or recreating inventory contents.
 The UI/admission consumers of the derived value have not been independently
 traced here. Do not write native offsets or destroy excess inventory contents
 when applying a lower limit.
 
-The inventory and magazine behavior persist through save/load. This does not
-establish every batch/single-transfer boundary or other modules' behavior by
-analogy.
-
-The stock assembly and bounded Railgun runtime results do not validate every
+The stock assembly and bounded runtime results do not validate every
 replacement or deposit route. A mod must still verify native inventory
 discovery, validator dispatch for every supported deposit route, interaction
-selection, and save/load of the actual instance. A weight budget calculated as
-six times the item's actual weight (23.4 for six 3.9-unit items) needs boundary
-tests: six at once, six one by one, 5+1, rejection of a seventh, removal and
-refill. Floating-point rounding and native partial-transfer behavior have not
+selection, and save/load of the actual instance. A weight budget intended to
+admit a fixed item count needs boundary tests: full-batch and single-item
+transfers, partial refill, and rejection beyond the intended count.
+Floating-point rounding and native partial-transfer behavior have not
 been established by this static inspection. Never silently accept extra items
 or discard rejected ones to compensate for a failed boundary test.
 
@@ -315,4 +302,4 @@ Reproduce with `Get-VoyageAssetSummary.ps1` for the exact refinery's components
 and `ValidateItem` function, `Get-VoyageAssetJson.ps1` for component defaults and
 implemented interfaces, and `Inspect-VoyageAsset.ps1` for bounded pseudocode and
 the `VoyageBaseInventoryComponent` / `VoyageInventoryWeightLimitedComponent`
-mapping queries. Raw evidence remains under ignored artifacts.
+mapping queries. Raw evidence follows the artifact lifecycle.

@@ -27,8 +27,7 @@ All surveyed Boat-side Electricity sockets attach to the built-in battery's
 mesh. All surveyed Boat-side Diesel sockets attach to the built-in Diesel
 container's mesh. The side connectors are consequently external sockets of
 ordinary modules, not special sockets owned directly by `VoyageBoatPawn`.
-The built-in Diesel module has local capacity `2000`, matching the stock card's
-`1897 L / 2000 L`.
+The built-in Diesel module has local capacity `2000`.
 
 Native `ModuleSocketComponent::GetScanText` produces the middle line. It resolves
 `ModuleOwner`, reads the port resource type, calls that component's virtual
@@ -48,16 +47,12 @@ The socket cards show local module storage rather than whole-grid totals;
 `6.0 kWh` is the local capacity of the built-in Boat battery. Battery and Diesel
 container both own the same concrete `VoyageModuleComponent`; neither
 Blueprint overrides the resource getters or initializes special resource
-state in Blueprint `BeginPlay`. There is no resource-specific socket behavior
-to fix.
+state in Blueprint `BeginPlay`.
 
-The `kWh` suffix is a stock presentation convention, not a physical conversion
-contract. The UI divides the native electricity amount by `1000`; runtime power
-integration shows that the native stored amount behaves as kJ while module
-demand is expressed in W. Code that controls energy consumption must therefore
-use kJ and W directly and must not convert native amounts through Wh or apply a
-factor of `3.6`. UI replacements may retain the stock `/1000` formatting when
-visual parity is the goal.
+The `kWh` suffix is a stock presentation convention. Use the
+[electricity-unit contract](gameplay-observations-knowledge.md#electricity-units)
+for energy calculations; UI replacements may retain stock formatting for visual
+parity without treating it as a physical conversion.
 
 The surveyed indicator creation path does not call
 `VoyageBaseUserWidget::SetInteractiveSource` on its button container. A global
@@ -136,7 +131,7 @@ For changing an individual port's bandwidth or direction at runtime, use the
 [socket control contract](module-socket-runtime-control-knowledge.md), including
 notification of connected modules after a limit change.
 
-Network-wide Diesel and Electricity belong in the possessed-Boat HUD, while
-socket scan text remains local to its module. Preserve the stock Actor, SCS
-template, component class and global interaction-widget consumer. The
-[research pitfalls](research-pitfalls-knowledge.md) document unsafe interception paths.
+Local socket storage and whole-grid totals have different producers. Choose
+the producer and display owner for the requested value rather than changing a
+socket's class merely to replace its text. For class-substitution risks, see
+[unsafe interception paths](research-pitfalls-knowledge.md#unsafe-class-substitution).

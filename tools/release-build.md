@@ -48,11 +48,10 @@ selected producer checks its own preconditions and reports a running game;
 there is no separate game-status or version preflight on the normal path. Do
 not manually bypass its source or manifest gates.
 
-For an already-built release, skip build/cook and use its release manifest with
-the [installation guide](release-installation.md). The common installer accepts
-schema-2 release manifests and schema 3 with one exact content-plugin
-descriptor. A build manifest is not an installer input. Keep exact commands and
-stage-specific details with the owning producer or its mod documentation.
+For an already-built release, skip build/cook and use the producer's release
+manifest through the [installation guide](release-installation.md). A build
+manifest is not an installer input. Keep exact commands and stage-specific
+details with the owning producer or its mod documentation.
 The shared installer covers the container payload for BoatHUDTotalResources,
 DonkLiftKeyboardControl, ElectrifiedBoat, MooringCable60m,
 PalletContainerSnap, ScopeFix, and VoyageAutoLoader. Railgun and StableGyro

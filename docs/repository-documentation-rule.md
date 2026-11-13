@@ -32,12 +32,15 @@
   compatibility constraints may distinguish versions; they are not a work log.
 - Shared `docs/` content must have a concrete or reasonably expected use across
   mods. Keep mod-only contracts under the owning `mods/<mod>/`.
-  Write reusable conclusions without tying them to one mod. Link to a mod example
-  only when it adds something the shared explanation does not provide, such as
-  a rare special case that does not justify expanding the shared document;
-  explain that value at the link. Do not keep task histories or per-run
-  measurements in the shared reading path. For explicitly requested resource
-  diagnostics, use the [agent work measurement method](agent-work-measurement-rule.md).
+  Shared rules and knowledge describe the recommended approach themselves.
+  A concrete mod may appear only as an optional context link, never as the
+  canonical implementation, a required reading step, or an example of how work
+  must be done. Keep such a link only when it adds a useful detail, such as a
+  rare consumer-specific boundary, and explain that value at the link. The
+  shared contract must remain understandable without opening it. Do not keep
+  task histories or per-run measurements in the shared reading path.
+  For explicitly requested resource diagnostics, use the
+  [agent work measurement method](agent-work-measurement-rule.md).
 - Root and mod `AGENTS.md` files are compact indexes, not collections of full
   rules or architecture descriptions. Keep substantive guidance in its owning
   document. Explain each link by the task or decision it helps with, so an agent

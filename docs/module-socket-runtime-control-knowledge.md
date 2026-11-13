@@ -1,8 +1,9 @@
 # Runtime control of resource sockets
 
 These native contracts were inspected on Steam build 25982825, UE 5.8.
-They apply to `ModuleSocketComponent` and `VoyageModuleComponent`; the runtime
-consumer example is [Smart Outlet](../mods/SmartOutlet/ARCHITECTURE.md).
+They apply to `ModuleSocketComponent` and `VoyageModuleComponent`. The inspected
+build identifies the evidence, not a prerequisite for using these contracts;
+recheck affected behavior when current evidence disagrees.
 
 ## Bandwidth and direction
 

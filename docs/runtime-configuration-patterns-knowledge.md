@@ -1,167 +1,102 @@
-# Runtime INI configuration knowledge (shared build tools; runtime ownership varies)
+# Runtime INI configuration knowledge
 
-This is a reusable implementation recipe, not a claim that every game class has
-the same events or native API. Railgun and StableGyro implement the canonical
-INI/schema and reload pattern; ContainerLidLabel demonstrates a manager-owned snapshot.
-A strictly session-lived single-read owner and one shared snapshot for multiple
-helpers are proposed standards, not behavior established in all three mods.
-
-For an existing mod, open its index before its settings files. For a Gyro
-request, start with the [StableGyro index](../mods/StableGyro/AGENTS.md), then
-read its [architecture](../mods/StableGyro/ARCHITECTURE.md) to locate the
-settings owner and lifecycle, its [rules](../mods/StableGyro/MOD-RULES.md)
-before changing anything. Its [candidate producer](../mods/StableGyro/Build-StableGyro.ps1)
-is indexed in the mod. The [Railgun index](../mods/Railgun/AGENTS.md) and
-[ContainerLidLabel index](../mods/ContainerLidLabel/AGENTS.md) provide the same
-routing for those mods. Use the owning public producer before investigating
-internals. For a new mod, identify the settings owner and lifecycle in its
-architecture before applying this recipe. Investigate game-specific calls
-only if the known path fails or the required event is absent.
+This recipe separates file parsing, settings lifetime and application to game
+objects. The recommended authoring path is the maintained Unreal project and
+BPT. A parser's supported grammar does not establish a consumer's lifecycle or
+the effect of writing a game field.
 
 ## Choose the read policy before writing a loader
 
-Keep **reading the file**, **storing the effective values**, and **applying them
-to an instance** separate. One read can serve many instances; an instance
-creation or save-load callback is often an application point, not a file-read
-point. Record the policy, owner, and reload trigger in the mod's architecture.
+Keep **reading the file**, **storing effective values**, and **applying them to
+an instance** separate. Instance creation and save restoration can apply an
+existing snapshot without reading the file again.
 
 | Policy | Use when | Read and apply contract |
 | --- | --- | --- |
-| Session snapshot | Many passive instances share settings and live edits are not promised, such as container capacity. | A session-lived owner reads the INI once on first need. Every instance, including one restored from a save, applies that stored snapshot through its normal lifecycle. Document that editing the file requires restarting the game. |
-| Entry reload | A player explicitly enters or activates the configured object infrequently, such as Railgun or Gyro. | One owner reads and validates a fresh snapshot at each entry and distributes it to all consumers before they use it. Read earlier only if behavior genuinely needs the setting before first entry. An edit takes effect on the next entry without a rebuild. |
+| Session snapshot | Many passive instances share settings and live edits are not promised. | A session-lived owner reads once on first need. Existing, newly created and restored instances apply that snapshot. Document that file edits require restarting the game. |
+| Entry reload | An explicit, infrequent entry or activation is the intended reload trigger. | One owner reads a fresh snapshot at entry and supplies all consumers before use. Read earlier only for behavior needed before entry. File edits take effect on the next entry. |
 
-Neither policy reads on Tick or makes each instance read the file. A start-of-game
-callback alone does not prove that later-created or save-loaded objects have
-received the value. An entry reload does not justify duplicate reads by several
-helpers on the same entry; give them one effective snapshot. If no suitable
-session-lived owner exists, a class default object (CDO) cache can avoid a read
-per instance, but it has a weaker contract: class unload/reload may reread the
-INI. [ContainerLidLabel](../mods/ContainerLidLabel/ARCHITECTURE.md#settings-ownership)
-uses its DML ModActor as the snapshot owner: one parser load at initialization,
-then stored instance values for existing and subsequently discovered containers.
+Choose an owner whose actual lifetime supports the promised policy. A CDO cache
+can avoid one read per instance, but class unload/reload can cause another read;
+it does not by itself establish a session-long snapshot. Neither policy needs
+Tick-based file reads or independent reads by several helpers on the same event.
+Changing a parser must not silently change the mod's read policy.
 
 ## Author one settings contract
 
-For new BPT-authored loaders, the reusable
-[UObject INI parser source](../tools/BlueprintText/Library/IniFileParser/AGENTS.md)
-provides `Load`, `Reload` and typed getters with caller-supplied defaults and
-inclusive numeric bounds. Import a copy into the consuming mod's package path
-through BPT AddSource/Apply. It caches raw values per object, clears before
-reload, and uses the existing Voyage `LoadFileToArray` API. No separate parser
-generator or runtime native module is needed. Its format is the flat grammar
-below; it does not provide section namespaces. The mod-owned
-[StableGyro integration](../mods/StableGyro/ARCHITECTURE.md#settings-parser) uses
-`GetDouble` and `GetBool` and is game-validated. Editor execution tests cover
-the full getter contract, including numeric edge cases. A new consumer still
-needs game checks of its own lifecycle and value application.
+Use the [BPT INI library](../tools/BlueprintText/Library/IniFileParser/AGENTS.md)
+for import, object lifetime, getter signatures and grammar. It supplies two
+UObject sources:
 
-1. Put the distributable default `Assets/<Mod>.ini` under the mod. It owns
-   distributed values, player comments, order, and formatting. Install the same
-   file beside the consumed container when the mod reads it from
-   `Voyage/Content/Paks`.
-2. Keep a small `Settings/<Mod>.settings.json` for what the INI cannot express:
-   exact key and generated member names, type (`number`, `boolean`, or
-   `string`), required runtime fallback, optional inclusive numeric range,
-   final numeric storage, and runtime binding. Schema fallbacks are independent
-   of distributed INI values. Railgun's schema also groups keys and can
-   bind a value to an external field; StableGyro's schema covers booleans. For
-   a new mod, the flat StableGyro shape is the smaller starting point; add
-   groups or external fields only when the consumers require them.
-3. At build time, require an exact case-sensitive key match between the default
-   INI and schema. Reject duplicate or malformed keys, unsupported values,
-   missing defaults, nonfinite numbers, bad ranges, and invalid quoted strings.
-   Reject duplicate keys in the repository INI. Copy
-   the validated INI without rewriting its comments or layout. Procedural
-   producers generate runtime names/defaults from these inputs; maintained
-   Blueprints keep matching members and loaders through their authoring workflow.
-   Never hand-edit generated headers or cooked output.
-4. On every runtime reload, assign every owned setting from the new snapshot
-   or its defined fallback; never retain an old effective value on failure.
-   With the BPT parser, pass the schema fallback to each getter and assign its
-   result once; no separate reset-before-read chain is needed. Procedural
-   loaders may reset before reading to establish the same outcome.
-   The first `=` separates a case-sensitive key from its value. Trim both,
-   and treat `#` as a comment only outside a quoted string. Numbers accept a
-   sign, decimal form, and exponent; they must be finite, representable in the
-   final storage type, and inside any inclusive bounds. Booleans accept only
-   `true` or `false`, case-insensitively. Strings are double quoted, may be
-   empty, and escape only quote and backslash. Missing or invalid input uses the
-   schema fallback and is never clamped. The last duplicate runtime occurrence
-   wins, including an invalid last value which therefore restores the schema
-   fallback. Unsupported keys
-   must not silently alter another setting. Keep parser work free of latent,
-   world, and instance side effects.
-5. Apply effective values through the actual owning setter or consumer path.
-   A serialized-field write alone may miss derived state, modifiers, delegates,
-   or presentation refresh. Verify exact lifecycle and parent-call ownership
-   for a game Blueprint override. Avoid polling for an owner or settings file
-   when a lifecycle event or direct reference suffices.
+- The flat parser addresses one case-sensitive key space.
+- The sectioned parser addresses section/key pairs and distinguishes section
+  presence from valid values, including empty sections and global assignments.
 
-The [INI preparation guide](../tools/mod-setup.md#runtime-ini-preparation)
-documents the shared `Read-VoyageModSettingsSchema` validator and copying the
-canonical INI without generating headers or graphs. Maintained BPT consumers
-use this path with their mod-owned parser and loaders. Existing C++ consumers
-can use the same validation through `New-VoyageModSettings.ps1`, which also
-emits a runtime table for `tools/VoyageModSettings/Public` graph generation.
-Both paths keep the runtime implementation inside the mod; neither requires
-a separately installed shared runtime package. The shared
-[INI merger](../tools/Merge-VoyageModIni.ps1) prepares a new file without
-changing the installed one: it keeps player values and comments, removes only
-explicitly retired keys/comments, and adds missing defaults. The owning
-installer performs the game-process check, replacement, readback, and rollback.
-Concrete inputs and their owning producers are
-[Railgun INI](../mods/Railgun/Assets/Railgun.ini),
-[Railgun schema](../mods/Railgun/Settings/Railgun.settings.json),
-[Railgun producer](../mods/Railgun/Build-Railgun.ps1),
-[StableGyro INI](../mods/StableGyro/Assets/StableGyro.ini),
-[StableGyro schema](../mods/StableGyro/Settings/StableGyro.settings.json), and
-[StableGyro settings contract](../mods/StableGyro/MOD-RULES.md#settings-contract), plus
-[ContainerLidLabel schema](../mods/ContainerLidLabel/Settings/ContainerLidLabel.settings.json)
-and [producer](../mods/ContainerLidLabel/Build-ContainerLidLabel.ps1).
-The normal build entry points remain `Build-Railgun.ps1` and
-`Build-StableGyro.ps1`; adding a setting requires editing the INI, schema and
-runtime consumer, then running that entry point. Their exact
-mod-owned additions are described in the [Railgun settings contract](../mods/Railgun/ARCHITECTURE.md#settings-parser)
-and [StableGyro rules](../mods/StableGyro/MOD-RULES.md).
+Import the selected source into the mod's own package path through BPT. The
+saved asset and synchronized BPT then belong to that project. Both parsers use
+the existing Voyage file-reading API; no separately installed runtime parser
+package is needed. Their editor tests establish parser behavior, not another
+consumer's game lifecycle.
+
+For flat, schema-driven settings:
+
+1. Keep the distributable default INI under the mod. It owns shipped values,
+   player comments, order and formatting. Choose the installed path from the
+   runtime reader's contract.
+2. Keep the key, type, required runtime fallback, optional inclusive bounds,
+   final storage and binding in the settings schema. Distributed values and
+   runtime fallbacks have distinct roles.
+3. Use the [INI preparation guide](../tools/mod-setup.md#runtime-ini-preparation)
+   for schema validation and copying the canonical INI unchanged. It does not
+   generate the maintained Blueprint loader; consuming BPT graphs own getters,
+   members and application.
+4. On reload, assign every owned setting from the new snapshot or its defined
+   fallback. BPT getters return that fallback for missing or invalid values;
+   a separate reset-before-read chain is unnecessary.
+
+Sectioned parser support does not by itself establish section support in a
+flat schema validator or installation merger. Define the consumer's profile,
+validation and merge contract through their supported interfaces before
+promising that behavior.
+
+The library owns the full lexical and numeric contract. In particular, it
+handles `#` comments outside quoted strings, typed fallbacks, inclusive bounds
+and invalid last duplicate values. Passing an unprocessed INI line directly to
+`IsNumeric` is not equivalent to using that parser.
+
+Apply effective values through the actual owning setter or consumer path.
+A field write may not update derived state, modifiers or presentation. For a
+Blueprint override, establish its declaring function and lifecycle; use owned
+references or lifecycle events instead of polling for the owner.
 
 ## Install and migrate a user-edited INI
 
-The ZIP carries the validated default INI. When installing, create the file
-from that template if absent. If it already exists, preserve values, comments,
-and unrelated lines for active keys; append only missing current keys with
-their canonical defaults. Remove or rename a retired key only under an explicit
-mod-owned migration that preserves the user's effective value when required.
-Do not replace the user's INI with a fresh template merely because a package
-version changed. The installer checks the game process immediately before
-mutation, preserves a temporary exact recovery copy, and reads back the final
-file. The shared [release policy](release-and-installation-rule.md) owns the
-transaction and rollback lifetime.
+The ZIP carries the validated default INI. On first installation, create the
+file from that template. On later installations, preserve player values,
+comments and unrelated lines for active keys; append missing keys with their
+current defaults. Remove or rename a retired key only under a defined migration
+that preserves the required effective value. A changed package version alone
+does not justify replacing the user's file.
 
-Railgun and StableGyro merge active settings on installation.
-[ContainerLidLabel's owning installer](../mods/ContainerLidLabel/Install-ContainerLidLabel.ps1)
-also preserves its user INI beside the LogicMods payload.
-Use the mod's entry point so container installation and settings recovery remain
-part of the same guarded operation.
+Use the documented [INI preparation and merge interfaces](../tools/mod-setup.md#existing-user-ini)
+for supported file changes. Unit conversion and settings read policy remain
+consumer-owned. The [release workflow](release-and-installation-rule.md#installation-and-rollback)
+owns process checks, recovery and readback; container and settings updates must
+remain within the owning install operation.
 
 ## Adding a setting
 
-When asked to add an INI or a setting, use the mod's documented public build
-path, not a fresh investigation of INI loading:
+1. Identify the value's owner, reload trigger and player-facing units. Preserve
+   an existing read policy unless the requested behavior changes it.
+2. Update the canonical INI and its validation contract, then wire the consuming
+   BPT getters and application. Extend installation migration only for changed
+   keys or values that actually need it.
+3. Run the owning public producer. Use its diagnostics for a failed check;
+   a successful build establishes structure, not the gameplay effect.
+4. Test the selected lifetime in game: shared snapshots reach new and restored
+   instances; entry reloads take effect at the next entry. Check missing/invalid
+   input, fallback behavior and preservation of existing player values.
 
-1. Identify the value's owner and choose **session snapshot** or **entry
-   reload**. State exactly when a player edit takes effect. For a new mod,
-   record the choice in its architecture; for an existing mod, keep its policy
-   unless the request changes it.
-2. Add the value and player-facing units/comment to the canonical INI; add its
-   type, range, and binding to the schema. Wire only the consuming behavior by
-   hand. Extend the installer merge only for an actual new or retired key.
-3. Run the owning public producer first. Use its schema and package diagnostics
-   if it fails. A successful build verifies structure, not the gameplay effect.
-4. Test the chosen read policy in game: for session snapshot, many instances
-   share one read and new/save-loaded instances apply the same value; for entry
-   reload, an edit made while outside takes effect on re-entry. Also check
-   missing/invalid input, the fallback, and existing user-value preservation.
-
-The shared tools prepare files; the mod still owns the exact game event,
-read policy, migration of values between different units, and behavior that
-consumes each value. Do not change a read policy merely by choosing a tool.
+The resulting mod documentation records the accepted settings contract under
+the [documentation workflow](repository-documentation-rule.md), rather than
+copying the parser implementation or presenting an untested policy as working.

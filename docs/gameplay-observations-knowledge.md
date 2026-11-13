@@ -51,7 +51,5 @@ identity, not as a separate combat actor with independent health.
 All three sharks and the ordinary Angel declare electric resistance `-0.05`.
 Arch Angel has no electric resistance entry in its actor template.
 
-Railgun currently submits a directional `PhysicalForce` attack with zero
-damage variance. The shark data declares no `PhysicalForce` resistance, so a
-direct Railgun hit of `600` removes all `600` HP from a full-health Talon or
-Dorsal Shark, provided the target is not temporarily invulnerable.
+The shark data declares no `PhysicalForce` resistance. That absence does not
+rule out temporary invulnerability or other runtime damage modifiers.

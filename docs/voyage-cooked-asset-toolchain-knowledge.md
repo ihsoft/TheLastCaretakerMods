@@ -20,8 +20,8 @@ For a package that does not ship a separate shader library, set
 `bShareMaterialShaderCode=False` and `bSharedMaterialNativeLibraries=False`
 under `/Script/UnrealEd.ProjectPackagingSettings` in the project's
 `Config/DefaultGame.ini`. This keeps shader code inline with the cooked
-material. Include that material explicitly in a single-package/no-references
-cook and in the release inventory. These are authoring project settings,
+material. Include it explicitly in the project's release cook and inventory.
+These are authoring project settings,
 not configuration to copy into the installed game.
 
 A per-mesh dynamic material instance can update a named color parameter
@@ -31,10 +31,8 @@ author an emissive input explicitly. Keep the original slot material for
 cleanup. Emission strength is a material value; perceived brightness and halo
 also depend on game exposure and bloom.
 
-[Smart Outlet](../mods/SmartOutlet/ARCHITECTURE.md#indicator-material)
-provides a maintained material and consumer using this arrangement. Shader
-compilation and package checks establish structural correctness; visual
-acceptance still belongs to the real game.
+Shader compilation and package checks establish structural correctness;
+visual acceptance still belongs to the real game.
 
 ## Reflected weak-object arrays
 
@@ -102,16 +100,11 @@ descriptor, a plugin-local registry in its PAK, and Item/Skill packages under
 the stock `/Game/Data/Assets` roots in IoStore. Package structure alone does
 not guarantee gameplay registration or initialization order.
 
-Railgun's normal source producer derives an exact three-record plugin registry
-from its owned package readbacks through the shared Voyage registry profile and
-class-agnostic native writer, packages it at
-`Voyage/Mods/RailgunCatalogue/AssetRegistry.bin`, and releases a loose
-content-only descriptor through the schema-3 manifest contract. This
-three-record plugin registry supports Railgun without a global registry
-override; it does not establish behavior for arbitrary registry overrides or
-duplicate IDs. Plugin descriptors extend the installed footprint
-beyond `Content/Paks`, so schema-3 installation and restoration retain the
-common backup, hash, path, reparse-point and closed-game gates.
+Plugin descriptors extend the installed footprint beyond `Content/Paks`.
+Use the [archive-layout contract](vortex-release-archive-knowledge.md) and
+[release installation interface](../tools/release-installation.md) for packaging,
+manifest validation and recovery. A successful additive registry does not
+establish arbitrary registry overrides or duplicate-ID resolution.
 
 With UE 5.8's `PakPlatformFile` active, the plugin registry lookup resolves
 through mounted PAK files and does not fall back to a same-path loose
@@ -121,9 +114,9 @@ not a supported equivalent layout.
 
 ## Stock AssetRegistry access and PAK encryption
 
-The following offline findings apply to Steam build `25191271`.
-Check the installed Steam build ID before using these addresses. A different
-build requires new validation of the addresses.
+The following offline findings were observed on Steam build `25191271`.
+Exact callback locations, keys and extracted inputs belong to their source
+build; these general format observations remain usable until evidence disagrees.
 
 - Stock `Voyage/Content/Paks/pakchunk0-Windows.pak` has a version-12 PAK footer
   with `bEncryptedIndex = 1` and a zero encryption-key GUID. The zero GUID
@@ -139,13 +132,15 @@ build requires new validation of the addresses.
   callback, and `PakFile/Private/IPlatformFilePak.cpp` uses it for the default
   PAK key. No running-game injection is needed to read this callback.
 
-Encrypted stock PAK work must remain fingerprint-gated and fail closed when the
-callback or encrypted-index layout changes. Validate a recovered default key by
-decrypting the version-12 index and matching its footer SHA-1; readable text is
-not sufficient evidence. UnrealPak key-chain JSON uses Base64 key bytes, while
-legacy `-aes` interprets its value differently. Keep keys, local crypto JSON,
-extracted files and raw reports below ignored `artifacts/`; none may enter Git
-or a distributed mod package. Railgun no longer consumes this path.
+Bind recovered callback data to the inspected executable and fail closed when
+the callback or encrypted-index layout is not recognized. Validate a recovered
+default key by decrypting the version-12 index and matching its footer SHA-1;
+readable text is insufficient. UnrealPak key-chain JSON uses Base64 key bytes,
+while legacy `-aes` interprets its value differently. Keep keys, crypto JSON,
+extractions and raw reports in ignored output under the
+[artifact lifecycle](artifact-lifecycle-rule.md): `Tmp/` by default, retained
+artifacts only for an identified continuing use. None belongs in Git or a
+distributed mod package.
 
 ## Package serialization is a separate compatibility contract
 
@@ -155,129 +150,98 @@ and resolved custom versions form a separate contract with the game reader.
 Successful registration, UI display or parser reopen alone does not prove
 that a gameplay consumer can use the reconstructed package.
 
-For the fingerprint-bound Railgun ammunition consumer, registration and UI
-display were insufficient when the package-format contract was wrong. The
-game-validated item is authored directly from owned JSON and preserves its
-reviewed unversioned property stream, object versions and custom-version
-container. The current contract and validation scope live in
-[Railgun architecture](../mods/Railgun/ARCHITECTURE.md); fabrication and pickup
-consumer boundaries live in
-[item fabrication and pickup](voyage-item-fabrication-and-pickup-knowledge.md).
+Maintained Unreal DataAssets own the item graph and gameplay values. When a
+consumer requires a bounded serialization conversion, use fresh cook as its
+input and preserve the reviewed property stream, object versions and custom
+versions. JSON is an intermediate representation, not a second authoring source.
+The [item validation boundary](voyage-item-fabrication-and-pickup-knowledge.md#cooked-json-validation-boundary)
+describes comparison with native saved-asset and fresh-cook readbacks.
 
-This does **not** prove that all tagged Voyage packages fail or authorize bulk
-conversion of other assets. Treat serialization as an asset-specific contract
-derived from reviewed source metadata and mappings, not as a universal list of
-flags or fixed entry counts.
+A working unversioned package does not prove that all tagged Voyage packages
+fail or authorize bulk conversion. Derive serialization requirements from the
+affected consumer and reviewed source metadata, not a universal flag list or
+fixed property count.
 
-Do not flip `IsUnversioned` / `PKG_UnversionedProperties` in a header or exported
-JSON and assume the payload has been converted. Author the complete package JSON
-with the intended property stream, stored object/custom versions and reviewed
-mapping, then write and reopen it with the canonical UAssetGUI/UAssetAPI writer.
-Compare serialization metadata and intended semantics before container
-verification and a real-game test of the actual consumer. Reopen verifies
-reader/writer consistency, not gameplay compatibility.
+Flipping `IsUnversioned` / `PKG_UnversionedProperties` in a header does not
+convert the property payload. Any conversion must write the complete intended
+stream with the canonical writer and reviewed mappings, preserve gameplay
+semantics, and reopen successfully before container and real-game checks.
+Reopen establishes reader/writer consistency, not gameplay compatibility.
 
 ## Known boundaries
 
-- Source audit of installed Unreal 5.8.2 (CL 56702186, compatible CL
-  55116800) found no new object/custom-version discriminator in
-  `Engine/Source/Runtime/CoreUObject/Private/UObject/ObjectResource.cpp`,
-  `operator<<(FStructuredArchive::FSlot, FObjectImport&)`: PackageName uses
-  the old `VER_UE4_NON_OUTER_PACKAGE_IMPORT` threshold; filtering changes the
-  placeholder/reset behavior, not whether the field exists. The installed
-  `ObjectVersion.h` UE5 enum still ends at IMPORT_TYPE_HIERARCHIES (1018).
-  This is direct 5.8.2 source evidence, not a full 5.7-to-5.8 source-history
-  audit or proof that no other package metadata could distinguish producers.
-  Do not invent a newer Unreal object-version number to distinguish layouts.
-- GUI Save's current selection override is intentionally narrower than full
-  target-version conversion: SetSerializationEngineVersion changes only the
-  explicit hint. ObjectVersion/ObjectVersionUE5/CustomVersionContainer remain
-  source metadata, and GetEngineVersion still derives from those fields.
-  Thus the selected version owns the import-layout hint, not every serializer
-  branch. Do not describe this as unconditional cross-engine Save conversion.
+### Import layout and engine profiles
 
-- `SpecifiedEngineVersion` is runtime-only and ignored on JSON read/write.
-  JSON retains stored object/custom versions, while every binary GUI save and
-  API JSON write must apply an explicit serialization hint immediately before
-  `Write`. Voyage uses `UE5_8`. This is not general cross-engine schema migration.
-- UAssetGUI forwards its selected profile to retoc. `UE5_8` uses the expanded
-  Voyage import layout; UE5.7, older profiles and unspecified library callers
-  preserve the upstream writer layout. The accepted tools read both reviewed
-  layouts, but that does not establish arbitrary runtime compatibility.
-- Full JSON intentionally omits API `OverrideNameMapHashes`. No-op JSON
-  roundtrips can therefore recompute name hashes even after the version fix.
-  Tests distinguish raw-export/schema errors, original object/custom versions,
-  `.uexp` identity and whole-package identity. Do not claim byte-identical
-  `.uasset` JSON roundtrips or normalize arbitrary differing header fields.
+- Inspection of UE 5.8.2's `FObjectImport` serializer found no new
+  object/custom-version discriminator for the reviewed import-layout difference:
+  `PackageName` uses `VER_UE4_NON_OUTER_PACKAGE_IMPORT`; filtering changes
+  placeholder/reset behavior. This source observation does not establish the
+  entire engine's format history. Do not invent an Unreal object-version number
+  to distinguish producers.
+- Reviewed filtered legacy inputs can omit or retain `FObjectImport.PackageName`.
+  The accepted tools read both layouts; the explicit `UE5_8` writer profile
+  selects the expanded Voyage layout, while older profiles retain the upstream
+  layout. A profile selection is not proof that an arbitrary runtime accepts it.
+- Resolve import stride from checked table boundaries and counts. Reject null,
+  out-of-range, invalid-name and cyclic references with bounded diagnostics.
+  Unknown layouts are errors, not permission for speculative version retries.
+  Unfiltered records retain `PackageName`.
+- Source legacy layout and target IoStore profile are separate. Do not use the
+  target profile as an unproven source fallback. A conversion failure or
+  unbounded allocation belongs in the [toolchain diagnostic workflow](../tools/toolchain-validation.md),
+  not another unchecked retry.
 
-- Single-package `to-zen` does not require copying referenced packages into
-  the input folder. UE5 external imports are represented by package IDs and
-  public export hashes (`resolve_zen_package_import`). A missing-script-import
-  warning followed by an out-of-range outer index can instead indicate a
-  misread legacy import table; suppressing the warning or dropping references
-  would not repair it.
-- Filtered legacy imports may omit or retain `FObjectImport.PackageName`.
-  Loose outputs from writers using different layouts are not interchangeable
-  with readers that assume only one stride. Accepted retoc `49b7721` validates
-  and reads both reviewed layouts. Keep extraction, editing and packaging
-  profiles consistent, and do not infer the producer from the shared CLI
-  version string alone.
-- A successful `retoc verify`, parse, cook, or container load is not gameplay
-  validation.
-- Import traversal must reject null, out-of-range, invalid-name and cyclic
-  references with bounded contextual errors. Determine import stride from
-  checked table boundaries and counts; unknown layouts fail closed without a
-  speculative version retry. Unfiltered records retain `PackageName`. Reading
-  both filtered layouts does not make older readers accept expanded UE5.8 output.
-- Source legacy version and target IoStore version are separate contracts.
-  A source reader must use the source summary layout, while the target writer
-  uses the requested output profile. Do not reuse a target version as an
-  unproven source fallback or normalize differing header fields without an
-  explicit version-bound comparison contract. Run failing conversions through
-  `Invoke-VoyageBoundedTool.ps1`; never repeat an unbounded allocation failure.
-- `VerifyBinaryEquality()` and fully parsed exports are independent gates:
-  `RawExport` can preserve unknown bytes while hiding a parse failure.
-- Legacy recovery can succeed at extraction while failing at property parsing.
-  In the ScopeFix investigation, retoc recovered two packages despite missing
-  directory-index filenames; incomplete historical dependencies left unknown
-  imports. CUE4Parse decoded early camera vectors but failed on later fields.
-  Treat such JSON as partial evidence: independently confirm any used value
-  against its serialized payload, and never infer a complete historical diff
-  or schema compatibility from readable early properties. Current mappings
-  and dependencies do not establish the old package's provenance. For current
-  builds, change fresh fingerprint-matched stock assets and validate the result.
-- A normal save of a directly opened binary and a save after full-JSON import
-  are different paths. JSON does not carry UAssetAPI's runtime-only engine
-  hint, so the writer must apply the explicit `UE5_8` serialization hint after
-  deserialization while preserving stored object/custom versions. Do not call
-  a broader engine-version setter that rewrites source metadata.
-- UE 5.8 filtered imports serialize `FObjectImport.PackageName`; older filtered
-  fixtures do not. The API fix is deliberately gated on `VER_UE5_8`.
-- Update 5.5 reports numeric `Voyage.exe` version `5.8.1.0`; the available
-  editor is UE `5.8.2`. Loose `.uasset/.uexp` cooking requires the documented
-  `-SkipZenStore` path. These are distinct game and toolchain identities.
-- Keep the retoc binary identity, selected profile and extraction manifest
-  together. Accepted retoc `49b7721` uses explicit `UE5_8` for Voyage's
-  expanded imports, while `UE5_7` deliberately selects the upstream filtered
-  layout. A profile name alone is not a cross-checkpoint serialization guarantee.
-- The canonical CUE4Parse bundle is built from a reviewed `ihsoft/CUE4Parse`
-  fork commit and records its upstream base. Tool-required source changes live
-  as explained commits in that fork; publishers do not patch dependency source
-  at build time. The managed-only publisher uses a temporary host to replace
-  `Microsoft.Bcl.Memory 9.0.0` with `10.0.11`. NuGet can still print the
-  dependency project's upstream audit warning during compilation; the
-  published manifest, DLL metadata, and `VoyageAssetInspector` output were
-  verified to resolve `10.0.11`.
-- A `.NET` dialog with exit code `0xE0434352` means an unhandled managed
-  exception; inspect the application error and logs before blaming the CLR.
-- Two valid retoc builds can differ in physical chunk order, and repeated Unreal
-  cook/SavePackage runs can change cooked package bytes even with the same
-  gameplay source. Whole-build byte equality is therefore not a reproducibility
-  requirement. Compare the same source/tool/game provenance, package identities
-  and IDs, exported imports/exports/references and properties, Blueprint
-  pseudocode, and sorted retoc semantic inventory. Do not discard a differing
-  field as volatile until the normalization contract proves it. Reserve exact
-  digests for the final published ZIP and for temporary copy-integrity checks
-  during installation or retention.
-  Any unexplained semantic difference or new compatibility claim still requires
-  a real-game canary; the normalization contract itself remains active research.
+### JSON, opaque exports and schemas
+
+- `SpecifiedEngineVersion` is runtime-only and absent from JSON. After JSON
+  deserialization, the writer must apply the explicit serialization hint before
+  writing while preserving stored object/custom versions. The GUI's serialization
+  selection changes that hint, not every serializer branch. It is not general
+  cross-engine schema migration.
+- JSON omits `OverrideNameMapHashes`, so a no-op JSON roundtrip can recompute
+  name hashes. Do not promise whole-package byte identity or normalize arbitrary
+  header differences. Preserve the distinction between binary save and
+  JSON-import save.
+- `VerifyBinaryEquality()` and fully parsed exports are independent checks.
+  `RawExport` can preserve unknown bytes while concealing a parse failure;
+  successful parsing can still produce different saved bytes. Report unexpected
+  raw fallback, exceptions and unapplied mappings separately.
+- Native custom serializers are not ordinary reflected structs. For example,
+  the inspected `InstancedPropertyBag` layout in `ABP_HologramPedestal`
+  begins with a separate `bHasData` field. A current USMAP alone cannot make an
+  unsupported serializer safe; reject unknown variants.
+- `RigHierarchy` and `RigVM` require native serializers. Explicit opaque
+  preservation can support an unchanged roundtrip, but must remain a reported
+  limitation and cannot justify structural edits.
+- An enum absent from mappings need not acquire invented members. For an
+  unchanged roundtrip, an explicitly marked numeric fallback is acceptable only
+  with known property width, preserved bytes and a visible notice.
+- Dynamic Blueprint schemas need the full inherited dependency chain. If schema
+  preload fails for missing dependencies, a later pass must be able to retry;
+  a permanent processed marker would hide the incomplete schema.
+
+### Inspection and reproducibility
+
+- Single-package `to-zen` can resolve external UE5 imports by package IDs and
+  public export hashes without copying every referenced package into its input
+  folder. A missing-script-import warning followed by an invalid outer index
+  can instead indicate a misread import table; dropping references is not a fix.
+- Partial parsing of a recovered historical package does not establish a
+  complete diff or compatible schema. Confirm any used value independently
+  against its serialized payload. Current dependencies do not establish an old
+  package's provenance.
+- Separate the game executable version, editor version and parser profile.
+  The [Update mapping](game-update-versions-knowledge.md) owns observed game
+  identities; the public cook interface owns required command-line options.
+- A `.NET` dialog with `0xE0434352` means an unhandled managed exception.
+  Inspect the actual application error before blaming the runtime.
+- Repeated retoc or Unreal cook/SavePackage runs can differ in physical order
+  or package bytes. Whole-build byte equality is not a general reproducibility
+  requirement. Compare relevant package identities, imports, exports,
+  references, properties and Blueprint behavior; ignore a differing field only
+  under an established normalization contract. A semantic comparison does not
+  replace a real-game test of the affected behavior.
+- Digest use is owned by the [hash rule](hash-usage-rule.md). Tool identities,
+  dependency preparation and publishing interfaces belong in the
+  [tool maintenance guide](../tools/toolchain-maintenance.md), not a historical
+  dependency checkpoint list in this document.

@@ -104,9 +104,6 @@ native contracts, not a guarantee for arbitrary equipment types or later updates
   amount. The equipment's native update owns transition timing. A setter call is
   not proof that ADS interpolation has completed.
 
-The [Railgun integration](../mods/Railgun/ARCHITECTURE.md#stock-aiming-and-input-integration-boundaries)
-uses one overlay slot and native equipment interpolation for a stationary weapon.
-
 ## Present actions separately from context lifetime
 
 Standard hints are driven by provided-action records, not merely by Enhanced
@@ -121,5 +118,3 @@ not exercise a gamepad's axis modifiers or device-change lifecycle.
 Native APIs described here were observed in a UE 5.8 game snapshot. Try the
 public candidate path first; revalidate an affected identity or lifecycle
 contract when an Update changes it or the build or game test finds a mismatch.
-The [Railgun architecture](../mods/Railgun/ARCHITECTURE.md) owns its concrete
-station, filtered-context constraints and equipment implementation.

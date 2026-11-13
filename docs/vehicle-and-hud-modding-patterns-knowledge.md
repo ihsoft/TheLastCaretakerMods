@@ -32,9 +32,7 @@ disable that display's native tick and update its material and degree text
 from the owning player's `PlayerCameraManager.GetCameraRotation`. Cache the
 owned display references at initialization and let the vehicle HUD control
 visibility. Avoid a second native updater competing for the same presentation.
-The [StableGyro camera compass](../mods/StableGyro/ARCHITECTURE.md#camera-compass)
-provides the concrete widget and heading contract; it does not establish
-other vehicles' HUD ownership or lifecycle.
+This does not establish another vehicle's HUD ownership or lifecycle.
 
 ## Actor attachment and save restoration
 
@@ -66,8 +64,9 @@ through `VoyageModuleRegisteredDelegate`. Module registration is not a
 substitute for completed actor attachment or proof of its final vehicle owner.
 
 The runtime contract above covers Electric Wall Sockets on Boats, not every
-actor type or arbitrary ordering of streamed levels. Revalidate the reflected
-signatures and lifecycle when the game fingerprint or consumer changes.
+actor type or arbitrary ordering of streamed levels. Check the reflected
+signatures and lifecycle for a new consumer or when changed behavior gives
+reason to doubt their applicability.
 See [external socket ownership](boat-resource-socket-architecture-knowledge.md#external-socket-registration).
 
 ### Feedback before the HUD is available
@@ -96,39 +95,11 @@ separate vertical state machine even when its Z value was copied from the same
 observation. A vertical correction likewise owns only Z velocity or Z position
 and preserves the live X/Y state.
 
-Within an eligible free-flight stabilization mode, to prevent continuous stock
-force from rebuilding speed, retain the previous
-velocity commanded by the helper. In each stabilized subspace, first reject
-observed growth beyond that previous command, then apply the configured
-constant-rate decay. On first entry there is no trustworthy previous sample;
-seed it from the observation. Clear sample validity whenever control ownership,
-the actuator-speed gate, throttle eligibility, or stabilization mode changes so
-stale commands cannot create a transition jump. A previous-command clamp cannot
-distinguish actuator acceleration from an external collision impulse: contact
-must have priority over both horizontal and vertical correction, and invalidate
-their old samples and position targets before they can be reused.
-
-Use local control intent, not a moving component's world orientation, to decide
-which motion is permitted. Combine the vehicle's world-horizontal forward and
-right axes using its native forward/side input values, normalize the result,
-and preserve only positive velocity along it. Neutral input damps all horizontal
-velocity; sideways and opposing components still decay under directional input.
-
-For a smooth transition from physical climb to exact altitude hold, brake only
-positive vertical speed at a constant configured rate. Reject renewed positive
-growth relative to the previous command before each braking step. Once the
-result becomes non-positive, capture the current Z and activate exact hold in
-that same tick; an already descending vehicle enters hold immediately. If zero
-is an accepted disable value for the braking rate, bypass the previous-command
-growth rejection as well as the decay while observed vertical speed is positive,
-and invalidate the old sample. Otherwise the growth clamp remains a hidden
-kinematic brake at a nominally disabled rate.
-
-Gate all kinematic corrections on verified propulsion eligibility as well as
-measured actuator speed, and clear their state when either fails. A coasting
-rotor is not proof that its engine is running or its throttle is nonzero;
-neutral input is not proof that throttle is zero. Otherwise a disabled or
-obstructed vehicle can be pinned unnaturally to an obstacle.
+The consumer owns its stabilization algorithm, eligibility, braking rates and
+disable semantics. Historical velocity or position samples must be invalidated
+when their control ownership changes. A previous-command clamp cannot distinguish
+actuator acceleration from a collision impulse; it is not a universal correction
+policy. A coasting actuator also does not establish propulsion eligibility.
 
 An unswept post-physics position correction can undo the solver's separation
 from a moving obstacle. A swept correction must inspect its hit result and
@@ -139,23 +110,6 @@ body. Treat welded child shapes as covered only when engine and component
 evidence shows that they are represented by that body; independent child bodies
 require separate handling. Contact notifications and the actual collision
 hierarchy therefore remain part of the contract.
-During commanded takeoff, an altitude floor must not erase positive vertical
-velocity merely because the current position has not yet risen above the floor.
-
-## Replacing a Blueprint while preserving original behavior
-
-A loader-free IoStore mod can preserve a complex original Blueprint by:
-
-1. freshly extracting the complete current-game package;
-2. relocating it to another verified package path;
-3. placing a generated child at the original path;
-4. adding only the new component or override to that child.
-
-This is inheritance from a snapshot, not from the developer's future asset.
-Every game update requires a new fingerprint, fresh extraction, and renewed
-compatibility testing. If relocation patches cooked bytes, assert exact path
-lengths, occurrence counts, and container contents rather than accepting an
-approximate match.
 
 ## Exact native identity matters
 
@@ -165,9 +119,9 @@ inheritance, function owner, struct fields, and enum values used by the graph.
 A same-name function declared on the wrong stand-in class can compile and cook
 yet never override the shipping callback.
 
-Keep native mirrors minimal, provenance-marked, and editor-only. Separate the
-game-identity mirror module from the hand-written editor commandlets that
-generate mod assets.
+Keep native mirrors minimal, provenance-marked and editor-only. Author the mod's
+Blueprints through the maintained project and BPT; editor support must not
+become a replacement runtime game module.
 
 ## Discovering Voyage's standard action UI
 
@@ -234,8 +188,8 @@ mutation without proving dispatch ownership.
 
 For a hold action, `Started` alone is insufficient. Match the native elapsed-time
 threshold in both the input handler and hint, release once per press, and reset
-press state on completion, cancellation and controller changes. StableGyro uses
-the live native `DropCargoTriggerTime` for this purpose. The
+press state on completion, cancellation and controller changes. For the stock
+Gyro release action, the native threshold is `DropCargoTriggerTime`. The
 [mooring socket contract](mooring-cable-and-socket-knowledge.md) explains why
 adding endpoints can require changes to both release and availability consumers.
 
@@ -255,8 +209,8 @@ The bad cooked expression was a bare `EX_InstanceVariable`, without an
 `EX_Context` for the intended action; labels were absent in game. An explicitly
 linked typed object reference supplies the correct read and restores labels.
 
-The working generator uses `UK2Node_Literal::SetObjectRef(action)` and connects
-its output to the getter target. The compiler can lower this into a generated
+An explicitly connected typed action reference supplies the getter target in
+the authored graph. The compiler can lower a literal object node into a generated
 object-reference property whose CDO default points to the action, rather than
 an inline `EX_ObjectConst`. Validation must resolve that reference instead of
 requiring one literal bytecode shape or a fixed generated property name.
@@ -323,24 +277,12 @@ parents, subobjects or default values.
 
 ### What the transient overlap does and does not prove
 
-**Runtime observation.** With the former runtime-created hint widget in an
-extra `VerticalBox`, changing only one action's availability could produce one
-captured frame where all hint icons/backgrounds disappeared and descriptions
-overlapped at the left edge; the next frame was normal. Empty descriptions hid
-the text symptom but did not establish a layout fix. Constant enabled state
-avoided the transition, but did not satisfy the disabled-action contract.
-
-**Reasonable inference.** A transient layout/initialization/invalidation problem
-during the stock row update is consistent with that frame. It is not evidence
-of a wrong description string or of the input handler moving every widget.
-
-**Unproven causality.** Serialized creation, direct Canvas placement and the
-invalidation root were introduced together. The result validates the combined
-composition, not any one change in isolation. We have not established that
-`InvalidationBox` alone fixes it, that runtime `CreateWidget` is inherently
-wrong, that a forced prepass is needed, or that a specific native child-rebuild
-algorithm causes it. General native ordering/collection findings are not a
-diagnosis of this frame.
+The observed overlap occurred during an enabled-state transition. Empty labels
+or a permanently enabled action can hide that symptom without satisfying the
+requested presentation. Serialized creation, direct Canvas placement and the
+invalidation root were validated together, not independently. The result does
+not establish that `InvalidationBox` alone fixes the issue, that all runtime
+`CreateWidget` use is wrong, or that a forced prepass is required.
 
 ### Reuse checklist
 
@@ -358,11 +300,6 @@ diagnosis of this frame.
    game. If wrapping the whole HUD in an invalidation root, also check its other
    changing indicators and animations. Video frame inspection can distinguish
    a brief missing row from overlapping text; static readback cannot.
-
-Optional implementation examples (Railgun; not a dependency of these contracts):
-[action records and typed label reads](../mods/Railgun/Project/BlueprintText/Mods/Railgun/Station/BP_RailgunOperator.json),
-[HUD tree and editor-only reference](../mods/Railgun/Project/BlueprintText/Mods/Railgun/Station/WBP_RailgunHUD.json),
-and [cooked semantic checks](../mods/Railgun/Build/Test-RailgunPackage.ps1).
 
 ## Selecting a complete vehicle HUD
 
@@ -408,10 +345,8 @@ resolution are separate; express authored phase times at sufficient tick
 resolution for ordinary widget frames to advance playback. Image color alpha
 and animated render opacity multiply and should retain separate responsibilities.
 
-The [Railgun HUD](../mods/Railgun/Project/BlueprintText/Mods/Railgun/Station/WBP_RailgunHUD.json)
-uses fixed image alpha and a looping zero/one render-opacity blink. These
-serialization/timing constraints do not by themselves prove visible playback;
-the cooked HUD remains the runtime validation boundary.
+These serialization/timing constraints do not by themselves prove visible
+playback; the cooked HUD remains the runtime validation boundary.
 
 ### Replacing one native-updated leaf
 
@@ -424,23 +359,21 @@ For a narrow value replacement, keep the stock HUD as lifecycle owner, collapse
 only the native-updated leaf, and add a separate `UUserWidget` to the leaf's
 existing parent panel. Repeating mod logic can then live on a widget derived
 directly from engine `UUserWidget`, avoiding an inherited Voyage HUD Tick CDO
-delta. The Boat HUD uses this insertion while preserving the stock fuel icon,
-position and neighboring values. Validate insertion and teardown with a static
-marker before adding the resource query.
+delta. A tested Boat HUD replacement used this insertion while preserving the
+stock fuel icon, position and neighboring values. Validate insertion and teardown
+with a static marker before adding the resource query.
 
-The Boat HUD's separate leaf obtains the possessed Boat's module, enumerates
-`VoyageModuleComponent` instances in the same grid through
-`VoyageModuleSubsystem`, sums only
-`GetResourceAmount(EModuleResourceType::Diesel)`, and displays the total in the
-stock lower-right slot. Keep the resource enum identity explicit;
-the inherited field name `PetrolTB` does not identify the resource being shown.
+For resource displays, [local and grid-wide resource producers](boat-resource-socket-architecture-knowledge.md#data-path)
+are separate contracts. The inherited field name `PetrolTB` does not identify
+the resource being shown; select the resource enum and producer explicitly.
 
 ## Language and lifecycle
 
 Voyage can keep its selected language in game-specific user settings rather
 than synchronizing Unreal's current internationalization language. Locate the
 actual setting consumed by the UI and read it at the lifecycle point where the
-action descriptions are produced. Revalidate enum values after game updates.
+action descriptions are produced. Recheck enum values when the settings contract
+changes or current evidence disagrees.
 
 Display-only HUD work must not write vehicle input state. Keep control and UI
 experiments separate so feedback, autonomous input, and crashes remain
