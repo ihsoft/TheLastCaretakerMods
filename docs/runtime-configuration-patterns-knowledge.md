@@ -121,7 +121,7 @@ and [producer](../mods/ContainerLidLabel/Build-ContainerLidLabel.ps1).
 The normal build entry points remain `Build-Railgun.ps1` and
 `Build-StableGyro.ps1`; a coder adding a setting edits the INI, schema and
 runtime consumer, then runs that entry point. Their exact
-mod-owned additions are indexed in the [Railgun rules](../mods/Railgun/MOD-RULES.md)
+mod-owned additions are described in the [Railgun settings contract](../mods/Railgun/ARCHITECTURE.md#settings-parser)
 and [StableGyro rules](../mods/StableGyro/MOD-RULES.md).
 
 ## Install and migrate a user-edited INI

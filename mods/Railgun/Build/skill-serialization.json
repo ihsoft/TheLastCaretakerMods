@@ -1,0 +1,28 @@
+{
+  "IsUnversioned": false,
+  "LegacyFileVersion": -9,
+  "ObjectVersion": "VER_UE4_CORRECT_LICENSEE_FLAG",
+  "ObjectVersionUE5": "IMPORT_TYPE_HIERARCHIES",
+  "FileVersionLicenseeUE": 0,
+  "CustomVersionContainer": [
+    {
+      "$type": "UAssetAPI.CustomVersion, UAssetAPI",
+      "Name": null,
+      "Key": "{601D1886-AC64-4F84-AA16-D3DE0DEAC7D6}",
+      "FriendlyName": "FFortniteMainBranchObjectVersion",
+      "Version": 268,
+      "IsSerialized": true
+    },
+    {
+      "$type": "UAssetAPI.CustomVersion, UAssetAPI",
+      "Name": null,
+      "Key": "{E4B068ED-F494-42E9-A231-DA0B2E46BB41}",
+      "FriendlyName": "FEditorObjectVersion",
+      "Version": 40,
+      "IsSerialized": true
+    }
+  ],
+  "PackageFlags": "PKG_Cooked, PKG_RequiresLocalizationGather, PKG_FilterEditorOnly",
+  "HasUnversionedProperties": false,
+  "CustomSerializationFlags": "None"
+}

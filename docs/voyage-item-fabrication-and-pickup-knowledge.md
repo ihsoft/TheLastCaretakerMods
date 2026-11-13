@@ -77,32 +77,28 @@ multiplayer require their own tests. Retain a known-good artifact before a
 change; parser reopen and container verification remain lower gates than
 these actual gameplay consumers.
 
-## JSON authoring boundary
+## Cooked JSON validation boundary
 
-For the tested Railgun setup, the complete owned UAssetAPI/UAssetGUI JSON is
-the source of truth for the ammo item's object graph and values. The reviewed
-[UAssetAPI `21c982f` writer](voyage-cooked-asset-toolchain-knowledge.md#known-boundaries)
-writes it directly to loose `.uasset/.uexp` with reviewed mappings and an
-explicit `UE5_8` serialization hint; no stock donor or post-write patcher is
-used. The writer does not add hidden balance overrides. Stored object and
-custom versions remain part of the authored package-format contract rather
-than a runtime dependency on another item.
+For a maintained Unreal project, saved DataAssets own the item object graph and
+values. A cooked UAssetAPI/UAssetGUI JSON representation can serve as input to a
+bounded serialization conversion; it does not become a second authoring source.
+The writer needs reviewed mappings and the correct engine/parser profile.
+Stored object/custom versions are a package-format contract, not a runtime
+dependency on another item. Validate converted values and references against
+fresh source/cook readbacks rather than historical property or import counts.
 
-The producer reopens the package and compares serialization metadata, imports,
-name map and the complete export graph against the current JSON, rather than
-enforcing historical property or import counts. This direct-JSON route belongs
-to the setup recorded in the owning
-[Railgun architecture](../mods/Railgun/ARCHITECTURE.md#authored-ammunition-contract).
-Arbitrary future edits still require packaging, reference resolution and
-affected gameplay-consumer checks.
+[Railgun's producer](../mods/Railgun/BUILD.md#primary-dataasset-serialization)
+reads the saved DataAssets natively, compares them with fresh cook, then checks
+the converted cooked graph. Arbitrary edits still require packaging, reference
+resolution and affected gameplay-consumer checks.
 
 For this filtered UE5.8 import layout, encode an unset import `PackageName` as
 the explicit FName `"None"`, not JSON `null`. In the reviewed writer, a null
 FName can serialize as name-map index zero, which is not guaranteed to resolve
 to `None`. A repeated stable binary roundtrip can therefore preserve an
-incorrect first write; semantic readback must compare against the authored
-JSON. Do not generalize this to byte-identical `.uasset` JSON roundtrips: fields
-such as name-map hashes can be recomputed by the writer.
+incorrect first write; semantic readback must compare against the intended
+object and import identities. Do not generalize this to byte-identical `.uasset`
+JSON roundtrips: fields such as name-map hashes can be recomputed by the writer.
 
 ## Filtered module inventories: refinery reference
 
@@ -198,8 +194,8 @@ synchronously on every native path.
 
 See [action/hint ownership](vehicle-and-hud-modding-patterns-knowledge.md#action-execution-and-action-presentation-are-separate-contracts).
 Optional implementation examples (Railgun):
-[transfer and lifecycle](../mods/Railgun/Source/RailgunRuntimeGenerator/RailgunReload.cpp)
-and [native inventory mirror](../mods/Railgun/Source/Voyage/VoyageBaseInventoryComponent.h).
+[transfer and lifecycle](../mods/Railgun/Project/BlueprintText/Mods/Railgun/Station/BP_RailgunOperator.json)
+and [native inventory mirror](../mods/Railgun/Project/EditorSupport/Source/Voyage/VoyageBaseInventoryComponent.h).
 
 ### Native removal and compensating resource additions
 

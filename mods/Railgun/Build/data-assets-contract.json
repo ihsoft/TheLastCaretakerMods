@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 5,
+  "assets": [
+    {
+      "kind": "ammo",
+      "assetFile": "Project/Content/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod.uasset",
+      "package": "/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod",
+      "object": "DA_Ammo_Railgun_FullRod",
+      "class": "VoyageItemAmmo",
+      "serializationFile": "Build/ammo-serialization.json"
+    },
+    {
+      "kind": "gun",
+      "assetFile": "Project/Content/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01.uasset",
+      "package": "/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01",
+      "object": "DA_Item_Module_RailgunCannonMk01",
+      "class": "VoyageItem",
+      "serializationFile": "Build/gun-serialization.json"
+    },
+    {
+      "kind": "skill",
+      "assetFile": "Project/Content/Data/Assets/Skill/Railgun/DA_Skill_Railgun.uasset",
+      "package": "/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun",
+      "object": "DA_Skill_Railgun",
+      "class": "VoyageSkill",
+      "serializationFile": "Build/skill-serialization.json"
+    }
+  ],
+  "serialization": {
+    "engineVersion": "5.8",
+    "steamBuildId": "25982825"
+  },
+  "validation": "Fresh native read, tagged cook, mapped serialization and complete graph readback; gameplay is a separate gate."
+}

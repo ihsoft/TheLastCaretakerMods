@@ -1,0 +1,15 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1",
+  "FriendlyName": "Railgun editor contracts and checks",
+  "CanContainContent": false,
+  "Modules": [
+    { "Name": "Voyage", "Type": "Runtime", "LoadingPhase": "Default" },
+    { "Name": "RailgunEditor", "Type": "Editor", "LoadingPhase": "Default" }
+  ],
+  "Plugins": [
+    { "Name": "EnhancedInput", "Enabled": true },
+    { "Name": "ModularGameplay", "Enabled": true }
+  ]
+}

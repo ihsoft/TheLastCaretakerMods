@@ -73,6 +73,40 @@ does not prescribe a vehicle orbit camera, a character controller or a direct
 rotator. Resolve axis conventions at that boundary without stripping mapping
 modifiers or implementing a second copy of the player's inversion preference.
 
+## Native equipment state for ADS
+
+For an animation-free station consuming the native ADS camera path, the holster
+still needs a real equipment definition and actor. These are inspected UE 5.8
+native contracts, not a guarantee for arbitrary equipment types or later updates.
+
+- `OverlaySlotIndex` is derived from the first `Overlay` entry in `HolsterSlots`.
+  Without it, the native overlay path returns. Do not fabricate internal slot
+  indices. An overlay does not need a matching ordinary `BarSlotConfig`; native
+  insertion can create the missing inventory slot record. Hand equipment must
+  have `DesiredSlot` matching its holster slot type and a nonempty primary-asset
+  identity.
+- `AddOverlayState` takes a key, a `VoyageHolsterSlotOverride` containing a weak
+  item reference and priority, and a force flag. It is not an arbitrary actor
+  insertion API. The inspected creation path supports `VoyageItemHandEquipment`
+  and `VoyageItemConsumable`; a bare `VoyageItemBaseEquipment` is insufficient.
+  `RemoveOverlayState` is BlueprintCallable, returns bool, and returns false for
+  an absent key. Reset ADS before removing the overlay on possession loss;
+  removal does not establish immediate actor destruction or a finished transition.
+- `DrawFromHolster` sets `bEquipped` through the equipment interface before its
+  animation attempt. Missing animation instance/asset, or zero returned duration,
+  selects a native fallback rather than unconditionally rejecting the draw.
+- Attachment tries the equipment skeleton socket, then `SkeletonSocketTag`, then
+  `EquipmentComponentTag`. If all are empty, it attaches to the owner's root and
+  applies the equipment attachment transform; this branch needs no skeletal mesh
+  or hand socket.
+- `SetInterpState(type, enabled)` is a callable void setter;
+  `HasInterpState(type)` is a pure bool query distinct from the interpolation
+  amount. The equipment's native update owns transition timing. A setter call is
+  not proof that ADS interpolation has completed.
+
+The [Railgun integration](../mods/Railgun/ARCHITECTURE.md#stock-aiming-and-input-integration-boundaries)
+uses one overlay slot and native equipment interpolation for a stationary weapon.
+
 ## Present actions separately from context lifetime
 
 Standard hints are driven by provided-action records, not merely by Enhanced

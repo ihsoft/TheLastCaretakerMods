@@ -16,10 +16,6 @@ not recorded. Revalidate a value when the relevant game contract changes.
 - The stock HUD convention divides the stored amount by `1000` and labels the
   result `kWh`. That presentation must not be used as an SI conversion: one
   physical kWh is `3600` kJ.
-- Railgun therefore correctly treats `FullChargeEnergyKJ=500` as `500` native
-  electricity units and requests `500 * 1000 / FullChargeTimeSeconds` watts.
-  With `FullChargeTimeSeconds=5.5`, a `500` kJ charge takes about `5.5`
-  seconds in the game.
 
 ## Electric Rifle
 

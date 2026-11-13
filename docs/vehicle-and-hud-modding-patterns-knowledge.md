@@ -360,9 +360,9 @@ diagnosis of this frame.
    a brief missing row from overlapping text; static readback cannot.
 
 Optional implementation examples (Railgun; not a dependency of these contracts):
-[action records and typed label reads](../mods/Railgun/Source/RailgunRuntimeGenerator/StationActionHints.cpp),
-[HUD tree and editor-only reference](../mods/Railgun/Source/RailgunRuntimeGenerator/DedicatedStationGenerator.cpp),
-and [cooked semantic checks](../mods/Railgun/Validate-Railgun.ps1).
+[action records and typed label reads](../mods/Railgun/Project/BlueprintText/Mods/Railgun/Station/BP_RailgunOperator.json),
+[HUD tree and editor-only reference](../mods/Railgun/Project/BlueprintText/Mods/Railgun/Station/WBP_RailgunHUD.json),
+and [cooked semantic checks](../mods/Railgun/Build/Test-RailgunPackage.ps1).
 
 ## Selecting a complete vehicle HUD
 
@@ -398,6 +398,20 @@ description text, and localized label are fragile identities.
 An `AddToViewport` overlay is useful as a lifecycle marker but is not equivalent
 to a standard hint: it can ignore pause hiding, rebindings, input-device glyphs,
 layout rules, and other native HUD state.
+
+### Cooked widget animations
+
+For the maintained UE 5.8 HUD animation path, the generated animation property
+and its inner `MovieScene` must share the logical name: cooked UMG initialization
+resolves the property by the scene name. Display rate and evaluation tick
+resolution are separate; express authored phase times at sufficient tick
+resolution for ordinary widget frames to advance playback. Image color alpha
+and animated render opacity multiply and should retain separate responsibilities.
+
+The [Railgun HUD](../mods/Railgun/Project/BlueprintText/Mods/Railgun/Station/WBP_RailgunHUD.json)
+uses fixed image alpha and a looping zero/one render-opacity blink. These
+serialization/timing constraints do not by themselves prove visible playback;
+the cooked HUD remains the runtime validation boundary.
 
 ### Replacing one native-updated leaf
 

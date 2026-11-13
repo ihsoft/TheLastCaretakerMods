@@ -1,0 +1,3317 @@
+{
+  "schema": 2,
+  "format": "compact-asset",
+  "asset": "/Game/Mods/Railgun/Station/BP_RailgunWaterWakeController",
+  "parent": "/Script/Engine.Actor",
+  "properties": {
+    "BlueprintSystemVersion": "2",
+    "bLegacyNeedToPurgeSkelRefs": "False",
+    "BlueprintGuid": "83C4A4414C3EB77E5B242B9C40537818"
+  },
+  "root": {
+    "node": {
+      "ComponentClass": "/Script/CoreUObject.Class'/Script/Engine.SceneComponent'",
+      "CategoryName": "NSLOCTEXT(\"SCS\", \"Default\", \"Default\")",
+      "VariableGuid": "0A03997042363DAC10FBE8A33E39C678",
+      "InternalVariableName": "DefaultSceneRoot"
+    },
+    "template": {
+      "bVisualizeComponent": "True"
+    }
+  },
+  "variables": [
+    {
+      "VarName": "\"WakeLocations\"",
+      "VarGuid": "65A8F1934D63B79A87A3CE8D91D5F31F",
+      "VarType": "(PinCategory=\"struct\",PinSubCategoryObject=\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=(),ContainerType=Array)",
+      "FriendlyName": "\"Wake Locations\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"WakeStrengths\"",
+      "VarGuid": "505986C74E0C0EF75F34EA92F9423653",
+      "VarType": "(PinCategory=\"real\",PinSubCategory=\"double\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=(),ContainerType=Array)",
+      "FriendlyName": "\"Wake Strengths\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"WakeExpiries\"",
+      "VarGuid": "BAB1E8BC4597B6412B5ED5B1FD9767BA",
+      "VarType": "(PinCategory=\"real\",PinSubCategory=\"double\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=(),ContainerType=Array)",
+      "FriendlyName": "\"Wake Expiries\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"WakeAcceptingSamples\"",
+      "VarGuid": "4BB3A4B2418F3E2FE4F9B2B4DE9F11F2",
+      "VarType": "(PinCategory=\"bool\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"Wake Accepting Samples\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"WakeAliveThisTick\"",
+      "VarGuid": "00DCEB7E4DE313C1AAB2308B28B19735",
+      "VarType": "(PinCategory=\"bool\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"Wake Alive This Tick\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    }
+  ],
+  "defaults": {
+    "PrimaryActorTick": "(TickGroup=TG_PostPhysics,EndTickGroup=TG_PrePhysics,bTickEvenWhenPaused=False,bCanEverTick=True,bStartWithTickEnabled=True,bAllowTickOnDedicatedServer=True,TickInterval=0.000000)",
+    "bActorEnableCollision": "False",
+    "WakeLocations": "",
+    "WakeStrengths": "",
+    "WakeExpiries": "",
+    "WakeAcceptingSamples": "False",
+    "WakeAliveThisTick": "False"
+  },
+  "graphs": [
+    {
+      "name": "EventGraph",
+      "kind": "event",
+      "properties": {
+        "bAllowDeletion": "False",
+        "GraphGuid": "551865E24DFF3249DF71BEB58FAE1C6B"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "K2Node_CallArrayFunction_0",
+            "kind": "CallArrayFunction",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetArrayLibrary'\",MemberName=\"Array_Length\")",
+              "NodePosX": "900",
+              "NodeGuid": "28F3427C4B80745DDA738DBA609CFD14"
+            },
+            "pins": {
+              "in:target": {
+                "id": "EAEC882A40CDE1EE6AE4B288AACF60B5",
+                "type": "p_2e240eece4dc56800d8948faf7db025fdd41f8435101cdb9e1b99bcbb8c9ee12",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetArrayLibrary\""
+              },
+              "in:TargetArray": {
+                "id": "79E657164E181B305E04C39FE879AEC4",
+                "type": "p_0a4241a5f1df33839e5d357a94318b5fa9a4fffa1bc385ab4317b7df57b13ba8"
+              },
+              "out:result": {
+                "id": "A92F11554FCB2A09A1E6D0A7BAFB8204",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "0"
+            }
+          },
+          {
+            "id": "K2Node_CallArrayFunction_1",
+            "kind": "CallArrayFunction",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetArrayLibrary'\",MemberName=\"Array_Get\")",
+              "NodePosX": "2160",
+              "NodeGuid": "926C354645CBF556DD72248BBDA7087D"
+            },
+            "pins": {
+              "in:target": {
+                "id": "D16184A2481593650E0728B666887E2C",
+                "type": "p_2e240eece4dc56800d8948faf7db025fdd41f8435101cdb9e1b99bcbb8c9ee12",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetArrayLibrary\""
+              },
+              "in:TargetArray": {
+                "id": "8C12F45F4A7BFE10C429DBAB4F2EF653",
+                "type": "p_609dd95ecb77ce48c40fba11d5f870f3a06a3a4058d7dc8c58997b587ab4243a"
+              },
+              "in:Index": {
+                "id": "422B8F9B40BA44FE82534FBA384E8CEC",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c"
+              },
+              "out:Item": {
+                "id": "621FB6B44A83D3037284689C3C59CA2C",
+                "type": "p_76deda82db767a70046c946059451b034fd5e732677741bdb65b994910ffb6ca"
+              }
+            },
+            "defaults": {
+              "in:Index": "0"
+            }
+          },
+          {
+            "id": "K2Node_CallArrayFunction_2",
+            "kind": "CallArrayFunction",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetArrayLibrary'\",MemberName=\"Array_Get\")",
+              "NodePosX": "4680",
+              "NodeGuid": "A81B5F0B472E416F4C89E186D0B201DE"
+            },
+            "pins": {
+              "in:target": {
+                "id": "5E6BCDBA4597BBF940E33996D2D1045D",
+                "type": "p_2e240eece4dc56800d8948faf7db025fdd41f8435101cdb9e1b99bcbb8c9ee12",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetArrayLibrary\""
+              },
+              "in:TargetArray": {
+                "id": "FD5247A8464E17AC03A71C8754789044",
+                "type": "p_609dd95ecb77ce48c40fba11d5f870f3a06a3a4058d7dc8c58997b587ab4243a"
+              },
+              "in:Index": {
+                "id": "EF583D7D4007765BFB977FB3DA90314A",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c"
+              },
+              "out:Item": {
+                "id": "16CA2CEC4188AA08535696A70708A69C",
+                "type": "p_76deda82db767a70046c946059451b034fd5e732677741bdb65b994910ffb6ca"
+              }
+            },
+            "defaults": {
+              "in:Index": "0"
+            }
+          },
+          {
+            "id": "K2Node_CallArrayFunction_3",
+            "kind": "CallArrayFunction",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetArrayLibrary'\",MemberName=\"Array_Get\")",
+              "NodePosX": "5580",
+              "NodeGuid": "E658E7DB49D5CF1FF7C5E4989DDCFE9B"
+            },
+            "pins": {
+              "in:target": {
+                "id": "0FF2AEBE49007803DC2488B01080049C",
+                "type": "p_2e240eece4dc56800d8948faf7db025fdd41f8435101cdb9e1b99bcbb8c9ee12",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetArrayLibrary\""
+              },
+              "in:TargetArray": {
+                "id": "909A9821413295D58A41DC9FCB1059AB",
+                "type": "p_0a4241a5f1df33839e5d357a94318b5fa9a4fffa1bc385ab4317b7df57b13ba8"
+              },
+              "in:Index": {
+                "id": "3A0F567046DE813EA08F40AA4C6D3FA7",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c"
+              },
+              "out:Item": {
+                "id": "775E3AEE4A139211884F71AF4E41285A",
+                "type": "p_480e63d745ab587e26996946080e9c570a9f78ee2febf4f467415a3ea0627c59"
+              }
+            },
+            "defaults": {
+              "in:Index": "0"
+            }
+          },
+          {
+            "id": "K2Node_CallArrayFunction_4",
+            "kind": "CallArrayFunction",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetArrayLibrary'\",MemberName=\"Array_Get\")",
+              "NodePosX": "5940",
+              "NodeGuid": "683BFE8D4243C1E14D1D699A18A268B2"
+            },
+            "pins": {
+              "in:target": {
+                "id": "660D23F7454F08B6D4EF8AA71FA8B32F",
+                "type": "p_2e240eece4dc56800d8948faf7db025fdd41f8435101cdb9e1b99bcbb8c9ee12",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetArrayLibrary\""
+              },
+              "in:TargetArray": {
+                "id": "71D2D6AD4F866B77943EBE80F78DE222",
+                "type": "p_609dd95ecb77ce48c40fba11d5f870f3a06a3a4058d7dc8c58997b587ab4243a"
+              },
+              "in:Index": {
+                "id": "A5396782422A3299D56EE2AA6EE498FE",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c"
+              },
+              "out:Item": {
+                "id": "0FD7E4C64AEB45CBE8AE12BA0656E286",
+                "type": "p_76deda82db767a70046c946059451b034fd5e732677741bdb65b994910ffb6ca"
+              }
+            },
+            "defaults": {
+              "in:Index": "0"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_0",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberName=\"SetLifeSpan\",bSelfContext=True)",
+              "NodePosX": "360",
+              "NodeGuid": "72930B3F4AE3C193AB0C21BB19836022"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "358CF6204AACDF5AA19D1194254BB16E",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "A533C44F4F6CA264165E1D931DB62038",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "D0251E5145227E9DB80398A7C4F2B863",
+                "type": "p_7ed77eaf51bf64e349a373050ae23cc1c69009fbaa06ad5b196e9db08c6c437a",
+                "name": "self"
+              },
+              "in:InLifespan": {
+                "id": "AEDF00284176B265462FF9824A861542",
+                "type": "p_725eeaedf942587b7e439cbe348fe124800c835b2fcd0dfea24ac8dfe50c5bfa"
+              }
+            },
+            "defaults": {
+              "in:InLifespan": "1.0"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_1",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Greater_IntInt\")",
+              "NodePosX": "1260",
+              "NodeGuid": "C2E1C715475398AF889692B3BDB93D27"
+            },
+            "pins": {
+              "in:target": {
+                "id": "E41FC5F341D7C6B1E9DCC5B5C654489E",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "39EA0B324557EBB77D269388DDDC3A27",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "EA95D65D442964783882F0BF80741252",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "8EF647214E0F928D640003AE09CD132F",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0",
+              "in:right": "0",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_10",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"EqualEqual_BoolBool\")",
+              "NodePosX": "7380",
+              "NodeGuid": "9CBE8CE74F4055DA4D85B3B288E34432"
+            },
+            "pins": {
+              "in:target": {
+                "id": "ED2990854DE842070E59C48E18528107",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "92281EA74D7838ACE60D5FB422C47A34",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "A62B9CD44656EB9E80F5D0B657A8D5D4",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "1E7DB5C1425D8F3CA3BA2A89237B6D38",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "false",
+              "in:right": "false",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_11",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"BooleanAND\")",
+              "NodePosX": "7560",
+              "NodeGuid": "283FDEA04AF71AF70D54E3B95757DC32"
+            },
+            "pins": {
+              "in:target": {
+                "id": "94F437A949B36FC1CADBC9B77C6835B8",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "4DA921FB476F321D5D30529A6944049D",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "1BB653F64BAA3CC5B9AA32AA891E84F4",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "D8904F704421A76F60C472971C025B0B",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "false",
+              "in:right": "false",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_12",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberName=\"K2_DestroyActor\",bSelfContext=True)",
+              "NodePosX": "7920",
+              "NodeGuid": "5DA0F4144B1C108BE0972F9DAD7AF591"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "CD2C03494C2CEAD111B72C85BCB145D9",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "4C55486A4D2B399428850DBB89C5B595",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "235283254D1BDEF85723ED8AF447BCA3",
+                "type": "p_7ed77eaf51bf64e349a373050ae23cc1c69009fbaa06ad5b196e9db08c6c437a",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_2",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Subtract_IntInt\")",
+              "NodePosX": "1620",
+              "NodeGuid": "480B988A45BD752D68113FACD2B24219"
+            },
+            "pins": {
+              "in:target": {
+                "id": "6EDC92094AFD17888B9025A00C702E7B",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "875B7EDB41D33D5C8E82F3AC7FA4A9D7",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "D1D91BE3415007E0C401468019B40964",
+                "type": "p_9cddca4967df7d9fd07f92fee6ca50b60bfb36fb4a95045f07ca364aea29bc16",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "69E5295246E37039D6353DAEA4AAE147",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0",
+              "in:right": "1",
+              "out:result": "0"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_3",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\",MemberName=\"GetGameTimeInSeconds\")",
+              "NodePosX": "1980",
+              "NodeGuid": "BC4BF7A24BB6449203F844829D38CE56"
+            },
+            "pins": {
+              "in:target": {
+                "id": "4929FF9E40B2BF4006072796132CB89C",
+                "type": "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetSystemLibrary\""
+              },
+              "in:WorldContextObject": {
+                "id": "3728F9DA4BAB9F4CD715D5B41A8B8EA6",
+                "type": "p_8b5a74d456558636cb47515e4366481ba807d5b36764cbabc0dde5bb868c9f1e"
+              },
+              "out:result": {
+                "id": "2D55C9E3432AB690520165921576018F",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_4",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Less_DoubleDouble\")",
+              "NodePosX": "2520",
+              "NodeGuid": "F9B4D0EA4DB0A3BAB3044EA3875C1178"
+            },
+            "pins": {
+              "in:target": {
+                "id": "3F2079154CA3912C3DCEE4B51305EF84",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "DDB60D7F4210937A10A36B92CD49D24A",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "566F168446E158755A30898C5AB8EFA8",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "645EDEB54703664C9340918348298C60",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0.0",
+              "in:right": "0.0",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_5",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.SubsystemBlueprintLibrary'\",MemberName=\"GetWorldSubsystem\")",
+              "NodePosX": "3780",
+              "NodeGuid": "A69CAC6F40490A3F1A750DA7C7EC2E17"
+            },
+            "pins": {
+              "in:target": {
+                "id": "BCDF2D494FF1D1ED879C36892C0E6308",
+                "type": "p_c4b0087a314c2de6734b6a5981bdfe3a260ed21ca80eff5b86a0e247c41271c0",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__SubsystemBlueprintLibrary\""
+              },
+              "in:ContextObject": {
+                "id": "EDE359824640F8FF56CBCEAB50D32219",
+                "type": "p_137dae0f38cb3af05e303cdbe8d61b512d056e8ea7fb764a4466b638ff2542d5"
+              },
+              "in:Class": {
+                "id": "EF57021E48A210E52B3EA39F213161CE",
+                "type": "p_abe47ce92cf216e8c8eb659a9dc363bdcb7acf3e3ac4a022105bbe401e0c5c29",
+                "DefaultObject": "\"/Script/Voyage.VoyageWeatherSubsystem\""
+              },
+              "out:result": {
+                "id": "99CA5101412C620D929BDDB9CF9285E8",
+                "type": "p_11643ed3f71bd7df2b98c5cc5f02979b4a126df483c0695221a664b2f9ef7567",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_6",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\",MemberName=\"GetGameTimeInSeconds\")",
+              "NodePosX": "4500",
+              "NodeGuid": "96B1FF4E4E8C4E7ED38E45A1D6115B14"
+            },
+            "pins": {
+              "in:target": {
+                "id": "1CAF215E4540FA33D7B6618628A843BC",
+                "type": "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetSystemLibrary\""
+              },
+              "in:WorldContextObject": {
+                "id": "D089D99E441FAC77D735569ED8C4818F",
+                "type": "p_8b5a74d456558636cb47515e4366481ba807d5b36764cbabc0dde5bb868c9f1e"
+              },
+              "out:result": {
+                "id": "A85090CA47F4B29713843DAA7D353284",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_7",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Less_DoubleDouble\")",
+              "NodePosX": "5040",
+              "NodeGuid": "65DFC8F548AD1100F0AA1B8C28A2795E"
+            },
+            "pins": {
+              "in:target": {
+                "id": "2732234F4264FC1CBD9CADBE79D6991D",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "9B11941F4C45A0269C3C5D9A55B233E1",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "D45A1C584CA276253ACAA5BCEFEBB3A6",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "AB136EAB4EC342877B01B683E2C4CCA3",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0.0",
+              "in:right": "0.0",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_8",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageWeatherSubsystem'\",MemberName=\"AddFluidImpulse\")",
+              "NodePosX": "6300",
+              "NodeGuid": "2D6FB2744AE002DF6681E490BD27C9DE"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "55A64F95427788BDAE8808A2897AA7C5",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "68B18DEB461FA5A41E659BB87EAA5465",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "3BDBDEC2429032F77E32388C8741C6F0",
+                "type": "p_c78cc1f775280ffc85b9d62fc8b3e6434beba2883e38276c5caf65b0ad2f14ec",
+                "name": "self"
+              },
+              "in:Impulse": {
+                "id": "18E2AF434980E73F473C208D1D9A0480",
+                "type": "p_b56340f0f30ef49a6c666c3e49341eb3739c012fb4506dba2bc8c378b90d96af"
+              }
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_9",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"EqualEqual_BoolBool\")",
+              "NodePosX": "7020",
+              "NodeGuid": "34CAF38A488D2EEEB44E11B795B36B7E"
+            },
+            "pins": {
+              "in:target": {
+                "id": "EB7A631A4572CDC9EF18189D4B093B70",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "666D09E547BA6B01FA2255B0CAED2F53",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "B07D670047CC433874269D95199165C0",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "20D3A61C441B6745C50570B7E3E58FED",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "false",
+              "in:right": "false",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_DynamicCast_0",
+            "kind": "cast",
+            "properties": {
+              "TargetType": "\"/Script/CoreUObject.Class'/Script/Voyage.VoyageWeatherSubsystem'\"",
+              "PureState": "Impure",
+              "NodePosX": "4140",
+              "NodeGuid": "0A04A3104B2EF71A01A046BDBE3FE74D"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "0F6EC7F547183B375C53A38E031B89C7",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "67CAF54B487D8826FEB8C9A70ADD83F1",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:CastFailed": {
+                "id": "5511571B4A2C51E0C5CB93AAF451A81D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:Object": {
+                "id": "95D36E89463E2A4F4508BB9D0BB7000E",
+                "type": "p_5ce4ab9cc1e24fcc43bae7b944e13ce938a412ba1e9609fc1ddabed2e3284d92"
+              },
+              "out:AsVoyage Weather Subsystem": {
+                "id": "617C1EFC48CA1D64E626148D8EA51562",
+                "type": "p_9025db21ddf37038eedaf2e662ea1e93740a6d001e6e3aaa03959919fc070b00"
+              },
+              "out:bSuccess": {
+                "id": "1DD18BDF4832BFC0BE1E019EDBE0FF5E",
+                "type": "p_56993b8655c965530d38c63d18de10c2e0ae9d0e8769c755d2fca14c67316f3c"
+              }
+            }
+          },
+          {
+            "id": "K2Node_Event_3",
+            "kind": "event",
+            "properties": {
+              "EventReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.Actor'\",MemberName=\"ReceiveBeginPlay\")",
+              "bOverrideFunction": "True",
+              "NodeGuid": "4621F7D646EC5479E36B6A8B35118A16"
+            },
+            "pins": {
+              "out:OutputDelegate": {
+                "id": "246853A1425E6122A50864B9C5A714CA",
+                "type": "p_3bd435c3751b880cc5aa59ac5f27ce1b5c21b4c706600ee0937212070f10787e"
+              },
+              "out:then": {
+                "id": "1E692DAA4643A4DA7071629CD1E6B1A6",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              }
+            }
+          },
+          {
+            "id": "K2Node_Event_4",
+            "kind": "event",
+            "properties": {
+              "EventReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.Actor'\",MemberName=\"ReceiveTick\")",
+              "bOverrideFunction": "True",
+              "NodePosX": "540",
+              "NodeGuid": "B967A99F4354600089BC51975EA41E2E"
+            },
+            "pins": {
+              "out:OutputDelegate": {
+                "id": "55E5857C4EE04596CA7C77AF09A5D1F3",
+                "type": "p_595ceea3d8eb4da67c731ee08cbf0bec131e1ead4fac8c5b9ecce4bee8d97b92"
+              },
+              "out:then": {
+                "id": "382953A74991A29C77B25991F22FE8AD",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:DeltaSeconds": {
+                "id": "CDD6F2674F7491AEDAB598AB0E217256",
+                "type": "p_e350d2e5ffa533d26511f1a4971478b3a8f44e3258b1e570250843f15818f75c"
+              }
+            },
+            "defaults": {
+              "out:DeltaSeconds": "0.0"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_0",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "1440",
+              "NodeGuid": "14E80B894F90E333362F9FABA54FD57E"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "DAF685EE4AFBAB9026D7A2B13E0FC54A",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "C121B1304F86BC948A6B9E9A4398BF6C",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "B3812A7E4641960F49369C8F4081A7D5",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "DA5E48654850ADFDAA4C85916DA79996",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_1",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "2700",
+              "NodeGuid": "D3AABB974EB670660F77D49D3810230E"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "E62F0B7448C1A3D1201F5CA98E995957",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "D58392A547739914CFFB4FBCDB5756CC",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "0F88455049D4FE5A90DCD0AA9C229469",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "11427AE14EF0B74BC14B5785C994DDB4",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_2",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "3060",
+              "NodeGuid": "32594D1F42A3A6373F967785CB445E7A"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "EA29537D4829F591059AD3AF293124B4",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "F95E1ED348B382555A0806AAFE4AA6E0",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "85AFB3BB4B6BBE05B3A633AFA15E4BC7",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "E2E2AABE4C703C67DCA92583C959A322",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_3",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "3240",
+              "NodeGuid": "474CFD7E46714412E703DFA5543885CA"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "7B76F8664DFD69B54F155A97EBAE2787",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "3A348DA2461BD106FF5C4B9D5F989E4E",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "BDC974F54DE9A155FA2454AEC780F40F",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "9886E95941DE7F0C91D1E5B8FFB1D846",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_4",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "3600",
+              "NodeGuid": "26F216F14929A40C35DF95A3E78283CF"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "0A41A4E54FBD8A51F057AEA0E50BD1D6",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "F28E13C74CD64C9BED3900B676948F59",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "B93945C244F7E68B34A58E8DB985DA8C",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "7B0E77994CFA1668D0D897B74D79F2F9",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_5",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "5220",
+              "NodeGuid": "0575BAC0427DBBE51CC5C996D2EE03CC"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "6BDEF57644E1726488ADFF875A4B568C",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "4F6031334A6754E3B5F15D8AFD34BBB9",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "960117124A732EA0FC57279D2CDCC9E1",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "09F758394A393FF2F3FE2FADC7C92EEC",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_6",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "6480",
+              "NodeGuid": "8399F7694D5D298A43287EA408320578"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "159C76BF4F9A5BB2630961BFE96CE7CE",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "F9338A1E48353D94301397ACFA6A962E",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "F5E8367E483C239247D674925783C9B5",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "EB54D89F4D4300ED95723F8A1E39FE5B",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_7",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "6660",
+              "NodeGuid": "CBDC0EF542BF343919B0C7AB1AB41CF4"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "96B050704222FAD143535EA645632FC1",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "A319363E4B2C888D975B64B6B214AD0F",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "B95985064B589DEEA4FEF1A7DDB8BAD8",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "B32A7D58430DF97D3C5BCC88AFB3F53A",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_8",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "7740",
+              "NodeGuid": "014BC4C04B26FF06B0E90AAB6627A651"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "4BE1BAA74FD3088A8A063E9C973FB601",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "365FEB024E2E583370FB77ABD518DFB4",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "6F1D3E7F4D03DD576906AE944736D25B",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "8F8BAE3744C23919D67C9296D39396A3",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_MacroInstance_0",
+            "kind": "MacroInstance",
+            "properties": {
+              "MacroGraphReference": "(MacroGraph=\"/Script/Engine.EdGraph'/Engine/EditorBlueprintResources/StandardMacros.StandardMacros:ForLoopWithBreak'\",GraphBlueprint=\"/Script/Engine.Blueprint'/Engine/EditorBlueprintResources/StandardMacros.StandardMacros'\",GraphGuid=1FCFFE2843C702031581E5A273BD4C6B)",
+              "NodePosX": "1800",
+              "NodeGuid": "D1ADC92D41977D11391C55807485F3F2"
+            },
+            "pins": {
+              "in:Execute": {
+                "id": "94109AEE45491A328EC3F8834AD67CF7",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:FirstIndex": {
+                "id": "BE3408494B457BA5A6BF4AB503884948",
+                "type": "p_d6fc60d7408c5aa1ed59190c252a8145c9867a04978989da93cc2567db238e36"
+              },
+              "in:LastIndex": {
+                "id": "474F280B42113ACC2A7F2CB5D38C7526",
+                "type": "p_d6fc60d7408c5aa1ed59190c252a8145c9867a04978989da93cc2567db238e36"
+              },
+              "in:Break": {
+                "id": "DB61C46B4B67D57E19F80EB0647DF554",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:LoopBody": {
+                "id": "0601BAE44CF252319DDE469B3C5C3A36",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:Index": {
+                "id": "3FB7B52440FCB96B0F4BD2A33DB49C9F",
+                "type": "p_d6fc60d7408c5aa1ed59190c252a8145c9867a04978989da93cc2567db238e36"
+              },
+              "out:Completed": {
+                "id": "7104C99B4309DE32993C78B847A3BD19",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              }
+            }
+          },
+          {
+            "id": "K2Node_MacroInstance_1",
+            "kind": "MacroInstance",
+            "properties": {
+              "MacroGraphReference": "(MacroGraph=\"/Script/Engine.EdGraph'/Engine/EditorBlueprintResources/StandardMacros.StandardMacros:ForLoopWithBreak'\",GraphBlueprint=\"/Script/Engine.Blueprint'/Engine/EditorBlueprintResources/StandardMacros.StandardMacros'\",GraphGuid=1FCFFE2843C702031581E5A273BD4C6B)",
+              "NodePosX": "4320",
+              "NodeGuid": "8F4BD7514B7593A6C1D9019919A3C9B0"
+            },
+            "pins": {
+              "in:Execute": {
+                "id": "AC706DD44855F844D81C2E9715B9653E",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:FirstIndex": {
+                "id": "68FF0E5A4755050E280791B51D4B6695",
+                "type": "p_d6fc60d7408c5aa1ed59190c252a8145c9867a04978989da93cc2567db238e36"
+              },
+              "in:LastIndex": {
+                "id": "8CEA68FB4476CFF3BC604CA977D023BF",
+                "type": "p_d6fc60d7408c5aa1ed59190c252a8145c9867a04978989da93cc2567db238e36"
+              },
+              "in:Break": {
+                "id": "22141AEB414F204E80193EA37F1AF46A",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:LoopBody": {
+                "id": "C54696564E374F308351BE98815E54A1",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:Index": {
+                "id": "616731FA4EC9E373BA7C2598704E3116",
+                "type": "p_d6fc60d7408c5aa1ed59190c252a8145c9867a04978989da93cc2567db238e36"
+              },
+              "out:Completed": {
+                "id": "7B2A776A43491B9FE083AD97A3B136AF",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              }
+            }
+          },
+          {
+            "id": "K2Node_MakeStruct_0",
+            "kind": "MakeStruct",
+            "properties": {
+              "bMadeAfterOverridePinRemoval": "True",
+              "ShowPinForProperties(0)": "(PropertyName=\"Location\",PropertyFriendlyName=\"Location\",CategoryName=\"VoyageFluidImpulse\",bShowPin=True,bCanToggleVisibility=True)",
+              "ShowPinForProperties(1)": "(PropertyName=\"Direction\",PropertyFriendlyName=\"Direction\",CategoryName=\"VoyageFluidImpulse\",bShowPin=True,bCanToggleVisibility=True)",
+              "ShowPinForProperties(2)": "(PropertyName=\"Radius\",PropertyFriendlyName=\"Radius\",CategoryName=\"VoyageFluidImpulse\",bShowPin=True,bCanToggleVisibility=True)",
+              "ShowPinForProperties(3)": "(PropertyName=\"Strength\",PropertyFriendlyName=\"Strength\",CategoryName=\"VoyageFluidImpulse\",bShowPin=True,bCanToggleVisibility=True)",
+              "StructType": "\"/Script/CoreUObject.ScriptStruct'/Script/Voyage.VoyageFluidImpulse'\"",
+              "NodePosX": "5400",
+              "NodeGuid": "DE503F0945BDC47D428A699F70054EB5"
+            },
+            "pins": {
+              "out:VoyageFluidImpulse": {
+                "id": "1750914549F27AB6DEA8D984FEC1C1FA",
+                "type": "p_b56340f0f30ef49a6c666c3e49341eb3739c012fb4506dba2bc8c378b90d96af"
+              },
+              "in:Location": {
+                "id": "47C71C0244A877B9CC736994A7284F97",
+                "type": "p_a7f48a1616416301bb6b7e3286c03ee928cc7d131dec4555b64e1d31eb5d8292"
+              },
+              "in:Direction": {
+                "id": "AFC5CAAB498A2AE45973D2996F64F514",
+                "type": "p_7bca84ed61df6bd222396917aaad49d5acf0effa2ad3af8056e97b44aaf9974b"
+              },
+              "in:Radius": {
+                "id": "09760B314F4A2A4A8AF1049132E17D82",
+                "type": "p_472e36037ff6d732a253f3053f39591c546466d55fc729a66a5aa8de69167d96"
+              },
+              "in:Strength": {
+                "id": "ABAD25454DED2DE6E55980A181F8BBFA",
+                "type": "p_c8c7faaf74e11a3bade8c881d0dbd33101fd39709fdfe68f10ba16e65561a5b5"
+              }
+            },
+            "defaults": {
+              "in:Location": "0.000000,0.000000,0.000000",
+              "in:Direction": "(X=0.000000,Y=0.000000)",
+              "in:Radius": "200.0",
+              "in:Strength": "0.000000"
+            }
+          },
+          {
+            "id": "K2Node_Self_0",
+            "kind": "self",
+            "properties": {
+              "NodePosX": "3960",
+              "NodeGuid": "7F1D2A104FBB8AFF4FC12A9862158A5C"
+            },
+            "pins": {
+              "out:target": {
+                "id": "18B942044CE0DC19CF6D80BE7B6A1D1E",
+                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_0",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeLocations\",MemberGuid=65A8F1934D63B79A87A3CE8D91D5F31F,bSelfContext=True)",
+              "NodePosX": "1080",
+              "NodeGuid": "5130CE454886BFB459ED2A9BD5A69706"
+            },
+            "pins": {
+              "out:WakeLocations": {
+                "id": "E82080494A9DF722E79F44B74E5042A2",
+                "type": "p_036db296a6fe4f81a03254f79363aa0a94c77e500ab3ce21d6466f79e8674337"
+              },
+              "in:target": {
+                "id": "D9E253CA4DF19A2409C0189C061AF52C",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_1",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeExpiries\",MemberGuid=BAB1E8BC4597B6412B5ED5B1FD9767BA,bSelfContext=True)",
+              "NodePosX": "2340",
+              "NodeGuid": "5392122C40326BD73C6F5E97BB8433BE"
+            },
+            "pins": {
+              "out:WakeExpiries": {
+                "id": "F7BE32DA4BA31A26ACC28EAAAC948980",
+                "type": "p_6d2bbf1685440eb7410d56ab2e795c9c1bdc515bdeb7ceee7af4b745ef1e0453"
+              },
+              "in:target": {
+                "id": "8654D44B48C4B1333DAF3D9E9AA5BCED",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_2",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeAliveThisTick\",MemberGuid=00DCEB7E4DE313C1AAB2308B28B19735,bSelfContext=True)",
+              "NodePosX": "3420",
+              "NodeGuid": "F706402B4DFCA79BE3F26DB551A8208C"
+            },
+            "pins": {
+              "out:WakeAliveThisTick": {
+                "id": "C18BCAD44554061C2B33D3B25C203A4D",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "in:target": {
+                "id": "0CBA74604F16E8822054918AC9FE0277",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:WakeAliveThisTick": "false"
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_3",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeExpiries\",MemberGuid=BAB1E8BC4597B6412B5ED5B1FD9767BA,bSelfContext=True)",
+              "NodePosX": "4860",
+              "NodeGuid": "09D6D97F4C27868D1E5648AA7768AC44"
+            },
+            "pins": {
+              "out:WakeExpiries": {
+                "id": "C5B4F40A4BA8BDF2299D26876F94137D",
+                "type": "p_6d2bbf1685440eb7410d56ab2e795c9c1bdc515bdeb7ceee7af4b745ef1e0453"
+              },
+              "in:target": {
+                "id": "B37CBE0E4AD174F713A6229166B9755D",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_4",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeLocations\",MemberGuid=65A8F1934D63B79A87A3CE8D91D5F31F,bSelfContext=True)",
+              "NodePosX": "5760",
+              "NodeGuid": "B2D66FE345178F203C49D19D52AF5C86"
+            },
+            "pins": {
+              "out:WakeLocations": {
+                "id": "3812D362415ACBBEC5F9569F572A60FE",
+                "type": "p_036db296a6fe4f81a03254f79363aa0a94c77e500ab3ce21d6466f79e8674337"
+              },
+              "in:target": {
+                "id": "5FFB097140B75989480A0BBED2138F55",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_5",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeStrengths\",MemberGuid=505986C74E0C0EF75F34EA92F9423653,bSelfContext=True)",
+              "NodePosX": "6120",
+              "NodeGuid": "A190674F42059BD1402E4CB197648BC5"
+            },
+            "pins": {
+              "out:WakeStrengths": {
+                "id": "210E777445DEA4E423B3BF961B41A0CE",
+                "type": "p_6d2bbf1685440eb7410d56ab2e795c9c1bdc515bdeb7ceee7af4b745ef1e0453"
+              },
+              "in:target": {
+                "id": "33111D6F4089D3D7D0FDDD835F0E3CB8",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_6",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeAliveThisTick\",MemberGuid=00DCEB7E4DE313C1AAB2308B28B19735,bSelfContext=True)",
+              "NodePosX": "6840",
+              "NodeGuid": "BC193C73468B325C6E9D2590E988629C"
+            },
+            "pins": {
+              "out:WakeAliveThisTick": {
+                "id": "C777FC534811C2CB9580EAB109EA3A14",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "in:target": {
+                "id": "C6E7ECA648E4A714E4AF1FB071E75E30",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:WakeAliveThisTick": "false"
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_7",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeAcceptingSamples\",MemberGuid=4BB3A4B2418F3E2FE4F9B2B4DE9F11F2,bSelfContext=True)",
+              "NodePosX": "7200",
+              "NodeGuid": "F5E8778C41C06AD855E429864313CB48"
+            },
+            "pins": {
+              "out:WakeAcceptingSamples": {
+                "id": "EA74B9F743E0FBBCC5190D87923103A0",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "in:target": {
+                "id": "7A6DDE80467D1A901B8AF2AF5D1D5093",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:WakeAcceptingSamples": "false"
+            }
+          },
+          {
+            "id": "K2Node_VariableSet_0",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeAcceptingSamples\",MemberGuid=4BB3A4B2418F3E2FE4F9B2B4DE9F11F2,bSelfContext=True)",
+              "NodePosX": "180",
+              "NodeGuid": "AE18AD444AE8BF52F18FD2A89D892418"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "684FD5374F84B276A53887845DE27FEC",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "84985BC14F0D1E1E2AC132AFC6CF8039",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:WakeAcceptingSamples": {
+                "id": "C5DC6EC046CE4CFAA56606801E7D1D88",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:Output_Get": {
+                "id": "EC06B7414A7BC0E8305F8BAD78C45D34",
+                "type": "p_b2a7bd72f8a232636d2a3951831b0b467cc223b358b7bdc1ec0304d59059c0f2"
+              },
+              "in:target": {
+                "id": "9681BBB44DD1BC92AFAF059D4F6569F0",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:WakeAcceptingSamples": "true",
+              "out:Output_Get": "false"
+            }
+          },
+          {
+            "id": "K2Node_VariableSet_1",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeAliveThisTick\",MemberGuid=00DCEB7E4DE313C1AAB2308B28B19735,bSelfContext=True)",
+              "NodePosX": "720",
+              "NodeGuid": "462AD12247BB27623F0712B8434AAD19"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "03AA9F094C067EC83A8E578783DEA21D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "E2CFA7B644DD9539B1D99D90916762F6",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:WakeAliveThisTick": {
+                "id": "DDABDA4F4C5D59D006F763A0021A3DB9",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:Output_Get": {
+                "id": "2CEAC39848AEACCA51FE71BBD3CA735F",
+                "type": "p_b2a7bd72f8a232636d2a3951831b0b467cc223b358b7bdc1ec0304d59059c0f2"
+              },
+              "in:target": {
+                "id": "4093EFC04B5D97E8C8794484EACD471C",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:WakeAliveThisTick": "false",
+              "out:Output_Get": "false"
+            }
+          },
+          {
+            "id": "K2Node_VariableSet_2",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeAliveThisTick\",MemberGuid=00DCEB7E4DE313C1AAB2308B28B19735,bSelfContext=True)",
+              "NodePosX": "2880",
+              "NodeGuid": "A5263E97487742831E88ED894176A781"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "9D55F49542F2E87CEE8E1C9A23D54C65",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "0FF14907487C4D34B28B0EB43DA070BC",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:WakeAliveThisTick": {
+                "id": "67A9A8694E08F215D7AEFE9EBB8A7214",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:Output_Get": {
+                "id": "13B5AB9A4D119C37238DC8A7842FBCA9",
+                "type": "p_b2a7bd72f8a232636d2a3951831b0b467cc223b358b7bdc1ec0304d59059c0f2"
+              },
+              "in:target": {
+                "id": "34E72FD942FEFF4F30D76195D3BF925B",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:WakeAliveThisTick": "true",
+              "out:Output_Get": "false"
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "K2Node_CallArrayFunction_0.out:result",
+            "to": "K2Node_CallFunction_1.in:left"
+          },
+          {
+            "from": "K2Node_CallArrayFunction_0.out:result",
+            "to": "K2Node_CallFunction_2.in:left"
+          },
+          {
+            "from": "K2Node_CallArrayFunction_1.out:Item",
+            "to": "K2Node_CallFunction_4.in:right"
+          },
+          {
+            "from": "K2Node_CallArrayFunction_2.out:Item",
+            "to": "K2Node_CallFunction_7.in:right"
+          },
+          {
+            "from": "K2Node_CallArrayFunction_3.out:Item",
+            "to": "K2Node_MakeStruct_0.in:Location"
+          },
+          {
+            "from": "K2Node_CallArrayFunction_4.out:Item",
+            "to": "K2Node_MakeStruct_0.in:Strength"
+          },
+          {
+            "from": "K2Node_CallFunction_1.out:result",
+            "to": "K2Node_IfThenElse_0.in:Condition"
+          },
+          {
+            "from": "K2Node_CallFunction_10.out:result",
+            "to": "K2Node_CallFunction_11.in:left"
+          },
+          {
+            "from": "K2Node_CallFunction_11.out:result",
+            "to": "K2Node_IfThenElse_8.in:Condition"
+          },
+          {
+            "from": "K2Node_CallFunction_2.out:result",
+            "to": "K2Node_MacroInstance_0.in:LastIndex"
+          },
+          {
+            "from": "K2Node_CallFunction_2.out:result",
+            "to": "K2Node_MacroInstance_1.in:LastIndex"
+          },
+          {
+            "from": "K2Node_CallFunction_3.out:result",
+            "to": "K2Node_CallFunction_4.in:left"
+          },
+          {
+            "from": "K2Node_CallFunction_4.out:result",
+            "to": "K2Node_IfThenElse_1.in:Condition"
+          },
+          {
+            "from": "K2Node_CallFunction_5.out:result",
+            "to": "K2Node_DynamicCast_0.in:Object"
+          },
+          {
+            "from": "K2Node_CallFunction_6.out:result",
+            "to": "K2Node_CallFunction_7.in:left"
+          },
+          {
+            "from": "K2Node_CallFunction_7.out:result",
+            "to": "K2Node_IfThenElse_5.in:Condition"
+          },
+          {
+            "from": "K2Node_CallFunction_8.out:then",
+            "to": "K2Node_IfThenElse_6.in:exec"
+          },
+          {
+            "from": "K2Node_CallFunction_9.out:result",
+            "to": "K2Node_CallFunction_11.in:right"
+          },
+          {
+            "from": "K2Node_DynamicCast_0.out:AsVoyage Weather Subsystem",
+            "to": "K2Node_CallFunction_8.in:target"
+          },
+          {
+            "from": "K2Node_DynamicCast_0.out:CastFailed",
+            "to": "K2Node_IfThenElse_7.in:exec"
+          },
+          {
+            "from": "K2Node_DynamicCast_0.out:then",
+            "to": "K2Node_MacroInstance_1.in:Execute"
+          },
+          {
+            "from": "K2Node_Event_3.out:then",
+            "to": "K2Node_VariableSet_0.in:exec"
+          },
+          {
+            "from": "K2Node_Event_4.out:then",
+            "to": "K2Node_VariableSet_1.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_0.out:else",
+            "to": "K2Node_IfThenElse_3.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_0.out:then",
+            "to": "K2Node_MacroInstance_0.in:Execute"
+          },
+          {
+            "from": "K2Node_IfThenElse_1.out:else",
+            "to": "K2Node_IfThenElse_2.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_1.out:then",
+            "to": "K2Node_VariableSet_2.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_3.out:then",
+            "to": "K2Node_IfThenElse_4.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_4.out:else",
+            "to": "K2Node_IfThenElse_7.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_4.out:then",
+            "to": "K2Node_DynamicCast_0.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_5.out:else",
+            "to": "K2Node_IfThenElse_6.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_5.out:then",
+            "to": "K2Node_CallFunction_8.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_7.out:then",
+            "to": "K2Node_IfThenElse_8.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_8.out:then",
+            "to": "K2Node_CallFunction_12.in:exec"
+          },
+          {
+            "from": "K2Node_MacroInstance_0.out:Completed",
+            "to": "K2Node_IfThenElse_3.in:exec"
+          },
+          {
+            "from": "K2Node_MacroInstance_0.out:Index",
+            "to": "K2Node_CallArrayFunction_1.in:Index"
+          },
+          {
+            "from": "K2Node_MacroInstance_0.out:LoopBody",
+            "to": "K2Node_IfThenElse_1.in:exec"
+          },
+          {
+            "from": "K2Node_MacroInstance_1.out:Completed",
+            "to": "K2Node_IfThenElse_7.in:exec"
+          },
+          {
+            "from": "K2Node_MacroInstance_1.out:Index",
+            "to": "K2Node_CallArrayFunction_2.in:Index"
+          },
+          {
+            "from": "K2Node_MacroInstance_1.out:Index",
+            "to": "K2Node_CallArrayFunction_3.in:Index"
+          },
+          {
+            "from": "K2Node_MacroInstance_1.out:Index",
+            "to": "K2Node_CallArrayFunction_4.in:Index"
+          },
+          {
+            "from": "K2Node_MacroInstance_1.out:LoopBody",
+            "to": "K2Node_IfThenElse_5.in:exec"
+          },
+          {
+            "from": "K2Node_MakeStruct_0.out:VoyageFluidImpulse",
+            "to": "K2Node_CallFunction_8.in:Impulse"
+          },
+          {
+            "from": "K2Node_Self_0.out:target",
+            "to": "K2Node_CallFunction_5.in:ContextObject"
+          },
+          {
+            "from": "K2Node_VariableGet_0.out:WakeLocations",
+            "to": "K2Node_CallArrayFunction_0.in:TargetArray"
+          },
+          {
+            "from": "K2Node_VariableGet_1.out:WakeExpiries",
+            "to": "K2Node_CallArrayFunction_1.in:TargetArray"
+          },
+          {
+            "from": "K2Node_VariableGet_2.out:WakeAliveThisTick",
+            "to": "K2Node_IfThenElse_4.in:Condition"
+          },
+          {
+            "from": "K2Node_VariableGet_3.out:WakeExpiries",
+            "to": "K2Node_CallArrayFunction_2.in:TargetArray"
+          },
+          {
+            "from": "K2Node_VariableGet_4.out:WakeLocations",
+            "to": "K2Node_CallArrayFunction_3.in:TargetArray"
+          },
+          {
+            "from": "K2Node_VariableGet_5.out:WakeStrengths",
+            "to": "K2Node_CallArrayFunction_4.in:TargetArray"
+          },
+          {
+            "from": "K2Node_VariableGet_6.out:WakeAliveThisTick",
+            "to": "K2Node_CallFunction_9.in:left"
+          },
+          {
+            "from": "K2Node_VariableGet_7.out:WakeAcceptingSamples",
+            "to": "K2Node_CallFunction_10.in:left"
+          },
+          {
+            "from": "K2Node_VariableSet_0.out:then",
+            "to": "K2Node_CallFunction_0.in:exec"
+          },
+          {
+            "from": "K2Node_VariableSet_1.out:then",
+            "to": "K2Node_IfThenElse_0.in:exec"
+          },
+          {
+            "from": "K2Node_VariableSet_2.out:then",
+            "to": "K2Node_IfThenElse_2.in:exec"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AddWakeSample",
+      "kind": "function",
+      "properties": {
+        "GraphGuid": "AAAA9D8648D9926DB9515A88396DB612"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "K2Node_CallArrayFunction_0",
+            "kind": "CallArrayFunction",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetArrayLibrary'\",MemberName=\"Array_Length\")",
+              "NodePosX": "360",
+              "NodeGuid": "6107345544E23D44596A999318057226"
+            },
+            "pins": {
+              "in:target": {
+                "id": "A965603B4897251F10C57EA9BEED6201",
+                "type": "p_2e240eece4dc56800d8948faf7db025fdd41f8435101cdb9e1b99bcbb8c9ee12",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetArrayLibrary\""
+              },
+              "in:TargetArray": {
+                "id": "B68E59594E244638FEF84BA49EABD123",
+                "type": "p_0a4241a5f1df33839e5d357a94318b5fa9a4fffa1bc385ab4317b7df57b13ba8"
+              },
+              "out:result": {
+                "id": "5609D7984C8D8294C1A681935B8E2739",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "0"
+            }
+          },
+          {
+            "id": "K2Node_CallArrayFunction_1",
+            "kind": "CallArrayFunction",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetArrayLibrary'\",MemberName=\"Array_Add\")",
+              "NodePosX": "1080",
+              "NodeGuid": "5BF3425E4376E91D1F7ADB897E66EB42"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "E0271A3A49E8AAA8CFA5CF97A23FE37E",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "6583E2704F318557CCE029BAA68B56B1",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "4FF0A0234FF3F156B7406C9C25D03150",
+                "type": "p_2e240eece4dc56800d8948faf7db025fdd41f8435101cdb9e1b99bcbb8c9ee12",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetArrayLibrary\""
+              },
+              "in:TargetArray": {
+                "id": "AAA144354970B7E2CBA4E9AECDF6B8CE",
+                "type": "p_ca3ebada639e29614b0e51ff86ac29b76a4f6c11bedd90132f4c90eebe71a1df"
+              },
+              "in:NewItem": {
+                "id": "C626DA5541D21C0D3A7F83A39BFBB3B2",
+                "type": "p_c25d7e1d7782cff0eaeda0507a9859e1a2fa2a5719c5dd8d14daf84e28f24f62"
+              },
+              "out:result": {
+                "id": "C96EC153404181BFF67B3C9BA9AFFB85",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "0"
+            }
+          },
+          {
+            "id": "K2Node_CallArrayFunction_2",
+            "kind": "CallArrayFunction",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetArrayLibrary'\",MemberName=\"Array_Add\")",
+              "NodePosX": "1440",
+              "NodeGuid": "AFCC80254FCD4B0C0E2D44A4321DB477"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "EF95A5B240824B90105E4BA37AD36D5B",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "B4433D684631F3893E1BF99B0652A27D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "F175898B47B3ADB8B6A1C5861EB8B45D",
+                "type": "p_2e240eece4dc56800d8948faf7db025fdd41f8435101cdb9e1b99bcbb8c9ee12",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetArrayLibrary\""
+              },
+              "in:TargetArray": {
+                "id": "CA85AA9C40A314E6B8977FBE10CEE1A2",
+                "type": "p_f472d2bfb7a88627b0ed8f1c3f324b4d737fd0396306bf747c826791a5c3a32b"
+              },
+              "in:NewItem": {
+                "id": "A7879D8648F782B3BA14D28D44D89354",
+                "type": "p_b8493f07a8b49b77d98cfea92c50015b0b9e988c95e93ef3abf195f8336c02cc"
+              },
+              "out:result": {
+                "id": "F7A3C435426ED46E351194A25069BF35",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "0"
+            }
+          },
+          {
+            "id": "K2Node_CallArrayFunction_3",
+            "kind": "CallArrayFunction",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetArrayLibrary'\",MemberName=\"Array_Add\")",
+              "NodePosX": "2160",
+              "NodeGuid": "66865FA24BE70C892880F5913FD252F5"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "26D174F5483F3DD5803E3DB296E7A27D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "B08F626F40CE37A5A0EA74A992ED92A2",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "4363A8C9423820E09C581D83883CB0AF",
+                "type": "p_2e240eece4dc56800d8948faf7db025fdd41f8435101cdb9e1b99bcbb8c9ee12",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetArrayLibrary\""
+              },
+              "in:TargetArray": {
+                "id": "188F91F843B308A168504ABF4B8FB8E0",
+                "type": "p_f472d2bfb7a88627b0ed8f1c3f324b4d737fd0396306bf747c826791a5c3a32b"
+              },
+              "in:NewItem": {
+                "id": "86E4EDF64E9E73A56E45F8B13EE959D2",
+                "type": "p_b8493f07a8b49b77d98cfea92c50015b0b9e988c95e93ef3abf195f8336c02cc"
+              },
+              "out:result": {
+                "id": "5523DEDA49060E65CFA58DBB31961AAB",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "0"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_0",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Less_IntInt\")",
+              "NodePosX": "720",
+              "NodeGuid": "3B36B3A741B39B92981E06B62A8AB625"
+            },
+            "pins": {
+              "in:target": {
+                "id": "A45BC67046A6241EA5CE9C92F6855130",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "1AE1440C42FB41705B54F6B9AF789F89",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "CA9201654636161976C8A4AE05CC2E8C",
+                "type": "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "D24D2E1D444BE73A6115DAA5B20F889A",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0",
+              "in:right": "256",
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_1",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\",MemberName=\"GetGameTimeInSeconds\")",
+              "NodePosX": "1800",
+              "NodeGuid": "F750B81247AE1478AFA426B386ECE9C2"
+            },
+            "pins": {
+              "in:target": {
+                "id": "C649F2F14A22BC4EB97076856463A08D",
+                "type": "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetSystemLibrary\""
+              },
+              "in:WorldContextObject": {
+                "id": "7C9513C148D69620AE08E1AB555B63F5",
+                "type": "p_8b5a74d456558636cb47515e4366481ba807d5b36764cbabc0dde5bb868c9f1e"
+              },
+              "out:result": {
+                "id": "D244E77447A47F923A5547A90A0A22E9",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "K2Node_CallFunction_2",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Add_DoubleDouble\")",
+              "NodePosX": "1980",
+              "NodeGuid": "2001DDA34AE4BC5DD78371B9D77AC129"
+            },
+            "pins": {
+              "in:target": {
+                "id": "8DC4310545AD6740D329C98CCE48BE80",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "3345A0AC48ACF2CDC87335A8D4A8BC86",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "80C280714D221B1D37EA669C6B52A735",
+                "type": "p_4d1c70798478a4900d704c9a9d29609aa1a343f8be43fa95240224fd665e0e4b",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "CFF6C2944C1DD76A24D7D09B6C0B50CC",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0.0",
+              "in:right": "0.25",
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "K2Node_FunctionEntry_0",
+            "kind": "FunctionEntry",
+            "properties": {
+              "FunctionReference": "(MemberName=\"AddWakeSample\")",
+              "NodeGuid": "C602ABA647C43812FD4C93AB50743CD9"
+            },
+            "pins": {
+              "out:then": {
+                "id": "46A9496A4A416B55DC1DF2922D9C5153",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "out:SampleLocation": {
+                "id": "F83CCF2B4089D9D2AFF47CBD23964885",
+                "type": "p_480e63d745ab587e26996946080e9c570a9f78ee2febf4f467415a3ea0627c59"
+              },
+              "out:SampleStrength": {
+                "id": "F4B2C245499858AE89FAC08F7FEC3B5A",
+                "type": "p_76deda82db767a70046c946059451b034fd5e732677741bdb65b994910ffb6ca"
+              }
+            },
+            "custom": [
+              "CustomProperties UserDefinedPin (PinName=\"SampleLocation\",PinType=(PinCategory=\"struct\",PinSubCategoryObject=\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\"),DesiredPinDirection=EGPD_Output)",
+              "CustomProperties UserDefinedPin (PinName=\"SampleStrength\",PinType=(PinCategory=\"real\",PinSubCategory=\"double\"),DesiredPinDirection=EGPD_Output)"
+            ]
+          },
+          {
+            "id": "K2Node_FunctionResult_0",
+            "kind": "FunctionResult",
+            "properties": {
+              "FunctionReference": "(MemberName=\"AddWakeSample\")",
+              "ErrorType": "3",
+              "NodeGuid": "9F4D35584941ED53F68DDA891BC90AFB"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "CAC6E8984D99216280994BBABAFB13F4",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              }
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_0",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "180",
+              "NodeGuid": "3DA26BCB4FD648B8AF1CDD8C2DA57E09"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "11E8584041CCA1123841CD9BD8E0CC7A",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "88856E58440F1E25ABB94F88EDD6AB95",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "7FA0FD2549CA36834D9EBD942CEC633F",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "B898DDEF4765F95938A3FDB00943845F",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_1",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "900",
+              "NodeGuid": "EE2F51D742DA9DA368E1ABAE65DF2E94"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "8F4B7CD54D684B4BB44F3FAC47663D43",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "E80C030847C6398E3D0C6BB88914F8AE",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "994C61674289197490F4A9A0D9F704DB",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "94E59403482690C4561796863D5CE74B",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_IfThenElse_2",
+            "kind": "branch",
+            "properties": {
+              "NodePosX": "2520",
+              "NodeGuid": "878E90244441458AD5634A821BE5AF4B"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "14CBCF2644CEB486236907B31E2C6373",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "97FE7713445860408016A4A8813B9883",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "DB89BE2F480EC2608B02E69E4A34D749",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "6D8400CA46599E6E7E20ABABC49E543D",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            },
+            "defaults": {
+              "in:Condition": "true"
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_0",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeAcceptingSamples\",MemberGuid=4BB3A4B2418F3E2FE4F9B2B4DE9F11F2,bSelfContext=True)",
+              "NodeGuid": "4C4B121E4234C9C0000BDBAC439A6215"
+            },
+            "pins": {
+              "out:WakeAcceptingSamples": {
+                "id": "F649DD49496F1EBD3921828A7D21728D",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "in:target": {
+                "id": "7F9A235946EE9F14F402E39838819FC4",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:WakeAcceptingSamples": "false"
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_1",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeLocations\",MemberGuid=65A8F1934D63B79A87A3CE8D91D5F31F,bSelfContext=True)",
+              "NodePosX": "540",
+              "NodeGuid": "B0AFCEB940F5ADE9D11D08BBF35E7CF4"
+            },
+            "pins": {
+              "out:WakeLocations": {
+                "id": "E6C1259844AB015D489E5C9D88C83A90",
+                "type": "p_036db296a6fe4f81a03254f79363aa0a94c77e500ab3ce21d6466f79e8674337"
+              },
+              "in:target": {
+                "id": "1E35D5A34B0DE068CF4661AE2E264923",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_2",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeLocations\",MemberGuid=65A8F1934D63B79A87A3CE8D91D5F31F,bSelfContext=True)",
+              "NodePosX": "1260",
+              "NodeGuid": "C1C903854A6F1A4EA4D38386871F072D"
+            },
+            "pins": {
+              "out:WakeLocations": {
+                "id": "FE6C90E94CB46739947E538EB7FC63C3",
+                "type": "p_036db296a6fe4f81a03254f79363aa0a94c77e500ab3ce21d6466f79e8674337"
+              },
+              "in:target": {
+                "id": "5C10192741DEC6A0070086A6DC5459F7",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_3",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeStrengths\",MemberGuid=505986C74E0C0EF75F34EA92F9423653,bSelfContext=True)",
+              "NodePosX": "1620",
+              "NodeGuid": "4346D68643D85A9C72ECB8B2AB154AA0"
+            },
+            "pins": {
+              "out:WakeStrengths": {
+                "id": "3C4E5FBE4CC133AFAA656C8589AF956E",
+                "type": "p_6d2bbf1685440eb7410d56ab2e795c9c1bdc515bdeb7ceee7af4b745ef1e0453"
+              },
+              "in:target": {
+                "id": "451C6CFF4F6DAB05900018A1B4A3ACB7",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableGet_4",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeExpiries\",MemberGuid=BAB1E8BC4597B6412B5ED5B1FD9767BA,bSelfContext=True)",
+              "NodePosX": "2340",
+              "NodeGuid": "49CA49E343A431952769EA9A400DE5E8"
+            },
+            "pins": {
+              "out:WakeExpiries": {
+                "id": "DA7747A84894809849B53A92013B69DE",
+                "type": "p_6d2bbf1685440eb7410d56ab2e795c9c1bdc515bdeb7ceee7af4b745ef1e0453"
+              },
+              "in:target": {
+                "id": "BFFDE2E74AB3E52E2968FF99FB4B43ED",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "K2Node_CallArrayFunction_0.out:result",
+            "to": "K2Node_CallFunction_0.in:left"
+          },
+          {
+            "from": "K2Node_CallArrayFunction_1.out:then",
+            "to": "K2Node_CallArrayFunction_2.in:exec"
+          },
+          {
+            "from": "K2Node_CallArrayFunction_2.out:then",
+            "to": "K2Node_CallArrayFunction_3.in:exec"
+          },
+          {
+            "from": "K2Node_CallArrayFunction_3.out:then",
+            "to": "K2Node_IfThenElse_2.in:exec"
+          },
+          {
+            "from": "K2Node_CallFunction_0.out:result",
+            "to": "K2Node_IfThenElse_1.in:Condition"
+          },
+          {
+            "from": "K2Node_CallFunction_1.out:result",
+            "to": "K2Node_CallFunction_2.in:left"
+          },
+          {
+            "from": "K2Node_CallFunction_2.out:result",
+            "to": "K2Node_CallArrayFunction_3.in:NewItem"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:SampleLocation",
+            "to": "K2Node_CallArrayFunction_1.in:NewItem"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:SampleStrength",
+            "to": "K2Node_CallArrayFunction_2.in:NewItem"
+          },
+          {
+            "from": "K2Node_FunctionEntry_0.out:then",
+            "to": "K2Node_IfThenElse_0.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_0.out:else",
+            "to": "K2Node_IfThenElse_2.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_0.out:then",
+            "to": "K2Node_IfThenElse_1.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_1.out:else",
+            "to": "K2Node_IfThenElse_2.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_1.out:then",
+            "to": "K2Node_CallArrayFunction_1.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_2.out:then",
+            "to": "K2Node_FunctionResult_0.in:exec"
+          },
+          {
+            "from": "K2Node_VariableGet_0.out:WakeAcceptingSamples",
+            "to": "K2Node_IfThenElse_0.in:Condition"
+          },
+          {
+            "from": "K2Node_VariableGet_1.out:WakeLocations",
+            "to": "K2Node_CallArrayFunction_0.in:TargetArray"
+          },
+          {
+            "from": "K2Node_VariableGet_2.out:WakeLocations",
+            "to": "K2Node_CallArrayFunction_1.in:TargetArray"
+          },
+          {
+            "from": "K2Node_VariableGet_3.out:WakeStrengths",
+            "to": "K2Node_CallArrayFunction_2.in:TargetArray"
+          },
+          {
+            "from": "K2Node_VariableGet_4.out:WakeExpiries",
+            "to": "K2Node_CallArrayFunction_3.in:TargetArray"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FinishWake",
+      "kind": "function",
+      "properties": {
+        "GraphGuid": "E9278EA045AD340E52FA5CBA83D93A4E"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "K2Node_FunctionEntry_0",
+            "kind": "FunctionEntry",
+            "properties": {
+              "FunctionReference": "(MemberName=\"FinishWake\")",
+              "NodeGuid": "27F843EF4065623F22CD1A8FE76A3178"
+            },
+            "pins": {
+              "out:then": {
+                "id": "7BD8A73B4C3A62F288F09B997EFC588D",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              }
+            }
+          },
+          {
+            "id": "K2Node_FunctionResult_0",
+            "kind": "FunctionResult",
+            "properties": {
+              "FunctionReference": "(MemberName=\"FinishWake\")",
+              "ErrorType": "3",
+              "NodeGuid": "C2E9C6F94B21A3A03CF2B59102FE6778"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "3CCC6AA94DB61F6CE58664836E9D87D4",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              }
+            }
+          },
+          {
+            "id": "K2Node_VariableSet_0",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"WakeAcceptingSamples\",MemberGuid=4BB3A4B2418F3E2FE4F9B2B4DE9F11F2,bSelfContext=True)",
+              "NodeGuid": "5EC201214A743AC36CC680A437DF1A47"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "C0D74392431649BAF8842FB8947BE32C",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "77B118D24B763BB22F1801BFBDF4B703",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:WakeAcceptingSamples": {
+                "id": "F4FBEE934BAB47DFB7A6A5BE5AA8740B",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:Output_Get": {
+                "id": "C56E835C42B78E2692DE3587D0E1DE4D",
+                "type": "p_b2a7bd72f8a232636d2a3951831b0b467cc223b358b7bdc1ec0304d59059c0f2"
+              },
+              "in:target": {
+                "id": "1F89241C40CD9F8680238D92BD03A7A6",
+                "type": "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:WakeAcceptingSamples": "false",
+              "out:Output_Get": "false"
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "K2Node_FunctionEntry_0.out:then",
+            "to": "K2Node_VariableSet_0.in:exec"
+          },
+          {
+            "from": "K2Node_VariableSet_0.out:then",
+            "to": "K2Node_FunctionResult_0.in:exec"
+          }
+        ]
+      }
+    }
+  ],
+  "dependencies": [
+    "/Script/Engine.Default__KismetArrayLibrary",
+    "/Script/Engine.Default__KismetMathLibrary",
+    "/Script/Engine.Default__KismetSystemLibrary",
+    "/Script/Engine.Default__SubsystemBlueprintLibrary",
+    "/Script/Voyage.VoyageWeatherSubsystem"
+  ],
+  "pinTemplates": {
+    "p_7bca84ed61df6bd222396917aaad49d5acf0effa2ad3af8056e97b44aaf9974b": {
+      "AutogeneratedDefaultValue": "\"(X=0.000000,Y=0.000000)\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "INVTEXT(\"Direction\")",
+      "PinToolTip": "\"Direction\\nVector 2D Structure\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector2D'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a7f48a1616416301bb6b7e3286c03ee928cc7d131dec4555b64e1d31eb5d8292": {
+      "AutogeneratedDefaultValue": "\"0.000000,0.000000,0.000000\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "INVTEXT(\"Location\")",
+      "PinToolTip": "\"Location\\nVector\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_472e36037ff6d732a253f3053f39591c546466d55fc729a66a5aa8de69167d96": {
+      "AutogeneratedDefaultValue": "\"0.000000\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "INVTEXT(\"Radius\")",
+      "PinToolTip": "\"Radius\\nFloat (single-precision)\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"float\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_c8c7faaf74e11a3bade8c881d0dbd33101fd39709fdfe68f10ba16e65561a5b5": {
+      "AutogeneratedDefaultValue": "\"0.000000\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "INVTEXT(\"Strength\")",
+      "PinToolTip": "\"Strength\\nFloat (single-precision)\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"float\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_e350d2e5ffa533d26511f1a4971478b3a8f44e3258b1e570250843f15818f75c": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Delta Seconds\\nFloat (single-precision)\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"float\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_725eeaedf942587b7e439cbe348fe124800c835b2fcd0dfea24ac8dfe50c5bfa": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"float\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_fe4a9ee396cf711e3b42fca217b92df67f17097a663611888addd3adc8044d1c": {
+      "AutogeneratedDefaultValue": "\"0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_4d1c70798478a4900d704c9a9d29609aa1a343f8be43fa95240224fd665e0e4b": {
+      "AutogeneratedDefaultValue": "\"1.000000\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_9cddca4967df7d9fd07f92fee6ca50b60bfb36fb4a95045f07ca364aea29bc16": {
+      "AutogeneratedDefaultValue": "\"1\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_b2a7bd72f8a232636d2a3951831b0b467cc223b358b7bdc1ec0304d59059c0f2": {
+      "AutogeneratedDefaultValue": "\"false\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0": {
+      "AutogeneratedDefaultValue": "\"false\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c": {
+      "AutogeneratedDefaultValue": "\"true\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_7ed77eaf51bf64e349a373050ae23cc1c69009fbaa06ad5b196e9db08c6c437a": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.Actor'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_2e240eece4dc56800d8948faf7db025fdd41f8435101cdb9e1b99bcbb8c9ee12": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.KismetArrayLibrary'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_c4b0087a314c2de6734b6a5981bdfe3a260ed21ca80eff5b86a0e247c41271c0": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.SubsystemBlueprintLibrary'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_c78cc1f775280ffc85b9d62fc8b3e6434beba2883e38276c5caf65b0ad2f14ec": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Voyage.VoyageWeatherSubsystem'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_6d6aa5c8453352e3b89b5820547649340a3c0e82be1251067c6eb90a59dafe09": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunWaterWakeController.BP_RailgunWaterWakeController_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"false\", \"false\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"true\", \"true\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_6d2bbf1685440eb7410d56ab2e795c9c1bdc515bdeb7ceee7af4b745ef1e0453": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "Array",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_f472d2bfb7a88627b0ed8f1c3f324b4d737fd0396306bf747c826791a5c3a32b": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "Array",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "True",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_609dd95ecb77ce48c40fba11d5f870f3a06a3a4058d7dc8c58997b587ab4243a": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "Array",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "True",
+      "PinType.bIsReference": "True",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "True",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_036db296a6fe4f81a03254f79363aa0a94c77e500ab3ce21d6466f79e8674337": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "Array",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_ca3ebada639e29614b0e51ff86ac29b76a4f6c11bedd90132f4c90eebe71a1df": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "Array",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "True",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_0a4241a5f1df33839e5d357a94318b5fa9a4fffa1bc385ab4317b7df57b13ba8": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "Array",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "True",
+      "PinType.bIsReference": "True",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "True",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_56993b8655c965530d38c63d18de10c2e0ae9d0e8769c755d2fca14c67316f3c": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"bool\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_abe47ce92cf216e8c8eb659a9dc363bdcb7acf3e3ac4a022105bbe401e0c5c29": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"class\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.WorldSubsystem'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "True",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_3bd435c3751b880cc5aa59ac5f27ce1b5c21b4c706600ee0937212070f10787e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"delegate\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.Actor'\",MemberName=\"ReceiveBeginPlay\")",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_595ceea3d8eb4da67c731ee08cbf0bec131e1ead4fac8c5b9ecce4bee8d97b92": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"delegate\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.Actor'\",MemberName=\"ReceiveTick\")",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"exec\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_d6fc60d7408c5aa1ed59190c252a8145c9867a04978989da93cc2567db238e36": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"int\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_5ce4ab9cc1e24fcc43bae7b944e13ce938a412ba1e9609fc1ddabed2e3284d92": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/CoreUObject.Object'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_137dae0f38cb3af05e303cdbe8d61b512d056e8ea7fb764a4466b638ff2542d5": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/CoreUObject.Object'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_8b5a74d456558636cb47515e4366481ba807d5b36764cbabc0dde5bb868c9f1e": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/CoreUObject.Object'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "True",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_11643ed3f71bd7df2b98c5cc5f02979b4a126df483c0695221a664b2f9ef7567": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Engine.WorldSubsystem'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_9025db21ddf37038eedaf2e662ea1e93740a6d001e6e3aaa03959919fc070b00": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Voyage.VoyageWeatherSubsystem'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"self\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_76deda82db767a70046c946059451b034fd5e732677741bdb65b994910ffb6ca": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_b8493f07a8b49b77d98cfea92c50015b0b9e988c95e93ef3abf195f8336c02cc": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "True",
+      "PinType.bIsReference": "True",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_480e63d745ab587e26996946080e9c570a9f78ee2febf4f467415a3ea0627c59": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_c25d7e1d7782cff0eaeda0507a9859e1a2fa2a5719c5dd8d14daf84e28f24f62": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/CoreUObject.Vector'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "True",
+      "PinType.bIsReference": "True",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_b56340f0f30ef49a6c666c3e49341eb3739c012fb4506dba2bc8c378b90d96af": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/Voyage.VoyageFluidImpulse'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    }
+  },
+  "classes": {
+    "CallArrayFunction": "/Script/BlueprintGraph.K2Node_CallArrayFunction",
+    "call": "/Script/BlueprintGraph.K2Node_CallFunction",
+    "cast": "/Script/BlueprintGraph.K2Node_DynamicCast",
+    "event": "/Script/BlueprintGraph.K2Node_Event",
+    "branch": "/Script/BlueprintGraph.K2Node_IfThenElse",
+    "MacroInstance": "/Script/BlueprintGraph.K2Node_MacroInstance",
+    "MakeStruct": "/Script/BlueprintGraph.K2Node_MakeStruct",
+    "self": "/Script/BlueprintGraph.K2Node_Self",
+    "getVariable": "/Script/BlueprintGraph.K2Node_VariableGet",
+    "setVariable": "/Script/BlueprintGraph.K2Node_VariableSet",
+    "FunctionEntry": "/Script/BlueprintGraph.K2Node_FunctionEntry",
+    "FunctionResult": "/Script/BlueprintGraph.K2Node_FunctionResult"
+  }
+}

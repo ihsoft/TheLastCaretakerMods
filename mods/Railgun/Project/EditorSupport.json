@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "plugins": [{
+    "source": "EditorSupport/RailgunSupport.uplugin",
+    "overlays": [{ "source": "../Tests/Native", "destination": "Source/RailgunEditor" }]
+  }]
+}

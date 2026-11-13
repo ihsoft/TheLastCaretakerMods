@@ -1,0 +1,36 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Modding",
+  "Description": "Editor project for authoring and validating maintained Railgun assets.",
+  "Plugins": [
+    {
+      "Name": "AndroidFileServer",
+      "Enabled": false
+    },
+    {
+      "Name": "EnhancedInput",
+      "Enabled": true
+    },
+    {
+      "Name": "Interchange",
+      "Enabled": true
+    },
+    {
+      "Name": "InterchangeEditor",
+      "Enabled": true
+    },
+    {
+      "Name": "ModularGameplay",
+      "Enabled": true
+    },
+    {
+      "Name": "BlueprintTextWorkspace",
+      "Enabled": true
+    },
+    {
+      "Name": "RailgunSupport",
+      "Enabled": true
+    }
+  ]
+}
