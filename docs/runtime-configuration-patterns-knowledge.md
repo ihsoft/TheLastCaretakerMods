@@ -139,7 +139,7 @@ transaction and rollback lifetime.
 
 Railgun and StableGyro merge active settings on installation.
 [ContainerLidLabel's owning installer](../mods/ContainerLidLabel/Install-ContainerLidLabel.ps1)
-also preserves its user INI and handles its documented migration to LogicMods.
+also preserves its user INI beside the LogicMods payload.
 Use the mod's entry point so container installation and settings recovery remain
 part of the same guarded operation.
 

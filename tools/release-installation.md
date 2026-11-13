@@ -7,7 +7,7 @@ For a routine candidate whose payload needs no mod-specific settings migration,
 use the producer's manifest directly with the installer. Railgun and StableGyro
 couple their settings installation to their producer's `-Install` mode;
 ContainerLidLabel uses [Install-ContainerLidLabel.ps1](../mods/ContainerLidLabel/Install-ContainerLidLabel.ps1)
-for its LogicMods payload and INI preservation/migration.
+for its LogicMods payload and INI preservation.
 The read-only status snapshot below is for a specific installation question or
 unexpected result.
 

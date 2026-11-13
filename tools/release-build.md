@@ -58,7 +58,7 @@ DonkLiftKeyboardControl, ElectrifiedBoat, MooringCable60m,
 PalletContainerSnap, ScopeFix, and VoyageAutoLoader. Railgun and StableGyro
 use their producer's `-Install` mode to preserve user INI settings.
 ContainerLidLabel uses its [owning installer](../mods/ContainerLidLabel/Install-ContainerLidLabel.ps1)
-to install the LogicMods payload and preserve or migrate its INI together.
+to install the LogicMods payload and preserve its INI together.
 
 ## Release container verification
 

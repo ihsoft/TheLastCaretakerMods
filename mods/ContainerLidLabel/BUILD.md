@@ -64,9 +64,5 @@ payload and user settings:
   -ReleaseManifest 'Tmp/ContainerLidLabel/candidate/release-manifest.json'
 ```
 
-The installer rejects legacy `ContainerLidLabel_P` overrides: uninstall them
-through the mod manager and preserve the old INI. If the LogicMods INI is absent,
-it migrates `Voyage/Content/Paks/ContainerLidLabel.ini`. It renames `MaxWeightKg`
-to `LargeContainerMaxWeightKg` only when the new key is absent; the old key is
-not a runtime alias. General preservation and recovery follow the shared
+Existing LogicMods INI values are preserved on updates. Recovery follows the shared
 [INI installation contract](../../docs/runtime-configuration-patterns-knowledge.md#install-and-migrate-a-user-edited-ini).
