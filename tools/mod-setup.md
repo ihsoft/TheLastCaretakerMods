@@ -118,11 +118,20 @@ A minimal numeric schema entry is:
 }
 ```
 
-`id` supplies the key and runtime member name when those fields are omitted.
-Use `storage: "float"` only when the consumer property is float. Boolean and
-string entries use JSON `true`/`false` and a JSON string as their required
-schema fallback. The distributed INI owns player comments, order, formatting,
-and shipped values.
+For maintained Blueprint consumers, the schema fields mean:
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Setting identity; also supplies omitted `key` and `runtimeName`. If omitted, the validator derives it from `key`, then `runtimeName`. |
+| `key` | Case-sensitive INI key. |
+| `runtimeName` | Consumer member/value-pin name; the maintained graph must use the same binding. |
+| `type` | `number`, `boolean` or `string`. |
+| `default` | Required runtime fallback, expressed as a JSON value of the selected type. |
+| `minimum`, `maximum` | Optional inclusive numeric bounds; the schema fallback and distributed value must satisfy them. |
+| `storage` | Numeric storage, `double` by default; use `float` only for a float consumer property. |
+
+The distributed INI owns player comments, order, formatting and shipped values.
+Its values and the schema's runtime fallbacks have distinct roles.
 
 ### Existing user INI
 

@@ -6,9 +6,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$UnrealEditor,
 
-    [string]$Project = "$PSScriptRoot\Voyage.uproject",
+    [Parameter(Mandatory = $true)][string]$Project,
 
-    [string]$LocalDataCachePath = "$PSScriptRoot\DerivedDataCache",
+    [Parameter(Mandatory = $true)][string]$LocalDataCachePath,
 
     [string]$LogPath,
 

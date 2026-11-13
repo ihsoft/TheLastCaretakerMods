@@ -22,7 +22,7 @@ function Assert-ReuseRejected {
     $rejected = $false
     try { Get-StableGyroItemRefreshPlan -StatePath $statePath -RecipePath $recipePath -SteamBuildId '100' | Out-Null }
     catch {
-        if ($_.Exception.Message -notlike '*-ReimportItemAsset*') { throw }
+        if ($_.Exception.Message -notlike '*Update-StableGyroItemAsset.ps1*') { throw }
         $rejected = $true
     }
     if (-not $rejected) { throw 'Unproven item state was accepted for reuse.' }

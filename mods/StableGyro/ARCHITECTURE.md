@@ -1,5 +1,10 @@
 # StableGyro architecture
 
+The contracts below constrain implementation changes. Preserve the stated
+ownership, lifecycle and saved identities. Changes to A/D integration, yaw,
+camera behavior, possession, save behavior or other input/HUD behavior beyond
+the features described here require a new user request.
+
 The loader-free mod leaves the stock Gyro Blueprint at its original package
 identity and uses a child selected through the stock item data asset's
 `DroppedActor`. One helper handles pitch input before the stock physics tick;
@@ -11,36 +16,25 @@ their respective PrePhysics and PostPhysics groups.
 The vehicle HUD also shows the stock compass scale with its heading driven by
 the player's camera.
 
-## Maintained project and editing
+## Project dependencies
 
-`Voyage.uproject` is the Unreal project descriptor; `Content/` contains its
-authoritative editor assets, including every asset selected for release.
-The three gameplay Blueprints are `ModActor`, `PitchInputActor`, and
-`BP_GyroCopter_StablePilot`; `Settings/BP_IniFileParser` is their mod-owned
-UObject settings parser. Three widgets under `Content/Mods/StableGyro/UI/` own
-the compass integration, camera update and inherited stock presentation.
-Their synchronized JSON representations live directly in `BlueprintText/`;
-the two HUD dependency stubs have corresponding sources in `BlueprintText/Stubs/`.
-Use the shared
-[BPT workflow](../../tools/blueprint-workspace.md) to export, edit and apply them.
-A routine build neither imports these JSON files nor regenerates the graphs.
+The maintained project and supported commands are described in [BUILD.md](BUILD.md).
+The gameplay Blueprints, settings parser and compass widgets are authored source.
+Native declarations under `Project/EditorSupport/Source/Voyage/` and the shared
+[item profile](../../tools/voyage-item-patch.md) provide editor dependencies,
+preserving `/Script/Voyage` identities and Runtime classification for game
+references. The project has no C++ modules or targets; native plugins do not ship.
 
-`EditorSupport.json` declares the project's native editor dependencies. The
-mod's `EditorSupport/Source/Voyage/` contains the minimal game API declarations;
-the shared [item profile](../../tools/voyage-item-patch.md) supplies the item
-layout and updater. The shared
-[native-support tool](../../tools/unreal-editor-support.md) composes and builds
-them into ready plugins. The project itself has no C++ modules or build targets.
-Plugin binaries remain ignored and are never included in the mod container.
-Keep the `/Script/Voyage` identities and Runtime classification required to
-compile references to the game's native classes.
+Stock-parent, HUD, crafting-generator, material, input and item dependency stubs
+provide editor identities and required structure, not the game's implementations
+or shaders. They are excluded from the release; runtime references resolve to
+the game originals. Their reconstruction and revalidation boundaries are listed
+under [editor-input provenance](#editor-input-provenance).
 
-The project also contains explicitly marked dependency stubs, including the
-stock Gyro parent, crafting-generator Blueprint, material, input actions and
-item references. They provide editor identities and required structure, not
-the game's implementations or shaders. Preview displays them in its supporting
-inventory and at reference use sites. Their presence does not make them release
-assets; runtime references resolve to the game originals.
+The stock parent remains `/Game/Blueprints/Vehicles/BP_GyroCopter_Possessable`,
+with native parent `/Script/Voyage.VoyageVehicleGyroCopter`. Only
+`/Game/Data/Assets/Modules/DA_Item_Module_GyroCopter.DroppedActor` selects the
+mod child. Do not relocate or replace the stock parent implementation.
 
 ## Graph organization
 
@@ -87,70 +81,19 @@ the sockets before appending the action and retains the enclosing action-provide
 local variable. The inherited action array crosses collapsed boundaries by
 reference.
 
-## Release preparation
+## Release serialization
 
-`Build-StableGyro.ps1` is the public producer. It validates the settings and
-reuses maintained assets while their source inputs are unchanged. It prepares
-the declared native editor support even when no asset refresh is needed.
-Unsupported input or failed refresh stops the build; it does not fall back to
-old project output.
+The release includes eleven explicitly selected packages: three gameplay
+Blueprints, the settings parser, three compass widgets, the reset input action,
+keyboard mapping context, Gyro item DataAsset and one plate mesh. The stock item
+and mapping context keep their override identities; the child remains under
+`/Game/Mods/StableGyroCtrl/`. Filesystem moves must preserve these runtime paths.
 
-A build without `-Install` may run while Voyage is running. Stock extraction
-and final-container validation still read the installed game packages; an actual
-read failure stops the build. Closing the game is required before installation
-and before writing or restoring the installed INI, not before build-only work.
-
-`Build/Item.source.json` records the item pair's source Steam build and applied
-`Build/Item.patch.json` recipe. The recipe changes only `DroppedActor` to the
-mod child. A changed game build or recipe, or explicit `-ReimportItemAsset`,
-calls the shared item updater to replace the DataAsset and its owned
-crafting-generator stub. Recipe comparison ignores whitespace and object key
-order, but preserves values and array order. Commit the refreshed pair with
-its updated source state. Missing or invalid state, missing assets, or a pending
-update blocks ordinary reuse; restore the inputs from Git or explicitly reimport.
-The state is marked pending before the updater and ready after final-container
-validation. Every build extracts the current original and compares the complete
-project-cooked item against it, allowing only the recipe's change. The decision
-tests are `Build/Test-ItemAssetRefresh.ps1`.
-
-`Build/MooringMeshes.source.json` records the one maintained plate's source Steam
-build, reconstruction recipe and readiness. Ordinary builds require a current,
-ready state and the mesh package. A changed game build, missing or invalid state,
-or interrupted update stops reuse and directs the caller to the separate
-`Update-StableGyroMooringPlate.ps1` script. The release producer never exports,
-splits or imports plate geometry and does not require Blender.
-
-Run the updater explicitly after a game update or to repair an import on the
-same build. Every invocation performs complete replacement at the existing package
-identity; it does not create numbered copies or merge old contents. Use the
-shared Unreal queue, with PowerShell 7, from the repository root:
-
-```powershell
-& tools/Invoke-UnrealQueued.ps1 -Operation 'Update StableGyro plate' `
-  -FilePath (Join-Path $PSHOME 'pwsh.exe') `
-  -ArgumentList @('-NoProfile', '-File', 'mods/StableGyro/Update-StableGyroMooringPlate.ps1')
-```
-
-The updater accepts `GameRoot`, `EngineRoot`, `BlenderPath`, `Retoc`, `OutputRoot`
-and `IgnorePinnedGameVersion`. Output stays below `Tmp/StableGyro`; it never
-installs a candidate. It marks the source state pending before replacement,
-cooks the mesh in the maintained project and validates an isolated container
-against the freshly extracted geometry, normals, UVs and colors. Only successful
-geometry, representation and material checks mark it ready. Failure restores
-the prior mesh and source state; an interrupted pending update cannot be reused.
-Commit the updated mesh together with its source state.
-
-Ordinary builds retain final-container Nanite, fallback, ray-tracing and material
-checks without a source-GLB comparison. Both paths share
-`Build/Test-MooringPlateContainer.ps1`; source-state decision tests are in
-`Build/Test-MooringMeshRefresh.ps1`.
-
-The producer preserves the authored Blueprints and cooks eleven explicit
-packages: the three gameplay Blueprints, settings parser, three compass widgets,
-reset input action, keyboard mapping context, Gyro item DataAsset and one plate mesh. Packaging validates the
-project-cooked item instead of patching cooked stock bytes. Dependency stubs
-are excluded. All intermediate extractions, split GLBs, cook output and reports
-remain ignored build output.
+Packaging compares the project-cooked item against a freshly extracted original,
+allowing only the `Build/Item.patch.json` replacement of `DroppedActor`. Socket
+templates, the plate's Nanite/fallback/ray-tracing representations and material
+binding are checked in the final container. Editor dependency stubs are excluded.
+Source refresh and build commands belong to [BUILD.md](BUILD.md).
 
 `WBP_StableGyroCompassDisplay` requires a separate cook without `-unversioned`.
 Its inherited `TickFrequency=Never` must be saved with property names because
@@ -163,6 +106,21 @@ Do not change the global `CanUseUnversionedPropertySerialization` setting to
 achieve this; editor object duplication also needs that capability.
 
 ## Camera compass
+
+For Steam build `25982825` / UE `5.8.2`, stock inspection establishes the
+Gyro HUD's `RootCanvasPanel`, the compass material `/Game/UI/Compass/M_Compass`
+and its `Direction` scalar. The binocular overlay
+`/Game/UI/Tools/BP_ToolsOverlay_Binoculars` supplies the `0.4` presentation-scale
+reference, not replacement payload. Stock compass update retains a pawn
+reference; `bUseControllerDirection` does not substitute the active camera manager.
+
+The reflected parent chains are
+`VoyageIngameGenericVehicleWidget -> VoyageInGameVehicleWidget ->
+VoyageInGameWidget -> VoyageBaseUserWidget -> UserWidget` and
+`VoyageCompassWidget -> VoyageBaseUserWidget`.
+`StableGyroHudContracts.h` mirrors only the parent identities and consumed widget
+references, not the complete shipping CDO layout. Recheck these dependencies when
+changed game data or serialization diagnostics give reason to doubt them.
 
 The Gyro child's construction assigns `HUDOverrideWidgetClass` to
 `WBP_StableGyroCompassHUD` through `KismetSystemLibrary.SetClassPropertyByName`.
@@ -222,11 +180,60 @@ convert each value to a nonzero boolean. They do not create their own input
 components, mapping contexts or consuming action events. Cargo keeps its
 separate event bindings.
 
-The PrePhysics pitch helper derives reset from a rising edge using transient
-`ResetActionWasActive`. It updates the latch after writing the integrated and
-native pitch, so holding reset does not repeat the reset or block later pitch
-integration. Disabled pitch, invalid ownership, controller changes and EndPlay
-clear the latch. The existing pitch-enable gate also controls the reset hint.
+### Mapping and value-binding contracts
+
+Preserve every stock keyboard mapping in
+`/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard`. For Steam build `25982825`,
+its fourteen entries cover mouse, E, T, Space, LeftControl, arrows, W/S/A/D and F;
+there is no stock X mapping. Entries inherit player-mappable settings from their
+actions; MouseY Negate and E/T Pressed use default parameters. The only addition
+is `IAV_GyroPitchReset` on X, with Pressed and player-mappable name `GyroPitchReset`.
+The stock throttle action names remain `GyroCopterThrottleUp` and
+`GyroCopterThrottleDown`; gamepad RightTriggerAxis/LeftTriggerAxis use the same
+actions without mapping triggers or modifiers.
+
+The shared [value-binding contract](../../docs/voyage-input-integration-knowledge.md#action-values-and-compiler-owned-bindings)
+owns actor selection, compiler persistence and held-value semantics. Keep the
+three connected action-value accessors in the Gyro graph; all three value
+bindings must survive cook alongside cargo event bindings. Helpers query the
+Gyro, never raw keys or their own input components.
+
+### Pitch integration and reset
+
+W/S use native `TiltForwardInput`; A/D use `TiltInput`. The native properties are
+protected and Blueprint-readable; writable editor mirrors only permit the
+established assignments and do not claim different game access flags. Stock
+tilt limits `-15..15` and interpolation speed `5` remain owned by the stock parent.
+
+When pitch correction is enabled, accept only exact native digital markers
+`-1`, `0`, `1`: W increases integrated pitch, S decreases it, and neutral holds
+it. Clamp to `-0.9999..0.9999`. Reset writes exact zero once per press.
+The helper ticks in `TG_PrePhysics`, after the controller and before the stock
+Gyro. Establish prerequisites at BeginPlay/controller change, not per frame.
+Restore integrated pitch before every controlled Gyro tick, including neutral
+input; reset helper and native pitch when the owner is not player-controlled.
+
+Derive the reset rising edge through transient `ResetActionWasActive`; update
+the latch only after both pitch writes, so pure-node reevaluation cannot consume
+the edge prematurely. Clear it on invalid ownership, disabled/uncontrolled paths,
+controller changes and EndPlay.
+
+With `EnablePitchCorrection=false`, the pitch helper must neither read nor write
+native `TiltForwardInput` on any tick or lifecycle path and must not append the
+reset hint. Inherited actions pass through. The independent horizontal helper
+may still read both native tilt axes as control intent. `GetProvidedActionsBP`
+must call the inherited provider and append reset only while pitch is enabled.
+
+### Horizontal stabilization
+
+`ModActor` applies local two-axis control-intent damping in `TG_PostPhysics`,
+explicitly after the stock Gyro tick and rotor/Chaos integration. Away from
+external contact, neutral control rejects physics-injected horizontal speed
+growth before decay. Apply only an additive XY velocity delta; never rewrite
+the full velocity vector or its Z component. Preserve the reusable
+[PostPhysics correction contract](../../docs/vehicle-and-hud-modding-patterns-knowledge.md#post-physics-kinematic-correction).
+The shared propulsion/contact gates and their reset order are owned by
+[altitude control](ALTITUDE-CONTROL.md#shipped-ownership-and-restoration).
 
 ## Independent flight-control settings
 
@@ -235,27 +242,26 @@ true and are reread by the PostPhysics `ModActor` when the player enters a
 Gyro. They are independent of each other and of `EnablePitchCorrection`.
 
 When altitude control is false, PostPhysics clears all vertical lock, braking
-and sample state and performs no mod-owned Z position or velocity correction.
+and sample state (including exact hold, Space floor, both braking modes,
+locked altitude and Ctrl cap) and performs no mod-owned Z position or velocity
+correction. The altitude gate follows the independent horizontal path.
 The player-entry callback also leaves saved `HoverPitchScale` untouched. The
 PrePhysics helper reads the altitude flag through its cached `ModActor`
 reference, declines native altitude-assistance ownership, and restores any
 captured `bAutoHoverCollective` and `bAltitudeAssist` values. W/S pitch
 integration and eligible horizontal damping remain available.
 
-When altitude control is true, the genuine player-entry callback writes the
-entry-reloaded `HoverPitchScale` setting to the native Gyro. This advanced INI
-setting defaults and falls back to `2.5`, accepts `0.5..2.5`, and is listed
-under the warning against changing advanced settings. It is dimensionless and
-is not polled or rewritten on tick.
+The enabled player-entry `HoverPitchScale` reset, its range and lifecycle are
+owned by [entry reset](ALTITUDE-CONTROL.md#entry-reset-and-remaining-limits).
 
 When horizontal velocity control is false, PostPhysics branches before reading
-or writing horizontal physics velocity, clears its prior XY sample, and
+or writing horizontal physics velocity, clears its prior XY sample and validity flag, and
 continues into the independent altitude path. Altitude control and W/S pitch
 integration remain available.
 
 ## Settings parser
 
-`Content/Mods/StableGyro/Settings/BP_IniFileParser.uasset` is the mod-owned copy
+`Project/Content/Mods/StableGyro/Settings/BP_IniFileParser.uasset` is the mod-owned copy
 of the reusable [BPT INI parser](../../tools/BlueprintText/Library/IniFileParser/AGENTS.md).
 Each consumer's `ReloadSettings` constructs a parser with itself as Outer,
 retains it in transient `IniParser`, and calls `Load` with
@@ -264,13 +270,25 @@ from `GetDouble` or `GetBool`, supplying the schema fallback and numeric bounds.
 There is no separate reset-before-read chain or duplicated parsing helper graph
 in the consumers. Missing or invalid input assigns the getter's fallback.
 
-`ModActor` loads its twelve settings, `PitchInputActor` its two, and the Gyro
-child the four-port flag. Each owns a separate parser snapshot; this is not a
-single file read shared between all three owners. Helper BeginPlay/entry reload
-and the child's once-per-loaded-class CDO guard retain their existing lifecycle.
-The parser has no Tick reads and is cooked as an ordinary mod asset, without a
-separate native parser module. This integration is game-validated; the library's
-editor suite covers the remaining getters and numeric edge cases.
+The canonical INI owns distributed values, comments, ordering and formatting;
+`Settings/StableGyro.settings.json` owns bindings, runtime fallbacks and ranges.
+Out-of-range values use the fallback rather than clamping. Getter members,
+arguments, fallbacks and consumers must match that schema.
+
+| Consumer | Settings ownership and read lifetime |
+| --- | --- |
+| `ModActor` | Twelve PostPhysics settings, including both independent flight-control flags. Reload at BeginPlay and synchronously on genuine player entry through the Pawn controller-change delegate. |
+| `PitchInputActor` | Owns only its `PitchRampSeconds` and `EnablePitchCorrection` members; same reload events. Read `EnableAltitudeControl` through the cached sibling, without duplicating that setting. |
+| Replacement Gyro child | Alone owns `EnableFourMooringPorts`, using the exact replacement-class CDO snapshot before parent construction. All layout, cargo and action branches share it; helper loaders exclude it. See [four-port lifecycle](#four-mooring-ports). |
+
+Each consumer constructs and retains its own parser snapshot; consuming graphs
+read their own helper members, except the child's explicit CDO contract.
+No parser reads occur on Tick. The parser ships as an ordinary mod asset,
+without a separate native parser module. For Steam build `25982825`, the consumed
+game API is `VoyageEditorBlueprintFunctionLibrary.LoadFileToArray(FString)`,
+returning a string array. This integration is game-validated; parser grammar,
+inline comments and getter edge cases belong to the
+[shared INI library](../../tools/BlueprintText/Library/IniFileParser/integration.md).
 
 ## Fuel settings
 
@@ -298,7 +316,11 @@ four-port option. There is no per-tick settings read or fuel write.
 
 The function updates only the owned custom module's Petrol capacity entry and
 the Gyro's base consumption property. It neither refills the tank nor removes
-stored fuel when capacity is lowered; other resource entries remain intact.
+stored fuel when capacity is lowered; other resource entries remain intact. Do not modify throttle
+or workload consumption from this path. `VoyageModuleComponent.h` and
+`VoyageCustomModuleComponent.h` provide editor-only identities for lookup, cast
+and the external `MaxResources` getter; they are not ordinal-complete schemas
+for authoring native component instances or defaults.
 The native defaults, field identities and rate conversion are documented in
 [altitude control](ALTITUDE-CONTROL.md#fuel-request-versus-observed-consumption).
 
@@ -317,6 +339,39 @@ derived plates, runs the parent construction graph, and applies the established
 four-port stock-part layout. Stock mode runs the parent construction graph with
 inherited stock parts untouched. Item-data class selection applies to newly
 created Gyros; it does not migrate saved stock actors into the mod subclass.
+
+### Mooring native contracts
+
+These native locations and stock identities are bounded to Steam build `25982825`.
+Socket discovery at `0x1455468d0..0x145546c47` enumerates actor components without
+a two-socket limit. Module-owner assignment at `0x145512c10` precedes the
+`bAutoInitialize` check; false skips port-data initialization, not discovery.
+The native reeling pass at `0x14549ed50` also enumerates actor socket components,
+whereas Drop Cargo at `0x145486d20` uses cached `MooringSocketA/B`.
+
+Preserve the Gyro's non-standalone socket configuration: `DA_Socket_MooringSmall`,
+`ST_Any`, Mooring resource/category, `DA_Cable_Hook`, integrated length `1000 cm`,
+disabled auto-initialization and absolute scale. Stock IDs are `1051774499` and
+`3437279300`; added rear IDs are `2056977161` and `2056977162`. Create extra
+components on the Gyro itself, with stable names and IDs in both setting modes.
+The ship's `DA_Socket_Mooring` / `ST_Output` / `DA_Cable_Mooring` and `2000 cm`
+configuration is a different consumer. Hook Cable uses `DA_Hook_Attachment`.
+Do not substitute the ship actor or infer zero from absent overrides.
+
+The reflected `MeshComponent` property points to the runtime UObject named
+`VehicleMesh`. Component-name searches must use that UObject name. Stock instance
+transforms and the authored rear templates remain in the child asset/BPT; disabled
+four-port mode must leave the inherited transforms untouched.
+
+`OnSocketConnectionChanged` has signature
+`VoyageSocketConnectionDelegate__DelegateSignature(bool bSocketConnection)`.
+Connect/disconnect broadcast true/false; the `ConnectionCable` setter also
+broadcasts peer validity after updating the socket, so cable assignment can
+broadcast false. Treat either value as a cleanup request and defer outside the
+callback; it does not signal completion of save restoration. The general
+[socket lifecycle](../../docs/mooring-cable-and-socket-knowledge.md) owns reusable
+event/disconnect guidance; the [disabled-port path](#saved-connections-when-disabling-the-extra-pair)
+owns this consumer's implementation.
 
 ### Port and base layout
 
@@ -343,6 +398,28 @@ fallback supplies the ray-tracing proxy. This reduces that representation's
 geometry budget without reducing the full-detail Nanite input.
 The inherited paired plate is hidden only in four-port mode.
 
+Preserve source corner normals, UV0..3, vertex colors and material bindings when
+splitting the full decoded Nanite geometry. Do not delete zero-area faces or
+invent source tangents. Blender can change imported normals near degenerate
+geometry; the bounded splitter restores the raw `NORMAL` accessor by complete
+triangle/corner position+UV identity after export. The source has no tangent
+stream; the importer retains normals, while the native builders derive the
+required fallback tangent basis. The stock mesh slot names `WorldGridMaterial`;
+visible `Gyrocopter_Seat_p1` comes from the component override. Derived components
+retain NoCollision and disabled overlap generation.
+
+The material chain `Gyrocopter_Seat_p1 -> Gyrocopte_Master_Hull ->
+/Game/ModulesAnimations/Common/Materials/M_Modules` has a connected
+WorldPositionOffset output. Coincident positions need not have identical corner
+attributes, so initial zero area is not permission to discard a face. This is
+not evidence that every degenerate face contributes visibly. Native mesh builders
+can discard coincident-position faces; the explicit updater must still prove
+that no nondegenerate source face is lost. Exact source counts, decode assertions
+and comparison tolerances belong to `Update-StableGyroMooringPlate.ps1`,
+`Build/Split-MooringPlateGlb.py` and `Build/Test-MooringPlateContainer.ps1`.
+Geometry/representation checks do not establish GPU cost or which representation
+is used in an individual frame.
+
 The four decorative components share one `StableGyroMooringPlate` template for
 the mesh, material and collision settings. `CreateMooringPlates` calls
 `CreateMooringPlate` four times with the required location and scale. Two use
@@ -355,13 +432,18 @@ instance names are generated uniquely from the common template. The two rear
 socket templates remain separate with their stable endpoint names and SocketIDs.
 Cook validation requires exactly those two socket templates and the shared plate.
 It also verifies that the plate template references the packaged mesh identity.
+Keep these runtime-created templates outside the unconditional SCS node list.
+`Build/Validate-StableGyroMooringTemplates.ps1` validates with the exact source-cook
+schema overlay, no `RawExport` and a byte-identical unchanged writer roundtrip;
+it must not patch native-parent attachment metadata during packaging.
 
-Replacement keeps package identities and Blueprint references, with backup and
-copy verification; it does not merge previous LOD, collision or socket data.
+Replacement keeps package identities and Blueprint references, with copy
+verification and rollback; it does not merge previous LOD, collision or socket data.
 The project requires DX12/SM6 and ray tracing enabled to retain the requested
 representations during cook. Preserve every emitted bulk companion. Final-container
-validation checks Nanite, fallback, ray tracing, source attributes and the stock
-material reference before installation. The shared
+validation checks Nanite, fallback, ray tracing and the stock material reference.
+The explicit plate updater additionally compares source geometry and attributes.
+The shared
 [cooking knowledge](../../docs/static-mesh-cooking-knowledge.md) defines the
 representation and validation boundaries.
 
@@ -372,9 +454,25 @@ positive-Y tube direction is approximately
 This direction comes from frame geometry; a port normal alone cannot determine
 it. Rotations and scales remain unchanged. Exact transforms and stable SocketIDs
 are stored in the maintained child Blueprint's component templates and
-construction graph, represented in `BlueprintText/BP_GyroCopter_StablePilot.json`.
+construction graph, represented in
+`Project/BlueprintText/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.json`.
 
 ### Drop Cargo and hints
+
+For Steam build `25982825`, the stock Gyro Blueprint has no function override.
+Its native action provider calls `VoyageVehiclePawn.GetProvidedActionsBP` and
+then appends cargo when `DropCargoAction` is non-null. The child preserves parent
+`ReceiveBeginPlay`; only in four-port mode it clears that property with
+`KismetSystemLibrary.SetObjectPropertyByName` and owns one replacement binding
+and provided-action record for `/Game/Game/Input/Vehicle/IA_GyroCopterDropCargo`.
+The native float `DropCargoTriggerTime` belongs to `VoyageVehicleGyroCopter`
+at offset `0x72c`, defaults to `1.0`, and is copied directly into the hint's
+`TriggerTime`. The mirror exposes it for reads, never a serialized override.
+
+Started arms a fresh press; Triggered checks elapsed time and releases once;
+Completed, Canceled and controller change clear press state. Availability uses
+`ModuleSocketComponent.IsSocketConnectedOrHasCable()` on Mooring ports, and
+release calls `VoyageMiscBlueprintFunctionLibrary.DisconnectCableFromSocket(Socket, false)`.
 
 Native reeling covers the extra sockets, but the stock Drop Cargo callback and
 availability test use only the original pair. Four-port mode reuses the stock
@@ -435,9 +533,28 @@ packages, migration of saved stock Gyros, or compatibility after removing the
 mod. Fixtures and cooked readback validate graph structure and component identities;
 changed game versions still require game tests of restoration and disconnect.
 
-`Assets/StableGyro.ini` is the packaged settings source, and
-`Settings/StableGyro.settings.json` defines runtime bindings and value ranges.
-[ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md) explains the native hover and
-stabilization boundary. [GAME_DERIVED_SOURCES.md](GAME_DERIVED_SOURCES.md)
-identifies version-bound inputs; [mod rules](MOD-RULES.md) give the exact
-behavior and settings constraints.
+The detailed native/altitude applicability is in
+[ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md#compatibility-boundary).
+Required acceptance scenarios are in [BUILD.md](BUILD.md#gameplay-validation).
+
+## Editor-input provenance
+
+The editor contracts below were inspected for Steam build `25982825`, UE `5.8.2`
+(parser target `5.8`). Current source-build selection is owned by `game-build.json`
+and the per-input source-state records. Mapping resolution alone does not
+revalidate a stub's implementation or CDO layout. Recheck affected contracts when
+changed stock data, observed behavior or tool diagnostics gives reason to doubt
+them; retain the explicit older evidence boundaries in
+[native field ownership](ALTITUDE-CONTROL.md#reflected-state-and-setter-route).
+
+| Maintained inputs | Origin and role | Update or revalidation owner |
+| --- | --- | --- |
+| `Project/Content/Mods/StableGyro/Settings/BP_IniFileParser.uasset` | Authored shared INI library relocated into the mod, with synchronized BPT; shipped source. | Shared library relocation/BPT workflow; consumer lifetime remains [local](#settings-parser). |
+| `Project/Content/Mods/StableGyro/ModActor.uasset`, `PitchInputActor.uasset`, and `Project/Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset` | Authored gameplay graphs using the inspected native contracts; synchronized BPT mirrors virtual paths. | BPT authoring; recheck consumed APIs on evidence of a contract change, never regenerate during build. |
+| `Project/Content/Mods/StableGyro/UI/` | Three authored widgets inheriting stock parents and camera conventions. | [Compass dependencies](#camera-compass) and [serialization](#release-serialization). |
+| `Project/Content/UI/Game/HUD/WBP_VoyageIngameGyroCopter.uasset`, `Project/Content/UI/Game/World/WBP_CompassHUD.uasset` and their BPT | Hand-reconstructed editor-only identities and required widget members, without stock implementations. | Check parent chains, names and consumed native fields when affected; exclude both from payload. |
+| `Project/Content/Mods/StableGyro/IAV_GyroPitchReset.uasset`, `Project/Content/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.uasset` | Authored reset action and stock keyboard-context reconstruction with that one addition. | [Mapping contract](#mapping-and-value-binding-contracts). |
+| `Project/Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/` | Positive-Y half derived from the stock Gyro plate through the mod splitter and shared StaticMesh producer. | `Build/MooringMeshes.source.json` owns source build/recipe/readiness; explicit [plate update](BUILD.md#source-updates). |
+| `Project/Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset` and `Project/Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset` | Shared VoyageItem profile reconstruction and its owned generator stub; `Build/Item.patch.json` changes only `DroppedActor`. Only the item ships. | `Build/Item.source.json` owns applied build/recipe/readiness; explicit [item update](BUILD.md#source-updates), with current-stock comparison during build. |
+| Other `Project/Content/` dependencies | Reconstructed stock Gyro parent, material, icon, actions, item references and string-table editor stubs. No stock shaders or implementations are claimed. | Review required identities/layouts when affected; exclude from payload. Missing dependencies created by the shared item tool require separate review before source acceptance. |
+| `Project/EditorSupport/Source/Voyage/` | Minimal native API mirrors from reflection/mappings; shared item-profile overlays declared by `Project/EditorSupport.json`. | Preserve `/Script/Voyage` identity, field order and consumed metadata. Rebuild ready support on source changes; never ship its binaries. |

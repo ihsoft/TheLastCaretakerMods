@@ -36,7 +36,7 @@ function Get-StableGyroItemRefreshPlan {
                 throw 'Missing, invalid or incomplete item source state.'
             }
         } catch {
-            throw "Cannot reuse maintained item assets: $($_.Exception.Message) Restore their source state from Git or request -ReimportItemAsset."
+            throw "Cannot reuse maintained item assets: $($_.Exception.Message) Restore their source state from Git or run Update-StableGyroItemAsset.ps1."
         }
         $expected = ConvertTo-Json -InputObject (ConvertTo-StableItemRecipeValue $state.recipe) -Depth 32 -Compress
         $actual = ConvertTo-Json -InputObject (ConvertTo-StableItemRecipeValue $recipe) -Depth 32 -Compress

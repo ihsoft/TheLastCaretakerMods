@@ -5,7 +5,7 @@
 The calculation chain below was checked against the Shipping executable for
 Steam build `25982825`, UE `5.8.2`, together with that build's reviewed mapping
 metadata. Native addresses are image virtual addresses, not portable runtime
-offsets. [Game-derived sources](GAME_DERIVED_SOURCES.md) records the executable
+offsets. [Editor-input provenance](ARCHITECTURE.md#editor-input-provenance) records the source
 identity. This is a calculation contract, not a claim that every flight state
 has been game-tested or a player-facing compatibility label.
 
@@ -386,6 +386,14 @@ and StableGyro's later correction.
 
 ## Reflected state and setter route
 
+Steam build `25982825` mappings establish native owners and types for float
+`PropellerVelocity`, `CurrentThrottle`, `Collective`, `HoverPitchScale` and bool
+`bEngineRunning`, `bAutoHoverCollective`, `bAltitudeAssist` on
+`VoyageVehicleGyroCopter`. Earlier reflection additionally identified
+`PropellerVelocity`, `CurrentThrottle` and `bEngineRunning` as protected,
+Blueprint-readable SaveGame fields. Those access flags were not independently
+revalidated by the newer mapping inspection.
+
 Earlier reflection established the following access flags and CDO defaults;
 current mappings revalidate field names/types, not all of those flags/defaults.
 `HoverPitchScale` at offset `0x80C` is a protected,
@@ -407,6 +415,13 @@ and those property identities; the shipped graph does not add a runtime setter
 readback or invent writable native flags.
 
 ## Shipped ownership and restoration
+
+These ownership and reset requirements constrain changes to the helpers.
+The stock Gyro primary tick is `TG_PostPhysics`; preserve the pitch helper's
+PrePhysics prerequisite and the stabilization helper's dependency on the Gyro.
+Native altitude-assistance ownership is independent of `EnablePitchCorrection`.
+Enable hit notification once on owned primitives. No kinematic correction is
+allowed during the shared contact-release interval.
 
 The helpers read `IA_GyroCopterThrottleUp` and `IA_GyroCopterThrottleDown`
 through the owning Gyro's Enhanced Input value bindings. Space and Ctrl below
@@ -495,12 +510,19 @@ held Ctrl leaves the cap intact.
 
 The distributed INI sets the minimum displayed-throttle threshold to `65%`.
 The schema fallback for a missing or invalid value remains `50%`. Below the
-configured inclusive threshold, PostPhysics still performs eligible horizontal
+configured inclusive threshold (`0..100`, tested as `Collective >= percent / 100`), PostPhysics still performs eligible horizontal
 damping and the eligible Ctrl-held cap. With Ctrl released, it skips Z braking,
 exact hold and Space-floor correction, then clears vertical state for fresh
 reacquisition. Native-assistance ownership uses the threshold for neutral
 stabilization and restores captured assistance booleans while that ownership is
 ineligible.
+
+While Space is held, preserve every positive Vz even at or below the stored
+altitude floor; raise the floor only when the current altitude exceeds it.
+Re-entry with Space released must brake climb inertia before acquiring exact hold.
+Process horizontal damping first, then the altitude-enable gate, then Ctrl before
+the minimum Collective gate. A failed Collective gate clears only vertical state;
+it must not disable or clear horizontal stabilization.
 
 ## Entry reset and remaining limits
 

@@ -9,20 +9,21 @@ param(
     [string]$OutputRoot,
     [switch]$IgnorePinnedGameVersion
 )
+if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
+    Import-Module (Join-Path $PSScriptRoot '../../tools/unreal-coordination.psm1') -Force
+    Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation 'StableGyro source/build operation'
+    return
+}
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $modRoot = $PSScriptRoot
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $modRoot '../..'))
 if (-not $Retoc) { $Retoc = Join-Path $repoRoot '.tools/bin/retoc.exe' }
-if (-not $OutputRoot) {
-    $OutputRoot = Join-Path $repoRoot ('Tmp/StableGyro/update-plate-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss'))
-}
-$releaseRoot = [IO.Path]::GetFullPath($OutputRoot)
-$allowed = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp/StableGyro')) + [IO.Path]::DirectorySeparatorChar
-if (-not $releaseRoot.StartsWith($allowed, [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'OutputRoot must stay below Tmp/StableGyro.'
-}
-if (Test-Path -LiteralPath $releaseRoot) { throw "OutputRoot already exists: $releaseRoot" }
+Import-Module (Join-Path $repoRoot 'tools/VoyageModPipeline.psm1') -Force
+Import-Module (Join-Path $modRoot 'Build/SourceUpdate.psm1') -Force
+$releaseRoot = New-VoyageModRun -ModRoot $modRoot -OutputRoot $OutputRoot -Kind update-plate
+$project = & (Join-Path $modRoot 'New-StableGyroProjectCopy.ps1') -Destination (Join-Path $releaseRoot 'Project')
+$projectRoot = Split-Path -Parent $project
 function Resolve-RequiredPath {
     param([string]$Path, [string]$Label)
     if (-not (Test-Path -LiteralPath $Path)) { throw "$Label missing: $Path" }
@@ -40,13 +41,16 @@ $fingerprint = Get-Content $fingerprintPath -Raw | ConvertFrom-Json
 $expectedBuild = [string]$fingerprint.steam.buildId
 & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') -ModRoot $modRoot `
     -ActualSteamBuildId $expectedBuild -IgnorePinnedGameVersion:$IgnorePinnedGameVersion | Out-Null
-$meshSourceStatePath = Join-Path $modRoot 'Build/MooringMeshes.source.json'
+$meshSourceStatePath = Join-Path $releaseRoot 'Build/MooringMeshes.source.json'
+$null = New-Item -ItemType Directory -Path (Split-Path -Parent $meshSourceStatePath)
 Import-Module (Join-Path $modRoot 'Build/MooringMeshRefresh.psm1') -Force
 $modelExporter = Join-Path $repoRoot 'tools/Export-VoyageModelGlb.ps1'
 $staticMeshBuilder = Join-Path $repoRoot 'tools/New-VoyageStaticMeshAssets.ps1'
 $mooringSplitter = Join-Path $modRoot 'Build/Split-MooringPlateGlb.py'
 $expectedStaticMeshObjectPaths = @('/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.StableGyroMooringPlatePositiveY')
 $relativeMesh = 'Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.uasset'
+$acceptPaths = @(('Project/' + $relativeMesh), 'Build/MooringMeshes.source.json')
+$snapshot = Get-StableGyroSourceSnapshot -ModRoot $modRoot -Paths $acceptPaths
 $phase = [Diagnostics.Stopwatch]::StartNew()
 $timings = [ordered]@{}
 Write-Host 'Exporting and splitting the current stock mooring plate'
@@ -201,31 +205,27 @@ if ($meshManifest.kind -cne 'Voyage uncooked StaticMesh assets' -or
 }
 $source = Join-Path $staticMeshOutputRoot $relativeMesh
 if ((Get-Item -LiteralPath $source).Length -ne $meshManifest.files[0].length) { throw 'Mesh size mismatch.' }
-$destination = Join-Path $modRoot $relativeMesh
-$backupRoot = Join-Path $releaseRoot 'project-backup'
-New-Item -ItemType Directory -Path $backupRoot | Out-Null
-$backupMesh = Join-Path $backupRoot 'plate.uasset'
-$backupState = Join-Path $backupRoot 'source.json'
-if (Test-Path -LiteralPath $destination) { Copy-Item -LiteralPath $destination -Destination $backupMesh }
-if (Test-Path -LiteralPath $meshSourceStatePath) { Copy-Item -LiteralPath $meshSourceStatePath -Destination $backupState }
+$destination = Join-Path $projectRoot $relativeMesh
 Set-StableGyroMooringMeshState -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild -Status pending
 try {
+
     New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
     Copy-Item -LiteralPath $source -Destination $destination -Force
     if ([Convert]::ToBase64String([IO.File]::ReadAllBytes($source)) -cne
         [Convert]::ToBase64String([IO.File]::ReadAllBytes($destination))) { throw 'Project mesh copy mismatch.' }
 
     & (Join-Path $repoRoot 'tools/Prepare-UnrealEditorSupport.ps1') `
-        -ProjectFile (Join-Path $modRoot 'Voyage.uproject') -EngineRoot $EngineRoot `
+        -ProjectFile $project -EngineRoot $EngineRoot `
         -OutputRoot (Join-Path $releaseRoot 'editor-support') | Out-Null
     $cookedRoot = Join-Path $releaseRoot 'cooked'
-    & (Join-Path $modRoot 'Cook-StableGyroAssets.ps1') -MooringPlateOnly `
+    & (Join-Path $modRoot 'Build/Cook-StableGyroAssets.ps1') -MooringPlateOnly `
         -UnrealEditor (Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe') `
+        -Project $project -LocalDataCachePath (Join-Path $releaseRoot 'DerivedDataCache') `
         -OutputRoot $cookedRoot -LogPath (Join-Path $logs 'cook.log')
 
     # Reuse the clean stock extractor to obtain this game's script-object table.
     $originals = Join-Path $releaseRoot 'originals'
-    & (Join-Path $modRoot 'Prepare-StableGyroOriginals.ps1') -GameRoot $GameRoot -Retoc $Retoc -OutputRoot $originals
+    & (Join-Path $modRoot 'Build/Prepare-StableGyroOriginals.ps1') -GameRoot $GameRoot -Retoc $Retoc -OutputRoot $originals
     $scriptObjects = @(Get-ChildItem -LiteralPath $originals -Recurse -File -Filter 'scriptobjects.bin')
     if ($scriptObjects.Count -ne 1) { throw 'Expected one current stock script-object table.' }
     $stage = Join-Path $releaseRoot 'stage'
@@ -243,27 +243,18 @@ try {
         -ContainerUtoc $utoc -OutputRoot $releaseRoot -GameRoot $GameRoot -SourceGlb $positiveMooringGlb
     Set-StableGyroMooringMeshState -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild -Status ready
 } catch {
-    # Recover both the asset and its provenance; preserve backups if recovery fails.
-    if (Test-Path -LiteralPath $backupMesh) {
-        Copy-Item -LiteralPath $backupMesh -Destination $destination -Force
-    } elseif (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination }
-    if (Test-Path -LiteralPath $backupState) {
-        Copy-Item -LiteralPath $backupState -Destination $meshSourceStatePath -Force
-    } else { Remove-Item -LiteralPath $meshSourceStatePath }
-    throw
+    throw "Plate update failed; maintained source was not changed. Inspect $releaseRoot : $_"
 }
+Save-StableGyroSourceUpdate -ModRoot $modRoot -RunRoot $releaseRoot -Paths $acceptPaths -Snapshot $snapshot
 $result = [ordered]@{
     status = 'updated-and-validated'; steamBuildId = $expectedBuild
-    mesh = $destination; sourceState = $meshSourceStatePath
+    mesh = (Join-Path $modRoot ('Project/' + $relativeMesh)); sourceState = (Join-Path $modRoot 'Build/MooringMeshes.source.json')
     validation = $validation; outputRoot = $releaseRoot; installed = $false
 }
 $result | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $releaseRoot 'update-result.json') -Encoding utf8
 # Retain comparison evidence and logs, discard successful transaction/cook scratch.
-foreach ($name in @('project-backup', 'static-mesh-assets', 'editor-support', 'cooked', 'stage', 'originals')) {
-    $scratch = [IO.Path]::GetFullPath((Join-Path $releaseRoot $name))
-    if (-not $scratch.StartsWith($releaseRoot.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Scratch path escaped this update: $scratch"
-    }
-    if (Test-Path -LiteralPath $scratch) { Remove-Item -LiteralPath $scratch -Recurse -Force }
+foreach ($name in @('Project','DerivedDataCache','static-mesh-assets','editor-support','cooked','stage','originals')) {
+    $scratch = Join-Path $releaseRoot $name
+    if (Test-Path -LiteralPath $scratch) { Remove-VoyageModScratch -ModRoot $modRoot -RunRoot $releaseRoot -Path $scratch }
 }
 $result | ConvertTo-Json -Depth 6 -Compress

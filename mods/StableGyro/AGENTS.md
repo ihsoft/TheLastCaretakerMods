@@ -1,24 +1,23 @@
 # StableGyro index
 
-Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
+Start with the [repository index](../../AGENTS.md) for shared rules and knowledge.
 
-- [Architecture](ARCHITECTURE.md):
-  maintained Unreal project, BPT editing, editor support, release refresh,
-  stock Gyro child, flight helpers, four-port layout, cargo action, saved
-  connections, camera compass, fuel settings, settings ownership, and game-validation boundaries.
-- [Mod rules](MOD-RULES.md): flight-control, settings, source, and validation
-  contracts; read when changing behavior or planning a targeted game test.
-- [Altitude control](ALTITUDE-CONTROL.md): native hover and vertical-control
-  behavior that bounds the mod.
-- [Game-derived sources](GAME_DERIVED_SOURCES.md): version-bound inputs and
-  reconstructed identities.
-- [Candidate producer](Build-StableGyro.ps1): complete build; use `-Install`
-  when preparing a game candidate so the owned INI is merged and installed.
-- [Plate updater](Update-StableGyroMooringPlate.ps1): explicitly replace and fully
-  validate the maintained mesh after a game update or an import fix; invocation
-  and the ordinary build boundary are in [release preparation](ARCHITECTURE.md#release-preparation).
-- [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
-- [Shared INI recipe](../../docs/runtime-configuration-patterns-knowledge.md):
-  schema-driven settings, entry reload, and user-value preservation.
-- [Vehicle and HUD patterns](../../docs/vehicle-and-hud-modding-patterns-knowledge.md):
-  shared vehicle lifecycle and action presentation.
+- [Architecture](ARCHITECTURE.md): binding implementation contracts, helper
+  lifecycle, input, compass, fuel, cargo, saved identities and serialization; read
+  the affected sections before changing behavior or dependencies.
+- [Build and authoring](BUILD.md): source layout, working copies, BPT, explicit
+  source updates, automated checks and candidate installation.
+- [Candidate producer](Build-StableGyro.ps1): cook and validate a disposable copy;
+  `-Install` delegates to the same candidate installer.
+- [Candidate installer](Install-StableGyro.ps1): install a supplied release
+  manifest with user INI preservation, without rebuilding.
+- [Source recovery](Restore-StableGyroSourceUpdate.ps1): recover an interrupted
+  source acceptance from its persisted manifest; usage and conflict handling
+  are in [source updates](BUILD.md#source-updates).
+- [Altitude control](ALTITUDE-CONTROL.md): native hover, vertical-control and fuel
+  formulas that bound the mod.
+- [Editor-input provenance](ARCHITECTURE.md#editor-input-provenance): reconstructed
+  inputs, source-state owners and contract-specific revalidation.
+- [Gameplay validation](BUILD.md#gameplay-validation): required scenarios for
+  affected behavior; distinguish them from established compatibility.
+- [Changelog](CHANGELOG.md): cumulative player-facing notes for publication.

@@ -55,6 +55,39 @@ is only one part of that lifecycle; do not replace controller coordination with
 device polling or synthetic restarts. Reflected methods are not necessarily
 Blueprint-callable: editor mirrors must reproduce the actual function flags.
 
+## Action values and compiler-owned bindings
+
+`EnhancedInputLibrary.GetBoundActionValue(Actor, Action)` reads the supplied
+actor's `EnhancedInputComponent`. It needs an action-value binding for that
+exact action; an event binding alone does not provide one. A helper that reads
+another actor's controls must query the input owner, not itself. Missing value
+bindings return zero, which can conceal a setup error as neutral input.
+`Conv_InputActionValueToBool` tests nonzero magnitude for both boolean and
+scalar action values.
+
+The Blueprint compiler rebuilds `DynamicBindingObjects`, so a manually appended
+binding does not survive recompilation. For maintained Blueprint graphs, keep
+connected `/Script/InputBlueprintNodes.K2Node_InputActionValueAccessor` nodes
+with the required `InputAction` identities on the input-owning actor. Those
+nodes register value bindings during compilation. Check that the cooked class
+retains the required value bindings alongside any event bindings; a direct
+library call or a successful editor read alone does not establish that contract.
+
+Trigger events and polled values have different lifetimes. In the inspected
+engine, `EnhancedInput.bAlwaysGetRealValueFromActionInstanceData` defaults to
+true: action instances return their current value independently of trigger
+state. A `Pressed` mapping can therefore remain nonzero while held. A consumer
+that needs one operation per press from a polled value must detect the rising
+edge and clear its transient latch on release and the relevant ownership,
+disable and teardown paths. Consume the edge before updating the latch; avoid
+reevaluating a pure edge expression after changing its previous-value input.
+
+These binding/compiler and value-lifetime mechanisms were checked in UE
+`5.8.2` source; the consumer evidence comes from Steam build `25982825`.
+Recheck the affected mechanism if compiler output, configuration or observed
+input behavior differs. Action identities and consumer-specific reset paths
+remain owned by the mod.
+
 ## Reuse camera settings at the processing boundary
 
 `VoyageMiscBlueprintFunctionLibrary::CalculateCameraMovementValue` takes a

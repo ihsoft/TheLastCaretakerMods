@@ -103,7 +103,7 @@ reevaluated for length and element access on every iteration.
 Use the public [asset inspection](../tools/asset-inspection.md) and
 [executable inspection](../tools/executable-inspection.md) tools for the exact
 socket, cable and consumer. When exact native locations for the inspected Gyro
-case are useful, [StableGyro source provenance](../mods/StableGyro/GAME_DERIVED_SOURCES.md)
+case are useful, [StableGyro native socket contracts](../mods/StableGyro/ARCHITECTURE.md#mooring-native-contracts)
 is an optional reference, not a template for another consumer.
 For action identity, availability and hold
 semantics, see [vehicle action patterns](vehicle-and-hud-modding-patterns-knowledge.md#action-execution-and-action-presentation-are-separate-contracts).

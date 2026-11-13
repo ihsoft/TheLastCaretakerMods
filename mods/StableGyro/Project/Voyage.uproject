@@ -15,10 +15,6 @@
     {
       "Name": "StableGyroSupport",
       "Enabled": true
-    },
-    {
-      "Name": "BlueprintTextWorkspace",
-      "Enabled": true
     }
   ]
 }

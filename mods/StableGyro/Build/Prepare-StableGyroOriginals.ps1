@@ -12,7 +12,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $retocCompatibilityVersion = 'UE5_8'
-$modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
+$modRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
@@ -30,7 +30,7 @@ if (Test-Path -LiteralPath $output) {
     throw "OutputRoot already exists: $output"
 }
 
-$extractor = Join-Path $PSScriptRoot '..\..\tools\Extract-VoyagePackage.ps1'
+$extractor = Join-Path $repoRoot 'tools/Extract-VoyagePackage.ps1'
 & $extractor `
     -Source Game `
     -Filter 'Data/Assets/Modules/DA_Item_Module_GyroCopter' `

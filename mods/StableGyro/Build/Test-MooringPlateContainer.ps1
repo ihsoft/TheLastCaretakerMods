@@ -89,7 +89,7 @@ $materialValidation = [ordered]@{}
 foreach ($side in @('PositiveY')) {
     $assetName = "StableGyroMooringPlate$side"
     $virtualPath = "Voyage/Content/Mods/StableGyro/$assetName/StaticMeshes/$assetName.uasset"
-    $inspectionLine = @(& (Join-Path $PSHOME 'pwsh.exe') -NoProfile `
+    $inspectionLine = @(& pwsh -NoProfile `
         -File $assetJsonReader $virtualPath -AsJson -Source Mod `
         -ModContainer $containerUtoc -ModInspectionRoot $materialInspectionRoot `
         -GameRoot $GameRoot) |

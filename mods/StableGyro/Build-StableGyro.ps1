@@ -1,5 +1,5 @@
 # HAND-WRITTEN RELEASE PRODUCER: uses the maintained plate without extraction.
-# Refreshes the item when needed, cooks, packages, verifies, archives, and
+# Cooks a disposable copy, packages, verifies, archives, and
 # optionally installs StableGyro. Output stays
 # in ignored local storage. It never publishes externally.
 
@@ -20,11 +20,16 @@ param(
 
     [switch]$Install,
 
-    [switch]$ReimportItemAsset,
+    [switch]$AllowDirtySource,
 
     [switch]$IgnorePinnedGameVersion
 )
 
+if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
+    Import-Module (Join-Path $PSScriptRoot '../../tools/unreal-coordination.psm1') -Force
+    Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation 'StableGyro source/build operation'
+    return
+}
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $expectedGameEngineVersion = '5.8'
@@ -49,14 +54,15 @@ if ([string]::IsNullOrWhiteSpace($Retoc)) {
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'artifacts'))
 $tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp'))
 $tmpOwnerRoot = Join-Path $tmpRoot 'StableGyro'
-$project = Join-Path $modRoot 'Voyage.uproject'
-$provenancePath = Join-Path $modRoot 'GAME_DERIVED_SOURCES.md'
+$projectRoot = Join-Path $modRoot 'Project'
+$project = Join-Path $projectRoot 'Voyage.uproject'
+Import-Module (Join-Path $repoRoot 'tools/VoyageModPipeline.psm1') -Force
 $unrealEditor = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 $engineVersionPath = Join-Path $EngineRoot 'Engine\Build\Build.version'
 $fingerprinter = Join-Path $repoRoot 'tools\Get-VoyageBuildFingerprint.ps1'
-$cookScript = Join-Path $modRoot 'Cook-StableGyroAssets.ps1'
-$prepareScript = Join-Path $modRoot 'Prepare-StableGyroOriginals.ps1'
-$packageScript = Join-Path $modRoot 'Build-InheritancePackage.ps1'
+$cookScript = Join-Path $modRoot 'Build/Cook-StableGyroAssets.ps1'
+$prepareScript = Join-Path $modRoot 'Build/Prepare-StableGyroOriginals.ps1'
+$packageScript = Join-Path $modRoot 'Build/Build-InheritancePackage.ps1'
 $settingsSchema = Join-Path $modRoot 'Settings\StableGyro.settings.json'
 $settingsDefaults = Join-Path $modRoot 'Assets\StableGyro.ini'
 $settingsModule = Join-Path $repoRoot 'tools\VoyageModSettings\VoyageModSettings.psm1'
@@ -102,72 +108,6 @@ function Assert-UnderIgnoredBuildStorage {
     return $fullPath
 }
 
-function Assert-GameClosed {
-    $running = @(Get-Process -Name 'VoyageSteam-Win64-Shipping', 'Voyage' -ErrorAction SilentlyContinue)
-    if ($running.Count -gt 0) {
-        $names = ($running | ForEach-Object { "$($_.ProcessName):$($_.Id)" }) -join ', '
-        throw "Voyage must be closed for this phase: $names"
-    }
-}
-
-function Update-StableGyroSettings {
-    param([string]$TemplatePath, [string]$SettingsPath)
-
-    $retiredKeys = @(
-        'AltitudeStabilizationDelaySeconds',
-        'CompensateTiltLift',
-        'TiltLiftCompensationMultiplier',
-        'StabilizationMinimumRotorSpeedPercent',
-        'EnableFuelDiagnostics',
-        'FuelConsumptionPerMinute'
-    )
-    $retiredComments = @(
-        '# Absolute delay after releasing Space at full throttle before exact altitude hold activates.',
-        '# A release below full throttle is ignored. Set to 0 for immediate activation. Clamped to 0..60 seconds.',
-        '# Keep vertical rotor lift while pitch is tilted forward/back.',
-        '# Scale the separate world-up force: 0=none, 1=lost vertical component. Clamped to 0..5.',
-        '# Percent of the stock rotor''s physical maximum speed (0 disables the gate).',
-        '# Percent of the stock rotor''s normal 100% operating speed (0 disables the gate).',
-        '# Temporary compact fuel/throttle diagnostics; set false to hide on the next Gyro entry.',
-        '# Valid range is 0.5..2.5; missing or invalid values fall back to 1.0.',
-        '# Base Petrol request at 100% engine throttle, in native resource units per minute.'
-    )
-    $temporary = $SettingsPath + '.stablegyro-' + [guid]::NewGuid().ToString('N') + '.tmp'
-    $backup = $SettingsPath + '.stablegyro-' + [guid]::NewGuid().ToString('N') + '.bak'
-    $keepBackup = $false
-    try {
-        $result = & (Join-Path $repoRoot 'tools/Merge-VoyageModIni.ps1') `
-            -TemplatePath $TemplatePath -CurrentPath $SettingsPath `
-            -OutputPath $temporary -RetiredKeys $retiredKeys `
-            -RetiredComments $retiredComments `
-            -DefaultsComment '# Defaults added by a newer StableGyro build.'
-        if ($result.Changed) {
-            Assert-GameClosed
-            [IO.File]::Replace($temporary, $SettingsPath, $backup, $true)
-        }
-        return [pscustomobject]@{
-            AddedKeys=@($result.AddedKeys); RemovedKeys=@($result.RemovedKeys)
-        }
-    } catch {
-        $failure = $_.Exception.Message
-        if (Test-Path -LiteralPath $backup) {
-            $keepBackup = $true
-            Assert-GameClosed
-            Copy-Item -LiteralPath $backup -Destination $SettingsPath -Force
-            if ((Get-FileHash -LiteralPath $SettingsPath -Algorithm SHA256).Hash -cne
-                (Get-FileHash -LiteralPath $backup -Algorithm SHA256).Hash) {
-                throw "StableGyro settings recovery hash mismatch; backup retained: $backup"
-            }
-            $keepBackup = $false
-        }
-        throw "StableGyro settings update failed: $failure"
-    } finally {
-        if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
-        if (-not $keepBackup -and (Test-Path -LiteralPath $backup)) {
-            Remove-Item -LiteralPath $backup -Force
-        }
-    }
-}
 function Get-CleanOriginalInputs {
     param(
         [Parameter(Mandatory = $true)] [string]$Root,
@@ -208,7 +148,6 @@ function Get-CleanOriginalInputs {
 }
 
 $project = Resolve-RequiredPath -Path $project -Label 'Unreal project'
-$provenancePath = Resolve-RequiredPath -Path $provenancePath -Label 'StableGyro provenance registry'
 $unrealEditor = Resolve-RequiredPath -Path $unrealEditor -Label 'UnrealEditor-Cmd'
 $engineVersionPath = Resolve-RequiredPath -Path $engineVersionPath -Label 'Unreal build version'
 $fingerprinter = Resolve-RequiredPath -Path $fingerprinter -Label 'Voyage fingerprint tool'
@@ -238,19 +177,10 @@ $sourceStatus = @(& git -C $repoRoot status --porcelain -- `
 if ($LASTEXITCODE -ne 0) {
     throw 'Unable to inspect StableGyro source status.'
 }
-if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
-    $buildIdentity = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
-    $OutputRoot = Join-Path $tmpOwnerRoot "build-$buildIdentity"
+if ($sourceStatus.Count -gt 0 -and -not $AllowDirtySource) {
+    throw 'StableGyro source is dirty. Pass -AllowDirtySource for an intentional development candidate.'
 }
-$releaseRoot = Assert-UnderIgnoredBuildStorage -Path $OutputRoot -Label 'OutputRoot'
-if (-not $releaseRoot.StartsWith($tmpOwnerRoot.TrimEnd('\') + '\',
-        [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'OutputRoot must be below Tmp/StableGyro.'
-}
-if (Test-Path -LiteralPath $releaseRoot) {
-    throw "OutputRoot already exists: $releaseRoot"
-}
-New-Item -ItemType Directory -Path $releaseRoot | Out-Null
+$releaseRoot = New-VoyageModRun -ModRoot $modRoot -OutputRoot $OutputRoot
 $logs = Join-Path $releaseRoot 'logs'
 New-Item -ItemType Directory -Path $logs | Out-Null
 Import-Module $settingsModule -Force
@@ -283,12 +213,15 @@ $timings.Fingerprint = $phase.Elapsed.TotalSeconds
 $meshPlan = Get-StableGyroMooringMeshPlan -StatePath $meshSourceStatePath `
     -SteamBuildId $expectedBuild
 $itemPlan = Get-StableGyroItemRefreshPlan -StatePath $itemSourceStatePath `
-    -RecipePath $itemRecipePath -SteamBuildId $expectedBuild -Reimport:$ReimportItemAsset
+    -RecipePath $itemRecipePath -SteamBuildId $expectedBuild
+if ($itemPlan.refresh) {
+    throw 'Maintained item inputs need an explicit Update-StableGyroItemAsset.ps1 source update before building.'
+}
 if (-not $itemPlan.refresh) {
     foreach ($relativePath in @('Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset',
             'Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset')) {
-        if (-not (Test-Path -LiteralPath (Join-Path $modRoot $relativePath) -PathType Leaf)) {
-            throw "Maintained item asset is missing: $relativePath. Restore it from Git or request -ReimportItemAsset."
+        if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $relativePath) -PathType Leaf)) {
+            throw "Maintained item asset is missing: $relativePath. Restore it from Git or run Update-StableGyroItemAsset.ps1."
         }
     }
 }
@@ -299,7 +232,7 @@ $expectedMeshPaths = @($expectedStaticMeshObjectPaths | ForEach-Object {
     'Content/' + (($_ -split '\.')[0]).Substring('/Game/'.Length) + '.uasset'
 })
 foreach ($relativePath in $expectedMeshPaths) {
-    if (-not (Test-Path -LiteralPath (Join-Path $modRoot $relativePath) -PathType Leaf)) {
+    if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $relativePath) -PathType Leaf)) {
         throw "Maintained mesh is missing: $relativePath. Restore it from Git or run Update-StableGyroMooringPlate.ps1."
     }
 }
@@ -322,25 +255,14 @@ $phase.Stop()
 $timings.Originals = $phase.Elapsed.TotalSeconds
 
 $phase.Restart()
-if ($itemPlan.refresh) {
-    Write-Host "Refreshing item and crafting-generator stub: $($itemPlan.reason)"
-    Set-StableGyroItemSourceState -StatePath $itemSourceStatePath -SteamBuildId $expectedBuild `
-        -Recipe $itemPlan.recipe -Status pending
-    & (Join-Path $repoRoot 'tools/Update-VoyageItemAsset.ps1') `
-        -Project $project -Recipe $itemRecipePath `
-        -EngineRoot $EngineRoot -GameRoot $GameRoot `
-        -OutputRoot (Join-Path $releaseRoot 'item-update')
-} else {
-    Write-Host 'Reusing item and crafting-generator stub for the same Steam build and recipe'
-    # The updater normally prepares these dependencies. Reuse must also work in
-    # a checkout without installed native support, without recreating assets.
-    $support = & (Join-Path $repoRoot 'tools/Prepare-UnrealEditorSupport.ps1') `
-        -ProjectFile $project -EngineRoot $EngineRoot `
-        -OutputRoot (Join-Path $releaseRoot 'editor-support') | ConvertFrom-Json
-    $loadedModules = @($support.providers | ForEach-Object loadedModules)
-    if ('Voyage' -notin $loadedModules -or 'VoyageItemPatchEditor' -notin $loadedModules) {
-        throw 'Project support must provide Voyage and VoyageItemPatchEditor.'
-    }
+$project = & (Join-Path $modRoot 'New-StableGyroProjectCopy.ps1') -Destination (Join-Path $releaseRoot 'Project')
+$projectRoot = Split-Path -Parent $project
+$support = & (Join-Path $repoRoot 'tools/Prepare-UnrealEditorSupport.ps1') `
+    -ProjectFile $project -EngineRoot $EngineRoot `
+    -OutputRoot (Join-Path $releaseRoot 'editor-support') | ConvertFrom-Json
+$loadedModules = @($support.providers | ForEach-Object loadedModules)
+if ('Voyage' -notin $loadedModules -or 'VoyageItemPatchEditor' -notin $loadedModules) {
+    throw 'Project support must provide Voyage and VoyageItemPatchEditor.'
 }
 $phase.Stop()
 $timings.ItemUpdate = $phase.Elapsed.TotalSeconds
@@ -351,7 +273,7 @@ $cookedRoot = Join-Path $releaseRoot 'cooked'
 & $cookScript `
     -UnrealEditor $unrealEditor `
     -Project $project `
-    -LocalDataCachePath (Join-Path $modRoot 'DerivedDataCache') `
+    -LocalDataCachePath (Join-Path $releaseRoot 'DerivedDataCache') `
     -LogPath (Join-Path $logs 'cook.log') `
     -OutputRoot $cookedRoot
 $stagedStaticMeshFiles = @()
@@ -380,6 +302,7 @@ if (@($originalInputs).Count -ne 1) {
     throw "Expected one clean-original input record; found $(@($originalInputs).Count)."
 }
 $packageArguments = @{
+    ProjectRoot = $projectRoot
     CookedRoot = [string]$cookedRoot
     OriginalItemDirectory = [string]$originalInputs.ItemDirectory
     ScriptObjects = [string]$originalInputs.ScriptObjects
@@ -395,11 +318,6 @@ $meshValidation = & (Join-Path $modRoot 'Build/Test-MooringPlateContainer.ps1') 
     -ContainerUtoc $containerUtoc -OutputRoot $releaseRoot -GameRoot $GameRoot
 $phase.Stop()
 $timings.Package = $phase.Elapsed.TotalSeconds
-if ($itemPlan.refresh) {
-    Set-StableGyroItemSourceState -StatePath $itemSourceStatePath -SteamBuildId $expectedBuild `
-        -Recipe $itemPlan.recipe -Status ready
-}
-
 Write-Host '5/5 Creating the player-facing archive'
 $phase.Restart()
 $payloadRoot = Join-Path $releaseRoot "payload\StableGyro-$Version"
@@ -424,7 +342,7 @@ $commonReleaseManifestPath = Join-Path $releaseRoot 'common-release-manifest.jso
     -SourcePath $modRoot `
     -GameRoot $GameRoot `
     -OutputPath $commonReleaseManifestPath `
-    -AllowDirtySource | Out-Null
+    -AllowDirtySource:$AllowDirtySource | Out-Null
 $commonReleaseManifestPath = Resolve-RequiredPath `
     -Path $commonReleaseManifestPath -Label 'Validated common release manifest'
 $installValidationEvidenceRoot = Join-Path $releaseRoot 'install-validation'
@@ -433,7 +351,7 @@ $installValidationPlan = & $releaseInstaller `
     -ReleaseManifest $commonReleaseManifestPath `
     -GameRoot $GameRoot `
     -EvidenceRoot $installValidationEvidenceRoot `
-    -AllowDirtySource `
+    -AllowDirtySource:$AllowDirtySource `
     -ValidateOnly
 $installValidationPlan | ConvertTo-Json -Depth 10 |
     Set-Content -LiteralPath $installValidationPlanPath -Encoding utf8
@@ -443,53 +361,8 @@ $timings.Archive = $phase.Elapsed.TotalSeconds
 $installed = $false
 $settingsInstallation = $null
 if ($Install) {
-    Assert-GameClosed
-    $paks = Resolve-RequiredPath -Path (Join-Path $GameRoot 'Voyage\Content\Paks') -Label 'Voyage Paks directory'
-    $backup = Join-Path $releaseRoot 'installed-backup'
-    New-Item -ItemType Directory -Path $backup | Out-Null
-    foreach ($name in $payloadNames) {
-        $source = Join-Path $containerFiles $name
-        $target = Join-Path $paks $name
-        if (Test-Path -LiteralPath $target -PathType Leaf) {
-            Copy-Item -LiteralPath $target -Destination (Join-Path $backup $name)
-        }
-        Copy-Item -LiteralPath $source -Destination $target -Force
-        $sourceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $source).Hash
-        $targetHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $target).Hash
-        if ($sourceHash -cne $targetHash) {
-            throw "Installed file hash mismatch: $name"
-        }
-    }
-    $settingsTemplate = $generatedSettingsIni
-    $settingsPath = Join-Path $paks 'StableGyro.ini'
-    if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
-        $temporarySettings = $settingsPath + '.stablegyro-' +
-            [guid]::NewGuid().ToString('N') + '.tmp'
-        try {
-            $settingsCreate = & (Join-Path $repoRoot 'tools/Merge-VoyageModIni.ps1') `
-                -TemplatePath $settingsTemplate -OutputPath $temporarySettings
-            Assert-GameClosed
-            [IO.File]::Move($temporarySettings, $settingsPath)
-        } finally {
-            if (Test-Path -LiteralPath $temporarySettings) {
-                Remove-Item -LiteralPath $temporarySettings -Force
-            }
-        }
-        $addedKeys = @()
-        $removedKeys = @()
-        $settingsCreated = $true
-    } else {
-        $settingsUpdate = Update-StableGyroSettings $settingsTemplate $settingsPath
-        $addedKeys = @($settingsUpdate.AddedKeys)
-        $removedKeys = @($settingsUpdate.RemovedKeys)
-        $settingsCreated = $false
-    }
-    $settingsInstallation = [ordered]@{
-        path = $settingsPath
-        created = $settingsCreated
-        addedKeys = $addedKeys
-        removedKeys = $removedKeys
-    }
+    $settingsInstallation = & (Join-Path $modRoot 'Install-StableGyro.ps1') `
+        -ReleaseManifest $commonReleaseManifestPath -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource
     $installed = $true
 }
 
@@ -504,6 +377,8 @@ $payloadEvidence = @(
             }
         }
 )
+$originalsManifestPath = Join-Path $releaseRoot 'originals-extraction-manifest.json'
+Copy-Item -LiteralPath $originalInputs.Manifest -Destination $originalsManifestPath
 $manifest = [ordered]@{
     schemaVersion = 2
     mod = 'StableGyro'
@@ -545,7 +420,7 @@ $manifest = [ordered]@{
         steamBuildId = [string]$fingerprint.steam.buildId
     }
     ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
-    originalsManifest = $originalInputs.Manifest
+    originalsManifest = $originalsManifestPath
     installed = $installed
     settingsInstallation = $settingsInstallation
     payload = $payloadEvidence
@@ -568,9 +443,17 @@ if ($installed) {
     Write-Host 'The prepared container was backed up, installed, and read back successfully.'
 }
 
+foreach ($scratch in @('Project','DerivedDataCache','cooked','originals','payload','validated-settings','editor-support','container/stage')) {
+    $path = Join-Path $releaseRoot $scratch
+    if (Test-Path -LiteralPath $path) { Remove-VoyageModScratch -ModRoot $modRoot -RunRoot $releaseRoot -Path $path }
+}
+if (-not (Test-Path -LiteralPath $originalsManifestPath -PathType Leaf)) {
+    throw "Required extraction evidence missing after cleanup: $originalsManifestPath"
+}
 [pscustomobject]@{
-    status = if ($installed) { 'installed' } else { 'prepared-not-installed' }
-    releaseManifestPath = $manifestPath
+    status = 'built'
+    releaseManifestPath = $commonReleaseManifestPath
+    validationSummaryPath = $manifestPath
     archivePath = $archivePath
     settingsInstallation = $settingsInstallation
 } | ConvertTo-Json -Depth 6 -Compress

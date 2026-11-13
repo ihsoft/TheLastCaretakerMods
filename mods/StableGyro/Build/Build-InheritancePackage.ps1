@@ -2,7 +2,8 @@
 # The stock item is a comparison input, never a replacement for project output.
 
 param(
-    [string]$CookedRoot = "$PSScriptRoot\Saved\Cooked\Windows\Voyage",
+    [Parameter(Mandatory = $true)][string]$CookedRoot,
+    [Parameter(Mandatory = $true)][string]$ProjectRoot,
 
     [Parameter(Mandatory = $true)]
     [string]$OriginalItemDirectory,
@@ -26,7 +27,7 @@ $ErrorActionPreference = 'Stop'
 
 $retocCompatibilityVersion = 'UE5_8'
 $expectedItemFilter = 'Data/Assets/Modules/DA_Item_Module_GyroCopter'
-$modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
+$modRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
@@ -159,10 +160,10 @@ foreach ($meshName in @('StableGyroMooringPlatePositiveY')) {
 }
 $validatorArguments = @(
     '-NoProfile',
-    '-File', (Join-Path $modRoot 'Validate-StableGyroMooringTemplates.ps1'),
+    '-File', (Join-Path $PSScriptRoot 'Validate-StableGyroMooringTemplates.ps1'),
     '-RepositoryRoot', $repoRoot,
     '-AssetPath', (Join-Path $childStage 'BP_GyroCopter_StablePilot.uasset'),
-    '-GeneratedParentAssetPath', (Join-Path $modRoot 'Content\Blueprints\Vehicles\BP_GyroCopter_Possessable.uasset'),
+    '-GeneratedParentAssetPath', (Join-Path $ProjectRoot 'Content\Blueprints\Vehicles\BP_GyroCopter_Possessable.uasset'),
     '-PitchHelperAssetPath', (Join-Path $helperStage 'PitchInputActor.uasset'),
     '-StabilizationHelperAssetPath', (Join-Path $helperStage 'ModActor.uasset'),
     '-MappingsPath', $MappingsPath,
@@ -212,38 +213,11 @@ $expectedAssetPaths = @(
     '../../../Voyage/Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.uasset'
     '../../../Voyage/Content/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot.uasset'
 )
-$inventory = @(& $retocPath list --path --size --hash --package $utoc)
-if ($LASTEXITCODE -ne 0) {
-    throw "retoc list failed with exit code $LASTEXITCODE"
-}
-$inventoryRecords = @(
-    $inventory | ForEach-Object {
-        if ($_ -match '^\S+\s+(?<chunk>\S+)\s+(?<hash>\S+)\s+(?<package>\S+)\s+' +
-            '\S+\s+(?<size>\d+)\s+(?<path>\.\./\.\./\.\./Voyage/Content/.+\.uasset)$') {
-            [pscustomobject]@{
-                Path = $Matches.path
-                Size = [int64]$Matches.size
-                Hash = $Matches.hash
-                PackageId = $Matches.package
-                ChunkId = $Matches.chunk
-            }
-        }
-    }
-)
-$actualAssetPaths = @($inventoryRecords.Path | Sort-Object)
-$inventoryDifference = @(Compare-Object ($expectedAssetPaths | Sort-Object) $actualAssetPaths)
-if ($inventoryRecords.Count -ne $expectedAssetPaths.Count -or $inventoryDifference.Count -ne 0) {
-    throw 'Packaged asset inventory does not match the exact StableGyro production set.'
-}
-$inventoryPath = Join-Path $package ($ContainerName + '.inventory.txt')
-$inventoryLines = @(
-    $inventoryRecords |
-        Sort-Object Path |
-        ForEach-Object {
-            '{0}|{1}|{2}|{3}|{4}' -f $_.Path, $_.Size, $_.Hash, $_.PackageId, $_.ChunkId
-        }
-)
-[IO.File]::WriteAllLines($inventoryPath, $inventoryLines)
+$expectedList = Join-Path $output 'expected-packages.txt'
+$expectedAssetPaths | Set-Content -LiteralPath $expectedList -Encoding ASCII
+& (Join-Path $repoRoot 'tools/Test-VoyageContainer.ps1') -Container $utoc `
+    -ExpectedPackageList $expectedList -Retoc $retocPath `
+    -OutputRoot (Join-Path $output 'container-check') | Out-Null
 
 $outputs = @(
     Join-Path $package ($ContainerName + '.pak')
