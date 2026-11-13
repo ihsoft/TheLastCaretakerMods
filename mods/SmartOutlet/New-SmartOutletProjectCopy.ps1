@@ -17,7 +17,7 @@ for ($ancestor = Split-Path $target -Parent; $ancestor; $ancestor = Split-Path $
 }
 $source = Join-Path $PSScriptRoot 'Project'
 $inputs = @('Voyage.uproject','EditorSupport.json','Content','Config','BlueprintText','EditorSupport','Tests')
-$entries = @(Get-ChildItem -LiteralPath $source -Force | Where-Object Name -NE 'Intermediate')
+$entries = @(Get-ChildItem -LiteralPath $source -Force | Where-Object { $_.Name -notin @('Intermediate','.gitignore') })
 foreach ($entry in $entries) {
     if ($entry.Name -notin $inputs) { throw "Unexpected project input; keep generated data in Tmp: $($entry.FullName)" }
     foreach ($item in @($entry) + @(Get-ChildItem -LiteralPath $entry.FullName -Recurse -Force)) {

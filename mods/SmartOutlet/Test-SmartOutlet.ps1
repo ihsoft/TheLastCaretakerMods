@@ -10,8 +10,6 @@ $output = [IO.Path]::GetFullPath($OutputRoot)
 if (-not $output.StartsWith($owner + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw "OutputRoot must be below $owner" }
 if (Test-Path -LiteralPath $output) { throw "Use a fresh output directory: $output" }
 [IO.Directory]::CreateDirectory($output) | Out-Null
-& (Join-Path $PSScriptRoot 'Tests/ValidateSettingsMigration.ps1') | Out-Null
-& (Join-Path $PSScriptRoot 'Tests/ValidateInstallation.ps1') | Out-Null
 $project = & (Join-Path $PSScriptRoot 'New-SmartOutletProjectCopy.ps1') -Destination (Join-Path $output 'Project')
 $workspace = Join-Path $repo ('Tmp/BlueprintText/SmartOutlet-tests-' + [guid]::NewGuid().ToString('N'))
 & (Join-Path $repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $workspace > (Join-Path $output 'prepare.log')

@@ -1,4 +1,4 @@
-# Install a candidate, preserving section profiles or migrating legacy port rules.
+# Install a candidate; keep an existing INI unless ResetSettings is requested.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)][string]$ReleaseManifest,
@@ -26,11 +26,15 @@ if ($existed) {
     $item = Get-Item -LiteralPath $target -Force
     if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Unsafe INI installation target' }
 }
+if ($existed -and -not $ResetSettings) {
+    $containerResult = & $installer -ReleaseManifest $manifestPath -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource
+    [pscustomobject]@{status='installed';releaseManifest=$manifestPath;settingsPath=$target;created=$false;settingsAction='preserved';containerFiles=$containerResult.fileCount;recoveryDirectory=$null;installManifestPath=$null}
+    return
+}
 $tmpOwner = [IO.Path]::GetFullPath((Join-Path $repo 'Tmp/SmartOutlet/installations'))
 $operation = Join-Path $tmpOwner ('settings-' + [guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($operation) | Out-Null
 $template = Join-Path $operation 'template.ini'
-$merged = Join-Path $operation 'merged.ini'
 $backup = Join-Path $operation 'original.ini'
 $archivePath = [IO.Path]::GetFullPath((Join-Path ([IO.Path]::GetDirectoryName($manifestPath)) $manifest.archive.path))
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -40,22 +44,13 @@ try {
     if ($entries.Count -ne 1) { throw 'Candidate must contain exactly one SmartOutlet.ini at the runtime path' }
     [IO.Compression.ZipFileExtensions]::ExtractToFile($entries[0], $template)
 } finally { $zip.Dispose() }
-$preparedSettings = $template
 $originalHash = $null
 if ($existed) {
     Copy-Item -LiteralPath $target -Destination $backup
     $originalHash = (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash
     if ((Get-FileHash -LiteralPath $backup -Algorithm SHA256).Hash -cne $originalHash) { throw 'INI backup readback failed' }
-    if (-not $ResetSettings) {
-        $migrated = Join-Path $operation 'migrated.ini'
-        & (Join-Path $PSScriptRoot 'Settings/Convert-LegacySettings.ps1') `
-            -CurrentPath $backup -TemplatePath $template -OutputPath $migrated
-        $preparedSettings = $migrated
-    }
 }
-Copy-Item -LiteralPath $preparedSettings -Destination $merged
-$merge = [pscustomobject]@{Changed=((-not $existed) -or ([IO.File]::ReadAllText($backup) -cne [IO.File]::ReadAllText($merged)));Policy='Preserve section profiles; migrate legacy rules without adding modes'}
-$mergedHash = (Get-FileHash -LiteralPath $merged -Algorithm SHA256).Hash
+$templateHash = (Get-FileHash -LiteralPath $template -Algorithm SHA256).Hash
 $containerResult = $null
 $iniWritten = $false
 try {
@@ -67,8 +62,8 @@ try {
     } elseif (Test-Path -LiteralPath $target) { throw 'INI appeared during installation' }
     # Digests are used only for copy integrity and rollback ownership in this transaction.
     $iniWritten = $true
-    Copy-Item -LiteralPath $merged -Destination $target -Force
-    if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -cne $mergedHash) { throw 'Installed INI readback failed' }
+    Copy-Item -LiteralPath $template -Destination $target -Force
+    if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -cne $templateHash) { throw 'Installed INI readback failed' }
 } catch {
     $failure = $_
     try {
@@ -89,4 +84,4 @@ if (-not $resolvedOperation.StartsWith($tmpOwner + [IO.Path]::DirectorySeparator
 # Both mutations succeeded. Gameplay rollback uses the previous ready ZIP.
 try { Remove-Item -LiteralPath $resolvedOperation -Recurse -Force }
 catch { throw "SmartOutlet files and settings are installed and verified, but temporary recovery cleanup failed at $resolvedOperation. $_" }
-[pscustomobject]@{status='installed';releaseManifest=$manifestPath;settingsPath=$target;created=(-not $existed);settingsMerge=$merge;containerFiles=$containerResult.fileCount;recoveryDirectory=$null;installManifestPath=$null}
+[pscustomobject]@{status='installed';releaseManifest=$manifestPath;settingsPath=$target;created=(-not $existed);settingsAction=$(if ($existed) {'reset'} else {'created'});containerFiles=$containerResult.fileCount;recoveryDirectory=$null;installManifestPath=$null}

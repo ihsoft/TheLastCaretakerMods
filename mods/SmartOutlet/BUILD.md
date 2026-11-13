@@ -3,8 +3,8 @@
 `Project/Voyage.uproject` owns release assets and editor dependencies.
 `Project/BlueprintText/` mirrors `/Game/Mods/SmartOutlet/` for review; these are
 synchronized source files, not build inputs. `Assets/SmartOutlet.ini` is the
-distributable settings file. Mod-level `Settings/` and `Tests/` own offline
-installation/migration code; Unreal fixtures live in `Project/Tests/`.
+distributable settings file. Mod-level `Settings/` owns settings-template
+validation; Unreal fixtures live in `Project/Tests/`.
 
 ## Build and validation
 
@@ -41,24 +41,20 @@ $shell = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
 
 The test runner returns `reportPath` for its Blueprint suites. Missing/failed
 reports stop the command. See the [validation boundary](#validation-boundary)
-for coverage and required game checks. The two offline scripts can also run
-directly: [settings migration](Tests/ValidateSettingsMigration.ps1) and
-[installation recovery](Tests/ValidateInstallation.ps1). The latter uses a
-synthetic container installer and never writes to the installed game.
+for coverage and required game checks.
 
-## Installation and settings migration
+## Installation and settings
 
 Use [Install-SmartOutlet.ps1](Install-SmartOutlet.ps1) with
 `-ReleaseManifest <candidate manifest>` for the coupled container/INI operation;
 pass `-AllowDirtySource` for a dirty candidate.
 
-The installer preserves existing sectioned INI text, including omitted modes,
-comments and unknown settings. Legacy numbered port rules migrate to class/mode
-profiles without adding modes; conflicting rules for one class/mode stop the
-installation. Socket names are not configuration selectors. Original INI and
-container recovery data last through the coupled installation and are removed
-after both writes succeed; failed operations report their recovery location.
-`-ResetSettings` explicitly replaces settings with the candidate's defaults.
+An existing INI is left untouched while the shared installer updates containers.
+If the INI is absent, the mod installer creates it from the candidate ZIP.
+`-ResetSettings` explicitly replaces it with that candidate's defaults.
+Creation/reset keeps container recovery data and, when replacing an INI, its
+backup until both writes succeed. Successful operations remove these temporary
+files; failed operations report their recovery location.
 
 ## Authoring
 
@@ -89,8 +85,7 @@ output hysteresis, per-port independence, configuration and discovery, latch
 snapshots, bandwidth preservation, notifications, reconciliation and visual
 cleanup. They also check optional mode profiles, class lookup, mode selection,
 hint text, HUD attachment/gating, input debouncing, research and restoration.
-Offline checks cover settings migration and preservation. These tests do not
-simulate native network transfer or the game save pipeline.
+These tests do not simulate native network transfer or the game save pipeline.
 
 Changes to native flow, attachment/restoration or persistence require their
 corresponding game tests; editor mirrors cannot establish those contracts.
