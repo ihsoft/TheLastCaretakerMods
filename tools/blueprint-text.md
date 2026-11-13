@@ -12,9 +12,9 @@ committed alongside the assets for Git review, as defined by the
 This document defines interchange capabilities, not a JSON-owned project model.
 The shared builder is independent of any mod. Compact JSON and native Unreal
 graph text are both available. Release packaging and installation remain separate.
-An existing C++ generator can supply the initial uncooked asset; BlueprintText
-exports that asset, not the C++ source. New mods use the same shared tools and
-describe their Blueprints directly rather than adding a per-mod graph builder.
+BlueprintText exports saved project assets. New mods use the same shared tools
+and describe their Blueprints directly rather than adding a per-mod graph builder.
+Migration of an older producer remains a separate, owner-scoped task.
 
 ## Schema 1: small examples
 
@@ -54,8 +54,10 @@ nonzero positions are preserved; the offline viewer computes its own layout.
 Run from the repository root with Windows PowerShell and an Unreal C++ build
 toolchain. The default engine is `K:\Epic Games\UE_5.8`; pass `-EngineRoot` to
 override it. **Prepare builds the editor module; catalogue refresh, import and
-export launch UnrealEditor-Cmd. Warn the user before engine work.** Close any
-open Unreal editor before these actions; they do not open the graphical editor.
+export launch UnrealEditor-Cmd. Warn the user before engine work.** These entry
+points use the [shared Unreal queue](unreal-coordination.md) and wait while an
+editor is open. Do not close the user's editor without authorization. The
+actions launch headless Unreal, not the graphical editor.
 
 ```powershell
 $tool = './tools/BlueprintText/Invoke-BlueprintText.ps1'
@@ -269,8 +271,8 @@ case-sensitive, including in the PowerShell entry point.
 
 Use a prepared project containing the BlueprintText editor module and
 the asset's dependencies. All actions below launch headless Unreal; warn first
-and close the editor. Project and output paths must be below
-`Tmp/BlueprintText/`.
+and let the shared queue wait for the editor to become available. Project and
+output paths must be below `Tmp/BlueprintText/`.
 
 ```powershell
 $assetTool = './tools/BlueprintText/Invoke-BlueprintAssetText.ps1'
@@ -543,12 +545,13 @@ assets or establish runtime behavior.
 
 Add `--context locals`, `--context components` or `--context all` to a selected
 graph or node/pin view. This optional section does not expand the ordinary
-compact output. For example, on the StableGyro child source:
+compact output. For example, for a source with a settings function and a named
+component template:
 
 ```powershell
-python -B tools/BlueprintText/graph_hierarchy.py $source --graph RefreshCargoAvailability --context locals
-python -B tools/BlueprintText/graph_hierarchy.py $source --graph CreateMooringPlate --context components
-python -B tools/BlueprintText/graph_hierarchy.py $source --component StableGyroMooringPlate
+python -B tools/BlueprintText/graph_hierarchy.py $source --graph ApplySettings --context locals
+python -B tools/BlueprintText/graph_hierarchy.py $source --graph CreateIndicator --context components
+python -B tools/BlueprintText/graph_hierarchy.py $source --component IndicatorTemplate
 ```
 
 Local context follows collapsed ownership to the enclosing FunctionEntry and
@@ -580,13 +583,14 @@ analysis. Supply one version of each asset, rather than mixing snapshots.
 For example:
 
 ```powershell
-$sources = @('./mods/StableGyro/BlueprintText/ModActor.json', './mods/StableGyro/BlueprintText/PitchInputActor.json')
-python -B tools/BlueprintText/graph_references.py @sources --variable EnableAltitudeControl --owner /Game/Mods/StableGyro/ModActor
+$sources = @('./Tmp/BlueprintText/example/blueprints/ModActor.json', './Tmp/BlueprintText/example/blueprints/Controller.json')
+python -B tools/BlueprintText/graph_references.py @sources --variable FeatureEnabled --owner /Game/Mods/Example/ModActor
 python -B tools/BlueprintText/graph_references.py @sources --function HandleControllerChanged
-python -B tools/BlueprintText/graph_references.py $source --variable StableGyroCargoAvailable --scope GetProvidedActionsBP
-python -B tools/BlueprintText/graph_references.py $source --function RunDisabledMooringCleanup
+python -B tools/BlueprintText/graph_references.py $source --variable ActionAvailable --scope GetProvidedActionsBP
+python -B tools/BlueprintText/graph_references.py $source --function CleanupDisabledFeature
 ```
 
+Replace the example paths and member names with those from the selected source.
 Choose exactly one `--function` or `--variable` with an exact member name.
 `--owner` optionally limits the declared owner to an asset package or native
 `/Script/Module.Class`; `--scope` limits local variables to an enclosing function
@@ -1203,8 +1207,9 @@ python -B ./tools/BlueprintText/test_asset_text_roundtrip.py `
   --output ./Tmp/BlueprintText/acceptance-new
 ```
 
-Warn before running it and close Unreal Editor: it invokes the public importer
-and a fresh-process re-export. Python 3.9+, Windows PowerShell and the configured
+Warn before running it: it invokes the queued public importer and a fresh-process
+re-export. Let the queue wait for open editors; do not close them without
+authorization. Python 3.9+, Windows PowerShell and the configured
 Unreal engine are required. The project and a new output directory must be below
 `Tmp/BlueprintText/`. The project must already contain all external
 dependencies and the current BlueprintText module. The runner temporarily moves only

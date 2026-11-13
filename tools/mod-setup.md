@@ -45,7 +45,7 @@ Copy-Item -LiteralPath './mods/MyMod/Assets/MyMod.ini' `
     -Destination (Join-Path $preparedDirectory 'MyMod.ini')
 ```
 
-The [BPT INI library](BlueprintText/Library/IniFileParser/AGENTS.md) supplies the
+The [BPT INI library](BlueprintText/Library/IniFileParser/integration.md) supplies the
 runtime parser; the consuming graphs own getters, fallbacks and application of
 values. This preparation path generates no header or graph and needs no separate
 mod adapter. It writes no game files and requires no installed game or
@@ -68,34 +68,6 @@ Use `storage: "float"` only when the consumer property is float. Boolean and
 string entries use JSON `true`/`false` and a JSON string as their required
 schema fallback. The distributed INI owns player comments, order, formatting,
 and shipped values.
-
-### C++ generator consumers
-
-Existing procedural consumers can call
-[`New-VoyageModSettings.ps1`](New-VoyageModSettings.ps1) with `-SchemaPath`,
-`-DefaultIniPath`, `-HeaderPath`, `-IniPath` and `-GeneratedBy`. It uses the same
-validator, copies the INI unchanged and emits the common C++ array table.
-`-GeneratedBy` names the adapter in the header comment. Legacy `-CollectionKind`
-is accepted for compatibility; it no longer selects a different table layout.
-
-An editor generator adds `tools/VoyageModSettings/Public` to its include paths,
-includes `VoyageModSettingsGraph.h`, and includes its generated header inside a
-small mod namespace. After creating the Blueprint and before adding graphs that
-read settings, it calls:
-
-```cpp
-VoyageModSettings::Graph::AddSettingMembers(
-    Blueprint, ModSettings::Settings, UE_ARRAY_COUNT(ModSettings::Settings),
-    [](const VoyageModSettings::FSetting&) { return true; });
-check(VoyageModSettings::Graph::AddSettingsLoader(
-    Blueprint, ReloadSettings, ModSettings::RelativePath,
-    ModSettings::Settings, UE_ARRAY_COUNT(ModSettings::Settings),
-    [](const VoyageModSettings::FSetting&) { return true; }));
-```
-
-`AddSettingsLoader` owns the parser/compile/loader/compile ordering. The cooked
-Blueprint carries those graphs, so players do not install a shared runtime mod.
-The mod keeps its existing lifecycle trigger and application setters.
 
 ### Existing user INI
 

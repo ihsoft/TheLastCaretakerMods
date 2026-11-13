@@ -1,86 +1,24 @@
-# BlueprintText
+# BlueprintText index
 
-For new and existing mods, start with the [workspace workflow](../blueprint-workspace.md).
-The [format guide](../blueprint-text.md) owns lower-level interfaces.
-Shared BPT changes and unresolved limitations follow the
-[specialist decision rule](../../docs/blueprint-text-maintenance-rule.md).
-For tool development, use the [maintenance guide](../blueprint-text-maintenance.md)
-to select the owning contract and validation boundary.
-Follow the [graph design rule](../../docs/blueprint-graph-design-rule.md) when
-authoring or simplifying graphs. BPT is an AI-to-Human interface: optimize graphs
-and previews for human understanding, including minimal nonessential noise,
-while preserving execution and data-evaluation boundaries.
-The [INI parser library](Library/IniFileParser/AGENTS.md) owns the flat and sectioned
-parsers, their integration, public getters, formats, and focused validation.
-For shared stateless pure operations, use a [Blueprint Function Library](../blueprint-text.md#blueprint-function-libraries).
-AddSource accepts its empty starter; CallTemplates reflects saved library functions.
-Keep library declarations and affected callers together when changing signatures.
-BlueprintText is the recommended Blueprint authoring workflow. Packaging and
-installation remain the mod producer's responsibility. Keep disposable tool-test
-projects and working results under `Tmp/BlueprintText/`; keep the catalogue cache
-local and ignored. Maintained mod projects are source asset stores, not temporary
-tool output. Follow the workflow's [source-of-truth and Git contract](../blueprint-workspace.md#source-of-truth-and-git):
-commit synchronized BPT alongside project assets, without making JSON an
-independent canonical store or a routine build-time replacement for those assets.
-For mod authoring, launch Unreal/BPT on a working project copy under `Tmp/<Mod>/`,
-following the [project layout rule](../../docs/unreal-project-rule.md#project-layout-and-temporary-data).
-The BPT workspace does not create that copy. Review concurrent source edits and
-transfer only intended saved source changes back; keep generated directories out
-of the maintained Project.
+Choose the guide for the current task. BPT edits supported Blueprint state in
+a maintained Unreal project; packaging and gameplay acceptance belong to its
+consumer.
 
-The agent edits the exported working representation. Extend shared factories and reflection
-when needed; do not introduce per-mod graph-building code. Unsupported state
-must be diagnosed rather than silently discarded. Do not imply universal
-Blueprint preservation from the bounded tests.
-
-## Routine agent work
-
-- Use the shared workflow entry point and its compact result. Read the workspace
-  manifest to find editable Blueprint JSON; inspect only source needed for the
-  requested change. Start with [compact graph reading](../blueprint-text.md#read-graphs-without-unreal)
-  and reveal exact node/pin details or [declaration context](../blueprint-text.md#reveal-source-context)
-  as needed. Use [member-use search](../blueprint-text.md#find-member-uses) for callers
-  and variable accesses across selected sources; its unresolved results and coverage
-  are not proof of absence. Edit the complete proposed Blueprint state, not a read
-  view or generated native text.
-- Generated previews are for the user. Run workspace Preview and return its
-  index link; it derives node changes from the original and current snapshots.
-  Do not assemble review lists or inspect baselines as a routine prerequisite.
-  Explicit annotations are optional supplements. Do not open or analyze generated HTML, SVG, PNGs or
-  screenshots to reconfirm a successful render or infer changes already known
-  from the source. Inspect preview output only when the user asks to investigate
-  the preview itself, or a concrete rendering failure requires it.
-- Baselines, native intermediates, resource manifests, comparison dumps and
-  full logs are tool-owned. Do not read them during a successful routine cycle.
-  On failure, start with the compact diagnostic and read only the indicated
-  evidence relevant to that failure. Do not repeat a successful mechanical check
-  by manually comparing exports or running a second verification script.
-- Do not create per-mod orchestration scripts for a documented workflow. If the
-  shared interface cannot perform the requested operation, report the missing
-  capability or fix the shared tool. Focused tool-development test fixtures are
-  separate from ordinary mod work.
-- When authoring function calls, follow [optional arguments](../blueprint-text.md#optional-call-arguments).
-  State what the caller requires; do not enumerate or compare callee defaults
-  to decide what to pass. An omitted input uses an existing declaration default;
-  if there is none, BPT diagnoses the missing required argument. For simple
-  Unreal arithmetic/logic, always provide every operand explicitly. Templates
-  for KismetMathLibrary retain explicit operands. New templates use `arguments`.
-  An explicit value, even equal to that default, fixes the caller's value.
-  Older `defaults` calls require the documented explicit transition; do not
-  assume deleting a legacy value enables inheritance.
-- For ordinary native call nodes outside the math catalogue, use
-  [CallTemplates](../blueprint-workspace.md#create-reflected-native-call-nodes)
-  and the shared insertion factory. Preserve reflected pin metadata when editing
-  arguments; a successful compilation does not replace strict Apply comparison.
-- Warn before engine actions. Let the tool own backups, conflict checks and
-  recovery; do not bypass them or manually overwrite an asset changed since
-  export. Existing resources and native mirrors remain project dependencies.
-- Give independent tasks separate workspace directories. One task owns edits to
-  a workspace, including its JSON and review annotations; command locks cannot
-  protect files edited directly by another agent. Coordinate ownership before
-  sharing sources or the same selected assets. Use the public workflow for engine
-  operations; do not bypass a busy lock with low-level scripts, direct Unreal
-  launches, or deleting lock files. Engine contention waits in the
-  [shared Unreal queue](../unreal-coordination.md). Wrap other engine producers
-  and agent-launched editor sessions with its public entry point; a manual editor
-  keeps the queue waiting until its owner closes it.
+- [Workspace workflow](../blueprint-workspace.md): export, edit, apply, preview,
+  recover conflicts and keep saved assets synchronized with tracked BPT.
+- [Graph design](../../docs/blueprint-graph-design-rule.md): choose readable
+  operations and boundaries when authoring or simplifying graphs.
+- [Format reference](../blueprint-text.md): supported state, exact fields and
+  lower-level interfaces when a source or tool contract needs clarification.
+- [Source reading](../blueprint-text.md#read-graphs-without-unreal): inspect a
+  graph compactly or reveal selected node, pin and declaration details.
+- [Member-use search](../blueprint-text.md#find-member-uses): locate callers,
+  callbacks or variable uses across an explicitly selected set of sources.
+- [INI library](Library/IniFileParser/AGENTS.md): select a flat or sectioned
+  parser for a consumer's settings.
+- [Function libraries](../blueprint-text.md#blueprint-function-libraries): share
+  stateless pure operations through a supported Blueprint Function Library.
+- [Maintenance](../blueprint-text-maintenance.md): choose implementation owners
+  and validation checks for a shared BPT change or a failed operation.
+- [Specialist decisions](../../docs/blueprint-text-maintenance-rule.md): review
+  proposed shared contracts and unresolved limitations.

@@ -52,7 +52,7 @@ failure to resolve before interpreting the suite's result.
 | Structural review or field display | [Review comparison](BlueprintText/test_graph_review.py), [Details](BlueprintText/test_review_details.py), [review rendering](BlueprintText/test_review_graph.py) and [batch preview](BlueprintText/test_preview_index.py). Check both snapshots and source isolation. |
 | Graph presentation, navigation or interactions | [Renderer and JavaScript checks](blueprint-text.md#checks), [expressions](BlueprintText/test_graph_expressions.py), [function navigation](BlueprintText/test_preview_graph_links.py), [node search](BlueprintText/test_node_search.js). DOM stand-ins are not browser visual acceptance. |
 | Widget input, resources or interaction | [Widget checks](blueprint-text.md#checks); resource collection changes also need an isolated Widget Blueprint export/Preview with its real dependencies. |
-| Reusable Object behavior or INI parsing | [Object acceptance](blueprint-text.md#schema-2-blueprints) or the [INI integration suite](BlueprintText/Library/IniFileParser/AGENTS.md#validation-and-maintenance), followed by consumer-specific game checks when runtime behavior changes. |
+| Reusable Object behavior or INI parsing | [Object acceptance](blueprint-text.md#schema-2-blueprints) or the [INI integration suite](BlueprintText/Library/IniFileParser/integration.md#validation-and-maintenance), followed by consumer-specific game checks when runtime behavior changes. |
 
 For inherited child-actor defaults, run:
 

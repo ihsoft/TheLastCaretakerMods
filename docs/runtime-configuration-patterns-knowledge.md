@@ -24,7 +24,7 @@ Changing a parser must not silently change the mod's read policy.
 
 ## Author one settings contract
 
-Use the [BPT INI library](../tools/BlueprintText/Library/IniFileParser/AGENTS.md)
+Use the [BPT INI library](../tools/BlueprintText/Library/IniFileParser/integration.md)
 for import, object lifetime, getter signatures and grammar. It supplies two
 UObject sources:
 

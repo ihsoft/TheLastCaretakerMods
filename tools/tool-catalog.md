@@ -24,8 +24,8 @@ failure handling.
 | Check Collapse with strict Apply and executable isolated fixtures | `BlueprintText/Test-CollapseGraphs.ps1` | [Collapsed graph checks](blueprint-text.md#collapsed-graphs) |
 | Import/export supported Actor/Widget/direct UObject/function-library Blueprints, batch mutually referencing assets, or export preview images/UI labels | `BlueprintText/Invoke-BlueprintAssetText.ps1` | [BlueprintText](blueprint-text.md#schema-2-blueprints) |
 | Check Blueprint Function Libraries, two Actor consumers, signature changes and cook | `BlueprintText/Test-FunctionLibrary.ps1` | [Function libraries](blueprint-text.md#blueprint-function-libraries) |
-| Import and execute the reusable INI parser in a disposable project | `BlueprintText/Test-IniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/AGENTS.md#validation-and-maintenance) |
-| Validate the sectioned INI parser and flat compatibility in a disposable project | `BlueprintText/Test-SectionedIniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/AGENTS.md#validation-and-maintenance) |
+| Import and execute the reusable INI parser in a disposable project | `BlueprintText/Test-IniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/integration.md#validation-and-maintenance) |
+| Validate the sectioned INI parser and flat compatibility in a disposable project | `BlueprintText/Test-SectionedIniParser.ps1` | [INI parser validation](BlueprintText/Library/IniFileParser/integration.md#validation-and-maintenance) |
 | Check asset-text round trips in a disposable prepared project | `BlueprintText/test_asset_text_roundtrip.py` | [Blueprint checks](blueprint-text.md#checks) |
 | Check inherited and overridden child-actor defaults across repeated BPT imports | `BlueprintText/Test-ComponentDefaults.ps1` | [BPT maintenance checks](blueprint-text-maintenance.md#choose-validation-by-the-change) |
 | Check native CDO default-subobject preservation and legacy-source rejection | `BlueprintText/Test-NativeDefaults.ps1` | [BPT maintenance checks](blueprint-text-maintenance.md#choose-validation-by-the-change) |
@@ -33,7 +33,7 @@ failure handling.
 | Generate graph/widget previews and an index with automatic node comparison for changed snapshots | `BlueprintText/Render-BlueprintPreviews.ps1` | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |
 | Preview an exported HUD layout and copy review adjustments | `BlueprintText/Render-WidgetPreview.ps1` | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
-| Generate a settings header and INI | `New-VoyageModSettings.ps1` | [Mod setup](mod-setup.md) |
+| Maintain generated settings in an existing procedural producer | `New-VoyageModSettings.ps1` | [Compatibility interface](VoyageModSettings/legacy-generation.md) |
 | Validate a settings schema and default INI without generating C++ | `VoyageModSettings/VoyageModSettings.psm1` → `Read-VoyageModSettingsSchema` | [INI preparation](mod-setup.md#runtime-ini-preparation) |
 | Merge an existing user INI | `Merge-VoyageModIni.ps1` | [Mod setup](mod-setup.md) |
 | Get the installed Steam build ID | `Get-VoyageBuildFingerprint.ps1` | [Mappings](mappings.md) |

@@ -17,9 +17,13 @@ the working copy, not in the maintained `mods/<Mod>/Project/`.
 This workflow does not generate stubs, cook, install or run the game. Supported
 Blueprint state is defined by the [format guide](blueprint-text.md#schema-2-blueprints).
 
-Follow the [routine agent rules](BlueprintText/AGENTS.md#routine-agent-work).
 Successful command results are the acceptance signal for mechanical work.
 Generated HTML, images, native intermediates and full logs are not agent inputs.
+Start from the workspace manifest and relevant editable source. On failure,
+read only the diagnostic evidence needed for that failure; do not manually
+repeat a successful export comparison. Keep the documented workflow in shared
+tools instead of adding per-mod orchestration scripts. If a required operation
+is missing, report the gap or address it through shared tool maintenance.
 
 ## Source of truth and Git
 
@@ -60,9 +64,10 @@ under the project ownership rule.
 
 ## Start a workspace
 
-For an existing mod, export its uncooked Blueprints, generating the initial assets
-with its current C++ producer when needed. For a new mod, first prepare the Unreal
-project with the required parents, native modules and resources. Create complete
+For an existing maintained project, export its saved uncooked Blueprints.
+A pre-migration mod follows its own documented migration boundary; its old
+producer is not the shared authoring recipe. For a new mod, first prepare the
+Unreal project with the required parents, native modules and resources. Create complete
 schema-2 Blueprint JSON, then add it to a workspace's source list as described
 below; new assets use the same shared Apply path. The current Export entry point
 starts from at least one existing Blueprint, so an empty project's first
@@ -156,7 +161,7 @@ or selected sources are rejected; export existing assets to edit them.
 & $tool -Action Apply -WorkspaceRoot $work
 ```
 
-The reusable [INI parser library](BlueprintText/Library/IniFileParser/AGENTS.md)
+The reusable [INI parser library](BlueprintText/Library/IniFileParser/integration.md)
 supplies the flat `BP_IniFileParser.json` and separate `BP_SectionedIniFileParser.json`
 sources; select the documented format and interface before importing a copy.
 Each consumer gets its own package; there is no shared runtime
@@ -309,8 +314,11 @@ needed.
 ### Workspace coordination
 
 Use a separate workspace for each independent task. All commands hold an OS lock
-on their workspace. Prepare, Export, Apply, Preview, MarkStubs and Recover also lock the project and
-join the [shared Unreal queue](unreal-coordination.md) for their entire operation,
+on their workspace. One task owns direct JSON and review-annotation edits;
+coordinate ownership before sharing sources or selected assets. Commands cannot
+protect direct edits by another task. Prepare, Export, Apply, Preview, MarkStubs
+and Recover also lock the project and join the
+[shared Unreal queue](unreal-coordination.md) for their entire operation,
 including rollback. Engine work waits its turn even for different projects.
 Project and older engine gates also wait for their owners to finish; never delete
 their lock files. A conflicting command in the same workspace still fails to
@@ -440,6 +448,9 @@ Optional `note` adds explanatory text. These annotations do not alter the Bluepr
 Read diagnostics only on failure: start with the returned short reason and
 diagnostic path, then inspect the relevant evidence. A successful render does not
 require screenshot inspection, link crawling or a second comparison by the agent.
+Do not open generated HTML, SVG or images to infer edits already represented
+in source. Inspect the rendered output when the user requests a preview
+investigation or a concrete rendering failure requires it.
 
 ## Editor stub identity
 

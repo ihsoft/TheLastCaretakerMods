@@ -4,10 +4,11 @@ Use the owning mod's public producer for a new candidate. This guide covers an
 already-built IoStore triplet. The [shared release rule](../docs/release-and-installation-rule.md)
 owns version identity, candidate retention, installation, and rollback.
 For a routine candidate whose payload needs no mod-specific settings migration,
-use the producer's manifest directly with the installer. Railgun and StableGyro
-couple their settings installation to their producer's `-Install` mode;
-ContainerLidLabel uses [Install-ContainerLidLabel.ps1](../mods/ContainerLidLabel/Install-ContainerLidLabel.ps1)
-for its LogicMods payload and INI preservation.
+use the producer's release manifest directly with the shared installer. When
+installation also preserves a user INI or performs another coupled migration,
+use the installation entry point documented by that mod's index. It must cover
+the payload and settings in one recoverable operation; a container-only install
+does not replace it. Exact commands and additional contracts belong to that mod.
 The read-only status snapshot below is for a specific installation question or
 unexpected result.
 

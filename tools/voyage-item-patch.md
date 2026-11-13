@@ -32,9 +32,16 @@ be available to the consumer:
 
 ```powershell
 ./tools/Update-VoyageItemAsset.ps1 `
-  -Project './mods/Example/Voyage.uproject' `
+  -Project './Tmp/Example/authoring/Project/Voyage.uproject' `
   -Recipe './mods/Example/Build/Item.patch.json'
 ```
+
+For a maintained mod, prepare that working project copy from current source
+inputs before invoking the updater. It updates the supplied project; it does
+not create or synchronize the copy. Review concurrent source edits and accept
+only intended refreshed assets and provenance into the maintained project
+before taking a release build copy, under the
+[project ownership rule](../docs/unreal-project-rule.md#project-layout-and-temporary-data).
 
 `-EngineRoot` and `-GameRoot` override the installations. Optional `-OutputRoot`
 must be a fresh directory below repository `Tmp/`; mod-selected output belongs

@@ -23,18 +23,31 @@ suffixes, wildcards, or fragments. For batch calls through
 `powershell.exe -File`, use `-MaterialsFile` with a UTF-8 JSON array of unique
 strings.
 
+## Output location and current limitation
+
+The [artifact lifecycle](../docs/artifact-lifecycle-rule.md) requires `Tmp/`
+for ordinary one-cycle exports; retention under `artifacts/` needs a concrete
+continuing consumer. A reusable exchange format alone does not justify retention.
+
+The four current wrappers accept only fresh output paths under `artifacts/`
+and reject `Tmp/`. This is a tool limitation, not an exception to that policy.
+The examples below apply only to an export whose retention is already justified;
+replace `<registered-family>` with its owning artifact family. For a temporary-only
+request, report the unsupported output destination rather than inventing a
+retention reason or routing temporary files through `artifacts/`.
+
 ## GLB and preview
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Export-VoyageMaterialsGlb.ps1 `
   -MaterialsFile tools\VoyageMaterialLibrary\socket-materials.example.json `
   -MaterialMode PbrApproximation `
-  -OutputPath artifacts\material-export\socket-materials.glb
+  -OutputPath 'artifacts\<registered-family>\socket-materials.glb'
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Export-VoyageMaterialPreview.ps1 `
   -MaterialsFile tools\VoyageMaterialLibrary\socket-materials.example.json `
   -MaterialMode BakeReconstructed `
-  -OutputPath artifacts\material-export\socket-materials.png
+  -OutputPath 'artifacts\<registered-family>\socket-materials.png'
 ```
 
 The GLB contains sample geometry so ordinary importers retain its materials;
@@ -50,13 +63,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Export-VoyageMater
   -MaterialMode BakeReconstructed `
   -Profile Full `
   -SourceTextures MetadataOnly `
-  -OutputPath artifacts\material-export\MI_Material.materialpack.zip
+  -OutputPath 'artifacts\<registered-family>\MI_Material.materialpack.zip'
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Export-VoyageMaterialBundle.ps1 `
   -MaterialsFile tools\VoyageMaterialLibrary\socket-materials.example.json `
   -BundleName MaterialCandidates `
   -MaterialMode BakeReconstructed `
-  -OutputPath artifacts\material-export\MaterialCandidates.materialbundle.zip
+  -OutputPath 'artifacts\<registered-family>\MaterialCandidates.materialbundle.zip'
 ```
 
 The pack contains no model or GLB. It carries one material's preview, bounded
@@ -75,9 +88,8 @@ The bundle is the batch analysis format. It always uses `AnalysisCompact`,
 stores final PBR payloads once by content identity, and excludes source pixels
 and geometry.
 
-All outputs must be fresh paths below ignored `artifacts/`; the wrappers refuse
-unsafe names and existing outputs. A missing image means the recorded scalar or
-factor is authoritative. Unsupported layered effects and ambiguous textures
+The wrappers refuse unsafe names and existing outputs. A missing image means
+the recorded scalar or factor is authoritative. Unsupported layered effects and ambiguous textures
 remain explicit metadata rather than invented payloads.
 
 ## Result and failure boundary

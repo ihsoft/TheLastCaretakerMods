@@ -2,14 +2,12 @@
 
 ## Release producers
 
-Build/cook/package contracts remain with their owning mods. Use these routes
-before searching for scripts or assembling Unreal/retoc commands manually.
-Every listed producer except ScopeFix launches Unreal build, generation, or
-cook. Start those producers outside the restricted sandbox from the first
-invocation, including a retry with `-IgnorePinnedGameVersion`; their Unreal
-stage may be hidden inside the PowerShell script. ScopeFix does not launch
-Unreal. See the [execution rule](../docs/game-derived-data-rule.md)
-for the failure boundary.
+Build/cook/package contracts remain with their owning mods. Start with the
+selected mod's index and public producer instead of assembling Unreal/retoc
+commands manually. A producer that launches Unreal build, generation or cook
+must start outside the restricted sandbox from the first invocation, including
+a retry with `-IgnorePinnedGameVersion`. Follow the selected producer's documented
+engine requirements and the [execution rule](../docs/game-derived-data-rule.md).
 
 For a requested candidate, run the owning producer first. If it reports only a
 pinned Steam build mismatch, retry with `-IgnorePinnedGameVersion`; the
@@ -24,8 +22,11 @@ needed for compatibility metadata. The [release rule](../docs/release-and-instal
 owns candidate and publication status.
 Each producer derives the next numbered version from its mod's `version.txt`
 and writes exactly `<Mod>-V<N>.zip`. Use the `Tmp/<Mod>/` output directory to
-label an experiment or attempt; do not pass a descriptive release version or
-rename the ZIP.
+label an experiment or attempt; do not pass a descriptive release version.
+Publication-time changes to the target number follow the release rule.
+
+The following links are a lookup for work on the named mod, not implementation
+examples or shared build/installation contracts:
 
 | Mod | Candidate producer | Mod index |
 | --- | --- | --- |
@@ -39,9 +40,8 @@ rename the ZIP.
 | StableGyro | [Build-StableGyro.ps1](../mods/StableGyro/Build-StableGyro.ps1) | [Index](../mods/StableGyro/AGENTS.md) |
 | VoyageAutoLoader | [Build-VoyageAutoLoader.ps1](../mods/VoyageAutoLoader/Build-VoyageAutoLoader.ps1) | [Index](../mods/VoyageAutoLoader/AGENTS.md) |
 
-Read only the selected mod's index and relevant contracts. The producer owns
-its fingerprint and provenance gates; a development probe or another mod's
-builder is not a substitute.
+The selected producer owns its fingerprint and provenance gates; a development
+probe or another mod's builder is not a substitute.
 
 Some preparation phases require a closed game even without `-Install`. The
 selected producer checks its own preconditions and reports a running game;
@@ -52,12 +52,6 @@ For an already-built release, skip build/cook and use the producer's release
 manifest through the [installation guide](release-installation.md). A build
 manifest is not an installer input. Keep exact commands and stage-specific
 details with the owning producer or its mod documentation.
-The shared installer covers the container payload for BoatHUDTotalResources,
-DonkLiftKeyboardControl, ElectrifiedBoat, MooringCable60m,
-PalletContainerSnap, ScopeFix, and VoyageAutoLoader. Railgun and StableGyro
-use their producer's `-Install` mode to preserve user INI settings.
-ContainerLidLabel uses its [owning installer](../mods/ContainerLidLabel/Install-ContainerLidLabel.ps1)
-to install the LogicMods payload and preserve its INI together.
 
 ## Release container verification
 

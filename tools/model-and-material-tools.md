@@ -19,9 +19,10 @@ Model and material exporters require an explicit `-MaterialMode`:
 when the request does not establish it. Exported geometry and PBR materials do
 not imply runtime Blueprint behavior, animation, widgets, or complete Unreal
 shader fidelity; inspect the tool's omission report for the selected output.
-Ordinary model output belongs below `Tmp/`. Material exporters require fresh
-paths below ignored `artifacts/` because their exchange files and evidence are
-designed for reuse beyond one tool invocation.
+Ordinary export output belongs below `Tmp/`; retained output needs a concrete
+continuing consumer under the [artifact lifecycle](../docs/artifact-lifecycle-rule.md).
+Before using a material exporter, account for its current
+[output-location limitation](material-export.md#output-location-and-current-limitation).
 
 StaticMesh preparation and inspection use caller-owned fresh paths below
 `Tmp/`. Keep tool-internal diagnostics below `Tmp/tools/`; a mod selects output

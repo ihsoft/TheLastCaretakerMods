@@ -15,7 +15,7 @@ replace the source GLB.
 ## Normal calls
 
 ```powershell
-python tools\glb\inspect_glb.py --registry mods\Railgun\Assets\Model\model-source.json
+python tools\glb\inspect_glb.py --registry '<owning model-source.json>'
 
 & 'K:\Program Files\Blender Foundation\Blender 5.2\blender.exe' `
   --background --factory-startup --python-exit-code 1 `
