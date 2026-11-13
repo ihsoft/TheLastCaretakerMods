@@ -14,8 +14,13 @@ covers normal UBT builds with ready providers, stale receipt recovery and BPT
 write/reopen/cook. Generated precompiled rules are managed package files, not
 owner-maintained module sources.
 [Clean-checkout acceptance](../BlueprintText/Test-CleanProjectSupport.ps1)
-covers BPT-owned bootstrap across missing mandatory BPT and declared native support.
+covers BPT-owned bootstrap, reuse across fresh project copies, overlay
+invalidation and public source-mode reuse.
 `project_support.py` composes declared owner inputs and reuses ready providers;
 `tests/test_project_support.py` covers source changes, collisions and failed updates.
+`provider_cache.py` owns the bounded shared cache, atomic publication, corruption
+recovery and eviction. Offline provider tests isolate this store under `Tmp/`.
+Update `BUILD_RECIPE` when changing the fixed build recipe; source and overlay
+changes already invalidate reuse through their actual bytes.
 Python callers hold the shared queue when calling these internal functions.
 Use a fresh test output directory. Keep engine launches in the shared queue.

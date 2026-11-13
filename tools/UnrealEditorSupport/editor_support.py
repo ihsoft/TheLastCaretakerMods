@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[2]
 KIND = 'Unreal editor support binaries'
 MANIFEST = 'editor-support.json'
 PACKAGE_SCHEMA = 2
+# Increment when the fixed Win64 Development Editor build recipe changes.
+BUILD_RECIPE = 1
 IDENTIFIER = re.compile(r'[A-Za-z][A-Za-z0-9_]*\Z')
 
 
@@ -314,9 +316,15 @@ def main():
         output = unlinked(args.output or ROOT / 'Tmp/UnrealEditorSupport' / ('prepare-' + uuid.uuid4().hex))
         require(output.is_relative_to(ROOT / 'Tmp') and output != ROOT / 'Tmp', 'OutputRoot must be a fresh directory below repository Tmp')
         require(not output.exists(), 'OutputRoot already exists')
-        output.mkdir(parents=True)
         created_output = True
         require(not recovery_path(project).exists(), 'Interrupted preparation requires -Recover')
+        if args.source:
+            sys.path.insert(0, str(ROOT / 'tools'))
+            from UnrealEditorSupport.project_support import prepare_provider
+            result = prepare_provider(project, engine, output, Path(args.source))
+            print(json.dumps(result))
+            return 0
+        output.mkdir(parents=True)
         if args.project_dependencies:
             sys.path.insert(0, str(ROOT / 'tools'))
             from UnrealEditorSupport.project_support import prepare_project
@@ -325,7 +333,7 @@ def main():
             write(output / 'result.json', result)
             print(json.dumps(result))
             return 0
-        package = build_package(Path(args.source), engine, output) if args.source else unlinked(args.package)
+        package = unlinked(args.package)
         status = attach(project, package, engine, output)
         result = dict(status=status, project=str(project), plugin=read(package / MANIFEST)['plugin'],
                       package=str(package), built=bool(args.source), engineBuildId=engine_identity(engine),

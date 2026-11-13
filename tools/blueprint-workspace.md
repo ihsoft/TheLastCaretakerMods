@@ -9,6 +9,11 @@ Use [Invoke-BlueprintWorkspace.ps1](BlueprintText/Invoke-BlueprintWorkspace.ps1)
 for the recommended Blueprint authoring workflow for new and existing mods:
 export, edit JSON, apply and preview. The Unreal project is the source of truth,
 under the [project ownership rule](../docs/unreal-project-rule.md).
+For maintained mods, run Unreal/BPT against a working project copy under
+`Tmp/<Mod>/`, created from current source inputs by the owning mod's authoring
+entry point. The BPT workspace is separate temporary text/review state; Export
+does not create that project copy. Generated plugins, caches and logs stay in
+the working copy, not in the maintained `mods/<Mod>/Project/`.
 This workflow does not generate stubs, cook, install or run the game. Supported
 Blueprint state is defined by the [format guide](blueprint-text.md#schema-2-blueprints).
 
@@ -32,6 +37,13 @@ refresh the export. After JSON changes, successfully Apply and use the tool's
 fresh-process comparison as the synchronization check. Subsequent asset edits
 invalidate that check. Do not commit stale exports or unapplied proposals as a
 completed asset change. Preserve and reconcile both sides of any conflict.
+
+Before accepting working-copy changes, check for concurrent edits in the
+maintained project and review the intended changes. Transfer only intentionally
+changed saved assets, synchronized BPT and deliberately authored configuration
+or other source files. Do not copy generated directories or the entire working
+project back. Within the maintained Project, only `Intermediate/` may be a
+temporary ignored directory; no `Plugins/` or `Saved/` exclusions are needed.
 
 Keep the committed BPT representations in the owning mod's tracked source tree,
 with an unambiguous mapping to project asset paths. Working copies and manifests
@@ -68,8 +80,11 @@ DLL selection or project build is needed before a normal workspace call.
 New consumers receive a ready `BlueprintTextWorkspace` plugin without C++
 implementation sources. Its generated precompiled module rules support ordinary
 Win64 Development Editor C++ builds without disabling the plugin; they are not
-an editable source provider. Unchanged provider sources and editor identity reuse its binaries;
-changed inputs rebuild through the common support tool. This does not generate
+an editable source provider. Unchanged provider sources and editor identity reuse
+its binaries, including across fresh working copies through the
+[shared provider cache](unreal-editor-support.md#shared-provider-cache).
+Changed inputs select a matching cached variant or rebuild through the common
+support tool; each working copy still gets a fresh load check. This does not generate
 game assets or refresh a mod's DataAssets. `Prepare` remains available as an explicit
 dependency/tooling-only operation.
 Projects with saved BPT call nodes keep `BlueprintTextWorkspace` as a required,
@@ -101,7 +116,7 @@ project uses an engine outside the wrapper's default installation.
 
 ```powershell
 $tool = './tools/BlueprintText/Invoke-BlueprintWorkspace.ps1'
-$project = 'R:/path/to/Project.uproject'
+$project = './Tmp/Example/authoring/Project/Example.uproject'
 $work = './Tmp/BlueprintText/edit-example'
 & $tool -Action Export -ProjectFile $project -WorkspaceRoot $work `
   -Asset @('/Game/Mods/Example/ModActor', '/Game/UI/ExampleHUD')

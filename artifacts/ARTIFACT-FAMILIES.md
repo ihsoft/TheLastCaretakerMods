@@ -8,6 +8,7 @@ Retained game-derived inputs keep relevant Steam build and asset provenance.
 
 | Family | Owner and creator | Consumer and retention value | Owning contract |
 | --- | --- | --- | --- |
+| `UnrealEditorSupport/providers/**` | Shared UnrealEditorSupport tool | Reuse validated native editor providers across disposable project copies; bounded disposable cache, revalidated against current inputs before reuse | [Editor support](../tools/unreal-editor-support.md) |
 | `asset-cache/**` | Shared game-asset retrieval; populated by `Get-VoyageAssetJson.ps1` through the inspector | `Get-VoyageAssetJson.ps1`, `Get-VoyageAssetSummary.ps1` and research reuse the real stock cache | [Complete asset JSON](../tools/asset-inspection.md#complete-asset-json-or-package-inventory) |
 | `asset-cache/<version>/_summaries/**` | Shared compact-summary subsystem; created by `Get-VoyageAssetSummary.ps1` for validated stock JSON | Research calls reuse content-addressed derived summaries; removing an obsolete game-cache version also removes its summaries | [Compact Blueprint structure](../tools/asset-inspection.md#compact-blueprint-structure) |
 | `installations/<Mod>-V<N>/**` | Published release and the named mod | One exact published ZIP and its original release manifest for identification and reliable rollback; a same-version collision stops retention | [Release workflow](../docs/release-and-installation-rule.md), [release installation](../tools/release-installation.md#release-installation) |

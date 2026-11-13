@@ -22,6 +22,11 @@ local and ignored. Maintained mod projects are source asset stores, not temporar
 tool output. Follow the workflow's [source-of-truth and Git contract](../blueprint-workspace.md#source-of-truth-and-git):
 commit synchronized BPT alongside project assets, without making JSON an
 independent canonical store or a routine build-time replacement for those assets.
+For mod authoring, launch Unreal/BPT on a working project copy under `Tmp/<Mod>/`,
+following the [project layout rule](../../docs/unreal-project-rule.md#project-layout-and-temporary-data).
+The BPT workspace does not create that copy. Review concurrent source edits and
+transfer only intended saved source changes back; keep generated directories out
+of the maintained Project.
 
 The agent edits the exported working representation. Extend shared factories and reflection
 when needed; do not introduce per-mod graph-building code. Unsupported state

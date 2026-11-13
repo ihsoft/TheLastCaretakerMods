@@ -6,6 +6,15 @@ editor process. It owns the shared Unreal queue, copying, conflict checks and
 rollback. Call the public script once; do not manually build modules, select DLLs,
 inspect manifests, or run a separate engine preflight first.
 
+For a maintained mod, pass a disposable working copy under `Tmp/<Mod>/` as
+`-ProjectFile`. Prepare that copy from current source inputs using the owning
+mod's copy/build/authoring entry point. The maintained `mods/<Mod>/Project/`
+stays source-only; within it, only `Intermediate/` may be temporary and ignored.
+Installed plugins, input caches, logs and generated settings belong to the
+working copy, under the [project layout rule](../docs/unreal-project-rule.md#project-layout-and-temporary-data).
+This tool prepares the supplied project; it does not create or synchronize a
+working copy for the caller.
+
 This mechanism is independent of BlueprintText and game-specific patching.
 The owner of a mod or tool supplies the plugin's source, reflected types and
 stub implementations. This tool supplies no game classes and does not infer
@@ -45,15 +54,17 @@ and file ownership collisions fail. This permits shared and mod-owned definition
 to compile into one required `/Script/<Module>` without moving their ownership.
 
 ```powershell
-./tools/Prepare-UnrealEditorSupport.ps1 -ProjectFile './mods/Example/Example.uproject'
+./tools/Prepare-UnrealEditorSupport.ps1 -ProjectFile './Tmp/Example/authoring/Project/Example.uproject'
 ```
 
 This mode reads the declaration, builds missing/changed providers, installs them
-and checks loading. Identical source bytes and editor `BuildId` reuse the installed
-package without compilation, with a fresh load check. Exact input snapshots live
-under the project's ignored `Saved/UnrealEditorSupport/inputs/`; removing that
-cache causes a rebuild. An absent declaration means no declared dependencies.
-The result contains a `providers` list with each provider's status and `built` flag.
+and checks loading. It first reuses an installation matching current inputs and
+package bytes, then looks in the shared provider cache, and builds only on a miss.
+Every path checks module loading in a fresh editor process. Local input records
+live under the working copy's `Saved/UnrealEditorSupport/inputs/`; a new copy
+without those records can still reuse the shared cache. An absent declaration
+means no declared dependencies. The result contains a `providers` list with each
+provider's status, `built` flag and `reuse` origin.
 
 Transactions apply to each plugin. A successfully prepared dependency can remain
 installed if a later provider fails; rerunning verifies and reuses it. No asset
@@ -67,8 +78,8 @@ Provide an existing project and a buildable, owner-maintained source plugin:
 
 ```powershell
 ./tools/Prepare-UnrealEditorSupport.ps1 `
-  -ProjectFile './mods/Example/Example.uproject' `
-  -PluginSource './mods/Example/EditorSupport/ExampleSupport.uplugin'
+  -ProjectFile './Tmp/Example/authoring/Project/Example.uproject' `
+  -PluginSource './Tmp/Example/authoring/Project/EditorSupport/ExampleSupport.uplugin'
 ```
 
 The tool uses Unreal's `BuildPlugin -NoTargetPlatforms` in a shallow private build
@@ -84,17 +95,20 @@ tree is removed after successful packaging; build and load diagnostics remain.
 
 Project preparation installs the package under `Plugins/<PluginName>/` and adds
 its enabled reference to the `.uproject` when absent. It does not add project
-modules or a project-level `Source` directory. The owning project should ignore this installed
-plugin directory in its own `.gitignore`; retain and review the project descriptor
-and the owner-maintained plugin sources. Tool preparation does not change Git rules.
+modules or a project-level `Source` directory. These generated files stay in the
+working copy; do not add `Plugins/` or `Saved/` exclusions to the maintained
+project. Retain and review its required plugin references and owner-maintained
+plugin sources. For authoring, transfer only intended source changes after
+checking for concurrent edits; never copy the whole working project back.
 
-Source mode deliberately builds the current supplied sources. After an intentional
-source change, use source mode again and use its new returned package. Reuse the
-package for routine project preparation:
+Source mode also checks current inputs and reuses a matching installed or shared
+provider before compiling. Use the same call after source changes; the tool
+selects the matching variant or builds it. For an explicit ready-package handoff,
+use the returned `package` path rather than assuming a location below OutputRoot:
 
 ```powershell
 ./tools/Prepare-UnrealEditorSupport.ps1 `
-  -ProjectFile './mods/Example/Example.uproject' `
+  -ProjectFile './Tmp/Example/authoring/Project/Example.uproject' `
   -PluginPackage '<package path returned by a successful source-mode call>'
 ```
 
@@ -102,9 +116,42 @@ Package mode does not invoke a compiler. An identical installation returns
 `unchanged` after loading the modules in a fresh editor process. Replacing a
 managed installation uses complete replacement at the same plugin identity.
 Current packages use manifest schema 2. Declared dependency preparation and BPT
-preparation rebuild older packaging once, then reuse it. Legacy schema-1 packages
+preparation replace older packaging with a current cached or rebuilt package.
+Legacy schema-1 packages
 remain readable for loading and rollback, but do not support ordinary C++ builds;
 rebuild them from owner sources rather than adding rules to an installed package.
+
+## Shared provider cache
+
+BPT preparation, declared project dependencies and `-PluginSource` automatically
+share ready providers in the ignored repository-local
+`artifacts/UnrealEditorSupport/providers/`. No cache path or key is required from
+the caller. This store is outside maintained projects and disposable working
+copies; it contains native packages and the input records needed for reuse,
+not authored assets, logs or compiler scratch.
+
+Reuse requires identical effective input paths and bytes after applying overlays,
+including the plugin descriptor, the selected editor's `BuildId`, package format
+and build recipe. Moving a project or its source tree does not itself invalidate
+reuse. Changed inputs select another variant; an earlier variant can be reused
+when those inputs return. Supply all non-engine compilation inputs in the source
+tree or overlays. Undeclared external build inputs are outside this contract.
+The supported build profile remains Win64 Development Editor.
+
+Only a complete package that passed installation and loading is published.
+Cache publication uses private staging under the run's `Tmp/` directory; failed
+publication removes that staging. Each consumer gets its own managed installation
+and load check. A damaged shared entry is discarded and rebuilt; a consumer's
+load failure still fails the call and rolls back its installation. Cache reuse
+does not suppress that failure or authorize replacing unmanaged project files.
+
+After successful preparation, the tool retains at most 32 entries and 2 GiB of
+cache files, evicting the least recently used entries first. A package exceeding
+the byte limit is usable but is not retained. Eviction does not remove installed
+plugins or run evidence. Cache entries are disposable: their absence causes a
+build when no matching local installation remains. Use the returned `package`
+path for a handoff; consumers do not depend on private cache paths surviving
+later cleanup. Build intermediates and diagnostics stay under `Tmp/`.
 
 ## Inputs, results and boundaries
 
@@ -147,6 +194,8 @@ rebuild them from owner sources rather than adding rules to an installed package
 The compact result reports `status` (`prepared`, `unchanged`, or `failed`),
 `project`, `plugin`, `package`, `built`, `engineBuildId`, `loadedModules`, and the
 `evidence` directory. Successful source/package calls also save `result.json`.
+Source and declaration results additionally report `reuse`: `installed`,
+`shared`, or `null` when a build was needed. `built: false` never skips loading.
 Failure returns a nonzero exit and a diagnostic location. A failed compiler run
 retains `build-scratch.json` pointing to its private scratch. Do not treat an
 existing package or an old successful result as success for the failed call.
@@ -175,7 +224,7 @@ over that pending transaction. Restore it through the same public entry point:
 
 ```powershell
 ./tools/Prepare-UnrealEditorSupport.ps1 `
-  -ProjectFile './mods/Example/Example.uproject' -Recover
+  -ProjectFile './Tmp/Example/authoring/Project/Example.uproject' -Recover
 ```
 
 Preserve `Saved/UnrealEditorSupport/` until recovery succeeds. Do not manually
@@ -196,8 +245,9 @@ It exercises the public build/install path, repeat package reuse, and a project
 without project C++ sources. The installed plugin carries only its generated
 precompiled rules beside the binary package. A native DataAsset is saved with a changed value,
 reopened in a fresh process under the same `/Script/SupportFixture` class identity,
-and cooked. All output stays in a fresh ignored directory; no game installation
-or maintained mod project is changed.
+and cooked. Run output stays in a fresh ignored directory; validated providers
+may also populate the shared cache. No game installation or maintained mod
+project is changed.
 
 ```powershell
 ./tools/UnrealEditorSupport/tests/Test-EditorSupport.ps1
@@ -214,3 +264,11 @@ project builds, a real native recompile, package reuse, recovery from a disabled
 receipt, two changed strict Apply/reopen passes, independent component-value
 checks and cook. Run it with a fresh `-OutputRoot` below `Tmp/BlueprintText/`
 and the selected `-EngineRoot`; it owns the shared Unreal queue.
+
+[Test-CleanProjectSupport.ps1](BlueprintText/Test-CleanProjectSupport.ps1) checks
+two project copies with mandatory BPT references, native support and saved custom
+call nodes. The fresh copy must load both providers without compiling either;
+changing a test overlay rebuilds only native support, and restoring it reuses
+the retained variant. The runner also checks public source-mode reuse, asset
+preservation, strict Apply/reopen and cook. Use a fresh `-OutputRoot` below
+`Tmp/BlueprintText/` and the selected `-EngineRoot`; it owns the shared queue.

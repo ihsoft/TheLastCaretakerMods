@@ -7,6 +7,7 @@ import base64
 from pathlib import Path
 
 from . import editor_support as support
+from . import provider_cache
 
 
 def source_tree(source, overlays=()):
@@ -43,17 +44,22 @@ def prepare_provider(project, engine, output, source, overlays=(), *, builder=No
     name = source.stem
     support.require(not support.recovery_path(project).exists(), 'Interrupted preparation requires -Recover')
     identity = support.engine_identity(engine)
-    snapshot = dict(schema=1, packageSchema=support.PACKAGE_SCHEMA, engineBuildId=identity,
+    snapshot = dict(schema=1, packageSchema=support.PACKAGE_SCHEMA, buildRecipe=support.BUILD_RECIPE, engineBuildId=identity,
                     files={key: base64.b64encode(value).decode('ascii') for key, value in files.items()})
     cache = support.unlinked(project.parent / 'Saved/UnrealEditorSupport/inputs' / (name + '.json'))
     installed = project.parent / 'Plugins' / name
     output.mkdir(parents=True)
-    reused = cache.is_file() and support.read(cache) == snapshot and installed.is_dir()
+    local = support.read(cache) if cache.is_file() else {}
+    reused = installed.is_dir() and {k: v for k, v in local.items() if k != 'packageKey'} == snapshot
     if reused:
         reused = support.read(installed / support.MANIFEST).get('schema') == support.PACKAGE_SCHEMA
     if reused:
-        package = installed
-    else:
+        _, _, installed_files = support.package_info(installed, identity)
+        reused = provider_cache.package_key(installed_files) == local.get('packageKey')
+    package = installed if reused else provider_cache.find(snapshot)
+    reuse = 'installed' if reused else 'shared' if package is not None else None
+    built = package is None
+    if built:
         composed = output / 'provider'
         for relative, value in files.items():
             path = composed / relative
@@ -61,15 +67,23 @@ def prepare_provider(project, engine, output, source, overlays=(), *, builder=No
             path.write_bytes(value)
         package = builder(composed / source.name, engine, output)
     status = support.attach(project, package, engine, output, loader, disabled_plugins=disabled_plugins)
+    if built:
+        provider_cache.publish(snapshot, installed, output)
     # Never mark changed sources current after a failed build, attach or load.
     temporary = cache.with_suffix('.writing')
-    support.write(temporary, snapshot)
+    # Package mode may have replaced this installation since its input snapshot.
+    # Bind local reuse to the package bytes that actually passed this load.
+    installed_info, _, installed_files = support.package_info(installed, identity)
+    support.write(temporary, dict(snapshot, packageKey=provider_cache.package_key(installed_files)))
     temporary.replace(cache)
-    if not reused:
+    if built:
         support.remove_owned(output / 'provider', output)
-    result = dict(status=status, plugin=name, package=str(package), built=not reused,
+    provider_cache.prune()
+    # Cache entries may be evicted later; return the consumer-owned installation
+    # instead of exposing a shared-cache path as a reusable public artifact.
+    result = dict(status=status, plugin=name, package=str(installed if reuse == 'shared' else package), built=built, reuse=reuse,
                   project=str(project), engineBuildId=identity,
-                  loadedModules=support.read(package / support.MANIFEST)['modules'], evidence=str(output))
+                  loadedModules=installed_info['modules'], evidence=str(output))
     support.write(output / 'result.json', result)
     return result
 

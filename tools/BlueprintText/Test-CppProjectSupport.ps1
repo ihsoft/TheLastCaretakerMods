@@ -63,7 +63,7 @@ BuildConsumer 'build-stale-receipt' -StaleReceipt
 Add-Content (Join-Path $projectRoot 'Source/SupportConsumer/SupportConsumer.cpp') '// Recompile the consumer with both ready providers installed.'
 BuildConsumer 'build-after'
 # Reuse after UBT must still recognize a managed binary provider, not refresh it as source.
-$package=Join-Path $output 'native-support/package'
+$package=(Get-Content (Join-Path $output 'native-support/result.json') -Raw | ConvertFrom-Json).package
 & $support -ProjectFile $project -EngineRoot $EngineRoot -PluginPackage $package -OutputRoot (Join-Path $output 'reuse-after-build')
 $repeat=Get-Content (Join-Path $output 'reuse-after-build/result.json') -Raw | ConvertFrom-Json
 if($repeat.status -ne 'unchanged'){throw 'UBT changed managed provider files.'}
