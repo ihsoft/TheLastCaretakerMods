@@ -1,9 +1,10 @@
 """Compiled member-write checks; stock research UI and grants need a game canary."""
 import json
+import os
 from pathlib import Path
 import unreal
 
-root = Path(__file__).resolve().parents[3]
+root = Path(os.environ['SMARTOUTLET_TEST_OUTPUT'])
 manager_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/ModActor.ModActor_C')
 actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 manager = actors.spawn_actor_from_class(manager_class, unreal.Vector())
@@ -59,5 +60,5 @@ try:
     checks.append('Disabled configuration skips the runtime change')
 finally:
     actors.destroy_actor(manager)
-(root/'Tmp/SmartOutlet/research-tier-validation.json').write_text(json.dumps({'status':'passed','checks':checks,'stockGameValidated':False}, indent=2)+'\n')
+(root/'research-tier-validation.json').write_text(json.dumps({'status':'passed','checks':checks,'stockGameValidated':False}, indent=2)+'\n')
 unreal.log('SmartOutlet research Tier checks passed: ' + str(len(checks)))

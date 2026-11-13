@@ -1,8 +1,9 @@
 """Compiled profile lookup/discovery and independent resource ports; editor mirrors only."""
 import json
+import os
 from pathlib import Path
 import unreal
-root=Path(__file__).resolve().parents[3]
+root=Path(os.environ['SMARTOUTLET_TEST_OUTPUT'])
 actors=unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 system=unreal.get_default_object(unreal.SystemLibrary)
 reader=unreal.get_default_object(unreal.VoyageEditorBlueprintFunctionLibrary)
@@ -10,7 +11,7 @@ parser_class=unreal.load_class(None,'/Game/Mods/SmartOutlet/Settings/BP_Sectione
 profile_class=unreal.load_class(None,'/Game/Mods/SmartOutlet/Settings/BP_StorageProfile.BP_StorageProfile_C')
 manager_class=unreal.load_class(None,'/Game/Mods/SmartOutlet/ModActor.ModActor_C')
 parser=unreal.new_object(parser_class)
-fixture=root/'Tmp/SmartOutlet/profile-fixture.ini'
+fixture=root/'profile-fixture.ini'
 created=[]
 def block(key,mode,enable,disable,slot=-1):
     return f'[{key}:{mode}]\nEnablePortAtPercent={enable}\nDisablePortAtPercent={disable}\nGlowMaterialSlot={slot}\n'
@@ -21,7 +22,7 @@ def spawn(cls):
     a=actors.spawn_actor_from_class(cls,unreal.Vector());created.append(a);return a
 try:
     before=reader.call_method('GetTestReadCount')
-    parser.call_method('Load',(str(root/'mods/SmartOutlet/Assets/SmartOutlet.ini'),))
+    parser.call_method('Load',(str(root/'SmartOutlet.ini'),))
     for key, mode, low, high in [
         ('BP_Module_Battery.BP_Module_Battery_C','Output',.2,.8),
         ('BP_Module_fresh_Water_Tank.BP_Module_fresh_Water_Tank_C','Input',.2,1.0),
@@ -82,7 +83,7 @@ try:
         assert module.get_editor_property('editor_validation_network_refreshes')==count_before
         cases.append([amount,incoming,outgoing])
     manager.call_method('Stop')
-    (root/'Tmp/SmartOutlet/rules-validation.json').write_text(json.dumps({'status':'passed','profiles':'input/output/both/neither; invalid/missing/case-sensitive','lookup':'real owner class; shared class cache; one file read; all ports; duplicate discovery','waterCases':cases,'boundary':'Compiled editor mirrors, not native transport or saves'},indent=2))
+    (root/'rules-validation.json').write_text(json.dumps({'status':'passed','profiles':'input/output/both/neither; invalid/missing/case-sensitive','lookup':'real owner class; shared class cache; one file read; all ports; duplicate discovery','waterCases':cases,'boundary':'Compiled editor mirrors, not native transport or saves'},indent=2))
 finally:
     fixture.unlink(missing_ok=True)
     if 'settings' in globals():settings.unlink(missing_ok=True)

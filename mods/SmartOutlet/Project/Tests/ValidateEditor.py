@@ -4,10 +4,11 @@ The Voyage provider supplies test-only resource values. This does not validate
 native game transfer, DML discovery, attachment ordering or persistence.
 """
 import json
+import os
 from pathlib import Path
 import unreal
 
-report_path = Path(__file__).resolve().parents[3] / 'Tmp/SmartOutlet/editor-validation.json'
+report_path = Path(os.environ['SMARTOUTLET_TEST_OUTPUT']) / 'editor-validation.json'
 controller_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/BP_OutletController.BP_OutletController_C')
 assert controller_class, 'Controller class missing'
 actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)

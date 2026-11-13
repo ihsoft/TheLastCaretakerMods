@@ -1,7 +1,2 @@
-/Binaries/
-/DerivedDataCache/
-/Intermediate/
-/Saved/
-/Plugins/
+/Project/Intermediate/
 /BACKLOG.local.md
-*.sln

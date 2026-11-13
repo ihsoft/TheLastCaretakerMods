@@ -1,8 +1,9 @@
 """Compiled port-mode transitions and tag snapshots; not native network/save proof."""
 import json
+import os
 from pathlib import Path
 import unreal
-root=Path(__file__).resolve().parents[3]
+root=Path(os.environ['SMARTOUTLET_TEST_OUTPUT'])
 actors=unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 system=unreal.get_default_object(unreal.SystemLibrary)
 created=[]
@@ -127,6 +128,6 @@ try:
     assert f[3].get_material(0)!=original_material and f[3].get_material(1)==original_material
     f[0].call_method('CycleMode');state(f,N)
     assert f[3].get_material(0)==original_material and f[3].get_material(1)==original_material
-    (root/'Tmp/SmartOutlet/modes-validation.json').write_text(json.dumps({'status':'passed','checks':['input/output/normal cycle','finite limits and original material restored','normal is passive','recapture stock settings on reacquisition','per-port independence across resources','shared rule immutable','mode and latch tag snapshots','explicit normal overrides configured smart mode','unrelated tags preserved','next/current hints with independent integer and fractional thresholds','optional mode cycling','removed saved mode falls back to normal','disabled and distinct valid material slots'],'boundary':'Compiled Blueprint with editor mirrors; native network and game save pipeline require runtime test'},indent=2)+'\n')
+    (root/'modes-validation.json').write_text(json.dumps({'status':'passed','checks':['input/output/normal cycle','finite limits and original material restored','normal is passive','recapture stock settings on reacquisition','per-port independence across resources','shared rule immutable','mode and latch tag snapshots','explicit normal overrides configured smart mode','unrelated tags preserved','next/current hints with independent integer and fractional thresholds','optional mode cycling','removed saved mode falls back to normal','disabled and distinct valid material slots'],'boundary':'Compiled Blueprint with editor mirrors; native network and game save pipeline require runtime test'},indent=2)+'\n')
 finally:
     for a in reversed(created):actors.destroy_actor(a)

@@ -1,10 +1,11 @@
 """Run compiled Blueprint checks in one editor session; no native game simulation."""
 import json
+import os
 from pathlib import Path
 import runpy
 
 tests = Path(__file__).resolve().parent
-output = tests.parents[2] / 'Tmp/SmartOutlet'
+output = Path(os.environ['SMARTOUTLET_TEST_OUTPUT'])
 output.mkdir(parents=True, exist_ok=True)
 summary = output / 'checks-validation.json'
 summary.unlink(missing_ok=True)

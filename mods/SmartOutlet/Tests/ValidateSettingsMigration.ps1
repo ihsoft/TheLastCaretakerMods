@@ -38,7 +38,9 @@ try {
     & $convert -CurrentPath $source -TemplatePath $template -OutputPath $result
     if ([IO.File]::ReadAllText($result) -match '\[') { throw 'RuleCount=0 gained profiles' }
     [pscustomobject]@{status='passed';checks='values, aliases, independent profiles, absent modes, idempotence, empty config, conflicts, disabled legacy rules'}
-} finally {
-    foreach ($file in @($source,$result,$again)) { if (Test-Path -LiteralPath $file) { Remove-Item -LiteralPath $file } }
-    Remove-Item -LiteralPath $work
+} catch {
+    throw "Settings migration checks failed; evidence: $work. $_"
 }
+if (-not ([IO.Path]::GetFullPath($work)).StartsWith((Join-Path $repo 'Tmp/SmartOutlet') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unexpected fixture cleanup path' }
+foreach ($file in @($source,$result,$again)) { if (Test-Path -LiteralPath $file) { Remove-Item -LiteralPath $file } }
+Remove-Item -LiteralPath $work

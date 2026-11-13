@@ -3,16 +3,17 @@
 Snapshot copying here does NOT test the game's native save/restore of Actor.Tags.
 """
 import json
+import os
 from pathlib import Path
 import unreal
 
-root = Path(__file__).resolve().parents[3]
+root = Path(os.environ['SMARTOUTLET_TEST_OUTPUT'])
 actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 system = unreal.get_default_object(unreal.SystemLibrary)
 controller_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/BP_OutletController.BP_OutletController_C')
 rule_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/Settings/BP_OutletRule.BP_OutletRule_C')
 parser_class = unreal.load_class(None, '/Game/Mods/SmartOutlet/Settings/BP_SectionedIniFileParser.BP_SectionedIniFileParser_C')
-rule_fixture_path = root/'Tmp/SmartOutlet/latch-rule.ini'
+rule_fixture_path = root/'latch-rule.ini'
 limits = unreal.ModuleSocketBandwidth(input=42, output=73, item_bandwidth_in_kg=9)
 unreal.get_default_object(controller_class).set_editor_property('OriginalBandwidth', limits)
 created = []
@@ -120,5 +121,5 @@ finally:
     for a in reversed(created):
         actors.destroy_actor(a)
     rule_fixture_path.unlink(missing_ok=True)
-(root/'Tmp/SmartOutlet/latch-validation.json').write_text(json.dumps({'status':'passed','checks':checks,'nativeSaveRestoreValidated':False}, indent=2)+'\n')
+(root/'latch-validation.json').write_text(json.dumps({'status':'passed','checks':checks,'nativeSaveRestoreValidated':False}, indent=2)+'\n')
 unreal.log('SmartOutlet latch checks passed: ' + str(len(checks)))

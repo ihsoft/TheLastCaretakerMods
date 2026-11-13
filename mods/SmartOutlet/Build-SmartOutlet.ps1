@@ -21,7 +21,7 @@ if (Test-Path -LiteralPath $output) { throw "Use a fresh output directory: $outp
 $versionText = (Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw).Trim()
 if ($versionText -cnotmatch '^(0|[1-9][0-9]*)$') { throw 'Invalid published version.txt' }
 $candidateVersion = 'V' + ([int]$versionText + 1)
-$project = Join-Path $modRoot 'Voyage.uproject'
+$projectRoot = Join-Path $output 'Project'
 $editor = Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe'
 $fingerprintPath = Join-Path $output 'game-fingerprint.json'
 & (Join-Path $repoRoot 'tools/Get-VoyageBuildFingerprint.ps1') -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
@@ -30,22 +30,20 @@ $buildGate = & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') -ModR
 $mappings = & (Join-Path $repoRoot 'tools/Get-VoyageMappings.ps1') -GameRoot $GameRoot
 $settingsTemplate = Join-Path $modRoot 'Assets/SmartOutlet.ini'
 & (Join-Path $modRoot 'Settings/Test-SettingsTemplate.ps1') -Path $settingsTemplate | Out-Null
-& (Join-Path $repoRoot 'tools/Prepare-UnrealEditorSupport.ps1') -ProjectFile $project -EngineRoot $EngineRoot | Out-Null
+$project = & (Join-Path $modRoot 'New-SmartOutletProjectCopy.ps1') -Destination $projectRoot
+$bptWorkspace = Join-Path $repoRoot ('Tmp/BlueprintText/SmartOutlet-build-' + [guid]::NewGuid().ToString('N'))
+& (Join-Path $repoRoot 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $bptWorkspace > (Join-Path $output 'prepare.log')
 $ownedNames = @('BP_OutletController', 'ModActor', 'WBP_PortModeAction', 'M_PortGlow', 'Settings/BP_SectionedIniFileParser', 'Settings/BP_OutletRule', 'Settings/BP_StorageProfile')
 $packages = @($ownedNames | ForEach-Object { '/Game/Mods/SmartOutlet/' + $_ })
-$cookedRoot = [IO.Path]::GetFullPath((Join-Path $modRoot 'Saved/Cooked/Windows/Voyage/Content/Mods/SmartOutlet'))
+$cookedRoot = Join-Path $projectRoot 'Saved/Cooked/Windows/Voyage/Content/Mods/SmartOutlet'
 foreach ($name in $ownedNames) {
-    $source = Join-Path $modRoot ('Content/Mods/SmartOutlet/' + $name + '.uasset')
+    $source = Join-Path $projectRoot ('Content/Mods/SmartOutlet/' + $name + '.uasset')
     if (-not (Test-Path -LiteralPath $source)) { throw "Maintained asset missing: $source; apply BPT before building." }
-    foreach ($ext in @('.uasset','.uexp')) {
-        $stale = Join-Path $cookedRoot ($name + $ext)
-        if (Test-Path -LiteralPath $stale) { Remove-Item -LiteralPath $stale -Force }
-    }
 }
 $cookLog = Join-Path $output 'cook.log'
 $cookArgs = @($project,'-run=cook','-targetplatform=Windows','-unversioned','-SkipZenStore',('-Package=' + ($packages -join '+')),
     '-CookSinglePackageNoRefs','-unattended','-nop4','-nosplash','-nullrhi','-ddc=NoZenLocalFallback',
-    ('-LocalDataCachePath=' + (Join-Path $modRoot 'DerivedDataCache')),('-abslog=' + $cookLog))
+    ('-LocalDataCachePath=' + (Join-Path $projectRoot 'DerivedDataCache')),('-abslog=' + $cookLog))
 & (Join-Path $repoRoot 'tools/Invoke-UnrealQueued.ps1') -Operation 'Cook SmartOutlet' -FilePath $editor -ArgumentList $cookArgs > (Join-Path $output 'cook-console.log')
 if (Select-String -LiteralPath $cookLog -Pattern 'LogBlueprint: Error:|LogLinker: Error:|LogCook: Error:' -Quiet) { throw "Cook reported an error: $cookLog" }
 $stage = Join-Path $output 'stage'
@@ -79,4 +77,7 @@ $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 
 $stagePath = (Resolve-Path -LiteralPath $stage).Path
 if (-not $stagePath.StartsWith($output + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unexpected scratch directory' }
 Remove-Item -LiteralPath $stagePath -Recurse -Force
+$projectPath = (Resolve-Path -LiteralPath $projectRoot).Path
+if (-not $projectPath.StartsWith($output + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unexpected project cleanup path' }
+Remove-Item -LiteralPath $projectPath -Recurse -Force
 $result | ConvertTo-Json -Depth 8

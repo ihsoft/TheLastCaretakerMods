@@ -19,14 +19,11 @@ start normal. The mapped Interact 3 action (V by default) cycles smart input,
 smart output, normal, skipping absent or invalid modes. If neither mode exists,
 the mod offers no action. The hint reads `Set <next> (now: <current>)`; smart mode
 labels include their actual Enable/Disable percentages. Normal releases control
-back to the game. The supplied defaults offer battery output and fresh/salt water
-tank input. Resource amount and capacity come from native getters without
+back to the game. Resource amount and capacity come from native getters without
 resource-specific conversion.
 
-Every mode requires valid `EnablePortAtPercent`, `DisablePortAtPercent` and
-`GlowMaterialSlot` values. Input requires Enable < Disable; output requires
-Enable > Disable. Missing, equal, reversed or out-of-range thresholds reject
-that mode. Output opens at or above Enable and closes at or below Disable;
+Modes that fail the INI's required-value, range or threshold-order checks are
+omitted independently. Output opens at or above Enable and closes at or below Disable;
 input opens at or below Enable and closes at or above Disable. Between them,
 the previous enabled state is retained.
 
@@ -117,21 +114,18 @@ Material Time follows game pause; animation needs no actor tick or timer.
 This is a simple tinted surface without stock trim textures; geometry is
 unchanged. Bloom and exposure affect the halo and perceived pulse contrast.
 
-The maintained material lives in the project. The focused
-[creation script](Editor/CreatePortGlowMaterial.py) refuses to overwrite it and
-is not part of normal builds. The focused
-[pulse update](Editor/ApplyPortGlowPulse.py) adds the pulse to the original
-steady material and refuses an already modified graph. Both scripts are
-one-time authoring steps; edit the saved material to tune its appearance.
+The maintained material lives in `Project/Content/Mods/SmartOutlet/M_PortGlow.uasset`.
+Edit that asset through a working project to tune its appearance; normal builds
+do not generate or reconstruct it.
 See [self-contained materials](../../docs/voyage-cooked-asset-toolchain-knowledge.md#self-contained-materials-in-additive-mods)
 for the shader packaging contract.
 
 ## Source and package boundaries
 
-The Unreal project owns the assets; synchronized files in `BlueprintText/`
-provide the text editing/review interface through the shared BPT workflow.
-`EditorSupport/Source/Voyage/` supplies minimal editor-only reflection mirrors
-for Steam build 25982825 and UE 5.8. Required stock input/widget identities are
+The [maintained project](Project/Voyage.uproject) owns the assets; the
+[development guide](DEVELOPMENT.md) owns working-copy and validation commands.
+`Project/EditorSupport/Source/Voyage/` supplies minimal editor-only reflection
+mirrors. Required stock input/widget identities are
 compilation stubs; their [provenance](SOURCE-PROVENANCE.md) owns reconstruction
 and revalidation boundaries.
 Their test getters and
@@ -139,15 +133,9 @@ notification counter do not enter the game. `ModuleSocketIOData` is deliberately
 partial: use member writes by reference, never serialize a complete native
 socket or replace its full Port value from this mirror.
 
-The public producer cooks exactly these owned packages:
-
-- `/Game/Mods/SmartOutlet/ModActor`, DML entry class `ModActor.ModActor_C`;
-- `/Game/Mods/SmartOutlet/BP_OutletController`;
-- `/Game/Mods/SmartOutlet/M_PortGlow`;
-- `/Game/Mods/SmartOutlet/WBP_PortModeAction`;
-- `/Game/Mods/SmartOutlet/Settings/BP_SectionedIniFileParser`;
-- `/Game/Mods/SmartOutlet/Settings/BP_StorageProfile`;
-- `/Game/Mods/SmartOutlet/Settings/BP_OutletRule`.
+The [public producer](Build-SmartOutlet.ps1) owns the exact additive package
+allowlist under `/Game/Mods/SmartOutlet/`. The DML entry is
+`/Game/Mods/SmartOutlet/ModActor.ModActor_C`.
 
 The container triplet installs directly into `Voyage/Content/Paks/LogicMods`.
 The package contains no replacement stock Blueprint, native DLL, game INI,
@@ -158,9 +146,10 @@ inline material shader code; it is not installed as game configuration.
 The installer preserves existing sectioned INI text, including omitted modes,
 comments and unknown settings. Legacy numbered port rules migrate to class/mode
 profiles without adding modes; conflicting rules for one class/mode stop the
-installation. Socket names are no longer configuration selectors. The original
-INI and container recovery evidence are retained for rollback. `-ResetSettings`
-explicitly replaces settings with the candidate's defaults.
+installation. Socket names are not configuration selectors. Original INI and
+container recovery data last through the coupled installation and are removed
+after both writes succeed; failed operations report their recovery location.
+`-ResetSettings` explicitly replaces settings with the candidate's defaults.
 
 ## Validation boundary
 
@@ -172,28 +161,9 @@ hint text, HUD attachment/gating, input debouncing, research and restoration.
 Offline checks cover settings migration and preservation. These tests do not
 simulate native network transfer or the game save pipeline.
 
-Runtime port control, pulsing glow, mode switching, the central HUD hint and
-section-based settings are accepted for the user's tested setups. Attachment/restoration coverage across every placement context,
-multiplayer and a complete save/reload matrix are not established by that
-acceptance. The user accepted latch persistence and missing-record recovery in
-his tested game saves; this does not establish every streaming/save context.
-Recheck native identities and notification behavior when
-the game contract changes; the producer's game pin and reviewed mappings own
-build selection. Exact accepted candidate identity and the user report remain
-with local release evidence, separate from the original build manifest.
-Technical identity changes also require a fresh DML discovery/load check.
-
-Run all maintained editor checks through the shared queue:
-
-```powershell
-$shell = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-./tools/Invoke-UnrealQueued.ps1 -Operation 'Validate SmartOutlet' `
-  -FilePath (Join-Path $PSHOME $shell) `
-  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',
-    'mods/SmartOutlet/Validate-SmartOutlet.ps1')
-```
-
-The validator prepares declared editor support and runs the six suites in one
-editor session. Reports and logs live under `Tmp/SmartOutlet/`; missing or failed
-reports fail the command. Build/install failures remain visible in their owning
-tools. Development-only `PrintString` is not a production diagnostic channel.
+Changes to native flow, attachment/restoration or persistence require their
+corresponding game tests; editor mirrors cannot establish those contracts.
+Recheck affected identities and notification behavior when the native contract
+changes. Technical identity changes require a fresh DML discovery/load check.
+Candidate acceptance belongs to release evidence under the
+[shared release workflow](../../docs/release-and-installation-rule.md).

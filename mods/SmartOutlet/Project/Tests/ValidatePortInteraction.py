@@ -1,9 +1,10 @@
 """Runtime mode action: compiled graph checks against editor-only native mirrors."""
 import json
+import os
 from pathlib import Path
 import unreal
 
-root = Path(__file__).resolve().parents[3]
+root = Path(os.environ['SMARTOUTLET_TEST_OUTPUT'])
 actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 system = unreal.get_default_object(unreal.SystemLibrary)
 spawned = []
@@ -171,7 +172,7 @@ try:
     manager.call_method('StopPortInteraction')
     assert host.get_parent() is None and stock_card.get_parent() == row
     assert row.get_children_count() == 1, 'Cleanup changed stock cards'
-    (root / 'Tmp/SmartOutlet/port-interaction-validation.json').write_text(json.dumps({
+    (root / 'port-interaction-validation.json').write_text(json.dumps({
         'status': 'passed',
         'checks': ['card class assigned before SetActions', 'class readback',
                    'current mode text', 'no redundant hint recreation', 'null hover', 'port/box/mesh identity', 'stale selection cleared',

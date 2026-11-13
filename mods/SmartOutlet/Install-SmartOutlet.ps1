@@ -86,5 +86,7 @@ try {
 }
 $resolvedOperation = (Resolve-Path -LiteralPath $operation).Path
 if (-not $resolvedOperation.StartsWith($tmpOwner + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unexpected cleanup path' }
-# Retain the original INI and container recovery record for settings and container rollback.
-[pscustomobject]@{status='installed';releaseManifest=$manifestPath;settingsPath=$target;created=(-not $existed);settingsMerge=$merge;containerFiles=$containerResult.fileCount;recoveryDirectory=$operation;installManifestPath=$containerResult.installManifestPath}
+# Both mutations succeeded. Gameplay rollback uses the previous ready ZIP.
+try { Remove-Item -LiteralPath $resolvedOperation -Recurse -Force }
+catch { throw "SmartOutlet files and settings are installed and verified, but temporary recovery cleanup failed at $resolvedOperation. $_" }
+[pscustomobject]@{status='installed';releaseManifest=$manifestPath;settingsPath=$target;created=(-not $existed);settingsMerge=$merge;containerFiles=$containerResult.fileCount;recoveryDirectory=$null;installManifestPath=$null}
