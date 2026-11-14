@@ -13,8 +13,6 @@ param(
 
     [string]$OutputRoot,
 
-    [string]$OriginalsRoot,
-
     [switch]$Install,
 
     [switch]$AllowDirtySource,
@@ -45,18 +43,12 @@ $Version = $candidateModVersion
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
 }
-$artifactsRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'artifacts'))
-$tmpRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'Tmp'))
-$tmpOwnerRoot = Join-Path $tmpRoot 'StableGyro'
 $projectRoot = Join-Path $modRoot 'Project'
 $project = Join-Path $projectRoot 'Voyage.uproject'
 Import-Module (Join-Path $repoRoot 'tools/VoyageModPipeline.psm1') -Force
 $unrealEditor = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 $engineVersionPath = Join-Path $EngineRoot 'Engine\Build\Build.version'
 $fingerprinter = Join-Path $repoRoot 'tools\Get-VoyageBuildFingerprint.ps1'
-$cookScript = Join-Path $modRoot 'Build/Cook-StableGyroAssets.ps1'
-$prepareScript = Join-Path $modRoot 'Build/Prepare-StableGyroOriginals.ps1'
-$packageScript = Join-Path $modRoot 'Build/Build-InheritancePackage.ps1'
 $settingsDefaults = Join-Path $modRoot 'Assets\StableGyro.ini'
 $releaseManifestBuilder = Join-Path $repoRoot 'tools\New-VoyageReleaseManifest.ps1'
 $releaseInstaller = Join-Path $repoRoot 'tools\Install-VoyageRelease.ps1'
@@ -80,64 +72,10 @@ function Resolve-RequiredPath {
     return (Resolve-Path -LiteralPath $Path).Path
 }
 
-function Assert-UnderIgnoredBuildStorage {
-    param([Parameter(Mandatory = $true)] [string]$Path, [Parameter(Mandatory = $true)] [string]$Label)
-
-    $fullPath = [IO.Path]::GetFullPath($Path)
-    $allowedRoots = @($tmpRoot, $artifactsRoot)
-    $isAllowed = $false
-    foreach ($allowedRoot in $allowedRoots) {
-        $prefix = $allowedRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) +
-            [IO.Path]::DirectorySeparatorChar
-        if ($fullPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
-            $isAllowed = $true
-            break
-        }
-    }
-    if (-not $isAllowed) {
-        throw "$Label must stay below the repository Tmp or artifacts directory: $fullPath"
-    }
-    return $fullPath
-}
-
-function Get-CleanOriginalInputs {
-    param(
-        [Parameter(Mandatory = $true)] [string]$Root,
-        [Parameter(Mandatory = $true)] [string]$ExpectedBuild,
-        [Parameter(Mandatory = $true)] [string]$ExpectedRetocCompatibilityVersion
-    )
-
-    $resolvedRoot = Resolve-RequiredPath -Path $Root -Label 'Originals root'
-    $manifests = @(Get-ChildItem -LiteralPath $resolvedRoot -Recurse -File -Filter 'extraction-manifest.json')
-    if ($manifests.Count -ne 1) {
-        throw "Expected exactly one extraction manifest below $resolvedRoot; found $($manifests.Count)."
-    }
-
-    $manifest = Get-Content -LiteralPath $manifests[0].FullName -Raw | ConvertFrom-Json
-    if ([string]$manifest.filter -cne 'Data/Assets/Modules/DA_Item_Module_GyroCopter' -or
-        [string]$manifest.steamBuildId -cne $ExpectedBuild -or
-        [string]$manifest.retocEngineVersion -cne $ExpectedRetocCompatibilityVersion -or
-        $manifest.allowAdditionalContainers -ne $false) {
-        throw "Originals manifest is not a clean extraction for the current validated game: $($manifests[0].FullName)"
-    }
-
-    $extractionRoot = $manifests[0].Directory.FullName
-    $scriptObjects = Join-Path $extractionRoot 'scriptobjects.bin'
-    Resolve-RequiredPath -Path $scriptObjects -Label 'Stock script-object table' | Out-Null
-
-    return [pscustomobject]@{
-        Manifest = $manifests[0].FullName
-        ScriptObjects = $scriptObjects
-    }
-}
-
 $project = Resolve-RequiredPath -Path $project -Label 'Unreal project'
 $unrealEditor = Resolve-RequiredPath -Path $unrealEditor -Label 'UnrealEditor-Cmd'
 $engineVersionPath = Resolve-RequiredPath -Path $engineVersionPath -Label 'Unreal build version'
 $fingerprinter = Resolve-RequiredPath -Path $fingerprinter -Label 'Voyage fingerprint tool'
-$cookScript = Resolve-RequiredPath -Path $cookScript -Label 'StableGyro cook script'
-$prepareScript = Resolve-RequiredPath -Path $prepareScript -Label 'StableGyro original preparer'
-$packageScript = Resolve-RequiredPath -Path $packageScript -Label 'StableGyro package builder'
 $settingsDefaults = Resolve-RequiredPath -Path $settingsDefaults -Label 'StableGyro canonical settings INI'
 $releaseManifestBuilder = Resolve-RequiredPath -Path $releaseManifestBuilder -Label 'Voyage release manifest builder'
 $releaseInstaller = Resolve-RequiredPath -Path $releaseInstaller -Label 'Voyage release installer'
@@ -152,7 +90,8 @@ if ($actualEngineVersion -cne $expectedEditorEngineVersion) {
 
 $sourceStatus = @(& git -C $repoRoot status --porcelain -- `
     'mods/StableGyro' `
-    'tools/New-VoyageModSettings.ps1' `
+    'tools/VoyageModPipeline.psm1' `
+    'tools/UnrealCookSupport' `
     'tools/VoyageModSettings' `
     ':(exclude)mods/StableGyro/Slideshow')
 if ($LASTEXITCODE -ne 0) {
@@ -162,13 +101,11 @@ if ($sourceStatus.Count -gt 0 -and -not $AllowDirtySource) {
     throw 'StableGyro source is dirty. Pass -AllowDirtySource for an intentional development candidate.'
 }
 $releaseRoot = New-VoyageModRun -ModRoot $modRoot -OutputRoot $OutputRoot
-$logs = Join-Path $releaseRoot 'logs'
-New-Item -ItemType Directory -Path $logs | Out-Null
 
 $totalStopwatch = [Diagnostics.Stopwatch]::StartNew()
 $timings = [ordered]@{}
 
-Write-Host '1/5 Validating game fingerprint'
+Write-Host '1/4 Validating game fingerprint'
 $phase = [Diagnostics.Stopwatch]::StartNew()
 $fingerprintPath = Join-Path $releaseRoot 'game-fingerprint.json'
 & $fingerprinter -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
@@ -200,35 +137,7 @@ if (-not $itemPlan.refresh) {
         }
     }
 }
-$expectedStaticMeshObjectPaths = @(
-    '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.StableGyroMooringPlatePositiveY'
-)
-$expectedMeshPaths = @($expectedStaticMeshObjectPaths | ForEach-Object {
-    'Content/' + (($_ -split '\.')[0]).Substring('/Game/'.Length) + '.uasset'
-})
-foreach ($relativePath in $expectedMeshPaths) {
-    if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $relativePath) -PathType Leaf)) {
-        throw "Maintained mesh is missing: $relativePath. Restore it from Git or run Update-StableGyroMooringPlate.ps1."
-    }
-}
-
-Write-Host 'Reusing the maintained plate; source geometry is checked by the explicit updater'
-
-Write-Host '2/5 Preparing the stock script-object table and maintained project inputs'
-$phase.Restart()
-if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
-    $OriginalsRoot = Join-Path $releaseRoot 'originals'
-    & $prepareScript -GameRoot $GameRoot -Retoc $Retoc -OutputRoot $OriginalsRoot
-} else {
-    $OriginalsRoot = Assert-UnderIgnoredBuildStorage -Path $OriginalsRoot -Label 'OriginalsRoot'
-}
-$originalInputs = Get-CleanOriginalInputs `
-    -Root $OriginalsRoot `
-    -ExpectedBuild $expectedBuild `
-    -ExpectedRetocCompatibilityVersion $retocCompatibilityVersion
-$phase.Stop()
-$timings.Originals = $phase.Elapsed.TotalSeconds
-
+Write-Host '2/4 Preparing maintained project inputs'
 $phase.Restart()
 $project = & (Join-Path $modRoot 'New-StableGyroProjectCopy.ps1') -Destination (Join-Path $releaseRoot 'Project')
 $projectRoot = Split-Path -Parent $project
@@ -240,55 +149,34 @@ if ('Voyage' -notin $loadedModules -or 'VoyageItemPatchEditor' -notin $loadedMod
     throw 'Project support must provide Voyage and VoyageItemPatchEditor.'
 }
 $phase.Stop()
-$timings.ItemUpdate = $phase.Elapsed.TotalSeconds
+$timings.EditorSupport = $phase.Elapsed.TotalSeconds
 
-Write-Host '3/5 Cooking maintained project packages'
+Write-Host '3/4 Cooking and packaging the release inventory'
 $phase.Restart()
-$cookedRoot = Join-Path $releaseRoot 'cooked'
-& $cookScript `
-    -UnrealEditor $unrealEditor `
-    -Project $project `
-    -LocalDataCachePath (Join-Path $releaseRoot 'DerivedDataCache') `
-    -LogPath (Join-Path $logs 'cook.log') `
-    -OutputRoot $cookedRoot
-$stagedStaticMeshFiles = @()
-foreach ($objectPath in $expectedStaticMeshObjectPaths) {
-    $relativeBase = 'Content/' + (($objectPath -split '\.')[0]).Substring('/Game/'.Length)
-    foreach ($extension in @('.uasset','.uexp','.ubulk','.uptnl','.m.ubulk')) {
-        $relativePath = $relativeBase + $extension
-        $candidate = Join-Path $cookedRoot $relativePath
-        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-            $stagedStaticMeshFiles += [ordered]@{path=$relativePath;length=(Get-Item -LiteralPath $candidate).Length}
-        } elseif ($extension -in @('.uasset','.uexp')) {
-            throw "Missing project-cooked mesh companion: $candidate"
-        }
-    }
-}
-$staticMeshStagingReportPath = Join-Path $releaseRoot 'static-mesh-staging.json'
-([ordered]@{ files = $stagedStaticMeshFiles }) | ConvertTo-Json -Depth 5 |
-    Set-Content -LiteralPath $staticMeshStagingReportPath -Encoding utf8
+$packages = @(
+    '/Game/Data/Assets/Modules/DA_Item_Module_GyroCopter',
+    '/Game/Mods/StableGyro/ModActor',
+    '/Game/Mods/StableGyro/PitchInputActor',
+    '/Game/Mods/StableGyro/Settings/BP_IniFileParser',
+    '/Game/Mods/StableGyro/IAV_GyroPitchReset',
+    '/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroCompassHUD',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroCameraCompass',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay',
+    '/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard',
+    '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY'
+)
+# The compass inherits TickFrequency through partial native editor mirrors.
+$taggedPackages = @('/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay')
+$cook = Invoke-VoyageModCook -ModRoot $modRoot -ProjectFile $project -EngineRoot $EngineRoot `
+    -OutputRoot $releaseRoot -Packages $packages -TaggedPackages $taggedPackages `
+    -ParserVersion $retocCompatibilityVersion -GameRoot $GameRoot -Retoc $Retoc `
+    -ContainerName $containerName -AdditionalCookArguments @('-LocalDataCachePath=' + (Join-Path $releaseRoot 'DerivedDataCache'))
+$containerUtoc = $cook.container
+$containerFiles = Split-Path -Parent $containerUtoc
 $phase.Stop()
-$timings.Cook = $phase.Elapsed.TotalSeconds
-
-Write-Host '4/5 Building and verifying the IoStore container'
-$phase.Restart()
-$containerRoot = Join-Path $releaseRoot 'container'
-if (@($originalInputs).Count -ne 1) {
-    throw "Expected one clean-original input record; found $(@($originalInputs).Count)."
-}
-$packageArguments = @{
-    CookedRoot = [string]$cookedRoot
-    ScriptObjects = [string]$originalInputs.ScriptObjects
-    Retoc = [string]$Retoc
-    OutputRoot = [string]$containerRoot
-    ActualSteamBuildId = $expectedBuild
-}
-& $packageScript @packageArguments
-$containerFiles = Join-Path $containerRoot 'package'
-$containerUtoc = Join-Path $containerFiles ($containerName + '.utoc')
-$phase.Stop()
-$timings.Package = $phase.Elapsed.TotalSeconds
-Write-Host '5/5 Creating the player-facing archive'
+$timings.CookAndPackage = $phase.Elapsed.TotalSeconds
+Write-Host '4/4 Creating the player-facing archive'
 $phase.Restart()
 $payloadRoot = Join-Path $releaseRoot "payload\StableGyro-$Version"
 New-Item -ItemType Directory -Path $payloadRoot -Force | Out-Null
@@ -308,7 +196,7 @@ $commonReleaseManifestPath = Join-Path $releaseRoot 'common-release-manifest.jso
     -ModVersion $candidateModVersion `
     -Container $containerUtoc `
     -Archive $archivePath `
-    -SourcePath $modRoot `
+    -SourcePath @($modRoot,(Join-Path $repoRoot 'tools/VoyageModPipeline.psm1'),(Join-Path $repoRoot 'tools/UnrealCookSupport')) `
     -GameRoot $GameRoot `
     -OutputPath $commonReleaseManifestPath `
     -AllowDirtySource:$AllowDirtySource | Out-Null
@@ -346,8 +234,6 @@ $payloadEvidence = @(
             }
         }
 )
-$originalsManifestPath = Join-Path $releaseRoot 'originals-extraction-manifest.json'
-Copy-Item -LiteralPath $originalInputs.Manifest -Destination $originalsManifestPath
 $manifest = [ordered]@{
     schemaVersion = 2
     mod = 'StableGyro'
@@ -363,9 +249,6 @@ $manifest = [ordered]@{
     itemRefresh = $itemPlan
     staticMeshes = [ordered]@{
         refresh = $meshPlan
-        stagingReport = [ordered]@{
-            path = $staticMeshStagingReportPath
-        }
     }
     commonReleaseManifest = [ordered]@{
         path = $commonReleaseManifestPath
@@ -377,7 +260,8 @@ $manifest = [ordered]@{
         steamBuildId = [string]$fingerprint.steam.buildId
     }
     ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
-    originalsManifest = $originalsManifestPath
+    containerValidation = $cook.validation
+    scriptObjects = $cook.scriptObjects
     installed = $installed
     settingsInstallation = $settingsInstallation
     payload = $payloadEvidence
@@ -400,12 +284,9 @@ if ($installed) {
     Write-Host 'The prepared container was backed up, installed, and read back successfully.'
 }
 
-foreach ($scratch in @('Project','DerivedDataCache','cooked','originals','payload','editor-support','container/stage')) {
+foreach ($scratch in @('Project','DerivedDataCache','payload','editor-support','stage')) {
     $path = Join-Path $releaseRoot $scratch
     if (Test-Path -LiteralPath $path) { Remove-VoyageModScratch -ModRoot $modRoot -RunRoot $releaseRoot -Path $path }
-}
-if (-not (Test-Path -LiteralPath $originalsManifestPath -PathType Leaf)) {
-    throw "Required extraction evidence missing after cleanup: $originalsManifestPath"
 }
 [pscustomobject]@{
     status = 'built'

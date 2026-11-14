@@ -11,7 +11,7 @@ declaration live under `Project/EditorSupport/` and `Project/EditorSupport.json`
 
 `Assets/StableGyro.ini` owns the distributed configuration and comments;
 `Settings/StableGyro.settings.json` owns bindings, fallbacks and ranges.
-`Build/` contains internal cook/package checks and source-state records.
+`Build/` contains explicit source-update operations and source-state records.
 Its scripts are stages used by the public commands below.
 Runtime and editor-only package ownership is defined by
 [architecture](ARCHITECTURE.md#release-serialization) and
@@ -48,28 +48,29 @@ Omit `-AllowDirtySource` for clean source. Optional `-OutputRoot` selects a fres
 run below `Tmp/StableGyro/`; `-GameRoot`, `-EngineRoot` and `-Retoc` override local
 installations. `-IgnorePinnedGameVersion` permits the shared pin override without
 bypassing mapping, source-readiness or serialization checks. Candidate numbering
-comes from `version.txt`. `-OriginalsRoot` may reuse a clean current-build
-extraction with its manifest.
+comes from `version.txt`.
 
 The producer checks source readiness and the installed game build, then
 prepares native support and cooks a disposable project copy. It does not refresh
 or write maintained assets. If an item's or mesh's recorded source build differs
 from the installed build, stop and ask whether to refresh those inputs; do not
 run an updater automatically. Item recipe changes also require an explicit update.
-The local cook adapter preserves the stock override
-inventory and the separate tagged compass-display cook required by
-[release serialization](ARCHITECTURE.md#release-serialization); the ordinary
-shared additive cook profile does not cover those contracts.
+The producer supplies one package inventory to the
+[shared cook and container stages](../../tools/mod-setup.md#cook-and-container-stages).
+The compass display selects tagged serialization for the reason recorded in
+[release serialization](ARCHITECTURE.md#release-serialization); the other packages
+use unversioned properties. No local cook or container implementation is needed.
 
 The result contains `status: built`, `archivePath`, `releaseManifestPath` and
 `validationSummaryPath`. Pass the returned release manifest to the installer;
 the detailed validation summary is not an installer input. Successful builds
 remove working-project, cook, extraction and staging scratch while keeping the
-archive, container and validation evidence, including a separate copy of the
-original extraction manifest. Failed runs retain diagnostics.
+archive, container and validation evidence, including the metadata extraction
+report. Failed runs retain diagnostics.
 Build-only work can run while Voyage is running; installation requires it closed.
-The stock extraction supplies `scriptobjects.bin` for IoStore packaging; routine
-builds do not repeat the updater's comparison of item data against stock.
+The shared container stage obtains only `scriptobjects.bin` from the installed
+game's global metadata. Routine builds neither extract the stock item nor repeat
+the updater's comparison of item data against stock.
 
 ## Source updates
 
