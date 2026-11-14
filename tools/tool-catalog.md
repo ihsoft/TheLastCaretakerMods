@@ -46,7 +46,7 @@ failure handling.
 | Retrieve one asset JSON or package inventory | `Get-VoyageAssetJson.ps1` | [Asset inspection](asset-inspection.md) |
 | Extract one cooked package | `Extract-VoyagePackage.ps1` | [Asset inspection](asset-inspection.md) |
 | Export a stock model | `Export-VoyageModelGlb.ps1` | [Model export](model-export.md) |
-| Build editor or cooked StaticMesh assets from authored GLB meshes | `New-VoyageStaticMeshAssets.ps1` | [StaticMesh tools](static-mesh-assets.md) |
+| Import GLB meshes into a project or emit editor/cooked StaticMesh packages | `New-VoyageStaticMeshAssets.ps1` | [StaticMesh tools](static-mesh-assets.md) |
 | Inspect or validate cooked StaticMesh assets | `Test-VoyageStaticMesh.ps1` | [StaticMesh tools](static-mesh-assets.md) |
 | Export stock material samples | `Export-VoyageMaterialsGlb.ps1` | [Material export](material-export.md) |
 | Render material previews | `Export-VoyageMaterialPreview.ps1` | [Material export](material-export.md) |

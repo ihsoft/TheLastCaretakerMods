@@ -22,6 +22,8 @@ namespace
 {
 constexpr TCHAR ManifestArgument[] = TEXT("BuildManifest=");
 constexpr TCHAR SummaryArgument[] = TEXT("OutputSummary=");
+constexpr TCHAR VerifyOnlyArgument[] = TEXT("VerifyOnly");
+constexpr TCHAR ContentRootArgument[] = TEXT("ContentRoot=");
 
 namespace JsonField
 {
@@ -118,6 +120,7 @@ constexpr TCHAR BuiltTriangleAssertion[] = TEXT("built-triangle-assertion");
 constexpr TCHAR NaniteBuild[] = TEXT("nanite-build");
 constexpr TCHAR RayTracingBuild[] = TEXT("ray-tracing-build");
 constexpr TCHAR SavePackage[] = TEXT("save-package");
+constexpr TCHAR Reopen[] = TEXT("reopen");
 }
 
 constexpr TCHAR ObjectPathSeparator[] = TEXT(".");
@@ -371,6 +374,66 @@ int32 UBuildVoyageStaticMeshesCommandlet::Main(const FString& Params)
     {
         WriteJson(SummaryFile, NewFailure(FailureCode::ManifestAssets, TEXT("Normalized build manifest has no assets")));
         return 1;
+    }
+
+    // A fresh editor process opens the saved packages, without importing or cooking.
+    // Mount only the chosen project's Content; the host supplies the native mesh classes.
+    if (FParse::Param(*Params, VerifyOnlyArgument))
+    {
+        FString ContentRoot;
+        if (!FParse::Value(*Params, ContentRootArgument, ContentRoot) ||
+            !IFileManager::Get().DirectoryExists(*ContentRoot))
+        {
+            WriteJson(SummaryFile, NewFailure(FailureCode::Reopen, TEXT("ContentRoot directory is missing")));
+            return 1;
+        }
+        FPaths::NormalizeDirectoryName(ContentRoot);
+        ContentRoot += TEXT("/");
+        FPackageName::RegisterMountPoint(GamePackagePrefix, ContentRoot);
+        for (const TSharedPtr<FJsonValue>& Value : *Assets)
+        {
+            const TSharedPtr<FJsonObject> Asset = Value->AsObject();
+            const FString Id = Asset->GetStringField(JsonField::Id);
+            const FString ObjectPath = Asset->GetStringField(JsonField::PackagePath) +
+                ObjectPathSeparator + Asset->GetStringField(JsonField::ObjectName);
+            UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *ObjectPath);
+            if (!Mesh || !Mesh->GetMeshDescription(0))
+            {
+                WriteJson(SummaryFile, NewFailure(FailureCode::Reopen,
+                    TEXT("Saved StaticMesh or its source MeshDescription could not be loaded"), Id));
+                return 1;
+            }
+            for (const FStaticMaterial& Material : Mesh->GetStaticMaterials())
+            {
+                if (!Material.MaterialInterface)
+                {
+                    WriteJson(SummaryFile, NewFailure(FailureCode::Reopen,
+                        TEXT("Saved StaticMesh has an unresolved material"), Id));
+                    return 1;
+                }
+            }
+            if (Asset->GetStringField(JsonField::MaterialMode) == JsonValue::ExternalReferences)
+            {
+                for (const TSharedPtr<FJsonValue>& BindingValue : Asset->GetArrayField(JsonField::MaterialBindings))
+                {
+                    const TSharedPtr<FJsonObject> Binding = BindingValue->AsObject();
+                    const FString Slot = Binding->GetStringField(JsonField::Slot);
+                    const FString ExpectedPath = Binding->GetStringField(JsonField::ObjectPath);
+                    const FStaticMaterial* Material = Mesh->GetStaticMaterials().FindByPredicate(
+                        [&Slot](const FStaticMaterial& Entry) { return Entry.MaterialSlotName.ToString() == Slot; });
+                    if (!Material || !Material->MaterialInterface || Material->MaterialInterface->GetPathName() != ExpectedPath)
+                    {
+                        WriteJson(SummaryFile, NewFailure(FailureCode::Reopen,
+                            TEXT("Saved mesh material binding does not resolve to the requested object"), Id));
+                        return 1;
+                    }
+                }
+            }
+        }
+        TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(JsonField::Status, JsonValue::Passed);
+        Result->SetNumberField(JsonField::AssetCount, Assets->Num());
+        return WriteJson(SummaryFile, Result) ? 0 : 1;
     }
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;

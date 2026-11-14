@@ -68,6 +68,7 @@ $files = @(Get-ChildItem -LiteralPath $candidate -File -Recurse | ForEach-Object
 })
 $manifest = [ordered]@{
     schemaVersion = 2
+    supportsPackageReopen = $true
     kind = 'Voyage canonical StaticMesh builder'
     engineVersion = '5.8'
     engine = $inputs.Engine

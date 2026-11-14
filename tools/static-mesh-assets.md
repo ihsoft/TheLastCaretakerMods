@@ -8,12 +8,12 @@ builder.
 | Task | Public entry point | Result |
 | --- | --- | --- |
 | Import, build, and cook authored GLB meshes | `New-VoyageStaticMeshAssets.ps1` | Loose cooked packages and a build manifest |
-| Build complete editor mesh packages from authored GLB meshes | `New-VoyageStaticMeshAssets.ps1 -OutputKind Uncooked` | Selected `.uasset` packages and a build manifest |
+| Import editor meshes, optionally into a project | `New-VoyageStaticMeshAssets.ps1 -OutputKind Uncooked [-ProjectFile ...]` | Selected `.uasset` packages, reopen result and a build manifest |
 | Inspect cooked mesh data and evaluate explicit criteria | `Test-VoyageStaticMesh.ps1` | `inspection.json` and `validation.json` |
 
 Use [model export](model-export.md) instead when the desired result is an
 editable GLB representation of a stock asset. Neither StaticMesh tool assembles
-a mod container, installs files, or proves runtime rendering.
+a mod container or proves runtime rendering.
 
 ## Build StaticMesh assets
 
@@ -41,8 +41,8 @@ outside the restricted sandbox. Put a mod's selected output below its own
 `Tmp/<Mod>/` directory:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File tools\New-VoyageStaticMeshAssets.ps1 `
+python -B tools/unreal_coordination.py --operation 'Import meshes' -- `
+  powershell.exe -File tools/New-VoyageStaticMeshAssets.ps1 `
   -Manifest 'Tmp\Example\static-mesh-request.json' `
   -OutputRoot 'Tmp\Example\static-mesh-assets'
 ```
@@ -86,19 +86,34 @@ The same import, Nanite, fallback, ray-tracing and material-binding controls
 apply. Only the requested mesh packages are emitted; temporary material stubs
 and other imported dependencies are excluded.
 
-The target project must supply referenced materials or suitable editor stubs.
-Bindings preserve material identity, not shader appearance. The producer does
-not install or merge assets into that project. A consumer that refreshes
-maintained assets owns complete package replacement at the declared paths,
-backup/recovery, and reopening to check existing references. It must keep
-unrelated project assets intact. Each tool call requires a fresh `OutputRoot`;
-an existing output directory is rejected rather than updated.
+Add `-ProjectFile '<project>/Voyage.uproject'` to install the selected packages
+into that project's `Content/` directory. This option requires `Uncooked`.
+The target must supply referenced materials or suitable editor stubs; bindings
+preserve material identity, not shader appearance. Only selected mesh packages
+are replaced. Existing destination companions or linked project paths are
+rejected. The project must be separate from the fresh output/evidence directories.
 
-Successful generation establishes the standalone editor packages, not their
-behavior after installation or cooking in another project. The target project's
-render settings affect cooked Nanite, fallback and ray-tracing data. Validate
-the final cooked representations using the consumer's explicit criteria; see
-[StaticMesh cooking and validation](../docs/static-mesh-cooking-knowledge.md).
+The producer checks for concurrent edits before replacing destination files and
+keeps their previous bytes under its diagnostic directory while it works. A
+failure leaves that directory and `project-backup/` available for inspection;
+`absent-files.txt` identifies new destination paths. Review current edits before
+restoring those backups or removing partially created files. Successful runs
+remove this scratch. Complete replacement does not merge previous LOD, collision
+or socket data.
+
+In a fresh Unreal process, the private host reopens each saved `StaticMesh`,
+checks that its source mesh description loads and that material slots resolve.
+With `ProjectFile`, it mounts the target project's Content and resolves its
+materials. Without it, the check uses the private host and generated material
+stubs. This does not start the target project's gameplay modules or configuration.
+The result is recorded in `build-result.json`; it does not compare vertices or
+triangles, establish visual fidelity, or prove cooked/runtime behavior.
+
+For a maintained mod, commit the imported editor package and let the ordinary
+project build cook it; GLB import is a separate authoring or source-refresh step.
+When investigating rendering or changing representation settings, consult
+[StaticMesh cooking and validation](../docs/static-mesh-cooking-knowledge.md)
+for appropriate evidence. Such investigation is not a mandatory per-build check.
 
 ## Inspect or validate a cooked StaticMesh
 

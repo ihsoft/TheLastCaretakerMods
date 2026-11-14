@@ -40,6 +40,9 @@ if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     throw "Canonical StaticMesh builder is missing. $publishHint"
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+if (-not $manifest.PSObject.Properties['supportsPackageReopen'] -or -not $manifest.supportsPackageReopen) {
+    throw "Canonical StaticMesh builder lacks package reopen support. $publishHint"
+}
 if ($manifest.schemaVersion -notin @(1, 2) -or
     $manifest.kind -cne 'Voyage canonical StaticMesh builder' -or
     $manifest.engineVersion -cne '5.8' -or

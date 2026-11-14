@@ -1,7 +1,7 @@
 # PUBLIC TOOL: imports one or more GLB meshes through Unreal's native StaticMesh
 # pipeline and builds optional Nanite and ray-tracing data. By default it cooks
 # the requested /Game packages; Uncooked returns editor mesh packages instead.
-# It never installs into a project or assembles a mod container.
+# Uncooked can also install into a selected project. It never assembles a mod container.
 
 <#
 .SYNOPSIS
@@ -13,7 +13,8 @@ below this repository's Tmp directory. Relative source paths are resolved from
 the manifest directory. Only /Game destinations are supported in schema v1.
 OutputKind defaults to Cooked. Uncooked skips cook and emits only selected
 editor mesh packages; referenced materials must be supplied by the target
-project. This command does not install or validate a replacement in that project.
+project. With ProjectFile, installs these packages into its Content directory
+and reopens them through the private Unreal host, resolving project materials.
 
 .EXAMPLE
 .\tools\New-VoyageStaticMeshAssets.ps1 -ShowSchema
@@ -31,6 +32,7 @@ param(
     [Parameter(Mandatory=$true, ParameterSetName='Build')][string]$Manifest,
     [Parameter(Mandatory=$true, ParameterSetName='Build')][string]$OutputRoot,
     [Parameter(ParameterSetName='Build')][ValidateSet('Cooked','Uncooked')][string]$OutputKind = 'Cooked',
+    [Parameter(ParameterSetName='Build')][string]$ProjectFile,
     [Parameter(ParameterSetName='Build')][string]$EvidenceRoot,
     [Parameter(ParameterSetName='Build')][string]$EngineRoot = 'K:\Epic Games\UE_5.8\Engine',
     [Parameter(Mandatory=$true, ParameterSetName='Schema')]
@@ -134,6 +136,19 @@ function Assert-UnderTmp([string]$Path, [string]$Label) {
     }
     $full
 }
+function Resolve-ProjectAssetPath([string]$Root, [string]$Relative) {
+    $full = [IO.Path]::GetFullPath((Join-Path $Root $Relative))
+    if (-not $full.StartsWith($Root.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Asset path escaped the project: $full"
+    }
+    for ($current = $full; $current; $current = Split-Path -Parent $current) {
+        if ((Test-Path -LiteralPath $current) -and
+            ((Get-Item -LiteralPath $current -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "Linked project paths are unsupported: $current"
+        }
+    }
+    $full
+}
 
 if ($ShowExample) {
     [ordered]@{
@@ -168,7 +183,7 @@ if ($ShowSchema) {
         behavior=@(
             'Unknown fields fail before Unreal launches.',
             'Embedded GLB shader fidelity is unsupported and explicitly reported; materialMode controls replacement/reference behavior.',
-            'OutputKind defaults to Cooked; Uncooked emits selected editor mesh packages without cooking. Neither mode installs into a project.',
+            'OutputKind defaults to Cooked; Uncooked emits selected editor mesh packages without cooking. Optional ProjectFile installs and reopens them with project materials.',
             'Uncooked output excludes external material stubs and other imported dependencies; the target project must supply referenced materials.'
         )
     } | ConvertTo-Json -Depth 12
@@ -185,7 +200,7 @@ if (Test-Path -LiteralPath $evidence) { throw "EvidenceRoot already exists: $evi
 if (Test-Path -LiteralPath $output) { throw "OutputRoot already exists: $output" }
 $evidencePrefix = $evidence.TrimEnd('\') + '\'
 $outputPrefix = $output.TrimEnd('\') + '\'
-if ($output.StartsWith($evidencePrefix, [StringComparison]::OrdinalIgnoreCase) -or
+if ($output -ieq $evidence -or $output.StartsWith($evidencePrefix, [StringComparison]::OrdinalIgnoreCase) -or
     $evidence.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase)) {
     throw 'EvidenceRoot and OutputRoot must not contain one another.'
 }
@@ -193,6 +208,22 @@ $null = New-Item -ItemType Directory -Path $evidence
 $failurePath = Join-Path $evidence 'failure.json'
 
 try {
+    $targetRoot = $null
+    if ($ProjectFile) {
+        if ($OutputKind -ne 'Uncooked') { throw 'ProjectFile requires OutputKind Uncooked.' }
+        $ProjectFile = (Resolve-Path -LiteralPath $ProjectFile).Path
+        if ([IO.Path]::GetExtension($ProjectFile) -ine '.uproject' -or
+            -not (Test-Path -LiteralPath $ProjectFile -PathType Leaf)) { throw 'ProjectFile must be a .uproject file.' }
+        $targetRoot = Split-Path -Parent $ProjectFile
+        $null = Resolve-ProjectAssetPath $targetRoot (Split-Path -Leaf $ProjectFile)
+        foreach ($scratchRoot in @($evidence, $output)) {
+            if ($targetRoot -ieq $scratchRoot -or
+                $targetRoot.StartsWith($scratchRoot + '\', [StringComparison]::OrdinalIgnoreCase) -or
+                $scratchRoot.StartsWith($targetRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+                throw 'ProjectFile must be outside OutputRoot and EvidenceRoot, with neither scratch directory inside the project.'
+            }
+        }
+    }
     $manifestPath = (Resolve-Path -LiteralPath $Manifest).Path
     $manifestDirectory = Split-Path -Parent $manifestPath
     try { $request = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json }
@@ -203,7 +234,7 @@ try {
     }
     $assetValues = @(Require-Field $request 'assets' '$')
     if ($assetValues.Count -eq 0) { throw '$.assets must contain at least one entry.' }
-    $ids = @{}; $objectPaths = @{}; $sources = @(); $assets = @()
+    $ids = @{}; $objectPaths = @{}; $packagePaths = @{}; $sources = @(); $assets = @()
     for ($index=0; $index -lt $assetValues.Count; $index++) {
         $asset = $assetValues[$index]; $at = "$.assets[$index]"
         Assert-Fields $asset @('id','source','sourceMesh','destination','materialMode','materialBindings','import','nanite','rayTracing','assertions') $at
@@ -226,7 +257,9 @@ try {
         if ($objectName -cnotmatch '^[A-Za-z_][A-Za-z0-9_]*$') { throw "$at.destination.objectName is invalid." }
         $objectPath = "$packagePath.$objectName"
         if ($objectPaths.ContainsKey($objectPath)) { throw "Duplicate destination objectPath: $objectPath" }
+        if ($packagePaths.ContainsKey($packagePath)) { throw "Each mesh needs a separate destination package: $packagePath" }
         $objectPaths[$objectPath] = $true
+        $packagePaths[$packagePath] = $true
 
         $materialMode = [string](Optional-Field $asset 'materialMode' 'DefaultEngine')
         if ($materialMode -cnotin @('DefaultEngine','ExternalReferences')) { throw "$at.materialMode is unsupported." }
@@ -297,6 +330,31 @@ try {
         }
     }
 
+    $projectTargets = @()
+    if ($targetRoot) {
+        foreach ($asset in $assets) {
+            $relative = 'Content/' + $asset.packagePath.Substring('/Game/'.Length) + '.uasset'
+            $path = Resolve-ProjectAssetPath $targetRoot $relative
+            foreach ($extension in @('.uexp','.ubulk','.uptnl','.m.ubulk')) {
+                if (Test-Path -LiteralPath ([IO.Path]::ChangeExtension($path, $extension))) {
+                    throw "Destination has unsupported package companions: $path"
+                }
+            }
+            if (Test-Path -LiteralPath $path -PathType Container) { throw "Asset destination is a directory: $path" }
+            $before = $null
+            if (Test-Path -LiteralPath $path -PathType Leaf) { $before = [IO.File]::ReadAllBytes($path) }
+            $projectTargets += @{relative=$relative;path=$path;before=$before}
+            foreach ($binding in $asset.materialBindings) {
+                if ($binding.objectPath.StartsWith('/Game/')) {
+                    $materialRelative = 'Content/' + $binding.objectPath.Substring(6).Split('.')[0] + '.uasset'
+                    $materialPath = Resolve-ProjectAssetPath $targetRoot $materialRelative
+                    if (-not (Test-Path -LiteralPath $materialPath -PathType Leaf)) {
+                        throw "Referenced project material is missing: $materialPath"
+                    }
+                }
+            }
+        }
+    }
     $normalized = [ordered]@{schemaVersion=1;assets=$assets}
     $normalizedPath = Join-Path $evidence 'normalized-manifest.json'
     Write-Utf8Json $normalizedPath $normalized
@@ -343,11 +401,61 @@ try {
                 throw "Input changed during build: $($source.path)"
             }
         }
+        $contentRoot = Join-Path $executionHost 'Content'
+        if ($targetRoot) {
+            # Snapshot only the files this operation replaces; keep backups on failure.
+            $absentPaths = @()
+            foreach ($target in $projectTargets) {
+                $null = Resolve-ProjectAssetPath $targetRoot $target.relative
+                $current = $null
+                if (Test-Path -LiteralPath $target.path -PathType Leaf) { $current = [IO.File]::ReadAllBytes($target.path) }
+                if (($null -eq $current) -ne ($null -eq $target.before) -or
+                    ($null -ne $current -and [Convert]::ToBase64String($current) -cne [Convert]::ToBase64String($target.before))) {
+                    throw "Project asset changed during import: $($target.path)"
+                }
+                if ($null -ne $target.before) {
+                    $backup = Join-Path (Join-Path $evidence 'project-backup') $target.relative
+                    $null = New-Item -ItemType Directory -Path (Split-Path -Parent $backup) -Force
+                    [IO.File]::WriteAllBytes($backup, $target.before)
+                } else {
+                    $absentPaths += $target.relative
+                }
+            }
+            Write-Utf8Json (Join-Path $evidence 'project-installation.json') ([ordered]@{
+                projectFile=$ProjectFile;paths=@($projectTargets | ForEach-Object relative)
+            })
+            if ($absentPaths.Count -gt 0) {
+                $backupRoot = Join-Path $evidence 'project-backup'
+                $null = New-Item -ItemType Directory -Path $backupRoot -Force
+                [IO.File]::WriteAllLines((Join-Path $backupRoot 'absent-files.txt'), [string[]]$absentPaths)
+            }
+            foreach ($target in $projectTargets) {
+                $null = New-Item -ItemType Directory -Path (Split-Path -Parent $target.path) -Force
+                Copy-Item -LiteralPath (Join-Path $staged $target.relative) -Destination $target.path -Force
+            }
+            $contentRoot = Join-Path $targetRoot 'Content'
+        }
+        $reopenSummary = Join-Path $evidence 'reopen-summary.json'
+        $reopenLog = Join-Path $evidence 'reopen.log'
+        $reopenArgs = @(('"{0}"' -f $project),'-run=BuildVoyageStaticMeshes','-VerifyOnly',
+            '-unattended','-nop4','-nosplash','-nullrhi','-ddc=NoZenLocalFallback',
+            ('-LocalDataCachePath="{0}"' -f (Join-Path $evidence 'ddc')),
+            ('-BuildManifest="{0}"' -f $normalizedPath),('-ContentRoot="{0}"' -f $contentRoot),
+            ('-OutputSummary="{0}"' -f $reopenSummary),('-abslog="{0}"' -f $reopenLog))
+        $process = Start-Process -FilePath $editor -ArgumentList $reopenArgs -Wait -PassThru -WindowStyle Hidden
+        if ($process.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $reopenSummary)) {
+            throw "Saved mesh reopen failed. Log: $reopenLog. Project backups, if any: $evidence\project-backup"
+        }
+        $reopenResult = Get-Content -LiteralPath $reopenSummary -Raw | ConvertFrom-Json
+        if ($reopenResult.status -cne 'passed') { throw "Saved mesh reopen failed: $reopenSummary" }
         Write-Utf8Json (Join-Path $staged 'build-result.json') ([ordered]@{
             schemaVersion=1;status='passed';outputKind='Uncooked';engine=$builder.Engine
             normalizedRequest=$normalized;assets=$editorSummary.assets
+            projectFile=$ProjectFile;reopen=$reopenResult
             limitations=@('Selected editor mesh packages only; referenced materials must exist in the target project.',
-                'No target-project installation, reopen validation, cook, or runtime validation has been performed.')
+                'Reopened through the private Unreal host; target gameplay modules and configuration are not loaded.',
+                'Without ProjectFile, external material references resolve against generated host stubs.',
+                'No cook, geometry comparison, visual fidelity, or runtime validation has been performed.')
         })
         Write-Utf8Json (Join-Path $staged 'output-manifest.json') ([ordered]@{
             schemaVersion=1;kind='Voyage uncooked StaticMesh assets';files=$fileRecords
