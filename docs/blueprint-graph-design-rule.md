@@ -268,11 +268,12 @@ group related behavior-preserving edits into a coherent candidate. Do not requir
 a separate game launch for every extracted subgraph. Keep deliberate behavior
 changes explicit and separately assessable.
 
-Choose gameplay checks from the affected states and transitions, with expected
-outcomes: entry and exit, enable and disable, loss and recovery of eligibility,
-press and release, and interactions between affected controls. Graph names and
-node counts do not define adequate test coverage. One combined scenario may
-exercise several extractions; retain distinct checks where behavior differs.
+Apply the shared [test scope rule](testing-rule.md) when choosing retained
+coverage. Choose gameplay acceptance from the affected states and transitions,
+with expected outcomes: entry and exit, enable and disable, loss and recovery of
+eligibility, press and release, and interactions between affected controls.
+One combined scenario may exercise several extractions; retain distinct checks
+where behavior differs.
 
 Use the ordinary Apply and one-call Preview workflow. Compilation and export
 comparison establish editor consistency, not gameplay equivalence or a performance

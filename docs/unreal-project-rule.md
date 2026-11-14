@@ -71,6 +71,9 @@ stock stand-ins and test-only assets.
 Use one public entry point per operation. These names and common fields define
 the migration target, not an additional tool API already supplied by the
 skeleton generator. `BUILD.md` records the interface actually available.
+The [test scope rule](testing-rule.md) determines useful retained coverage;
+the `Test-<Mod>.ps1` convention does not require adding a suite where none is
+justified.
 
 | Entry point | Contract |
 | --- | --- |
@@ -222,10 +225,13 @@ have moved. Keep only necessary temporary compatibility adapters, with their
 remaining callers identified in the migration work; do not leave two canonical
 producers. Do not copy implementation from a named mod as the normative design.
 
-Validate at the changed boundary: copy and path rejection for a copy helper,
+Choose acceptance at the changed boundary under the
+[test scope rule](testing-rule.md): copy and path rejection for a copy helper,
 actual suites and report failures for a test runner, package inventory and
 archive/manifest checks for a producer, and preservation/recovery for an
-installer. Preserve editor-only exclusions and the source/working-copy boundary.
+installer. These are acceptance boundaries, not a requirement to create a
+permanent test for every migration or repeat shared-tool suites in each mod.
+Preserve editor-only exclusions and the source/working-copy boundary.
 Changing behavior, runtime identity or serialization also requires the applicable
 game acceptance. A filename-only change does not itself require a new game test.
 

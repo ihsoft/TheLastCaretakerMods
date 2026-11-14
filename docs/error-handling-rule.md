@@ -6,8 +6,12 @@
   applied state. A warning that accompanies broken behavior is not a substitute
   for a working implementation.
 - Required authored components, assets and identities are project contracts.
-  Validate the specific structural requirements during development and build
-  preparation instead of hiding violations behind silent fallback branches.
+  Establish the affected structural requirements when authoring or changing
+  them instead of hiding violations behind silent fallback branches. Keep
+  necessary input/output checks in the owning operation; this is not a mandate
+  for a separate test or a full structural audit on every build. The
+  [test scope rule](testing-rule.md) distinguishes those checks from regression
+  coverage.
   Successful compilation or packaging proves only the checks actually performed;
   it does not establish every structural requirement. When removing a guard in
   reliance on such a contract, identify the evidence that establishes it.

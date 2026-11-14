@@ -52,7 +52,9 @@ routine agent accounting. A short decision is sufficient for a small change.
 Ask whether repeated manual work, format omissions, ambiguous diagnostics or
 misleading previews belong in the shared tool. Prefer one bounded shared
 capability over per-mod orchestration. A tool extension still needs an identified
-consumer, a preservation/rejection contract and tests at the affected boundary.
+consumer, a preservation/rejection contract and acceptance at the affected
+boundary. Use the [test scope rule](testing-rule.md) to decide which checks
+deserve retained regression coverage.
 Do not generalize a one-off workaround into a framework or expand supported
 state merely by disabling validation.
 

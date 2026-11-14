@@ -157,8 +157,9 @@ and test failure evidence. Installation changes use
 `-WithContentPluginDescriptor` when that payload is affected; it covers complete
 INI replacement and coupled rollback against a synthetic game directory.
 These checks launch no Unreal process and write no real installed game files.
-Then run the affected
-mods' public tests/builds for changes at those boundaries.
+Run a consumer's public test/build when the change affects its integration;
+do not repeat the shared suite in every mod. The
+[test scope rule](../docs/testing-rule.md) governs retained coverage and run scope.
 
 ## Runtime INI preparation
 

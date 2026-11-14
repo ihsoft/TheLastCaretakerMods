@@ -28,7 +28,10 @@ equivalence or preservation outside the supported envelope.
 
 ## Choose validation by the change
 
-Run focused existing checks first. Broaden to the affected consumers when shared
+Use the [test scope rule](../docs/testing-rule.md) to choose retained coverage.
+The table below routes affected changes to existing checks; it is not an
+unconditional full-suite checklist. Run focused existing checks first.
+Broaden to the affected consumers when shared
 comparison, representation or transaction behavior changes. Offline checks use
 synthetic fixtures and mocked engine work; they do not replace engine acceptance.
 Run Python checks with `python -B <test path>` and select an installed interpreter

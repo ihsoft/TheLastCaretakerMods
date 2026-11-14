@@ -1,5 +1,9 @@
 # Experiment and validation workflow
 
+For selecting retained automated tests and avoiding duplicate coverage, use
+the [test scope rule](testing-rule.md). The scenarios below establish game
+acceptance; they do not automatically become permanent regression suites.
+
 - Install all new DML mods' container files together directly in
   `Voyage/Content/Paks/LogicMods` so DML can discover them. A virtual actor path
   or a previously registered mod working elsewhere is not proof of fresh

@@ -40,6 +40,9 @@ do not load every document just because it is indexed here.
   tool use, DML installation, and validation levels.
 - [Game experiments](docs/game-experiment-rule.md): live-game safety and
   evidence needed before accepting behavior.
+- [Test scope](docs/testing-rule.md): decide which tests to retain or run,
+  distinguish operation validation from regression coverage, and avoid
+  duplicating shared-tool checks in mods.
 - [Error handling](docs/error-handling-rule.md): defined outcomes and recovery
   from failures in mods and tools.
 - [Repository hygiene](docs/repository-hygiene-rule.md): Git coordination,
