@@ -1,0 +1,15 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Description": "ElectrifiedBuildings DML sockets for building controls",
+  "Plugins": [
+    {
+      "Name": "BlueprintTextWorkspace",
+      "Enabled": true
+    },
+    {
+      "Name": "ElectrifiedBuildingsSupport",
+      "Enabled": true
+    }
+  ]
+}
