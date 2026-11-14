@@ -10,7 +10,7 @@
 #include "VoyageFabricatorComponent.generated.h"
 
 // Read-only queue shapes from the reviewed Steam 25191271 mapping. The game
-// owns these structs; this mirror exists only while compiling the probe graph.
+// owns these structs; this mirror supplies editor compilation contracts only.
 USTRUCT(BlueprintType)
 struct VOYAGE_API FVoyageFabricatorQueueItem
 {

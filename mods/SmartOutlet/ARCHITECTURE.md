@@ -36,8 +36,7 @@ Each controller stores its latch on the storage actor in namespaced `Tags`:
 `SmartOutlet.Latch.v1.<socket>.<mode>` means open;
 `SmartOutlet.LatchKnown.v1.<socket>.<mode>` distinguishes an explicit closed
 state from a missing record. Missing state starts open, then normal boundary
-checks apply immediately. Cleanup retains the tags. An older open-only encoding
-cannot distinguish closed from missing: an unmarked midrange port starts open.
+checks apply immediately. Cleanup retains the tags.
 Tags are per socket/mode; switching mode retires the previous mode's markers.
 
 `UnlockSaltWaterTank` makes the existing tank technology available at Tier 11,

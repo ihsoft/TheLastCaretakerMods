@@ -121,19 +121,14 @@ if ([string]$mapping.steamBuildId -cne $expectedBuild -or
 $phase.Stop()
 $timings.Fingerprint = $phase.Elapsed.TotalSeconds
 
-$meshPlan = Get-StableGyroMooringMeshPlan -StatePath $meshSourceStatePath `
+Assert-StableGyroMooringMeshSource -StatePath $meshSourceStatePath `
     -SteamBuildId $expectedBuild
-$itemPlan = Get-StableGyroItemRefreshPlan -StatePath $itemSourceStatePath `
+Assert-StableGyroItemSource -StatePath $itemSourceStatePath `
     -SteamBuildId $expectedBuild
-if ($itemPlan.refresh) {
-    throw "Maintained item inputs require review ($($itemPlan.reason)): source build $($itemPlan.sourceSteamBuildId), installed build $expectedBuild. Ask the user whether to run Build/Update-StableGyroItemAsset.ps1; no automatic refresh was performed."
-}
-if (-not $itemPlan.refresh) {
-    foreach ($relativePath in @('Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset',
-            'Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset')) {
-        if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $relativePath) -PathType Leaf)) {
-            throw "Maintained item asset is missing: $relativePath. Restore it from Git or run Build/Update-StableGyroItemAsset.ps1."
-        }
+foreach ($relativePath in @('Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset',
+        'Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $relativePath) -PathType Leaf)) {
+        throw "Maintained item asset is missing: $relativePath. Restore it from Git or run Build/Update-StableGyroItemAsset.ps1."
     }
 }
 Write-Host '2/4 Preparing maintained project inputs'
@@ -245,10 +240,6 @@ $manifest = [ordered]@{
     editorEngineVersion = $actualEngineVersion
     retocCompatibilityVersion = $retocCompatibilityVersion
     cookStorage = $cookStorage
-    itemRefresh = $itemPlan
-    staticMeshes = [ordered]@{
-        refresh = $meshPlan
-    }
     commonReleaseManifest = [ordered]@{
         path = $commonReleaseManifestPath
     }

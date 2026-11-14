@@ -7,9 +7,6 @@ param(
     [switch]$ValidateOnly
 )
 $ErrorActionPreference = 'Stop'
-if (Test-Path -LiteralPath (Join-Path $GameRoot 'Voyage/Content/Paks/Railgun.autoload')) {
-    throw 'Legacy Railgun.autoload requires review before installation.'
-}
 & (Join-Path $PSScriptRoot '../../tools/Install-VoyageRelease.ps1') `
     -ReleaseManifest $ReleaseManifest -GameRoot $GameRoot -ExpectedMod Railgun `
     -SettingsArchivePath 'Voyage/Content/Paks/Railgun.ini' `

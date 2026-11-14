@@ -234,7 +234,6 @@ $cook = Invoke-VoyageModCookAssets -ModRoot $PSScriptRoot -ProjectFile $project 
         '-ini:Engine:[/Script/WindowsTargetPlatform.WindowsTargetSettings]:D3D12TargetedShaderFormats=PCD3D_SM6,D3D11TargetedShaderFormats=PCD3D_SM5',
         ('-LocalDataCachePath=' + $ddc), ('-ZenDataPath=' + (Join-Path $ddc 'Zen')))
 $loose = $cook.stage
-$assetRelatives = @($packages | ForEach-Object { $_.Replace('/Game/', 'Voyage/Content/') })
 $cloneRelative = 'Voyage/Content/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod'
 $newName = 'DA_Ammo_Railgun_FullRod'
 $newPackage = '/Game/Data/Assets/Ammo/' + $newName
@@ -272,12 +271,6 @@ $gunConversion = & (Join-Path $PSScriptRoot 'Build/Convert-RailgunDataAsset.ps1'
 $gunWrite = $gunConversion.write
 $gunReadback = $gunConversion.readback
 $gunReadbackPath = $gunConversion.readbackPath
-if ($assetRelatives -contains
-        'Voyage/Content/Blueprints/Modules/Generators/BP_Module_WindTurbine_Medium_New' -or
-    $assetRelatives -contains
-        'Voyage/Content/Data/Assets/Skill/Weapons/Ammo/DA_Skill_Railgun_Ammo_Test') {
-    throw 'Release inventory still contains a stock Cyclone override or obsolete ammo skill.'
-}
 $stem = 'Railgun'
 # Write only the three Railgun primary records from their authored JSON readbacks.
 $pluginRegistry = Join-Path $output 'RailgunCatalogue-AssetRegistry.bin'

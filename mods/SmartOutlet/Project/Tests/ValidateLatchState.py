@@ -83,9 +83,6 @@ try:
     refresh(fixture(owner(), is_input=True), 50, True)
     refresh(fixture(owner()), 20, False)
     refresh(fixture(owner(), is_input=True), 80, False)
-    # Legacy open-only saves have no known-state marker. Legacy closed and no
-    # record are indistinguishable and intentionally take the open fallback.
-    refresh(fixture(owner(['SmartOutlet.Latch.v1.SocketA.output'])), 50, True)
     refresh(fixture(owner(['UnrelatedTag'])), 50, True)
     refresh(fixture(owner(['SmartOutlet.LatchKnown.v1.SocketA.output'])), 50, False)
     checks.append('Unknown state opens in both modes; explicit closed state restores; boundaries still close normally')

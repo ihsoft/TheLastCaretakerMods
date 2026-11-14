@@ -1,6 +1,6 @@
 Set-StrictMode -Version Latest
 
-function Get-StableGyroMooringMeshPlan {
+function Assert-StableGyroMooringMeshSource {
     param(
         [Parameter(Mandatory = $true)] [string]$StatePath,
         [Parameter(Mandatory = $true)] [ValidatePattern('^[0-9]+$')] [string]$SteamBuildId
@@ -17,12 +17,6 @@ function Get-StableGyroMooringMeshPlan {
         }
     } catch {
         throw "Cannot reuse the maintained mooring plate: $($_.Exception.Message) Ask the user whether to run Build/Update-StableGyroMooringPlate.ps1; no automatic refresh was performed."
-    }
-
-    return [pscustomobject]@{
-        refresh = $false
-        reason = 'same-game-build'
-        steamBuildId = $SteamBuildId
     }
 }
 
@@ -41,4 +35,4 @@ function Set-StableGyroMooringMeshState {
     [IO.File]::WriteAllText($StatePath, $json, (New-Object Text.UTF8Encoding($false)))
 }
 
-Export-ModuleMember -Function Get-StableGyroMooringMeshPlan, Set-StableGyroMooringMeshState
+Export-ModuleMember -Function Assert-StableGyroMooringMeshSource, Set-StableGyroMooringMeshState

@@ -74,8 +74,8 @@ FNode ReadValue(FProperty* Property, const void* Value, FString& Error, const vo
             Result->SetStringField(TEXT("nativeHistory"), History);
             return Result;
         }
-        // This migration supports Base histories only. Preserve the history-aware
-        // native representation as evidence, rather than inferring it from display.
+        // String-table text is handled above; the remaining supported form is
+        // Base text. Preserve its native identity rather than display text alone.
         if (!History.StartsWith(TEXT("NSLOCTEXT("))) { Error = TEXT("Unsupported text history: ") + History; return nullptr; }
         const auto Namespace = FTextInspector::GetNamespace(Text);
         const auto Key = FTextInspector::GetKey(Text);

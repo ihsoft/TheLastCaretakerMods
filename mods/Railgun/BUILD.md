@@ -127,8 +127,7 @@ lifecycle remains a separate acceptance boundary.
 [Install-Railgun.ps1](Install-Railgun.ps1) installs the supplied release manifest
 without rebuilding. The [shared installation operation](../../tools/release-installation.md#install-a-candidate-with-settings)
 replaces the complete INI from that candidate's ZIP together with the container
-and plugin descriptor. `-ValidateOnly` returns the read-only plan. A legacy
-`Railgun.autoload` blocks installation until that conflicting loader is reviewed.
+and plugin descriptor. `-ValidateOnly` returns the read-only plan.
 
 ```powershell
 python -B tools/run_powershell.py mods/Railgun/Install-Railgun.ps1 -ReleaseManifest '<returned releaseManifestPath>'

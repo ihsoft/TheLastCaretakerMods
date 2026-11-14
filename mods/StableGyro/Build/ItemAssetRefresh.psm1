@@ -1,6 +1,6 @@
 Set-StrictMode -Version Latest
 
-function Get-StableGyroItemRefreshPlan {
+function Assert-StableGyroItemSource {
     param(
         [Parameter(Mandatory = $true)] [string]$StatePath,
         [Parameter(Mandatory = $true)] [ValidatePattern('^[0-9]+$')] [string]$SteamBuildId
@@ -12,16 +12,11 @@ function Get-StableGyroItemRefreshPlan {
             [string]$state.steamBuildId -cnotmatch '^[0-9]+$') {
             throw 'Missing, invalid or incomplete item source state.'
         }
+        if ([string]$state.steamBuildId -cne $SteamBuildId) {
+            throw "Item source build $($state.steamBuildId) differs from installed build $SteamBuildId."
+        }
     } catch {
-        throw "Cannot reuse maintained item assets: $($_.Exception.Message) Restore their source state from Git or run Build/Update-StableGyroItemAsset.ps1."
-    }
-    $reason = if ([string]$state.steamBuildId -cne $SteamBuildId) { 'game-build-changed' }
-        else { 'same-game-build' }
-    return [pscustomobject]@{
-        refresh = $reason -cne 'same-game-build'
-        reason = $reason
-        steamBuildId = $SteamBuildId
-        sourceSteamBuildId = [string]$state.steamBuildId
+        throw "Cannot reuse maintained item assets: $($_.Exception.Message) Restore their source state from Git if damaged; ask the user whether to run Build/Update-StableGyroItemAsset.ps1 to refresh inputs. No automatic refresh was performed."
     }
 }
 
@@ -36,4 +31,4 @@ function Set-StableGyroItemSourceState {
     [IO.File]::WriteAllText($StatePath, $json, (New-Object Text.UTF8Encoding($false)))
 }
 
-Export-ModuleMember -Function Get-StableGyroItemRefreshPlan, Set-StableGyroItemSourceState
+Export-ModuleMember -Function Assert-StableGyroItemSource, Set-StableGyroItemSourceState
