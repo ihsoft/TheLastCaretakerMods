@@ -85,6 +85,114 @@ function Remove-VoyageModScratch {
     if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
 }
 
+function ConvertTo-ModRelativePath([string]$Path) {
+    $relative = $Path.Replace('\','/')
+    if ([string]::IsNullOrWhiteSpace($relative) -or $relative -match '[:*?]' -or
+        [IO.Path]::IsPathRooted($relative) -or @($relative.Split('/') | Where-Object { $_ -in @('','.','..') -or $_ -match '[. ]$' }).Count) {
+        throw "Expected a canonical relative file path: $Path"
+    }
+    $relative
+}
+
+function Resolve-ModSourceChild([string]$Root, [string]$Relative) {
+    $relativePath = ConvertTo-ModRelativePath $Relative
+    $path = Resolve-ModPath (Join-Path $Root $relativePath)
+    Assert-ModChild $path $Root
+    $path
+}
+
+function Get-ModFileSnapshot([string]$Root, [string[]]$Paths) {
+    $result = @{}
+    foreach ($path in $Paths) {
+        $key = ConvertTo-ModRelativePath $path
+        if ($result.ContainsKey($key)) { throw "Duplicate snapshot path: $path" }
+        $file = Resolve-ModSourceChild $Root $key
+        $result[$key] = $null
+        if (Test-Path -LiteralPath $file) { $result[$key] = [IO.File]::ReadAllBytes($file) }
+    }
+    return $result
+}
+
+function Get-VoyageModSourceSnapshot {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$ModRoot, [Parameter(Mandatory)][string[]]$Paths)
+    $context = Get-ModContext $ModRoot
+    Get-ModFileSnapshot $context.modRoot $Paths
+}
+
+function Assert-ModSourceSnapshot([string]$ModRoot, [hashtable]$Snapshot) {
+    foreach ($path in $Snapshot.Keys) {
+        $file = Resolve-ModSourceChild $ModRoot $path
+        $current = if (Test-Path -LiteralPath $file) { [Convert]::ToBase64String([IO.File]::ReadAllBytes($file)) } else { $null }
+        $before = if ($null -ne $Snapshot[$path]) { [Convert]::ToBase64String($Snapshot[$path]) } else { $null }
+        if ($current -cne $before) { throw "Concurrent source edit: $file" }
+    }
+}
+
+function Get-VoyageProjectContentSnapshot {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$ProjectRoot)
+    $root = Resolve-ModPath $ProjectRoot
+    $content = Resolve-ModSourceChild $root 'Content'
+    Assert-ModUnlinked $content -Recurse
+    $paths = @(Get-ChildItem -LiteralPath $content -Recurse -File -Force | ForEach-Object { $_.FullName.Substring($root.TrimEnd('\','/').Length + 1) })
+    Get-ModFileSnapshot $root $paths
+}
+
+function Assert-VoyageProjectContentUpdateScope {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$ProjectRoot, [Parameter(Mandatory)][hashtable]$Before, [Parameter(Mandatory)][string[]]$AllowedPaths)
+    $allowed = @($AllowedPaths | ForEach-Object { ConvertTo-ModRelativePath $_ })
+    $after = Get-VoyageProjectContentSnapshot -ProjectRoot $ProjectRoot
+    foreach ($path in @(@($Before.Keys) + @($after.Keys) | Sort-Object -Unique)) {
+        if ($path -in $allowed) { continue }
+        if (-not $Before.ContainsKey($path) -or -not $after.ContainsKey($path) -or
+            [Convert]::ToBase64String($Before[$path]) -cne [Convert]::ToBase64String($after[$path])) {
+            throw "Content update changed a file outside AllowedPaths: $path. Preserve $ProjectRoot and review the change before acceptance."
+        }
+    }
+}
+
+# Explicit authoring only. Callers validate outputs and order assets before source-state records.
+function Save-VoyageModSourceUpdate {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$ModRoot, [Parameter(Mandatory)][string]$RunRoot,
+        [Parameter(Mandatory)][string[]]$Paths, [Parameter(Mandatory)][hashtable]$Snapshot)
+    $context = Get-ModContext $ModRoot
+    $run = Resolve-ModPath $RunRoot
+    Assert-ModChild $run $context.owner
+    $accepted = @($Paths | ForEach-Object { ConvertTo-ModRelativePath $_ })
+    if (-not $accepted.Count -or @($accepted | Sort-Object -Unique).Count -ne $accepted.Count) { throw 'Expected a nonempty exact acceptance set.' }
+    Assert-ModSourceSnapshot $context.modRoot $Snapshot
+    foreach ($path in $accepted) {
+        if (-not $Snapshot.ContainsKey($path)) { throw "Acceptance path was not captured: $path" }
+        $null = Resolve-ModSourceChild $context.modRoot $path
+        if (-not (Test-Path -LiteralPath (Resolve-ModSourceChild $run $path) -PathType Leaf)) { throw "Updated source missing: $path" }
+    }
+    $backup = Resolve-ModSourceChild $run 'source-backup'
+    $null = New-Item -ItemType Directory -Path $backup
+    $absent = @()
+    foreach ($path in $accepted) {
+        if ($null -eq $Snapshot[$path]) { $absent += $path; continue }
+        $saved = Resolve-ModSourceChild $backup $path
+        $null = New-Item -ItemType Directory -Path (Split-Path -Parent $saved) -Force
+        [IO.File]::WriteAllBytes($saved, $Snapshot[$path])
+    }
+    [IO.File]::WriteAllLines((Join-Path $backup 'absent-files.txt'), [string[]]$absent)
+    Write-Host "Source backup: $backup"
+    try {
+        Assert-ModSourceSnapshot $context.modRoot $Snapshot
+        foreach ($path in $accepted) {
+            $target = Resolve-ModSourceChild $context.modRoot $path
+            $null = New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force
+            Copy-Item -LiteralPath (Resolve-ModSourceChild $run $path) -Destination $target -Force
+        }
+    } catch {
+        throw "Source copy failed; files may be partially updated. Restore affected paths from $backup or Git after reviewing current edits. Previously absent paths are listed in absent-files.txt. Preserve $run. Error: $_"
+    }
+    Remove-VoyageModScratch -ModRoot $context.modRoot -RunRoot $run -Path $backup
+}
+
 function Invoke-VoyageModEditorTest {
     [CmdletBinding()]
     param(
@@ -289,4 +397,4 @@ function Invoke-VoyageModCook {
         -Packages $Packages -ParserVersion $ParserVersion -GameRoot $GameRoot -ContainerName $ContainerName -Retoc $Retoc
 }
 
-Export-ModuleMember -Function New-VoyageModRun,New-VoyageModProjectCopy,Remove-VoyageModScratch,Invoke-VoyageModEditorTest,Invoke-VoyageModCookAssets,New-VoyageModContainer,Invoke-VoyageModCook
+Export-ModuleMember -Function Get-VoyageModSourceSnapshot,Save-VoyageModSourceUpdate,Get-VoyageProjectContentSnapshot,Assert-VoyageProjectContentUpdateScope,New-VoyageModRun,New-VoyageModProjectCopy,Remove-VoyageModScratch,Invoke-VoyageModEditorTest,Invoke-VoyageModCookAssets,New-VoyageModContainer,Invoke-VoyageModCook

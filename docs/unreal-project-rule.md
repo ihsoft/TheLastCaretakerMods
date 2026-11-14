@@ -108,9 +108,10 @@ creation and release installation. Find the supported entry point through the
 [tool index](../tools/tool-index.md).
 
 Use the [shared mod pipeline](../tools/mod-setup.md#shared-mod-pipeline) for
-working copies, run paths, editor-test orchestration, cook, container packaging
-and cleanup. Keep path containment, linked-path rejection, source selection and
-failure evidence there rather than in per-mod copies. Extend that shared owner
+working copies, run paths, editor-test orchestration, cook, container packaging,
+explicit source-update acceptance and cleanup. Keep path containment, linked-path
+rejection, source selection and failure evidence there rather than in per-mod
+copies. Extend that shared owner
 when a recurring mechanism is missing and has an established consumer; keep
 mod entry points thin. One mod-owned release inventory drives cook, staging and
 container verification. Select tagged versus unversioned cook as data for the

@@ -95,23 +95,16 @@ Both accept `-GameRoot`, `-EngineRoot`, `-OutputRoot` and
 `-IgnorePinnedGameVersion`. The plate updater additionally accepts `-BlenderPath`.
 Each works on a disposable copy, validates the updated inputs,
 rejects concurrent edits to its acceptance paths, and transfers only the owned
-asset/state pair after validation. Before the first source write, the operation
-copies previous files to `source-backup/` under its run, preserving paths relative
-to the mod. `absent-files.txt` lists acceptance paths that did not exist before.
-Assets are copied first, then the source-state record. Successful acceptance
-removes the backup. Review accepted source changes before building.
+assets and source-state record after validation, using the
+[shared source acceptance](../../tools/mod-setup.md#explicit-source-update-acceptance).
+That guide describes watched inputs, backup lifetime and recovery if copying
+fails. Assets are copied first, then the source-state record. Review accepted
+source changes before building.
 
 These are asset-generation workspaces: the item commandlet and mesh importer
 produce binary editor packages there. Only their validated source outputs are
 accepted into the maintained project. Ordinary build/test copies have no
 copy-back stage.
-
-If generation or validation fails before acceptance, maintained source is
-unchanged; inspect the retained logs and rerun with a fresh output directory.
-If source copying fails or is interrupted, preserve the run and restore affected
-paths from `source-backup/` or Git after reviewing current edits. Remove any
-partially created files listed in `absent-files.txt` when restoring the old state.
-There is no automatic recovery command or persistent project marker.
 
 ### Item source update
 

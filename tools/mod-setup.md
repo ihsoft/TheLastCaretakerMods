@@ -41,6 +41,10 @@ Reserve the
 | `New-VoyageModRun` | `-ModRoot`, optional `-OutputRoot` and `-Kind`; creates and returns a fresh run directory below `Tmp/<Mod>/`. |
 | `New-VoyageModProjectCopy` | `-ModRoot -Destination`; copies maintained inputs and returns the `.uproject` path without launching Unreal. |
 | `Remove-VoyageModScratch` | `-ModRoot -RunRoot -Path`; removes only an unlinked descendant of that mod's run, preserving the run root and its evidence. |
+| `Get-VoyageModSourceSnapshot` | `-ModRoot -Paths`; captures current file bytes or absence for mod-relative paths before generation. Returns an in-memory hashtable. |
+| `Save-VoyageModSourceUpdate` | `-ModRoot -RunRoot -Paths -Snapshot`; accepts selected validated files from matching paths under the run into maintained source, checking the snapshot first. |
+| `Get-VoyageProjectContentSnapshot` | `-ProjectRoot`; captures all files under `Content/`, keyed by project-relative path. |
+| `Assert-VoyageProjectContentUpdateScope` | `-ProjectRoot -Before -AllowedPaths`; rejects added, removed or changed content outside the supplied project-relative paths. |
 | `Invoke-VoyageModEditorTest` | `-ModRoot -EngineRoot`, optional `-OutputRoot`, `-ReportName`, `-ExpectedSuiteCount`, and a required `-Run` script block; prepares a copy, runs the supplied checks, requires a passing report and removes the project only on success. Returns `status`, `reportPath`, `evidence`, `bptWorkspace`. |
 | `Invoke-VoyageModCook` | Ordinary combined cook and packaging: `-ModRoot -ProjectFile -EngineRoot -OutputRoot -Packages -ParserVersion`. Optional `-TaggedPackages`, `-AdditionalCookArguments`, `-GameRoot`, `-ContainerName`, `-Retoc`. Returns `status`, `container`, `stage`, `validation`, `scriptObjects`. |
 | `Invoke-VoyageModCookAssets` | The same cook/staging stage without packaging: `-ModRoot -ProjectFile -EngineRoot -OutputRoot -Packages`, optional `-TaggedPackages` and `-AdditionalCookArguments`. Returns `stage`, `packages`, `taggedPackages`. Use when a documented serialization conversion must run before packaging. |
@@ -65,6 +69,40 @@ and writes the report at `reportPath`; a missing/failed report or mismatched
 required suite count fails the operation. Restore any environment variables
 introduced by the block in `finally`. Failed runs retain their project and
 diagnostics; inspect the reported run directory before retrying with fresh output.
+
+### Explicit source-update acceptance
+
+Use these operations when a generator or importer must produce editor assets in
+a disposable project. Ordinary build/test commands do not accept source changes.
+The mod owns the recipe, output validation and exact file list; shared acceptance
+does not establish asset correctness or synchronize BPT.
+
+Before generation, capture the acceptance paths with `Get-VoyageModSourceSnapshot`.
+Include any recipe files whose concurrent edits would invalidate the result;
+these can be watched without being copied back. Paths are relative to the mod;
+both slash styles are accepted, but rooted paths, traversal and aliases are not.
+After validating the generated outputs, call `Save-VoyageModSourceUpdate` with
+the original snapshot and an ordered subset of those paths: assets first,
+source-state records last. Each new file must exist at the same relative path
+under `RunRoot`, an unlinked descendant of `Tmp/<Mod>/`.
+
+When a generator can also modify dependencies, capture its working project's
+content before running it and call `Assert-VoyageProjectContentUpdateScope`
+afterward. `AllowedPaths` names the intended files relative to that project,
+including `Content/`. An unexpected change stops acceptance for review; it is
+not silently included or discarded. This check belongs to that update operation,
+not to every build.
+
+Acceptance rejects concurrent edits to all captured source paths. Before copying,
+it saves the selected previous files under `RunRoot/source-backup/`, preserving
+their mod-relative paths; `absent-files.txt` lists previously absent files.
+Success removes this backup. Generation or validation failure leaves maintained
+source unchanged. A copy failure or interruption can leave partial changes:
+preserve the run, review current edits and restore affected files from the backup
+or Git; remove partially created files listed as previously absent when restoring
+the old state. The copy is not atomic and does not lock out concurrent writers;
+there is no recovery journal or automatic rollback. Review accepted changes and
+synchronize affected BPT before building or committing.
 
 ### Cook and container stages
 

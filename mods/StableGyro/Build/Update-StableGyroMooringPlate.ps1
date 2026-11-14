@@ -15,7 +15,6 @@ Set-StrictMode -Version Latest
 $modRoot = Split-Path -Parent $PSScriptRoot
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $modRoot '../..'))
 Import-Module (Join-Path $repoRoot 'tools/VoyageModPipeline.psm1') -Force
-Import-Module (Join-Path $modRoot 'Build/SourceUpdate.psm1') -Force
 $releaseRoot = New-VoyageModRun -ModRoot $modRoot -OutputRoot $OutputRoot -Kind update-plate
 $project = & (Join-Path $modRoot 'New-StableGyroProjectCopy.ps1') -Destination (Join-Path $releaseRoot 'Project')
 function Resolve-RequiredPath {
@@ -43,7 +42,7 @@ $staticMeshBuilder = Join-Path $repoRoot 'tools/New-VoyageStaticMeshAssets.ps1'
 $mooringSplitter = Join-Path $modRoot 'Build/Split-MooringPlateGlb.py'
 $relativeMesh = 'Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.uasset'
 $acceptPaths = @(('Project/' + $relativeMesh), 'Build/MooringMeshes.source.json')
-$snapshot = Get-StableGyroSourceSnapshot -ModRoot $modRoot -Paths $acceptPaths
+$snapshot = Get-VoyageModSourceSnapshot -ModRoot $modRoot -Paths $acceptPaths
 $phase = [Diagnostics.Stopwatch]::StartNew()
 $timings = [ordered]@{}
 Write-Host 'Exporting and splitting the current stock mooring plate'
@@ -134,7 +133,7 @@ $phase.Stop()
 $timings.StaticMeshBuild = $phase.Elapsed.TotalSeconds
 
 Set-StableGyroMooringMeshState -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild -Status ready
-Save-StableGyroSourceUpdate -ModRoot $modRoot -RunRoot $releaseRoot -Paths $acceptPaths -Snapshot $snapshot
+Save-VoyageModSourceUpdate -ModRoot $modRoot -RunRoot $releaseRoot -Paths $acceptPaths -Snapshot $snapshot
 $result = [ordered]@{
     status = 'updated-and-validated'; steamBuildId = $expectedBuild
     mesh = (Join-Path $modRoot ('Project/' + $relativeMesh)); sourceState = (Join-Path $modRoot 'Build/MooringMeshes.source.json')
