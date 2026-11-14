@@ -1,11 +1,16 @@
 [CmdletBinding()]
 param([string]$OutputRoot = '', [switch]$Install,
-    [string]$EngineRoot = 'K:/Epic Games/UE_5.8',
+    [string]$EngineRoot = 'P:/UnrealEngine/UE_5.8',
     [string]$GameRoot = 'P:/SteamLibrary/steamapps/common/Voyage',
     [switch]$AllowDirtySource,
     [switch]$IgnorePinnedGameVersion,
     [string]$ArtifactVersion = '',
     [string]$CacheRoot = 'P:\UnrealCache\TheLastCaretakerMods\UE5.8')
+if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
+    Import-Module (Join-Path $PSScriptRoot '../../tools/unreal-coordination.psm1') -Force
+    Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation 'Build Railgun'
+    return
+}
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ($Install -and @(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
@@ -39,8 +44,6 @@ $project = & (Join-Path $PSScriptRoot 'New-RailgunProjectCopy.ps1') -Destination
 $projectRoot = Split-Path -Parent $project
 $bptWorkspace = Join-Path $repo ('Tmp/BlueprintText/Railgun-build-' + [Guid]::NewGuid().ToString('N'))
 $releaseStaging = Join-Path $output 'candidate'
-$boundedToolRoot = Join-Path $output 'bounded-tool-runs'
-$containerCheckRoot = Join-Path $output 'container-checks'
 $modInspectionRoot = Join-Path $output 'asset-inspections'
 $settingsSchema = Join-Path $PSScriptRoot 'Settings/Railgun.settings.json'
 $settingsDefaults = Join-Path $PSScriptRoot 'Assets/Railgun.ini'
@@ -54,6 +57,7 @@ $sourcePaths = @(
     'mods/Railgun',
     'tools/Get-VoyageAssetJson.ps1',
     'tools/VoyageModPipeline.psm1',
+    'tools/UnrealCookSupport',
     'tools/Get-VoyageBuildFingerprint.ps1',
     'tools/Get-VoyageMappings.ps1',
     'tools/Install-VoyageRelease.ps1',
@@ -228,53 +232,15 @@ if ($packages -cnotcontains $ammoPickupPackage -or
     $packages -ccontains $stockSfxSoundClassPackage) {
     throw 'Package set lost an owned-child/editor-only stock-reference boundary.'
 }
-$cookPackageManifest = Join-Path $output 'cook-packages.txt'
-$cookPackageManifestText = ($packages -join "`n") + "`n"
-[IO.File]::WriteAllText($cookPackageManifest, $cookPackageManifestText,
-    (New-Object System.Text.UTF8Encoding($false)))
-$cookPackageManifestSha1 = (Get-FileHash -LiteralPath $cookPackageManifest -Algorithm SHA1).Hash
-$cookPackageManifestEvidence = [ordered]@{
-    schemaVersion = 1
-    packageCount = $packages.Count
-    sha1 = $cookPackageManifestSha1
-    manifestPath = $cookPackageManifest
-}
-$cookPackageManifestEvidence | ConvertTo-Json -Depth 3 |
-    Set-Content -LiteralPath (Join-Path $output 'cook-packages.manifest.json') -Encoding UTF8
-# Keep new material shader code inline in owned packages. Do not change shared
-# project config or require a game-global ShaderArchive-Voyage library override.
-# Partial native mirrors serialize named property tags, never positional indices.
-$cookArguments = @($project,'-run=CookPackageManifest','-RunAsCookCommandlet',('-PackageManifest=' + $cookPackageManifest),('-PackageManifestCount=' + $packages.Count),('-PackageManifestSha1=' + $cookPackageManifestSha1),'-targetplatform=Windows','-SkipZenStore','-CookSinglePackageNoRefs','-ini:Game:[/Script/UnrealEd.ProjectPackagingSettings]:bShareMaterialShaderCode=False','-ini:Engine:[/Script/WindowsTargetPlatform.WindowsTargetSettings]:D3D12TargetedShaderFormats=PCD3D_SM6,D3D11TargetedShaderFormats=PCD3D_SM5','-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'cook-unreal.log')))
-if (($cookArguments -join ' ').Length -gt 4096) {
-    throw 'Cook launcher arguments unexpectedly exceed the bounded manifest-adapter contract.'
-}
-Invoke-NativeStage 'cook' $editor $cookArguments
-$retoc = Join-Path $repo '.tools/bin/retoc.exe'
-if (-not (Test-Path -LiteralPath $retoc -PathType Leaf)) {
-    throw 'Canonical retoc is missing.'
-}
-$loose = Join-Path $output 'loose'
+# Preserve named properties for the partial native mirrors and keep shader code
+# in the owned packages. The shared cooker owns manifest transport and staging.
+$cook = Invoke-VoyageModCookAssets -ModRoot $PSScriptRoot -ProjectFile $project -EngineRoot $EngineRoot `
+    -OutputRoot $output -Packages $packages -TaggedPackages $packages -AdditionalCookArguments @(
+        '-ini:Game:[/Script/UnrealEd.ProjectPackagingSettings]:bShareMaterialShaderCode=False',
+        '-ini:Engine:[/Script/WindowsTargetPlatform.WindowsTargetSettings]:D3D12TargetedShaderFormats=PCD3D_SM6,D3D11TargetedShaderFormats=PCD3D_SM5',
+        ('-LocalDataCachePath=' + $ddc), ('-ZenDataPath=' + (Join-Path $ddc 'Zen')))
+$loose = $cook.stage
 $assetRelatives = @($packages | ForEach-Object { $_.Replace('/Game/', 'Voyage/Content/') })
-$stockHintWidgetRelative =
-    $stockHintWidgetPackage.Replace('/Game/', 'Voyage/Content/')
-$stockSfxSoundClassRelative =
-    $stockSfxSoundClassPackage.Replace('/Game/', 'Voyage/Content/')
-if ($assetRelatives -ccontains $stockHintWidgetRelative -or
-    $assetRelatives -ccontains $stockSfxSoundClassRelative) {
-    throw 'Editor-only stock reference entered the loose release inventory.'
-}
-foreach ($assetRelative in $assetRelatives) {
-    $looseAsset = Join-Path $loose $assetRelative
-    $null = New-Item -ItemType Directory -Path (Split-Path -Parent $looseAsset) -Force
-    foreach ($extension in @('.uasset','.uexp')) {
-        $cooked = Join-Path (Join-Path $projectRoot 'Saved/Cooked/Windows') ($assetRelative + $extension)
-        Copy-Item -LiteralPath $cooked -Destination ($looseAsset + $extension)
-    }
-    foreach ($extension in @('.ubulk','.uptnl')) {
-        $cooked = Join-Path (Join-Path $projectRoot 'Saved/Cooked/Windows') ($assetRelative + $extension)
-        if (Test-Path -LiteralPath $cooked -PathType Leaf) { Copy-Item -LiteralPath $cooked -Destination ($looseAsset + $extension) }
-    }
-}
 $cloneRelative = 'Voyage/Content/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod'
 $newName = 'DA_Ammo_Railgun_FullRod'
 $newPackage = '/Game/Data/Assets/Ammo/' + $newName
@@ -367,41 +333,7 @@ if ($assetRelatives -contains
         'Voyage/Content/Data/Assets/Skill/Weapons/Ammo/DA_Skill_Railgun_Ammo_Test') {
     throw 'Release inventory still contains a stock Cyclone override or obsolete ammo skill.'
 }
-$globalUtoc = Join-Path $fingerprint.gameRoot 'Voyage/Content/Paks/global.utoc'
-$globalUcas = [IO.Path]::ChangeExtension($globalUtoc, '.ucas')
-if (-not (Test-Path -LiteralPath $globalUtoc -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $globalUcas -PathType Leaf)) {
-    throw 'Current-game global IoStore metadata is missing.'
-}
-$scriptObjectsInput = @($globalUtoc, $globalUcas)
-$scriptObjectsDirectory = Join-Path $output 'scriptobjects-only'
-$null = New-Item -ItemType Directory -Path $scriptObjectsDirectory
-$scriptObjectsRun = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
-    -Executable $retoc -Arguments @(
-        'to-legacy','--version','UE5_8','--no-assets','--no-shaders',
-        $globalUtoc,$scriptObjectsDirectory) -OutputRoot $boundedToolRoot `
-    -TimeoutSeconds 60 -MemoryLimitMB 1024
-$scriptObjectsFiles = @(Get-ChildItem -LiteralPath $scriptObjectsDirectory -File -Recurse)
-if ($scriptObjectsRun.status -cne 'passed' -or $scriptObjectsFiles.Count -ne 1 -or
-    $scriptObjectsFiles[0].Name -cne 'scriptobjects.bin') {
-    throw 'Metadata-only extraction did not produce exactly one scriptobjects.bin.'
-}
-Copy-Item -LiteralPath $scriptObjectsFiles[0].FullName `
-    -Destination (Join-Path $loose 'scriptobjects.bin')
-$null = New-Item -ItemType Directory -Path $releaseStaging
-$payload = Join-Path $releaseStaging 'payload'
-$null = New-Item -ItemType Directory -Path $payload
 $stem = 'Railgun'
-$container = Join-Path $payload ($stem + '.utoc')
-$pack = & (Join-Path $repo 'tools/Invoke-VoyageBoundedTool.ps1') `
-    -Executable $retoc `
-    -Arguments @('to-zen',$loose,$container,'--version','UE5_8') `
-    -OutputRoot $boundedToolRoot -TimeoutSeconds 60 -MemoryLimitMB 1024
-if ($pack.status -ne 'passed') { throw 'Packaging failed.' }
-$containerPak = [IO.Path]::ChangeExtension($container, '.pak')
-$resolvedContainerPak = [IO.Path]::GetFullPath($containerPak)
-if (-not $resolvedContainerPak.StartsWith($output + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
-    -not (Test-Path -LiteralPath $resolvedContainerPak -PathType Leaf)) { throw 'retoc did not create the expected owned PAK.' }
 # Write only the three Railgun primary records from their authored JSON readbacks.
 $pluginRegistry = Join-Path $output 'RailgunCatalogue-AssetRegistry.bin'
 $registryResult = & (Join-Path $repo 'tools/New-VoyageAssetRegistry.ps1') `
@@ -444,14 +376,11 @@ if ($readbackFiles.Count -ne 1 -or $readbackFiles[0].Name -cne 'AssetRegistry.bi
         (Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash) {
     throw 'Packaged plugin registry readback hash mismatch.'
 }
-Move-Item -LiteralPath $containerPak -Destination (Join-Path $output ($stem + '.empty.pak'))
-Move-Item -LiteralPath $registryPak -Destination $containerPak
-$expected = Join-Path $output 'expected-packages.txt'
-[IO.File]::WriteAllLines($expected, @($assetRelatives | ForEach-Object { $_ + '.uasset' }))
-$verify = & (Join-Path $repo 'tools/Test-VoyageContainer.ps1') `
-    -Container $container -ExpectedPackageList $expected `
-    -OutputRoot $containerCheckRoot
-if ($verify.status -ne 'passed' -or -not $verify.packageSetMatches) { throw 'Container verification failed.' }
+$payload = Join-Path $releaseStaging 'payload'
+$pack = New-VoyageModContainer -ModRoot $PSScriptRoot -Stage $loose -OutputRoot $payload `
+    -Packages $packages -ParserVersion UE5_8 -GameRoot $GameRoot -ContainerName $stem -CompanionPak $registryPak
+$container = $pack.container
+$verify = $pack.validation
 $cloneInspection = (& (Join-Path $repo 'tools/Get-VoyageAssetJson.ps1') `
     $cloneRelative -Source Mod -ModContainer $container -GameRoot $GameRoot `
     -ModInspectionRoot $modInspectionRoot -AsJson) | ConvertFrom-Json
@@ -649,7 +578,7 @@ $provenance = [ordered]@{
     skillWriterStatus=$skillWrite.status;skillReadbackStatus=$skillReadback.status;
     gunSourceAsset='mods/Railgun/Project/Content/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01.uasset';
     gunWriterStatus=$gunWrite.status;gunReadbackStatus=$gunReadback.status;
-    scriptObjectsInput=@($scriptObjectsInput | ForEach-Object { [IO.Path]::GetFileName($_) });scriptObjectsStatus=$scriptObjectsRun.status;
+    scriptObjectsInput=@($pack.scriptObjects.inputs | ForEach-Object { [IO.Path]::GetFileName($_) });scriptObjectsStatus=$pack.scriptObjects.status;
     primaryAssetRegistryAssetCount=[int]$registryResult.assetCount;
     primaryAssetRegistryPackageCount=[int]$registryResult.packageCount;
     primaryAssetRegistryReopenVerified=[bool]$registryResult.reopenVerified;
@@ -683,6 +612,7 @@ if ($Install) {
     $settingsInstallation = $installed.settingsInstallation
     $restoreValidation = $installed.restoreValidation
 }
+Remove-VoyageModScratch -ModRoot $PSScriptRoot -RunRoot $output -Path $loose
 Remove-VoyageModScratch -ModRoot $PSScriptRoot -RunRoot $output -Path $projectRoot
 [pscustomobject]@{
     status = $(if ($Install) { 'installed' } else { 'built' })

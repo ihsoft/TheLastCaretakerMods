@@ -14,7 +14,7 @@ owns installation, game acceptance and candidate selection.
 | `Project/Content/` | Authored assets and required editor reference stubs. |
 | `Project/BlueprintText/` | Synchronized Blueprint JSON, mirroring paths below `/Game/`. |
 | `Project/Config/` | Required renderer, collision, packaging and project settings. |
-| `Project/EditorSupport/` | Native game API mirrors, saved-asset readers and cook adapter. |
+| `Project/EditorSupport/` | Native game API mirrors and saved-asset readers. |
 | `Project/Tests/Native/` | Saved Blueprint settings-loader integration test. |
 | `Assets/` | External model, image and audio inputs; distributed INI template. |
 | `Settings/` | Runtime settings schema and bindings. |
@@ -23,7 +23,7 @@ owns installation, game acceptance and candidate selection.
 
 [EditorSupport.json](Project/EditorSupport.json) declares the native
 `RailgunSupport` plugin. Its `Voyage` module preserves `/Script/Voyage` identities;
-`RailgunEditor` supplies inspection, cook and test commandlets. Public BPT
+`RailgunEditor` supplies inspection and test commandlets. Public BPT
 preparation supplies this support and `BlueprintTextWorkspace`, using the shared
 [native support provider](../../tools/unreal-editor-support.md) for build/reuse
 and loading checks. Neither plugin's DLLs belong in the game payload.
@@ -57,14 +57,11 @@ check requires correcting the affected input before release.
 
 ## Build and test
 
-From the repository root, reserve the shared Unreal queue for the whole producer:
+From the repository root, use the shared PowerShell launcher. The producer
+reserves the Unreal queue for its entire operation:
 
 ```powershell
-$hostExe = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-& ./tools/Invoke-UnrealQueued.ps1 -Operation 'Build Railgun' `
-  -FilePath (Join-Path $PSHOME $hostExe) `
-  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',
-    'mods/Railgun/Build-Railgun.ps1','-Install')
+python -B tools/run_powershell.py mods/Railgun/Build-Railgun.ps1 -Install
 ```
 
 Omit `-Install` to prepare only. `-OutputRoot` selects a fresh directory below
@@ -72,12 +69,20 @@ Omit `-Install` to prepare only. `-OutputRoot` selects a fresh directory below
 The archive name remains `Railgun-V<N>.zip`.
 `-AllowDirtySource` explicitly permits uncommitted inputs, including when
 building with `-Install`. `-EngineRoot` and `-GameRoot` override local installation
-paths. The default editor is the reviewed UE 5.8.2 installation at `K:/Epic Games/UE_5.8`.
+paths. The default editor is the reviewed UE 5.8.2 installation at `P:/UnrealEngine/UE_5.8`.
 `-CacheRoot` selects external engine cache storage.
 The parser profile is `UE5_8`; the accepted source-build pin lives in
 [game-build.json](game-build.json). On a pin mismatch, follow the shared
 [candidate workflow](../../docs/release-and-installation-rule.md#game-update-and-candidate-builds)
 for `-IgnorePinnedGameVersion`.
+
+Cook and IoStore packaging use the [shared pipeline](../../tools/mod-setup.md#cook-and-container-stages).
+Railgun supplies its owned inventory and selects tagged cook for all packages,
+plus its shader policy. The common cooker transports the large inventory by file;
+there is no mod-specific cook commandlet. The DataAsset conversions below run on
+the returned stage before shared packaging. The producer supplies its verified
+registry PAK as `CompanionPak`; the common container stage obtains game
+`scriptobjects.bin` and verifies the final package set.
 
 The producer validates the settings schema, executes the saved Blueprint loader,
 reads the primary DataAssets and model, cooks the owned inventory, converts the
