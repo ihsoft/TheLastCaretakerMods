@@ -71,10 +71,10 @@ See [external socket ownership](boat-resource-socket-architecture-knowledge.md#e
 
 ### Feedback before the HUD is available
 
-`VoyagePlayerController.AddMessageBySlot(MessageContent, Slot, Argument0)`
-returns false if its HUD, game widget, or slot widget is unavailable; the native
-call does not itself queue delivery. It cannot guarantee user-visible failure
-feedback from an early-load callback. Development-only Blueprint helpers such
+The [stock message-card contract](voyage-hud-messages-knowledge.md#acceptance-readiness-and-throttling)
+explains delivery results, HUD readiness and throttling. A card attempt cannot
+guarantee user-visible failure feedback from an early-load callback.
+Development-only Blueprint helpers such
 as `PrintString` and `RaiseScriptError` are likewise not a Shipping failure
 channel. Distinguish a useful development diagnostic from a production outcome;
 do not silently treat an attempted notification as successful delivery.

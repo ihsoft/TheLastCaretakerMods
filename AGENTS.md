@@ -83,6 +83,9 @@ do not load every document just because it is indexed here.
   page and file, verify the draft, and distinguish it from a public release.
 - [Vehicle and HUD patterns](docs/vehicle-and-hud-modding-patterns-knowledge.md):
   shared actor lifecycle, provided actions, and widget behavior.
+- [Stock HUD message cards](docs/voyage-hud-messages-knowledge.md): display
+  temporary text through the existing UI; message fields, readiness, throttling
+  and editor declaration boundaries.
 - [Cooked-asset toolchain knowledge](docs/voyage-cooked-asset-toolchain-knowledge.md):
   serialization, registries, DML discovery, and known format boundaries.
 - [Input integration](docs/voyage-input-integration-knowledge.md): stock action

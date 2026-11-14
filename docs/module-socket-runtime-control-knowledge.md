@@ -46,6 +46,34 @@ requires an actual consumer on the controlled cable; neither a colored rim,
 cable glow nor total battery discharge proves that this particular port is
 passing or blocking power. Other ports may still supply energy.
 
+## Resource groups and diagnostic values
+
+`VoyageModuleComponent.GetModuleSecondaryGroups() -> TMap<FName, int32>` exposes
+actual runtime secondary-group memberships. Use the native getter rather than
+misdeclaring the underlying unsigned-ID map or converting IDs through floats.
+Configured `ModuleGroupName` and `AdditionalGroupNames` do not enumerate those
+runtime memberships. Multiple memberships alone do not establish independent
+power inlets or transfer directions.
+
+`CachedGridID` is a runtime-allocated module-grid key used by
+`GetModulesInSameGrid`, not a stable identity or a complete electrical-resource
+network description. The resource-amount query uses secondary groups through
+a separate lookup. Equal cached grid IDs therefore do not establish equal power
+availability, interchangeable inlets or bidirectional transfer.
+
+`GetModuleGroupTotalResourceAmount(Module, ResourceType)` takes
+`EModuleResourceType`, whose `Electricity` value is `0` in the inspected contract.
+It does not take `EModuleResourceCategory`, whose `Electricity` value is `1`;
+passing that numeric value queries `EModuleResourceType::Petrol`. Preserve the
+actual reflected enum type instead of substituting a similarly named selector.
+The result is a resource amount, not measured transfer power in watts.
+
+For stock `BP_Module_Generic_Switch` actors, class and visible lever geometry
+alone do not identify a building inlet: the class also serves door controls.
+Inspect attachment parents, `SwitchType` and module configuration before
+choosing an electrical owner. Group membership and visual proximity do not
+replace that ownership evidence.
+
 ## Reflection and state preservation
 
 An editor-only mirror may expose the members needed to compile Blueprint

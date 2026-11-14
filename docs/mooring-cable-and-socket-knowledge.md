@@ -2,8 +2,9 @@
 
 These findings describe the shared Voyage socket/cable layer inspected on
 Steam build `25982825`. Runtime validation covers the optional Gyro endpoint
-arrangement described below, not every vehicle's reeling, release action or load
-ordering. Check applicability for a new consumer; revalidate affected contracts
+arrangement and the added resource-socket reload described below, not every
+vehicle's reeling, release action or load ordering. Check applicability for a new
+consumer; revalidate affected contracts
 when current evidence disagrees or relevant behavior changes.
 
 ## Socket, cable and decoration are separate objects
@@ -74,6 +75,29 @@ argument. Hiding a mesh, disabling collision or deactivating a component does
 not substitute for this operation. Remote attachment cleanup belongs to the
 native cable/action behavior, not to a local visual traversal. Arbitrary cable
 types and pre-existing orphan attachments need their own verification.
+
+## Recreating added endpoints on load
+
+A dynamically spawned socket helper can participate in stock cable restoration
+when its actor identity and SocketID are recreated consistently. In the tested
+resource-socket arrangement, the helper receives a deterministic actor name
+derived from stable physical-host identity and socket role. Before
+`FinishSpawningActor`, its native socket component receives
+`SetSocketID(Conv_StringToName(GetObjectName(SocketComponent)))`. Naming the
+actor alone does not repair an ID already initialized on its native component;
+deferred spawning can still register native-root components before Finish.
+
+Set the identity before exposing the port for connections. Keep component names
+stable, do not derive identity from discovery order or `CachedGridID`, and do
+not rename or change the ID of an already connected endpoint. Attachment and
+external registration still determine the electrical owner; a stable name does
+not substitute for that configuration.
+
+An in-game save/reload restored a newly connected cable with this arrangement,
+without mod-owned reconnection or a custom cable-save format. This establishes
+the tested reload path, not all streaming orders, hot reload or migration of
+saves containing earlier endpoint identities. It does not establish that the
+helper existed before the first native restoration attempt.
 
 ## Saved endpoint identity and disabled optional ports
 
