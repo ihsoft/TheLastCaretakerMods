@@ -44,8 +44,12 @@ only where it is an actual supported contract with a credible failure risk;
 do not invent recovery machinery to create something to test.
 
 Assert the promised behavior rather than a copy of the implementation. Do not
-freeze incidental function sets, graph shape, call counts, layout coordinates or
-asset statistics merely because they describe the current source. Such details
+freeze a detail if it can change while the promised behavior remains correct,
+unless an independent contract requires that exact value. This criterion
+applies to any representation or property; examples below are not a closed
+list of prohibited fields. Do not freeze incidental function sets, graph shape,
+call counts, layout coordinates or asset statistics merely because they describe
+the current source. Such details
 are valid assertions only when they express the contract being protected: for
 example, one notification per real change can prevent a feedback loop. A known
 vertex count in a particular game mesh usually describes that input, not extractor

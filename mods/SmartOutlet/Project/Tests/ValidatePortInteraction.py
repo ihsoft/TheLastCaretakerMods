@@ -79,6 +79,12 @@ try:
     system.call_method('SetBoolPropertyByName', (controller, 'Initialized', True))
     profile = unreal.new_object(unreal.load_class(None, '/Game/Mods/SmartOutlet/Settings/BP_StorageProfile.BP_StorageProfile_C'))
     input_rule = unreal.new_object(rule.get_class())
+    for value, is_input in [(rule, False), (input_rule, True)]:
+        system.call_method('SetDoublePropertyByName', (value, 'LowFraction', 0.2))
+        system.call_method('SetDoublePropertyByName', (value, 'HighFraction', 0.8))
+        system.call_method('SetBoolPropertyByName', (value, 'IsInput', is_input))
+        system.call_method('SetBytePropertyByName', (value, 'Direction', 1 if is_input else 2))
+        system.call_method('SetIntPropertyByName', (value, 'GlowMaterialSlot', 0))
     system.call_method('SetObjectPropertyByName', (profile, 'InputRule', input_rule))
     system.call_method('SetObjectPropertyByName', (profile, 'OutputRule', rule))
     system.call_method('SetObjectPropertyByName', (controller, 'Profile', profile))

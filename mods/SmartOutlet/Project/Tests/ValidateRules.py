@@ -22,11 +22,13 @@ def spawn(cls):
     a=actors.spawn_actor_from_class(cls,unreal.Vector());created.append(a);return a
 try:
     before=reader.call_method('GetTestReadCount')
-    parser.call_method('Load',(str(root/'SmartOutlet.ini'),))
+    # Exercise profile selection with explicit test inputs, independently of
+    # the player's current distributed defaults and supported class list.
+    fixture.write_text(block('Fixture.Battery_C','Output',73,17)+block('Fixture.Water_C','Input',12,91),encoding='utf-8')
+    parser.call_method('Load',(str(fixture),))
     for key, mode, low, high in [
-        ('BP_Module_Battery.BP_Module_Battery_C','Output',.2,.8),
-        ('BP_Module_fresh_Water_Tank.BP_Module_fresh_Water_Tank_C','Input',.2,1.0),
-        ('BP_Module_Salt_Water_Tank.BP_Module_salt_Water_Tank_C','Input',.2,1.0)]:
+        ('Fixture.Battery_C','Output',.17,.73),
+        ('Fixture.Water_C','Input',.12,.91)]:
         p=unreal.new_object(profile_class);p.call_method('ReadSettings',(parser,key))
         assert p.get_editor_property('HasModes')
         selected=p.get_editor_property(mode+'Rule')

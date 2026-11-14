@@ -17,6 +17,13 @@ profile=unreal.new_object(profile_class)
 system.call_method('SetBoolPropertyByName',(input_rule,'IsInput',True))
 system.call_method('SetObjectPropertyByName',(profile,'InputRule',input_rule))
 system.call_method('SetObjectPropertyByName',(profile,'OutputRule',rule))
+# Explicit scenario inputs keep the state-machine checks independent of defaults.
+for value, is_input in [(rule,False),(input_rule,True)]:
+    system.call_method('SetDoublePropertyByName',(value,'LowFraction',0.2))
+    system.call_method('SetDoublePropertyByName',(value,'HighFraction',0.8))
+    system.call_method('SetBoolPropertyByName',(value,'IsInput',is_input))
+    system.call_method('SetBytePropertyByName',(value,'Direction',1 if is_input else 2))
+    system.call_method('SetIntPropertyByName',(value,'GlowMaterialSlot',0))
 def prop(o,k,v,kind='Object'):
     system.call_method('Set'+kind+'PropertyByName',(o,k,v))
 def storage(tags=()):

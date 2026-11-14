@@ -74,7 +74,9 @@ shared library's grammar. The operator contains no local line or number parser.
 `Assets/Railgun.ini` owns distributed values and formatting;
 `Settings/Railgun.settings.json` owns runtime bindings, fallbacks and bounds.
 When adding a setting, update both files, its operator member, shared-parser
-getter and consuming behavior, and extend the loader's integration test. The
+getter and consuming behavior. The loader integration test derives numeric
+cases from the schema; extend its binding map or coverage only when the new
+consumer contract needs it. The
 getter defaults and bounds must agree with the schema. Fixed presentation values
 that are not user options belong with their audio or HUD owner, not in the INI
 or schema. [Build and test](BUILD.md#build-and-test) owns schema checks,

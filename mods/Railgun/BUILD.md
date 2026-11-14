@@ -84,19 +84,29 @@ the returned stage before shared packaging. The producer supplies its verified
 registry PAK as `CompanionPak`; the common container stage obtains game
 `scriptobjects.bin` and verifies the final package set.
 
-The producer executes the saved Blueprint loader,
-reads the primary DataAssets and model, cooks the owned inventory, converts the
-required cooked serialization and verifies the final container, registry, ZIP
+The producer reads the primary DataAssets and model, cooks the owned inventory,
+converts the required cooked serialization and verifies the final container, registry, ZIP
 and release manifest. The registry is derived from fresh owned DataAsset
 readbacks. A build-only result has `status: built` and returns `archivePath`, `releaseManifestPath` and
-`validationSummaryPath`; the summary includes the settings-loader result.
+`validationSummaryPath`.
+
+The package check compares model hierarchy, transforms, references and collision
+with this run's project inventory, and checks the final native item/module and
+pickup identities. These comparisons protect the handoff between authored
+inputs and the selected release payload; their expectations follow the current
+inputs rather than a historical model snapshot. DataAsset conversion owns
+fresh-cook/native comparison, serialization contracts and post-write readback.
+The build does not pin gameplay function sets, bytecode structure or visual
+tuning, and does not rerun settings-loader regressions. Those belong to changed
+behavior acceptance rather than package production.
 
 The release ZIP contains the `Railgun.pak/.utoc/.ucas` triplet and `Railgun.ini`
 under `Voyage/Content/Paks/`, plus the loose content-only descriptor at
 `Voyage/Mods/RailgunCatalogue/RailgunCatalogue.uplugin`. The PAK's registry
 contract belongs to [primary assets and research](ARCHITECTURE.md#primary-assets-and-research).
 
-Run just the settings-loader integration test in its own disposable project:
+When changing settings bindings, schema bounds/fallbacks or reload behavior,
+run the saved Blueprint loader integration test in its own disposable project:
 
 ```powershell
 python -B tools/run_powershell.py mods/Railgun/Test-Railgun.ps1
@@ -105,9 +115,12 @@ python -B tools/run_powershell.py mods/Railgun/Test-Railgun.ps1
 [Test-Railgun.ps1](Test-Railgun.ps1) accepts `-EngineRoot` and a fresh
 `-OutputRoot` below `Tmp/Railgun/`. On success, its `reportPath` points to
 `settings-validation.json` with status `passed`. It covers saved
-Blueprint execution with missing/custom/invalid values, inclusive bounds,
-explicit zero, key case and reload/reset behavior. Game lifecycle remains a
-separate acceptance boundary.
+Blueprint execution with schema-derived field bindings, inclusive bounds,
+out-of-range fallbacks and reload/reset behavior. The schema determines the
+setting set; the test does not pin its count or order. These checks catch
+incorrect getter arguments and stale assigned values in the consumer. Grammar,
+duplicate keys and case handling belong to the shared parser suite. Game
+lifecycle remains a separate acceptance boundary.
 
 ## Install an existing candidate
 

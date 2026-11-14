@@ -90,6 +90,11 @@ snapshots, bandwidth preservation, notifications, reconciliation and visual
 cleanup. They also check optional mode profiles, class lookup, mode selection,
 hint text, HUD attachment/gating, input debouncing, research and restoration.
 These tests do not simulate native network transfer or the game save pipeline.
+Run them for changes to the covered behavior. Profile fixtures supply their own
+values so changes to distributed defaults do not redefine the test. Visual
+ownership and material restoration are tested; authored appearance is accepted
+visually rather than frozen as scalar or color constants. Validate the shipped
+INI separately when it or its section rules change, as described above.
 
 Changes to native flow, attachment/restoration or persistence require their
 corresponding game tests; editor mirrors cannot establish those contracts.

@@ -11,8 +11,6 @@ Import-Module (Join-Path $PSScriptRoot '../../tools/VoyageModPipeline.psm1')
 Invoke-VoyageModEditorTest -ModRoot $PSScriptRoot -EngineRoot $EngineRoot -OutputRoot $OutputRoot `
     -ReportName 'checks-validation.json' -ExpectedSuiteCount 6 -Run {
     param($run)
-    $settings = Join-Path $run.output 'SmartOutlet.ini'
-    Copy-Item -LiteralPath (Join-Path $run.modRoot 'Assets/SmartOutlet.ini') -Destination $settings
     $previousOutput = $env:SMARTOUTLET_TEST_OUTPUT
     try {
         $env:SMARTOUTLET_TEST_OUTPUT = $run.output
@@ -21,5 +19,4 @@ Invoke-VoyageModEditorTest -ModRoot $PSScriptRoot -EngineRoot $EngineRoot -Outpu
             -ArgumentList @($run.project, '-run=pythonscript', ('-script=' + (Join-Path $run.projectRoot 'Tests/RunAll.py')),
                 '-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $run.output 'checks-validation.log')))
     } finally { $env:SMARTOUTLET_TEST_OUTPUT = $previousOutput }
-    Remove-Item -LiteralPath $settings
 } | ConvertTo-Json -Depth 8

@@ -45,7 +45,6 @@ $projectRoot = Split-Path -Parent $project
 $bptWorkspace = Join-Path $repo ('Tmp/BlueprintText/Railgun-build-' + [Guid]::NewGuid().ToString('N'))
 $releaseStaging = Join-Path $output 'candidate'
 $modInspectionRoot = Join-Path $output 'asset-inspections'
-$settingsSchema = Join-Path $PSScriptRoot 'Settings/Railgun.settings.json'
 $settingsDefaults = Join-Path $PSScriptRoot 'Assets/Railgun.ini'
 $preparedSettingsDirectory = Join-Path $output 'settings'
 $null = New-Item -ItemType Directory -Path $preparedSettingsDirectory
@@ -122,8 +121,6 @@ $ddc = [IO.Path]::GetFullPath($CacheRoot)
 $null = New-Item -ItemType Directory -Path $ddc -Force
 & (Join-Path $repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare `
     -ProjectFile $project -WorkspaceRoot $bptWorkspace -EngineRoot (Split-Path -Parent $engine) > (Join-Path $output 'prepare.log')
-$settingsValidationPath = Join-Path $output 'settings-validation.json'
-Invoke-NativeStage 'test-settings' $editor @($project,'-run=TestRailgunSettings',('-Schema=' + $settingsSchema),('-Output=' + $settingsValidationPath),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'test-settings-unreal.log')))
 $ammoNativePath = Join-Path $output 'ammo-project.json'
 Invoke-NativeStage 'read-ammo-project' $editor @($project,'-run=ReadRailgunDataAssets',('-Output=' + $ammoNativePath),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'read-ammo-project-unreal.log')))
 $ammoNative = Get-Content -LiteralPath $ammoNativePath -Raw | ConvertFrom-Json
@@ -258,55 +255,6 @@ $ammoConversion = & (Join-Path $PSScriptRoot 'Build/Convert-RailgunDataAsset.ps1
 $ammoWrite = $ammoConversion.write
 $ammoReadback = $ammoConversion.readback
 $ammoReadbackPath = $ammoConversion.readbackPath
-$ammoReadbackData = Get-Content -LiteralPath $ammoReadbackPath -Raw | ConvertFrom-Json
-$ammoImportNames = @($ammoReadbackData.Imports | ForEach-Object { [string]$_.ObjectName })
-$removedImpactSoundPackage = `
-    '/Game/Audio/SFX/Player/Pla_Weapons/Pla_Wpn_Boltgun/CUE_Pla_Wpn_BoltGun_Impact_Hard'
-$removedImpactSoundAsset = 'CUE_Pla_Wpn_BoltGun_Impact_Hard'
-if ($ammoImportNames -ccontains $removedImpactSoundPackage -or
-    $ammoImportNames -ccontains $removedImpactSoundAsset) {
-    throw 'Removed Railgun ammo ImpactSound remains in the package import table.'
-}
-$removedImpactMetaSoundPackage = `
-    '/Game/Audio/SFX/Player/Pla_Weapons/Pla_Wpn_Boltgun/MTS_Pla_Wpn_BoltGun_Ricochet'
-$removedImpactMetaSoundAsset = 'MTS_Pla_Wpn_BoltGun_Ricochet'
-if ($ammoImportNames -ccontains $removedImpactMetaSoundPackage -or
-    $ammoImportNames -ccontains $removedImpactMetaSoundAsset) {
-    throw 'Removed Railgun ammo ImpactMetaSound remains in the package import table.'
-}
-$removedActivationSoundPackage = `
-    '/Game/Audio/SFX/Player/Pla_Weapons/Pla_Wpn_Boltgun/Pla_Wpn_BoltGun_TheRod/MTS_Pla_Wpn_BoltGun_Rod_Shoot'
-$removedActivationSoundAsset = 'MTS_Pla_Wpn_BoltGun_Rod_Shoot'
-if ($ammoImportNames -ccontains $removedActivationSoundPackage -or
-    $ammoImportNames -ccontains $removedActivationSoundAsset) {
-    throw 'Removed Railgun ammo AbilityActivationSound remains in the package import table.'
-}
-$removedActivationSystemPackage = `
-    '/Game/VFX/Weapons/Shared/NiagaraSystem/NS_Weapon_MuzzleFlash_Sniper_Rod'
-$removedActivationSystemAsset = 'NS_Weapon_MuzzleFlash_Sniper_Rod'
-if ($ammoImportNames -ccontains $removedActivationSystemPackage -or
-    $ammoImportNames -ccontains $removedActivationSystemAsset) {
-    throw 'Removed Railgun ammo ActivationSystem remains in the package import table.'
-}
-$removedImpactSystemPackage = '/Game/VFX/Weapons/ImpactEffects/NS_Impact_Metal_Voyage'
-$removedImpactSystemAsset = 'NS_Impact_Metal_Voyage'
-if ($ammoImportNames -ccontains $removedImpactSystemPackage -or
-    $ammoImportNames -ccontains $removedImpactSystemAsset) {
-    throw 'Removed Railgun ammo ImpactSystem remains in the package import table.'
-}
-$removedSecondaryIconPackage = '/Game/UI/Icons/Weapons/Bullet_Stencil_127'
-$removedSecondaryIconAsset = 'Bullet_Stencil_127'
-if ($ammoImportNames -ccontains $removedSecondaryIconPackage -or
-    $ammoImportNames -ccontains $removedSecondaryIconAsset) {
-    throw 'Removed Railgun ammo SecondaryIcon remains in the package import table.'
-}
-$remainingDamageTypeImports = @($ammoImportNames | Where-Object {
-    $_ -like '*BP_DamageTypePhysicalForce*'
-})
-if ($remainingDamageTypeImports.Count -ne 0) {
-    throw 'Removed Railgun ammo DamageTypeClass remains in the package import table.'
-}
-
 $skillTarget = Join-Path $loose $skillRelative
 $skillConversion = & (Join-Path $PSScriptRoot 'Build/Convert-RailgunDataAsset.ps1') `
     -Asset skill -CookedAsset ($skillTarget + '.uasset') -NativeReadback $primaryNativePaths.skill `
@@ -550,7 +498,6 @@ $validationSummary = [ordered]@{
         reopenVerified = [bool]$registryResult.reopenVerified
         primaryAssetIds = @($registryResult.primaryAssetIds)
     }
-    settingsLoader = (Get-Content -LiteralPath $settingsValidationPath -Raw | ConvertFrom-Json)
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
 $validationSummaryPath = Join-Path $releaseStaging 'validation-summary.json'

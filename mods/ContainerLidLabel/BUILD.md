@@ -37,6 +37,11 @@ copy through the shared test runner and returns `reportPath` with
 The suite checks discovery/filtering, capacity snapshots, presentation events,
 attachment and cleanup on synthetic actors. It does not validate stock event
 ordering, save serialization, visual appearance or performance in the game.
+Run it when changing those behaviors. Small fixtures cover the supported types
+and independent instances; increasing their population is useful only for an
+explicit scale-dependent claim. Authored placement and typography belong to
+visual acceptance, while attachment, live updates and cleanup are behavioral
+contracts covered by the suite.
 
 ## Authoring copy
 
