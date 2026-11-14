@@ -80,25 +80,19 @@ mods' public tests/builds for changes at those boundaries.
 
 ## Runtime INI preparation
 
-Use the owning mod's public producer for normal builds. For maintained BPT
-graphs, import [VoyageModSettings.psm1](VoyageModSettings/VoyageModSettings.psm1)
-and call its exported `Read-VoyageModSettingsSchema`. It validates
+When changing a settings schema or its canonical INI, run
+[`Validate-VoyageModSettings.ps1`](Validate-VoyageModSettings.ps1). It validates
 case-sensitive keys, number/boolean/quoted-string values, schema fallbacks,
 optional inclusive ranges, final storage, and duplicate-free repository INI.
-It returns normalized setting records and writes no files. Validation errors
-throw; only after success should the producer copy the canonical INI unchanged
-to its output directory, distinct from the input paths:
+It returns `status: passed`, the setting count and the two input paths, and writes
+no files. Invalid input fails with the offending setting; correct the input and
+rerun. Ordinary builds copy the canonical INI unchanged without repeating this
+validation or tracking a separate validation cache.
 
 ```powershell
-$ErrorActionPreference = 'Stop'
-Import-Module ./tools/VoyageModSettings/VoyageModSettings.psm1 -Force
-$null = Read-VoyageModSettingsSchema `
+python -B tools/run_powershell.py tools/Validate-VoyageModSettings.ps1 `
     -SchemaPath './mods/MyMod/Settings/MyMod.settings.json' `
     -DefaultIniPath './mods/MyMod/Assets/MyMod.ini'
-$preparedDirectory = './Tmp/MyMod/settings'
-$null = New-Item -ItemType Directory -Path $preparedDirectory -Force
-Copy-Item -LiteralPath './mods/MyMod/Assets/MyMod.ini' `
-    -Destination (Join-Path $preparedDirectory 'MyMod.ini')
 ```
 
 The [BPT INI library](BlueprintText/Library/IniFileParser/integration.md) supplies the
@@ -106,6 +100,10 @@ runtime parser; the consuming graphs own getters, fallbacks and application of
 values. This preparation path generates no header or graph and needs no separate
 mod adapter. It writes no game files and requires no installed game or
 tool-version precheck.
+
+Tools that consume normalized setting records can import
+[VoyageModSettings.psm1](VoyageModSettings/VoyageModSettings.psm1) and use
+`Read-VoyageModSettingsSchema`, the same implementation as the public validator.
 
 A minimal numeric schema entry is:
 

@@ -1,12 +1,9 @@
 # INTERNAL BUILD STAGE: package validated project-cooked assets.
-# The stock item is a comparison input, never a replacement for project output.
+# The stock extraction supplies the script-object table for packaging.
 
 param(
     [Parameter(Mandatory = $true)][string]$CookedRoot,
     [Parameter(Mandatory = $true)][string]$ProjectRoot,
-
-    [Parameter(Mandatory = $true)]
-    [string]$OriginalItemDirectory,
 
     [Parameter(Mandatory = $true)]
     [string]$ScriptObjects,
@@ -26,7 +23,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $retocCompatibilityVersion = 'UE5_8'
-$expectedItemFilter = 'Data/Assets/Modules/DA_Item_Module_GyroCopter'
+$expectedExtractionFilter = 'Data/Assets/Modules/DA_Item_Module_GyroCopter'
 $modRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
@@ -34,7 +31,6 @@ if ([string]::IsNullOrWhiteSpace($Retoc)) {
 }
 
 $cooked = (Resolve-Path -LiteralPath $CookedRoot).Path
-$originalDirectory = (Resolve-Path -LiteralPath $OriginalItemDirectory).Path
 $scriptObjectsPath = (Resolve-Path -LiteralPath $ScriptObjects).Path
 $retocPath = (Resolve-Path -LiteralPath $Retoc).Path
 $output = [IO.Path]::GetFullPath($OutputRoot)
@@ -94,17 +90,10 @@ function Get-ExtractionEvidence {
     }
 }
 
-$itemEvidence = Get-ExtractionEvidence `
-    -InputPath $originalDirectory `
-    -ExpectedFilter $expectedItemFilter `
-    -Label 'GyroCopter item data asset'
 $scriptObjectsEvidence = Get-ExtractionEvidence `
     -InputPath $scriptObjectsPath `
-    -ExpectedFilter $expectedItemFilter `
+    -ExpectedFilter $expectedExtractionFilter `
     -Label 'scriptobjects.bin'
-if ($scriptObjectsEvidence.ManifestPath -cne $itemEvidence.ManifestPath) {
-    throw 'scriptobjects.bin must come from the same extraction root as the Gyro item data asset.'
-}
 
 $stage = Join-Path $output 'stage'
 $package = Join-Path $output 'package'
@@ -181,11 +170,6 @@ foreach ($assetName in @('IMC_GyroCopter_Keyboard.uasset', 'IMC_GyroCopter_Keybo
     Copy-Item -LiteralPath (Join-Path $contextSource $assetName) -Destination $contextStage
 }
 $itemSource = Join-Path $cooked 'Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset'
-& (Join-Path $repoRoot 'tools/Test-VoyageItemPatch.ps1') `
-    -Recipe (Join-Path $modRoot 'Build/Item.patch.json') `
-    -OriginalAsset (Join-Path $originalDirectory 'DA_Item_Module_GyroCopter.uasset') `
-    -CookedAsset $itemSource -MappingsPath $MappingsPath `
-    -OutputRoot (Join-Path $output 'item-validation')
 foreach ($extension in @('.uasset','.uexp')) {
     Copy-Item -LiteralPath ([IO.Path]::ChangeExtension($itemSource,$extension)) -Destination $itemStage
 }

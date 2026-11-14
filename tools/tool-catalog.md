@@ -37,7 +37,7 @@ failure handling.
 | Share maintained-project copies, run paths, editor tests and additive cook | `VoyageModPipeline.psm1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
 | Check shared mod execution and installation failure boundaries offline | `Test-VoyageModPipeline.ps1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
 | Maintain generated settings in an existing procedural producer | `New-VoyageModSettings.ps1` | [Compatibility interface](VoyageModSettings/legacy-generation.md) |
-| Validate a settings schema and default INI without generating C++ | `VoyageModSettings/VoyageModSettings.psm1` → `Read-VoyageModSettingsSchema` | [INI preparation](mod-setup.md#runtime-ini-preparation) |
+| Validate a changed settings schema or default INI | `Validate-VoyageModSettings.ps1` | [INI preparation](mod-setup.md#runtime-ini-preparation) |
 | Merge local development INI copies (not installation) | `Merge-VoyageModIni.ps1` | [Mod setup](mod-setup.md#existing-user-ini) |
 | Get the installed Steam build ID | `Get-VoyageBuildFingerprint.ps1` | [Mappings](mappings.md) |
 | Check a mod's game-build pin | `Assert-VoyageModGameBuild.ps1` | [Release build](release-build.md) |

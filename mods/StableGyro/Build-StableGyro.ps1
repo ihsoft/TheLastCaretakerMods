@@ -57,9 +57,7 @@ $fingerprinter = Join-Path $repoRoot 'tools\Get-VoyageBuildFingerprint.ps1'
 $cookScript = Join-Path $modRoot 'Build/Cook-StableGyroAssets.ps1'
 $prepareScript = Join-Path $modRoot 'Build/Prepare-StableGyroOriginals.ps1'
 $packageScript = Join-Path $modRoot 'Build/Build-InheritancePackage.ps1'
-$settingsSchema = Join-Path $modRoot 'Settings\StableGyro.settings.json'
 $settingsDefaults = Join-Path $modRoot 'Assets\StableGyro.ini'
-$settingsModule = Join-Path $repoRoot 'tools\VoyageModSettings\VoyageModSettings.psm1'
 $releaseManifestBuilder = Join-Path $repoRoot 'tools\New-VoyageReleaseManifest.ps1'
 $releaseInstaller = Join-Path $repoRoot 'tools\Install-VoyageRelease.ps1'
 $meshSourceStatePath = Join-Path $modRoot 'Build\MooringMeshes.source.json'
@@ -124,19 +122,11 @@ function Get-CleanOriginalInputs {
     }
 
     $extractionRoot = $manifests[0].Directory.FullName
-    $itemDirectory = Join-Path $extractionRoot 'Voyage\Content\Data\Assets\Modules'
     $scriptObjects = Join-Path $extractionRoot 'scriptobjects.bin'
-    foreach ($required in @(
-        (Join-Path $itemDirectory 'DA_Item_Module_GyroCopter.uasset'),
-        (Join-Path $itemDirectory 'DA_Item_Module_GyroCopter.uexp'),
-        $scriptObjects
-    )) {
-        Resolve-RequiredPath -Path $required -Label 'Clean original input' | Out-Null
-    }
+    Resolve-RequiredPath -Path $scriptObjects -Label 'Stock script-object table' | Out-Null
 
     return [pscustomobject]@{
         Manifest = $manifests[0].FullName
-        ItemDirectory = $itemDirectory
         ScriptObjects = $scriptObjects
     }
 }
@@ -148,9 +138,7 @@ $fingerprinter = Resolve-RequiredPath -Path $fingerprinter -Label 'Voyage finger
 $cookScript = Resolve-RequiredPath -Path $cookScript -Label 'StableGyro cook script'
 $prepareScript = Resolve-RequiredPath -Path $prepareScript -Label 'StableGyro original preparer'
 $packageScript = Resolve-RequiredPath -Path $packageScript -Label 'StableGyro package builder'
-$settingsSchema = Resolve-RequiredPath -Path $settingsSchema -Label 'StableGyro settings schema'
 $settingsDefaults = Resolve-RequiredPath -Path $settingsDefaults -Label 'StableGyro canonical settings INI'
-$settingsModule = Resolve-RequiredPath -Path $settingsModule -Label 'Settings validation module'
 $releaseManifestBuilder = Resolve-RequiredPath -Path $releaseManifestBuilder -Label 'Voyage release manifest builder'
 $releaseInstaller = Resolve-RequiredPath -Path $releaseInstaller -Label 'Voyage release installer'
 $Retoc = Resolve-RequiredPath -Path $Retoc -Label 'retoc'
@@ -176,12 +164,6 @@ if ($sourceStatus.Count -gt 0 -and -not $AllowDirtySource) {
 $releaseRoot = New-VoyageModRun -ModRoot $modRoot -OutputRoot $OutputRoot
 $logs = Join-Path $releaseRoot 'logs'
 New-Item -ItemType Directory -Path $logs | Out-Null
-Import-Module $settingsModule -Force
-$validatedSettings = @(Read-VoyageModSettingsSchema -SchemaPath $settingsSchema -DefaultIniPath $settingsDefaults)
-$releaseSettingsDirectory = Join-Path $releaseRoot 'validated-settings'
-New-Item -ItemType Directory -Path $releaseSettingsDirectory | Out-Null
-$generatedSettingsIni = Join-Path $releaseSettingsDirectory 'StableGyro.ini'
-Copy-Item -LiteralPath $settingsDefaults -Destination $generatedSettingsIni
 
 $totalStopwatch = [Diagnostics.Stopwatch]::StartNew()
 $timings = [ordered]@{}
@@ -208,7 +190,7 @@ $meshPlan = Get-StableGyroMooringMeshPlan -StatePath $meshSourceStatePath `
 $itemPlan = Get-StableGyroItemRefreshPlan -StatePath $itemSourceStatePath `
     -RecipePath $itemRecipePath -SteamBuildId $expectedBuild
 if ($itemPlan.refresh) {
-    throw 'Maintained item inputs need an explicit Update-StableGyroItemAsset.ps1 source update before building.'
+    throw "Maintained item inputs require review ($($itemPlan.reason)): source build $($itemPlan.sourceSteamBuildId), installed build $expectedBuild. Ask the user whether to run Update-StableGyroItemAsset.ps1; no automatic refresh was performed."
 }
 if (-not $itemPlan.refresh) {
     foreach ($relativePath in @('Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset',
@@ -232,7 +214,7 @@ foreach ($relativePath in $expectedMeshPaths) {
 
 Write-Host 'Reusing the maintained plate; source geometry is checked by the explicit updater'
 
-Write-Host '2/5 Preparing current stock item validation and maintained project inputs'
+Write-Host '2/5 Preparing the stock script-object table and maintained project inputs'
 $phase.Restart()
 if ([string]::IsNullOrWhiteSpace($OriginalsRoot)) {
     $OriginalsRoot = Join-Path $releaseRoot 'originals'
@@ -297,7 +279,6 @@ if (@($originalInputs).Count -ne 1) {
 $packageArguments = @{
     ProjectRoot = $projectRoot
     CookedRoot = [string]$cookedRoot
-    OriginalItemDirectory = [string]$originalInputs.ItemDirectory
     ScriptObjects = [string]$originalInputs.ScriptObjects
     Retoc = [string]$Retoc
     OutputRoot = [string]$containerRoot
@@ -307,8 +288,6 @@ $packageArguments = @{
 & $packageScript @packageArguments
 $containerFiles = Join-Path $containerRoot 'package'
 $containerUtoc = Join-Path $containerFiles ($containerName + '.utoc')
-$meshValidation = & (Join-Path $modRoot 'Build/Test-MooringPlateContainer.ps1') `
-    -ContainerUtoc $containerUtoc -OutputRoot $releaseRoot -GameRoot $GameRoot
 $phase.Stop()
 $timings.Package = $phase.Elapsed.TotalSeconds
 Write-Host '5/5 Creating the player-facing archive'
@@ -318,7 +297,7 @@ New-Item -ItemType Directory -Path $payloadRoot -Force | Out-Null
 foreach ($name in $payloadNames) {
     Copy-Item -LiteralPath (Join-Path $containerFiles $name) -Destination (Join-Path $payloadRoot $name)
 }
-Copy-Item -LiteralPath $generatedSettingsIni -Destination (Join-Path $payloadRoot 'StableGyro.ini')
+Copy-Item -LiteralPath $settingsDefaults -Destination (Join-Path $payloadRoot 'StableGyro.ini')
 $archivePath = Join-Path $releaseRoot "StableGyro-$Version.zip"
 & (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
     -Container (Join-Path $payloadRoot ($containerName + '.utoc')) -Archive $archivePath `
@@ -389,18 +368,6 @@ $manifest = [ordered]@{
         stagingReport = [ordered]@{
             path = $staticMeshStagingReportPath
         }
-        validationRequest = [ordered]@{
-            path = $meshValidation.request
-        }
-        inspection = [ordered]@{
-            path = $meshValidation.inspection
-        }
-        validation = [ordered]@{
-            path = $meshValidation.validation
-        }
-        materialValidation = [ordered]@{
-            path = $meshValidation.materialValidation
-        }
     }
     commonReleaseManifest = [ordered]@{
         path = $commonReleaseManifestPath
@@ -435,7 +402,7 @@ if ($installed) {
     Write-Host 'The prepared container was backed up, installed, and read back successfully.'
 }
 
-foreach ($scratch in @('Project','DerivedDataCache','cooked','originals','payload','validated-settings','editor-support','container/stage')) {
+foreach ($scratch in @('Project','DerivedDataCache','cooked','originals','payload','editor-support','container/stage')) {
     $path = Join-Path $releaseRoot $scratch
     if (Test-Path -LiteralPath $path) { Remove-VoyageModScratch -ModRoot $modRoot -RunRoot $releaseRoot -Path $path }
 }

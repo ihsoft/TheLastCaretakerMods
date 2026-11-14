@@ -236,7 +236,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Plate validation packaging failed.' }
     & $Retoc verify $utoc
     if ($LASTEXITCODE -ne 0) { throw 'Plate validation container is invalid.' }
-    $validation = & (Join-Path $modRoot 'Build/Test-MooringPlateContainer.ps1') `
+    $validation = & (Join-Path $modRoot 'Build/Validate-MooringPlateUpdate.ps1') `
         -ContainerUtoc $utoc -OutputRoot $releaseRoot -GameRoot $GameRoot -SourceGlb $positiveMooringGlb
     Set-StableGyroMooringMeshState -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild -Status ready
 } catch {
@@ -249,7 +249,7 @@ $result = [ordered]@{
     validation = $validation; outputRoot = $releaseRoot; installed = $false
 }
 $result | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $releaseRoot 'update-result.json') -Encoding utf8
-# Retain comparison evidence and logs, discard successful transaction/cook scratch.
+# Retain comparison evidence and logs, discard successful generation/cook scratch.
 foreach ($name in @('Project','DerivedDataCache','static-mesh-assets','editor-support','cooked','stage','originals')) {
     $scratch = Join-Path $releaseRoot $name
     if (Test-Path -LiteralPath $scratch) { Remove-VoyageModScratch -ModRoot $modRoot -RunRoot $releaseRoot -Path $scratch }

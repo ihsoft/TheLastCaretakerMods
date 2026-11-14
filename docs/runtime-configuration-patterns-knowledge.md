@@ -47,7 +47,8 @@ For flat, schema-driven settings:
    final storage and binding in the settings schema. Distributed values and
    runtime fallbacks have distinct roles.
 3. Use the [INI preparation guide](../tools/mod-setup.md#runtime-ini-preparation)
-   for schema validation and copying the canonical INI unchanged. It does not
+   to validate changes to the schema or canonical INI. Ordinary builds copy the
+   INI unchanged without repeating that validation. The validator does not
    generate the maintained Blueprint loader; consuming BPT graphs own getters,
    members and application.
 4. On reload, assign every owned setting from the new snapshot or its defined

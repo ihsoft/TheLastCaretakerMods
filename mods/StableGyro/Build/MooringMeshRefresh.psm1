@@ -17,7 +17,7 @@ function Get-StableGyroMooringMeshPlan {
             throw "Plate source build $($state.steamBuildId) differs from installed build $SteamBuildId."
         }
     } catch {
-        throw "Cannot reuse the maintained mooring plate: $($_.Exception.Message) Run Update-StableGyroMooringPlate.ps1 separately; the release build never refreshes the mesh."
+        throw "Cannot reuse the maintained mooring plate: $($_.Exception.Message) Ask the user whether to run Update-StableGyroMooringPlate.ps1; no automatic refresh was performed."
     }
 
     return [pscustomobject]@{

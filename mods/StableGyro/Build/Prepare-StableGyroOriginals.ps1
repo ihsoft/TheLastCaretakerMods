@@ -1,5 +1,5 @@
-# INTERNAL BUILD STAGE: extracts the base-game item data asset required by the
-# StableGyro package through the extractor's isolated stock-game source.
+# INTERNAL BUILD STAGE: a small stock-package extraction supplies scriptobjects.bin
+# for IoStore packaging. The extracted item is not revalidated by ordinary builds.
 
 param(
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',

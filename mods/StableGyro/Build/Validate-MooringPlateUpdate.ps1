@@ -1,10 +1,10 @@
-# INTERNAL: consumer policy for the exact cooked plate container.
-# SourceGlb is supplied only by the explicit updater for full geometry comparison.
+# INTERNAL UPDATE STAGE: validate the freshly extracted and imported plate.
+# Called only by Update-StableGyroMooringPlate.ps1, never by ordinary builds.
 param(
     [Parameter(Mandatory)][string]$ContainerUtoc,
     [Parameter(Mandatory)][string]$OutputRoot,
     [Parameter(Mandatory)][string]$GameRoot,
-    [string]$SourceGlb
+    [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$SourceGlb
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -42,27 +42,25 @@ foreach ($side in @('PositiveY')) {
         )
     }
 }
-if (-not [string]::IsNullOrWhiteSpace($SourceGlb)) {
-    $comparison = [ordered]@{
-        path = $SourceGlb
-        positionMatchToleranceMeters = 0.00033
-        attributes = [ordered]@{
-            POSITION = 0.00033
-            NORMAL = 0.012
-            TEXCOORD_0 = 0.0002
-            TEXCOORD_1 = 0.0002
-            TEXCOORD_2 = 0.0002
-            TEXCOORD_3 = 0.0002
-            COLOR_0 = (0.5 / 255.0)
-        }
-        topology = [ordered]@{
-            maxExtraFaces = 0
-            maxMissingNondegenerateFaces = 0
-            maxMissingFaces = 43
-        }
+$comparison = [ordered]@{
+    path = $SourceGlb
+    positionMatchToleranceMeters = 0.00033
+    attributes = [ordered]@{
+        POSITION = 0.00033
+        NORMAL = 0.012
+        TEXCOORD_0 = 0.0002
+        TEXCOORD_1 = 0.0002
+        TEXCOORD_2 = 0.0002
+        TEXCOORD_3 = 0.0002
+        COLOR_0 = (0.5 / 255.0)
     }
-    $staticMeshValidationAssets[0].sourceGlb = $comparison
+    topology = [ordered]@{
+        maxExtraFaces = 0
+        maxMissingNondegenerateFaces = 0
+        maxMissingFaces = 43
+    }
 }
+$staticMeshValidationAssets[0].sourceGlb = $comparison
 $staticMeshValidationRequest = [ordered]@{
     schemaVersion = 1
     source = [ordered]@{ kind = 'utoc'; utoc = $containerUtoc }
@@ -135,5 +133,5 @@ $materialValidation | ConvertTo-Json -Depth 5 |
     inspection = $staticMeshInspectionPath
     validation = $staticMeshValidationPath
     materialValidation = $materialValidationPath
-    comparedSourceGeometry = -not [string]::IsNullOrWhiteSpace($SourceGlb)
+    comparedSourceGeometry = $true
 }

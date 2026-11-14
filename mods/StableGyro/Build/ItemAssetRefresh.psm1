@@ -44,6 +44,7 @@ function Get-StableGyroItemRefreshPlan {
         refresh = $reason -cne 'same-game-build-and-recipe'
         reason = $reason
         steamBuildId = $SteamBuildId
+        sourceSteamBuildId = [string]$state.steamBuildId
         recipe = $recipe
     }
 }

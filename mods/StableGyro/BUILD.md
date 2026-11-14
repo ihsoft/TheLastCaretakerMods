@@ -19,12 +19,13 @@ Runtime and editor-only package ownership is defined by
 
 ## Working copies and Blueprint authoring
 
-Run commands from the repository root in Windows PowerShell 5.1. The package
+Run commands from the repository root through the
+[shared PowerShell launcher](../../tools/powershell-execution.md). The package
 validators and item updater also require PowerShell 7 on PATH. Engine operations
 require Unreal Engine 5.8.2 and join the shared Unreal queue automatically.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/StableGyro/New-StableGyroProjectCopy.ps1 -Destination R:/Codex/TheLastCaretakerMods/Tmp/StableGyro/authoring/Project
+python -B tools/run_powershell.py mods/StableGyro/New-StableGyroProjectCopy.ps1 -Destination R:/Codex/TheLastCaretakerMods/Tmp/StableGyro/authoring/Project
 ```
 
 Choose a fresh destination anywhere below `Tmp/StableGyro/`. The copy command
@@ -37,25 +38,10 @@ tracked JSON when accepting asset changes. Check concurrent source edits and
 transfer only intentionally changed assets, text and configuration. Do not open
 the maintained source project in Unreal or copy an entire working project back.
 
-## Automated checks
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/StableGyro/Test-StableGyro.ps1
-```
-
-Optional `-OutputRoot` selects a fresh directory below `Tmp/StableGyro/`.
-The offline suites cover source-state decisions, exact asset copies and BPT path
-mapping, relocated overlays, unsafe copy destinations, concurrent-source rejection,
-paired update recovery, forced-process interruption and public recovery,
-rejection of newly created item dependencies, INI/schema validation, candidate-based INI installation,
-exact INI replacement and coupled rollback on a synthetic installation.
-Success returns `status: passed` and `reportPath`. Failure retains its report and
-diagnostics. These checks do not launch Unreal, cook or install into the game.
-
 ## Candidate build
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/StableGyro/Build-StableGyro.ps1 -AllowDirtySource
+python -B tools/run_powershell.py mods/StableGyro/Build-StableGyro.ps1 -AllowDirtySource
 ```
 
 Omit `-AllowDirtySource` for clean source. Optional `-OutputRoot` selects a fresh
@@ -65,9 +51,12 @@ bypassing mapping, source-readiness or serialization checks. Candidate numbering
 comes from `version.txt`. `-OriginalsRoot` may reuse a clean current-build
 extraction with its manifest.
 
-The producer validates settings, source readiness and current game inputs, then
+The producer checks source readiness and the installed game build, then
 prepares native support and cooks a disposable project copy. It does not refresh
-or write maintained assets. The local cook adapter preserves the stock override
+or write maintained assets. If an item's or mesh's recorded source build differs
+from the installed build, stop and ask whether to refresh those inputs; do not
+run an updater automatically. Item recipe changes also require an explicit update.
+The local cook adapter preserves the stock override
 inventory and the separate tagged compass-display cook required by
 [release serialization](ARCHITECTURE.md#release-serialization); the ordinary
 shared additive cook profile does not cover those contracts.
@@ -79,6 +68,8 @@ remove working-project, cook, extraction and staging scratch while keeping the
 archive, container and validation evidence, including a separate copy of the
 original extraction manifest. Failed runs retain diagnostics.
 Build-only work can run while Voyage is running; installation requires it closed.
+The stock extraction supplies `scriptobjects.bin` for IoStore packaging; routine
+builds do not repeat the updater's comparison of item data against stock.
 
 ## Source updates
 
@@ -95,8 +86,8 @@ These commands change maintained source files after validation. They do not
 install a mod or commit the accepted changes:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/StableGyro/Update-StableGyroItemAsset.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/StableGyro/Update-StableGyroMooringPlate.ps1
+python -B tools/run_powershell.py mods/StableGyro/Update-StableGyroItemAsset.ps1
+python -B tools/run_powershell.py mods/StableGyro/Update-StableGyroMooringPlate.ps1
 ```
 
 Both accept `-GameRoot`, `-EngineRoot`, `-OutputRoot` and
@@ -104,26 +95,22 @@ Both accept `-GameRoot`, `-EngineRoot`, `-OutputRoot` and
 and `-Retoc`. Each works on a disposable copy, validates the updated inputs,
 rejects concurrent edits to its acceptance paths, and transfers only the owned
 asset/state pair after validation. Before the first source write, the operation
-saves both previous and replacement bytes plus a recovery manifest in its run.
-Each file replacement is atomic; ordinary exceptions restore the previous bytes.
-Review accepted source changes before building.
+copies previous files to `source-backup/` under its run, preserving paths relative
+to the mod. `absent-files.txt` lists acceptance paths that did not exist before.
+Assets are copied first, then the source-state record. Successful acceptance
+removes the backup. Review accepted source changes before building.
 
-An interrupted acceptance leaves
-`Project/Intermediate/StableGyroSourceUpdate.json` pointing to its recovery manifest.
-Working-copy preparation and further source acceptance reject this pending state.
-After the interrupted process has ended, recover through the public command:
+These are asset-generation workspaces: the item commandlet and mesh importer
+produce binary editor packages there. Only their validated source outputs are
+accepted into the maintained project. Ordinary build/test copies have no
+copy-back stage.
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/StableGyro/Restore-StableGyroSourceUpdate.ps1 -RecoveryManifest '<recovery.json from the marker or update output>'
-```
-
-Recovery checks backup integrity and all current target bytes before writing.
-Unexpected bytes from a later edit block recovery; preserve the run and resolve
-that conflict rather than deleting the marker. Repeating recovery is supported.
-If acceptance had already completed, recovery only finishes cleanup. Successful
-acceptance/recovery removes temporary backup bytes and integrity digests; the
-small completion record remains with the run. This covers process interruption,
-not loss of the storage volume containing both source and recovery data.
+If generation or validation fails before acceptance, maintained source is
+unchanged; inspect the retained logs and rerun with a fresh output directory.
+If source copying fails or is interrupted, preserve the run and restore affected
+paths from `source-backup/` or Git after reviewing current edits. Remove any
+partially created files listed in `absent-files.txt` when restoring the old state.
+There is no automatic recovery command or persistent project marker.
 
 ### Item source update
 
@@ -141,14 +128,14 @@ write. The working copy remains for a separately reviewed dependency repair.
 The plate updater fully replaces the positive-Y mesh at its existing identity,
 compares cooked geometry, normals, UVs and colors against fresh stock-derived
 geometry, and updates `Build/MooringMeshes.source.json`.
-Ordinary builds require ready current inputs and retain
-final-container representation/material checks without extracting plate geometry.
+Ordinary builds check source readiness and game-build identity, then package the
+maintained mesh without repeating geometry, representation or material validation.
 Geometry checks do not establish game appearance.
 
 ## Installation
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/StableGyro/Install-StableGyro.ps1 -ReleaseManifest '<returned release manifest>' -AllowDirtySource
+python -B tools/run_powershell.py mods/StableGyro/Install-StableGyro.ps1 -ReleaseManifest '<returned release manifest>' -AllowDirtySource
 ```
 
 `-GameRoot` overrides the game location; `-ValidateOnly` returns the shared
@@ -171,8 +158,16 @@ For StableGyro, update `Assets/StableGyro.ini` and
 `Settings/StableGyro.settings.json`, then change the owning Blueprint through BPT:
 member, getter arguments, fallback, bounds and consumers must agree. Keep the
 [consumer ownership and read lifetimes](ARCHITECTURE.md#settings-parser).
-The producer validates the exact key set and defaults; it does not create members
-or rewrite graphs. Synchronize BPT and build after accepting the asset changes;
+After changing the schema or INI, run the shared validator once:
+
+```powershell
+python -B tools/run_powershell.py tools/Validate-VoyageModSettings.ps1 `
+  -SchemaPath mods/StableGyro/Settings/StableGyro.settings.json `
+  -DefaultIniPath mods/StableGyro/Assets/StableGyro.ini
+```
+
+The validator does not create members or rewrite graphs. Ordinary builds copy
+the INI unchanged. Synchronize BPT and build after accepting the asset changes;
 changed runtime loaders require their graph and game checks.
 
 To remove an option, remove its INI entry, schema entry and every consumer.

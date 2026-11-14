@@ -89,10 +89,12 @@ keyboard mapping context, Gyro item DataAsset and one plate mesh. The stock item
 and mapping context keep their override identities; the child remains under
 `/Game/Mods/StableGyroCtrl/`. Filesystem moves must preserve these runtime paths.
 
-Packaging compares the project-cooked item against a freshly extracted original,
-allowing only the `Build/Item.patch.json` replacement of `DroppedActor`. Socket
-templates, the plate's Nanite/fallback/ray-tracing representations and material
-binding are checked in the final container. Editor dependency stubs are excluded.
+The explicit item updater compares the cooked item against a freshly extracted
+original, allowing only the `Build/Item.patch.json` replacement of `DroppedActor`.
+Ordinary builds check the recorded source build and recipe before reuse. Plate
+geometry, representations and material bindings are validated during explicit
+plate updates. Cooked socket templates are checked during packaging.
+Editor dependency stubs are excluded.
 Source refresh and build commands belong to [BUILD.md](BUILD.md).
 
 `WBP_StableGyroCompassDisplay` requires a separate cook without `-unversioned`.
@@ -416,7 +418,7 @@ not evidence that every degenerate face contributes visibly. Native mesh builder
 can discard coincident-position faces; the explicit updater must still prove
 that no nondegenerate source face is lost. Exact source counts, decode assertions
 and comparison tolerances belong to `Update-StableGyroMooringPlate.ps1`,
-`Build/Split-MooringPlateGlb.py` and `Build/Test-MooringPlateContainer.ps1`.
+`Build/Split-MooringPlateGlb.py` and `Build/Validate-MooringPlateUpdate.ps1`.
 Geometry/representation checks do not establish GPU cost or which representation
 is used in an individual frame.
 
@@ -437,12 +439,13 @@ Keep these runtime-created templates outside the unconditional SCS node list.
 schema overlay, no `RawExport` and a byte-identical unchanged writer roundtrip;
 it must not patch native-parent attachment metadata during packaging.
 
-Replacement keeps package identities and Blueprint references, with copy
-verification and rollback; it does not merge previous LOD, collision or socket data.
+Replacement keeps package identities and Blueprint references, with a backup
+of changed source files; it does not merge previous LOD, collision or socket data.
 The project requires DX12/SM6 and ray tracing enabled to retain the requested
-representations during cook. Preserve every emitted bulk companion. Final-container
-validation checks Nanite, fallback, ray tracing and the stock material reference.
-The explicit plate updater additionally compares source geometry and attributes.
+representations during cook. Preserve every emitted bulk companion. During an
+explicit plate update, validate Nanite, fallback, ray tracing, the stock material
+reference and correspondence to source geometry and attributes. Ordinary builds
+reuse the accepted mesh without repeating these checks.
 The shared
 [cooking knowledge](../../docs/static-mesh-cooking-knowledge.md) defines the
 representation and validation boundaries.
@@ -555,6 +558,6 @@ them; retain the explicit older evidence boundaries in
 | `Project/Content/UI/Game/HUD/WBP_VoyageIngameGyroCopter.uasset`, `Project/Content/UI/Game/World/WBP_CompassHUD.uasset` and their BPT | Hand-reconstructed editor-only identities and required widget members, without stock implementations. | Check parent chains, names and consumed native fields when affected; exclude both from payload. |
 | `Project/Content/Mods/StableGyro/IAV_GyroPitchReset.uasset`, `Project/Content/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.uasset` | Authored reset action and stock keyboard-context reconstruction with that one addition. | [Mapping contract](#mapping-and-value-binding-contracts). |
 | `Project/Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/` | Positive-Y half derived from the stock Gyro plate through the mod splitter and shared StaticMesh producer. | `Build/MooringMeshes.source.json` owns source build/recipe/readiness; explicit [plate update](BUILD.md#source-updates). |
-| `Project/Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset` and `Project/Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset` | Shared VoyageItem profile reconstruction and its owned generator stub; `Build/Item.patch.json` changes only `DroppedActor`. Only the item ships. | `Build/Item.source.json` owns applied build/recipe/readiness; explicit [item update](BUILD.md#source-updates), with current-stock comparison during build. |
+| `Project/Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset` and `Project/Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset` | Shared VoyageItem profile reconstruction and its owned generator stub; `Build/Item.patch.json` changes only `DroppedActor`. Only the item ships. | `Build/Item.source.json` owns applied build/recipe/readiness; explicit [item update](BUILD.md#source-updates), with current-stock comparison during that update. |
 | Other `Project/Content/` dependencies | Reconstructed stock Gyro parent, material, icon, actions, item references and string-table editor stubs. No stock shaders or implementations are claimed. | Review required identities/layouts when affected; exclude from payload. Missing dependencies created by the shared item tool require separate review before source acceptance. |
 | `Project/EditorSupport/Source/Voyage/` | Minimal native API mirrors from reflection/mappings; shared item-profile overlays declared by `Project/EditorSupport.json`. | Preserve `/Script/Voyage` identity, field order and consumed metadata. Rebuild ready support on source changes; never ship its binaries. |
