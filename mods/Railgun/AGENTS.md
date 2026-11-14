@@ -11,6 +11,10 @@ the role manifest, but must not alter GLB geometry unless explicitly requested.
 - [Project layout, build and tests](BUILD.md): maintained `Project/`, disposable
   working copies, public commands and accepting authoring changes.
   Use the shared [BPT workflow](../../tools/blueprint-workspace.md) for graph edits.
+- [Model authoring and preview](BUILD.md#model-authoring-and-preview): project-owned
+  model, GLB review copy and accepting an explicitly requested model replacement.
+- [Images and audio](BUILD.md#images-and-audio): locate the saved resources and
+  export or replace them through the shared authoring tool.
 - [Primary DataAsset authoring](BUILD.md#primary-dataasset-authoring):
   ordinary Unreal Details editing and the native-read/cook validation boundary.
 - [Settings parser](ARCHITECTURE.md#settings-parser): the mod-owned shared INI

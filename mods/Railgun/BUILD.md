@@ -16,7 +16,7 @@ owns installation, game acceptance and candidate selection.
 | `Project/Config/` | Required renderer, collision, packaging and project settings. |
 | `Project/EditorSupport/` | Native game API mirrors and saved-asset readers. |
 | `Project/Tests/Native/` | Saved Blueprint settings-loader integration test. |
-| `Assets/` | External model, image and audio inputs; distributed INI template. |
+| `Assets/` | Model review/editing copy and role registry; distributed INI template. |
 | `Settings/` | Runtime settings schema and bindings. |
 | `Build/` | Cooked serialization contracts/codec, package checks and catalogue descriptor. |
 | `slideshow/` | Publication images. |
@@ -28,16 +28,56 @@ preparation supplies this support and `BlueprintTextWorkspace`, using the shared
 [native support provider](../../tools/unreal-editor-support.md) for build/reuse
 and loading checks. Neither plugin's DLLs belong in the game payload.
 
-Changing an external GLB, image or sound alone does not update its saved release
-representation in `Project/Content/`; accept the corresponding focused asset
-edit before building.
-
 [New-RailgunProjectCopy.ps1](New-RailgunProjectCopy.ps1) uses the
 [shared pipeline](../../tools/mod-setup.md#shared-mod-pipeline) to copy current maintained
 inputs, including uncommitted edits, into a fresh directory below `Tmp/Railgun/`.
 It returns the copied `.uproject` path. Build and test entry points create their
 own copies and remove them on success, retaining reports and candidate packages.
 On failure, use the retained copy and diagnostics to investigate.
+
+### Model authoring and preview
+
+The saved meshes, materials and component hierarchy in `Project/Content/` own
+the gun model. `Assets/Model/Railgun.glb` is its review/editing copy under the
+[shared project ownership rule](../../docs/unreal-project-rule.md).
+`Assets/Model/model-source.json` selects component roles and interaction/collision
+boxes in that saved hierarchy; the producer consumes this registry, not the GLB.
+
+For an explicitly requested replacement, use the shared
+[complete GLB importer](../../tools/unreal-glb-import.md) in a fresh content
+directory of the working project. Review its `BP_Model`, then integrate the
+accepted hierarchy/resources with the maintained shell and
+[model bindings](ARCHITECTURE.md#station-model-and-possession). The imported
+graph-free actor does not replace the gameplay shell. Check yaw and pitch around
+their authored pivots: the muzzle and descendants must follow, while the base
+and unrelated branches remain fixed. Retain the role registry and intentional
+collision, socket, indicator and cassette bindings when accepting the model.
+Routine builds neither import nor require the GLB.
+
+Use the shared [GLB preview](../../tools/glb-tools.md) to inspect the copy through
+Blender. Preview output belongs below `Tmp/Railgun/`; inspect the updated project
+model as well when accepting a replacement.
+
+### Images and audio
+
+Edit images and sound in the Unreal working project. For agent-assisted export
+or an explicitly selected replacement file, use the shared
+[resource tool](../../tools/unreal-resources.md). Accept reviewed saved assets
+through the shared authoring workflow; ordinary builds cook those assets.
+No external PNG/WAV copies are maintained as alternative inputs.
+
+| Resource | Asset below `/Game/Mods/Railgun/` |
+| --- | --- |
+| Scope mask | `Station/T_RailgunOpticalMask` |
+| Ready, charging and offline icons | `Station/T_RailgunStatusReady`, `Station/T_RailgunStatusCharging`, `Station/T_RailgunStatusOffline` |
+| HUD ammunition indicator | `Station/T_RailgunAmmoIndicator` |
+| Fabricator gun and ammunition icons | `Fabricator/T_RailgunIcon`, `Fabricator/T_RailgunAmmoIcon` |
+| Research icon | `Research/T_RailgunSkill` |
+| Shot audio | `Station/S_RailgunShotBlast` |
+
+Preserve the image references in the HUD/primary assets and the sound's stock
+`SC_SFX` binding unless changing those contracts intentionally. Export current
+resources below `Tmp/Railgun/` for visual/audio review.
 
 ### Game-derived editor inputs
 

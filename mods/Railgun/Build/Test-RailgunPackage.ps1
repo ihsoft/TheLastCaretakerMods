@@ -162,7 +162,7 @@ function Require-Child([string]$ParentName, [string]$ChildName) {
 }
 foreach ($expected in $inventory.components) {
     $component = @($shell | Where-Object { $_.Name -ceq ($expected.name + '_GEN_VARIABLE') })
-    Require ($component.Count -eq 1) ('Missing GLB component: ' + $expected.name)
+    Require ($component.Count -eq 1) ('Missing project model component: ' + $expected.name)
     if ([string]::IsNullOrEmpty([string]$expected.parent)) {
         Require ($expected.name -ceq $modelRootName) `
             ('Unexpected root component: ' + $expected.name)
@@ -175,7 +175,7 @@ foreach ($expected in $inventory.components) {
         for ($i=0; $i -lt 3; $i++) {
             $actual = if ($field -ceq 'scale') { 1.0 } else { 0.0 }
             if ((PropertyNames $component[0]) -contains $property) { $actual = $component[0].Properties.$property.($axes[$i]) }
-            Require ([Math]::Abs($actual - $expected.$field[$i]) -lt 0.001) ('GLB transform mismatch: ' + $expected.name + '/' + $field)
+            Require ([Math]::Abs($actual - $expected.$field[$i]) -lt 0.001) ('Project model transform mismatch: ' + $expected.name + '/' + $field)
         }
     }
     if ($expected.mesh) {

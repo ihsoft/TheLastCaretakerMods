@@ -127,9 +127,9 @@ grammar and player-value preservation.
   restores canonical wide-mode camera/FOV/input state, notifies the bound HUD
   after that reset, and acquires the dedicated camera. Actual exit restores the
   previous view only when the station still owns the current view target.
-- The GLB is imported by Unreal Interchange. Full hierarchy matrices determine
-  ownership and transforms; node names identify roles but do not imply
-  parentage.
+- The saved project component hierarchy determines ownership and transforms;
+  node names identify roles but do not imply parentage. Model replacement and
+  GLB preview follow [model authoring](BUILD.md#model-authoring-and-preview).
 - Yaw, pitch, muzzle, sight, entry, power-socket and charge-indicator roles are
   declared in `Assets/Model/model-source.json`, together with explicit collision
   and interaction boxes. Bind those roles rather than incidental Blender object
@@ -250,7 +250,7 @@ grammar and player-value preservation.
   Fixed layout, fonts, colors and opacity are authored in the saved HUD and its
   `RefreshRailgunHudStyle` graph. The station retains the required font-object
   references. These style values are not runtime configuration options.
-- The model-authored charge-indicator render mesh keeps its GLB transform,
+- The model-authored charge-indicator render mesh keeps its project transform,
   ancestry, dimensions and UVs. The shell disables collision, overlap and shadow
   and tags it for runtime binding. That tagged component loads the stock
   `MI_PogressBar_Basic_LED` material at runtime. Each station instance caches

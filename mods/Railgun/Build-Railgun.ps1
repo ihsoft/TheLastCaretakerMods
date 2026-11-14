@@ -72,8 +72,6 @@ $model = Get-Content -LiteralPath $modelPath -Raw | ConvertFrom-Json
 $modelFields = @($model.PSObject.Properties.Name | Sort-Object)
 $expectedModelFields = @('entryInteraction','fabricatorCollision','inventoryInteraction','nodes','schemaVersion')
 if ($model.schemaVersion -ne 1 -or (Compare-Object $modelFields $expectedModelFields)) { throw 'Unsupported Railgun model registry.' }
-$glbPath = [IO.Path]::GetFullPath((Join-Path $modelDirectory 'Railgun.glb'))
-if (-not (Test-Path -LiteralPath $glbPath -PathType Leaf)) { throw "GLB not found: $glbPath" }
 $dataAssetContractPath = Join-Path $PSScriptRoot 'Build/data-assets-contract.json'
 $dataAssetContract = Get-Content -LiteralPath $dataAssetContractPath -Raw | ConvertFrom-Json
 if ($dataAssetContract.schemaVersion -ne 5 -or @($dataAssetContract.assets).Count -ne 3 -or
@@ -87,8 +85,6 @@ foreach ($entry in $dataAssetContract.assets) {
     }
 }
 $serializationContract = $dataAssetContract.serialization
-# Retain the external authoring input in the release source inventory.
-$sourcePaths += @($glbPath.Substring($repo.Length + 1).Replace('\','/'))
 function Get-RailgunSourceStatus {
     @(& git -C $repo status --porcelain -- $sourcePaths)
 }
@@ -144,7 +140,7 @@ if ($packages.Count -lt 2 -or @($packages | Where-Object {
     -not $_.StartsWith('/Game/Mods/Railgun/Visual/') -and
     -not $_.StartsWith('/Game/Mods/Railgun/Fabricator/AmmoCassette/') -and
     $_ -cne '/Game/Mods/Railgun/Module/BP_Module_Railgun'
-}).Count) { throw 'GLB cook inventory escaped owned packages.' }
+}).Count) { throw 'Project model cook inventory escaped owned packages.' }
 $ammoPickupInventory = $inventory.ammoPickup
 $ammoPickupCollisionSize = @($ammoPickupInventory.collisionSizeCm)
 $ammoPickupCollisionCenter = @($ammoPickupInventory.collisionCenterCm)
@@ -503,7 +499,7 @@ $provenance = [ordered]@{
     dirtySource=($sourceStatus.Count -gt 0);sourceStatus=$sourceStatus;
     gameEngineVersion='5.8';gameEngineVersionBasis='Reviewed mapping/parser target; game patch version not independently established';editorEngineVersion='5.8.2';retocCompatibilityVersion='UE5_8';
     gameFingerprint=@{steamBuildId=[string]$fingerprint.steam.buildId};ignoredPinnedGameVersion=[bool]$gameBuild.ignoredPinnedGameVersion;
-    validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, plugin-local three-record primary-asset registry, GLB module actor with lifecycle-owned station initialization, operator, inputs, HUD and shot audio';
+    validation='build and static verification; gameplay validation is a separate gate';runtimeArchitecture='Single Railgun container with independent gun and ammo items, one research skill, plugin-local three-record primary-asset registry, project-owned module actor with lifecycle-owned station initialization, operator, inputs, HUD and shot audio';
     mappingPath=$mapping.mappingsPath;validationSummary='validation-summary.json';
     packagingStatus=$pack.status;containerVerificationStatus=$verify.status;semanticStatus=$semantic.status;
     ammoSourceAsset='mods/Railgun/Project/Content/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod.uasset';
