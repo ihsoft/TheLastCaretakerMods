@@ -11,8 +11,8 @@ declaration live under `Project/EditorSupport/` and `Project/EditorSupport.json`
 
 `Assets/StableGyro.ini` owns the distributed configuration and comments;
 `Settings/StableGyro.settings.json` owns bindings, fallbacks and ranges.
-`Build/` contains internal cook/package checks, source-state records and INI
-migration policy. Its scripts are stages used by the public commands below.
+`Build/` contains internal cook/package checks and source-state records.
+Its scripts are stages used by the public commands below.
 Runtime and editor-only package ownership is defined by
 [architecture](ARCHITECTURE.md#release-serialization) and
 [provenance](ARCHITECTURE.md#editor-input-provenance).
@@ -48,7 +48,7 @@ The offline suites cover source-state decisions, exact asset copies and BPT path
 mapping, relocated overlays, unsafe copy destinations, concurrent-source rejection,
 paired update recovery, forced-process interruption and public recovery,
 rejection of newly created item dependencies, INI/schema validation, candidate-based INI installation,
-user-value preservation and coupled rollback on a synthetic installation.
+exact INI replacement and coupled rollback on a synthetic installation.
 Success returns `status: passed` and `reportPath`. Failure retains its report and
 diagnostics. These checks do not launch Unreal, cook or install into the game.
 
@@ -62,8 +62,8 @@ Omit `-AllowDirtySource` for clean source. Optional `-OutputRoot` selects a fres
 run below `Tmp/StableGyro/`; `-GameRoot`, `-EngineRoot` and `-Retoc` override local
 installations. `-IgnorePinnedGameVersion` permits the shared pin override without
 bypassing mapping, source-readiness or serialization checks. Candidate numbering
-comes from `version.txt`; the optional legacy `-Version` accepts only that derived
-number. `-OriginalsRoot` may reuse a clean current-build extraction with its manifest.
+comes from `version.txt`. `-OriginalsRoot` may reuse a clean current-build
+extraction with its manifest.
 
 The producer validates settings, source readiness and current game inputs, then
 prepares native support and cooks a disposable project copy. It does not refresh
@@ -82,7 +82,17 @@ Build-only work can run while Voyage is running; installation requires it closed
 
 ## Source updates
 
-Source updates are explicit and separate from builds:
+Source updates refresh maintained assets derived from the game. Ordinary builds
+reuse those saved assets; they never run either updater automatically. Invoke
+the public commands at the mod root; their implementations live in `Build/`.
+
+| Command | Purpose and when to use it |
+| --- | --- |
+| [Update-StableGyroItemAsset.ps1](Update-StableGyroItemAsset.ps1) | Reapply the mod's `DroppedActor` replacement to the current stock gyrocopter item, so placing the item creates the StableGyro Blueprint while retaining current stock item data. Use when accepting a new game build, changing `Build/Item.patch.json`, or regenerating missing item inputs. Routine flight-logic or INI edits do not require it. |
+| [Update-StableGyroMooringPlate.ps1](Update-StableGyroMooringPlate.ps1) | Recreate the maintained half-plate mesh from the stock mooring plate for the mod's port layout. Use when accepting a new game build or repairing the mesh import. Routine Blueprint or INI edits do not require it. |
+
+These commands change maintained source files after validation. They do not
+install a mod or commit the accepted changes:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/StableGyro/Update-StableGyroItemAsset.ps1
@@ -96,7 +106,7 @@ rejects concurrent edits to its acceptance paths, and transfers only the owned
 asset/state pair after validation. Before the first source write, the operation
 saves both previous and replacement bytes plus a recovery manifest in its run.
 Each file replacement is atomic; ordinary exceptions restore the previous bytes.
-Neither installs or commits. Review accepted source changes before building.
+Review accepted source changes before building.
 
 An interrupted acceptance leaves
 `Project/Intermediate/StableGyroSourceUpdate.json` pointing to its recovery manifest.
@@ -115,19 +125,23 @@ acceptance/recovery removes temporary backup bytes and integrity digests; the
 small completion record remains with the run. This covers process interruption,
 not loss of the storage volume containing both source and recovery data.
 
+### Item source update
+
 The item updater replaces the item and its owned crafting-generator stub using
 `Build/Item.patch.json`, compares the cooked result to current stock, and updates
-`Build/Item.source.json`. Run it after a game-build or recipe change, or to repair
-missing/interrupted state. Unsupported stock data fails in the shared item tool.
-The wrapper accepts only the item/generator pair and its source state. If the
+`Build/Item.source.json`. A stale saved item override can otherwise mask changes
+to stock item data. Unsupported stock data fails in the shared item tool.
+The updater accepts only the item/generator pair and its source state. If the
 shared updater creates a missing dependency or string table, removes a dependency,
 or changes another content file, acceptance fails before any maintained-source
 write. The working copy remains for a separately reviewed dependency repair.
 
+### Mooring plate source update
+
 The plate updater fully replaces the positive-Y mesh at its existing identity,
 compares cooked geometry, normals, UVs and colors against fresh stock-derived
-geometry, and updates `Build/MooringMeshes.source.json`. Run it after a game-build
-change or import repair. Ordinary builds require ready current inputs and retain
+geometry, and updates `Build/MooringMeshes.source.json`.
+Ordinary builds require ready current inputs and retain
 final-container representation/material checks without extracting plate geometry.
 Geometry checks do not establish game appearance.
 
@@ -139,9 +153,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File mods/StableGyro/Install-
 
 `-GameRoot` overrides the game location; `-ValidateOnly` returns the shared
 read-only plan. `Build-StableGyro.ps1 -Install` invokes this same implementation.
-The installer takes defaults from the exact candidate ZIP, preserves current
-values/comments, removes only entries declared in `Build/SettingsMigration.psd1`,
-and adds missing keys. It checks installed INI bytes and restores settings plus
+The installer replaces the entire INI with the exact file from the selected
+candidate ZIP, including on updates. It does not merge values, preserve old
+comments or migrate keys. It checks installed INI bytes and restores settings plus
 the container if the coupled change fails. Preserve reported recovery files if
 recovery fails. Successful transaction scratch is removed.
 
@@ -162,9 +176,8 @@ or rewrite graphs. Synchronize BPT and build after accepting the asset changes;
 changed runtime loaders require their graph and game checks.
 
 To remove an option, remove its INI entry, schema entry and every consumer.
-For installed-file migration, add only its exact old key and exact canonical
-comment lines to `Build/SettingsMigration.psd1`. Do not broaden deletion to user
-comments or unrelated keys. The existing installer owns preservation and recovery.
+Installation distributes the complete current INI; do not add key-migration or
+merge logic. The installer owns exact replacement and recovery on failure.
 
 ## Gameplay validation
 
@@ -182,4 +195,4 @@ every game build. Established applicability remains in
 | Independent flight flags | Both flags independently and together; entry reload, native assistance restoration, no saved HoverPitchScale reset with altitude disabled, no XY physics-velocity access with horizontal control disabled, and continued operation of the other control paths. |
 | Horizontal damping | Climb, descent, neutral, directional and reversing input; contact release, no Z modification, and no horizontal-state reset from the vertical Collective gate. |
 | Four-port/cargo lifecycle | Four simultaneous connections, short/held cargo input and once-per-press behavior, shared live hold threshold in input/hint, saved extra connections loaded with four-port mode disabled, late restoration and native two-port behavior in disabled mode. |
-| Mesh/HUD/fuel/settings | Plate placement, detail/material appearance; compass heading from camera and visibility with the vehicle HUD; fuel capacity/consumption without refilling or losing stored resources; missing/invalid settings, next-entry reload and preserved user INI values. |
+| Mesh/HUD/fuel/settings | Plate placement, detail/material appearance; compass heading from camera and visibility with the vehicle HUD; fuel capacity/consumption without refilling or losing stored resources; missing/invalid settings and next-entry reload. Installation must copy the complete candidate INI. |

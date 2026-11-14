@@ -10,7 +10,9 @@ Start with the [repository index](../../AGENTS.md) for shared rules and knowledg
 - [Candidate producer](Build-StableGyro.ps1): cook and validate a disposable copy;
   `-Install` delegates to the same candidate installer.
 - [Candidate installer](Install-StableGyro.ps1): install a supplied release
-  manifest with user INI preservation, without rebuilding.
+  manifest with the complete packaged INI, without rebuilding.
+- [Source update commands](BUILD.md#source-updates): why and when to refresh the
+  stock-derived item or mooring plate, public calls and acceptance boundaries.
 - [Source recovery](Restore-StableGyroSourceUpdate.ps1): recover an interrupted
   source acceptance from its persisted manifest; usage and conflict handling
   are in [source updates](BUILD.md#source-updates).

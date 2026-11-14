@@ -30,7 +30,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 Add-Type -AssemblyName System.IO.Compression
 $zip = [IO.Compression.ZipFile]::OpenRead($archive)
 try {
-    $entries = @($zip.Entries | Where-Object { $_.FullName -ceq 'Voyage/Content/Paks/StableGyro.ini' })
+    $entries = @($zip.Entries | Where-Object { $_.FullName -ceq 'StableGyro.ini' })
     if ($entries.Count -ne 1) { throw 'Candidate must contain exactly one StableGyro.ini.' }
     [IO.Compression.ZipFileExtensions]::ExtractToFile($entries[0], $template)
 } finally { $zip.Dispose() }
@@ -38,10 +38,6 @@ $target = Join-Path $plan.paksDirectory 'StableGyro.ini'
 $existed = Test-Path -LiteralPath $target -PathType Leaf
 $backup = Join-Path $transaction 'previous.ini'
 if ($existed) { Copy-Item -LiteralPath $target -Destination $backup }
-$prepared = Join-Path $transaction 'merged.ini'
-$policy = Import-PowerShellDataFile (Join-Path $PSScriptRoot 'Build/SettingsMigration.psd1')
-$merge = & (Join-Path $repo 'tools/Merge-VoyageModIni.ps1') -TemplatePath $template `
-    -CurrentPath $(if ($existed) { $target } else { $null }) -OutputPath $prepared @policy
 $installed = $null
 $iniChanged = $false
 try {
@@ -51,8 +47,8 @@ try {
     Assert-Closed
     # The stock installer owns the triplet; this coupled transaction owns the INI.
     $iniChanged = $true
-    Copy-Item -LiteralPath $prepared -Destination $target -Force
-    if ((Get-FileHash -LiteralPath $target).Hash -cne (Get-FileHash -LiteralPath $prepared).Hash) {
+    Copy-Item -LiteralPath $template -Destination $target -Force
+    if ((Get-FileHash -LiteralPath $target).Hash -cne (Get-FileHash -LiteralPath $template).Hash) {
         throw 'Installed StableGyro.ini failed copy readback.'
     }
 } catch {
@@ -72,7 +68,7 @@ try {
     throw $failure
 }
 $report = Join-Path $run 'install-result.json'
-$result = [pscustomobject]@{status='installed'; settingsPath=$target; addedKeys=@($merge.AddedKeys); removedKeys=@($merge.RemovedKeys); reportPath=$report}
+$result = [pscustomobject]@{status='installed'; settingsPath=$target; reportPath=$report}
 $result | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $report -Encoding UTF8
 Remove-VoyageModScratch -ModRoot $PSScriptRoot -RunRoot $run -Path $transaction
 $recovery = Split-Path -Parent $installed.installManifestPath

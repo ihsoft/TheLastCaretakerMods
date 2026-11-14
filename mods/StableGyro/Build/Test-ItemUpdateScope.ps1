@@ -8,7 +8,7 @@ $fixtureMod=Join-Path $fixture 'mods/StableGyro'
 foreach ($relative in @('tools','mods/StableGyro/Build','mods/StableGyro/Project/Content/Data/Assets/Modules','mods/StableGyro/Project/Content/Blueprints/Fabrication','mods/StableGyro/Project/Content/LocalizationStringTables')) {
     $null=New-Item -ItemType Directory -Path (Join-Path $fixture $relative) -Force
 }
-foreach ($relative in @('Update-StableGyroItemAsset.ps1','New-StableGyroProjectCopy.ps1','Build/SourceUpdate.psm1','Build/ItemAssetRefresh.psm1')) {
+foreach ($relative in @('Update-StableGyroItemAsset.ps1','Build/Update-StableGyroItemAsset.ps1','New-StableGyroProjectCopy.ps1','Build/SourceUpdate.psm1','Build/ItemAssetRefresh.psm1')) {
     Copy-Item -LiteralPath (Join-Path $mod $relative) -Destination (Join-Path $fixtureMod $relative)
 }
 Copy-Item -LiteralPath (Join-Path $repo 'tools/VoyageModPipeline.psm1') -Destination (Join-Path $fixture 'tools')

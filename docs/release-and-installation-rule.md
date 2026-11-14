@@ -182,6 +182,13 @@ its presence in the game directory provides no runtime value.
 
 ## Installation and rollback
 
+Distribute settings INI files as complete files in the release ZIP. First
+installation and updates use those exact files; do not add automatic INI merge,
+key migration or user-value preservation. A local candidate installer must use
+the selected archive's INI and include its replacement in the recoverable
+installation operation. Recovery backups restore failed writes, not values
+from a previous version after successful installation.
+
 The operator keeps track of two ready packages: **current** and **previous**.
 If the current package fails a game test, reinstall the previous package as it
 is. The path to each working package can stay in the active task context or an
@@ -192,8 +199,8 @@ An installer may create a transaction record and copy existing files under
 `Tmp/<Mod>/installations/` while an installation or coupled settings edit is in
 progress. These are short-lived recovery data for an interrupted operation, not a package to
 choose for rollback after testing. Never put them in the versioned release
-directory. A settings backup has the same limited purpose: preserve
-the user's INI through the settings mutation, then discard the operation
+directory. A settings backup has the same limited purpose: retain the prior
+INI bytes for recovery from a failed replacement, then discard the operation
 record once it has completed. Keep failure evidence in `Tmp/` only while it is
 needed to resolve that failure.
 

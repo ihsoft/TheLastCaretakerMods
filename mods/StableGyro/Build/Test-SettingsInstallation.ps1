@@ -4,10 +4,9 @@ $repo = [IO.Path]::GetFullPath((Join-Path $mod '../..'))
 Import-Module (Join-Path $repo 'tools/VoyageModPipeline.psm1') -Force
 $run = New-VoyageModRun -ModRoot $mod -Kind test-install
 $fixture = Join-Path $run 'fixture'
-foreach ($path in @('mods/StableGyro/Build','tools/VoyageModSettings','game/Voyage/Content/Paks')) { $null=New-Item -ItemType Directory -Path (Join-Path $fixture $path) -Force }
+foreach ($path in @('mods/StableGyro','tools','game/Voyage/Content/Paks')) { $null=New-Item -ItemType Directory -Path (Join-Path $fixture $path) -Force }
 Copy-Item -LiteralPath (Join-Path $mod 'Install-StableGyro.ps1') -Destination (Join-Path $fixture 'mods/StableGyro')
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'SettingsMigration.psd1') -Destination (Join-Path $fixture 'mods/StableGyro/Build')
-foreach ($file in @('VoyageModPipeline.psm1','Merge-VoyageModIni.ps1','VoyageModSettings/VoyageModIniMerge.psm1')) {
+foreach ($file in @('VoyageModPipeline.psm1')) {
     Copy-Item -LiteralPath (Join-Path $repo ('tools/' + $file)) -Destination (Join-Path $fixture ('tools/' + $file))
 }
 @'
@@ -36,13 +35,15 @@ $ini=Join-Path $paks 'StableGyro.ini'
 $container=Join-Path $paks 'StableGyro_P.pak'
 'old container' | Set-Content -LiteralPath $container
 $archive=Join-Path $fixture 'candidate.zip'
+$candidateText="# Candidate defaults`r`nFuelCapacity=50`r`nEnableAltitudeControl=true`r`n"
+$candidateBytes=[Text.Encoding]::UTF8.GetBytes($candidateText)
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 Add-Type -AssemblyName System.IO.Compression
 $zip=[IO.Compression.ZipFile]::Open($archive,[IO.Compression.ZipArchiveMode]::Create)
 try {
-    $entry=$zip.CreateEntry('Voyage/Content/Paks/StableGyro.ini')
-    $writer=New-Object IO.StreamWriter($entry.Open())
-    try { $writer.Write("FuelCapacity=50`nEnableAltitudeControl=true`n") } finally { $writer.Dispose() }
+    $entry=$zip.CreateEntry('StableGyro.ini')
+    $stream=$entry.Open()
+    try { $stream.Write($candidateBytes,0,$candidateBytes.Length) } finally { $stream.Dispose() }
 } finally { $zip.Dispose() }
 $manifest=Join-Path $fixture 'release-manifest.json'
 @{mod='StableGyro';archive=@{path='candidate.zip'}} | ConvertTo-Json | Set-Content -LiteralPath $manifest
@@ -56,26 +57,35 @@ Reject { & $installer -ReleaseManifest $manifest -GameRoot $game -AllowDirtySour
 $fixtureState=@{gameRunning=$false;failSettings=$false}
 Reject { & $installer -ReleaseManifest $manifest -GameRoot $game } 'dirty policy forwarded'
 $null=& $installer -ReleaseManifest $manifest -GameRoot $game -AllowDirtySource
-Check ((Get-Content -LiteralPath $ini -Raw).Contains('FuelCapacity=50')) 'create from candidate'
+Check ([Convert]::ToBase64String([IO.File]::ReadAllBytes($ini)) -ceq [Convert]::ToBase64String($candidateBytes)) 'first install copies candidate bytes'
 "# user comment`nFuelCapacity=99`nEnableFuelDiagnostics=true`n" | Set-Content -LiteralPath $ini
 $null=& $installer -ReleaseManifest $manifest -GameRoot $game -AllowDirtySource
-$text=Get-Content -LiteralPath $ini -Raw
-Check ($text.Contains('FuelCapacity=99') -and $text.Contains('# user comment') -and $text.Contains('EnableAltitudeControl=true') -and -not $text.Contains('EnableFuelDiagnostics')) 'preservation and migration'
+Check ([Convert]::ToBase64String([IO.File]::ReadAllBytes($ini)) -ceq [Convert]::ToBase64String($candidateBytes)) 'update replaces all old values and comments with candidate bytes'
 # Fail after payload replacement, at the first settings write, then allow recovery.
+"# local values before a failed install`nFuelCapacity=123`nUnknownKey=keep for rollback`n" | Set-Content -LiteralPath $ini
 $before=[IO.File]::ReadAllBytes($ini)
 'rollback container' | Set-Content -LiteralPath $container
 $fixtureState.failSettings=$true
 function Copy-Item {
     [CmdletBinding()]param([string]$LiteralPath,[string]$Destination,[switch]$Force)
-    if ($fixtureState.failSettings -and $LiteralPath.EndsWith('merged.ini')) { $fixtureState.failSettings=$false; throw 'Injected INI write failure' }
+    if ($fixtureState.failSettings -and $LiteralPath.EndsWith('template.ini')) {
+        $fixtureState.failSettings=$false
+        [IO.File]::WriteAllText($Destination,'partial settings write')
+        throw 'Injected INI write failure'
+    }
     Microsoft.PowerShell.Management\Copy-Item @PSBoundParameters
 }
 Reject { & $installer -ReleaseManifest $manifest -GameRoot $game -AllowDirtySource } 'coupled failure surfaced'
 Check ([Convert]::ToBase64String([IO.File]::ReadAllBytes($ini)) -ceq [Convert]::ToBase64String($before)) 'exact INI rollback'
 Check ((Get-Content -LiteralPath $container -Raw).Trim() -ceq 'rollback container') 'container rollback'
+Remove-Item -LiteralPath $ini
+$fixtureState.failSettings=$true
+Reject { & $installer -ReleaseManifest $manifest -GameRoot $game -AllowDirtySource } 'first-install failure surfaced'
+Check (-not (Test-Path -LiteralPath $ini)) 'first-install rollback removes partial INI'
+Check ((Get-Content -LiteralPath $container -Raw).Trim() -ceq 'rollback container') 'first-install container rollback'
 Remove-Item Function:Copy-Item
 Remove-Item Function:Get-Process
 # Reimport the real module after the fixture installer loaded its isolated copy.
 Import-Module (Join-Path $repo 'tools/VoyageModPipeline.psm1') -Force
 Remove-VoyageModScratch -ModRoot $mod -RunRoot $run -Path $fixture
-'Candidate INI, preservation, retired keys, dirty/game gates and coupled rollback passed.'
+'Exact candidate INI replacement, dirty/game gates and coupled rollback passed.'

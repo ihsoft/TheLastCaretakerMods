@@ -305,8 +305,8 @@ the native property without a time-unit conversion. It is not a scale factor
 or a fixed number of liters per real minute. The native request is multiplied
 by `CurrentThrottle`, not the displayed collective percentage; module processing
 determines the actual tank decrease. Zero disables this base Petrol request.
-The retired `FuelConsumptionPerMinute` key is ignored at runtime and removed
-by the local installer, which adds the new default if its key is missing.
+The runtime reads `FuelConsumption`; the installed INI is a complete copy from
+the selected package, without conversion from older keys.
 
 After reloading settings, `ApplyFuelSettings` applies them at helper BeginPlay
 and on genuine player entry, before the altitude-control branch. Editing the

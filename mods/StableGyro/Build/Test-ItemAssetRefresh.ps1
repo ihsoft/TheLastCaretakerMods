@@ -11,8 +11,8 @@ $originalRecipe = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Item.patch.
 $recipe = $originalRecipe | ConvertFrom-Json
 
 function Assert-Plan {
-    param([string]$Build, [bool]$Refresh, [string]$Reason, [switch]$Reimport)
-    $plan = Get-StableGyroItemRefreshPlan -StatePath $statePath -RecipePath $recipePath -SteamBuildId $Build -Reimport:$Reimport
+    param([string]$Build, [bool]$Refresh, [string]$Reason)
+    $plan = Get-StableGyroItemRefreshPlan -StatePath $statePath -RecipePath $recipePath -SteamBuildId $Build
     if ($plan.refresh -ne $Refresh -or $plan.reason -cne $Reason -or $plan.steamBuildId -cne $Build) {
         throw "Unexpected item refresh plan: $($plan | ConvertTo-Json -Depth 10 -Compress)"
     }
@@ -29,13 +29,11 @@ function Assert-ReuseRejected {
 }
 
 Assert-ReuseRejected
-Assert-Plan -Build '100' -Refresh $true -Reason 'explicit-reimport' -Reimport
 Set-StableGyroItemSourceState -StatePath $statePath -SteamBuildId '100' -Recipe $recipe -Status ready
 $before = [IO.File]::ReadAllBytes($statePath)
 $writeTime = (Get-Item -LiteralPath $statePath).LastWriteTimeUtc
 Assert-Plan -Build '100' -Refresh $false -Reason 'same-game-build-and-recipe'
 Assert-Plan -Build '101' -Refresh $true -Reason 'game-build-changed'
-Assert-Plan -Build '100' -Refresh $true -Reason 'explicit-reimport' -Reimport
 
 # Formatting and object key order are not recipe edits; array contents and
 # case-sensitive reference changes are. Exercise nested patch fields too.
@@ -64,15 +62,13 @@ if ([Convert]::ToBase64String($before) -cne [Convert]::ToBase64String([IO.File]:
 
 Set-StableGyroItemSourceState -StatePath $statePath -SteamBuildId '100' -Recipe $recipe -Status pending
 Assert-ReuseRejected
-Assert-Plan -Build '100' -Refresh $true -Reason 'explicit-reimport' -Reimport
 Set-StableGyroItemSourceState -StatePath $statePath -SteamBuildId '101' -Recipe $recipe -Status ready
 Assert-Plan -Build '101' -Refresh $false -Reason 'same-game-build-and-recipe'
 foreach ($invalid in @('{', '{}', '{"schemaVersion":1,"steamBuildId":"100","status":"ready"}')) {
     [IO.File]::WriteAllText($statePath, $invalid)
     Assert-ReuseRejected
-    Assert-Plan -Build '100' -Refresh $true -Reason 'explicit-reimport' -Reimport
 }
 
 Remove-Item -LiteralPath $statePath, $recipePath
 Remove-Item -LiteralPath $testRoot
-Write-Output 'Item refresh tests passed: version, recipe semantics, explicit repair, invalid/interrupted state, and no-write planning.'
+Write-Output 'Item refresh tests passed: version, recipe semantics, invalid/interrupted state, and no-write planning.'

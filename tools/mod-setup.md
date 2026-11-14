@@ -135,14 +135,16 @@ Its values and the schema's runtime fallbacks have distinct roles.
 
 ### Existing user INI
 
-For an existing user INI, [`Merge-VoyageModIni.ps1`](Merge-VoyageModIni.ps1)
-prepares a **new** file from `-TemplatePath`, `-CurrentPath`, and a fresh
-`-OutputPath`. Optional `-RetiredKeys`, `-RetiredComments`, and
-`-DefaultsComment` describe mod-owned migrations. Omit `-CurrentPath` to
-copy the template for a first installation. Its compact result reports
-`Created`, `Changed`, `AddedKeys`, and `RemovedKeys`. It never writes
-the installed INI; the owning installer checks that the game is closed, keeps
-a recovery copy, replaces the file, and checks the readback hash. A value or
-unit conversion remains mod-specific. See the
-[INI recipe](../docs/runtime-configuration-patterns-knowledge.md) for the
-runtime read policy and schema authoring contract.
+Installation replaces the complete INI with the selected archive's file under
+the [release contract](../docs/release-and-installation-rule.md#installation-and-rollback).
+Keep a temporary backup for failed-install recovery; do not merge old values or
+migrate keys. Runtime read policy and schema authoring belong to the
+[INI recipe](../docs/runtime-configuration-patterns-knowledge.md).
+
+`Merge-VoyageModIni.ps1` is a local development utility, not the distribution or
+candidate-installation path. Its existing interface produces a new file from
+`-TemplatePath`, optional `-CurrentPath`, and a fresh `-OutputPath`; optional
+`-RetiredKeys`, `-RetiredComments`, and `-DefaultsComment` control that local
+transformation. It returns `Created`, `Changed`, `AddedKeys`, and `RemovedKeys`
+without writing the installed INI. Do not infer player migration support from
+this utility.

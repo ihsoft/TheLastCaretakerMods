@@ -20,30 +20,26 @@ function Get-StableGyroItemRefreshPlan {
     param(
         [Parameter(Mandatory = $true)] [string]$StatePath,
         [Parameter(Mandatory = $true)] [string]$RecipePath,
-        [Parameter(Mandatory = $true)] [ValidatePattern('^[0-9]+$')] [string]$SteamBuildId,
-        [switch]$Reimport
+        [Parameter(Mandatory = $true)] [ValidatePattern('^[0-9]+$')] [string]$SteamBuildId
     )
 
     $recipe = Get-Content -LiteralPath $RecipePath -Raw -ErrorAction Stop | ConvertFrom-Json
     if ($recipe -isnot [pscustomobject]) { throw 'Item recipe must be a JSON object.' }
-    $reason = 'explicit-reimport'
-    if (-not $Reimport) {
-        try {
-            $state = Get-Content -LiteralPath $StatePath -Raw -ErrorAction Stop | ConvertFrom-Json
-            if ($state.schemaVersion -ne 1 -or $state.status -cne 'ready' -or
-                [string]$state.steamBuildId -cnotmatch '^[0-9]+$' -or
-                $state.recipe -isnot [pscustomobject]) {
-                throw 'Missing, invalid or incomplete item source state.'
-            }
-        } catch {
-            throw "Cannot reuse maintained item assets: $($_.Exception.Message) Restore their source state from Git or run Update-StableGyroItemAsset.ps1."
+    try {
+        $state = Get-Content -LiteralPath $StatePath -Raw -ErrorAction Stop | ConvertFrom-Json
+        if ($state.schemaVersion -ne 1 -or $state.status -cne 'ready' -or
+            [string]$state.steamBuildId -cnotmatch '^[0-9]+$' -or
+            $state.recipe -isnot [pscustomobject]) {
+            throw 'Missing, invalid or incomplete item source state.'
         }
-        $expected = ConvertTo-Json -InputObject (ConvertTo-StableItemRecipeValue $state.recipe) -Depth 32 -Compress
-        $actual = ConvertTo-Json -InputObject (ConvertTo-StableItemRecipeValue $recipe) -Depth 32 -Compress
-        $reason = if ([string]$state.steamBuildId -cne $SteamBuildId) { 'game-build-changed' }
-            elseif ($expected -cne $actual) { 'recipe-changed' }
-            else { 'same-game-build-and-recipe' }
+    } catch {
+        throw "Cannot reuse maintained item assets: $($_.Exception.Message) Restore their source state from Git or run Update-StableGyroItemAsset.ps1."
     }
+    $expected = ConvertTo-Json -InputObject (ConvertTo-StableItemRecipeValue $state.recipe) -Depth 32 -Compress
+    $actual = ConvertTo-Json -InputObject (ConvertTo-StableItemRecipeValue $recipe) -Depth 32 -Compress
+    $reason = if ([string]$state.steamBuildId -cne $SteamBuildId) { 'game-build-changed' }
+        elseif ($expected -cne $actual) { 'recipe-changed' }
+        else { 'same-game-build-and-recipe' }
     return [pscustomobject]@{
         refresh = $reason -cne 'same-game-build-and-recipe'
         reason = $reason

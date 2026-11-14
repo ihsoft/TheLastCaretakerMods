@@ -5,9 +5,6 @@
 
 [CmdletBinding()]
 param(
-    [ValidatePattern('^[0-9A-Za-z][0-9A-Za-z._-]*$')]
-    [string]$Version,
-
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
     [string]$EngineRoot = 'P:\UnrealEngine\UE_5.8',
@@ -44,9 +41,6 @@ if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
     throw 'StableGyro published version must be a non-negative integer in version.txt.'
 }
 $candidateModVersion = 'V' + ([int]$publishedVersionText + 1)
-if (-not [string]::IsNullOrWhiteSpace($Version) -and $Version -cne $candidateModVersion) {
-    throw "Version is derived from version.txt and must be $candidateModVersion. Use OutputRoot to label a temporary run."
-}
 $Version = $candidateModVersion
 if ([string]::IsNullOrWhiteSpace($Retoc)) {
     $Retoc = Join-Path $repoRoot '.tools\bin\retoc.exe'
@@ -171,7 +165,6 @@ if ($actualEngineVersion -cne $expectedEditorEngineVersion) {
 $sourceStatus = @(& git -C $repoRoot status --porcelain -- `
     'mods/StableGyro' `
     'tools/New-VoyageModSettings.ps1' `
-    'tools/Merge-VoyageModIni.ps1' `
     'tools/VoyageModSettings' `
     ':(exclude)mods/StableGyro/Slideshow')
 if ($LASTEXITCODE -ne 0) {
@@ -325,7 +318,6 @@ New-Item -ItemType Directory -Path $payloadRoot -Force | Out-Null
 foreach ($name in $payloadNames) {
     Copy-Item -LiteralPath (Join-Path $containerFiles $name) -Destination (Join-Path $payloadRoot $name)
 }
-Copy-Item -LiteralPath (Join-Path $modRoot 'README.md') -Destination (Join-Path $payloadRoot 'README.md')
 Copy-Item -LiteralPath $generatedSettingsIni -Destination (Join-Path $payloadRoot 'StableGyro.ini')
 $archivePath = Join-Path $releaseRoot "StableGyro-$Version.zip"
 & (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
