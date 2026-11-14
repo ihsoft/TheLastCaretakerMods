@@ -9,6 +9,11 @@ param(
     [switch]$AllowDirtySource
 )
 $ErrorActionPreference = 'Stop'
+if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
+    Import-Module (Join-Path $PSScriptRoot '../../tools/unreal-coordination.psm1') -Force
+    Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation 'Build SmartOutlet'
+    return
+}
 Set-StrictMode -Version Latest
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '../..')).Path
@@ -25,7 +30,6 @@ $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
 $buildGate = & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 $mappings = & (Join-Path $repoRoot 'tools/Get-VoyageMappings.ps1') -GameRoot $GameRoot
 $settingsTemplate = Join-Path $modRoot 'Assets/SmartOutlet.ini'
-& (Join-Path $modRoot 'Settings/Test-SettingsTemplate.ps1') -Path $settingsTemplate | Out-Null
 $project = & (Join-Path $modRoot 'New-SmartOutletProjectCopy.ps1') -Destination $projectRoot
 $bptWorkspace = Join-Path $repoRoot ('Tmp/BlueprintText/SmartOutlet-build-' + [guid]::NewGuid().ToString('N'))
 & (Join-Path $repoRoot 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $bptWorkspace > (Join-Path $output 'prepare.log')

@@ -2,6 +2,7 @@
 param(
     [switch]$KeepArtifacts,
     [switch]$WithAutoLoadSidecar,
+    [switch]$WithSettings,
     [switch]$WithContentPluginDescriptor
 )
 
@@ -33,6 +34,9 @@ $fixtureExtensions = @('.pak', '.ucas', '.utoc')
 if ($WithAutoLoadSidecar) { $fixtureExtensions += '.autoload' }
 $expectedInstalledCount = $fixtureExtensions.Count +
     $(if ($WithContentPluginDescriptor) { 1 } else { 0 })
+$settingsName = 'SyntheticSettings.ini'
+$settingsArguments = if ($WithSettings) { @{SettingsArchivePath=$settingsName} } else { @{} }
+if ($WithSettings) { $expectedInstalledCount++ }
 $pluginName = 'SyntheticCatalogue'
 $pluginInstallPath = Join-Path $gameRoot "Voyage\Mods\$pluginName\$pluginName.uplugin"
 function Write-Utf8Json {
@@ -108,6 +112,9 @@ function New-SyntheticRelease {
             archivePath = "Mods/$pluginName/$pluginName.uplugin"
             installRelativePath = "Voyage/Mods/$pluginName/$pluginName.uplugin"
         }
+    }
+    if ($WithSettings) {
+        [IO.File]::WriteAllText((Join-Path $packageRoot $settingsName), "$ContentMarker-settings", [Text.UTF8Encoding]::new($false))
     }
     $archivePath = Join-Path $releaseRoot "$modName-$Version.zip"
     Compress-Archive -Path (Join-Path $packageRoot '*') -DestinationPath $archivePath
@@ -207,15 +214,20 @@ try {
         $previousHashes[$name] = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash
     }
 
+    if ($WithSettings) {
+        $settingsTarget = Join-Path $paksDirectory $settingsName
+        [IO.File]::WriteAllText($settingsTarget, '# previous user values', [Text.UTF8Encoding]::new($false))
+        $previousHashes[$settingsName] = (Get-FileHash -LiteralPath $settingsTarget).Hash
+    }
     $firstRelease = New-SyntheticRelease -Version 'V1' `
         -ContentMarker 'first'
 
     Assert-Rejected -Action {
-        & $installer -ReleaseManifest $firstRelease.manifestPath `
+        & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath `
             -GameRoot $gameRoot -ReleaseCandidate
     } -Pattern 'ReleaseCandidate is obsolete'
     Assert-Rejected -Action {
-        & $installer -ReleaseManifest $firstRelease.manifestPath `
+        & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath `
             -GameRoot $gameRoot -RetainCandidateOnly
     } -Pattern 'RetainCandidateOnly is obsolete'
 
@@ -225,14 +237,14 @@ try {
         "0`n",
         [Text.UTF8Encoding]::new($false))
     Assert-Rejected -Action {
-        & $installer -ReleaseManifest $firstRelease.manifestPath `
+        & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath `
             -GameRoot $publishedRetentionGameRoot -RetainPublishedRelease
     } -Pattern 'is not the published version'
     [IO.File]::WriteAllText(
         $publishedVersionPath,
         "1`n",
         [Text.UTF8Encoding]::new($false))
-    $retained = & $installer -ReleaseManifest $firstRelease.manifestPath `
+    $retained = & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath `
         -GameRoot $publishedRetentionGameRoot -RetainPublishedRelease
     Assert-Hash -Path $retained.archivePath -Expected $firstRelease.archive.sha256 `
         -Label 'Retained published archive'
@@ -240,12 +252,12 @@ try {
         -Expected (Get-FileHash -LiteralPath $firstRelease.manifestPath -Algorithm SHA256).Hash `
         -Label 'Retained published manifest'
     Assert-Rejected -Action {
-        & $installer -ReleaseManifest $firstRelease.manifestPath `
+        & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath `
             -GameRoot $publishedRetentionGameRoot -RetainPublishedRelease
     } -Pattern 'already exists'
 
     $validationEvidence = Join-Path $testRoot 'validation-must-not-exist'
-    $validationResult = & $installer -ReleaseManifest $firstRelease.manifestPath `
+    $validationResult = & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath `
         -GameRoot $gameRoot -EvidenceRoot $validationEvidence -ValidateOnly
     if (-not [bool]$validationResult.validated -or
         @($validationResult.files).Count -ne $expectedInstalledCount -or
@@ -253,11 +265,35 @@ try {
         throw 'ValidateOnly did not return a clean, mutation-free installation plan.'
     }
 
+    Assert-Rejected -Pattern 'Expected a DifferentMod release manifest' -Action {
+        & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath -GameRoot $gameRoot -ExpectedMod DifferentMod -ValidateOnly
+    }
+    if ($WithSettings) {
+        Assert-Rejected -Pattern 'exactly one settings entry' -Action {
+            & $installer -ReleaseManifest $firstRelease.manifestPath -GameRoot $gameRoot -SettingsArchivePath 'Missing.ini' -ValidateOnly
+        }
+        Assert-Rejected -Pattern 'must match the container destination' -Action {
+            & $installer -ReleaseManifest $firstRelease.manifestPath -GameRoot $gameRoot -SettingsArchivePath '../SyntheticSettings.ini' -ValidateOnly
+        }
+        $savedSettings = [IO.File]::ReadAllBytes($settingsTarget)
+        Remove-Item -LiteralPath $settingsTarget
+        $null = New-Item -ItemType Directory -Path $settingsTarget
+        try {
+            Assert-Rejected -Pattern 'directory or reparse-point installation target' -Action {
+                & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath -GameRoot $gameRoot -ValidateOnly
+            }
+        } finally {
+            [IO.Directory]::Delete($settingsTarget)
+            [IO.File]::WriteAllBytes($settingsTarget, $savedSettings)
+        }
+    }
+
     if (-not $WithContentPluginDescriptor) {
     $logicRelease = New-SyntheticRelease -Version 'V2' `
         -ContentMarker 'logicmods'
     $logicStage = Join-Path $logicRelease.root 'logic-archive-stage'
-    $logicStagePaks = Join-Path $logicStage 'LogicMods'
+    $logicArchivePrefix = if ($WithSettings) { 'Voyage/Content/Paks/LogicMods' } else { 'LogicMods' }
+    $logicStagePaks = Join-Path $logicStage $logicArchivePrefix
     [IO.Directory]::CreateDirectory($logicStagePaks) | Out-Null
     Copy-Item -Path (Join-Path $logicRelease.root 'container\package\*') `
         -Destination $logicStagePaks
@@ -269,10 +305,14 @@ try {
     $logicManifest.archive.sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $logicArchivePath).Hash
     Write-Utf8Json -Path $logicRelease.manifestPath -Value $logicManifest
     $logicPaks = Join-Path $paksDirectory 'LogicMods'
-    $logicInstall = & $installer -ReleaseManifest $logicRelease.manifestPath `
-        -GameRoot $gameRoot -EvidenceRoot (Join-Path $testRoot 'logicmods-evidence')
+    $logicSettingsArguments = if ($WithSettings) { @{SettingsArchivePath="$logicArchivePrefix/$settingsName"} } else { @{} }
+    $logicInstall = & $installer @logicSettingsArguments -ReleaseManifest $logicRelease.manifestPath `
+        -GameRoot $gameRoot -EvidenceRoot (Join-Path $testRoot 'logicmods-evidence') -KeepRecoveryEvidence
     if ([string]$logicInstall.paksDirectory -cne $logicPaks) {
         throw 'Installer did not infer the LogicMods destination from the ZIP.'
+    }
+    if ($WithSettings -and [IO.File]::ReadAllText((Join-Path $logicPaks $settingsName)) -cne 'logicmods-settings') {
+        throw 'LogicMods settings were not created from the archive.'
     }
     foreach ($record in $logicRelease.records) {
         Assert-Hash -Path (Join-Path $logicPaks $record.name) `
@@ -280,10 +320,17 @@ try {
     }
     }
 
+    if (-not $WithContentPluginDescriptor) {
+        $null = & $restorer -InstallManifest $logicInstall.installManifestPath
+        if (@(Get-ChildItem -LiteralPath $logicPaks -File -Force -ErrorAction SilentlyContinue).Count) {
+            throw 'First-install restore left LogicMods files behind.'
+        }
+    }
+
     $wrongFingerprintRelease = New-SyntheticRelease -Version 'V3' `
         -ContentMarker 'wrong-fingerprint' -SteamBuildId '88888888'
     Assert-Rejected -Pattern 'fingerprint does not match' -Action {
-        & $installer -ReleaseManifest $wrongFingerprintRelease.manifestPath `
+        & $installer @settingsArguments -ReleaseManifest $wrongFingerprintRelease.manifestPath `
             -GameRoot $gameRoot -ValidateOnly
     }
     if ($WithAutoLoadSidecar) {
@@ -293,7 +340,7 @@ try {
         $wrongSidecarManifest.payload[-1].name = 'DifferentMod.autoload'
         Write-Utf8Json -Path $wrongSidecarRelease.manifestPath -Value $wrongSidecarManifest
         Assert-Rejected -Pattern 'autoload sidecar must use the exact container basename' -Action {
-            & $installer -ReleaseManifest $wrongSidecarRelease.manifestPath -GameRoot $gameRoot -ValidateOnly
+            & $installer @settingsArguments -ReleaseManifest $wrongSidecarRelease.manifestPath -GameRoot $gameRoot -ValidateOnly
         }
     }
     $wrongArchiveRelease = New-SyntheticRelease -Version 'V5' `
@@ -306,7 +353,7 @@ try {
     $wrongArchiveManifest.payload[0].size = (Get-Item -LiteralPath $wrongArchivePayloadPath).Length
     Write-Utf8Json -Path $wrongArchiveRelease.manifestPath -Value $wrongArchiveManifest
     Assert-Rejected -Pattern 'Release ZIP does not match|Loose payload differs' -Action {
-        & $installer -ReleaseManifest $wrongArchiveRelease.manifestPath `
+        & $installer @settingsArguments -ReleaseManifest $wrongArchiveRelease.manifestPath `
             -GameRoot $gameRoot -ValidateOnly
     }
     if ($WithContentPluginDescriptor) {
@@ -319,7 +366,7 @@ try {
         Write-Utf8Json -Path $unsafePluginRelease.manifestPath `
             -Value $unsafePluginManifest
         Assert-Rejected -Pattern 'paths do not match' -Action {
-            & $installer -ReleaseManifest $unsafePluginRelease.manifestPath `
+            & $installer @settingsArguments -ReleaseManifest $unsafePluginRelease.manifestPath `
                 -GameRoot $gameRoot -ValidateOnly
         }
     }
@@ -330,7 +377,7 @@ try {
     [IO.Directory]::CreateDirectory($directoryTargetPath) | Out-Null
     try {
         Assert-Rejected -Pattern 'directory or reparse-point installation target' -Action {
-            & $installer -ReleaseManifest $firstRelease.manifestPath `
+            & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath `
                 -GameRoot $gameRoot -ValidateOnly
         }
     }
@@ -338,7 +385,7 @@ try {
         [IO.Directory]::Delete($directoryTargetPath)
         [IO.File]::WriteAllBytes($directoryTargetPath, $directoryTargetOriginal)
     }
-    $installResult = & $installer -ReleaseManifest $firstRelease.manifestPath `
+    $installResult = & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath `
         -GameRoot $gameRoot -EvidenceRoot $evidenceParent -KeepRecoveryEvidence
 
     foreach ($record in $firstRelease.records) {
@@ -354,6 +401,9 @@ try {
         throw 'Installation placed a ZIP in Paks.'
     }
 
+    if ($WithSettings -and [IO.File]::ReadAllText($settingsTarget) -cne 'first-settings') {
+        throw 'Existing INI was not replaced completely from the archive.'
+    }
     $installManifest = Get-Content -LiteralPath $installResult.installManifestPath `
         -Raw | ConvertFrom-Json
     if ([string]$installManifest.status -cne 'installed' -or
@@ -400,6 +450,7 @@ try {
                 Join-Path $paksDirectory $name)).Hash
     }
 
+    if ($WithSettings) { $installedBeforeFailure[$settingsName] = (Get-FileHash -LiteralPath $settingsTarget).Hash }
     $secondEvidenceParent = Join-Path $testRoot 'failure-evidence'
     $secondRelease = New-SyntheticRelease -Version 'V7' `
         -ContentMarker 'second'
@@ -418,7 +469,11 @@ try {
 
         if ($LiteralPath -like '*.installing-*') {
             $global:VoyageInstallerTestMoveCount++
-            if ($global:VoyageInstallerTestMoveCount -eq 2) {
+            if ($WithSettings -and $LiteralPath -like "*$settingsName.installing-*") {
+                Microsoft.PowerShell.Management\Move-Item @PSBoundParameters
+                throw 'Synthetic mid-install failure'
+            }
+            if (-not $WithSettings -and $global:VoyageInstallerTestMoveCount -eq 2) {
                 throw 'Synthetic mid-install failure'
             }
         }
@@ -427,7 +482,7 @@ try {
 
     $failureObserved = $false
     try {
-        & $installer -ReleaseManifest $secondRelease.manifestPath `
+        & $installer @settingsArguments -ReleaseManifest $secondRelease.manifestPath `
             -GameRoot $gameRoot -EvidenceRoot $secondEvidenceParent
     }
     catch {
@@ -502,7 +557,7 @@ try {
     $restoreValidation = & $restorer `
         -InstallManifest $installResult.installManifestPath -ValidateOnly
     if (-not [bool]$restoreValidation.validated -or
-        [int]$restoreValidation.restoreCount -ne $fixtureExtensions.Count -or
+        [int]$restoreValidation.restoreCount -ne ($fixtureExtensions.Count + $(if ($WithSettings) { 1 } else { 0 })) -or
         [int]$restoreValidation.removeCount -ne
             $(if ($WithContentPluginDescriptor) { 1 } else { 0 }) -or
         [int]$restoreValidation.retainedCount -ne 0) {
@@ -519,7 +574,7 @@ try {
     }
 
     $reinstallEvidence = Join-Path $testRoot 'reinstall-evidence'
-    $reinstallResult = & $installer -ReleaseManifest $firstRelease.manifestPath `
+    $reinstallResult = & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath `
         -GameRoot $gameRoot -EvidenceRoot $reinstallEvidence -KeepRecoveryEvidence
     $installedBeforeRestoreFailure = @{}
     foreach ($name in @(
@@ -646,7 +701,7 @@ try {
     }
 
     $transientEvidence = Join-Path $testRoot 'transient-installation'
-    $transientInstall = & $installer -ReleaseManifest $firstRelease.manifestPath `
+    $transientInstall = & $installer @settingsArguments -ReleaseManifest $firstRelease.manifestPath `
         -GameRoot $gameRoot -EvidenceRoot $transientEvidence
     if ($null -ne $transientInstall.installManifestPath -or
         @(Get-ChildItem -LiteralPath $transientEvidence -Recurse -File `
@@ -667,13 +722,13 @@ try {
         throw 'Synthetic package cleanup escaped its release root.'
     }
     Remove-Item -LiteralPath $archiveOnlyPackage -Recurse -Force
-    $archiveOnlyValidation = & $installer `
+    $archiveOnlyValidation = & $installer @settingsArguments `
         -ReleaseManifest $archiveOnlyRelease.manifestPath `
         -GameRoot $gameRoot -ValidateOnly
     if (-not [bool]$archiveOnlyValidation.validated) {
         throw 'Archive-only release did not validate.'
     }
-    $null = & $installer -ReleaseManifest $archiveOnlyRelease.manifestPath `
+    $null = & $installer @settingsArguments -ReleaseManifest $archiveOnlyRelease.manifestPath `
         -GameRoot $gameRoot -EvidenceRoot (Join-Path $testRoot 'archive-only-evidence')
     foreach ($record in $archiveOnlyRelease.records) {
         Assert-Hash -Path (Join-Path $paksDirectory $record.name) `
@@ -687,7 +742,7 @@ try {
 
     $defaultEvidenceParent = [IO.Path]::GetFullPath(
         (Join-Path $repositoryRoot "Tmp\$modName\installations"))
-    $defaultInstall = & $installer `
+    $defaultInstall = & $installer @settingsArguments `
         -ReleaseManifest $archiveOnlyRelease.manifestPath `
         -GameRoot $gameRoot -KeepRecoveryEvidence
     $defaultOperationRoot = [IO.Path]::GetFullPath(
@@ -703,6 +758,7 @@ try {
     $testPassed = $true
     [pscustomobject][ordered]@{
         passed = $true
+        settings = [bool]$WithSettings
         autoLoadSidecar = [bool]$WithAutoLoadSidecar
         contentPluginDescriptor = [bool]$WithContentPluginDescriptor
         checks = @('obsolete-candidate-retention-rejection',

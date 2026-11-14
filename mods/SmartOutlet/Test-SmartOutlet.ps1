@@ -1,7 +1,11 @@
-# Reserve Invoke-UnrealQueued for the whole test operation.
 [CmdletBinding()]
 param([string]$EngineRoot = 'P:/UnrealEngine/UE_5.8', [string]$OutputRoot)
 $ErrorActionPreference = 'Stop'
+if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
+    Import-Module (Join-Path $PSScriptRoot '../../tools/unreal-coordination.psm1') -Force
+    Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation 'Test SmartOutlet'
+    return
+}
 Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot '../../tools/VoyageModPipeline.psm1')
 Invoke-VoyageModEditorTest -ModRoot $PSScriptRoot -EngineRoot $EngineRoot -OutputRoot $OutputRoot `

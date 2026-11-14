@@ -18,15 +18,12 @@ results/logs, and leave failed runs available for diagnosis. Build also accepts
 `-GameRoot`, `-IgnorePinnedGameVersion` and `-AllowDirtySource` under the
 [shared release workflow](../../docs/release-and-installation-rule.md).
 
-Wrap either command in the [Unreal queue](../../tools/unreal-coordination.md).
-Run from the repository root. To build a candidate:
+Both commands enter the [Unreal queue](../../tools/unreal-coordination.md)
+automatically. Run from the repository root through the
+[shared PowerShell launcher](../../tools/powershell-execution.md). To build a candidate:
 
 ```powershell
-$shell = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-./tools/Invoke-UnrealQueued.ps1 -Operation 'Build Smart Outlet' `
-  -FilePath (Join-Path $PSHOME $shell) `
-  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',
-    'mods/SmartOutlet/Build-SmartOutlet.ps1')
+python -B tools/run_powershell.py mods/SmartOutlet/Build-SmartOutlet.ps1
 ```
 
 Add `-AllowDirtySource` to the producer's arguments for uncommitted source.
@@ -35,11 +32,7 @@ Building does not install the candidate. Its result has `status: built`,
 For editor checks:
 
 ```powershell
-$shell = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-./tools/Invoke-UnrealQueued.ps1 -Operation 'Test Smart Outlet' `
-  -FilePath (Join-Path $PSHOME $shell) `
-  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',
-    'mods/SmartOutlet/Test-SmartOutlet.ps1')
+python -B tools/run_powershell.py mods/SmartOutlet/Test-SmartOutlet.ps1
 ```
 
 The test runner returns `reportPath` for its Blueprint suites. Missing/failed
@@ -52,19 +45,27 @@ Use [Install-SmartOutlet.ps1](Install-SmartOutlet.ps1) with
 `-ReleaseManifest <candidate manifest>` for the coupled container/INI operation;
 pass `-AllowDirtySource` for a dirty candidate.
 
-An existing INI is left untouched while the shared installer updates containers.
-If the INI is absent, the mod installer creates it from the candidate ZIP.
-`-ResetSettings` explicitly replaces it with that candidate's defaults.
-Creation/reset keeps container recovery data and, when replacing an INI, its
-backup until both writes succeed. Successful operations remove these temporary
-files; failed operations report their recovery location.
+The installer replaces the complete INI from the selected ZIP through the
+[shared installation operation](../../tools/release-installation.md#install-a-candidate-with-settings).
+`-ValidateOnly` checks the candidate and destinations without installing.
+
+When changing the canonical INI or its section rules, run:
+
+```powershell
+python -B tools/run_powershell.py mods/SmartOutlet/Settings/Test-SettingsTemplate.ps1 -Path mods/SmartOutlet/Assets/SmartOutlet.ini
+```
+
+This focused check owns the mod's class/mode section names, threshold ordering
+and material-slot constraints; the shared flat settings schema does not express
+that contract. It runs only when those inputs change, not during ordinary builds.
+Runtime parser changes also require the editor and game checks below.
 
 ## Authoring
 
 Create a working project without launching Unreal:
 
 ```powershell
-./mods/SmartOutlet/New-SmartOutletProjectCopy.ps1 `
+python -B tools/run_powershell.py mods/SmartOutlet/New-SmartOutletProjectCopy.ps1 `
   -Destination './Tmp/SmartOutlet/authoring-ports/Project'
 ```
 

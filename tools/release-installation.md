@@ -6,10 +6,9 @@ owns version identity, candidate retention, installation, and rollback.
 For a routine candidate whose payload needs no mod-specific coupled file writes,
 use the producer's release manifest directly with the shared installer. When
 installation also copies a packaged INI or another coupled payload file,
-use the installation entry point documented by that mod's index. It must cover
-the payload and settings in one recoverable operation; a container-only install
-does not replace it. Copy the INI completely from the selected archive, without
-merge or key migration. Exact commands and additional contracts belong to that mod.
+use the installation entry point documented by that mod's index. It supplies the
+INI archive path to the shared operation below; a container-only install does
+not replace it. Exact commands and additional contracts belong to that mod.
 The read-only status snapshot below is for a specific installation question or
 unexpected result.
 
@@ -26,6 +25,37 @@ from a completed common installation manifest. Exit zero means the snapshot
 was obtained; inspect the returned match states before drawing conclusions.
 This read-only snapshot does not replace the installer's immediate process and
 copy-integrity checks.
+
+## Install a candidate with settings
+
+`Install-VoyageRelease.ps1 -SettingsArchivePath <entry>` includes one complete
+INI from the selected ZIP in the same installation and recovery operation as
+the container and optional content-plugin descriptor. Mod wrappers supply only
+the archive entry, `-ExpectedMod <name>` and any actual mod-specific blockers.
+They do not extract, merge, copy, back up or restore settings themselves.
+
+```powershell
+python -B tools/run_powershell.py tools/Install-VoyageRelease.ps1 `
+  -ReleaseManifest './Tmp/Example/candidate/release-manifest.json' `
+  -ExpectedMod Example -SettingsArchivePath 'Voyage/Content/Paks/Example.ini'
+```
+
+The exact entry must be unique and match the container's Paks or LogicMods
+destination. Flat Paks archives use `Example.ini`; game-root archives use
+`Voyage/Content/Paks/Example.ini` or
+`Voyage/Content/Paks/LogicMods/Example.ini`. Legacy `LogicMods/Example.ini`
+entries are also supported. The installed filename comes from that entry.
+Existing settings are replaced byte for byte, including comments; installation
+does not parse settings, merge values or migrate keys. Validate schema/INI edits
+through the [settings preparation guide](mod-setup.md#runtime-ini-preparation).
+
+`-ValidateOnly` checks the archive entry and destination without writing files.
+`-AllowDirtySource` retains the release's existing dirty-source policy.
+Success returns `status: installed`, `settingsPath`, `paksDirectory`, `fileCount`
+and `installManifestPath` (null after normal temporary-recovery cleanup).
+Failure uses the existing common rollback for all files and reports retained
+recovery evidence when needed. `-KeepRecoveryEvidence` also retains the INI's
+predecessor for the shared restore tool; no separate settings journal is needed.
 
 ## Release installation
 

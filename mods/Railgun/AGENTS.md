@@ -18,13 +18,13 @@ the role manifest, but must not alter GLB geometry unless explicitly requested.
 - [Candidate producer](Build-Railgun.ps1): use `-Install` for a routine game
   candidate so the owned INI is installed with the container.
 - [Installer](Install-Railgun.ps1): install an existing candidate without rebuilding;
-  [installation details](BUILD.md#install-an-existing-candidate) cover INI migration
+  [installation details](BUILD.md#install-an-existing-candidate) cover complete INI replacement
   and dirty-source policy.
 - [Settings integration test](Test-Railgun.ps1): execute the saved Blueprint
   loader in a disposable project without cooking or installing a candidate.
 - [Changelog](CHANGELOG.md): player-facing notes for the next Nexus release.
 - [Shared INI recipe](../../docs/runtime-configuration-patterns-knowledge.md):
-  canonical defaults, entry reload, and preservation of player settings.
+  canonical defaults, entry reload, and complete INI distribution.
 - [Input integration](../../docs/voyage-input-integration-knowledge.md): stock
   actions, contexts, and remapping when changing controls.
 - [Item fabrication](../../docs/voyage-item-fabrication-and-pickup-knowledge.md)

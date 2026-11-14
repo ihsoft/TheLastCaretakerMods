@@ -1,7 +1,11 @@
-# Reserve Invoke-UnrealQueued for the whole test operation.
 [CmdletBinding()]
 param([string]$EngineRoot = 'K:/Epic Games/UE_5.8', [string]$OutputRoot)
 $ErrorActionPreference = 'Stop'
+if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
+    Import-Module (Join-Path $PSScriptRoot '../../tools/unreal-coordination.psm1') -Force
+    Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation 'Test Railgun'
+    return
+}
 Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot '../../tools/VoyageModPipeline.psm1')
 Import-Module (Join-Path $PSScriptRoot '../../tools/VoyageModSettings/VoyageModSettings.psm1') -Force

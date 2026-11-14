@@ -73,8 +73,9 @@ users through a new release.
 
 ## Changelog
 
-Every mod owns `mods/<Mod>/CHANGELOG.md`. It is repository source for
-player-facing release notes, not payload: never put it inside the Vortex ZIP.
+Every mod owns `mods/<Mod>/CHANGELOG.md`. Its audience is players downloading
+the release, not developers or agents maintaining the repository. It is source
+for release notes, not payload: never put it inside the Vortex ZIP.
 `## Next` describes the player-visible difference between the latest published
 release and the version that would be published now. It is not a history of
 commits, candidates, experiments, reversals, or implementation steps. Do not
@@ -87,9 +88,13 @@ it does, update `Next` in the same proposed commit. Keep its text aligned with
 the current cumulative result: rewrite or remove an earlier entry when later
 work changes, supersedes, or reverts that result. A reverted intermediate
 change leaves no changelog entry. Experimental work that is not being accepted
-into the mod does not enter the changelog. Internal refactors, build-tool
-maintenance, and validation details belong there only when their final result
-affects players.
+into the mod does not enter the changelog. Internal refactors, build/test tools,
+local candidate installation, validation and repository organization are not
+player-facing changes. For example, changing how a development script copies
+an INI does not change what players receive through the published archive.
+If internal work also fixes a player-visible problem, describe that result,
+not the implementation or production steps. A purely internal change needs no
+changelog entry.
 
 When preparing publication, read `Next`, make it accurate and concise, and use
 that text for the Nexus file changelog. Do not reconstruct a missing release

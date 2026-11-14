@@ -11,11 +11,7 @@ available modes and thresholds. Installed at
 Build a candidate from the repository root (see [build details](BUILD.md)):
 
 ```powershell
-$shell = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-./tools/Invoke-UnrealQueued.ps1 -Operation 'Build Smart Outlet' `
-  -FilePath (Join-Path $PSHOME $shell) `
-  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',
-    'mods/SmartOutlet/Build-SmartOutlet.ps1','-AllowDirtySource')
+python -B tools/run_powershell.py mods/SmartOutlet/Build-SmartOutlet.ps1 -AllowDirtySource
 ```
 
 Omit `-AllowDirtySource` for a clean checkout.

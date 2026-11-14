@@ -1,6 +1,8 @@
 # ContainerLidLabel build entry points
 
-Run commands from the repository root. Follow the shared
+Run commands from the repository root through the
+[shared PowerShell launcher](../../tools/powershell-execution.md). Build and test
+commands enter the Unreal queue automatically. Follow the shared
 [project layout rule](../../docs/unreal-project-rule.md#project-layout-and-temporary-data),
 [Unreal queue guide](../../tools/unreal-coordination.md) and
 [release workflow](../../tools/release-build.md).
@@ -8,13 +10,7 @@ Run commands from the repository root. Follow the shared
 ## Build
 
 ```powershell
-$hostExe = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-& ./tools/Invoke-UnrealQueued.ps1 -Operation 'Build ContainerLidLabel' `
-  -FilePath (Join-Path $PSHOME $hostExe) `
-  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',
-    'mods/ContainerLidLabel/Build-ContainerLidLabel.ps1',
-    '-OutputRoot','Tmp/ContainerLidLabel/candidate',
-    '-AllowDirtySource')
+python -B tools/run_powershell.py mods/ContainerLidLabel/Build-ContainerLidLabel.ps1 -OutputRoot Tmp/ContainerLidLabel/candidate -AllowDirtySource
 ```
 
 [Build-ContainerLidLabel.ps1](Build-ContainerLidLabel.ps1) prepares and cooks a copy
@@ -31,11 +27,7 @@ is defined in architecture. Building does not install the candidate.
 ## Editor checks
 
 ```powershell
-$hostExe = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-& ./tools/Invoke-UnrealQueued.ps1 -Operation 'Test ContainerLidLabel' `
-  -FilePath (Join-Path $PSHOME $hostExe) `
-  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',
-    'mods/ContainerLidLabel/Test-ContainerLidLabel.ps1')
+python -B tools/run_powershell.py mods/ContainerLidLabel/Test-ContainerLidLabel.ps1
 ```
 
 [Test-ContainerLidLabel.ps1](Test-ContainerLidLabel.ps1) prepares its own project
@@ -49,7 +41,7 @@ ordering, save serialization, visual appearance or performance in the game.
 ## Authoring copy
 
 ```powershell
-./mods/ContainerLidLabel/New-ContainerLidLabelProjectCopy.ps1 `
+python -B tools/run_powershell.py mods/ContainerLidLabel/New-ContainerLidLabelProjectCopy.ps1 `
   -Destination 'Tmp/ContainerLidLabel/edit-label/Project'
 ```
 
@@ -63,11 +55,25 @@ DML must already be installed. Use the owning installer for both the LogicMods
 payload and user settings:
 
 ```powershell
-& ./mods/ContainerLidLabel/Install-ContainerLidLabel.ps1 `
+python -B tools/run_powershell.py mods/ContainerLidLabel/Install-ContainerLidLabel.ps1 `
   -ReleaseManifest 'Tmp/ContainerLidLabel/candidate/release-manifest.json' `
   -AllowDirtySource
 ```
 
 Omit `-AllowDirtySource` for a candidate built from clean source.
-Existing LogicMods INI values are preserved on updates. Recovery follows the shared
-[INI installation contract](../../docs/runtime-configuration-patterns-knowledge.md#install-and-migrate-a-user-edited-ini).
+The installer replaces the complete INI from the selected ZIP, together with
+its containers, through the [shared installation operation](../../tools/release-installation.md#install-a-candidate-with-settings).
+`-ValidateOnly` checks the candidate and destinations without installing.
+
+## Changing settings
+
+After changing the schema or canonical INI, run the shared validator once:
+
+```powershell
+python -B tools/run_powershell.py tools/Validate-VoyageModSettings.ps1 `
+  -SchemaPath mods/ContainerLidLabel/Settings/ContainerLidLabel.settings.json `
+  -DefaultIniPath mods/ContainerLidLabel/Assets/ContainerLidLabel.ini
+```
+
+Ordinary builds copy the INI unchanged. Runtime loader changes also need their
+editor and game checks under the [settings contract](ARCHITECTURE.md#settings-ownership).

@@ -8,4 +8,3 @@
 - Use DML without replacing the game's container classes. Only the three
   supported container classes receive changes; other descendants remain unchanged.
 - Read settings from `Voyage/Content/Paks/LogicMods/ContainerLidLabel.ini`.
-  The owning installer preserves player settings on updates.

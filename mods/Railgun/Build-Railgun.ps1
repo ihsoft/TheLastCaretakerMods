@@ -47,8 +47,6 @@ $releaseStaging = Join-Path $output 'candidate'
 $modInspectionRoot = Join-Path $output 'asset-inspections'
 $settingsSchema = Join-Path $PSScriptRoot 'Settings/Railgun.settings.json'
 $settingsDefaults = Join-Path $PSScriptRoot 'Assets/Railgun.ini'
-Import-Module (Join-Path $repo 'tools/VoyageModSettings/VoyageModSettings.psm1') -Force
-$null = Read-VoyageModSettingsSchema -SchemaPath $settingsSchema -DefaultIniPath $settingsDefaults
 $preparedSettingsDirectory = Join-Path $output 'settings'
 $null = New-Item -ItemType Directory -Path $preparedSettingsDirectory
 $preparedSettingsIni = Join-Path $preparedSettingsDirectory 'Railgun.ini'
@@ -61,7 +59,6 @@ $sourcePaths = @(
     'tools/Get-VoyageBuildFingerprint.ps1',
     'tools/Get-VoyageMappings.ps1',
     'tools/Install-VoyageRelease.ps1',
-    'tools/Merge-VoyageModIni.ps1',
     'tools/VoyageModSettings',
     'tools/Invoke-VoyageBoundedTool.ps1',
     'tools/New-VoyageAssetRegistry.ps1',
@@ -604,13 +601,9 @@ if (-not [bool]$publicationValidation.validated) {
     throw 'Prepared Railgun release did not pass installation validation.'
 }
 $installation = $null
-$settingsInstallation = $null
-$restoreValidation = $null
 if ($Install) {
     $installed = & (Join-Path $PSScriptRoot 'Install-Railgun.ps1') -ReleaseManifest $manifestPath -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource
-    $installation = $installed.installation
-    $settingsInstallation = $installed.settingsInstallation
-    $restoreValidation = $installed.restoreValidation
+    $installation = $installed
 }
 Remove-VoyageModScratch -ModRoot $PSScriptRoot -RunRoot $output -Path $loose
 Remove-VoyageModScratch -ModRoot $PSScriptRoot -RunRoot $output -Path $projectRoot
@@ -622,6 +615,4 @@ Remove-VoyageModScratch -ModRoot $PSScriptRoot -RunRoot $output -Path $projectRo
     verificationReport = $validationSummaryPath
     candidateRoot = $(if ($Install) { $null } else { $output })
     installation = $installation
-    settingsInstallation = $settingsInstallation
-    restoreValidation = $restoreValidation
 } | ConvertTo-Json -Depth 8 -Compress

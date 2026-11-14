@@ -12,7 +12,7 @@ declaration live under `Project/EditorSupport/` and `Project/EditorSupport.json`
 `Assets/StableGyro.ini` owns the distributed configuration and comments;
 `Settings/StableGyro.settings.json` owns bindings, fallbacks and ranges.
 `Build/` contains explicit source-update operations and source-state records.
-Its scripts are stages used by the public commands below.
+Its update commands are invoked directly as described below.
 Runtime and editor-only package ownership is defined by
 [architecture](ARCHITECTURE.md#release-serialization) and
 [provenance](ARCHITECTURE.md#editor-input-provenance).
@@ -138,11 +138,9 @@ python -B tools/run_powershell.py mods/StableGyro/Install-StableGyro.ps1 -Releas
 
 `-GameRoot` overrides the game location; `-ValidateOnly` returns the shared
 read-only plan. `Build-StableGyro.ps1 -Install` invokes this same implementation.
-The installer replaces the entire INI with the exact file from the selected
-candidate ZIP, including on updates. It does not merge values, preserve old
-comments or migrate keys. It checks installed INI bytes and restores settings plus
-the container if the coupled change fails. Preserve reported recovery files if
-recovery fails. Successful transaction scratch is removed.
+The [shared installation operation](../../tools/release-installation.md#install-a-candidate-with-settings)
+replaces the complete INI from the selected ZIP together with the container,
+checks installed bytes and owns recovery and cleanup.
 
 Publication, retention and rollback selection follow the
 [shared release workflow](../../docs/release-and-installation-rule.md).

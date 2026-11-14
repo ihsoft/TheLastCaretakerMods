@@ -5,11 +5,11 @@ Use the [repository index](../../AGENTS.md) for shared rules and knowledge.
 - [Architecture](ARCHITECTURE.md): behavior, state ownership, input/HUD and
   native-contract boundaries when changing runtime code.
 - [Build and authoring](BUILD.md): project copies, candidate creation, validation
-  and installation commands, including settings preservation and recovery.
+  and installation commands, including complete INI replacement and recovery.
 - [Public producer](Build-SmartOutlet.ps1) cooks maintained project assets
   and creates the additive DML candidate and release manifest.
-- [Installer](Install-SmartOutlet.ps1) deploys a candidate and preserves the
-  player's INI. [Commented INI](Assets/SmartOutlet.ini) owns rule keys and defaults.
+- [Installer](Install-SmartOutlet.ps1) deploys a candidate and its complete
+  packaged INI. [Commented INI](Assets/SmartOutlet.ini) owns rule keys and defaults.
 - [Editor checks](Test-SmartOutlet.ps1) execute compiled Blueprint
   suites against editor mirrors.
 - [Editor dependencies](ARCHITECTURE.md#editor-dependencies-and-provenance): required identities,

@@ -84,7 +84,7 @@ the returned stage before shared packaging. The producer supplies its verified
 registry PAK as `CompanionPak`; the common container stage obtains game
 `scriptobjects.bin` and verifies the final package set.
 
-The producer validates the settings schema, executes the saved Blueprint loader,
+The producer executes the saved Blueprint loader,
 reads the primary DataAssets and model, cooks the owned inventory, converts the
 required cooked serialization and verifies the final container, registry, ZIP
 and release manifest. The registry is derived from fresh owned DataAsset
@@ -99,11 +99,7 @@ contract belongs to [primary assets and research](ARCHITECTURE.md#primary-assets
 Run just the settings-loader integration test in its own disposable project:
 
 ```powershell
-$hostExe = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-& ./tools/Invoke-UnrealQueued.ps1 -Operation 'Test Railgun settings' `
-  -FilePath (Join-Path $PSHOME $hostExe) `
-  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',
-    'mods/Railgun/Test-Railgun.ps1')
+python -B tools/run_powershell.py mods/Railgun/Test-Railgun.ps1
 ```
 
 [Test-Railgun.ps1](Test-Railgun.ps1) accepts `-EngineRoot` and a fresh
@@ -116,19 +112,32 @@ separate acceptance boundary.
 ## Install an existing candidate
 
 [Install-Railgun.ps1](Install-Railgun.ps1) installs the supplied release manifest
-without rebuilding. It reads the INI template from that candidate's ZIP,
-preserves player values and applies the owned retired-key and energy-unit
-migrations. Container and settings recovery remain coupled. A legacy
-`Railgun.autoload` blocks installation until its recoverable migration is handled.
+without rebuilding. The [shared installation operation](../../tools/release-installation.md#install-a-candidate-with-settings)
+replaces the complete INI from that candidate's ZIP together with the container
+and plugin descriptor. `-ValidateOnly` returns the read-only plan. A legacy
+`Railgun.autoload` blocks installation until that conflicting loader is reviewed.
 
 ```powershell
-./mods/Railgun/Install-Railgun.ps1 -ReleaseManifest '<returned releaseManifestPath>'
+python -B tools/run_powershell.py mods/Railgun/Install-Railgun.ps1 -ReleaseManifest '<returned releaseManifestPath>'
 ```
 
 Pass `-AllowDirtySource` when the candidate contains uncommitted source;
 `-GameRoot` overrides the game installation. The game must be closed.
 `Build-Railgun.ps1 -Install` delegates to this same installer after a successful
 build and returns `status: installed`.
+
+## Changing settings
+
+After changing the schema or canonical INI, validate those inputs once:
+
+```powershell
+python -B tools/run_powershell.py tools/Validate-VoyageModSettings.ps1 `
+  -SchemaPath mods/Railgun/Settings/Railgun.settings.json `
+  -DefaultIniPath mods/Railgun/Assets/Railgun.ini
+```
+
+Ordinary builds copy the INI unchanged. Saved Blueprint loader checks cover
+runtime behavior separately from this file/schema check.
 
 ## Primary DataAsset serialization
 
@@ -159,9 +168,9 @@ format constraints belong to the shared [serialization contract](../../docs/voya
 Create a working copy before launching Unreal or exporting through BPT:
 
 ```powershell
-$project = & ./mods/Railgun/New-RailgunProjectCopy.ps1 `
+$project = python -B tools/run_powershell.py mods/Railgun/New-RailgunProjectCopy.ps1 `
   -Destination 'R:/Codex/TheLastCaretakerMods/Tmp/Railgun/edit/Project'
-& ./tools/BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action Export `
+python -B tools/run_powershell.py tools/BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action Export `
   -ProjectFile $project -WorkspaceRoot './Tmp/BlueprintText/Railgun-edit' `
   -Asset '/Game/Mods/Railgun/Station/BP_RailgunOperator'
 ```

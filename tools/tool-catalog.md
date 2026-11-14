@@ -35,7 +35,7 @@ failure handling.
 | Preview an exported HUD layout and copy review adjustments | `BlueprintText/Render-WidgetPreview.ps1` | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
 | Share project copies, source-update acceptance, editor tests, grouped cook and container packaging | `VoyageModPipeline.psm1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
-| Check shared mod execution and installation failure boundaries offline | `Test-VoyageModPipeline.ps1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
+| Check shared project-copy and editor-test failure boundaries offline | `Test-VoyageModPipeline.ps1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
 | Maintain generated settings in an existing procedural producer | `New-VoyageModSettings.ps1` | [Compatibility interface](VoyageModSettings/legacy-generation.md) |
 | Validate a changed settings schema or default INI | `Validate-VoyageModSettings.ps1` | [INI preparation](mod-setup.md#runtime-ini-preparation) |
 | Merge local development INI copies (not installation) | `Merge-VoyageModIni.ps1` | [Mod setup](mod-setup.md#existing-user-ini) |
@@ -68,7 +68,7 @@ failure handling.
 | Create a Vortex archive | `New-VoyageVortexArchive.ps1` | [Release installation](release-installation.md) |
 | Create a release manifest | `New-VoyageReleaseManifest.ps1` | [Release installation](release-installation.md) |
 | Inspect the installed game and mods | `Get-VoyageInstallationStatus.ps1` | [Release installation](release-installation.md) |
-| Validate, install, or retain a release | `Install-VoyageRelease.ps1` | [Release installation](release-installation.md) |
+| Validate, install (including a complete packaged INI), or retain a release | `Install-VoyageRelease.ps1` | [Release installation](release-installation.md) |
 | Restore an interrupted installation | `Restore-VoyageReleaseInstallation.ps1` | [Release installation](release-installation.md) |
 | Inspect the shipping executable | `Invoke-VoyageExecutableInspector.ps1` | [Executable inspection](executable-inspection.md) |
 | Diagnose one native instruction window | `Inspect-VoyageNativeMemberAccess.py` | [Executable inspection](executable-inspection.md) |

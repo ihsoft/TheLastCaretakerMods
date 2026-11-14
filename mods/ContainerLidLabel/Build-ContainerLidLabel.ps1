@@ -8,6 +8,11 @@ param(
     [switch]$IgnorePinnedGameVersion
 )
 $ErrorActionPreference = 'Stop'
+if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
+    Import-Module (Join-Path $PSScriptRoot '../../tools/unreal-coordination.psm1') -Force
+    Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation 'Build ContainerLidLabel'
+    return
+}
 Set-StrictMode -Version Latest
 $modRoot = $PSScriptRoot
 $repo = (Resolve-Path (Join-Path $modRoot '../..')).Path
@@ -30,8 +35,6 @@ $cook = Invoke-VoyageModCook -ModRoot $modRoot -ProjectFile $project -EngineRoot
 $utoc = $cook.container
 $check = $cook.validation
 $ini = Join-Path $output 'ContainerLidLabel.ini'
-Import-Module (Join-Path $repo 'tools/VoyageModSettings/VoyageModSettings.psm1') -Force
-$null = Read-VoyageModSettingsSchema -SchemaPath (Join-Path $modRoot 'Settings/ContainerLidLabel.settings.json') -DefaultIniPath (Join-Path $modRoot 'Assets/ContainerLidLabel.ini')
 Copy-Item -LiteralPath (Join-Path $modRoot 'Assets/ContainerLidLabel.ini') -Destination $ini
 $zip = Join-Path $output ('ContainerLidLabel-' + $version + '.zip')
 & (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') -Container $utoc -Archive $zip -LogicMods -AdditionalFile $ini -AdditionalDestination 'Voyage/Content/Paks/LogicMods/ContainerLidLabel.ini' | Out-Null

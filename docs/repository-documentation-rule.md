@@ -113,8 +113,9 @@
   If a release ZIP includes a README, package that same `README.md`.
 - Each mod's `CHANGELOG.md` is concise player-facing publication input. Keep
   the cumulative result since the latest published release under `Next`, index
-  it from the mod's `AGENTS.md`, and follow the shared release rule when
-  revising or finalizing it. It records neither commit history nor discarded
+  it from the mod's `AGENTS.md`, and follow the
+  [changelog rule](release-and-installation-rule.md#changelog) when revising or
+  finalizing it. It records neither commit history nor discarded
   intermediate behavior. It is not an architecture, knowledge, rule, work log,
   or release payload file.
 - Describe finished mods by their current behavior and necessary compatibility

@@ -14,9 +14,9 @@ pinned Steam build mismatch, retry with `-IgnorePinnedGameVersion`; the
 producer still checks current inputs and records the actual build. Resolve a
 reported mapping gap through the [mapping guide](mappings.md), then retry.
 After a successful build, use the owning installation entry point and request
-an in-game test. Mods with a coupled user INI must preserve that file through
-their mod-specific installation path; a container-only installation is
-insufficient for them.
+an in-game test. Mods with a coupled INI must install its complete archived copy
+through the [shared settings installation](release-installation.md#install-a-candidate-with-settings);
+a container-only installation is insufficient for them.
 Keep the same ZIP and manifest for release selection; no post-test rebuild is
 needed for compatibility metadata. The [release rule](../docs/release-and-installation-rule.md)
 owns candidate and publication status.

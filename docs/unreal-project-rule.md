@@ -77,7 +77,7 @@ skeleton generator. `BUILD.md` records the interface actually available.
 | `New-<Mod>ProjectCopy.ps1 -Destination <path>` | Copy maintained inputs to a fresh working project below `Tmp/<Mod>/`, including intended uncommitted source. Return the copied `.uproject` path. Do not launch Unreal. |
 | `Build-<Mod>.ps1` | Produce and validate one candidate from a disposable copy. Return `status: built`, `archivePath`, `releaseManifestPath` and `validationSummaryPath`. Do not install by default. |
 | `Test-<Mod>.ps1` | Run the mod's supported automated checks, creating a disposable project only for checks that need Unreal. Return `status: passed` and `reportPath`, with coverage and limitations in the report. Do not cook a release or install it as an implicit test step. |
-| `Install-<Mod>.ps1 -ReleaseManifest <path>` | Provide the mod-owned installation policy when settings or other coupled payloads require it. Install the supplied candidate without rebuilding. For a standard container-only payload, use the shared installer directly instead of creating a pass-through wrapper. |
+| `Install-<Mod>.ps1 -ReleaseManifest <path>` | Supply the mod identity, INI archive entry and necessary local restrictions to the shared installer. Install the supplied candidate without rebuilding; shared tools own copying, readback and rollback. For a standard container-only payload, use the shared installer directly. |
 
 Build and test accept `-OutputRoot` for a fresh run directory anywhere below
 `Tmp/<Mod>/`; omission allocates one automatically. Engine-consuming entry points
@@ -87,6 +87,10 @@ used, `-IgnorePinnedGameVersion`; installation forwards the applicable dirty
 candidate policy. These flags retain the meanings in the shared release workflow.
 Local installation defaults must be overridable; do not bake a particular
 workstation path into the shared setup.
+
+Engine-consuming public commands enter the shared Unreal queue for their whole
+operation; callers do not choose a shell or add another queue wrapper. Document
+their invocation through the [shared PowerShell launcher](../tools/powershell-execution.md).
 
 Return one compact structured success result, with detailed diagnostics in the
 run directory. Missing or failed required reports fail the command rather than

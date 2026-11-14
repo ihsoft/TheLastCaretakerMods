@@ -232,25 +232,28 @@ $restoreItems = @(
         }
         $createdDirectories = @(
             Get-OptionalPropertyValue -Object $record -Name 'createdDirectories')
-        if ($kind -cne 'content-plugin-descriptor' -and
-            $createdDirectories.Count -ne 0) {
-            throw "Only a content plugin descriptor may own created directories: $name"
-        }
+        $allowedDirectories = @()
         if ($kind -ceq 'content-plugin-descriptor') {
             $pluginDirectory = Split-Path -Parent $expectedDestination
             $modsDirectory = Split-Path -Parent $pluginDirectory
             $allowedDirectories = @($pluginDirectory, $modsDirectory)
+        } elseif ($kind -ceq 'container' -and
+            [StringComparer]::OrdinalIgnoreCase.Equals($paksDirectory, (Join-Path $gameRoot 'Voyage/Content/Paks/LogicMods'))) {
+            # First installation can create LogicMods; only its container owns it.
+            $allowedDirectories = @($paksDirectory)
+        }
+        if ($createdDirectories.Count) {
             foreach ($directory in $createdDirectories) {
                 $directoryFullPath = [IO.Path]::GetFullPath([string]$directory)
                 if (@($allowedDirectories | Where-Object {
                     [StringComparer]::OrdinalIgnoreCase.Equals($_, $directoryFullPath)
                 }).Count -ne 1) {
-                    throw "Content plugin recorded an unowned created directory: $directory"
+                    throw "Installation recorded an unowned created directory: $directory"
                 }
             }
             if (@($createdDirectories | Sort-Object -Unique).Count -ne
                 $createdDirectories.Count) {
-                throw 'Content plugin created-directory records must be unique.'
+                throw 'Installation created-directory records must be unique.'
             }
         }
 
@@ -292,13 +295,17 @@ $sidecarItems = @($restoreItems | Where-Object {
 $descriptorItems = @($restoreItems | Where-Object {
     $_.kind -ceq 'content-plugin-descriptor'
 })
+$settingsItems = @($restoreItems | Where-Object {
+    $_.kind -ceq 'settings' -and [IO.Path]::GetExtension($_.name) -ceq '.ini'
+})
 $bases = @($containerItems | ForEach-Object {
     [IO.Path]::GetFileNameWithoutExtension($_.name)
 } | Sort-Object -Unique)
 $extensions = @($containerItems | ForEach-Object {
     [IO.Path]::GetExtension($_.name).ToLowerInvariant()
 } | Sort-Object -Unique)
-if ($restoreItems.Count -ne (3 + $archiveItems.Count + $sidecarItems.Count + $descriptorItems.Count) -or
+if ($restoreItems.Count -ne (3 + $archiveItems.Count + $sidecarItems.Count + $descriptorItems.Count + $settingsItems.Count) -or
+    $settingsItems.Count -gt 1 -or
     $sidecarItems.Count -gt 1 -or $descriptorItems.Count -gt 1 -or $containerItems.Count -ne 3 -or
     $archiveItems.Count -gt 1 -or $bases.Count -ne 1 -or $extensions.Count -ne 3 -or
     $bases[0] -match '^(?i:global$|pakchunk)') {

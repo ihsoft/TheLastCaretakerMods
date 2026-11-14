@@ -151,9 +151,13 @@ container and validation reports under the [output lifecycle](../docs/artifact-l
 
 For changes to these mechanics, run
 [`Test-VoyageModPipeline.ps1`](Test-VoyageModPipeline.ps1) in Windows PowerShell
-5.1. It uses isolated fixtures below `Tmp/tests/`, including junction rejection,
-test failure evidence and candidate-based INI installation/recovery. It launches
-no Unreal process and writes no installed game files. Then run the affected
+5.1. It uses isolated fixtures below `Tmp/tests/`, including junction rejection
+and test failure evidence. Installation changes use
+`Test-Install-VoyageRelease.ps1 -WithSettings`, also with
+`-WithContentPluginDescriptor` when that payload is affected; it covers complete
+INI replacement and coupled rollback against a synthetic game directory.
+These checks launch no Unreal process and write no real installed game files.
+Then run the affected
 mods' public tests/builds for changes at those boundaries.
 
 ## Runtime INI preparation
@@ -215,7 +219,9 @@ Its values and the schema's runtime fallbacks have distinct roles.
 Installation replaces the complete INI with the selected archive's file under
 the [release contract](../docs/release-and-installation-rule.md#installation-and-rollback).
 Keep a temporary backup for failed-install recovery; do not merge old values or
-migrate keys. Runtime read policy and schema authoring belong to the
+migrate keys. The [shared installer](release-installation.md#install-a-candidate-with-settings)
+owns these mechanics; mod installers supply the exact INI archive entry.
+Runtime read policy and schema authoring belong to the
 [INI recipe](../docs/runtime-configuration-patterns-knowledge.md).
 
 `Merge-VoyageModIni.ps1` is a local development utility, not the distribution or

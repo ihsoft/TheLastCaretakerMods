@@ -8,6 +8,9 @@ param(
 
     [string]$GameRoot = 'P:\SteamLibrary\steamapps\common\Voyage',
 
+    [string]$ExpectedMod,
+    [string]$SettingsArchivePath,
+
     [string]$EvidenceRoot,
     [switch]$ReleaseCandidate,
     [switch]$RetainCandidateOnly,
@@ -287,6 +290,9 @@ if ($manifestSchema -notin @(2, 3, 4, 5)) {
 }
 
 $mod = [string](Get-OptionalPropertyValue -Object $manifest -Name 'mod')
+if ($ExpectedMod -and $mod -cne $ExpectedMod) {
+    throw "Expected a $ExpectedMod release manifest; got $mod."
+}
 $artifactVersion = [string](Get-OptionalPropertyValue -Object $manifest -Name 'version')
 $modVersion = [string](Get-OptionalPropertyValue -Object $manifest -Name 'modVersion')
 $dirtySourceValue = Get-OptionalPropertyValue -Object $manifest -Name 'dirtySource'
@@ -423,6 +429,32 @@ try {
         }
         $artifact.sha256 = $entryHash
         $artifact.archiveEntryName = $entries[0].FullName
+    }
+    if ($SettingsArchivePath) {
+        $settingsName = [IO.Path]::GetFileName($SettingsArchivePath)
+        Assert-SafeLeafName -Name $settingsName -Label 'Settings filename'
+        if ([IO.Path]::GetExtension($settingsName) -cne '.ini') { throw 'Settings must be an INI file.' }
+        $allowedSettingsPaths = if ($archiveUsesLogicMods) {
+            @("LogicMods/$settingsName", "Voyage/Content/Paks/LogicMods/$settingsName")
+        } else {
+            @($settingsName, "Voyage/Content/Paks/$settingsName")
+        }
+        if ($allowedSettingsPaths -cnotcontains $SettingsArchivePath) {
+            throw 'Settings archive path must match the container destination.'
+        }
+        $settingsEntries = @($archiveReader.Entries | Where-Object { $_.Name -ieq $settingsName })
+        if ($settingsEntries.Count -ne 1 -or $settingsEntries[0].FullName.Replace('\', '/') -cne $SettingsArchivePath) {
+            throw "Candidate must contain exactly one settings entry at $SettingsArchivePath."
+        }
+        $stream = $settingsEntries[0].Open()
+        $hasher = [Security.Cryptography.SHA256]::Create()
+        try { $settingsHash = [BitConverter]::ToString($hasher.ComputeHash($stream)).Replace('-', '') }
+        finally { $hasher.Dispose(); $stream.Dispose() }
+        # Include the complete archived INI in the existing copy/rollback operation.
+        $resolvedArtifacts += [pscustomobject]@{
+            name = $settingsName; path = $null; size = $settingsEntries[0].Length
+            sha256 = $settingsHash; archiveEntryName = $settingsEntries[0].FullName
+        }
     }
     if ($null -ne $contentPluginPlan) {
         $descriptorEntries = @($archiveReader.Entries | Where-Object {
@@ -605,7 +637,7 @@ $installManifestPath = Join-Path $evidence 'install-manifest.json'
 $installItems = @(
     foreach ($artifact in $resolvedArtifacts) {
         [pscustomobject][ordered]@{
-            kind = if ([IO.Path]::GetExtension($artifact.name) -ceq '.autoload') { 'autoload' } else { 'container' }
+            kind = switch ([IO.Path]::GetExtension($artifact.name)) { '.autoload' { 'autoload' } '.ini' { 'settings' } default { 'container' } }
             name = $artifact.name
             sourcePath = $artifact.path
             archiveEntryName = $artifact.archiveEntryName
@@ -660,6 +692,7 @@ if ($ValidateOnly) {
         gameRoot = $resolvedGameRoot
         steamBuildId = $actualBuildId
         paksDirectory = $paksDirectory
+        settingsPath = if ($SettingsArchivePath) { Join-Path $paksDirectory $settingsName } else { $null }
         files = @($installItems | Select-Object kind, name, size, retainOnRestore)
     }
     return
@@ -897,9 +930,11 @@ if (-not $KeepRecoveryEvidence) {
 Write-Host "Voyage release installed and read back successfully: $mod $artifactVersion"
 if ($KeepRecoveryEvidence) { Write-Host "Temporary recovery evidence: $installManifestPath" }
 [pscustomobject][ordered]@{
+    status = 'installed'
     mod = $mod
     artifactVersion = $artifactVersion
     installManifestPath = $installManifestPath
     paksDirectory = $paksDirectory
+    settingsPath = if ($SettingsArchivePath) { Join-Path $paksDirectory $settingsName } else { $null }
     fileCount = $installItems.Count
 }

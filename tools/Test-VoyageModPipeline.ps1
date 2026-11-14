@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $fixture=Join-Path $repo ('Tmp/tests/mod-pipeline-' + [guid]::NewGuid().ToString('N'))
-foreach ($relative in @('tools/BlueprintText','mods/Example/Project/Content','mods/Railgun','Tmp/Example')) {
+foreach ($relative in @('tools/BlueprintText','mods/Example/Project/Content','Tmp/Example')) {
     [IO.Directory]::CreateDirectory((Join-Path $fixture $relative)) | Out-Null
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'VoyageModPipeline.psm1') -Destination (Join-Path $fixture 'tools')
@@ -98,78 +98,4 @@ try {
     Check (Test-Path -LiteralPath (Join-Path $failedPrepare 'Project/Voyage.uproject')) 'prepare failure retains project'
 } finally { $env:MOD_PIPELINE_PREPARE_FAIL=$previousPrepareFailure }
 
-# Exercise the real Railgun installer and migration against a synthetic container installer.
-Copy-Item -LiteralPath (Join-Path $repo 'mods/Railgun/Install-Railgun.ps1') -Destination (Join-Path $fixture 'mods/Railgun')
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Merge-VoyageModIni.ps1') -Destination (Join-Path $fixture 'tools')
-[IO.Directory]::CreateDirectory((Join-Path $fixture 'tools/VoyageModSettings')) | Out-Null
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'VoyageModSettings/VoyageModIniMerge.psm1') -Destination (Join-Path $fixture 'tools/VoyageModSettings')
-@'
-param($ReleaseManifest,$GameRoot,[switch]$AllowDirtySource,[switch]$ValidateOnly,[switch]$KeepRecoveryEvidence)
-if (-not $AllowDirtySource) { throw 'fixture requires explicit dirty source acceptance' }
-$repo=Split-Path $PSScriptRoot -Parent
-$paks=Join-Path $GameRoot 'Voyage/Content/Paks'
-if ($ValidateOnly) { return [pscustomobject]@{validated=$true;mod='Railgun';paksDirectory=$paks} }
-$evidence=Join-Path $repo ('Tmp/Railgun/installations/' + [guid]::NewGuid().ToString('N'))
-[IO.Directory]::CreateDirectory($evidence) | Out-Null
-$container=Join-Path $paks 'Railgun.pak'
-$previous=[IO.File]::ReadAllText($container)
-$record=Join-Path $evidence 'installation.json'
-@{target=$container;previous=$previous} | ConvertTo-Json | Set-Content -LiteralPath $record
-'new container' | Set-Content -LiteralPath $container
-[pscustomobject]@{fileCount=1;paksDirectory=$paks;installManifestPath=$record}
-'@ | Set-Content -LiteralPath (Join-Path $fixture 'tools/Install-VoyageRelease.ps1')
-@'
-param($InstallManifest,[switch]$ValidateOnly)
-if ($ValidateOnly) { return [pscustomobject]@{validated=$true} }
-$record=Get-Content -LiteralPath $InstallManifest -Raw | ConvertFrom-Json
-[IO.File]::WriteAllText([string]$record.target,[string]$record.previous)
-'@ | Set-Content -LiteralPath (Join-Path $fixture 'tools/Restore-VoyageReleaseInstallation.ps1')
-$game=Join-Path $fixture 'game'
-$paks=Join-Path $game 'Voyage/Content/Paks'; [IO.Directory]::CreateDirectory($paks) | Out-Null
-$ini=Join-Path $paks 'Railgun.ini'
-$container=Join-Path $paks 'Railgun.pak'
-'old container' | Set-Content -LiteralPath $container
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-Add-Type -AssemblyName System.IO.Compression
-function New-Candidate([string]$Name,[string]$Template) {
-    $directory=Join-Path $fixture $Name; [IO.Directory]::CreateDirectory($directory) | Out-Null
-    $archive=Join-Path $directory 'Railgun-V1.zip'
-    $zip=[IO.Compression.ZipFile]::Open($archive,[IO.Compression.ZipArchiveMode]::Create)
-    try {
-        $entry=$zip.CreateEntry('Voyage/Content/Paks/Railgun.ini')
-        $writer=New-Object IO.StreamWriter($entry.Open())
-        try { $writer.Write($Template) } finally { $writer.Dispose() }
-    } finally { $zip.Dispose() }
-    $manifest=Join-Path $directory 'release-manifest.json'
-    @{mod='Railgun';archive=@{path='Railgun-V1.zip'}} | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $manifest
-    $manifest
-}
-$candidate=New-Candidate valid "FullChargeEnergyKWh=1`nIdleConsumptionKW=2`n"
-$installer=Join-Path $fixture 'mods/Railgun/Install-Railgun.ps1'
-# The installer runs against a fake game directory; process state is part of the fixture too.
-$script:fixtureGameRunning=$false
-function Get-Process {
-    [CmdletBinding()]
-    param([string[]]$Name)
-    if ($fixtureGameRunning) { [pscustomobject]@{ProcessName='Voyage'} }
-}
-$script:fixtureGameRunning=$true
-Reject { & $installer -ReleaseManifest $candidate -GameRoot $game -AllowDirtySource } 'running game blocker'
-$script:fixtureGameRunning=$false
-Reject { & $installer -ReleaseManifest $candidate -GameRoot $game } 'dirty policy forwarded'
-$installed=& $installer -ReleaseManifest $candidate -GameRoot $game -AllowDirtySource
-Check ($installed.status -eq 'installed' -and (Get-Content -LiteralPath $ini -Raw).Contains('IdleConsumptionKW=2')) 'INI created from archived candidate'
-"# custom`nFullChargeEnergyKJ=1000`nIdleConsumptionKW=7`nOfflineDischargeKW=9`nOpticsMousePercent=2`n" | Set-Content -LiteralPath $ini
-$installed=& $installer -ReleaseManifest $candidate -GameRoot $game -AllowDirtySource
-$text=Get-Content -LiteralPath $ini -Raw
-Check ($text.Contains('FullChargeEnergyKWh=1') -and $text.Contains('IdleConsumptionKW=7') -and $text.Contains('# custom')) 'preserve settings and migrate energy'
-Check ($text -notmatch 'FullChargeEnergyKJ|OfflineDischargeKW|OpticsMousePercent') 'retire obsolete keys'
-$broken=New-Candidate broken "FullChargeEnergyKWh=invalid`n"
-'before failed install' | Set-Content -LiteralPath $container
-$previousIni=[IO.File]::ReadAllBytes($ini); $previousContainer=[IO.File]::ReadAllText($container)
-Reject { & $installer -ReleaseManifest $broken -GameRoot $game -AllowDirtySource } 'migration failure'
-Check ([Convert]::ToBase64String([IO.File]::ReadAllBytes($ini)) -ceq [Convert]::ToBase64String($previousIni)) 'restore exact INI'
-Check ([IO.File]::ReadAllText($container) -ceq $previousContainer) 'restore container after settings failure'
-'legacy' | Set-Content -LiteralPath (Join-Path $paks 'Railgun.autoload')
-Reject { & $installer -ReleaseManifest $candidate -GameRoot $game -AllowDirtySource } 'legacy loader blocker'
 [pscustomobject]@{status='passed';checks=$script:checks;evidence=$fixture} | ConvertTo-Json
