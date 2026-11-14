@@ -8,7 +8,7 @@ failure handling.
 | Launch a Windows PowerShell script in the fixed repository environment | `run_powershell.py` | [PowerShell execution](powershell-execution.md) |
 | Wait for a shared Unreal execution slot and run a producer | `Invoke-UnrealQueued.ps1` | [Unreal coordination](unreal-coordination.md) |
 | Build or attach native editor support for content and C++ projects, or recover its installation | `Prepare-UnrealEditorSupport.ps1` | [Unreal editor support](unreal-editor-support.md) |
-| Refresh a supported project VoyageItem from current game data and a recipe | `Update-VoyageItemAsset.ps1` | [VoyageItem project updates](voyage-item-patch.md) |
+| Refresh a supported project VoyageItem from current game data and an asset/patch recipe | `Update-VoyageItemAsset.ps1` | [VoyageItem project updates](voyage-item-patch.md) |
 | Validate a cooked/re-extracted VoyageItem against its original and recipe | `Test-VoyageItemPatch.ps1` | [VoyageItem project updates](voyage-item-patch.md) |
 | Import/export Blueprint text or discover operations | `BlueprintText/Invoke-BlueprintText.ps1` | [BlueprintText](blueprint-text.md) |
 | Operate a Blueprint JSON workspace in an existing project | `BlueprintText/Invoke-BlueprintWorkspace.ps1` | [Blueprint workspace](blueprint-workspace.md) |

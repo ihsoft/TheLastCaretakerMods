@@ -55,7 +55,6 @@ $releaseInstaller = Join-Path $repoRoot 'tools\Install-VoyageRelease.ps1'
 $meshSourceStatePath = Join-Path $modRoot 'Build\MooringMeshes.source.json'
 Import-Module (Join-Path $modRoot 'Build\MooringMeshRefresh.psm1') -Force
 $itemSourceStatePath = Join-Path $modRoot 'Build\Item.source.json'
-$itemRecipePath = Join-Path $modRoot 'Build\Item.patch.json'
 Import-Module (Join-Path $modRoot 'Build\ItemAssetRefresh.psm1') -Force
 $containerName = 'StableGyro_P'
 $payloadNames = @(
@@ -125,15 +124,15 @@ $timings.Fingerprint = $phase.Elapsed.TotalSeconds
 $meshPlan = Get-StableGyroMooringMeshPlan -StatePath $meshSourceStatePath `
     -SteamBuildId $expectedBuild
 $itemPlan = Get-StableGyroItemRefreshPlan -StatePath $itemSourceStatePath `
-    -RecipePath $itemRecipePath -SteamBuildId $expectedBuild
+    -SteamBuildId $expectedBuild
 if ($itemPlan.refresh) {
-    throw "Maintained item inputs require review ($($itemPlan.reason)): source build $($itemPlan.sourceSteamBuildId), installed build $expectedBuild. Ask the user whether to run Update-StableGyroItemAsset.ps1; no automatic refresh was performed."
+    throw "Maintained item inputs require review ($($itemPlan.reason)): source build $($itemPlan.sourceSteamBuildId), installed build $expectedBuild. Ask the user whether to run Build/Update-StableGyroItemAsset.ps1; no automatic refresh was performed."
 }
 if (-not $itemPlan.refresh) {
     foreach ($relativePath in @('Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset',
             'Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset')) {
         if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $relativePath) -PathType Leaf)) {
-            throw "Maintained item asset is missing: $relativePath. Restore it from Git or run Update-StableGyroItemAsset.ps1."
+            throw "Maintained item asset is missing: $relativePath. Restore it from Git or run Build/Update-StableGyroItemAsset.ps1."
         }
     }
 }

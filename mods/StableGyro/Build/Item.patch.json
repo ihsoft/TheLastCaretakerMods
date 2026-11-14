@@ -1,6 +1,5 @@
 {
   "schemaVersion": 1,
-  "profile": "voyage-item-default-generator-v1",
   "asset": "/Game/Data/Assets/Modules/DA_Item_Module_GyroCopter",
   "patches": [
     {

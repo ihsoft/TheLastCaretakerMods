@@ -6,9 +6,9 @@ mappings, native support preparation, replacement, fresh editor reopen, cook
 and complete semantic comparison. Run it once; do not manually extract the item,
 copy native headers into the project or build a project target first.
 
-The supported profile is `voyage-item-default-generator-v1`: the reviewed
-Steam 25982825 / UE 5.8 VoyageItem with its owned default crafting-generator
-subobject. Recipes allow zero changes or one `DroppedActor` soft-class replacement,
+The tool reconstructs VoyageItem with its owned default crafting-generator
+subobject, reviewed on Steam 25982825 / UE 5.8. Recipes allow zero changes or
+one `DroppedActor` soft-class replacement,
 guarded by the exact expected original reference. Other fields, shapes and game
 builds fail rather than falling back to an older asset or partial serialization.
 This is not a universal DataAsset importer.
@@ -20,7 +20,6 @@ be available to the consumer:
 ```json
 {
   "schemaVersion": 1,
-  "profile": "voyage-item-default-generator-v1",
   "asset": "/Game/Data/Assets/Modules/DA_Item_Module_GyroCopter",
   "patches": [{
     "property": "DroppedActor",

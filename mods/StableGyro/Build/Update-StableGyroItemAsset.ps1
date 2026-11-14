@@ -1,16 +1,18 @@
-# Internal implementation; invoke the public command at the mod root.
+# Explicit source refresh; never called by the release build.
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][string]$GameRoot,
-    [Parameter(Mandatory)][string]$EngineRoot,
+    [string]$GameRoot = 'P:/SteamLibrary/steamapps/common/Voyage',
+    [string]$EngineRoot = 'P:/UnrealEngine/UE_5.8',
     [string]$OutputRoot,
     [switch]$IgnorePinnedGameVersion
 )
+$ErrorActionPreference = 'Stop'
 if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
-    throw 'Use the root Update-StableGyroItemAsset.ps1 command to acquire the Unreal queue.'
+    Import-Module (Join-Path $PSScriptRoot '../../../tools/unreal-coordination.psm1') -Force
+    Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation 'Update StableGyro item'
+    return
 }
 $modRoot = Split-Path -Parent $PSScriptRoot
-$ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $modRoot '../..'))
 Import-Module (Join-Path $repo 'tools/VoyageModPipeline.psm1') -Force
 Import-Module (Join-Path $modRoot 'Build/ItemAssetRefresh.psm1') -Force
@@ -33,8 +35,7 @@ Assert-VoyageProjectContentUpdateScope -ProjectRoot $projectRoot -Before $conten
     -AllowedPaths @('Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset',
         'Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset')
 $null = New-Item -ItemType Directory -Path (Join-Path $run 'Build')
-Set-StableGyroItemSourceState -StatePath (Join-Path $run 'Build/Item.source.json') -SteamBuildId $build `
-    -Recipe (Get-Content -LiteralPath $recipe -Raw | ConvertFrom-Json) -Status ready
+Set-StableGyroItemSourceState -StatePath (Join-Path $run 'Build/Item.source.json') -SteamBuildId $build
 Save-VoyageModSourceUpdate -ModRoot $modRoot -RunRoot $run -Paths $paths -Snapshot $snapshot
 Remove-VoyageModScratch -ModRoot $modRoot -RunRoot $run -Path (Join-Path $run 'Project')
 [pscustomobject]@{status='updated-and-validated';outputRoot=$run;sourceState=(Join-Path $modRoot 'Build/Item.source.json')} | ConvertTo-Json -Compress

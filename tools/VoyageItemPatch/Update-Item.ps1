@@ -20,8 +20,7 @@ New-Item -ItemType Directory -Path $output | Out-Null
 $python=Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
 $editor=Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe'
 $recipeObject=Get-Content -LiteralPath $Recipe -Raw | ConvertFrom-Json
-if($recipeObject.profile -cne 'voyage-item-default-generator-v1' -or
-   $recipeObject.asset -cnotmatch '^/Game/(?:[A-Za-z0-9_]+/)*[A-Za-z0-9_]+$') { throw 'Unsupported recipe/profile or invalid package.' }
+if($recipeObject.asset -cnotmatch '^/Game/(?:[A-Za-z0-9_]+/)*[A-Za-z0-9_]+$') { throw 'Invalid recipe package.' }
 $mapping=& (Join-Path $repository 'tools/Get-VoyageMappings.ps1') -GameRoot $GameRoot
 if($mapping.steamBuildId -cne '25982825' -or $mapping.engineVersion -notlike '5.8*') { throw 'Item profile supports reviewed Steam 25982825 / UE 5.8 only; review the profile for this game build.' }
 $extraction=& (Join-Path $repository 'tools/Extract-VoyagePackage.ps1') -GameRoot $GameRoot -Source Game -Filter ('Voyage/Content/'+$recipeObject.asset.Substring(6)+'.uasset') -OutputRoot (Join-Path $output 'original')
@@ -112,7 +111,7 @@ try {
     if($rollbackErrors.Count) { throw "Update failed: $failureMessage. Rollback incomplete; preserve backups and inspect $output/failure.json" }
     throw "Update failed; project files restored: $failureMessage. Evidence: $output"
 }
-$result=[ordered]@{status='passed';profile=$recipeObject.profile;project=$projectPath;asset=$spec.package;allowedChanges=@($recipeObject.patches | ForEach-Object property);assetCount=$assetPaths.Count;validation=(Join-Path $output 'validation/summary.json');cookedAsset=$cooked;sourceAsset=$original;mappingsPath=$mapping.mappingsPath;recipe=(Join-Path $output 'recipe.json');evidencePath=$output}
+$result=[ordered]@{status='passed';project=$projectPath;asset=$spec.package;allowedChanges=@($recipeObject.patches | ForEach-Object property);assetCount=$assetPaths.Count;validation=(Join-Path $output 'validation/summary.json');cookedAsset=$cooked;sourceAsset=$original;mappingsPath=$mapping.mappingsPath;recipe=(Join-Path $output 'recipe.json');evidencePath=$output}
 [IO.File]::WriteAllText((Join-Path $output 'result.json'),($result | ConvertTo-Json -Depth 5))
 foreach($record in $records | Where-Object existed) { Remove-Item -LiteralPath $record.backup }
 Write-Output ($result | ConvertTo-Json -Depth 5 -Compress)

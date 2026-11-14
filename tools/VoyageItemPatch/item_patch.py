@@ -17,8 +17,8 @@ def require(condition, message):
         raise ValueError(message)
 
 recipe=json.loads(Path(args.recipe).read_text(encoding='utf-8-sig'))
-require(set(recipe)=={'schemaVersion','profile','asset','patches'}, 'Unknown or missing recipe fields')
-require(recipe['schemaVersion']==1 and recipe['profile']=='voyage-item-default-generator-v1', 'Unsupported recipe/profile')
+require(set(recipe)=={'schemaVersion','asset','patches'}, 'Unknown or missing recipe fields')
+require(recipe['schemaVersion']==1, 'Unsupported recipe schema')
 package=recipe['asset']
 require(isinstance(package,str) and re.fullmatch(r'/Game/(?:[A-Za-z0-9_]+/)*[A-Za-z0-9_]+',package), 'Invalid asset package')
 name=package.rsplit('/',1)[1]

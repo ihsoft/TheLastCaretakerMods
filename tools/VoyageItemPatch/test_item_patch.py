@@ -46,7 +46,7 @@ class RecipeTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(dir=scratch)
         self.root = Path(self.tmp.name)
         self.source = fixture()
-        self.recipe = {'schemaVersion': 1, 'profile': 'voyage-item-default-generator-v1', 'asset': '/Game/Test/DA_Test',
+        self.recipe = {'schemaVersion': 1, 'asset': '/Game/Test/DA_Test',
                        'patches': [{'property': 'DroppedActor', 'expect': '/Game/Test/Original.Original_C', 'value': '/Game/Mods/Test/Child.Child_C'}]}
         self.schema = {'UberGraphFrame': 'StructProperty<PointerToUberGraphFrame>', 'AllowWithWater': 'BoolProperty'}
 
@@ -104,10 +104,10 @@ class RecipeTests(unittest.TestCase):
         self.assertNotEqual(self.run_tool('prepare').returncode, 0)
         self.assertNotEqual(self.run_tool('compare', self.patched()).returncode, 0)
 
-    def test_reject_unknown_profile_and_property(self):
-        self.recipe['profile'] = 'all-assets'
+    def test_reject_unknown_schema_and_property(self):
+        self.recipe['schemaVersion'] = 999
         self.assertNotEqual(self.run_tool('prepare').returncode, 0)
-        self.recipe['profile'] = 'voyage-item-default-generator-v1'
+        self.recipe['schemaVersion'] = 1
         self.recipe['patches'][0]['property'] = 'Price'
         self.assertNotEqual(self.run_tool('prepare').returncode, 0)
 

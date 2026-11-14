@@ -1,16 +1,18 @@
-# Internal implementation; invoke the public command at the mod root.
+# Explicit source refresh; never called by the release build.
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][string]$GameRoot,
-    [Parameter(Mandatory)][string]$EngineRoot,
-    [Parameter(Mandatory)][string]$BlenderPath,
+    [string]$GameRoot = 'P:/SteamLibrary/steamapps/common/Voyage',
+    [string]$EngineRoot = 'P:/UnrealEngine/UE_5.8',
+    [string]$BlenderPath = 'K:/Program Files/Blender Foundation/Blender 5.2/blender.exe',
     [string]$OutputRoot,
     [switch]$IgnorePinnedGameVersion
 )
-if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
-    throw 'Use the root Update-StableGyroMooringPlate.ps1 command to acquire the Unreal queue.'
-}
 $ErrorActionPreference = 'Stop'
+if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
+    Import-Module (Join-Path $PSScriptRoot '../../../tools/unreal-coordination.psm1') -Force
+    Invoke-UnrealQueueEntry -ScriptPath $PSCommandPath -Parameters $PSBoundParameters -Operation 'Update StableGyro mooring plate'
+    return
+}
 Set-StrictMode -Version Latest
 $modRoot = Split-Path -Parent $PSScriptRoot
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $modRoot '../..'))
@@ -132,7 +134,7 @@ $staticMeshBuildResultPath = Resolve-RequiredPath `
 $phase.Stop()
 $timings.StaticMeshBuild = $phase.Elapsed.TotalSeconds
 
-Set-StableGyroMooringMeshState -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild -Status ready
+Set-StableGyroMooringMeshState -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild
 Save-VoyageModSourceUpdate -ModRoot $modRoot -RunRoot $releaseRoot -Paths $acceptPaths -Snapshot $snapshot
 $result = [ordered]@{
     status = 'updated-and-validated'; steamBuildId = $expectedBuild

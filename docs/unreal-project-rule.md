@@ -49,12 +49,13 @@ create empty folders or placeholder scripts to complete the table.
 | `Project/EditorSupport.json`, `Project/EditorSupport/` | Native editor dependencies, when needed; use the [shared dependency declaration](../tools/unreal-editor-support.md#prepare-declared-project-dependencies). |
 | `Assets/` | External authoring inputs and distributable files such as `<Mod>.ini`; saved Unreal assets belong in `Project/Content/`. |
 | `Settings/` | Settings schemas, bindings or focused template checks when the configuration requires them. |
-| `Build/` | Mod-specific packaging inputs, serialization adapters and package checks, only where shared tools do not cover the contract; never build output. |
+| `Build/` | Mod-specific packaging inputs, serialization adapters, package checks and explicit source-update commands, only where shared tools do not cover the contract; never build output. |
 | `slideshow/` | Publication media, when available. |
 | `game-build.json` | Accepted source-build pin when a game-bound contract requires it; provenance and update handling remain with the [game-derived data rule](game-derived-data-rule.md). |
 
-The public scripts below live at the mod root. Internal helpers stay with their
-owning responsibility instead of creating a second set of root-level build or
+The standard build/test/install and project-copy scripts below live at the mod
+root. Internal helpers stay with their owning responsibility instead of creating
+a second set of root-level build or
 test commands. Ignore rules belong to the owning mod or project under the
 [repository hygiene rule](repository-hygiene-rule.md).
 
@@ -95,8 +96,10 @@ entry points without changing the public test interface.
 
 A convenience `Build -Install` may call the same installation implementation
 after building; it must not be the only way to install an existing candidate.
-Source-update helpers, when needed, use a focused `Update-<Mod><Subject>.ps1`
-name and remain explicit authoring operations, separate from build and test.
+Source-update commands, when needed, live in `Build/Update-<Mod><Subject>.ps1`
+and remain explicit authoring operations, separate from build and test. Invoke
+them directly; do not add root-level forwarding wrappers. Each command owns its
+parameters and enters the shared Unreal queue when it uses the engine.
 
 ## Shared mechanics and mod-owned contracts
 

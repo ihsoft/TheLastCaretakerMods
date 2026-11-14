@@ -54,7 +54,8 @@ The producer checks source readiness and the installed game build, then
 prepares native support and cooks a disposable project copy. It does not refresh
 or write maintained assets. If an item's or mesh's recorded source build differs
 from the installed build, stop and ask whether to refresh those inputs; do not
-run an updater automatically. Item recipe changes also require an explicit update.
+run an updater automatically. After changing `Build/Item.patch.json`, apply it
+with the item updater before building; the build does not track patch application.
 The producer supplies one package inventory to the
 [shared cook and container stages](../../tools/mod-setup.md#cook-and-container-stages).
 The compass display selects tagged serialization for the reason recorded in
@@ -76,19 +77,19 @@ the updater's comparison of item data against stock.
 
 Source updates refresh maintained assets derived from the game. Ordinary builds
 reuse those saved assets; they never run either updater automatically. Invoke
-the public commands at the mod root; their implementations live in `Build/`.
+the commands directly from `Build/`; each enters the shared Unreal queue.
 
 | Command | Purpose and when to use it |
 | --- | --- |
-| [Update-StableGyroItemAsset.ps1](Update-StableGyroItemAsset.ps1) | Reapply the mod's `DroppedActor` replacement to the current stock gyrocopter item, so placing the item creates the StableGyro Blueprint while retaining current stock item data. Use when accepting a new game build, changing `Build/Item.patch.json`, or regenerating missing item inputs. Routine flight-logic or INI edits do not require it. |
-| [Update-StableGyroMooringPlate.ps1](Update-StableGyroMooringPlate.ps1) | Recreate the maintained half-plate mesh from the stock mooring plate for the mod's port layout. Use when accepting a new game build or repairing the mesh import. Routine Blueprint or INI edits do not require it. |
+| [Update-StableGyroItemAsset.ps1](Build/Update-StableGyroItemAsset.ps1) | Reapply the mod's `DroppedActor` replacement to the current stock gyrocopter item, so placing the item creates the StableGyro Blueprint while retaining current stock item data. Use when accepting a new game build, changing `Build/Item.patch.json`, or regenerating missing item inputs. Routine flight-logic or INI edits do not require it. |
+| [Update-StableGyroMooringPlate.ps1](Build/Update-StableGyroMooringPlate.ps1) | Recreate the maintained half-plate mesh from the stock mooring plate for the mod's port layout. Use when accepting a new game build or repairing the mesh import. Routine Blueprint or INI edits do not require it. |
 
 These commands change maintained source files after validation. They do not
 install a mod or commit the accepted changes:
 
 ```powershell
-python -B tools/run_powershell.py mods/StableGyro/Update-StableGyroItemAsset.ps1
-python -B tools/run_powershell.py mods/StableGyro/Update-StableGyroMooringPlate.ps1
+python -B tools/run_powershell.py mods/StableGyro/Build/Update-StableGyroItemAsset.ps1
+python -B tools/run_powershell.py mods/StableGyro/Build/Update-StableGyroMooringPlate.ps1
 ```
 
 Both accept `-GameRoot`, `-EngineRoot`, `-OutputRoot` and
