@@ -35,7 +35,7 @@ $null = Read-VoyageModSettingsSchema -SchemaPath (Join-Path $modRoot 'Settings/C
 Copy-Item -LiteralPath (Join-Path $modRoot 'Assets/ContainerLidLabel.ini') -Destination $ini
 $zip = Join-Path $output ('ContainerLidLabel-' + $version + '.zip')
 & (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') -Container $utoc -Archive $zip -LogicMods -AdditionalFile $ini -AdditionalDestination 'Voyage/Content/Paks/LogicMods/ContainerLidLabel.ini' | Out-Null
-$manifest = & (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod ContainerLidLabel -Version $version -Container $utoc -Archive $zip -SourcePath @($modRoot,(Join-Path $repo 'tools/VoyageModPipeline.psm1')) -GameRoot $GameRoot -LogicMods -AllowDirtySource:$AllowDirtySource
+$manifest = & (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod ContainerLidLabel -Version $version -Container $utoc -Archive $zip -SourcePath @($modRoot,(Join-Path $repo 'tools/VoyageModPipeline.psm1'),(Join-Path $repo 'tools/UnrealCookSupport')) -GameRoot $GameRoot -LogicMods -AllowDirtySource:$AllowDirtySource
 $summaryPath = Join-Path $output 'validation-summary.json'
 [ordered]@{status='passed';container=$check;runtime='pending'} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
 $result = [ordered]@{status='built';archivePath=$zip;releaseManifestPath=$manifest.manifestPath;validationSummaryPath=$summaryPath;entryClass='/Game/Mods/ContainerLidLabel/ModActor.ModActor_C';steamBuildId=[string]$fingerprint.steam.buildId;packages=$packages;containerCheck=$check;runtimeIni='Voyage/Content/Paks/LogicMods/ContainerLidLabel.ini';gameplayValidated=$false}

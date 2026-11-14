@@ -42,7 +42,9 @@ Reserve the
 | `New-VoyageModProjectCopy` | `-ModRoot -Destination`; copies maintained inputs and returns the `.uproject` path without launching Unreal. |
 | `Remove-VoyageModScratch` | `-ModRoot -RunRoot -Path`; removes only an unlinked descendant of that mod's run, preserving the run root and its evidence. |
 | `Invoke-VoyageModEditorTest` | `-ModRoot -EngineRoot`, optional `-OutputRoot`, `-ReportName`, `-ExpectedSuiteCount`, and a required `-Run` script block; prepares a copy, runs the supplied checks, requires a passing report and removes the project only on success. Returns `status`, `reportPath`, `evidence`, `bptWorkspace`. |
-| `Invoke-VoyageModCook` | `-ModRoot -ProjectFile -EngineRoot -OutputRoot -Packages -ParserVersion`, optional `-AdditionalCookArguments`; cooks an explicit additive `/Game/` inventory with unversioned properties, stages its asset/bulk files, converts the container and verifies its exact package set. Returns `container`, `stage`, `validation`. |
+| `Invoke-VoyageModCook` | Ordinary combined cook and packaging: `-ModRoot -ProjectFile -EngineRoot -OutputRoot -Packages -ParserVersion`. Optional `-TaggedPackages`, `-AdditionalCookArguments`, `-GameRoot`, `-ContainerName`, `-Retoc`. Returns `status`, `container`, `stage`, `validation`, `scriptObjects`. |
+| `Invoke-VoyageModCookAssets` | The same cook/staging stage without packaging: `-ModRoot -ProjectFile -EngineRoot -OutputRoot -Packages`, optional `-TaggedPackages` and `-AdditionalCookArguments`. Returns `stage`, `packages`, `taggedPackages`. Use when a documented serialization conversion must run before packaging. |
+| `New-VoyageModContainer` | Package a prepared stage: `-ModRoot -Stage -OutputRoot -Packages -ParserVersion`. Optional `-GameRoot`, `-ContainerName`, `-Retoc`, `-CompanionPak`. Returns the same container result as the combined operation. |
 
 For example, a mod's project-copy wrapper needs only the shared operation:
 
@@ -64,12 +66,50 @@ required suite count fails the operation. Restore any environment variables
 introduced by the block in `finally`. Failed runs retain their project and
 diagnostics; inspect the reported run directory before retrying with fresh output.
 
-The cook helper is for the ordinary additive cook profile, not arbitrary
-serialization adapters. A mod with a native readback/conversion contract keeps
-that focused stage and its assertions. Archive creation and manifest production
-continue through the [release tools](release-build.md); the shared helper does
-not install or publish. Follow the [output lifecycle](../docs/artifact-lifecycle-rule.md)
-for successful-run scratch and retained reports.
+### Cook and container stages
+
+The mod supplies one explicit `/Game/` package inventory. Cook, staging and exact
+container verification consume that same inventory; do not maintain duplicate
+copy lists. `TaggedPackages` is a subset of that inventory that needs named
+property tags; remaining packages use unversioned properties. The mod architecture
+owns the reason for choosing a different serialization mode. Ordinary additive
+mods can omit this option.
+
+The cook operation prepares the private `UnrealCookSupport` editor provider in
+the working project through the shared support tool. It passes each group's
+inventory by file, calls Unreal's stock cooker, checks its output serialization,
+and stages every group before another cook can clear the cook directory. It
+preserves asset companions including `.m.ubulk`. The provider has no game types
+or runtime payload and is reused through the normal editor-support cache.
+Additional cook arguments may select renderer/shader/cache policy, but may not
+replace the package inventory, serialization mode, commandlet or output target.
+The working project must be below the supplied run `OutputRoot`.
+
+For a required cooked-format conversion, call `Invoke-VoyageModCookAssets`,
+apply the bounded mod-owned conversion to its returned stage, then call
+`New-VoyageModContainer` with the same inventory. Do not copy cook or container
+orchestration into that converter. The container output must be a fresh directory
+separate from the stage, both under `Tmp/<Mod>/`.
+
+Supply `GameRoot` when packaging needs the installed game's script-object table.
+The container stage extracts only metadata from `global.utoc` with assets and
+shaders disabled, copies `scriptobjects.bin` into the stage, and records its
+source paths and extraction report. It does not extract an unrelated game asset,
+refresh maintained project inputs, or reuse a caller-selected old extraction.
+Without `GameRoot`, no game metadata is added. The producer remains responsible
+for its game/source-build applicability checks.
+
+`CompanionPak` supplies a caller-prepared PAK for extra files such as a plugin
+registry. It replaces retoc's generated companion PAK before final container
+verification; the caller owns validation of those extra files and their mount
+paths. It is not merged with another PAK. Ordinary asset-only releases omit it.
+Container verification runs once on the final triplet against the supplied
+inventory. Stage/conversion/extraction failures retain diagnostics in the run.
+
+Archive creation and manifest production continue through the
+[release tools](release-build.md); these stages do not install or publish.
+Remove the returned stage and working project after success, retaining the
+container and validation reports under the [output lifecycle](../docs/artifact-lifecycle-rule.md).
 
 For changes to these mechanics, run
 [`Test-VoyageModPipeline.ps1`](Test-VoyageModPipeline.ps1) in Windows PowerShell

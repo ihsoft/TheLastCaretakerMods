@@ -108,12 +108,19 @@ creation and release installation. Find the supported entry point through the
 [tool index](../tools/tool-index.md).
 
 Use the [shared mod pipeline](../tools/mod-setup.md#shared-mod-pipeline) for
-working copies, run paths, editor-test orchestration, ordinary additive cook
+working copies, run paths, editor-test orchestration, cook, container packaging
 and cleanup. Keep path containment, linked-path rejection, source selection and
 failure evidence there rather than in per-mod copies. Extend that shared owner
 when a recurring mechanism is missing and has an established consumer; keep
-mod entry points thin. The skeleton tool still creates only the minimal mod
-skeleton, not an implemented project or complete producer.
+mod entry points thin. One mod-owned release inventory drives cook, staging and
+container verification. Select tagged versus unversioned cook as data for the
+shared cooker; a different serialization mode does not justify a local cooker.
+A required cooked-asset conversion may sit between the shared cook and container
+stages. Game script-object metadata and large-inventory transport also belong to
+the shared tools, rather than per-mod extraction or native cook adapters.
+Document reusable options in the tool guide and each mod's reasons in its
+architecture. The skeleton tool still creates only the minimal mod skeleton,
+not an implemented project or complete producer.
 
 The mod still owns its package inventory, runtime entry identity, settings
 policy, native mirrors, behavioral assertions and any required serialization

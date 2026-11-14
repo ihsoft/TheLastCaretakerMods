@@ -1,0 +1,8 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1",
+  "FriendlyName": "Shared project cooking",
+  "CanContainContent": false,
+  "Modules": [{ "Name": "UnrealCookSupport", "Type": "Editor", "LoadingPhase": "Default" }]
+}

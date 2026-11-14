@@ -39,7 +39,7 @@ $zip = Join-Path $output ('SmartOutlet-' + $candidateVersion + '.zip')
 $packagedIni = Join-Path $output 'SmartOutlet.ini'
 Copy-Item -LiteralPath $settingsTemplate -Destination $packagedIni
 & (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') -Container $utoc -Archive $zip -LogicMods -AdditionalFile $packagedIni -AdditionalDestination 'Voyage/Content/Paks/LogicMods/SmartOutlet.ini' | Out-Null
-$manifest = & (Join-Path $repoRoot 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod SmartOutlet -Version $candidateVersion -Container $utoc -Archive $zip -SourcePath @($modRoot,(Join-Path $repoRoot 'tools/VoyageModPipeline.psm1')) -GameRoot $GameRoot -LogicMods -AllowDirtySource:$AllowDirtySource
+$manifest = & (Join-Path $repoRoot 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $output -Mod SmartOutlet -Version $candidateVersion -Container $utoc -Archive $zip -SourcePath @($modRoot,(Join-Path $repoRoot 'tools/VoyageModPipeline.psm1'),(Join-Path $repoRoot 'tools/UnrealCookSupport')) -GameRoot $GameRoot -LogicMods -AllowDirtySource:$AllowDirtySource
 $summaryPath = Join-Path $output 'validation-summary.json'
 [ordered]@{status='passed';container=$validation;runtime='pending'} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
 $result = [ordered]@{status='built';archivePath=$zip;releaseManifestPath=$manifest.manifestPath;validationSummaryPath=$summaryPath;entryClass='/Game/Mods/SmartOutlet/ModActor.ModActor_C';steamBuildId=[string]$fingerprint.steam.buildId;ownedPackages=$packages;gameplayValidated=$false;saveReloadValidated=$false;containerValidation=$validation}
