@@ -11,6 +11,8 @@ including when a guide shows an older direct `.ps1` invocation.
 | --- | --- |
 | Queue shared Unreal builds, commandlets or editor sessions | [Unreal coordination](unreal-coordination.md) |
 | Build or attach ready native support to an Unreal project | [Unreal editor support](unreal-editor-support.md) |
+| Inspect/export project images or audio, or explicitly import their replacements | [Project resources](unreal-resources.md) |
+| Import a complete rigid GLB model with hierarchy and movable parts into a project | [GLB model import](unreal-glb-import.md) |
 | Refresh or validate a supported VoyageItem DataAsset from a patch recipe | [VoyageItem project updates](voyage-item-patch.md) |
 | Create a mod skeleton, unify its execution scripts or prepare its INI | [Mod setup](mod-setup.md) |
 | Find, summarize, or extract a game asset | [Asset inspection](asset-inspection.md) |

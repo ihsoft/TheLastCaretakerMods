@@ -4,6 +4,10 @@ These source-only helpers inspect, preview, validate, or convert GLB files. They
 do not recreate a model procedurally, and an inspection roundtrip must not
 replace the source GLB.
 
+To import the complete rigid assembly into a working Unreal project, use
+[GLB model import](unreal-glb-import.md). It preserves named groups, pivots and
+mesh instances in an Actor Blueprint; the helpers here inspect the external file.
+
 | Intent | Entry point | Runtime |
 | --- | --- | --- |
 | Inspect a GLB or owning model registry | `glb/inspect_glb.py` | Python 3.10+ and NumPy |

@@ -14,12 +14,33 @@ release: Blueprints, models, textures, materials, and every other shipped asset.
 The release producer cooks and packages that project content. The project is a
 maintained source asset store, not disposable output recreated on every build.
 
-External authoring inputs and focused project-update scripts are allowed. For
-example, a script may import a separately maintained GLB and update a particular
-mesh in the project. Its resulting release asset must reside in the project;
-the external input does not replace the project's authority over release asset
-state. This does not prohibit packaging scripts or non-asset release files such
-as user configuration and documentation.
+GLB files retained for model review/editing are synchronized copies of the
+maintained project model, not independent release sources. Keep an owned copy
+consistent with accepted changes to the model content it represents; engine-only
+materials, collision and gameplay bindings remain project contracts. Review a
+changed model visually in addition to structural checks. The shared
+[GLB preview](../tools/glb-tools.md) uses Blender and shows the supplied GLB;
+it does not establish agreement with the project or runtime rendering.
+
+An explicit request to replace a model from a particular GLB authorizes a focused
+project edit: import the selected content into a working copy, review the model
+and its bindings, then accept the saved assets and corresponding review copies.
+Use the shared [complete GLB importer](../tools/unreal-glb-import.md) for rigid
+assemblies: preserve the hierarchy, pivots and mesh instances, then wire the
+consumer's moving-part roles and behavior in the project. Importing geometry
+does not supply gameplay logic or authorize replacing an existing gameplay actor.
+Do not infer replacement from a changed external file or automate a rare model
+replacement as part of building. Ordinary builds consume saved project content
+and must not require a GLB they do not read. Focused source-update tools remain
+appropriate for recurring operations with a real consumer. Non-asset release
+files such as configuration and documentation retain their own ownership.
+
+Images and audio are maintained as project assets and edited through Unreal
+Editor. For an agent-assisted file replacement, use the shared
+[resource authoring tool](../tools/unreal-resources.md) on a working copy, then
+review and accept the saved assets. Export previews or editing copies from the
+current project when needed. Do not retain parallel PNG/WAV files solely to feed
+a build or regenerate an asset that is already maintained in the project.
 
 Use [BlueprintText (BPT)](../tools/blueprint-workspace.md#source-of-truth-and-git)
 as the bidirectional text editing and Git review interface for Blueprints.
@@ -47,7 +68,7 @@ create empty folders or placeholder scripts to complete the table.
 | `Project/BlueprintText/` | Synchronized BPT, mirroring virtual asset paths. |
 | `Project/Config/` | Deliberately maintained project configuration, when needed. |
 | `Project/EditorSupport.json`, `Project/EditorSupport/` | Native editor dependencies, when needed; use the [shared dependency declaration](../tools/unreal-editor-support.md#prepare-declared-project-dependencies). |
-| `Assets/` | External authoring inputs and distributable files such as `<Mod>.ini`; saved Unreal assets belong in `Project/Content/`. |
+| `Assets/` | Review/editing copies, external authoring inputs and distributable files such as `<Mod>.ini`; saved Unreal assets belong in `Project/Content/`. |
 | `Settings/` | Settings schemas, bindings or focused template checks when the configuration requires them. |
 | `Build/` | Mod-specific packaging inputs, serialization adapters, package checks and explicit source-update commands, only where shared tools do not cover the contract; never build output. |
 | `slideshow/` | Publication media, when available. |

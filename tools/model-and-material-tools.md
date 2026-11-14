@@ -7,6 +7,7 @@ for that operation's syntax, result, and representation boundary:
 | --- | --- | --- |
 | Convert or preview an editable GLB | [GLB tools](glb-tools.md) | GLB or preview |
 | Export one stock mesh or Blueprint default assembly | [Model export](model-export.md) | Static geometry GLB |
+| Import a complete rigid GLB hierarchy into an Unreal working project | [GLB model import](unreal-glb-import.md) | Project resources, movable Actor Blueprint and BPT |
 | Build authored GLB geometry as Voyage StaticMesh assets | [StaticMesh tools](static-mesh-assets.md) | Editor packages or loose cooked packages |
 | Inspect or validate an exact cooked StaticMesh | [StaticMesh tools](static-mesh-assets.md) | Inspection and policy reports |
 | Export stock materials for visual reference | [Material export](material-export.md) | Material sample GLB |

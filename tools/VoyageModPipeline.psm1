@@ -141,7 +141,7 @@ function Get-VoyageProjectContentSnapshot {
 
 function Assert-VoyageProjectContentUpdateScope {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$ProjectRoot, [Parameter(Mandatory)][hashtable]$Before, [Parameter(Mandatory)][string[]]$AllowedPaths)
+    param([Parameter(Mandatory)][string]$ProjectRoot, [Parameter(Mandatory)][hashtable]$Before, [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$AllowedPaths)
     $allowed = @($AllowedPaths | ForEach-Object { ConvertTo-ModRelativePath $_ })
     $after = Get-VoyageProjectContentSnapshot -ProjectRoot $ProjectRoot
     foreach ($path in @(@($Before.Keys) + @($after.Keys) | Sort-Object -Unique)) {

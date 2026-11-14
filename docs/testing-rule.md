@@ -87,7 +87,10 @@ The [game experiment rule](game-experiment-rule.md) owns gameplay acceptance and
 live-session safety; passing editor fixtures does not prove native game behavior.
 
 When a test fails, distinguish a defect, an obsolete expectation and an invalid
-fixture. Do not mechanically update expected values to the new output or change
+fixture. Tests describe intended contracts; they do not freeze the design or
+prohibit experiments that deliberately change it. For an intentional contract
+change, revise or retire the affected tests alongside the implementation.
+Do not mechanically update expected values to the new output or change
 valid production behavior merely to satisfy an incidental assertion. Narrow or
 remove tests whose risk has disappeared or is already covered by their owning
 operation. Report what was checked and the remaining evidence boundary; neither
