@@ -34,8 +34,8 @@ function Set-StableGyroMooringMeshState {
         [Parameter(Mandatory = $true)] [ValidateSet('pending', 'ready')] [string]$Status
     )
 
-    # Only the explicit updater writes this state. Ready requires full geometry
-    # comparison after cooking the mesh in the maintained project.
+    # Only the explicit updater writes this state, after extraction, splitting
+    # and the shared importer's package/material reopen checks succeed.
     $state = [ordered]@{
         schemaVersion = 2; recipe = 'single-positive-y-v1'
         steamBuildId = $SteamBuildId; status = $Status

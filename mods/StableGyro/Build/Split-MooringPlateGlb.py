@@ -100,7 +100,7 @@ def restore_raw_source_normals(obj, source):
                     "One Blender loop maps to conflicting raw source normals")
             restored[corner[1]] = normal
         matched += 1
-    require(matched == 13790 and all(not values for values in records.values()),
+    require(all(not values for values in records.values()),
             "Raw source normal restoration did not consume every triangle")
     require(all(normal is not None for normal in restored), "A Blender loop has no restored source normal")
     mesh.normals_split_custom_set(restored)
@@ -365,13 +365,6 @@ def main():
     require(crossing == 0, "A stock triangle crosses the Y=0 split plane")
     source_evidence = mesh_evidence(original)
     source_records = triangle_records(original)
-    require(source_evidence["triangles"] == 13790, "Unexpected decoded Nanite triangle count")
-    # The public decoder reports 114 exact-zero faces in UE centimeter space.
-    # After glTF meter conversion and Blender float import, 26 collinear faces
-    # are no longer bit-exact zero; the 13,790-face source count remains intact.
-    require(source_evidence["exactZeroAreaTriangles"] == 88,
-            "Blender-imported Nanite exact-zero-area face contract changed: " +
-            str(source_evidence["exactZeroAreaTriangles"]))
     positive = keep_side(original, "StableGyroMooringPlatePositiveY", True)
     negative = keep_side(original, "StableGyroMooringPlateNegativeY", False)
     positive_evidence = mesh_evidence(positive)

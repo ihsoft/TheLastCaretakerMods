@@ -5,7 +5,6 @@ param(
     [string]$GameRoot = 'P:/SteamLibrary/steamapps/common/Voyage',
     [string]$EngineRoot = 'P:/UnrealEngine/UE_5.8',
     [string]$BlenderPath = 'K:/Program Files/Blender Foundation/Blender 5.2/blender.exe',
-    [string]$Retoc,
     [string]$OutputRoot,
     [switch]$IgnorePinnedGameVersion
 )
@@ -16,4 +15,4 @@ if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
 }
 & (Join-Path $PSScriptRoot 'Build/Update-StableGyroMooringPlate.ps1') `
     -GameRoot $GameRoot -EngineRoot $EngineRoot -BlenderPath $BlenderPath `
-    -Retoc $Retoc -OutputRoot $OutputRoot -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
+    -OutputRoot $OutputRoot -IgnorePinnedGameVersion:$IgnorePinnedGameVersion

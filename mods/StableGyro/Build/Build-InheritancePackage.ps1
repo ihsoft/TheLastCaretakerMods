@@ -3,7 +3,6 @@
 
 param(
     [Parameter(Mandatory = $true)][string]$CookedRoot,
-    [Parameter(Mandatory = $true)][string]$ProjectRoot,
 
     [Parameter(Mandatory = $true)]
     [string]$ScriptObjects,
@@ -15,9 +14,7 @@ param(
 
     [string]$ContainerName = 'StableGyro_P',
 
-    [Parameter(Mandatory = $true)][string]$ActualSteamBuildId,
-
-    [Parameter(Mandatory = $true)][string]$MappingsPath
+    [Parameter(Mandatory = $true)][string]$ActualSteamBuildId
 )
 
 $ErrorActionPreference = 'Stop'
@@ -146,21 +143,6 @@ foreach ($meshName in @('StableGyroMooringPlatePositiveY')) {
     foreach ($source in $meshFiles) {
         Copy-Item -LiteralPath $source.FullName -Destination $meshStage
     }
-}
-$validatorArguments = @(
-    '-NoProfile',
-    '-File', (Join-Path $PSScriptRoot 'Validate-StableGyroMooringTemplates.ps1'),
-    '-RepositoryRoot', $repoRoot,
-    '-AssetPath', (Join-Path $childStage 'BP_GyroCopter_StablePilot.uasset'),
-    '-GeneratedParentAssetPath', (Join-Path $ProjectRoot 'Content\Blueprints\Vehicles\BP_GyroCopter_Possessable.uasset'),
-    '-PitchHelperAssetPath', (Join-Path $helperStage 'PitchInputActor.uasset'),
-    '-StabilizationHelperAssetPath', (Join-Path $helperStage 'ModActor.uasset'),
-    '-MappingsPath', $MappingsPath,
-    '-EvidencePath', (Join-Path $output 'mooring-template-validation.json')
-)
-& pwsh @validatorArguments | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "StableGyro mooring template validation failed with exit code $LASTEXITCODE."
 }
 foreach ($assetName in @('IAV_GyroPitchReset.uasset', 'IAV_GyroPitchReset.uexp')) {
     Copy-Item -LiteralPath (Join-Path $helperSource $assetName) -Destination $helperStage

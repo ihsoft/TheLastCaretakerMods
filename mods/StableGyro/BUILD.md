@@ -20,9 +20,9 @@ Runtime and editor-only package ownership is defined by
 ## Working copies and Blueprint authoring
 
 Run commands from the repository root through the
-[shared PowerShell launcher](../../tools/powershell-execution.md). The package
-validators and item updater also require PowerShell 7 on PATH. Engine operations
-require Unreal Engine 5.8.2 and join the shared Unreal queue automatically.
+[shared PowerShell launcher](../../tools/powershell-execution.md). The item
+updater also requires PowerShell 7 on PATH. Engine operations require Unreal
+Engine 5.8.2 and join the shared Unreal queue automatically.
 
 ```powershell
 python -B tools/run_powershell.py mods/StableGyro/New-StableGyroProjectCopy.ps1 -Destination R:/Codex/TheLastCaretakerMods/Tmp/StableGyro/authoring/Project
@@ -91,8 +91,8 @@ python -B tools/run_powershell.py mods/StableGyro/Update-StableGyroMooringPlate.
 ```
 
 Both accept `-GameRoot`, `-EngineRoot`, `-OutputRoot` and
-`-IgnorePinnedGameVersion`. The plate updater additionally accepts `-BlenderPath`
-and `-Retoc`. Each works on a disposable copy, validates the updated inputs,
+`-IgnorePinnedGameVersion`. The plate updater additionally accepts `-BlenderPath`.
+Each works on a disposable copy, validates the updated inputs,
 rejects concurrent edits to its acceptance paths, and transfers only the owned
 asset/state pair after validation. Before the first source write, the operation
 copies previous files to `source-backup/` under its run, preserving paths relative
@@ -125,12 +125,15 @@ write. The working copy remains for a separately reviewed dependency repair.
 
 ### Mooring plate source update
 
-The plate updater fully replaces the positive-Y mesh at its existing identity,
-compares cooked geometry, normals, UVs and colors against fresh stock-derived
-geometry, and updates `Build/MooringMeshes.source.json`.
-Ordinary builds check source readiness and game-build identity, then package the
-maintained mesh without repeating geometry, representation or material validation.
-Geometry checks do not establish game appearance.
+The plate updater extracts the current stock mesh, splits its disconnected
+halves and imports the positive-Y half into a disposable project through the
+shared StaticMesh tool. Extraction and splitting check their results where they
+run; no fixed source triangle counts are prescribed. The importer reopens the
+saved mesh and checks its material bindings. After successful acceptance,
+`Build/MooringMeshes.source.json` records the source game build.
+Ordinary builds check source readiness and game-build identity, then cook the
+maintained mesh. They do not reimport GLB or compare the cooked mesh to it.
+Import success does not establish game appearance.
 
 ## Installation
 

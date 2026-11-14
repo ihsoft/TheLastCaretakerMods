@@ -277,13 +277,11 @@ if (@($originalInputs).Count -ne 1) {
     throw "Expected one clean-original input record; found $(@($originalInputs).Count)."
 }
 $packageArguments = @{
-    ProjectRoot = $projectRoot
     CookedRoot = [string]$cookedRoot
     ScriptObjects = [string]$originalInputs.ScriptObjects
     Retoc = [string]$Retoc
     OutputRoot = [string]$containerRoot
     ActualSteamBuildId = $expectedBuild
-    MappingsPath = [string]$mapping.mappingsPath
 }
 & $packageScript @packageArguments
 $containerFiles = Join-Path $containerRoot 'package'

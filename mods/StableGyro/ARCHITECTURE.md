@@ -92,8 +92,8 @@ and mapping context keep their override identities; the child remains under
 The explicit item updater compares the cooked item against a freshly extracted
 original, allowing only the `Build/Item.patch.json` replacement of `DroppedActor`.
 Ordinary builds check the recorded source build and recipe before reuse. Plate
-geometry, representations and material bindings are validated during explicit
-plate updates. Cooked socket templates are checked during packaging.
+extraction, splitting and import are checked during explicit plate updates.
+The shared importer reopens the saved mesh and resolves its material bindings.
 Editor dependency stubs are excluded.
 Source refresh and build commands belong to [BUILD.md](BUILD.md).
 
@@ -390,8 +390,8 @@ retains the positive-Y half as one complete editor mesh, preserving the original
 pivot. The other half is temporary extraction evidence only. Four components reuse
 the maintained mesh with the stock component material override and no collision.
 The updater delegates mesh import to the shared
-[StaticMesh tools](../../tools/static-mesh-assets.md) with `-OutputKind Uncooked`,
-then replaces the complete package in the maintained project. The retained name
+[StaticMesh tools](../../tools/static-mesh-assets.md) with `-OutputKind Uncooked -ProjectFile <working-project>`,
+then accepts the complete package in the maintained project. The retained name
 `StableGyroMooringPlatePositiveY` identifies the source half, not an instance side.
 The mod's project cook supplies the runtime mesh. It uses native
 Nanite with all input triangles retained, zero trim error, position precision
@@ -415,12 +415,11 @@ The material chain `Gyrocopter_Seat_p1 -> Gyrocopte_Master_Hull ->
 WorldPositionOffset output. Coincident positions need not have identical corner
 attributes, so initial zero area is not permission to discard a face. This is
 not evidence that every degenerate face contributes visibly. Native mesh builders
-can discard coincident-position faces; the explicit updater must still prove
-that no nondegenerate source face is lost. Exact source counts, decode assertions
-and comparison tolerances belong to `Update-StableGyroMooringPlate.ps1`,
-`Build/Split-MooringPlateGlb.py` and `Build/Validate-MooringPlateUpdate.ps1`.
-Geometry/representation checks do not establish GPU cost or which representation
-is used in an individual frame.
+can discard coincident-position faces. The splitter preserves attributes while
+separating the disconnected halves; the shared importer owns basic package and
+material checks. No fixed triangle counts or cooked-to-GLB comparison are part
+of source acceptance. These checks do not establish GPU cost or which
+representation is used in an individual frame.
 
 The four decorative components share one `StableGyroMooringPlate` template for
 the mesh, material and collision settings. `CreateMooringPlates` calls
@@ -432,23 +431,19 @@ and finishes deferred creation. Its callers do not gate later plates on a
 completion flag; failure of the internal cast ends that invocation. Decorative
 instance names are generated uniquely from the common template. The two rear
 socket templates remain separate with their stable endpoint names and SocketIDs.
-Cook validation requires exactly those two socket templates and the shared plate.
-It also verifies that the plate template references the packaged mesh identity.
-Keep these runtime-created templates outside the unconditional SCS node list.
-`Build/Validate-StableGyroMooringTemplates.ps1` validates with the exact source-cook
-schema overlay, no `RawExport` and a byte-identical unchanged writer roundtrip;
-it must not patch native-parent attachment metadata during packaging.
+The plate template must reference the maintained mesh identity described above.
+Keep these runtime-created templates outside the unconditional SCS node list:
+SCS would create them even when the corresponding option is disabled. Retain
+them as component templates so the deferred creation functions can copy the
+authored mesh, material, collision and socket settings at runtime.
 
 Replacement keeps package identities and Blueprint references, with a backup
 of changed source files; it does not merge previous LOD, collision or socket data.
 The project requires DX12/SM6 and ray tracing enabled to retain the requested
-representations during cook. Preserve every emitted bulk companion. During an
-explicit plate update, validate Nanite, fallback, ray tracing, the stock material
-reference and correspondence to source geometry and attributes. Ordinary builds
-reuse the accepted mesh without repeating these checks.
-The shared
-[cooking knowledge](../../docs/static-mesh-cooking-knowledge.md) defines the
-representation and validation boundaries.
+representations during cook. Preserve every emitted bulk companion. Ordinary
+builds cook the accepted editor mesh without a separate representation validator.
+The shared [cooking knowledge](../../docs/static-mesh-cooking-knowledge.md)
+describes representation boundaries when a rendering investigation needs them.
 
 Sockets and bases move together along the frame tubes: the original pair moves
 5 cm forward and the added pair sits 40 cm behind the original positions. The
@@ -533,8 +528,8 @@ liters-per-minute conversion or explain every previously observed tank change.
 
 These checks do not establish repair of orphan attachment pads left by older
 packages, migration of saved stock Gyros, or compatibility after removing the
-mod. Fixtures and cooked readback validate graph structure and component identities;
-changed game versions still require game tests of restoration and disconnect.
+mod. Structural inspection alone does not establish runtime restoration and
+disconnect behavior; those changes require the affected game checks.
 
 The detailed native/altitude applicability is in
 [ALTITUDE-CONTROL.md](ALTITUDE-CONTROL.md#compatibility-boundary).

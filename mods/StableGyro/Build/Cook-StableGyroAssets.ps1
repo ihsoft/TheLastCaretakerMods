@@ -13,9 +13,7 @@ param(
     [string]$LogPath,
 
     [Parameter(Mandatory = $true)]
-    [string]$OutputRoot,
-
-    [switch]$MooringPlateOnly
+    [string]$OutputRoot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,7 +43,6 @@ $packages = @(
     '/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard',
     '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY'
 )
-if ($MooringPlateOnly) { $packages = @($packages[-1]) }
 $compassDisplay = '/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay'
 $ordinaryPackages = @($packages | Where-Object { $_ -ne $compassDisplay })
 $requiredCookedExtensions = @('.uasset', '.uexp')
