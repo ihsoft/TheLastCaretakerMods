@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 import uuid
+from run_powershell import run_command
 
 ROOT = Path(tempfile.gettempdir()) / 'Codex-Unreal-Queue'
 TOKEN = 'CODEX_UNREAL_QUEUE_LEASE'
@@ -138,7 +139,7 @@ def main():
     if command and command[0]=='--':command=command[1:]
     if not command:parser.error('Provide an executable and arguments after --')
     with engine_slot(args.operation,timeout=args.timeout):
-        return subprocess.call(command)
+        return run_command(command)
 
 
 if __name__=='__main__':sys.exit(main())

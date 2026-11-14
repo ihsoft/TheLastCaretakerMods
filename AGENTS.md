@@ -95,6 +95,9 @@ do not load every document just because it is indexed here.
 
 ## Entry points outside shared docs
 
+- [PowerShell execution](tools/powershell-execution.md): required shared launcher
+  when running Windows PowerShell scripts, including commands in older examples;
+  host selection and module-path isolation are owned by the tool.
 - [Tool index](tools/tool-index.md): choose a public script by intent and read its
   supported interface before inspecting implementations.
 - [Git coordination](tools/repository-git-coordination.md): required semaphore

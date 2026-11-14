@@ -19,8 +19,9 @@ and diagnostic path before inspecting a checkout under ignored `.tools/`.
 | `VoyageStaticMeshBuilder/` | `VoyageStaticMeshBuilder/Publish-VoyageStaticMeshBuilder.ps1` |
 | `VoyageStaticMeshValidator.exe` | `VoyageStaticMeshValidator/Publish.ps1` |
 
-Run commands from the repository root with Windows PowerShell 5.1 unless the
-entry point documents another host. Unreal build, generation, and cook stages
+Run commands from the repository root through the
+[shared PowerShell launcher](powershell-execution.md), unless the entry point
+explicitly documents another host. Unreal build, generation, and cook stages
 must start outside the restricted sandbox; a UBT `Trace*.uba` access denial is
 a launch-permission failure. Pass `-GameRoot` when the game is installed outside
 the configured default location.

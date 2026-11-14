@@ -16,7 +16,7 @@ For an implemented mod's folders and command conventions, use the
 The skeleton generator does not scaffold a project or build/test/install scripts.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\New-ModSkeleton.ps1 `
+python -B tools/run_powershell.py tools/New-ModSkeleton.ps1 `
   -Name BlueLargeContainers `
   -Summary 'Make all large containers blue.'
 ```
@@ -32,7 +32,8 @@ Normal authoring, build and test work starts at the mod's indexed public
 command. When implementing or unifying those commands, import
 [`VoyageModPipeline.psm1`](VoyageModPipeline.psm1). Its functions provide the
 repeated mechanics; the mod supplies its inputs, assertions and packaging policy.
-Use Windows PowerShell 5.1 for these entry points. Reserve the
+Launch these entry points through the [shared PowerShell launcher](powershell-execution.md).
+Reserve the
 [Unreal queue](unreal-coordination.md) around the whole build or editor test.
 
 | Function | Interface and result |

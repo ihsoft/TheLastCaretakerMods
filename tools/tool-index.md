@@ -4,6 +4,9 @@ Choose the current task, then read only the linked guide. The
 [tool catalog](tool-catalog.md) lists commands by intent. Shared repository
 rules remain in the [repository index](../AGENTS.md).
 
+For Windows PowerShell commands, use the [shared script launcher](powershell-execution.md),
+including when a guide shows an older direct `.ps1` invocation.
+
 | Task | Guide |
 | --- | --- |
 | Queue shared Unreal builds, commandlets or editor sessions | [Unreal coordination](unreal-coordination.md) |

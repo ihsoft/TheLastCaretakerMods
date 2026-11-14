@@ -5,21 +5,16 @@ serializes cooperating tools across repository copies and projects in the same
 Windows user account. It does not coordinate other Windows accounts.
 
 ```powershell
-$powerShellName = if ($PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-.\tools\Invoke-UnrealQueued.ps1 -Operation 'Build Example' `
-  -FilePath (Join-Path $PSHOME $powerShellName) `
-  -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File','mods/Example/Build.ps1')
+python -B tools/unreal_coordination.py --operation 'Build Example' -- `
+  powershell.exe -File mods/Example/Build.ps1
 ```
 
-For PowerShell scripts, select the executable from the current `$PSHOME` as
-shown above. The queue launches through Python and inherits the environment;
-it does not normalize `PSModulePath` when switching PowerShell editions.
-Starting Windows PowerShell 5.1 (`powershell.exe`) from a PowerShell 7 queue
-invocation can load incompatible modules and leave commands such as
-`Get-FileHash` unavailable. `-NoProfile` and `-ExecutionPolicy Bypass` do not
-correct module paths. If a script specifically requires Windows PowerShell
-5.1, invoke the queue from a Windows PowerShell 5.1 session. The normal path
-needs no separate module-discovery preflight.
+Windows PowerShell commands use the [shared launcher](powershell-execution.md):
+the queue selects the absolute system executable and isolates its module paths,
+regardless of the caller's shell. The example above is safe from either
+PowerShell edition. `Invoke-UnrealQueueEntry` uses this path automatically.
+For an explicitly documented PowerShell 7 worker, supply its absolute executable
+path; other executables keep their own environment contract.
 
 Wrap the entire producer, including its verification and rollback. BPT workspace
 engine actions and both lower-level BPT engine scripts already join the queue.
