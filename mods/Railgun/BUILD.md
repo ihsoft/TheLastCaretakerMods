@@ -16,9 +16,9 @@ owns installation, game acceptance and candidate selection.
 | `Project/Config/` | Required renderer, collision, packaging and project settings. |
 | `Project/EditorSupport/` | Native game API mirrors and saved-asset readers. |
 | `Project/Tests/Native/` | Saved Blueprint settings-loader integration test. |
-| `Assets/` | Model review/editing copy and role registry; distributed INI template. |
+| `Assets/` | Model review/editing copy and distributed INI template. |
 | `Settings/` | Runtime settings schema and bindings. |
-| `Build/` | Cooked serialization contracts, package checks and catalogue descriptor. |
+| `Build/` | Cooked serialization contracts and catalogue descriptor. |
 | `slideshow/` | Publication images. |
 
 [EditorSupport.json](Project/EditorSupport.json) declares the native
@@ -40,19 +40,25 @@ On failure, use the retained copy and diagnostics to investigate.
 The saved meshes, materials and component hierarchy in `Project/Content/` own
 the gun model. `Assets/Model/Railgun.glb` is its review/editing copy under the
 [shared project ownership rule](../../docs/unreal-project-rule.md).
-`Assets/Model/model-source.json` selects component roles and interaction/collision
-boxes in that saved hierarchy; the producer consumes this registry, not the GLB.
+Component roles, transforms, interaction boxes and collision are saved in the
+project; [model bindings](ARCHITECTURE.md#model-bindings) explain their purpose.
+The producer selects saved packages from `Content/Mods/Railgun/Visual/` plus its
+explicit owned inventory; it does not load a separate model recipe.
 
 For an explicitly requested replacement, use the shared
 [complete GLB importer](../../tools/unreal-glb-import.md) in a fresh content
 directory of the working project. Review its `BP_Model`, then integrate the
 accepted hierarchy/resources with the maintained shell and
-[model bindings](ARCHITECTURE.md#station-model-and-possession). The imported
+[model bindings](ARCHITECTURE.md#model-bindings). The imported
 graph-free actor does not replace the gameplay shell. Check yaw and pitch around
 their authored pivots: the muzzle and descendants must follow, while the base
-and unrelated branches remain fixed. Retain the role registry and intentional
+and unrelated branches remain fixed. Retain the component role bindings and intentional
 collision, socket, indicator and cassette bindings when accepting the model.
-Routine builds neither import nor require the GLB.
+Routine builds neither import nor require the GLB. On accepting a model change,
+check the affected component tags/references, cassette visibility, interaction
+areas and placement/pickup collision in the working project, then verify the
+affected behavior in game. Geometry and placement values belong to the saved
+assets; do not maintain a second JSON copy of those settings.
 
 Use the shared [GLB preview](../../tools/glb-tools.md) to inspect the copy through
 Blender. Preview output belongs below `Tmp/Railgun/`; inspect the updated project
@@ -126,21 +132,24 @@ the [shared additional-file packager](../../tools/pak-files.md) to create and ve
 the PAK. It supplies that result as `CompanionPak`; the common container stage obtains game
 `scriptobjects.bin` and verifies the final package set.
 
-The producer reads the primary DataAssets and model, cooks the owned inventory,
+The producer reads the primary DataAssets, cooks the owned inventory,
 converts the required cooked serialization and verifies the final container, registry, ZIP
 and release manifest. The registry is derived from fresh owned DataAsset
 readbacks. A build-only result has `status: built` and returns `archivePath`, `releaseManifestPath` and
 `validationSummaryPath`.
 
-The package check compares model hierarchy, transforms, references and collision
-with this run's project inventory, and checks the final native item/module and
-pickup identities. These comparisons protect the handoff between authored
-inputs and the selected release payload; their expectations follow the current
-inputs rather than a historical model snapshot. DataAsset conversion owns
-fresh-cook/native comparison, serialization contracts and post-write readback.
-The build does not pin gameplay function sets, bytecode structure or visual
-tuning, and does not rerun settings-loader regressions. Those belong to changed
-behavior acceptance rather than package production.
+Build validation follows the operations that actually transform or package
+data: shared DataAsset conversion compares native state, fresh cook and rewritten
+packages; registry creation reopens its output; PAK packaging verifies paths and
+bytes; container verification checks the selected package set. The validation
+summary reports these operations and leaves runtime acceptance pending.
+
+The model is already authored in the project and undergoes ordinary Unreal cook,
+so the producer does not separately re-prove its hierarchy, transforms or collision
+after each build. Model checks belong to [change acceptance](#model-authoring-and-preview).
+Settings-loader regressions likewise run for affected behavior changes, not
+as a packaging step. This keeps checks tied to a concrete transformation or
+integration risk rather than maintaining a parallel description of the project.
 
 The release ZIP contains the `Railgun.pak/.utoc/.ucas` triplet and `Railgun.ini`
 under `Voyage/Content/Paks/`, plus the loose content-only descriptor at

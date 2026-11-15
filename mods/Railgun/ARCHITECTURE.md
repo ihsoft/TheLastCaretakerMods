@@ -101,9 +101,9 @@ grammar and player-value preservation.
   component, but deliberately does not require the shell to have an external
   parent. The created station still attaches to the shell's tagged root, and its
   query box must retain the station interaction component as its parent. The
-  node selected by `model-source.json`'s `nodes.root` is the shell's scene root
+  component tagged `Railgun.Model.Root` is the shell's scene root
   and station anchor; no additional mount collider is needed. Physical collision
-  remains on the configured `fabricatorCollision` mesh, and the
+  remains on `Foundation_BottomPlate`, and the
   dynamic-collision component retains auto-weld. An enclosing mount collider
   interferes with the attached power cable. Initialization uses no polling,
   retry or global discovery fallback. Because native fabrication helpers could
@@ -130,12 +130,11 @@ grammar and player-value preservation.
 - The saved project component hierarchy determines ownership and transforms;
   node names identify roles but do not imply parentage. Model replacement and
   GLB preview follow [model authoring](BUILD.md#model-authoring-and-preview).
-- Yaw, pitch, muzzle, sight, entry, power-socket and charge-indicator roles are
-  declared in `Assets/Model/model-source.json`, together with explicit collision
-  and interaction boxes. Bind those roles rather than incidental Blender object
-  order or decorative node names. Model revisions may change topology, materials
-  and local offsets when those roles remain valid; the corresponding maintained
-  project assets must be updated before building.
+- [Model bindings](#model-bindings) are authored component tags, references and
+  graph connections in the project. Bind those roles rather than incidental
+  Blender object order or decorative node names. Model revisions may change
+  topology, materials and local offsets when those roles remain valid; the
+  corresponding maintained project assets must be updated before building.
 - Wide view is character-eye view. Scope view uses the barrel sight, optical
   mask, reticle and reduced sensitivity. The weapon aligns toward the character
   view target before scoped aiming.
@@ -154,6 +153,28 @@ grammar and player-value preservation.
   refuses to destroy a player-controlled pawn or any pawn that still has a
   controller. World transition, editor shutdown and process quit rely on normal
   world teardown. Station EndPlay removes the shell delegate binding.
+
+### Model bindings
+
+`BP_Module_Railgun` owns the saved component hierarchy and its connections to
+gameplay. The following is a lookup for changing that project, not another model
+recipe. Exact transforms, extents and mesh assignments remain in the assets and
+their synchronized BPT.
+
+| Role | Saved binding and purpose |
+| --- | --- |
+| Model root | `Railgun_Type_02`, tagged `Railgun.Model.Root`; shell root and station anchor. |
+| Yaw and pitch | `YAW` and `PITCH`, tagged `Railgun.Model.Yaw` and `Railgun.Model.Pitch`; aiming pivots whose descendants follow their rotation. |
+| Muzzle and sight | `Muzzle`, tagged `Railgun.Model.Muzzle` and `Railgun.Model.Sight`; projectile origin and scoped view reference. |
+| Charge indicator | `ChargeIndicator`, tagged `Railgun.Model.ChargeIndicator`; charge presentation. |
+| Station entry | `RailgunEntryReference`, tagged `Railgun.Model.Entry`; authored entry reference/query box at the base. |
+| Inventory interaction | `RailgunInventoryReference`, tagged `Railgun.Model.Inventory`, with the provider/query components at `AmmoMagazine_6Slot`; opens the gun inventory. |
+| Power and placement | `ElectricalSocket_Reference` anchors the socket layout; `Foundation_BottomPlate` carries placement collision. Preserve the authored socket attachments and collision settings. |
+| Ammunition visuals | Six `Slot_01_AmmoCassette` through `Slot_06_AmmoCassette` subtrees are bound by the shell's graphs; the pickup reuses their saved model resources as described under [ammunition](#authored-ammunition-contract). |
+
+Accept changes to these bindings through the [model authoring workflow](BUILD.md#model-authoring-and-preview).
+Ordinary builds cook saved assets; model binding and appearance acceptance is
+not a second serialization test on every produced package.
 
 ### Energy and supply
 
@@ -336,9 +357,9 @@ recipe and balance values are edited in that asset.
 `CraftAmount=1` and `MaxDropCount=1` make each fabricated pickup represent one
 round. The primary icon is mod-owned. The drop RenderAsset and
 `Fabricator/AmmoCassette/BP_RailgunAmmoCassette` reference the shared model: the
-inherited native `MeshComponent` renders `nodes.ammoPickupCarrier`, while direct
+inherited native `MeshComponent` renders the saved cassette carrier mesh, while direct
 SCS children reuse the other visible meshes, materials and relative transforms
-below `nodes.ammoPickupRoot`. All six gun cassette slots reuse those imported
+from the first cassette subtree. All six gun cassette slots reuse those imported
 assets. The native carrier owns one simple collision box enclosing the selected
 render meshes in carrier space.
 
@@ -362,8 +383,8 @@ valid reference to the owned ammo item; the validator's inventory argument may
 be the player's source inventory and is not compared to the module inventory.
 The mass budget must remain six times the maintained ammo item's weight. An
 ammo-weight change requires a matching update to the module's inventory
-template; the build validates their agreement instead of regenerating that
-Blueprint. The existing `ReceiveBeginPlay` chain calls native
+template; check their agreement when accepting either change. The existing
+`ReceiveBeginPlay` chain calls native
 `SetMaxWeightLimit` to initialize effective capacity; serialized defaults alone
 were insufficient.
 
@@ -397,8 +418,8 @@ sole execution path; the action-hint delegate does not also perform the
 transfer. Reload is independent of energy, scope mode, firing, and the existing
 event-driven ammunition visuals, and has no tick or polling fallback.
 
-The model binds six distinct ordered cassette roots explicitly in
-`model-source.json`; each must have a nonempty render subtree. Their render
+The shell's saved graphs bind the six ordered cassette roots listed under
+[model bindings](#model-bindings); each must have a nonempty render subtree. Their render
 descendants are hidden by default; internal mesh composition may change while
 those roles remain valid. Each gun instance binds a parameterless callback to
 its owned inventory's native `OnInventoryChanged` multicast delegate. The
@@ -411,7 +432,7 @@ presentation path does not mutate inventory state, hide neighboring ammo-bin
 geometry, or depend on an operator entering the gun.
 
 The model's `AmmoMagazine_6Slot` anchor carries the reference, interaction
-provider and attached query box specified by `model-source.json`. Part 100 opens
+provider and attached query box authored in `BP_Module_Railgun`. Part 100 opens
 the stock container overlay. The exact inherited
 `InteractiveInterface.InteractGetInventory` override returns
 `ModuleComponent.GetInternalInventory()`. Socket and operator interactions

@@ -2,8 +2,8 @@
 
 Start with [repository index](../../AGENTS.md) for shared rules and knowledge.
 
-The user owns model geometry. The agent may move or wire model files and update
-the role manifest, but must not alter GLB geometry unless explicitly requested.
+The user owns model geometry. The agent may move or wire model files, but must
+not alter GLB geometry unless explicitly requested.
 
 - [Architecture](ARCHITECTURE.md):
   the current station, weapon, HUD, item, skill, registry, and their data flow.
