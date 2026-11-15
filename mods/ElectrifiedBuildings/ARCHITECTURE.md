@@ -67,7 +67,8 @@ implementation or source layout. The mod has no separate cable-save format.
 
 ## Project dependencies
 
-[Build/packages.txt](Build/packages.txt) owns the two-package release inventory.
+[Build-ElectrifiedBuildings.ps1](Build-ElectrifiedBuildings.ps1) defines the
+two-package release inventory.
 The mod is additive and requires DML; editor support is excluded from the payload.
 
 [RuntimeContracts.h](Project/EditorSupport/Source/Voyage/RuntimeContracts.h)

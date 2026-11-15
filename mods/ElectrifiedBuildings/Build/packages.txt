@@ -1,2 +1,0 @@
-/Game/Mods/ElectrifiedBuildings/ModActor
-/Game/Mods/ElectrifiedBuildings/BP_BuildingSocket

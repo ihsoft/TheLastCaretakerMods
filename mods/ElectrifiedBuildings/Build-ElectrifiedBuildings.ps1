@@ -24,7 +24,10 @@ if (-not $IgnorePinnedGameVersion -and $fingerprint.steam.buildId -ne $pin.steam
 $project = New-VoyageModProjectCopy -ModRoot $PSScriptRoot -Destination (Join-Path $run 'Project')
 $workspace = Join-Path $repo ('Tmp/BlueprintText/ElectrifiedBuildings-build-' + [IO.Path]::GetFileName($run))
 & (Join-Path $repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $workspace > (Join-Path $run 'prepare.log')
-$packages = @([IO.File]::ReadAllLines((Join-Path $PSScriptRoot 'Build/packages.txt')) | Where-Object { $_.Trim() })
+$packages = @(
+    '/Game/Mods/ElectrifiedBuildings/ModActor'
+    '/Game/Mods/ElectrifiedBuildings/BP_BuildingSocket'
+)
 $cooked = Invoke-VoyageModCook -ModRoot $PSScriptRoot -ProjectFile $project -EngineRoot $EngineRoot -OutputRoot $run -Packages $packages -ParserVersion 'UE5_8'
 $version = 'V' + (1 + [int]([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'version.txt')).Trim()))
 $archive = Join-Path $run ('ElectrifiedBuildings-' + $version + '.zip')

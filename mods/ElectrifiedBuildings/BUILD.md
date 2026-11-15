@@ -5,7 +5,8 @@
 `Project/Voyage.uproject` and `Project/Content/` own the maintained assets.
 Synchronized BPT mirrors their paths under `Project/BlueprintText/`.
 `Project/EditorSupport.json` declares native editor dependencies.
-[Build/packages.txt](Build/packages.txt) supplies the release inventory.
+[Build-ElectrifiedBuildings.ps1](Build-ElectrifiedBuildings.ps1) defines the release
+inventory passed to the shared cook and exact package validation.
 
 Run commands from the repository root through the
 [PowerShell launcher](../../tools/powershell-execution.md). Create a working copy:
