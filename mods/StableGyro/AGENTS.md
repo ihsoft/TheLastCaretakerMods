@@ -7,6 +7,8 @@ Start with the [repository index](../../AGENTS.md) for shared rules and knowledg
   the affected sections before changing behavior or dependencies.
 - [Build and authoring](BUILD.md): source layout, working copies, BPT, explicit
   source updates and candidate installation.
+- [Item authoring](BUILD.md#item-authoring): edit the saved
+  DataAsset through BPT and preserve the explicit stock-refresh recipe.
 - [Candidate producer](Build-StableGyro.ps1): cook and validate a disposable copy;
   `-Install` delegates to the same candidate installer.
 - [Candidate installer](Install-StableGyro.ps1): install a supplied release

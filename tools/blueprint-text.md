@@ -6,7 +6,7 @@ For shared tool changes and specialist reviews, use the
 [maintenance guide](blueprint-text-maintenance.md).
 
 BlueprintText (BPT) is the recommended bidirectional text interface for editing
-Blueprint assets in an authoritative Unreal project. Its synchronized JSON is
+Blueprint and DataAsset properties in an authoritative Unreal project. Its synchronized JSON is
 committed alongside the assets for Git review, as defined by the
 [source-of-truth and Git contract](blueprint-workspace.md#source-of-truth-and-git).
 This document defines interchange capabilities, not a JSON-owned project model.
@@ -15,6 +15,71 @@ graph text are both available. Release packaging and installation remain separat
 BlueprintText exports saved project assets. New mods use the same shared tools
 and describe their Blueprints directly rather than adding a per-mod graph builder.
 Migration of an older producer remains a separate, owner-scoped task.
+
+## DataAsset property snapshot
+
+The workspace [DataAsset workflow](blueprint-workspace.md#edit-an-existing-dataasset)
+exports a distinct `kind: dataAsset` document. It is not a Blueprint schema-1
+example or schema-2 graph and must not pass through the Blueprint codec/importer.
+
+```json
+{
+  "schema": 2,
+  "kind": "dataAsset",
+  "asset": "/Game/Data/ExampleItem",
+  "objectName": "ExampleItem",
+  "class": "/Script/Example.Item",
+  "objects": {
+    ".": {
+      "class": "/Script/Example.Item",
+      "properties": {
+        "Weight": {"type": "float", "editable": true, "value": "300.000000"},
+        "DroppedActor": {
+          "type": "TSoftObjectPtr<UObject>",
+          "editable": true,
+          "value": "\"/Game/Mods/Example/BP_Dropped.BP_Dropped_C\""
+        }
+      }
+    }
+  }
+}
+```
+
+The example abbreviates the property inventory: an actual export includes every
+persistent reflected field, including inherited fields and values equal to defaults.
+The `.` entry is the root; other keys identify existing owned objects relative to
+that root. Each object retains its class and property inventory. Change only
+`value` where `editable` is true. Identities, types, editability and inventories
+are read-only. Omitting a field is an error, not a default reset.
+
+Values use Unreal's native property text, as Blueprint property values do. This
+covers numbers, booleans, enums, names, strings, localized text, object/class and
+soft references, structures, arrays, maps and sets supported by the declared type's
+native codec. Preserve the exported syntax and canonical formatting. For example,
+floats retain their decimal formatting, structures use named members, and soft
+paths include quotes inside the JSON string. `None` clears an object reference;
+an empty dynamic array exports as an empty string, while an empty map uses `()`.
+A fixed C++ array uses a JSON array of text values with unchanged length. A `_C`
+suffix does not by itself make a property a class reference: its reflected type
+remains authoritative. Localization lookup expressions remain expressions, not
+resolved display text; use existing table identities/keys when relying on lookups.
+
+Editable fields have `CPF_Edit`, excluding `CPF_EditConst`, deprecated,
+transient and skipped-serialization fields. `EditDefaultsOnly` does not exclude
+saved DataAsset/owned-object values from BPT. Other persistent fields are visible
+as read-only; transient and skipped-serialization fields are omitted. Non-reflected
+custom serialized state is preserved, not exposed as editable JSON. Unsupported
+native text or unstable serialization causes an explicit failure.
+
+Each selected `/Game` package must contain one existing `UDataAsset` root and its
+owned objects. Values on existing owned objects are editable; creating, replacing,
+deleting or renaming those objects is outside this contract. Keep instanced-object
+links intact and edit the referenced object's entry. New non-null references,
+including references inside collections/structures, must resolve to compatible
+project objects/classes. BPT does not create dependency stubs. The saved package
+must remain available: this snapshot does not reconstruct a missing asset or a
+split package. Older soft-reference-only schema-1 workspaces require a fresh
+`ExportDataAsset` from the saved project; do not upgrade them by changing the number.
 
 ## Schema 1: small examples
 

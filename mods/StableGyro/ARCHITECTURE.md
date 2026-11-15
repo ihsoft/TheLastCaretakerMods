@@ -36,6 +36,12 @@ with native parent `/Script/Voyage.VoyageVehicleGyroCopter`. Only
 `/Game/Data/Assets/Modules/DA_Item_Module_GyroCopter.DroppedActor` selects the
 mod child. Do not relocate or replace the stock parent implementation.
 
+The saved item is the authority for its state. Its full tracked BPT DataAsset
+snapshot lives at `Project/BlueprintText/Data/Assets/Modules/DA_Item_Module_GyroCopter.json`.
+Use [item authoring](BUILD.md#item-authoring) for ordinary
+edits. `Build/Item.patch.json` retains the intended stock-to-mod replacement for
+explicit game-data refresh; it is not applied by ordinary builds.
+
 ## Graph organization
 
 The gameplay Blueprints retain their state and tick responsibilities. Local
@@ -554,6 +560,6 @@ them; retain the explicit older evidence boundaries in
 | `Project/Content/UI/Game/HUD/WBP_VoyageIngameGyroCopter.uasset`, `Project/Content/UI/Game/World/WBP_CompassHUD.uasset` and their BPT | Hand-reconstructed editor-only identities and required widget members, without stock implementations. | Check parent chains, names and consumed native fields when affected; exclude both from payload. |
 | `Project/Content/Mods/StableGyro/IAV_GyroPitchReset.uasset`, `Project/Content/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.uasset` | Authored reset action and stock keyboard-context reconstruction with that one addition. | [Mapping contract](#mapping-and-value-binding-contracts). |
 | `Project/Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/` | Positive-Y half derived from the stock Gyro plate through shared GLB selection and StaticMesh import, with the mod's side, material and representation settings. | `Build/MooringMeshes.source.json` records the source game build; explicit [plate update](BUILD.md#source-updates). |
-| `Project/Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset` and `Project/Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset` | Shared VoyageItem profile reconstruction and its owned generator stub; `Build/Item.patch.json` changes only `DroppedActor`. Only the item ships. | `Build/Item.source.json` records the source game build; explicit [item update](BUILD.md#source-updates), with current-stock comparison during that update. |
+| `Project/Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset`, its property JSON under `Project/BlueprintText/Data/Assets/Modules/`, and `Project/Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset` | Shared VoyageItem profile reconstruction and its owned generator stub; BPT exposes the item's properties and owned-object state. `Build/Item.patch.json` preserves the `DroppedActor` replacement during refresh. Only the item ships. | `Build/Item.source.json` records the source game build; explicit [item update](BUILD.md#source-updates), with current-stock comparison and refreshed BPT during that update. |
 | Other `Project/Content/` dependencies | Reconstructed stock Gyro parent, material, icon, actions, item references and string-table editor stubs. No stock shaders or implementations are claimed. | Review required identities/layouts when affected; exclude from payload. Missing dependencies created by the shared item tool require separate review before source acceptance. |
 | `Project/EditorSupport/Source/Voyage/` | Minimal native API mirrors from reflection/mappings; shared item-profile overlays declared by `Project/EditorSupport.json`. | Preserve `/Script/Voyage` identity, field order and consumed metadata. Rebuild ready support on source changes; never ship its binaries. |

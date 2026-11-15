@@ -922,6 +922,7 @@ bool ExportBatch(const FString& Path,const FString& Folder)
 #include "BlueprintCallTemplateTests.h"
 #include "BlueprintArgumentTests.h"
 #include "BlueprintFunctionLibraryTests.h"
+#include "BlueprintDataAssets.h"
 
 UBlueprintAssetTextCommandlet::UBlueprintAssetTextCommandlet(){IsClient=false;IsServer=false;IsEditor=true;LogToConsole=true;}
 int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
@@ -930,6 +931,8 @@ int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
     FParse::Value(*Params,ATNames::ValueMode_,Mode);FParse::Value(*Params,ATNames::ValueInput_,Input);
     FParse::Value(*Params,ATNames::ValueOutput_,Output);FParse::Value(*Params,ATNames::ValueAsset_,Asset);
     FString PreviewResources;FParse::Value(*Params,WidgetPreviewResources::ResourcesArgument,PreviewResources);
+    if(Mode==BlueprintDataAssets::ExportMode)return BlueprintDataAssets::Export(Asset,Output)?0:10;
+    if(Mode==BlueprintDataAssets::ApplyMode)return BlueprintDataAssets::Apply(Input,Output)?0:10;
     if(Mode==TEXT("FunctionLibraryFixture"))return BlueprintFunctionLibraryTests::Fixture()?0:9;
     if(Mode==TEXT("FunctionLibraryCheck"))return BlueprintFunctionLibraryTests::Check(FParse::Param(*Params,TEXT("Changed")))?0:9;
     if(Mode==TEXT("ArgumentFixture"))return BlueprintArgumentTests::Fixture()?0:8;

@@ -452,6 +452,103 @@ Do not open generated HTML, SVG or images to infer edits already represented
 in source. Inspect the rendered output when the user requests a preview
 investigation or a concrete rendering failure requires it.
 
+## Edit an existing DataAsset
+
+`ExportDataAsset` starts a separate workspace for existing editor DataAssets.
+Use it to inspect the full persistent property state and edit values on the root
+and existing owned objects without extracting stock game data or reconstructing
+the asset. It does not create DataAssets or
+mix them with Blueprint graph sources in the same workspace. Prepare the mod's
+working project copy and warn before Export/Apply, as for Blueprint authoring.
+
+```powershell
+python -B tools/run_powershell.py tools/BlueprintText/Invoke-BlueprintWorkspace.ps1 `
+  -Action ExportDataAsset -ProjectFile './Tmp/Example/authoring/Project/Example.uproject' `
+  -WorkspaceRoot './Tmp/BlueprintText/example-item' `
+  -Asset '/Game/Data/ExampleItem' -EngineRoot '<selected engine root>'
+```
+
+Edit the required `objects.<object>.properties.<property>.value` in the returned workspace's
+`data-assets/**/*.json`, then use ordinary `Apply` and `Preview` with that
+WorkspaceRoot. The root object key is `.`. Preserve the other fields and values;
+omitting an existing field is an error, not a default reset.
+The [DataAsset source format](blueprint-text.md#dataasset-property-snapshot)
+defines the exact editable boundary. Required native declarations and existing
+reference targets must be available in the project; BPT does not generate stubs.
+
+Apply loads existing objects and writes only changed properties, using Unreal's
+native property text for scalars, structures and collections.
+It preserves the owned-object tree rather than reconstructing it from text.
+The tool checks the accepted saved package and native snapshot before editing,
+backs up selected packages, then checks the result in fresh Unreal processes.
+Named-object and per-property serialization capture protected state, including
+owned-object identity, untouched localized-text histories and custom serialized
+payloads. Unchanged fields are not reimported; equal subvalues within edited
+structures and collections retain their native state. The freshly reopened result
+must match the native state prepared before saving. Unsupported
+or unstable serialization is a failure; it is not accepted by weakening the
+comparison. Changed nonempty references must resolve to compatible objects or
+classes. Package/owned-object creation, class/identity changes and property
+addition/removal require authoring in Unreal followed by a fresh export.
+
+The transaction and `Recover` retain pending source proposals and restore saved
+packages on failed acceptance. Successful Apply advances the accepted baseline.
+Retain the synchronized property JSON alongside the owning asset in the mod's
+tracked BPT tree when accepting changes. It includes the full reflected property
+state, including read-only fields. Native preservation evidence remains temporary
+under `.workspace/`; the saved Unreal asset remains the source of truth.
+
+DataAsset `Preview` is offline and in English, with two display modes:
+
+- **Changes** shows only differing properties with Before/After values.
+- **Full asset** shows every proposed property, grouped by object, with types and
+  read-only markers. Changed fields are highlighted and can reveal their previous
+  value in place.
+
+The page always names the comparison baseline separately from the pending/saved
+status. Without an explicit reference, it compares against this workspace's
+initial Export, labelled `Before this edit (workspace export)`. Zero differences
+there does not mean the mod has no differences from the stock game. With a baseline,
+the initial view is Changes; without one it is Full asset with `No comparison baseline`.
+Edit through JSON, not the HTML page. Preview does not invent a graph or run gameplay.
+As usual, return its `previewUrl`; diagnostics are for investigating failures.
+
+To review against another saved state, first export that state into a separate
+DataAsset workspace, then supply both comparison arguments:
+
+```powershell
+python -B tools/run_powershell.py tools/BlueprintText/Invoke-BlueprintWorkspace.ps1 `
+  -Action Preview -WorkspaceRoot './Tmp/BlueprintText/example-item' `
+  -ComparisonWorkspace './Tmp/BlueprintText/example-item-original' `
+  -ComparisonLabel 'Original game item (Steam build <source build>)'
+```
+
+The reference is the other workspace's **initial exported snapshot**, not its
+pending JSON or subsequent Apply result. Export to a new reference workspace when
+selecting a different baseline. Every selected asset must have a matching package,
+object/class inventory and property types; missing or incompatible references fail
+instead of producing a partial comparison. Read-only values can differ in a review
+even though Apply cannot edit them. The preview run retains its comparison snapshots
+and selection metadata; neither workspace's Apply/recovery baseline is changed.
+Repeat the comparison arguments when regenerating that review.
+
+A comparison label describes the supplied evidence; it does not establish its
+origin. For a stock-game comparison, obtain the original through the supported
+game-data importer in a separate disposable project, validate its reconstruction,
+and export it with BPT. Do not manufacture an original by reversing a patch on
+the current mod snapshot. The original is review evidence, not another authoring
+source or something ordinary builds need to recreate.
+
+Cooked-game reconstruction remains owned by the specialized importer/updater.
+An existing refresh recipe records intentional differences from stock and is
+not replaced by an exported property snapshot. Keep that recipe until an explicit
+consumer migration defines refresh/reapplication behavior. A recipe supporting
+one property will not automatically retain other BPT-authored changes during a
+later stock refresh; resolve that consumer contract before refreshing. Normal DataAsset
+editing uses Unreal directly, without UAssetAPI. Independent cooked semantic
+validation belongs to tool acceptance or a changed serialization contract, not
+an additional extraction/reconstruction step on every mod build.
+
 ## Preview a project model
 
 Use `ModelPreview` for a lightweight interactive view of one saved Static Mesh

@@ -1,6 +1,6 @@
 # BlueprintText index
 
-Choose the guide for the current task. BPT edits supported Blueprint state in
+Choose the guide for the current task. BPT edits supported Blueprint and DataAsset state in
 a maintained Unreal project; packaging and gameplay acceptance belong to its
 consumer.
 
@@ -14,6 +14,8 @@ consumer.
   graph compactly or reveal selected node, pin and declaration details.
 - [Project model preview](../blueprint-workspace.md#preview-a-project-model):
   view saved Static Meshes and rigid Actor Blueprint assemblies interactively.
+- [DataAsset editing](../blueprint-workspace.md#edit-an-existing-dataasset):
+  inspect and edit persistent properties on the asset and its owned objects.
 - [Member-use search](../blueprint-text.md#find-member-uses): locate callers,
   callbacks or variable uses across an explicitly selected set of sources.
 - [INI library](Library/IniFileParser/AGENTS.md): select a flat or sectioned

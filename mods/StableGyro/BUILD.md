@@ -4,7 +4,8 @@
 
 `Project/Voyage.uproject` and `Project/Content/` own the maintained Unreal assets.
 `Project/BlueprintText/` mirrors their `/Game/` paths, including the two HUD
-dependency stubs under `UI/Game/`. Native declarations and their dependency
+dependency stubs under `UI/Game/` and the item's full DataAsset property snapshot at
+`Data/Assets/Modules/DA_Item_Module_GyroCopter.json`. Native declarations and their dependency
 declaration live under `Project/EditorSupport/` and `Project/EditorSupport.json`.
 `Project/Config/` contains deliberately maintained configuration. Only
 `Project/Intermediate/` is ignored temporary project storage.
@@ -39,6 +40,51 @@ tracked JSON when accepting asset changes. Check concurrent source edits and
 transfer only intentionally changed assets, text and configuration. Do not open
 the maintained source project in Unreal or copy an entire working project back.
 
+### Item authoring
+
+Edit the existing Gyro item through the shared
+[BPT DataAsset workflow](../../tools/blueprint-workspace.md#edit-an-existing-dataasset).
+After creating a fresh working copy, export the current saved asset:
+
+```powershell
+python -B tools/run_powershell.py tools/BlueprintText/Invoke-BlueprintWorkspace.ps1 `
+  -Action ExportDataAsset -ProjectFile './Tmp/StableGyro/authoring/Project/Voyage.uproject' `
+  -WorkspaceRoot './Tmp/BlueprintText/stablegyro-item' `
+  -Asset '/Game/Data/Assets/Modules/DA_Item_Module_GyroCopter' -EngineRoot 'P:/UnrealEngine/UE_5.8'
+```
+
+The snapshot includes the item's persistent properties and its owned crafting
+generator. Edit intended `objects.<object>.properties.<property>.value` fields,
+then use ordinary BPT `Apply` and `Preview`. The root key is `.`; for the current
+mod override, edit `objects["."].properties.DroppedActor.value` using the exported
+native text syntax. This is a soft object reference containing a generated-class
+path. BPT edits saved objects without reconstructing the item or generator.
+The current mod contract changes only `DroppedActor`; `DroppedMesh` remains null.
+Accept the deliberately changed `.uasset` and synchronized property JSON into
+their corresponding `Project/Content/` and `Project/BlueprintText/` paths after
+checking concurrent edits. A read-only adoption/export needs only the JSON.
+
+Keep `Build/Item.patch.json`'s replacement value consistent with an accepted
+intentional change to `DroppedActor`, so a later stock refresh reapplies that
+choice. Its expected stock reference remains a separate refresh guard; do not
+replace it with the current mod value. Changing the reference on an existing
+item does not require running the stock updater. Gameplay consequences of a new
+target still require the consumer's relevant checks. BPT can also edit other
+properties, but the current stock-refresh recipe only reapplies `DroppedActor`.
+Before accepting additional persistent overrides, define how the explicit refresh
+will preserve them; do not assume the recipe imports the full BPT snapshot.
+
+For a review of what the mod changes relative to the game, use BPT Preview's
+`-ComparisonWorkspace` and `-ComparisonLabel` as described in the shared
+[DataAsset workflow](../../tools/blueprint-workspace.md#edit-an-existing-dataasset).
+Prepare the reference in another disposable project copy: run the shared
+[VoyageItem updater](../../tools/voyage-item-patch.md) with the same asset identity
+and an empty `patches` list, then export that validated stock item to its own BPT
+workspace. Name the source game build in the comparison label. The current item
+override should appear as `DroppedActor` in Changes; Full asset retains the whole
+item and generator with the same difference highlighted. Reference assets and
+workspaces stay temporary and are never accepted into the mod source project.
+
 ## Candidate build
 
 ```powershell
@@ -55,8 +101,9 @@ The producer checks source readiness and the installed game build, then
 prepares native support and cooks a disposable project copy. It does not refresh
 or write maintained assets. If an item's or mesh's recorded source build differs
 from the installed build, stop and ask whether to refresh those inputs; do not
-run an updater automatically. After changing `Build/Item.patch.json`, apply it
-with the item updater before building; the build does not track patch application.
+run an updater automatically. Ordinary item-reference edits follow
+[item authoring](#item-authoring); an edited refresh recipe
+alone does not change the saved asset. The build does not apply recipes or BPT.
 The producer supplies one package inventory to the
 [shared cook and container stages](../../tools/mod-setup.md#cook-and-container-stages).
 The compass display selects tagged serialization for the reason recorded in
@@ -82,7 +129,7 @@ the commands directly from `Build/`; each enters the shared Unreal queue.
 
 | Command | Purpose and when to use it |
 | --- | --- |
-| [Update-StableGyroItemAsset.ps1](Build/Update-StableGyroItemAsset.ps1) | Reapply the mod's `DroppedActor` replacement to the current stock gyrocopter item, so placing the item creates the StableGyro Blueprint while retaining current stock item data. Use when accepting a new game build, changing `Build/Item.patch.json`, or regenerating missing item inputs. Routine flight-logic or INI edits do not require it. |
+| [Update-StableGyroItemAsset.ps1](Build/Update-StableGyroItemAsset.ps1) | Reconstruct the item from current stock and reapply the recipe's `DroppedActor` replacement. Use when accepting a new game build or regenerating missing item inputs. Ordinary reference edits use BPT; flight-logic or INI edits do not require a stock refresh. |
 | [Update-StableGyroMooringPlate.ps1](Build/Update-StableGyroMooringPlate.ps1) | Recreate the maintained half-plate mesh from the stock mooring plate for the mod's port layout. Use when accepting a new game build or repairing the mesh import. Routine Blueprint or INI edits do not require it. |
 
 These commands change maintained source files after validation. They do not
@@ -117,7 +164,10 @@ The item updater replaces the item and its owned crafting-generator stub using
 [shared source-build marker](../../tools/mod-setup.md#asset-source-build-markers).
 A stale saved item override can otherwise mask changes
 to stock item data. Unsupported stock data fails in the shared item tool.
-The updater accepts only the item/generator pair and its source state. If the
+Before acceptance, it exports the refreshed DataAsset through BPT and includes
+the synchronized property JSON in the same guarded source update. A failed
+export stops acceptance; the previous maintained item and snapshot stay together.
+The updater accepts only the item/generator pair, the item's property JSON and its source state. If the
 shared updater creates a missing dependency or string table, removes a dependency,
 or changes another content file, acceptance fails before any maintained-source
 write. The working copy remains for a separately reviewed dependency repair.

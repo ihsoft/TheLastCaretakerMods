@@ -31,6 +31,7 @@ including when a guide shows an older direct `.ps1` invocation.
 | Measure explicitly requested agent work | [Agent work measurement](agent-work-measurement.md) |
 | Create or edit Blueprints for new and existing mods (requires a prepared Unreal project with the needed dependencies) | [Blueprint workspace](blueprint-workspace.md) |
 | Look up BlueprintText formats, schemas and lower-level interfaces | [BlueprintText reference](blueprint-text.md) |
+| Inspect and edit properties of an existing project DataAsset and its owned objects | [DataAsset workflow](blueprint-workspace.md#edit-an-existing-dataasset) |
 | Evaluate or maintain shared BPT tools and guidance | [BPT maintenance](blueprint-text-maintenance.md) |
 | Extract selected BPT nodes into a named collapsed graph | [Workspace Collapse](blueprint-workspace.md#extract-an-operation-into-a-collapsed-graph) |
 | Add a reusable flat or sectioned UObject INI parser to a mod through BPT | [INI parser source library](BlueprintText/Library/IniFileParser/AGENTS.md) |

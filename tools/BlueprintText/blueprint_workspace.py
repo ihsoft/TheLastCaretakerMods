@@ -858,7 +858,7 @@ class Workspace:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'ModelPreview', 'MarkStubs', 'Recover', 'AddSource', 'Collapse', 'CallTemplates'])
+    parser.add_argument('action', choices=['Prepare', 'Export', 'ExportDataAsset', 'Apply', 'Preview', 'ModelPreview', 'MarkStubs', 'Recover', 'AddSource', 'Collapse', 'CallTemplates'])
     parser.add_argument('--workspace', required=True)
     parser.add_argument('--project')
     parser.add_argument('--asset', action='append')
@@ -868,6 +868,8 @@ def main():
     parser.add_argument('--name')
     parser.add_argument('--boundary-names', type=json.loads)
     parser.add_argument('--operation', action='append')
+    parser.add_argument('--comparison-workspace')
+    parser.add_argument('--comparison-label')
     parser.add_argument('--engine', default=r'K:\Epic Games\UE_5.8')
     args = parser.parse_args()
     workspace = None
@@ -877,6 +879,14 @@ def main():
         lock_path = workspace.root.parent / (workspace.root.name + '.workspace.lock')
         with ExitStack() as stack:
             stack.enter_context(lock(lock_path))
+            data_assets = args.action == 'ExportDataAsset' or (workspace.manifest.exists() and read(workspace.manifest).get('kind') == 'dataAssets')
+            if (args.comparison_workspace or args.comparison_label) and (not data_assets or args.action != 'Preview'):
+                raise ValueError('ComparisonWorkspace/ComparisonLabel are supported only by DataAsset Preview')
+            if data_assets:
+                from data_asset_workspace import DataAssetWorkspace
+                if args.action not in ('ExportDataAsset', 'Apply', 'Preview', 'Recover', 'Prepare', 'ModelPreview'):
+                    raise ValueError('This action requires a Blueprint workspace, not a DataAsset workspace')
+                workspace = DataAssetWorkspace(args.workspace, args.engine)
             workspace.recover_edit()
             if args.action == 'Collapse':
                 if not args.graph or not args.node or not args.name or (args.asset and len(args.asset) != 1):
@@ -908,25 +918,28 @@ def main():
                 workspace.project = Path(args.project or saved_project).resolve()
                 if workspace.project.suffix != '.uproject' or not workspace.project.is_file():
                     raise ValueError('ProjectFile must be an existing .uproject')
-            elif args.action in ('Export', 'Prepare'):
+            elif args.action in ('Export', 'ExportDataAsset', 'Prepare'):
                 if not args.project:
-                    raise ValueError('ProjectFile is required for Export and Prepare')
+                    raise ValueError('ProjectFile is required for Export, ExportDataAsset and Prepare')
                 workspace.project = Path(args.project).resolve()
             elif args.action == 'Recover':
                 workspace.project = Path(read(workspace.manifest)['project']).resolve()
             else:
                 workspace.load()
-            stack.enter_context(project_operation(workspace.project))
+                if data_assets and args.project and Path(args.project).resolve() != workspace.project:
+                    raise ValueError('ProjectFile disagrees with the DataAsset workspace project')
+            if not (data_assets and args.action == 'Preview'):
+                stack.enter_context(project_operation(workspace.project))
             if args.action != 'Recover' and (workspace.internal / 'recovery.json').exists():
                 raise ValueError('Interrupted asset write requires Recover before another operation')
             if args.action == 'Prepare':
                 result = workspace.prepare(args.project)
-            elif args.action == 'Export':
+            elif args.action in ('Export', 'ExportDataAsset'):
                 result = workspace.export(args.project, args.asset)
             elif args.action == 'Apply':
                 result = workspace.apply()
             elif args.action == 'Preview':
-                result = workspace.preview()
+                result = workspace.preview(args.comparison_workspace, args.comparison_label) if data_assets else workspace.preview()
             elif args.action == 'ModelPreview':
                 result = workspace.model_preview(args.asset)
             elif args.action == 'CallTemplates':
@@ -961,4 +974,5 @@ def main():
 
 
 if __name__ == '__main__':
+    sys.modules.setdefault('blueprint_workspace', sys.modules[__name__])
     sys.exit(main())

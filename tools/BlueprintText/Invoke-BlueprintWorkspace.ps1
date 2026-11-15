@@ -9,11 +9,15 @@ CallTemplates reflects a batch of -Operation native or pure static Blueprint lib
 source parent context; it launches Unreal but does not edit Blueprint sources/assets.
 ModelPreview renders one saved Static Mesh or Actor Blueprint selected by -Asset, from -ProjectFile
 or the existing workspace project. It launches Unreal and does not apply pending JSON edits.
+ExportDataAsset starts a separate existing-DataAsset workspace. Edit property values in
+data-assets/*.json, then use Apply/Preview/Recover. DataAsset Preview is offline.
+For a named DataAsset comparison, Preview accepts ComparisonWorkspace and ComparisonLabel
+together; the reference is that workspace's initial export, independent of Apply baselines.
 Edit workspace.json and blueprints/*.json. Recover restores interrupted asset writes.
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Prepare','Export','Apply','Preview','ModelPreview','MarkStubs','Recover','AddSource','Collapse','CallTemplates')][string]$Action,
+    [Parameter(Mandatory)][ValidateSet('Prepare','Export','ExportDataAsset','Apply','Preview','ModelPreview','MarkStubs','Recover','AddSource','Collapse','CallTemplates')][string]$Action,
     [Parameter(Mandatory)][string]$WorkspaceRoot,
     [string]$ProjectFile,
     [string[]]$Asset,
@@ -23,6 +27,8 @@ param(
     [string]$Name,
     [hashtable]$BoundaryNames,
     [string[]]$Operation,
+    [string]$ComparisonWorkspace,
+    [string]$ComparisonLabel,
     [string]$EngineRoot='K:\Epic Games\UE_5.8',
     [string]$PythonPath
 )
@@ -36,6 +42,8 @@ if($ProjectFile){$arguments+=@('--project',$ProjectFile)}
 if($SourcePath){$arguments+=@('--source',$SourcePath)}
 if($Graph){$arguments+=@('--graph',$Graph)}
 if($Name){$arguments+=@('--name',$Name)}
+if($ComparisonWorkspace){$arguments+=@('--comparison-workspace',$ComparisonWorkspace)}
+if($ComparisonLabel){$arguments+=@('--comparison-label',$ComparisonLabel)}
 foreach($identity in $Node){$arguments+=@('--node',$identity)}
 foreach($identity in $Operation){$arguments+=@('--operation',$identity)}
 if($BoundaryNames){$arguments+=@('--boundary-names',($BoundaryNames | ConvertTo-Json -Compress))}
