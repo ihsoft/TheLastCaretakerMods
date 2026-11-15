@@ -452,6 +452,57 @@ Do not open generated HTML, SVG or images to infer edits already represented
 in source. Inspect the rendered output when the user requests a preview
 investigation or a concrete rendering failure requires it.
 
+## Preview a project model
+
+Use `ModelPreview` for a lightweight interactive view of one saved Static Mesh
+or an Actor Blueprint's visible rigid Static Mesh assembly. The Unreal project
+is the source: no external GLB or graph export is required. This is a separate
+model view; `Preview` continues to review graphs and widgets.
+
+Create the mod's working project copy first, then call the shared entry point
+through the [PowerShell launcher](powershell-execution.md):
+
+```powershell
+python -B tools/run_powershell.py tools/BlueprintText/Invoke-BlueprintWorkspace.ps1 `
+  -Action ModelPreview -ProjectFile './Tmp/Example/authoring/Project/Example.uproject' `
+  -WorkspaceRoot './Tmp/BlueprintText/example-model' `
+  -Asset '/Game/Mods/Example/BP_Model' -EngineRoot '<selected engine root>'
+```
+
+Supply exactly one `/Game` package identity. With an existing workspace,
+`ProjectFile` may be omitted; a supplied project must agree with its manifest.
+The asset need not be selected for graph editing. A standalone model call does
+not create `workspace.json` or change an existing workspace's sources/baselines.
+Pending JSON edits are not applied: to preview their resulting assembly, Apply
+first. Unsaved changes in an interactive editor are not included.
+
+Warn before this engine action. The command owns the shared queue, dependency
+preparation, native export and HTML generation. The offline renderer uses NumPy
+(included in the repository's bundled Python runtime). On success, return the
+`previewUrl`; the result also identifies `source: saved-project`, the selected
+asset, visible mesh-instance/triangle counts and bounds in metres. The standalone
+HTML embeds its geometry and works locally without a server or network access.
+Its English interface provides drag/keyboard orbit, wheel/keyboard zoom and
+reset, side and top views. All generated GLB, evidence and HTML remain in the
+workspace's `.workspace/runs/`; none is an authoring or release source.
+
+Actor preview instantiates the saved Blueprint in an editor world, including its
+editor construction script, without BeginPlay or gameplay simulation. It uses
+visible, non-hidden Static Mesh components and their evaluated Unreal world
+transforms. Nested non-uniform scale and reflections preserve placement and
+outward shading. The tool does not save packages. A neutral material deliberately
+shows shape, not game shaders, textures, collision, effects, animation or runtime
+visibility. A direct Static Mesh is shown at its local origin; assemblies retain
+their component placement. Camera framing does not change source geometry.
+
+This version rejects visible skinned, instanced, spline-deformed or other
+unsupported mesh components, and populated Child Actor components. Hidden
+components are omitted; collision-only primitives are not model geometry.
+An empty selection of visible meshes or an unsupported asset type is an error,
+not an empty successful preview. Start from the returned reason and diagnostic
+path on failure. Do not substitute an external review GLB or silently omit an
+unsupported model part to obtain success.
+
 ## Editor stub identity
 
 When creating or changing an external Blueprint compilation stub, establish its

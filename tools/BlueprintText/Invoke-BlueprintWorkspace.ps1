@@ -7,11 +7,13 @@ AddSource copies a reusable UObject/function-library source to -Asset in the wor
 Collapse extracts explicit -Node IDs from -Graph into -Name; it is offline.
 CallTemplates reflects a batch of -Operation native or pure static Blueprint library functions in the selected
 source parent context; it launches Unreal but does not edit Blueprint sources/assets.
+ModelPreview renders one saved Static Mesh or Actor Blueprint selected by -Asset, from -ProjectFile
+or the existing workspace project. It launches Unreal and does not apply pending JSON edits.
 Edit workspace.json and blueprints/*.json. Recover restores interrupted asset writes.
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Prepare','Export','Apply','Preview','MarkStubs','Recover','AddSource','Collapse','CallTemplates')][string]$Action,
+    [Parameter(Mandatory)][ValidateSet('Prepare','Export','Apply','Preview','ModelPreview','MarkStubs','Recover','AddSource','Collapse','CallTemplates')][string]$Action,
     [Parameter(Mandatory)][string]$WorkspaceRoot,
     [string]$ProjectFile,
     [string[]]$Asset,

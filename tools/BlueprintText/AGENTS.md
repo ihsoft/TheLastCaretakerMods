@@ -12,6 +12,8 @@ consumer.
   lower-level interfaces when a source or tool contract needs clarification.
 - [Source reading](../blueprint-text.md#read-graphs-without-unreal): inspect a
   graph compactly or reveal selected node, pin and declaration details.
+- [Project model preview](../blueprint-workspace.md#preview-a-project-model):
+  view saved Static Meshes and rigid Actor Blueprint assemblies interactively.
 - [Member-use search](../blueprint-text.md#find-member-uses): locate callers,
   callbacks or variable uses across an explicitly selected set of sources.
 - [INI library](Library/IniFileParser/AGENTS.md): select a flat or sectioned

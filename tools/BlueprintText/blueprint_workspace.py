@@ -222,6 +222,45 @@ class Workspace:
                       '-abslog=' + str(self.run / (name + '-unreal.log')),
                       *['-' + key + '=' + str(value) for key, value in fields.items()]], name)
 
+    def model_preview(self, assets):
+        if not assets or len(assets) != 1:
+            raise ValueError('ModelPreview requires exactly one Asset (Static Mesh or Actor Blueprint)')
+        asset = assets[0]
+        # Uncooked Static Mesh bulk data is valid here; the Blueprint codec's
+        # single-package restriction does not apply to model export.
+        if not re.fullmatch(r'/Game/[A-Za-z0-9_]+(?:/[A-Za-z0-9_]+)*', asset):
+            raise ValueError('ModelPreview requires an explicit /Game package path')
+        if not (self.project.parent / 'Content' / (asset[6:] + '.uasset')).is_file():
+            raise ValueError('ModelPreview asset is missing from the project: ' + asset)
+        from render_model import render_model
+        self.prepare(self.project)
+        output = self.run / 'model-preview'
+        output.mkdir(parents=True)
+        write(output / 'request.json', dict(asset=asset))
+        script = output / 'export.py'
+        script.write_bytes((HERE / 'model_export.py').read_bytes())
+        closed()
+        try:
+            self.command([self.engine / 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe', self.project,
+                          '-EnablePlugins=PythonScriptPlugin,EditorScriptingUtilities,GLTFExporter',
+                          '-run=pythonscript', '-script=' + str(script), '-unattended', '-nop4',
+                          '-nosplash', '-nullrhi', '-ddc=NoZenLocalFallback',
+                          '-abslog=' + str(self.run / 'model-export-unreal.log')], 'model-export')
+        except RuntimeError as exc:
+            failure = output / 'export-error.json'
+            if failure.is_file():
+                raise ValueError(read(failure)['error'] + '; diagnostic: ' + str(failure)) from exc
+            raise
+        evidence = read(output / 'export.json')
+        if evidence.get('status') != 'exported' or evidence.get('asset') != asset:
+            raise ValueError('ModelPreview export did not confirm the selected asset')
+        report = render_model(output / 'model.glb', output / 'index.html', asset)
+        if report['meshInstances'] != evidence['meshInstances']:
+            raise ValueError('ModelPreview export omitted mesh instances; see export.json')
+        write(output / 'geometry.json', report)
+        return dict(status='previewed', asset=asset, source='saved-project',
+                    previewUrl=(output / 'index.html').as_uri(), **report)
+
     def export_one(self, asset, output, name, resources=False):
         native_path = self.run / (name + '.native.json')
         self.engine_run('Export', name, Asset=asset, Output=native_path)
@@ -819,7 +858,7 @@ class Workspace:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'MarkStubs', 'Recover', 'AddSource', 'Collapse', 'CallTemplates'])
+    parser.add_argument('action', choices=['Prepare', 'Export', 'Apply', 'Preview', 'ModelPreview', 'MarkStubs', 'Recover', 'AddSource', 'Collapse', 'CallTemplates'])
     parser.add_argument('--workspace', required=True)
     parser.add_argument('--project')
     parser.add_argument('--asset', action='append')
@@ -858,7 +897,18 @@ def main():
                 result.update(workspace=str(workspace.root), manifest=str(workspace.manifest))
                 print(json.dumps(result))
                 return
-            if args.action in ('Export', 'Prepare'):
+            if args.action == 'ModelPreview':
+                if not args.asset or len(args.asset) != 1:
+                    raise ValueError('ModelPreview requires exactly one Asset')
+                saved_project = read(workspace.manifest)['project'] if workspace.manifest.exists() else None
+                if args.project and saved_project and Path(args.project).resolve() != Path(saved_project).resolve():
+                    raise ValueError('ProjectFile disagrees with the existing workspace project')
+                if not (args.project or saved_project):
+                    raise ValueError('ModelPreview requires ProjectFile or an existing workspace')
+                workspace.project = Path(args.project or saved_project).resolve()
+                if workspace.project.suffix != '.uproject' or not workspace.project.is_file():
+                    raise ValueError('ProjectFile must be an existing .uproject')
+            elif args.action in ('Export', 'Prepare'):
                 if not args.project:
                     raise ValueError('ProjectFile is required for Export and Prepare')
                 workspace.project = Path(args.project).resolve()
@@ -877,6 +927,8 @@ def main():
                 result = workspace.apply()
             elif args.action == 'Preview':
                 result = workspace.preview()
+            elif args.action == 'ModelPreview':
+                result = workspace.model_preview(args.asset)
             elif args.action == 'CallTemplates':
                 if args.asset and len(args.asset) != 1:
                     raise ValueError('CallTemplates accepts at most one Asset')
@@ -887,7 +939,9 @@ def main():
                 restored = workspace.recover()
                 result = dict(status='recovered' if restored else 'no-recovery-needed',
                               recoveredCandidates=str(workspace.recovery_candidates) if restored else None)
-            result.update(workspace=str(workspace.root), manifest=str(workspace.manifest), evidence=str(workspace.run))
+            result.update(workspace=str(workspace.root),
+                          manifest=(str(workspace.manifest) if args.action != 'ModelPreview' or workspace.manifest.exists() else None),
+                          evidence=str(workspace.run))
             try:
                 write(workspace.run / 'result.json', result)
             except OSError as evidence_error:

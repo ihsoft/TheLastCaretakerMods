@@ -36,4 +36,5 @@ including when a guide shows an older direct `.ps1` invocation.
 | Find BPT callers, callbacks and variable accesses across selected sources | [Member-use search](blueprint-text.md#find-member-uses) |
 | Create native or pure static Blueprint library calls from reflected pin definitions | [Call templates](blueprint-workspace.md#create-reflected-native-call-nodes) |
 | Preview and annotate an exported HUD widget layout | [HUD preview](blueprint-text.md#hud-widget-preview) |
+| Preview a saved project Static Mesh or rigid Actor Blueprint assembly | [Project model preview](blueprint-workspace.md#preview-a-project-model) |
 | Browse exported Blueprints or review an explicitly marked set of changes | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |
