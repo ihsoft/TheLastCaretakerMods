@@ -91,7 +91,8 @@ and mapping context keep their override identities; the child remains under
 
 The explicit item updater compares the cooked item against a freshly extracted
 original, allowing only the `Build/Item.patch.json` replacement of `DroppedActor`.
-Ordinary builds check the recorded source build and recipe before reuse. Plate
+Ordinary builds check the recorded source build before reuse; recipe changes
+must be applied explicitly by their author. Plate
 extraction, splitting and import are checked during explicit plate updates.
 The shared importer reopens the saved mesh and resolves its material bindings.
 Editor dependency stubs are excluded.
@@ -385,9 +386,10 @@ actor's socket components, so the extra pair needs no separate winch loop.
 
 The stock `MooringPlate` is a separate decorative component whose mesh contains
 both sides together. It is not part of the frame mesh or two selectable material
-sections. The separate updater splits its full decoded Nanite leaf geometry and
-retains the positive-Y half as one complete editor mesh, preserving the original
-pivot. The other half is temporary extraction evidence only. Four components reuse
+sections. The separate updater selects whole faces from its full decoded Nanite
+leaf geometry through the [shared GLB selector](../../tools/glb-tools.md#select-whole-triangles):
+positive Unreal Y, corresponding to mesh-local glTF positive Z. It retains that
+half as one complete editor mesh, preserving the original pivot. Four components reuse
 the maintained mesh with the stock component material override and no collision.
 The updater delegates mesh import to the shared
 [StaticMesh tools](../../tools/static-mesh-assets.md) with `-OutputKind Uncooked -ProjectFile <working-project>`,
@@ -402,9 +404,8 @@ The inherited paired plate is hidden only in four-port mode.
 
 Preserve source corner normals, UV0..3, vertex colors and material bindings when
 splitting the full decoded Nanite geometry. Do not delete zero-area faces or
-invent source tangents. Blender can change imported normals near degenerate
-geometry; the bounded splitter restores the raw `NORMAL` accessor by complete
-triangle/corner position+UV identity after export. The source has no tangent
+invent source tangents. The shared selector copies the selected corner attributes
+directly, without a Blender roundtrip or normal recalculation. The source has no tangent
 stream; the importer retains normals, while the native builders derive the
 required fallback tangent basis. The stock mesh slot names `WorldGridMaterial`;
 visible `Gyrocopter_Seat_p1` comes from the component override. Derived components
@@ -415,7 +416,7 @@ The material chain `Gyrocopter_Seat_p1 -> Gyrocopte_Master_Hull ->
 WorldPositionOffset output. Coincident positions need not have identical corner
 attributes, so initial zero area is not permission to discard a face. This is
 not evidence that every degenerate face contributes visibly. Native mesh builders
-can discard coincident-position faces. The splitter preserves attributes while
+can discard coincident-position faces. The selector preserves attributes while
 separating the disconnected halves; the shared importer owns basic package and
 material checks. No fixed triangle counts or cooked-to-GLB comparison are part
 of source acceptance. These checks do not establish GPU cost or which
@@ -552,7 +553,7 @@ them; retain the explicit older evidence boundaries in
 | `Project/Content/Mods/StableGyro/UI/` | Three authored widgets inheriting stock parents and camera conventions. | [Compass dependencies](#camera-compass) and [serialization](#release-serialization). |
 | `Project/Content/UI/Game/HUD/WBP_VoyageIngameGyroCopter.uasset`, `Project/Content/UI/Game/World/WBP_CompassHUD.uasset` and their BPT | Hand-reconstructed editor-only identities and required widget members, without stock implementations. | Check parent chains, names and consumed native fields when affected; exclude both from payload. |
 | `Project/Content/Mods/StableGyro/IAV_GyroPitchReset.uasset`, `Project/Content/Game/Input/Vehicle/IMC_GyroCopter_Keyboard.uasset` | Authored reset action and stock keyboard-context reconstruction with that one addition. | [Mapping contract](#mapping-and-value-binding-contracts). |
-| `Project/Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/` | Positive-Y half derived from the stock Gyro plate through the mod splitter and shared StaticMesh producer. | `Build/MooringMeshes.source.json` records the source game build; explicit [plate update](BUILD.md#source-updates). |
+| `Project/Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/` | Positive-Y half derived from the stock Gyro plate through shared GLB selection and StaticMesh import, with the mod's side, material and representation settings. | `Build/MooringMeshes.source.json` records the source game build; explicit [plate update](BUILD.md#source-updates). |
 | `Project/Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset` and `Project/Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset` | Shared VoyageItem profile reconstruction and its owned generator stub; `Build/Item.patch.json` changes only `DroppedActor`. Only the item ships. | `Build/Item.source.json` records the source game build; explicit [item update](BUILD.md#source-updates), with current-stock comparison during that update. |
 | Other `Project/Content/` dependencies | Reconstructed stock Gyro parent, material, icon, actions, item references and string-table editor stubs. No stock shaders or implementations are claimed. | Review required identities/layouts when affected; exclude from payload. Missing dependencies created by the shared item tool require separate review before source acceptance. |
 | `Project/EditorSupport/Source/Voyage/` | Minimal native API mirrors from reflection/mappings; shared item-profile overlays declared by `Project/EditorSupport.json`. | Preserve `/Script/Voyage` identity, field order and consumed metadata. Rebuild ready support on source changes; never ship its binaries. |

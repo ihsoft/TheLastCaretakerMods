@@ -15,7 +15,6 @@ if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
 $modRoot = Split-Path -Parent $PSScriptRoot
 $repo = [IO.Path]::GetFullPath((Join-Path $modRoot '../..'))
 Import-Module (Join-Path $repo 'tools/VoyageModPipeline.psm1') -Force
-Import-Module (Join-Path $modRoot 'Build/ItemAssetRefresh.psm1') -Force
 $run = New-VoyageModRun -ModRoot $modRoot -OutputRoot $OutputRoot -Kind update-item
 $fingerprint = & (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -GameRoot $GameRoot | ConvertFrom-Json
 $build = [string]$fingerprint.steam.buildId
@@ -35,7 +34,7 @@ Assert-VoyageProjectContentUpdateScope -ProjectRoot $projectRoot -Before $conten
     -AllowedPaths @('Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset',
         'Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset')
 $null = New-Item -ItemType Directory -Path (Join-Path $run 'Build')
-Set-StableGyroItemSourceState -StatePath (Join-Path $run 'Build/Item.source.json') -SteamBuildId $build
+Set-VoyageModAssetSourceBuild -StatePath (Join-Path $run 'Build/Item.source.json') -SteamBuildId $build
 Save-VoyageModSourceUpdate -ModRoot $modRoot -RunRoot $run -Paths $paths -Snapshot $snapshot
 Remove-VoyageModScratch -ModRoot $modRoot -RunRoot $run -Path (Join-Path $run 'Project')
 [pscustomobject]@{status='updated-and-validated';outputRoot=$run;sourceState=(Join-Path $modRoot 'Build/Item.source.json')} | ConvertTo-Json -Compress

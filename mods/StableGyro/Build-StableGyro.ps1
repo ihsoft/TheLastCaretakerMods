@@ -53,9 +53,7 @@ $settingsDefaults = Join-Path $modRoot 'Assets\StableGyro.ini'
 $releaseManifestBuilder = Join-Path $repoRoot 'tools\New-VoyageReleaseManifest.ps1'
 $releaseInstaller = Join-Path $repoRoot 'tools\Install-VoyageRelease.ps1'
 $meshSourceStatePath = Join-Path $modRoot 'Build\MooringMeshes.source.json'
-Import-Module (Join-Path $modRoot 'Build\MooringMeshRefresh.psm1') -Force
 $itemSourceStatePath = Join-Path $modRoot 'Build\Item.source.json'
-Import-Module (Join-Path $modRoot 'Build\ItemAssetRefresh.psm1') -Force
 $containerName = 'StableGyro_P'
 $payloadNames = @(
     "$containerName.pak",
@@ -121,10 +119,10 @@ if ([string]$mapping.steamBuildId -cne $expectedBuild -or
 $phase.Stop()
 $timings.Fingerprint = $phase.Elapsed.TotalSeconds
 
-Assert-StableGyroMooringMeshSource -StatePath $meshSourceStatePath `
-    -SteamBuildId $expectedBuild
-Assert-StableGyroItemSource -StatePath $itemSourceStatePath `
-    -SteamBuildId $expectedBuild
+Assert-VoyageModAssetSourceBuild -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild `
+    -Label 'StableGyro mooring plate' -RefreshCommand 'mods/StableGyro/Build/Update-StableGyroMooringPlate.ps1'
+Assert-VoyageModAssetSourceBuild -StatePath $itemSourceStatePath -SteamBuildId $expectedBuild `
+    -Label 'StableGyro item assets' -RefreshCommand 'mods/StableGyro/Build/Update-StableGyroItemAsset.ps1'
 foreach ($relativePath in @('Content/Data/Assets/Modules/DA_Item_Module_GyroCopter.uasset',
         'Content/Blueprints/Fabrication/BP_CraftingLocationGenerator_Default.uasset')) {
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $relativePath) -PathType Leaf)) {

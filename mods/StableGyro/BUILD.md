@@ -30,8 +30,9 @@ python -B tools/run_powershell.py mods/StableGyro/New-StableGyroProjectCopy.ps1 
 
 Choose a fresh destination anywhere below `Tmp/StableGyro/`. The copy command
 returns its `.uproject` path without launching Unreal. It copies current source,
-including intended uncommitted edits, and resolves the two shared native overlays
-for the new location. Use that project with the shared
+including intended uncommitted edits. The
+[shared copy operation](../../tools/mod-setup.md#shared-mod-pipeline) preserves
+the declared native dependencies at the new location. Use that project with the shared
 [BPT workflow](../../tools/blueprint-workspace.md); BPT preparation installs its
 own editor plugin into the copy. Export/apply and synchronize the corresponding
 tracked JSON when accepting asset changes. Check concurrent source edits and
@@ -93,7 +94,8 @@ python -B tools/run_powershell.py mods/StableGyro/Build/Update-StableGyroMooring
 ```
 
 Both accept `-GameRoot`, `-EngineRoot`, `-OutputRoot` and
-`-IgnorePinnedGameVersion`. The plate updater additionally accepts `-BlenderPath`.
+`-IgnorePinnedGameVersion`. The plate updater uses Python and NumPy through the
+shared GLB selection tool; Blender is not required.
 Each works on a disposable copy, validates the updated inputs,
 rejects concurrent edits to its acceptance paths, and transfers only the owned
 assets and source-state record after validation, using the
@@ -111,7 +113,9 @@ copy-back stage.
 
 The item updater replaces the item and its owned crafting-generator stub using
 `Build/Item.patch.json`, compares the cooked result to current stock, and updates
-`Build/Item.source.json`. A stale saved item override can otherwise mask changes
+`Build/Item.source.json` through the
+[shared source-build marker](../../tools/mod-setup.md#asset-source-build-markers).
+A stale saved item override can otherwise mask changes
 to stock item data. Unsupported stock data fails in the shared item tool.
 The updater accepts only the item/generator pair and its source state. If the
 shared updater creates a missing dependency or string table, removes a dependency,
@@ -120,12 +124,15 @@ write. The working copy remains for a separately reviewed dependency repair.
 
 ### Mooring plate source update
 
-The plate updater extracts the current stock mesh, splits its disconnected
-halves and imports the positive-Y half into a disposable project through the
-shared StaticMesh tool. Extraction and splitting check their results where they
+The plate updater extracts the current stock mesh and selects whole faces on
+its positive Unreal Y side through the [shared GLB selector](../../tools/glb-tools.md#select-whole-triangles)
+(`--axis z --side positive` in mesh-local glTF coordinates). It imports this
+half into a disposable project through the shared StaticMesh tool.
+Extraction and selection check their results where they
 run; no fixed source triangle counts are prescribed. The importer reopens the
 saved mesh and checks its material bindings. After successful acceptance,
-`Build/MooringMeshes.source.json` records the source game build.
+`Build/MooringMeshes.source.json` records the source game build through the same
+shared marker mechanism as the item updater.
 Ordinary builds check source readiness and game-build identity, then cook the
 maintained mesh. They do not reimport GLB or compare the cooked mesh to it.
 Import success does not establish game appearance.

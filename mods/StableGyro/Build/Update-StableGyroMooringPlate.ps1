@@ -3,7 +3,6 @@
 param(
     [string]$GameRoot = 'P:/SteamLibrary/steamapps/common/Voyage',
     [string]$EngineRoot = 'P:/UnrealEngine/UE_5.8',
-    [string]$BlenderPath = 'K:/Program Files/Blender Foundation/Blender 5.2/blender.exe',
     [string]$OutputRoot,
     [switch]$IgnorePinnedGameVersion
 )
@@ -38,10 +37,10 @@ $expectedBuild = [string]$fingerprint.steam.buildId
     -ActualSteamBuildId $expectedBuild -IgnorePinnedGameVersion:$IgnorePinnedGameVersion | Out-Null
 $meshSourceStatePath = Join-Path $releaseRoot 'Build/MooringMeshes.source.json'
 $null = New-Item -ItemType Directory -Path (Split-Path -Parent $meshSourceStatePath)
-Import-Module (Join-Path $modRoot 'Build/MooringMeshRefresh.psm1') -Force
 $modelExporter = Join-Path $repoRoot 'tools/Export-VoyageModelGlb.ps1'
 $staticMeshBuilder = Join-Path $repoRoot 'tools/New-VoyageStaticMeshAssets.ps1'
-$mooringSplitter = Join-Path $modRoot 'Build/Split-MooringPlateGlb.py'
+$meshSelector = Join-Path $repoRoot 'tools/glb/select_glb.py'
+$python = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
 $relativeMesh = 'Content/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY.uasset'
 $acceptPaths = @(('Project/' + $relativeMesh), 'Build/MooringMeshes.source.json')
 $snapshot = Get-VoyageModSourceSnapshot -ModRoot $modRoot -Paths $acceptPaths
@@ -53,7 +52,6 @@ $mooringGeometryRoot = Join-Path $releaseRoot 'mooring-geometry'
 New-Item -ItemType Directory -Path $mooringGeometryRoot | Out-Null
 $stockMooringGlb = Join-Path $mooringGeometryRoot 'Gyro_MooringPlate.stock.glb'
 $positiveMooringGlb = Join-Path $mooringGeometryRoot 'StableGyroMooringPlatePositiveY.glb'
-$negativeMooringGlb = Join-Path $mooringGeometryRoot 'StableGyroMooringPlateNegativeY.glb'
 $mooringSplitReport = Join-Path $mooringGeometryRoot 'split-report.json'
 & $modelExporter `
     -Asset '/Game/AssetSets/Vehicles/Gyrocopter/Mesh/Gyro_MooringPlate' `
@@ -62,20 +60,18 @@ $mooringSplitReport = Join-Path $mooringGeometryRoot 'split-report.json'
     -GeometryMode Nanite `
     -GameRoot $GameRoot | Out-Null
 $splitLog = Join-Path $logs 'mooring-split.log'
-$splitOutput = @(& $BlenderPath --background --factory-startup --python-exit-code 1 `
-    --python $mooringSplitter -- `
-    --source $stockMooringGlb `
-    --positive-y $positiveMooringGlb `
-    --negative-y $negativeMooringGlb `
-    --report $mooringSplitReport 2>&1)
+# The exporter maps Unreal +Y to glTF +Z. Select whole faces without moving the pivot.
+$splitOutput = @(& $python -B $meshSelector --source $stockMooringGlb --output $positiveMooringGlb `
+    --axis z --side positive --material-slot Gyrocopter_Seat_p1 2>&1)
 $splitExitCode = $LASTEXITCODE
 $splitOutput | Set-Content -LiteralPath $splitLog -Encoding utf8
 if ($splitExitCode -ne 0) {
     $splitOutput | Select-Object -Last 60 | Write-Host
     throw "Mooring plate split failed with exit code $splitExitCode."
 }
-$splitEvidence = Get-Content -LiteralPath $mooringSplitReport -Raw | ConvertFrom-Json
+$splitEvidence = ($splitOutput -join [Environment]::NewLine) | ConvertFrom-Json
 if ($splitEvidence.status -cne 'passed') { throw "Mooring plate split failed: $mooringSplitReport" }
+$splitEvidence | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $mooringSplitReport -Encoding utf8
 $phase.Stop()
 $timings.MooringGeometry = $phase.Elapsed.TotalSeconds
 
@@ -134,7 +130,7 @@ $staticMeshBuildResultPath = Resolve-RequiredPath `
 $phase.Stop()
 $timings.StaticMeshBuild = $phase.Elapsed.TotalSeconds
 
-Set-StableGyroMooringMeshState -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild
+Set-VoyageModAssetSourceBuild -StatePath $meshSourceStatePath -SteamBuildId $expectedBuild
 Save-VoyageModSourceUpdate -ModRoot $modRoot -RunRoot $releaseRoot -Paths $acceptPaths -Snapshot $snapshot
 $result = [ordered]@{
     status = 'updated-and-validated'; steamBuildId = $expectedBuild
