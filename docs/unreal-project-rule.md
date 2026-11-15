@@ -70,7 +70,7 @@ create empty folders or placeholder scripts to complete the table.
 | `Project/EditorSupport.json`, `Project/EditorSupport/` | Native editor dependencies, when needed; use the [shared dependency declaration](../tools/unreal-editor-support.md#prepare-declared-project-dependencies). |
 | `Assets/` | Review/editing copies, external authoring inputs and distributable files such as `<Mod>.ini`; saved Unreal assets belong in `Project/Content/`. |
 | `Settings/` | Settings schemas, bindings or focused template checks when the configuration requires them. |
-| `Build/` | Mod-specific packaging inputs, serialization adapters, package checks and explicit source-update commands, only where shared tools do not cover the contract; never build output. |
+| `Build/` | Necessary separate packaging inputs and justified local adapters, checks or explicit source-update commands under [shared mechanics](#shared-mechanics-and-mod-owned-contracts); never build output. |
 | `slideshow/` | Publication media, when available. |
 | `game-build.json` | Accepted source-build pin when a game-bound contract requires it; provenance and update handling remain with the [game-derived data rule](game-derived-data-rule.md). |
 
@@ -79,6 +79,15 @@ root. Internal helpers stay with their owning responsibility instead of creating
 a second set of root-level build or
 test commands. Ignore rules belong to the owning mod or project under the
 [repository hygiene rule](repository-hygiene-rule.md).
+
+This layout assigns a home to necessary files; it does not justify creating
+them. Keep ordinary short parameters of a shared operation, including a small
+package inventory, beside the call in its owning script. Extract data into a
+separate file when an independent consumer, a required file format, or the
+volume and complexity of the data makes that separation useful. Avoid adding
+file loading and another maintained input merely to shorten the script.
+Create `Build/` only for such inputs or justified additional operations;
+association with building alone is insufficient.
 
 Virtual package paths are a separate contract from this filesystem layout.
 Use `/Game/Mods/<Mod>/` for ordinary owned content, but preserve stock-reference
@@ -131,7 +140,8 @@ parameters and enters the shared Unreal queue when it uses the engine.
 
 ## Shared mechanics and mod-owned contracts
 
-Mod entry points select inputs and checks; reusable execution belongs in shared
+Mod build entry points primarily compose standard shared operations, supplying
+the mod's inputs and required checks. Reusable execution belongs in shared
 tools. Do not copy another mod's producer or project-copy implementation as a
 template. Reuse the existing public tools for BPT and dependency preparation,
 the Unreal queue, game/mapping resolution, container verification, archive
@@ -144,9 +154,10 @@ extension that lets this and future mods use the same workflow, with mod-specifi
 choices supplied as data. One concrete consumer is enough to justify evaluating
 an extension; do not wait for several mods to duplicate the workaround.
 A shared implementation is the preferred outcome, not an unconditional
-requirement. Keep a local operation when its contract is specific to that mod or
-sharing it would add disproportionate complexity, and state that reason in the
-mod's architecture. Do not turn a one-off experiment into a general framework.
+requirement. Any additional mod-local build operation needs a concrete reason:
+its contract is specific to that mod or sharing it would add disproportionate
+complexity. State that reason in the mod's architecture. Do not turn a one-off
+experiment into a general framework.
 
 Use the [shared mod pipeline](../tools/mod-setup.md#shared-mod-pipeline) for
 working copies, run paths, editor-test orchestration, cook, container packaging,
