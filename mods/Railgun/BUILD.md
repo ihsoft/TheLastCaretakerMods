@@ -18,7 +18,7 @@ owns installation, game acceptance and candidate selection.
 | `Project/Tests/Native/` | Saved Blueprint settings-loader integration test. |
 | `Assets/` | Model review/editing copy and role registry; distributed INI template. |
 | `Settings/` | Runtime settings schema and bindings. |
-| `Build/` | Cooked serialization contracts/codec, package checks and catalogue descriptor. |
+| `Build/` | Cooked serialization contracts, package checks and catalogue descriptor. |
 | `slideshow/` | Publication images. |
 
 [EditorSupport.json](Project/EditorSupport.json) declares the native
@@ -120,8 +120,10 @@ Cook and IoStore packaging use the [shared pipeline](../../tools/mod-setup.md#co
 Railgun supplies its owned inventory and selects tagged cook for all packages,
 plus its shader policy. The common cooker transports the large inventory by file;
 there is no mod-specific cook commandlet. The DataAsset conversions below run on
-the returned stage before shared packaging. The producer supplies its verified
-registry PAK as `CompanionPak`; the common container stage obtains game
+the returned stage before shared packaging. The producer maps its generated
+registry to `../../../Voyage/Mods/RailgunCatalogue/AssetRegistry.bin` and uses
+the [shared additional-file packager](../../tools/pak-files.md) to create and verify
+the PAK. It supplies that result as `CompanionPak`; the common container stage obtains game
 `scriptobjects.bin` and verifies the final package set.
 
 The producer reads the primary DataAssets and model, cooks the owned inventory,
@@ -194,12 +196,12 @@ runtime behavior separately from this file/schema check.
 ## Primary DataAsset serialization
 
 The producer reads the maintained ammo, gun and skill natively and cooks them
-with tagged properties. Its [converter](Build/Convert-RailgunDataAsset.ps1)
-processes only fresh cook through the reviewed UAssetGUI/UAssetAPI writer and
-game mappings. It compares fresh cook with the native state, then the converted
-package with the fresh cooked object graph,
-including owned objects, references and FText. Uncooked UAssetGUI parsing is not
-this authoring/validation boundary.
+with tagged properties. The [shared converter](../../tools/data-asset-conversion.md)
+processes that fresh cook using the selected mappings and the mod's explicit
+package, class and serialization contract. It owns native/cooked comparison,
+rewriting and post-write semantic/format validation. Uncooked UAssetGUI parsing
+is not this authoring/validation boundary. The mod retains its native reader;
+DataAsset authoring and serialization conversion are separate operations.
 
 [data-assets-contract.json](Build/data-assets-contract.json) maps the source
 assets to metadata-only `Build/*-serialization.json` contracts. These fix

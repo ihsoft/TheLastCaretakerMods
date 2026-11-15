@@ -61,6 +61,9 @@ $sourcePaths = @(
     'tools/VoyageModSettings',
     'tools/Invoke-VoyageBoundedTool.ps1',
     'tools/New-VoyageAssetRegistry.ps1',
+    'tools/Convert-VoyageDataAsset.ps1',
+    'tools/New-VoyagePak.ps1',
+    'tools/AssetPackaging',
     'tools/New-VoyageReleaseManifest.ps1',
     'tools/Restore-VoyageReleaseInstallation.ps1',
     'tools/Test-VoyageContainer.ps1',
@@ -78,7 +81,9 @@ if ($dataAssetContract.schemaVersion -ne 5 -or @($dataAssetContract.assets).Coun
     (Compare-Object @($dataAssetContract.assets.kind | Sort-Object) @('ammo','gun','skill'))) {
     throw 'Expected the three maintained Railgun primary DataAssets.'
 }
+$dataAssetsByKind = @{}
 foreach ($entry in $dataAssetContract.assets) {
+    $dataAssetsByKind[$entry.kind] = $entry
     if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $entry.assetFile) -PathType Leaf) -or
         -not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $entry.serializationFile) -PathType Leaf)) {
         throw "Maintained DataAsset or serialization contract missing: $($entry.kind)"
@@ -186,8 +191,6 @@ foreach ($pickupAssetPath in $pickupAssetPaths) {
         throw "Shared ammo pickup dependency is absent from cook inventory: $pickupAssetPath"
     }
 }
-$unrealPak = Join-Path $engine 'Binaries/Win64/UnrealPak.exe'
-if (-not (Test-Path -LiteralPath $unrealPak -PathType Leaf)) { throw 'UnrealPak is missing.' }
 $packages += @(
     '/Game/Mods/Railgun/Inputs/DA_RailgunCharacterContext',
     '/Game/Mods/Railgun/Inputs/DA_RailgunExitContext',
@@ -240,20 +243,22 @@ if (-not $newPackage.StartsWith($itemDiscoveryRoot + '/', [StringComparison]::Or
     throw 'Railgun ammo escaped the confirmed Item AssetManager discovery root.'
 }
 $cloneTarget = Join-Path $loose $cloneRelative
-$uassetGui = Join-Path $repo '.tools/bin/UAssetGUI.exe'
-if (-not (Test-Path -LiteralPath $uassetGui -PathType Leaf)) {
-    throw 'UAssetGUI is missing.'
-}
-$ammoConversion = & (Join-Path $PSScriptRoot 'Build/Convert-RailgunDataAsset.ps1') `
+$conversionTool = Join-Path $repo 'tools/Convert-VoyageDataAsset.ps1'
+$conversionOptions = @{MappingsPath=$mapping.mappingsPath; EngineVersion=$serializationContract.engineVersion}
+$ammoConversion = & $conversionTool @conversionOptions `
+    -Package $dataAssetsByKind.ammo.package -ExpectedClass ('/Script/Voyage.' + $dataAssetsByKind.ammo.class) `
+    -SerializationContract (Join-Path $PSScriptRoot $dataAssetsByKind.ammo.serializationFile) `
     -CookedAsset ($cloneTarget + '.uasset') -NativeReadback $ammoNativePath `
-    -MappingsPath $mapping.mappingsPath -OutputRoot (Join-Path $output 'project-ammo')
+    -OutputRoot (Join-Path $output 'project-ammo')
 $ammoWrite = $ammoConversion.write
 $ammoReadback = $ammoConversion.readback
 $ammoReadbackPath = $ammoConversion.readbackPath
 $skillTarget = Join-Path $loose $skillRelative
-$skillConversion = & (Join-Path $PSScriptRoot 'Build/Convert-RailgunDataAsset.ps1') `
-    -Asset skill -CookedAsset ($skillTarget + '.uasset') -NativeReadback $primaryNativePaths.skill `
-    -MappingsPath $mapping.mappingsPath -OutputRoot (Join-Path $output 'project-skill')
+$skillConversion = & $conversionTool @conversionOptions `
+    -Package $dataAssetsByKind.skill.package -ExpectedClass ('/Script/Voyage.' + $dataAssetsByKind.skill.class) `
+    -SerializationContract (Join-Path $PSScriptRoot $dataAssetsByKind.skill.serializationFile) `
+    -CookedAsset ($skillTarget + '.uasset') -NativeReadback $primaryNativePaths.skill `
+    -OutputRoot (Join-Path $output 'project-skill')
 $skillWrite = $skillConversion.write
 $skillReadback = $skillConversion.readback
 $skillReadbackPath = $skillConversion.readbackPath
@@ -261,9 +266,11 @@ $gunRelative = 'Voyage/Content/Data/Assets/Modules/DA_Item_Module_RailgunCannonM
 $gunTarget = Join-Path $loose $gunRelative
 $newGunName = 'DA_Item_Module_RailgunCannonMk01'
 $newGunPackage = '/Game/Data/Assets/Modules/' + $newGunName
-$gunConversion = & (Join-Path $PSScriptRoot 'Build/Convert-RailgunDataAsset.ps1') `
-    -Asset gun -CookedAsset ($gunTarget + '.uasset') -NativeReadback $primaryNativePaths.gun `
-    -MappingsPath $mapping.mappingsPath -OutputRoot (Join-Path $output 'project-gun')
+$gunConversion = & $conversionTool @conversionOptions `
+    -Package $dataAssetsByKind.gun.package -ExpectedClass ('/Script/Voyage.' + $dataAssetsByKind.gun.class) `
+    -SerializationContract (Join-Path $PSScriptRoot $dataAssetsByKind.gun.serializationFile) `
+    -CookedAsset ($gunTarget + '.uasset') -NativeReadback $primaryNativePaths.gun `
+    -OutputRoot (Join-Path $output 'project-gun')
 $gunWrite = $gunConversion.write
 $gunReadback = $gunConversion.readback
 $gunReadbackPath = $gunConversion.readbackPath
@@ -282,34 +289,13 @@ if ($registryResult.status -cne 'passed' -or
     (Get-Item -LiteralPath $pluginRegistry).Length -le 0) {
     throw 'Owned-entry plugin registry is missing or empty.'
 }
-$registryResponse = Join-Path $output 'registry-response.txt'
-$registryPak = Join-Path $output ($stem + '.registry.pak')
-[IO.File]::WriteAllText($registryResponse,
-    ('"' + [IO.Path]::GetFullPath($pluginRegistry) +
-        '" "../../../Voyage/Mods/RailgunCatalogue/AssetRegistry.bin"' +
-        [Environment]::NewLine),
-    [Text.Encoding]::ASCII)
-Invoke-NativeStage 'pack-registry' $unrealPak @($registryPak,('-Create=' + $registryResponse),'-Dest=../../../')
-$registryListLog = Join-Path $output 'list-registry.log'
-& $unrealPak -List $registryPak *> $registryListLog
-if ($LASTEXITCODE -ne 0) { throw "Registry PAK listing failed; log: $registryListLog" }
-$registryList = @(Get-Content -LiteralPath $registryListLog)
-$registryEntries = @($registryList | Where-Object { $_ -match 'AssetRegistry\.bin' })
-if ($registryEntries.Count -ne 1 -or
-    @($registryList | Where-Object {
-        $_.Contains('mount point "../../../Voyage/Mods/RailgunCatalogue/"')
-    }).Count -ne 1 -or -not $registryEntries[0].Contains('"AssetRegistry.bin"')) {
-    throw "Registry PAK mount/file list invalid; log: $registryListLog"
-}
-$registryReadback = Join-Path $output 'registry-readback'
-$null = New-Item -ItemType Directory -Path $registryReadback
-Invoke-NativeStage 'readback-registry' $unrealPak @($registryPak,'-Extract',$registryReadback,'-Filter=AssetRegistry.bin')
-$readbackFiles = @(Get-ChildItem -LiteralPath $registryReadback -File -Recurse)
-if ($readbackFiles.Count -ne 1 -or $readbackFiles[0].Name -cne 'AssetRegistry.bin' -or
-    (Get-FileHash -LiteralPath $readbackFiles[0].FullName -Algorithm SHA256).Hash -cne
-        (Get-FileHash -LiteralPath $pluginRegistry -Algorithm SHA256).Hash) {
-    throw 'Packaged plugin registry readback hash mismatch.'
-}
+$registryManifest = Join-Path $output 'registry-files.json'
+[ordered]@{schemaVersion=1;files=@([ordered]@{
+    source=$pluginRegistry;mountPath='../../../Voyage/Mods/RailgunCatalogue/AssetRegistry.bin'
+})} | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $registryManifest -Encoding UTF8
+$registryArchive = & (Join-Path $repo 'tools/New-VoyagePak.ps1') -Manifest $registryManifest `
+    -OutputRoot (Join-Path $output 'registry-pak') -EngineRoot $EngineRoot
+$registryPak = $registryArchive.pakPath
 $payload = Join-Path $releaseStaging 'payload'
 $pack = New-VoyageModContainer -ModRoot $PSScriptRoot -Stage $loose -OutputRoot $payload `
     -Packages $packages -ParserVersion UE5_8 -GameRoot $GameRoot -ContainerName $stem -CompanionPak $registryPak
