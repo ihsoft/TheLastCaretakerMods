@@ -71,6 +71,7 @@ failure handling.
 | Diagnose mapping address discovery | `Find-VoyageUObjectArray.ps1` | [Toolchain maintenance](toolchain-maintenance.md) |
 | Build a primary-asset registry | `New-VoyageAssetRegistry.ps1` | [Asset registry](asset-registry.md) |
 | Convert fresh cooked native DataAssets under a consumer-owned serialization contract | `Convert-VoyageDataAsset.ps1` | [DataAsset conversion](data-asset-conversion.md) |
+| Read a native project DataAsset and its owned objects for cooked-state comparison | `Read-VoyageDataAsset.ps1` | [Native readback](data-asset-conversion.md#native-readback) |
 | Package explicitly mapped extra files and verify their PAK mount paths and bytes | `New-VoyagePak.ps1` | [Additional-file PAK](pak-files.md) |
 | Build and package a mod candidate | [Mod producers](release-build.md#release-producers) | [Release build](release-build.md) |
 | Verify an IoStore container | `Test-VoyageContainer.ps1` | [Release build](release-build.md) |

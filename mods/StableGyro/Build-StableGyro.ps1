@@ -1,7 +1,5 @@
-# HAND-WRITTEN RELEASE PRODUCER: uses the maintained plate without extraction.
-# Cooks a disposable copy, packages, verifies, archives, and
-# optionally installs StableGyro. Output stays
-# in ignored local storage. It never publishes externally.
+# Build a candidate from maintained project assets through the shared pipeline.
+# Optional installation uses the same public installer as an existing candidate.
 
 [CmdletBinding()]
 param(
@@ -27,10 +25,8 @@ if (-not $env:CODEX_UNREAL_QUEUE_LEASE) {
 }
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$expectedGameEngineVersion = '5.8'
 $expectedEditorEngineVersion = '5.8.2'
 $retocCompatibilityVersion = 'UE5_8'
-$cookStorage = 'LooseCookedPackageWriter'
 
 $modRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $modRoot '..\..')).Path
@@ -46,20 +42,13 @@ if ([string]::IsNullOrWhiteSpace($Retoc)) {
 $projectRoot = Join-Path $modRoot 'Project'
 $project = Join-Path $projectRoot 'Voyage.uproject'
 Import-Module (Join-Path $repoRoot 'tools/VoyageModPipeline.psm1') -Force
-$unrealEditor = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 $engineVersionPath = Join-Path $EngineRoot 'Engine\Build\Build.version'
 $fingerprinter = Join-Path $repoRoot 'tools\Get-VoyageBuildFingerprint.ps1'
 $settingsDefaults = Join-Path $modRoot 'Assets\StableGyro.ini'
 $releaseManifestBuilder = Join-Path $repoRoot 'tools\New-VoyageReleaseManifest.ps1'
-$releaseInstaller = Join-Path $repoRoot 'tools\Install-VoyageRelease.ps1'
 $meshSourceStatePath = Join-Path $modRoot 'Build\MooringMeshes.source.json'
 $itemSourceStatePath = Join-Path $modRoot 'Build\Item.source.json'
 $containerName = 'StableGyro_P'
-$payloadNames = @(
-    "$containerName.pak",
-    "$containerName.ucas",
-    "$containerName.utoc"
-)
 function Resolve-RequiredPath {
     param([Parameter(Mandatory = $true)] [string]$Path, [Parameter(Mandatory = $true)] [string]$Label)
 
@@ -70,12 +59,10 @@ function Resolve-RequiredPath {
 }
 
 $project = Resolve-RequiredPath -Path $project -Label 'Unreal project'
-$unrealEditor = Resolve-RequiredPath -Path $unrealEditor -Label 'UnrealEditor-Cmd'
 $engineVersionPath = Resolve-RequiredPath -Path $engineVersionPath -Label 'Unreal build version'
 $fingerprinter = Resolve-RequiredPath -Path $fingerprinter -Label 'Voyage fingerprint tool'
 $settingsDefaults = Resolve-RequiredPath -Path $settingsDefaults -Label 'StableGyro canonical settings INI'
 $releaseManifestBuilder = Resolve-RequiredPath -Path $releaseManifestBuilder -Label 'Voyage release manifest builder'
-$releaseInstaller = Resolve-RequiredPath -Path $releaseInstaller -Label 'Voyage release installer'
 $Retoc = Resolve-RequiredPath -Path $Retoc -Label 'retoc'
 $GameRoot = Resolve-RequiredPath -Path $GameRoot -Label 'Voyage game root'
 
@@ -165,22 +152,17 @@ $cook = Invoke-VoyageModCook -ModRoot $modRoot -ProjectFile $project -EngineRoot
     -ParserVersion $retocCompatibilityVersion -GameRoot $GameRoot -Retoc $Retoc `
     -ContainerName $containerName -AdditionalCookArguments @('-LocalDataCachePath=' + (Join-Path $releaseRoot 'DerivedDataCache'))
 $containerUtoc = $cook.container
-$containerFiles = Split-Path -Parent $containerUtoc
 $phase.Stop()
 $timings.CookAndPackage = $phase.Elapsed.TotalSeconds
 Write-Host '4/4 Creating the player-facing archive'
 $phase.Restart()
-$payloadRoot = Join-Path $releaseRoot "payload\StableGyro-$Version"
-New-Item -ItemType Directory -Path $payloadRoot -Force | Out-Null
-foreach ($name in $payloadNames) {
-    Copy-Item -LiteralPath (Join-Path $containerFiles $name) -Destination (Join-Path $payloadRoot $name)
-}
-Copy-Item -LiteralPath $settingsDefaults -Destination (Join-Path $payloadRoot 'StableGyro.ini')
+$packagedIni = Join-Path $releaseRoot 'StableGyro.ini'
+Copy-Item -LiteralPath $settingsDefaults -Destination $packagedIni
 $archivePath = Join-Path $releaseRoot "StableGyro-$Version.zip"
 & (Join-Path $repoRoot 'tools/New-VoyageVortexArchive.ps1') `
-    -Container (Join-Path $payloadRoot ($containerName + '.utoc')) -Archive $archivePath `
-    -AdditionalFile (Join-Path $payloadRoot 'StableGyro.ini') | Out-Null
-$commonReleaseManifestPath = Join-Path $releaseRoot 'common-release-manifest.json'
+    -Container $containerUtoc -Archive $archivePath `
+    -AdditionalFile $packagedIni | Out-Null
+$manifestPath = Join-Path $releaseRoot 'release-manifest.json'
 & $releaseManifestBuilder `
     -ReleaseRoot $releaseRoot `
     -Mod 'StableGyro' `
@@ -190,96 +172,35 @@ $commonReleaseManifestPath = Join-Path $releaseRoot 'common-release-manifest.jso
     -Archive $archivePath `
     -SourcePath @($modRoot,(Join-Path $repoRoot 'tools/VoyageModPipeline.psm1'),(Join-Path $repoRoot 'tools/UnrealCookSupport')) `
     -GameRoot $GameRoot `
-    -OutputPath $commonReleaseManifestPath `
+    -OutputPath $manifestPath `
     -AllowDirtySource:$AllowDirtySource | Out-Null
-$commonReleaseManifestPath = Resolve-RequiredPath `
-    -Path $commonReleaseManifestPath -Label 'Validated common release manifest'
-$installValidationEvidenceRoot = Join-Path $releaseRoot 'install-validation'
-$installValidationPlanPath = Join-Path $releaseRoot 'install-validation-plan.json'
-$installValidationPlan = & $releaseInstaller `
-    -ReleaseManifest $commonReleaseManifestPath `
-    -GameRoot $GameRoot `
-    -EvidenceRoot $installValidationEvidenceRoot `
-    -AllowDirtySource:$AllowDirtySource `
-    -ValidateOnly
-$installValidationPlan | ConvertTo-Json -Depth 10 |
-    Set-Content -LiteralPath $installValidationPlanPath -Encoding utf8
 $phase.Stop()
 $timings.Archive = $phase.Elapsed.TotalSeconds
 
-$installed = $false
 $settingsInstallation = $null
 if ($Install) {
     $settingsInstallation = & (Join-Path $modRoot 'Install-StableGyro.ps1') `
-        -ReleaseManifest $commonReleaseManifestPath -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource
-    $installed = $true
+        -ReleaseManifest $manifestPath -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource
 }
 
 $totalStopwatch.Stop()
-$payloadEvidence = @(
-    Get-ChildItem -LiteralPath $payloadRoot -File |
-        Sort-Object Name |
-        ForEach-Object {
-            [pscustomobject]@{
-                name = $_.Name
-                size = $_.Length
-            }
-        }
-)
-$manifest = [ordered]@{
-    schemaVersion = 2
-    mod = 'StableGyro'
-    version = $Version
-    modVersion = $candidateModVersion
-    createdAtUtc = [DateTime]::UtcNow.ToString('o')
-    dirtySource = ($sourceStatus.Count -gt 0)
-    sourceStatus = $sourceStatus
-    gameEngineVersion = $expectedGameEngineVersion
-    editorEngineVersion = $actualEngineVersion
-    retocCompatibilityVersion = $retocCompatibilityVersion
-    cookStorage = $cookStorage
-    commonReleaseManifest = [ordered]@{
-        path = $commonReleaseManifestPath
-    }
-    installValidationPlan = [ordered]@{
-        path = $installValidationPlanPath
-    }
-    gameFingerprint = [ordered]@{
-        steamBuildId = [string]$fingerprint.steam.buildId
-    }
-    ignoredPinnedGameVersion = [bool]$gameBuild.ignoredPinnedGameVersion
-    containerValidation = $cook.validation
-    scriptObjects = $cook.scriptObjects
-    installed = $installed
-    settingsInstallation = $settingsInstallation
-    payload = $payloadEvidence
-    archive = [ordered]@{
-        name = (Split-Path -Leaf $archivePath)
-        size = (Get-Item -LiteralPath $archivePath).Length
-        sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath).Hash
-    }
+$summaryPath = Join-Path $releaseRoot 'validation-summary.json'
+[ordered]@{
+    status = 'passed'
+    runtime = 'pending'
+    container = $cook.validation
     timingsSeconds = $timings
     totalSeconds = $totalStopwatch.Elapsed.TotalSeconds
-}
-$manifestPath = Join-Path $releaseRoot 'release-manifest.json'
-$manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding utf8
+} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $summaryPath -Encoding utf8
 
-Write-Host ''
-Write-Host "StableGyro release artifact is ready: $archivePath"
-Write-Host "Manifest: $manifestPath"
-Write-Host ("Elapsed: {0:N1} seconds" -f $totalStopwatch.Elapsed.TotalSeconds)
-if ($installed) {
-    Write-Host 'The prepared container was backed up, installed, and read back successfully.'
-}
-
-foreach ($scratch in @('Project','DerivedDataCache','payload','editor-support','stage')) {
+foreach ($scratch in @('Project','DerivedDataCache','editor-support','stage')) {
     $path = Join-Path $releaseRoot $scratch
     if (Test-Path -LiteralPath $path) { Remove-VoyageModScratch -ModRoot $modRoot -RunRoot $releaseRoot -Path $path }
 }
 [pscustomobject]@{
     status = 'built'
-    releaseManifestPath = $commonReleaseManifestPath
-    validationSummaryPath = $manifestPath
+    releaseManifestPath = $manifestPath
+    validationSummaryPath = $summaryPath
     archivePath = $archivePath
     settingsInstallation = $settingsInstallation
 } | ConvertTo-Json -Depth 6 -Compress

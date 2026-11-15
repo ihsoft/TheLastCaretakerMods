@@ -20,7 +20,6 @@ if ($Install -and @(Get-Process -Name 'VoyageSteam-Win64-Shipping','Voyage' `
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 Import-Module (Join-Path $repo 'tools/VoyageModPipeline.psm1')
 $engine = Join-Path $EngineRoot 'Engine'
-$editor = Join-Path $engine 'Binaries/Win64/UnrealEditor-Cmd.exe'
 $ammoPickupPackage = '/Game/Mods/Railgun/Fabricator/AmmoCassette/BP_RailgunAmmoCassette'
 $publishedVersionText = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version.txt') -Raw).Trim()
 if ($publishedVersionText -cnotmatch '^(0|[1-9][0-9]*)$') {
@@ -57,6 +56,7 @@ $sourcePaths = @(
     'tools/Invoke-VoyageBoundedTool.ps1',
     'tools/New-VoyageAssetRegistry.ps1',
     'tools/Convert-VoyageDataAsset.ps1',
+    'tools/Read-VoyageDataAsset.ps1',
     'tools/New-VoyagePak.ps1',
     'tools/AssetPackaging',
     'tools/New-VoyageReleaseManifest.ps1',
@@ -95,13 +95,6 @@ if ([string]$mapping.steamBuildId -cne [string]$fingerprint.steam.buildId -or
 $engineVersion = Get-Content -LiteralPath (Join-Path $engine 'Build/Build.version') -Raw | ConvertFrom-Json
 if ($engineVersion.MajorVersion -ne 5 -or $engineVersion.MinorVersion -ne 8 -or $engineVersion.PatchVersion -ne 2) { throw 'Railgun requires reviewed editor 5.8.2.' }
 
-function Invoke-NativeStage([string]$Name, [string]$Executable, [string[]]$NativeArguments) {
-    if ($Executable -eq $editor) { $NativeArguments += ('-ZenDataPath=' + (Join-Path $ddc 'Zen')) }
-    $log = Join-Path $output ($Name + '.log')
-    & $Executable @NativeArguments *> $log
-    if ($LASTEXITCODE -ne 0) { throw "$Name failed ($LASTEXITCODE); log: $log" }
-    Write-Host "$Name passed; log: $log"
-}
 $content = Join-Path $projectRoot 'Content'
 if (-not (Test-Path -LiteralPath $content -PathType Container)) {
     throw 'Maintained Railgun Content is missing. Restore project assets before building.'
@@ -110,14 +103,13 @@ $ddc = [IO.Path]::GetFullPath($CacheRoot)
 [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'Process')
 $null = New-Item -ItemType Directory -Path $ddc -Force
 & (Join-Path $repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare `
-    -ProjectFile $project -WorkspaceRoot $bptWorkspace -EngineRoot (Split-Path -Parent $engine) > (Join-Path $output 'prepare.log')
-$ammoNativePath = Join-Path $output 'ammo-project.json'
-Invoke-NativeStage 'read-ammo-project' $editor @($project,'-run=ReadRailgunDataAssets',('-Output=' + $ammoNativePath),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output 'read-ammo-project-unreal.log')))
-$primaryNativePaths = @{ammo=$ammoNativePath}
-foreach ($kind in @('gun','skill')) {
-    $nativePath = Join-Path $output ($kind + '-project.json')
-    Invoke-NativeStage ('read-' + $kind + '-project') $editor @($project,'-run=ReadRailgunDataAssets',('-Asset=' + $kind),'-Graph',('-Output=' + $nativePath),'-unattended','-nop4','-nosplash','-nullrhi',('-abslog=' + (Join-Path $output ('read-' + $kind + '-project-unreal.log'))))
-    $primaryNativePaths[$kind] = $nativePath
+    -ProjectFile $project -WorkspaceRoot $bptWorkspace -EngineRoot $EngineRoot > (Join-Path $output 'prepare.log')
+$primaryNativePaths = @{}
+foreach ($entry in $dataAssetContract.assets) {
+    $native = & (Join-Path $repo 'tools/Read-VoyageDataAsset.ps1') -ProjectFile $project `
+        -Package $entry.package -ExpectedClass ('/Script/Voyage.' + $entry.class) `
+        -EngineRoot $EngineRoot -OutputRoot (Join-Path $output ('native-' + $entry.kind)) | ConvertFrom-Json
+    $primaryNativePaths[$entry.kind] = $native.readbackPath
 }
 # This directory owns its release resources; enumerate saved packages without loading Unreal.
 $visualRoot = Join-Path $content 'Mods/Railgun/Visual'
@@ -169,7 +161,7 @@ $conversionOptions = @{MappingsPath=$mapping.mappingsPath; EngineVersion=$serial
 $ammoConversion = & $conversionTool @conversionOptions `
     -Package $dataAssetsByKind.ammo.package -ExpectedClass ('/Script/Voyage.' + $dataAssetsByKind.ammo.class) `
     -SerializationContract (Join-Path $PSScriptRoot $dataAssetsByKind.ammo.serializationFile) `
-    -CookedAsset ($cloneTarget + '.uasset') -NativeReadback $ammoNativePath `
+    -CookedAsset ($cloneTarget + '.uasset') -NativeReadback $primaryNativePaths.ammo `
     -OutputRoot (Join-Path $output 'project-ammo')
 $ammoWrite = $ammoConversion.write
 $ammoReadback = $ammoConversion.readback
@@ -305,11 +297,6 @@ $release = (& (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') `
     ConvertFrom-Json
 $manifestPath = Join-Path $releaseStaging 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Manifest producer did not publish the candidate.' }
-$publicationValidation = & (Join-Path $repo 'tools/Install-VoyageRelease.ps1') `
-    -ReleaseManifest $manifestPath -GameRoot $GameRoot -ValidateOnly -AllowDirtySource:$AllowDirtySource
-if (-not [bool]$publicationValidation.validated) {
-    throw 'Prepared Railgun release did not pass installation validation.'
-}
 $installation = $null
 if ($Install) {
     $installed = & (Join-Path $PSScriptRoot 'Install-Railgun.ps1') -ReleaseManifest $manifestPath -GameRoot $GameRoot -AllowDirtySource:$AllowDirtySource

@@ -1,0 +1,49 @@
+{
+  "schema": 2,
+  "kind": "dataAsset",
+  "asset": "/Game/Data/Assets/Skill/Railgun/DA_Skill_Railgun",
+  "objectName": "DA_Skill_Railgun",
+  "class": "/Script/Voyage.VoyageSkill",
+  "objects": {
+    ".": {
+      "class": "/Script/Voyage.VoyageSkill",
+      "properties": {
+        "Unlock": {
+          "type": "FVoyageSkillUnlock",
+          "editable": true,
+          "value": "(UnlockMethod=Tier,Requirement=19)"
+        },
+        "Items": {
+          "type": "TArray<TObjectPtr<UVoyageItem> >",
+          "editable": true,
+          "value": "(\"/Script/Voyage.VoyageItem'/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01.DA_Item_Module_RailgunCannonMk01'\",\"/Script/Voyage.VoyageItemAmmo'/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod.DA_Ammo_Railgun_FullRod'\")"
+        },
+        "Icon": {
+          "type": "TObjectPtr<UTexture2D>",
+          "editable": true,
+          "value": "\"/Script/Engine.Texture2D'/Game/Mods/Railgun/Research/T_RailgunSkill.T_RailgunSkill'\""
+        },
+        "Type": {
+          "type": "FPrimaryAssetType",
+          "editable": true,
+          "value": "\"Skill\""
+        },
+        "Name": {
+          "type": "FText",
+          "editable": true,
+          "value": "NSLOCTEXT(\"\", \"1844C6A44ACC3EBFDFE3CBA9F0A46CC7\", \"Railgun\")"
+        },
+        "Description": {
+          "type": "FText",
+          "editable": true,
+          "value": "NSLOCTEXT(\"\", \"EF07BD4D4DBAA088FB2B90B4091E118C\", \"Unlocks the Railgun and its long-range kinetic ammunition.\")"
+        },
+        "AssetBundleData": {
+          "type": "FAssetBundleData",
+          "editable": false,
+          "value": ""
+        }
+      }
+    }
+  }
+}

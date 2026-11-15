@@ -1,0 +1,184 @@
+{
+  "schema": 2,
+  "kind": "dataAsset",
+  "asset": "/Game/Data/Assets/Ammo/DA_Ammo_Railgun_FullRod",
+  "objectName": "DA_Ammo_Railgun_FullRod",
+  "class": "/Script/Voyage.VoyageItemAmmo",
+  "objects": {
+    ".": {
+      "class": "/Script/Voyage.VoyageItemAmmo",
+      "properties": {
+        "Caliber": {
+          "type": "float",
+          "editable": true,
+          "value": "45.000000"
+        },
+        "WeaponData": {
+          "type": "FVoyageWeaponDataStruct",
+          "editable": true,
+          "value": "(Attack=(Hit=(Time=1.000000,Location=(X=0.000000,Y=0.000000,Z=0.000000),ImpactPoint=(X=0.000000,Y=0.000000,Z=0.000000),Normal=(X=0.000000,Y=0.000000,Z=0.000000),ImpactNormal=(X=0.000000,Y=0.000000,Z=0.000000),TraceStart=(X=0.000000,Y=0.000000,Z=0.000000),TraceEnd=(X=0.000000,Y=0.000000,Z=0.000000),MyItem=-1,HitObjectHandle=())),LinearRecoilMin=(X=0.000000,Y=0.000000,Z=0.000000),LinearRecoilMax=(X=0.000000,Y=0.000000,Z=0.000000),AngularRecoilMin=(X=0.000000,Y=0.000000,Z=0.000000),AngularRecoilMax=(X=0.000000,Y=0.000000,Z=0.000000),SfxData=())"
+        },
+        "bIsInteractive": {
+          "type": "bool",
+          "editable": true,
+          "value": "False"
+        },
+        "bSupportInventory": {
+          "type": "bool",
+          "editable": true,
+          "value": "False"
+        },
+        "Icon": {
+          "type": "TObjectPtr<UTexture2D>",
+          "editable": true,
+          "value": "\"/Script/Engine.Texture2D'/Game/Mods/Railgun/Fabricator/T_RailgunAmmoIcon.T_RailgunAmmoIcon'\""
+        },
+        "SecondaryIcon": {
+          "type": "TObjectPtr<UTexture2D>",
+          "editable": true,
+          "value": "None"
+        },
+        "Category": {
+          "type": "EVoyageItemCategory",
+          "editable": true,
+          "value": "Ammo"
+        },
+        "CategoryAsset": {
+          "type": "TObjectPtr<UVoyageItemCategoryAsset>",
+          "editable": true,
+          "value": "\"/Script/Voyage.VoyageItemCategoryAsset'/Game/Data/Assets/ItemCategories/DA_ItemCategory_Ammo.DA_ItemCategory_Ammo'\""
+        },
+        "Quality": {
+          "type": "EVoyageItemQuality",
+          "editable": true,
+          "value": "Common"
+        },
+        "MaxStackCount": {
+          "type": "int32",
+          "editable": true,
+          "value": "0"
+        },
+        "Weight": {
+          "type": "float",
+          "editable": true,
+          "value": "3.900000"
+        },
+        "CraftTime": {
+          "type": "float",
+          "editable": true,
+          "value": "6.000000"
+        },
+        "CraftElectricityCost": {
+          "type": "float",
+          "editable": true,
+          "value": "5.000000"
+        },
+        "CraftAmount": {
+          "type": "int32",
+          "editable": true,
+          "value": "1"
+        },
+        "CraftFilter": {
+          "type": "uint8",
+          "editable": true,
+          "value": "3"
+        },
+        "Components": {
+          "type": "TMap<UVoyageItem*,int32>",
+          "editable": true,
+          "value": "((\"/Script/Voyage.VoyageItemMaterial'/Game/Data/Assets/Materials/DA_Material_Iron.DA_Material_Iron'\", 1),(\"/Script/Voyage.VoyageItemMaterial'/Game/Data/Assets/Materials/DA_Material_Copper.DA_Material_Copper'\", 1),(\"/Script/Voyage.VoyageItemMaterial'/Game/Data/Assets/Materials/DA_Material_Plastic.DA_Material_Plastic'\", 1))"
+        },
+        "DropVariations": {
+          "type": "TArray<FVoyageItemDropVariation>",
+          "editable": true,
+          "value": "((RenderAsset=\"/Game/Mods/Railgun/Visual/Railgun/StaticMeshes/SM_Cassette_Case.SM_Cassette_Case\"))"
+        },
+        "DroppedActor": {
+          "type": "TSoftClassPtr<AActor> ",
+          "editable": true,
+          "value": "\"/Game/Mods/Railgun/Fabricator/AmmoCassette/BP_RailgunAmmoCassette.BP_RailgunAmmoCassette_C\""
+        },
+        "ScalePerItem": {
+          "type": "float",
+          "editable": true,
+          "value": "1.000000"
+        },
+        "MaxDropCount": {
+          "type": "int32",
+          "editable": true,
+          "value": "1"
+        },
+        "bIsDismantlable": {
+          "type": "bool",
+          "editable": true,
+          "value": "False"
+        },
+        "bIsRepairable": {
+          "type": "bool",
+          "editable": true,
+          "value": "False"
+        },
+        "Tag": {
+          "type": "FName",
+          "editable": true,
+          "value": "\"\""
+        },
+        "DismantleDuration": {
+          "type": "float",
+          "editable": true,
+          "value": "0.000000"
+        },
+        "DismantleElectricityCost": {
+          "type": "float",
+          "editable": true,
+          "value": "0.000000"
+        },
+        "RepairDuration": {
+          "type": "float",
+          "editable": true,
+          "value": "0.000000"
+        },
+        "RepairElectricityCost": {
+          "type": "float",
+          "editable": true,
+          "value": "0.000000"
+        },
+        "bIsDestructible": {
+          "type": "bool",
+          "editable": true,
+          "value": "False"
+        },
+        "DestructibleObjectProperties": {
+          "type": "FVoyageDestructibleObjectProperties",
+          "editable": true,
+          "value": "()"
+        },
+        "properties": {
+          "type": "TMap<FName,TObjectPtr<UObject> >",
+          "editable": true,
+          "value": "((\"__RailgunEditorSerializationSentinel\", None))"
+        },
+        "Type": {
+          "type": "FPrimaryAssetType",
+          "editable": true,
+          "value": "\"None\""
+        },
+        "Name": {
+          "type": "FText",
+          "editable": true,
+          "value": "NSLOCTEXT(\"\", \"D425D9094787A72746ACEDAADBFD9697\", \"Railgun Kinetic Rounds\")"
+        },
+        "Description": {
+          "type": "FText",
+          "editable": true,
+          "value": "NSLOCTEXT(\"\", \"17D4D5F5454EFBEDD9794C9B71A0A487\", \"Armor-piercing kinetic rounds. No explosives, just mass and velocity.\")"
+        },
+        "AssetBundleData": {
+          "type": "FAssetBundleData",
+          "editable": false,
+          "value": ""
+        }
+      }
+    }
+  }
+}

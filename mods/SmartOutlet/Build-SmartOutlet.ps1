@@ -23,12 +23,10 @@ $versionText = (Get-Content -LiteralPath (Join-Path $modRoot 'version.txt') -Raw
 if ($versionText -cnotmatch '^(0|[1-9][0-9]*)$') { throw 'Invalid published version.txt' }
 $candidateVersion = 'V' + ([int]$versionText + 1)
 $projectRoot = Join-Path $output 'Project'
-$editor = Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe'
 $fingerprintPath = Join-Path $output 'game-fingerprint.json'
 & (Join-Path $repoRoot 'tools/Get-VoyageBuildFingerprint.ps1') -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
 $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
 $buildGate = & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
-$mappings = & (Join-Path $repoRoot 'tools/Get-VoyageMappings.ps1') -GameRoot $GameRoot
 $settingsTemplate = Join-Path $modRoot 'Assets/SmartOutlet.ini'
 $project = & (Join-Path $modRoot 'New-SmartOutletProjectCopy.ps1') -Destination $projectRoot
 $bptWorkspace = Join-Path $repoRoot ('Tmp/BlueprintText/SmartOutlet-build-' + [guid]::NewGuid().ToString('N'))

@@ -15,7 +15,7 @@ including when a guide shows an older direct `.ps1` invocation.
 | Import a complete rigid GLB model with hierarchy and movable parts into a project | [GLB model import](unreal-glb-import.md) |
 | Select a part of an external mesh by a local plane before import | [GLB selection](glb-tools.md#select-whole-triangles) |
 | Refresh or validate a supported VoyageItem DataAsset from a patch recipe | [VoyageItem project updates](voyage-item-patch.md) |
-| Convert fresh cooked DataAsset serialization without changing its represented data | [DataAsset conversion](data-asset-conversion.md) |
+| Read native project DataAssets for conversion or convert their fresh cooked serialization | [DataAsset conversion](data-asset-conversion.md) |
 | Pack a plugin registry or other explicitly mapped extra files into a PAK | [Additional-file PAK](pak-files.md) |
 | Create a mod skeleton, unify its execution scripts or prepare its INI | [Mod setup](mod-setup.md) |
 | Find, summarize, or extract a game asset | [Asset inspection](asset-inspection.md) |

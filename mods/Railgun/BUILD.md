@@ -12,9 +12,9 @@ owns installation, game acceptance and candidate selection.
 | Path | Responsibility |
 | --- | --- |
 | `Project/Content/` | Authored assets and required editor reference stubs. |
-| `Project/BlueprintText/` | Synchronized Blueprint JSON, mirroring paths below `/Game/`. |
+| `Project/BlueprintText/` | Synchronized Blueprint and DataAsset JSON, mirroring paths below `/Game/`. |
 | `Project/Config/` | Required renderer, collision, packaging and project settings. |
-| `Project/EditorSupport/` | Native game API mirrors and saved-asset readers. |
+| `Project/EditorSupport/` | Native game API mirrors and editor test support. |
 | `Project/Tests/Native/` | Saved Blueprint settings-loader integration test. |
 | `Assets/` | Model review/editing copy and distributed INI template. |
 | `Settings/` | Runtime settings schema and bindings. |
@@ -23,7 +23,7 @@ owns installation, game acceptance and candidate selection.
 
 [EditorSupport.json](Project/EditorSupport.json) declares the native
 `RailgunSupport` plugin. Its `Voyage` module preserves `/Script/Voyage` identities;
-`RailgunEditor` supplies inspection and test commandlets. Public BPT
+`RailgunEditor` supplies the settings test commandlet. Public BPT
 preparation supplies this support and `BlueprintTextWorkspace`, using the shared
 [native support provider](../../tools/unreal-editor-support.md) for build/reuse
 and loading checks. Neither plugin's DLLs belong in the game payload.
@@ -60,9 +60,11 @@ areas and placement/pickup collision in the working project, then verify the
 affected behavior in game. Geometry and placement values belong to the saved
 assets; do not maintain a second JSON copy of those settings.
 
-Use the shared [GLB preview](../../tools/glb-tools.md) to inspect the copy through
-Blender. Preview output belongs below `Tmp/Railgun/`; inspect the updated project
-model as well when accepting a replacement.
+Use the shared [project model preview](../../tools/blueprint-workspace.md#preview-a-project-model)
+with `/Game/Mods/Railgun/Module/BP_Module_Railgun` in a working project to review
+the saved assembly. The [GLB preview](../../tools/glb-tools.md) remains available
+for the external review/editing copy. Preview workspaces and output remain under
+`Tmp/`; accept model changes against the project and affected game behavior.
 
 ### Images and audio
 
@@ -209,8 +211,11 @@ with tagged properties. The [shared converter](../../tools/data-asset-conversion
 processes that fresh cook using the selected mappings and the mod's explicit
 package, class and serialization contract. It owns native/cooked comparison,
 rewriting and post-write semantic/format validation. Uncooked UAssetGUI parsing
-is not this authoring/validation boundary. The mod retains its native reader;
-DataAsset authoring and serialization conversion are separate operations.
+is not this authoring/validation boundary. The producer obtains native state
+through the [shared reader](../../tools/data-asset-conversion.md#native-readback),
+using the package and class identities in the mod's contract. DataAsset authoring
+and serialization conversion are separate operations; BPT JSON is not the
+converter's native readback format.
 
 [data-assets-contract.json](Build/data-assets-contract.json) maps the source
 assets to metadata-only `Build/*-serialization.json` contracts. These fix
@@ -239,19 +244,22 @@ python -B tools/run_powershell.py tools/BlueprintText/Invoke-BlueprintWorkspace.
 ```
 
 Follow the shared [BPT workflow](../../tools/blueprint-workspace.md) for
-Export/edit/Apply/Preview. For native DataAssets, prepare the working copy and
-use the [ordinary Details editor](#primary-dataasset-authoring).
+Export/edit/Apply/Preview. For native DataAssets, use the
+[property authoring workflow](#primary-dataasset-authoring).
 Launch interactive Unreal through the [queue](../../tools/unreal-coordination.md).
 Accept reviewed changes back into matching paths under `Project/` using the
 [shared transfer rules](../../docs/unreal-project-rule.md#project-layout-and-temporary-data).
 
 ### Primary DataAsset authoring
 
-Edit ammo, gun and skill in the working copy through Unreal's ordinary DataAsset
-Details editor. Their native mirrors expose editable fields, including nested
-structures and references; BPT represents their Blueprint consumers, not these
-native DataAssets. Source paths are listed in
-[data-assets-contract.json](Build/data-assets-contract.json).
+Edit ammo, gun and skill in the working copy through the shared
+[BPT DataAsset workflow](../../tools/blueprint-workspace.md#edit-an-existing-dataasset).
+Select the package from [data-assets-contract.json](Build/data-assets-contract.json)
+and export it with `ExportDataAsset` into a DataAsset workspace. The three full
+property snapshots live under `Project/BlueprintText/Data/Assets/`, mirroring
+their `/Game/` paths. Accept a changed asset together with its freshly synchronized
+JSON. Unreal's Details editor is also available; re-export after accepting an
+editor change so the tracked text continues to describe the saved asset.
 
 Preserve native class/property identities, serialization defaults and
 `VoyageItem::Serialize` behavior when extending the partial mirrors. Save,

@@ -2,8 +2,9 @@
 
 Use the public PowerShell operations, not these internal workers:
 
-- [DataAsset conversion](../data-asset-conversion.md): convert a fresh cooked
-  native DataAsset under an explicit serialization contract and compare its data.
+- [DataAsset conversion](../data-asset-conversion.md): read native project state,
+  convert a fresh cooked DataAsset under an explicit serialization contract and
+  compare its data.
 - [Additional-file PAK](../pak-files.md): package an explicit source/mount-path
   list and verify the produced archive.
 

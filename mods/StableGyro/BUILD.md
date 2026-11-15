@@ -111,7 +111,10 @@ The compass display selects tagged serialization for the reason recorded in
 use unversioned properties. No local cook or container implementation is needed.
 
 The result contains `status: built`, `archivePath`, `releaseManifestPath` and
-`validationSummaryPath`. Pass the returned release manifest to the installer;
+`validationSummaryPath`. The common `release-manifest.json` owns candidate
+metadata; `validation-summary.json` records the container result, runtime
+acceptance boundary and timings. The shared archive producer reads the cooked
+container directly. Pass the returned release manifest to the installer;
 the detailed validation summary is not an installer input. Successful builds
 remove working-project, cook, extraction and staging scratch while keeping the
 archive, container and validation evidence, including the metadata extraction

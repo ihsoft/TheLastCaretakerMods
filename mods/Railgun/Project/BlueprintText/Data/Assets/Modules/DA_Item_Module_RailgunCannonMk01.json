@@ -1,0 +1,174 @@
+{
+  "schema": 2,
+  "kind": "dataAsset",
+  "asset": "/Game/Data/Assets/Modules/DA_Item_Module_RailgunCannonMk01",
+  "objectName": "DA_Item_Module_RailgunCannonMk01",
+  "class": "/Script/Voyage.VoyageItem",
+  "objects": {
+    ".": {
+      "class": "/Script/Voyage.VoyageItem",
+      "properties": {
+        "bIsInteractive": {
+          "type": "bool",
+          "editable": true,
+          "value": "False"
+        },
+        "bSupportInventory": {
+          "type": "bool",
+          "editable": true,
+          "value": "False"
+        },
+        "Icon": {
+          "type": "TObjectPtr<UTexture2D>",
+          "editable": true,
+          "value": "\"/Script/Engine.Texture2D'/Game/Mods/Railgun/Fabricator/T_RailgunIcon.T_RailgunIcon'\""
+        },
+        "SecondaryIcon": {
+          "type": "TObjectPtr<UTexture2D>",
+          "editable": true,
+          "value": "None"
+        },
+        "Category": {
+          "type": "EVoyageItemCategory",
+          "editable": true,
+          "value": "Module"
+        },
+        "CategoryAsset": {
+          "type": "TObjectPtr<UVoyageItemCategoryAsset>",
+          "editable": true,
+          "value": "\"/Script/Voyage.VoyageItemCategoryAsset'/Game/Data/Assets/ItemCategories/DA_ItemCategory_Module.DA_ItemCategory_Module'\""
+        },
+        "Quality": {
+          "type": "EVoyageItemQuality",
+          "editable": true,
+          "value": "Uncommon"
+        },
+        "MaxStackCount": {
+          "type": "int32",
+          "editable": true,
+          "value": "0"
+        },
+        "Weight": {
+          "type": "float",
+          "editable": true,
+          "value": "89.699997"
+        },
+        "CraftTime": {
+          "type": "float",
+          "editable": true,
+          "value": "10.000000"
+        },
+        "CraftElectricityCost": {
+          "type": "float",
+          "editable": true,
+          "value": "5.000000"
+        },
+        "CraftAmount": {
+          "type": "int32",
+          "editable": true,
+          "value": "0"
+        },
+        "CraftFilter": {
+          "type": "uint8",
+          "editable": true,
+          "value": "9"
+        },
+        "Components": {
+          "type": "TMap<UVoyageItem*,int32>",
+          "editable": true,
+          "value": "((\"/Script/Voyage.VoyageItemPart'/Game/Data/Assets/Parts/DA_Part_AlloyFrame.DA_Part_AlloyFrame'\", 3),(\"/Script/Voyage.VoyageItemPart'/Game/Data/Assets/Parts/DA_Part_AdvancedAlloyMesh.DA_Part_AdvancedAlloyMesh'\", 2),(\"/Script/Voyage.VoyageItemPart'/Game/Data/Assets/Parts/DA_Part_ConnectorPorts.DA_Part_ConnectorPorts'\", 1),(\"/Script/Voyage.VoyageItemPart'/Game/Data/Assets/Parts/DA_Part_BatteryCell.DA_Part_BatteryCell'\", 1),(\"/Script/Voyage.VoyageItemPart'/Game/Data/Assets/Parts/DA_Part_ConduitWiring.DA_Part_ConduitWiring'\", 4),(\"/Script/Voyage.VoyageItemPart'/Game/Data/Assets/Parts/DA_Part_OpticalLens.DA_Part_OpticalLens'\", 1),(\"/Script/Voyage.VoyageItemPart'/Game/Data/Assets/Parts/DA_Part_NanoFabricMesh.DA_Part_NanoFabricMesh'\", 3),(\"/Script/Voyage.VoyageItemPart'/Game/Data/Assets/Parts/DA_Part_LogicChip.DA_Part_LogicChip'\", 1),(\"/Script/Voyage.VoyageItemPart'/Game/Data/Assets/Parts/DA_Part_CoolingRadiator.DA_Part_CoolingRadiator'\", 2))"
+        },
+        "DropVariations": {
+          "type": "TArray<FVoyageItemDropVariation>",
+          "editable": true,
+          "value": "(())"
+        },
+        "DroppedActor": {
+          "type": "TSoftClassPtr<AActor> ",
+          "editable": true,
+          "value": "\"/Game/Mods/Railgun/Module/BP_Module_Railgun.BP_Module_Railgun_C\""
+        },
+        "ScalePerItem": {
+          "type": "float",
+          "editable": true,
+          "value": "1.000000"
+        },
+        "MaxDropCount": {
+          "type": "int32",
+          "editable": true,
+          "value": "0"
+        },
+        "bIsDismantlable": {
+          "type": "bool",
+          "editable": true,
+          "value": "True"
+        },
+        "bIsRepairable": {
+          "type": "bool",
+          "editable": true,
+          "value": "True"
+        },
+        "Tag": {
+          "type": "FName",
+          "editable": true,
+          "value": "\"Module\""
+        },
+        "DismantleDuration": {
+          "type": "float",
+          "editable": true,
+          "value": "8.000000"
+        },
+        "DismantleElectricityCost": {
+          "type": "float",
+          "editable": true,
+          "value": "15.000000"
+        },
+        "RepairDuration": {
+          "type": "float",
+          "editable": true,
+          "value": "10.000000"
+        },
+        "RepairElectricityCost": {
+          "type": "float",
+          "editable": true,
+          "value": "5.000000"
+        },
+        "bIsDestructible": {
+          "type": "bool",
+          "editable": true,
+          "value": "True"
+        },
+        "DestructibleObjectProperties": {
+          "type": "FVoyageDestructibleObjectProperties",
+          "editable": true,
+          "value": "(Health=400.000000,DestructionDamageThreshold=100.000000)"
+        },
+        "properties": {
+          "type": "TMap<FName,TObjectPtr<UObject> >",
+          "editable": true,
+          "value": "()"
+        },
+        "Type": {
+          "type": "FPrimaryAssetType",
+          "editable": true,
+          "value": "\"None\""
+        },
+        "Name": {
+          "type": "FText",
+          "editable": true,
+          "value": "NSLOCTEXT(\"\", \"Railgun_Name\", \"Railgun\")"
+        },
+        "Description": {
+          "type": "FText",
+          "editable": true,
+          "value": "NSLOCTEXT(\"\", \"Railgun_Description\", \"A long-range electromagnetic cannon. Payload selection is your responsibility.\")"
+        },
+        "AssetBundleData": {
+          "type": "FAssetBundleData",
+          "editable": false,
+          "value": ""
+        }
+      }
+    }
+  }
+}

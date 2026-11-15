@@ -87,7 +87,10 @@ Create the release manifest for an already-built triplet and ZIP:
 ```
 
 The producer writes `release-manifest.json` only after validating the archive
-and payload. It refuses to replace an existing manifest. Use
+and payload through the shared installer's `-ValidateOnly`, and refuses to
+replace an existing manifest. A calling build does not need to repeat that same
+check; a separate call is useful when requesting a new read-only plan for an
+existing candidate. Use
 `-ContentPluginDescriptor` when that exact file is part of the release; the
 producer and installer support one content-only plugin descriptor. A dirty
 development candidate needs explicit `-AllowDirtySource`. For a LogicMods ZIP,
