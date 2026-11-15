@@ -98,4 +98,44 @@ try {
     Check (Test-Path -LiteralPath (Join-Path $failedPrepare 'Project/Voyage.uproject')) 'prepare failure retains project'
 } finally { $env:MOD_PIPELINE_PREPARE_FAIL=$previousPrepareFailure }
 
+# Relocation has two bases (project and plugin), with internal and external owners.
+$supportRoot=Join-Path $project 'EditorSupport'
+[IO.Directory]::CreateDirectory($supportRoot) | Out-Null
+$supportDeclaration=Join-Path $project 'EditorSupport.json'
+$externalPlugin=Join-Path $fixture 'tools/External/External.uplugin'
+$internalOverlay=Join-Path $project 'Content'
+@{schema=1;plugins=@(
+    @{source='EditorSupport/Local.uplugin';overlays=@(
+        @{source='../Content';destination='Source/Internal'},
+        @{source='../../../../tools/Shared';destination='Source/Shared'})},
+    @{source=$externalPlugin;overlays=@(@{source=$internalOverlay;destination='Source/Internal'})}
+)} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $supportDeclaration
+$declarationBefore=[IO.File]::ReadAllText($supportDeclaration)
+$relocated=New-VoyageModProjectCopy -ModRoot $mod -Destination (Join-Path $fixture 'Tmp/Example/deep/authoring/Project')
+$relocatedRoot=Split-Path -Parent $relocated
+$support=Get-Content -LiteralPath (Join-Path $relocatedRoot 'EditorSupport.json') -Raw | ConvertFrom-Json
+Check ($support.plugins[0].source -eq (Join-Path $relocatedRoot 'EditorSupport/Local.uplugin')) 'internal plugin follows copy'
+Check ($support.plugins[0].overlays[0].source -eq (Join-Path $relocatedRoot 'Content')) 'internal relative overlay follows copy'
+Check ($support.plugins[0].overlays[1].source -eq (Join-Path $fixture 'tools/Shared')) 'external relative overlay retains origin'
+Check ($support.plugins[1].source -eq $externalPlugin) 'external plugin retains origin'
+Check ($support.plugins[1].overlays[0].source -eq (Join-Path $relocatedRoot 'Content')) 'absolute internal overlay follows copy'
+Check ([IO.File]::ReadAllText($supportDeclaration) -ceq $declarationBefore) 'maintained dependency declaration untouched'
+
+$marker=Join-Path $fixture 'source.json'
+Set-VoyageModAssetSourceBuild -StatePath $marker -SteamBuildId '123'
+$markerArgs=@{StatePath=$marker;SteamBuildId='123';Label='fixture mesh';RefreshCommand='Update-Example.ps1'}
+Assert-VoyageModAssetSourceBuild @markerArgs
+$before=[IO.File]::ReadAllText($marker)
+$markerArgs.SteamBuildId='456'
+try { Assert-VoyageModAssetSourceBuild @markerArgs; throw 'Expected mismatch' } catch {
+    Check ($_.Exception.Message -like '*fixture mesh*123*456*Update-Example.ps1*') 'mismatch identifies asset and manual update'
+}
+Check ([IO.File]::ReadAllText($marker) -ceq $before) 'build check never refreshes marker'
+foreach ($invalid in @('{}','{"schemaVersion":1,"steamBuildId":"invalid"}','{"schemaVersion":2,"steamBuildId":"456"}')) {
+    $invalid | Set-Content -LiteralPath $marker
+    Reject { Assert-VoyageModAssetSourceBuild @markerArgs } 'invalid marker cannot authorize reuse'
+}
+$markerArgs.StatePath=Join-Path $fixture 'missing-source.json'
+Reject { Assert-VoyageModAssetSourceBuild @markerArgs } 'missing marker cannot authorize reuse'
+
 [pscustomobject]@{status='passed';checks=$script:checks;evidence=$fixture} | ConvertTo-Json

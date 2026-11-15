@@ -39,7 +39,7 @@ failure handling.
 | Generate graph/widget previews and an index with automatic node comparison for changed snapshots | `BlueprintText/Render-BlueprintPreviews.ps1` | [Batch preview index](blueprint-text.md#browse-a-set-of-blueprints) |
 | Preview an exported HUD layout and copy review adjustments | `BlueprintText/Render-WidgetPreview.ps1` | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
-| Share project copies, source-update acceptance, editor tests, grouped cook and container packaging | `VoyageModPipeline.psm1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
+| Share project copies, asset source-build markers, source-update acceptance, editor tests, grouped cook and container packaging | `VoyageModPipeline.psm1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
 | Check shared project-copy and editor-test failure boundaries offline | `Test-VoyageModPipeline.ps1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
 | Maintain generated settings in an existing procedural producer | `New-VoyageModSettings.ps1` | [Compatibility interface](VoyageModSettings/legacy-generation.md) |
 | Validate a changed settings schema or default INI | `Validate-VoyageModSettings.ps1` | [INI preparation](mod-setup.md#runtime-ini-preparation) |
@@ -59,6 +59,7 @@ failure handling.
 | Package a material batch | `Export-VoyageMaterialBundle.ps1` | [Material export](material-export.md) |
 | Check material export destinations and existing-output protection without game data | `VoyageMaterialLibrary/Test-OutputPaths.ps1` | [Output-path regression](material-export.md#output-path-regression) |
 | Inspect a GLB or owning model registry | `glb/inspect_glb.py` | [GLB tools](glb-tools.md) |
+| Select whole triangles on one side of a mesh-local plane | `glb/select_glb.py` | [GLB selection](glb-tools.md#select-whole-triangles) |
 | Preview a GLB | `glb/preview_glb.py` | [GLB tools](glb-tools.md) |
 | Preview imported material swatches | `glb/preview_material_glb.py` | [GLB tools](glb-tools.md) |
 | Convert an authored Blender hierarchy to GLB | `glb/export_blender_glb.py` | [GLB tools](glb-tools.md) |
@@ -68,6 +69,8 @@ failure handling.
 | Validate a mapping candidate | `Test-VoyageMappings.ps1` | [Mappings](mappings.md) |
 | Diagnose mapping address discovery | `Find-VoyageUObjectArray.ps1` | [Toolchain maintenance](toolchain-maintenance.md) |
 | Build a primary-asset registry | `New-VoyageAssetRegistry.ps1` | [Asset registry](asset-registry.md) |
+| Convert fresh cooked native DataAssets under a consumer-owned serialization contract | `Convert-VoyageDataAsset.ps1` | [DataAsset conversion](data-asset-conversion.md) |
+| Package explicitly mapped extra files and verify their PAK mount paths and bytes | `New-VoyagePak.ps1` | [Additional-file PAK](pak-files.md) |
 | Build and package a mod candidate | [Mod producers](release-build.md#release-producers) | [Release build](release-build.md) |
 | Verify an IoStore container | `Test-VoyageContainer.ps1` | [Release build](release-build.md) |
 | Create a Vortex archive | `New-VoyageVortexArchive.ps1` | [Release installation](release-installation.md) |

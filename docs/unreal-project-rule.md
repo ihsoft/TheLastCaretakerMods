@@ -138,14 +138,22 @@ the Unreal queue, game/mapping resolution, container verification, archive
 creation and release installation. Find the supported entry point through the
 [tool index](../tools/tool-index.md).
 
+When a mod needs custom asset manipulation outside a supported public tool,
+first assess the missing capability in the shared tool. Prefer a bounded
+extension that lets this and future mods use the same workflow, with mod-specific
+choices supplied as data. One concrete consumer is enough to justify evaluating
+an extension; do not wait for several mods to duplicate the workaround.
+A shared implementation is the preferred outcome, not an unconditional
+requirement. Keep a local operation when its contract is specific to that mod or
+sharing it would add disproportionate complexity, and state that reason in the
+mod's architecture. Do not turn a one-off experiment into a general framework.
+
 Use the [shared mod pipeline](../tools/mod-setup.md#shared-mod-pipeline) for
 working copies, run paths, editor-test orchestration, cook, container packaging,
 explicit source-update acceptance and cleanup. Keep path containment, linked-path
 rejection, source selection and failure evidence there rather than in per-mod
-copies. Extend that shared owner
-when a recurring mechanism is missing and has an established consumer; keep
-mod entry points thin. One mod-owned release inventory drives cook, staging and
-container verification. Select tagged versus unversioned cook as data for the
+copies; keep mod entry points thin. One mod-owned release inventory drives cook,
+staging and container verification. Select tagged versus unversioned cook as data for the
 shared cooker; a different serialization mode does not justify a local cooker.
 A required cooked-asset conversion may sit between the shared cook and container
 stages. Game script-object metadata and large-inventory transport also belong to

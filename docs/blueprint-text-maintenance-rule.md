@@ -49,14 +49,13 @@ routine agent accounting. A short decision is sufficient for a small change.
 
 ## Consider tool changes proactively
 
-Ask whether repeated manual work, format omissions, ambiguous diagnostics or
-misleading previews belong in the shared tool. Prefer one bounded shared
-capability over per-mod orchestration. A tool extension still needs an identified
-consumer, a preservation/rejection contract and acceptance at the affected
+Apply the [shared-tool preference](unreal-project-rule.md#shared-mechanics-and-mod-owned-contracts)
+when a mod needs custom asset work. For BPT, also consider manual work, format
+omissions, ambiguous diagnostics and misleading previews. A tool extension needs
+an identified consumer, a preservation/rejection contract and acceptance at the affected
 boundary. Use the [test scope rule](testing-rule.md) to decide which checks
 deserve retained regression coverage.
-Do not generalize a one-off workaround into a framework or expand supported
-state merely by disabling validation.
+Do not expand supported state merely by disabling validation.
 
 Preserve the [project and synchronization contract](../tools/blueprint-workspace.md#source-of-truth-and-git).
 Editor reconstruction, structural comparison, review presentation and gameplay

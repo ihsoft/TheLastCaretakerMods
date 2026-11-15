@@ -37,7 +37,7 @@ def local_matrix(node):
     return result
 
 
-def inspect(path):
+def read_glb(path):
     data = path.read_bytes()
     require(len(data) >= 20 and struct.unpack_from('<4sII', data) == (b'glTF', 2, len(data)), 'Invalid GLB header')
     chunks = []
@@ -63,6 +63,29 @@ def inspect(path):
         require(view.get('byteOffset', 0) >= 0 and view.get('byteOffset', 0) + view['byteLength'] <= doc['buffers'][0]['byteLength'], 'Buffer view exceeds data')
     for image in doc.get('images', []):
         require('uri' not in image and 0 <= image['bufferView'] < len(doc['bufferViews']), 'External/invalid image')
+    return doc, binary
+
+
+def read_accessor(doc, binary, index):
+    types = {5120:'i1', 5121:'u1', 5122:'<i2', 5123:'<u2', 5125:'<u4', 5126:'<f4'}
+    widths = {'SCALAR':1, 'VEC2':2, 'VEC3':3, 'VEC4':4}
+    a = doc['accessors'][index]
+    require('sparse' not in a, 'Sparse accessor requires a different reader')
+    require(a['type'] in widths, 'Matrix accessor not supported by geometry audit')
+    view = doc['bufferViews'][a['bufferView']]
+    dtype, width, count = np.dtype(types[a['componentType']]), widths[a['type']], a['count']
+    stride = view.get('byteStride', dtype.itemsize * width)
+    offset = a.get('byteOffset', 0)
+    require(count > 0 and offset >= 0 and stride >= dtype.itemsize * width, 'Invalid accessor dimensions')
+    require(offset + (count-1)*stride + dtype.itemsize*width <= view['byteLength'], 'Accessor exceeds view')
+    values = np.ndarray((count, width), dtype=dtype, buffer=binary,
+                        offset=view.get('byteOffset', 0)+offset, strides=(stride, dtype.itemsize))
+    require(np.isfinite(values).all(), 'Non-finite accessor')
+    return values
+
+
+def inspect(path):
+    doc, binary = read_glb(path)
 
     def image_content(index):
         require(isinstance(index, int) and 0 <= index < len(doc.get('images', [])), 'Invalid material-pipeline image index')
@@ -121,23 +144,8 @@ def inspect(path):
                                 sourceArtifactPolicy=artifact_policy,
                                 bakeOperations=len(operations), generatedImages=len(generated),
                                 sourceArtifacts=len(artifacts), unresolvedLayers=len(unresolved))
-    types = {5120:'i1', 5121:'u1', 5122:'<i2', 5123:'<u2', 5125:'<u4', 5126:'<f4'}
-    widths = {'SCALAR':1, 'VEC2':2, 'VEC3':3, 'VEC4':4}
-
     def accessor(index):
-        a = doc['accessors'][index]
-        require('sparse' not in a, 'Sparse accessor requires a different reader')
-        require(a['type'] in widths, 'Matrix accessor not supported by geometry audit')
-        view = doc['bufferViews'][a['bufferView']]
-        dtype, width, count = np.dtype(types[a['componentType']]), widths[a['type']], a['count']
-        stride = view.get('byteStride', dtype.itemsize * width)
-        offset = a.get('byteOffset', 0)
-        require(count > 0 and offset >= 0 and stride >= dtype.itemsize * width, 'Invalid accessor dimensions')
-        require(offset + (count-1)*stride + dtype.itemsize*width <= view['byteLength'], 'Accessor exceeds view')
-        values = np.ndarray((count, width), dtype=dtype, buffer=binary,
-                            offset=view.get('byteOffset', 0)+offset, strides=(stride, dtype.itemsize))
-        require(np.isfinite(values).all(), 'Non-finite accessor')
-        return values
+        return read_accessor(doc, binary, index)
 
     geometry = []
     for mesh in doc.get('meshes', []):
@@ -212,7 +220,7 @@ def inspect(path):
         reports.append(report)
     require(bounds, 'No visible mesh geometry')
     return dict(schemaVersion=1, path=str(path.resolve()),
-                byteLength=len(data), format='GLB 2.0', units='meters', upAxis='+Y',
+                byteLength=path.stat().st_size, format='GLB 2.0', units='meters', upAxis='+Y',
                 counts=dict(nodes=len(nodes), activeNodes=len(active), meshDefinitions=len(geometry),
                             meshNodes=sum('mesh' in n for n in nodes), instantiatedTriangles=triangles,
                             materials=len(doc.get('materials', [])), images=len(doc.get('images', [])),

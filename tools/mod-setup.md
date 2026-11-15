@@ -40,6 +40,8 @@ Reserve the
 | --- | --- |
 | `New-VoyageModRun` | `-ModRoot`, optional `-OutputRoot` and `-Kind`; creates and returns a fresh run directory below `Tmp/<Mod>/`. |
 | `New-VoyageModProjectCopy` | `-ModRoot -Destination`; copies maintained inputs and returns the `.uproject` path without launching Unreal. |
+| `Assert-VoyageModAssetSourceBuild` | `-StatePath -SteamBuildId -Label -RefreshCommand`; requires an asset group's recorded source build to match the installed build; otherwise stops with a manual-refresh prompt. |
+| `Set-VoyageModAssetSourceBuild` | `-StatePath -SteamBuildId`; writes a source-build marker after a successful explicit refresh. The parent directory must exist. |
 | `Remove-VoyageModScratch` | `-ModRoot -RunRoot -Path`; removes only an unlinked descendant of that mod's run, preserving the run root and its evidence. |
 | `Get-VoyageModSourceSnapshot` | `-ModRoot -Paths`; captures current file bytes or absence for mod-relative paths before generation. Returns an in-memory hashtable. |
 | `Save-VoyageModSourceUpdate` | `-ModRoot -RunRoot -Paths -Snapshot`; accepts selected validated files from matching paths under the run into maintained source, checking the snapshot first. |
@@ -62,6 +64,11 @@ The copy validates source entries and rejects linked paths and existing output
 before copying. It includes current uncommitted inputs, omits generated
 intermediates, and permits absent optional source directories. It does not
 invent missing project content or accept unexpected generated folders.
+In the copied `EditorSupport.json`, plugin and overlay source paths are resolved
+against their original bases and written as absolute paths: project-owned inputs
+follow the working copy, external inputs retain their original location. The
+maintained declaration is unchanged. This permits arbitrary copy depth without
+mod-specific path repair; support preparation still owns dependency validation.
 
 The test block receives one context object with `repo`, `modRoot`, `output`,
 `project`, `projectRoot`, `reportPath` and `engineRoot`. It runs the owning suite
@@ -104,6 +111,23 @@ the old state. The copy is not atomic and does not lock out concurrent writers;
 there is no recovery journal or automatic rollback. Review accepted changes and
 synchronize affected BPT before building or committing.
 
+### Asset source-build markers
+
+For independently refreshed groups of game-derived assets, keep a small JSON
+marker with `schemaVersion: 1` and a decimal-string `steamBuildId`. After the
+explicit refresh and its output validation, use `Set-VoyageModAssetSourceBuild`
+to write the marker in the run; accept it after the corresponding assets.
+An ordinary build calls `Assert-VoyageModAssetSourceBuild` with the installed
+build ID, a readable asset label and the mod's explicit update command. Missing,
+invalid or mismatched markers stop reuse and ask whether to refresh. The check
+never executes that command or rewrites the marker.
+
+This records which game build supplied those maintained inputs. It does not
+track recipe application, duplicate the recipe or prove asset correctness.
+It is separate from the mod's compatibility pin in `game-build.json`: bypassing
+that pin does not make stale source inputs current. Recipe changes must be
+applied by their author through the owning updater.
+
 ### Cook and container stages
 
 The mod supplies one explicit `/Game/` package inventory. Cook, staging and exact
@@ -124,7 +148,8 @@ replace the package inventory, serialization mode, commandlet or output target.
 The working project must be below the supplied run `OutputRoot`.
 
 For a required cooked-format conversion, call `Invoke-VoyageModCookAssets`,
-apply the bounded mod-owned conversion to its returned stage, then call
+apply the [shared DataAsset conversion](data-asset-conversion.md) under the
+mod's serialization contract when its supported boundary fits, then call
 `New-VoyageModContainer` with the same inventory. Do not copy cook or container
 orchestration into that converter. The container output must be a fresh directory
 separate from the stage, both under `Tmp/<Mod>/`.
@@ -138,9 +163,11 @@ Without `GameRoot`, no game metadata is added. The producer remains responsible
 for its game/source-build applicability checks.
 
 `CompanionPak` supplies a caller-prepared PAK for extra files such as a plugin
-registry. It replaces retoc's generated companion PAK before final container
-verification; the caller owns validation of those extra files and their mount
-paths. It is not merged with another PAK. Ordinary asset-only releases omit it.
+registry. Use the [shared additional-file packager](pak-files.md) to create it
+from the consumer's explicit source/mount-path list. It replaces retoc's generated
+companion PAK before final container verification; the consumer owns extra-file
+semantics and chooses their mount paths, while the packager verifies archive
+paths and bytes. It is not merged with another PAK. Ordinary asset-only releases omit it.
 Container verification runs once on the final triplet against the supplied
 inventory. Stage/conversion/extraction failures retain diagnostics in the run.
 

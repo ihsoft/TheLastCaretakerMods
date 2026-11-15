@@ -21,3 +21,9 @@ game/format compatibility, validates each record, and writes a sibling
 manifest. It rejects unsupported or ambiguous inputs before replacing output.
 Use the reported failure to decide whether the asset data or the tool needs
 investigation; do not precheck its native writer or dependency versions.
+
+When the registry must ship inside a plugin-local PAK, use the
+[additional-file packager](pak-files.md) with the consumer's exact mount path.
+Registry generation owns record semantics; the packager owns archive paths and
+byte preservation. A mod should not implement another UnrealPak response/list/
+extraction sequence for this handoff.

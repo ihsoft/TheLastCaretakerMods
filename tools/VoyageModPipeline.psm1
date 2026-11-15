@@ -68,9 +68,65 @@ function New-VoyageModProjectCopy {
         }
         Assert-ModUnlinked $entry.FullName -Recurse
     }
+    $declaration = Join-Path $source 'EditorSupport.json'
+    $supportJson = $null
+    if (Test-Path -LiteralPath $declaration) {
+        $support = Get-Content -LiteralPath $declaration -Raw | ConvertFrom-Json
+        if ($support.schema -ne 1) { throw 'Unsupported EditorSupport.json schema' }
+        foreach ($plugin in $support.plugins) {
+            $origin = [IO.Path]::GetFullPath([IO.Path]::Combine($source, $plugin.source))
+            $plugin.source = ConvertTo-ModCopiedDependency $origin $source $target
+            if ($plugin.PSObject.Properties['overlays']) {
+                foreach ($overlay in $plugin.overlays) {
+                    $overlayOrigin = [IO.Path]::GetFullPath([IO.Path]::Combine((Split-Path -Parent $origin), $overlay.source))
+                    $overlay.source = ConvertTo-ModCopiedDependency $overlayOrigin $source $target
+                }
+            }
+        }
+        $supportJson = ($support | ConvertTo-Json -Depth 100) + [Environment]::NewLine
+    }
     [IO.Directory]::CreateDirectory($target) | Out-Null
     foreach ($entry in $entries) { Copy-Item -LiteralPath $entry.FullName -Destination $target -Recurse }
+    if ($null -ne $supportJson) {
+        [IO.File]::WriteAllText((Join-Path $target 'EditorSupport.json'), $supportJson, (New-Object Text.UTF8Encoding($false)))
+    }
     Join-Path $target 'Voyage.uproject'
+}
+
+function ConvertTo-ModCopiedDependency([string]$Path, [string]$Source, [string]$Target) {
+    if ($Path -eq $Source) { return $Target }
+    $prefix = $Source.TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar
+    if ($Path.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+        return Join-Path $Target $Path.Substring($prefix.Length)
+    }
+    return $Path
+}
+
+function Assert-VoyageModAssetSourceBuild {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$StatePath,
+        [Parameter(Mandatory)][ValidatePattern('^[0-9]+$')][string]$SteamBuildId,
+        [Parameter(Mandatory)][string]$Label, [Parameter(Mandatory)][string]$RefreshCommand)
+    try {
+        $state = Get-Content -LiteralPath $StatePath -Raw -ErrorAction Stop | ConvertFrom-Json
+        if ($state.schemaVersion -ne 1 -or [string]$state.steamBuildId -cnotmatch '^[0-9]+$') {
+            throw 'Invalid source-build marker.'
+        }
+        if ([string]$state.steamBuildId -cne $SteamBuildId) {
+            throw "Source build $($state.steamBuildId) differs from installed build $SteamBuildId."
+        }
+    } catch {
+        throw "Cannot reuse ${Label}: $($_.Exception.Message) Marker: $StatePath. Ask the user whether to run $RefreshCommand; no automatic refresh was performed."
+    }
+}
+
+function Set-VoyageModAssetSourceBuild {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$StatePath,
+        [Parameter(Mandatory)][ValidatePattern('^[0-9]+$')][string]$SteamBuildId)
+    $state = [ordered]@{ schemaVersion = 1; steamBuildId = $SteamBuildId }
+    $json = ($state | ConvertTo-Json) + [Environment]::NewLine
+    [IO.File]::WriteAllText((Resolve-ModPath $StatePath), $json, (New-Object Text.UTF8Encoding($false)))
 }
 
 function Remove-VoyageModScratch {
@@ -397,4 +453,4 @@ function Invoke-VoyageModCook {
         -Packages $Packages -ParserVersion $ParserVersion -GameRoot $GameRoot -ContainerName $ContainerName -Retoc $Retoc
 }
 
-Export-ModuleMember -Function Get-VoyageModSourceSnapshot,Save-VoyageModSourceUpdate,Get-VoyageProjectContentSnapshot,Assert-VoyageProjectContentUpdateScope,New-VoyageModRun,New-VoyageModProjectCopy,Remove-VoyageModScratch,Invoke-VoyageModEditorTest,Invoke-VoyageModCookAssets,New-VoyageModContainer,Invoke-VoyageModCook
+Export-ModuleMember -Function Get-VoyageModSourceSnapshot,Save-VoyageModSourceUpdate,Get-VoyageProjectContentSnapshot,Assert-VoyageProjectContentUpdateScope,New-VoyageModRun,New-VoyageModProjectCopy,Remove-VoyageModScratch,Invoke-VoyageModEditorTest,Invoke-VoyageModCookAssets,New-VoyageModContainer,Invoke-VoyageModCook,Assert-VoyageModAssetSourceBuild,Set-VoyageModAssetSourceBuild
