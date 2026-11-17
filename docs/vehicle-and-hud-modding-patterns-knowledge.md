@@ -44,10 +44,29 @@ In an observed stock snapshot,
   Wall Sockets during save restoration: the same synchronous handler supports
   newly built and restored sockets, including sockets with connected cables.
   A separate restore scan or polling loop is not required for that consumer.
-- `OnActorRestored(AActor* Actor)` is a separate reflected event. Its signature
-  is established, but its ordering relative to attachment and loader startup
-  is not a runtime contract. Do not subscribe to both merely because both exist;
-  account for duplicate processing if a consumer actually needs both.
+  Delivery for farming actors during streamed POI arrival was also confirmed
+  in game; this does not establish that their asynchronous setup is complete.
+- `OnActorRestored(AActor* Actor)` is emitted by the inspected common actor
+  creation core after optional persistent-state restoration. The public
+  `SpawnRuntimeActorFromClass` and `SpawnRuntimeActorFromData` wrappers emit
+  Spawned afterward; persistence restoration can use the core without those
+  wrappers. A Spawned-only observer therefore misses that restoration path.
+  This does not establish a universal ordering relative to Attached. Do not
+  subscribe to both merely because both exist; account for duplicate processing
+  if a consumer actually needs both.
+
+When a consumer needs both an initial actor snapshot and subsequent events,
+bind before taking the snapshot to avoid a gap in observation. The same actor
+can reach both paths, so processing must tolerate that overlap. Whether a
+snapshot is necessary depends on the loader and consumer lifecycle.
+Unbind callbacks and release queued actor references at teardown.
+
+Neither actor event is a "location completely ready" signal. Consumers needing
+asynchronous dependencies must validate them when processing the actor; the
+[farming setup contract](farming-fruit-lifecycle-knowledge.md#setup-readiness)
+describes the mesh/socket case. A fixed delay is consumer policy, not proof of
+completion, and cannot replace readiness checks. Queueing and batching are
+consumer choices, not requirements of these events.
 
 Use the attached actor supplied by the event rather than rediscovering it.
 The parent scene component identifies the immediate attachment target; for a
@@ -63,10 +82,11 @@ Blueprint-assignable and carry one `VoyageModuleComponent* Module` parameter
 through `VoyageModuleRegisteredDelegate`. Module registration is not a
 substitute for completed actor attachment or proof of its final vehicle owner.
 
-The runtime contract above covers Electric Wall Sockets on Boats, not every
-actor type or arbitrary ordering of streamed levels. Check the reflected
-signatures and lifecycle for a new consumer or when changed behavior gives
-reason to doubt their applicability.
+The runtime evidence covers Electric Wall Sockets on Boats and farming actors
+during streamed arrival, not every actor type or arbitrary ordering of streamed
+levels. The native creation-path distinction was inspected on Steam build
+`25982825`. Check the reflected signatures and lifecycle for a new consumer or
+when changed behavior gives reason to doubt their applicability.
 See [external socket ownership](boat-resource-socket-architecture-knowledge.md#external-socket-registration).
 
 ### Feedback before the HUD is available

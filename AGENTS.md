@@ -56,6 +56,8 @@ do not load every document just because it is indexed here.
 
 ## Reusable knowledge
 
+- [Farming fruit lifecycle](docs/farming-fruit-lifecycle-knowledge.md): fruit
+  registration versus attachment, growth obstruction, ripening and removal state.
 - [Runtime resource socket control](docs/module-socket-runtime-control-knowledge.md):
   per-port limits, direction changes, network notifications and state preservation.
 - [Boat resource sockets](docs/boat-resource-socket-architecture-knowledge.md):
