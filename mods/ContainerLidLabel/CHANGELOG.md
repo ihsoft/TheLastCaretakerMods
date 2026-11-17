@@ -2,6 +2,8 @@
 
 ## Next
 
+## V2
+
 - Add lid names and icons to medium and small containers.
 - Configure each size independently: defaults are 200 kg for large, 100 kg for
   medium and 50 kg for small containers.
