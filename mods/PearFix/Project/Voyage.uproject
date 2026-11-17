@@ -1,0 +1,1 @@
+{"FileVersion":3,"EngineAssociation":"5.8","Description":"PearFix diagnostic authoring project","Plugins":[{"Name":"PythonScriptPlugin","Enabled":true},{"Name":"EditorScriptingUtilities","Enabled":true},{"Name":"PearFixSupport","Enabled":true},{"Name":"BlueprintTextWorkspace","Enabled":true}]}
