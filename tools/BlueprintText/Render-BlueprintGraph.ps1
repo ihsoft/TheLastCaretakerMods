@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
 Render compact Blueprint JSON as offline SVG and an HTML viewer, without Unreal.
-Defaults to simplified top-to-bottom. HTML can switch both view and direction;
+Defaults to grouped chains, no formulas, top-to-bottom. HTML has independent options;
 an adjacent .full.svg always preserves access to every node and link.
 Optional ReviewPath JSON lists added/changed/removed IDs for the selected graph.
 BeforePath supplies the original source for changed/removed nodes. Review marks
@@ -16,7 +16,9 @@ param(
     [string]$Graph,
     [string]$ReviewPath,
     [string]$BeforePath,
-    [ValidateSet('simplified','full')][string]$View = 'simplified',
+    [ValidateSet('simplified','full','expressions','combined')][string]$View = 'simplified',
+    [ValidateSet('on','off')][string]$GroupChains,
+    [ValidateSet('on','off')][string]$Expressions,
     [ValidateSet('TB','LR')][string]$Direction = 'TB',
     [string]$PythonPath
 )
@@ -34,6 +36,8 @@ if ([string]::IsNullOrWhiteSpace($PythonPath)) {
     }
 }
 $arguments = @('-B', (Join-Path $PSScriptRoot 'render_graph.py'), (Resolve-Path -LiteralPath $InputPath).Path, '--output', $OutputPath, '--view', $View, '--direction', $Direction)
+if ($GroupChains) { $arguments += $(if ($GroupChains -eq 'on') { '--group-chains' } else { '--no-group-chains' }) }
+if ($Expressions) { $arguments += $(if ($Expressions -eq 'on') { '--expressions' } else { '--no-expressions' }) }
 if (-not [string]::IsNullOrWhiteSpace($Graph)) { $arguments += @('--graph', $Graph) }
 if ($ReviewPath) { $arguments += @('--review', (Resolve-Path -LiteralPath $ReviewPath).Path) }
 if ($BeforePath) { $arguments += @('--before', (Resolve-Path -LiteralPath $BeforePath).Path) }

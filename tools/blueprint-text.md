@@ -258,8 +258,8 @@ Use a library for shared pure calculations or predicates, called by name with
 their inputs. Consumers do not construct an instance, locate a manager or obtain
 a CDO manually. Preserve Unreal's generated hidden target/world-context pins in
 the complete source; these are engine implementation details, not extra authored
-graph operations. Simplified preview keeps the hidden CDO reference in Details;
-Full shows the exact reference. Connect the Actor input in predicates such as `IsLarge(Actor)`.
+graph operations. Preview keeps the implicit CDO reference in Details, not on
+the card. Connect the Actor input in predicates such as `IsLarge(Actor)`.
 
 Start a new library with the empty shared source:
 
@@ -840,8 +840,10 @@ line is appended to the card. Typed object/class inputs (`DefaultObject`) appear
 at the same input position with a readable object name; their exact reference
 remains in the tooltip and Details. Review compares exact references even when
 their displayed names match.
-Simplified and Expressions cards omit technical pin-type and member-owner links;
-these remain resolved in node Details (`_typeReferences`) and visible in Full.
+All graph presentations omit technical pin-type, member-owner and
+implicit library-target links from cards. This includes duplicate type references
+in user-defined pin declarations. These remain resolved in node Details
+(`_typeReferences`); expanding graph structure does not add raw metadata labels.
 Chosen asset values (including class defaults) retain their links in every view.
 Viewer role/link metadata stays separate from BPT source. The summary distinguishes
 `editableAssets`, `listedAssets` and displayed `graphs` from total `assets`.
@@ -912,14 +914,15 @@ The preview root has **Find a node**, searching represented node IDs, display
 names and graph paths without regard to case. Results show the Blueprint and
 full nested path because IDs can repeat between graphs. Select a result to open
 its graph and highlight the node, including a member of a folded card. A node
-hidden in Simplified opens in Full instead. **Include Before** adds old-snapshot
-results, including deleted nodes. The query and snapshot choice survive Back
+not represented in the current folded cards opens with grouping and expressions
+off instead. **Include Before** adds old-snapshot results, including deleted
+nodes. The query and snapshot choice survive Back
 and are retained in the URL. Enter opens a unique result; with multiple matches,
 it focuses the first result for selection. Search uses the same preview batch
 and needs no extra agent command or asset query.
 
 Each graph row shows local source node/link counts and a separate descendant
-node count, independent of viewer folding or hidden disconnected nodes. Deleted
+node count, independent of viewer folding. Deleted
 graphs use Before counts. Review rows distinguish Added, Changed, Removed and
 Nested changes; the last means the local graph is unchanged but a represented
 descendant differs. Relocations additionally show Moved. Unchanged graphs have no badge,
@@ -939,13 +942,19 @@ from editor placeholders and runtime-created widgets are not reconstructed.
 
 Requires Python 3.9+ (bundled runtime or `python`; override with `-PythonPath`).
 Writes SVG, adjacent `.full.svg`, and a self-contained HTML viewer with zoom,
-Full, Simplified and Expressions views and top-to-bottom/left-to-right directions. Defaults are
-`-View simplified -Direction TB`; `-Graph` selects a graph when needed. No model,
-network, engine, or catalogue call is involved. Input is never rewritten.
+independent **Group chains**, **Show expressions**, **Show unconnected** options
+and top-to-bottom/left-to-right directions. Defaults are grouping on, expressions
+and unconnected outputs off, direction TB. `-GroupChains on|off` and
+`-Expressions on|off` select the initial folding; `-Graph` selects a graph when needed.
+Legacy `-View simplified|full|expressions|combined` presets select these option pairs
+for existing callers, with explicit options taking precedence. They no longer select
+different topology filters or unconnected-output defaults. The Python renderer accepts
+`--[no-]group-chains` and `--[no-]expressions`, and retains `--view` presets.
+No model, network, engine, or catalogue call is involved. Input is never rewritten.
 
 **Row width (nodes)** selects a target width of 1–12 standard cards (default 8)
 in both directions. Changing it rearranges the current graph locally and fits
-its width; the value is retained between all three views. Connected fragments
+its width; the value is retained across option changes. Connected fragments
 are laid out separately and packed into rows without splitting them. A fragment
 can exceed the target width. The lower-level `render_graph.py` and
 `render_preview_index.py` accept `--columns 8` to set the initial HTML and
@@ -974,13 +983,13 @@ including after browser layout changes.
 In HTML, click a node to highlight its incoming/outgoing links and immediate
 neighbors; unrelated elements dim and link colours retain their meaning.
 Click again, click the background, or press Escape to clear. Tab and Enter/Space
-also select nodes. Changing view or direction clears selection. Only visible
-links participate; use Full to include hidden technical nodes.
+also select nodes. Changing folding options or direction clears selection. Only
+displayed links participate; turn grouping and expressions off to expand internal links.
 
 **Show unconnected** controls unconnected output descriptions on every node,
 including execution branches, data types and output defaults, also inside folded
-steps. In the HTML viewer it starts off in Simplified and Expressions, and on
-in Full. Each view remembers its own explicit choice while the page is open.
+steps. It starts off and remains independent of grouping, formulas, direction
+and review/final-only switching.
 Connected outputs, input defaults and graph entry/exit signatures
 remain visible. Unconnected advanced outputs are omitted when BPT declares
 `AdvancedPinDisplay=Hidden`; connected advanced outputs remain visible, and
@@ -992,8 +1001,9 @@ Custom event titles use the declared event name. Enhanced Input event titles
 use the referenced action name, omitting the conventional `IA_` / `IAV_` prefix;
 Details retains the exact name and reference. Both are colored as event entries.
 
-Browser Back/Forward restores each graph visit's view, direction, row width,
-unconnected-output filter, review mode, zoom, selected node and scroll position.
+Browser Back/Forward restores each graph visit's grouping and expression options,
+direction, row width, unconnected-output filter, review mode, zoom, selected node
+and scroll position.
 The graph title shows the full nesting path: the Blueprint name links to the
 preview index and ancestor graph names link to their respective pages.
 
@@ -1004,26 +1014,30 @@ The final-only choice follows graph links. Ordinary browse pages, empty review
 mark lists and entirely added or removed graphs do not add this control. Entirely
 added or removed graphs retain their status without a comparison toggle.
 
-Simplified view hides disabled and technical Self nodes, labels incoming hidden
-sources, and folds exclusive data chains and linear action chains into numbered
+**Group chains** folds exclusive data chains and linear action chains into numbered
 steps. It does not combine repeated computations or invent bypass connections.
+Explicit Self nodes and their connections stay visible. Disabled nodes stay separate
+and labelled `DISABLED`; they are not removed from the authored topology.
 An action with a connected data input stays separate, including when that input
 comes from the preceding action. Unconnected defaults and technical Self target
 inputs do not prevent folding; a target supplied by another object does.
-Full view retains all nodes. Folded steps preserve defaults, output connections
-and unconnected-output notes; data chains retain their internal dependencies.
+Turning both folding options off displays every source node. Folded steps preserve
+defaults, output connections and unconnected-output notes; data chains retain
+their internal dependencies.
 A sole unused execution output is treated as a terminal path; unused alternatives
 remain visible.
 
-**Expressions** is a presentation mode, not another editable format. It folds
-recognized pure scalar arithmetic, comparisons, boolean operations, select,
+**Show expressions** is an independent presentation option, not another editable
+format. It folds recognized pure scalar arithmetic, comparisons, boolean operations, select,
 min/max and supported Vector calls into bounded formula cards. Native function identity and pin types
 must match; unsupported operations and incomplete signatures stay as nodes.
 Variable reads, shared results and graph boundaries remain separate. Operand
 order, parentheses, select alternatives and numeric conversions are preserved;
 the viewer does not evaluate or algebraically simplify formulas. Different review
-statuses do not merge, and removed connections remain explicit. Use Full or
-Details to inspect the original nodes, pins and links; edit the BPT graph normally.
+statuses do not merge, and removed connections remain explicit. When both options
+are on, formulas form first, then other eligible chains group; formula cards are
+not folded again into chains. Turn both options off or use Details to inspect
+the original nodes, pins and links; edit the BPT graph normally.
 
 Vector formulas support `Vector(x, y, z)`, `dot(a, b)`, vector select,
 addition/subtraction and vector-times-number multiplication. `VInterpTo_Constant`
@@ -1132,7 +1146,7 @@ reusing a removed operation's ID represents it as Changed instead of Added.
 
 Green `+`, purple `~` and red dashed `−` borders mark added, changed and removed
 nodes; existing fill colours retain their execution/data meaning. Marked nodes
-stay visible in Simplified view. Linear actions with the same review status may
+stay represented with folding enabled. Linear actions with the same review status may
 fold under the ordinary dependency and branching rules; different statuses never
 merge. Folded review details preserve every step's Before/After snapshots and
 changed-field highlights. Marked data nodes remain separate. Removed nodes and

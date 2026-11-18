@@ -28,8 +28,10 @@ technical identifiers and irrelevant displayed details compete with meaningful
 operations for the reader's attention. Remove semantically redundant operations
 from the authored graph under the preservation rules below. For information
 needed by serialization or detailed inspection but not by the main reading task,
-improve the preview's presentation and keep the detail accessible through Full
-or Details. Hiding a necessary decision or failure path is not simplification.
+improve the preview's presentation and keep the detail accessible through Details
+or by turning off grouping and expressions. Hiding a necessary decision or failure
+path is not simplification. Keep explicit Self nodes and disabled nodes visible:
+they are part of the authored topology, even when they should later be removed.
 
 Callers state their own requirements. If a maximum must be 1000, pass 1000 even
 when the callee happens to default to 1000. If the caller has no maximum
@@ -101,6 +103,17 @@ Unreal expands it into a getter during compilation. Do not substitute the setter
 input value, remove an intentional captured value, or claim a runtime speedup
 from this visual simplification. Setter callbacks and changing target expressions
 can make superficially similar reads different.
+
+Prefer implicit Self when accessing the current object's members and the node
+supports that context. Do not add an explicit Self node merely to wire a target
+that can use its own context. When cleaning up an existing explicit Self, convert
+the consumer's member reference and target declaration to self context as needed;
+disconnecting a target still declared as external can cause an invalid-target
+compiler error. Preserve the exact member, including inherited-member identity.
+Remove the Self node only after checking all of its consumers. Keep explicit Self
+when it supplies an ordinary argument value or a connection the consumer requires;
+do not replace references to other objects with Self. Validate an authored cleanup
+through Apply and fresh export. A preview must not silently perform this source edit.
 
 A branch with a literal condition and no meaningful alternative is routing noise,
 not a decision. Connect its incoming paths directly to the selected continuation,

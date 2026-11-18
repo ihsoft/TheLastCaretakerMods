@@ -6,7 +6,7 @@ const page=fs.readFileSync(process.argv[2],'utf8');
 const decode=s=>s.replace(/&quot;/g,'"').replace(/&#x27;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
 const layouts=[...page.matchAll(/<svg data-layout="([^"]+)"/g)].map(m=>JSON.parse(decode(m[1])));
 const defaultColumns=Number(page.match(/id="nodes-per-row"[^>]*value="(\d+)"/)[1]);
-assert.equal(layouts.length,6,'All three views and both directions contain geometry');
+assert.equal(layouts.length,8,'All four option combinations and both directions contain geometry');
 assert.equal(context.layoutRows({nodes:[],edges:[],direction:'TB',minWidth:1800},3).width,1800,
     'A long hierarchy title remains inside the viewport after browser reflow');
 // Overall height must shrink when the resized card sets the vertical extent.

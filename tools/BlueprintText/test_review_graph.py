@@ -129,7 +129,7 @@ class ReviewTests(unittest.TestCase):
 
     def test_marked_disabled_self_stays_visible_and_unfolded(self):
         document = {'schema': 1, 'nodes': [{'id': 'self', 'kind': 'self', 'enabled': False}], 'links': []}
-        self.assertEqual(render(document)[2], 0)
+        self.assertEqual(render(document)[2], 1)
         result = render(document, review={'added': ['self']})
         self.assertEqual(result[2], 1)
         self.assertIn('+ Added', result[0])

@@ -23,7 +23,10 @@ from graph_expressions import fold_expressions, format_expression
 from graph_layout import layout_boxes, port_fractions
 from graph_routing import edge_path
 
-VIEW_MODES = ('simplified', 'full', 'expressions')
+# Legacy names remain accepted by Python/CLI callers; the viewer exposes options.
+VIEW_MODES = ('simplified', 'full', 'expressions', 'combined')
+VIEW_OPTIONS = {'simplified': (True, False), 'full': (False, False),
+                'expressions': (False, True), 'combined': (True, True)}
 
 
 def escape(value):
@@ -318,6 +321,8 @@ def fold_chains(nodes, edges, original_edges, templates, parent=None, mode='data
         incoming[edge[2]].append(edge)
 
     def eligible(node):
+        if is_disabled(node) or '_foldedNodes' in node:
+            return False
         status = node.get('_reviewStatus')
         if (mode != 'action' and status) or (node.get('_reviewBoundary') and status != 'removed'):
             return False
@@ -605,7 +610,7 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
                              [CardLine(text) for text in textwrap.wrap(line, int((width - 28) / 6.5),
                                  break_long_words=False, break_on_hyphens=False)])]
     if '_expression' in node and not any(step_outputs):
-        lines = [node['_expression'], f"Expression · {len(node['_foldedNodes'])} nodes (Details / Full)"]
+        lines = [node['_expression'], f"Expression · {len(node['_foldedNodes'])} nodes (Details)"]
         lines.extend(output_lines(node, pin_templates or {}, connected_outputs))
         return [part for i, line in enumerate(lines) for part in wrap_card_line(line, i == 0)]
     if '_foldedSteps' in node:
@@ -793,13 +798,17 @@ def variable_label(variable):
     return name + ": " + kind
 
 
-def render(document, selection=None, view="simplified", direction="TB", review=None, before=None, asset_context=None, graph_context=None, marker_namespace="", columns=8):
+def render(document, selection=None, view="simplified", direction="TB", review=None, before=None, asset_context=None, graph_context=None, marker_namespace="", columns=8, group_chains=None, expressions=None):
     asset_context = asset_context or {}
     graph_context = graph_context or {}
     if review is not None:
         document = review_document(document, before, review, selection)
     if view not in VIEW_MODES or direction not in ("TB", "LR"):
-        raise ValueError("Expected view simplified/full/expressions and direction TB/LR.")
+        raise ValueError("Expected a supported presentation preset and direction TB/LR.")
+    legacy_group, legacy_expressions = VIEW_OPTIONS[view]
+    group_chains = legacy_group if group_chains is None else group_chains
+    expressions = legacy_expressions if expressions is None else expressions
+    view = next(key for key, options in VIEW_OPTIONS.items() if options == (group_chains, expressions))
     all_nodes, all_edges, owner, graph = load_graph(document, selection)
     all_nodes = [with_type_reference_details(n, document.get('pinTemplates', {})) for n in all_nodes]
     all_nodes = [with_input_references(n, document.get('pinTemplates', {}), owner, asset_context) for n in all_nodes]
@@ -810,34 +819,21 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     all_nodes = [dict(n, _graphLink=target) if (target := graph_context.get(
         'beforeCalls' if n.get('_reviewStatus') == 'removed' else 'calls', {}).get(n['id'])) else n
         for n in all_nodes]
-    hidden = {}
-    if view == "simplified":
-        for node in all_nodes:
-            if node.get('_reviewStatus') or node.get('_reviewBoundary'):
-                continue
-            if is_disabled(node):
-                hidden[node["id"]] = "disabled node"
-            elif node.get("kind") == "self" or node.get("ref") == "/Script/BlueprintGraph.K2Node_Self":
-                hidden[node["id"]] = "Self"
-    nodes = [node for node in all_nodes if node["id"] not in hidden]
-    edges = [edge for edge in all_edges if edge[0] not in hidden and edge[2] not in hidden]
-    hidden_links, folded = len(all_edges) - len(edges), 0
-    if view == "simplified":
-        nodes, edges, folded = fold_data_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"))
-        self_ids = {n['id'] for n in all_nodes if n.get('kind') == 'self' or n.get('ref') == '/Script/BlueprintGraph.K2Node_Self'}
-        nodes, edges, actions_folded = fold_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"), 'action', self_ids)
-        folded += actions_folded
-    elif view == 'expressions':
+    nodes, edges, folded = all_nodes, all_edges, 0
+    if expressions:
         nodes, edges, folded = fold_expressions(nodes, edges, all_edges, document.get('pinTemplates', {}),
                                               graph_context.get('children'), document.get('_reviewRemovedLinks', []))
+    if group_chains:
+        nodes, edges, data_folded = fold_data_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"))
+        self_ids = {n['id'] for n in all_nodes if n.get('kind') == 'self' or n.get('ref') == '/Script/BlueprintGraph.K2Node_Self'}
+        nodes, edges, actions_folded = fold_chains(nodes, edges, all_edges, document.get("pinTemplates", {}), document.get("parent"), 'action', self_ids)
+        folded += data_folded + actions_folded
     rank = layers(nodes, edges, document.get('pinTemplates', {}))
     boxes, lines_by_id, changed_lines, title_rows = {}, {}, {}, {}
-    connected, connected_outputs, hidden_inputs = defaultdict(set), defaultdict(set), defaultdict(list)
+    connected, connected_outputs = defaultdict(set), defaultdict(set)
     for source, output, target, pin, _ in all_edges:
         connected[target].add(pin)
         connected_outputs[source].add(output)
-        if source in hidden and target not in hidden:
-            hidden_inputs[target].append(f"{pin} ← {hidden[source]} (hidden)")
     for node in nodes:
         node_id = node["id"]
         parts = node.get('_foldedNodes', [node])
@@ -847,14 +843,14 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                  for part in parts]
         if '_foldedNodes' in node:
             lines_by_id[node_id] = node_lines(node, connected[node_id], pin_templates=document.get('pinTemplates', {}),
-                                             parent=document.get('parent'), step_inputs=[hidden_inputs[p['id']] for p in parts],
+                                             parent=document.get('parent'),
                                              step_outputs=notes, connected_outputs=connected_outputs[node_id])
             title_rows[node_id] = len(wrap_node_line(node['_expression'], True)) if '_expression' in node and not any(notes) else 1
             changed_lines[node_id] = {i: line.previous for i, line in enumerate(lines_by_id[node_id])
                                      if getattr(line, 'previous', None) is not None}
         else:
             templates, parent = document.get('pinTemplates', {}), document.get('parent')
-            raw_lines = node_lines(node, connected[node_id], hidden_inputs[node_id], templates, parent, wrap=False,
+            raw_lines = node_lines(node, connected[node_id], pin_templates=templates, parent=parent, wrap=False,
                                    connected_outputs=connected_outputs[node_id])
             if node.get('_graphNeverContinues'):
                 raw_lines[0] = 'Graph Never Continues'
@@ -886,7 +882,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
                            if (ref := getattr(line, 'reference', None)) and ref.get('node')}
         for part in node.get('_foldedNodes', [node]):
             for field, target in node_references(part, document.get('pinTemplates', {})):
-                if view != 'full' and (is_type_reference(field) or is_implicit_target(part, document.get('pinTemplates', {}), field)):
+                if is_type_reference(field) or is_implicit_target(part, document.get('pinTemplates', {}), field):
                     continue
                 if reference_package(target) == owner or (part['id'], field, target) in seen_references:
                     continue
@@ -938,7 +934,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         escape(part['name']) + '</tspan></a>' if 'href' in part else '<tspan>' + escape(part['name']) + '</tspan>'
         for part in title_parts)
     pieces.append(f'<text class="graph-title" x="40" y="34" font-size="22" font-weight="600" aria-label="Graph hierarchy">{title_markup}</text>')
-    pieces.append(f'<text x="40" y="59" font-size="12">{view} · {direction} · {len(nodes)} / {len(all_nodes)} nodes · {len(edges)} / {len(all_edges)} links · source unchanged</text>')
+    pieces.append(f'<text x="40" y="59" font-size="12">Group chains: {"on" if group_chains else "off"} · Expressions: {"on" if expressions else "off"} · {direction} · {len(nodes)} / {len(all_nodes)} nodes · {len(edges)} / {len(all_edges)} links · source unchanged</text>')
     pieces.append('<g class="graph-legend" role="group" aria-label="Node and link legend">')
     for x, label, color in ((40, 'Entry / event', '#dce9fc'), (197, 'Execution step', '#f7e9d7'), (354, 'Data / other', '#e8edf4')):
         pieces.append(f'<rect x="{x}" y="73" width="145" height="36" rx="8" fill="{color}" stroke="#8b9bae" stroke-width="1.5"/><text x="{x+72.5}" y="96" text-anchor="middle" font-size="13" font-weight="600">{label}</text>')
@@ -947,7 +943,7 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     pieces.append('</g>')
     pieces.append('<text x="40" y="133" font-size="12">Structural view only. Timers / indirect calls are not inferred. Details button: node data. Hover arrows: pin details.</text>')
     pieces.append('<text x="40" y="154" font-size="12">Unconnected pin defaults are marked as defaults, not runtime results. Details retains raw fields.</text>')
-    pieces.append(f'<text x="40" y="175" font-size="12">Hidden: {len(hidden)} disabled / Self nodes, {hidden_links} incident links. Folded: {folded} nodes into {"expressions" if view == "expressions" else "chains"}; see Details / Full.</text>')
+    pieces.append(f'<text x="40" y="175" font-size="12">Folded: {folded} nodes. Disable grouping and expressions to expand all nodes; originals remain in Details.</text>')
     declarations = document.get("variables", [])
     if declarations:
         declaration_text = "Variables: " + ", ".join(variable_label(v) for v in declarations)
@@ -1122,11 +1118,17 @@ def main():
     parser.add_argument('--before', type=Path, help='Original compact source for review Before details and removed nodes')
     parser.add_argument('--asset-context', type=Path, help='Tool-owned asset roles and preview links; never part of editable BPT')
     parser.add_argument('--graph-context', type=Path, help='Tool-owned nested navigation; never part of editable BPT')
-    parser.add_argument("--view", choices=VIEW_MODES, default="simplified")
+    parser.add_argument("--view", choices=VIEW_MODES, default="simplified", help='Legacy presentation preset; explicit options take precedence')
+    parser.add_argument('--group-chains', action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument('--expressions', action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--direction", choices=("TB", "LR"), default="TB", help="Top-to-bottom (default) or left-to-right")
     parser.add_argument('--columns', type=int, choices=range(1, 13), default=8,
                         help='Target row width in node widths; connected fragments stay intact')
     args = parser.parse_args()
+    group, expressions = VIEW_OPTIONS[args.view]
+    group = group if args.group_chains is None else args.group_chains
+    expressions = expressions if args.expressions is None else args.expressions
+    args.view = next(key for key, options in VIEW_OPTIONS.items() if options == (group, expressions))
     try:
         if args.output.suffix.lower() != ".svg":
             raise ValueError("--output must end in .svg")
@@ -1169,16 +1171,17 @@ def main():
 <style>body{margin:0;background:#f8fafc;font:14px 'Segoe UI',sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr}nav{padding:10px 18px;background:#fff;border-bottom:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,select{padding:6px 10px}main{overflow:auto;min-height:0;position:relative}svg{display:block}</style>
 <style>.graph-node{cursor:pointer}.graph-node:focus-visible{outline:none}.graph-node:focus-visible>rect{stroke:#1d4ed8;stroke-width:3}svg.has-selection .graph-node:not(.selected):not(.neighbor),svg.has-selection .graph-edge:not(.related):not(.inspected):not(:hover){opacity:.16}.graph-node.selected,.graph-node.neighbor{opacity:1}.graph-node.selected>rect{stroke:#1d4ed8;stroke-width:4}.graph-node.neighbor>rect{stroke-width:2.5}.graph-edge.related>.edge-line,.graph-edge.inspected>.edge-line{stroke-width:3.5}.graph-edge.inspected{opacity:1}.hint{color:#52657a;font-size:12px}.copy-node-id{cursor:copy}.node-info{cursor:pointer}.copy-node-id:hover>rect,.copy-node-id:focus>rect,.node-info:hover>rect,.node-info:focus>rect{fill:#dbeafe;stroke:#1d4ed8}.copy-node-id:focus,.node-info:focus{outline:none}#edge-tooltip{position:fixed;z-index:30;max-width:min(440px,calc(100vw - 24px));max-height:60vh;overflow:auto;padding:10px 12px;border:1px solid #94a3b8;border-radius:6px;background:#fff;box-shadow:0 4px 18px #20334b33;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.5 Consolas,monospace}#copy-status{font-size:12px;color:#17614b}#node-details{position:absolute;z-index:20;width:min(520px,calc(100vw - 24px));max-height:70vh;overflow:auto;background:#fff;border:1px solid #94a3b8;border-radius:8px;box-shadow:0 6px 28px #20334b44;user-select:text}#node-details[hidden]{display:none}.detail-toolbar{position:sticky;top:0;display:flex;gap:6px;background:#f1f5f9;padding:8px;border-bottom:1px solid #cbd5e1}#close-details{margin-left:auto}#detail-ids{padding:10px 12px 0;overflow-wrap:anywhere;font-weight:600}#detail-text{margin:0;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 Consolas,monospace;cursor:text}</style>
 <style>.detail-row{display:block;min-height:1.5em}.detail-mark{display:inline-block;width:1.5em;user-select:none}.detail-changed{color:#7c3aed}.detail-added{color:#15803d}.detail-removed{color:#b42318;text-decoration:line-through}.detail-technical{color:#64748b}</style>
-<nav><label>View <select id="view" onchange="choose()"><option value="simplified">Simplified</option><option value="full">Full</option><option value="expressions">Expressions</option></select></label>
-<label>Direction <select id="direction" onchange="choose()"><option value="TB">Top to bottom</option><option value="LR">Left to right</option></select></label>
+<nav><label>Direction <select id="direction" onchange="choose()"><option value="TB">Top to bottom</option><option value="LR">Left to right</option></select></label>
 <button onclick="zoom(.8)" aria-label="Zoom out">−</button><button onclick="zoom(1.25)" aria-label="Zoom in">+</button><button onclick="fit()">Fit width</button><button onclick="fit(true)">Fit graph</button>
 <label>Row width (nodes) <input id="nodes-per-row" type="number" min="1" max="12" step="1" value="8" style="width:4em;padding:6px" onchange="changeColumns()" title="Target row width. Connected fragments stay together, even when wider."></label>
-<label title="Show unconnected outputs on every node, including execution branches and output defaults."><input id="unconnected" type="checkbox" checked onchange="changeUnconnected()">Show unconnected</label>
+<label title="Group exclusive data chains and linear actions into numbered steps."><input id="group-chains" type="checkbox" checked onchange="choose()">Group chains</label>
+<label title="Show supported pure calculations as formulas. Can be combined with chain grouping."><input id="expressions" type="checkbox" onchange="choose()">Show expressions</label>
+<label title="Show unconnected outputs on every node, including execution branches and output defaults."><input id="unconnected" type="checkbox" onchange="changeUnconnected()">Show unconnected</label>
 <style>svg.hide-unconnected [data-unconnected-output="true"]{display:none}svg.hide-unconnected [data-card-row]{transform:translateY(var(--compact-dy,0px))}</style>
 <span id="copy-status" role="status" aria-live="polite"></span></nav><main>''' + sections + '''
 <aside id="node-details" hidden aria-label="Node details"><div class="detail-toolbar"><select id="detail-version" aria-label="Details version" hidden><option>After</option><option>Before</option></select><button id="copy-detail-ids">Copy IDs</button><button id="copy-details">Copy contents</button><button id="close-details" aria-label="Close details">×</button></div><div id="detail-ids"></div><pre id="detail-text" tabindex="0"></pre></aside></main><div id="edge-tooltip" role="tooltip" hidden></div>
 <script>''' + (Path(__file__).with_name('graph_layout.js').read_text(encoding='utf-8')) + '\n' + (Path(__file__).with_name('graph_viewer.js').read_text(encoding='utf-8')) + '''
-''' + f'view.value="{args.view}";direction.value="{args.direction}";' + '''restoreViewerState();</script></html>'''
+''' + f'groupChains.checked={str(group).lower()};showExpressions.checked={str(expressions).lower()};direction.value="{args.direction}";' + '''restoreViewerState();</script></html>'''
         page = page.replace('step="1" value="8"', f'step="1" value="{args.columns}"', 1)
         if has_review:
             page = page.replace('>Show unconnected</label>', '>Show unconnected</label>\n<label title="Turn off to see only the final graph, without review marks or removed nodes."><input id="show-changes" type="checkbox" checked onchange="changeReview()">Show changes</label>', 1)

@@ -1,12 +1,13 @@
 // Embedded in generated HTML; no external scripts or network dependencies.
-const box=document.querySelector('main'),view=document.getElementById('view'),direction=document.getElementById('direction');
+const box=document.querySelector('main'),direction=document.getElementById('direction');
+const groupChains=document.getElementById('group-chains'),showExpressions=document.getElementById('expressions');
+function presentationKey(){return showExpressions.checked?(groupChains.checked?'combined':'expressions'):(groupChains.checked?'simplified':'full')}
 const tip=document.getElementById('node-details'),detailText=document.getElementById('detail-text');
 const detailIds=document.getElementById('detail-ids'),status=document.getElementById('copy-status');
 const edgeTip=document.getElementById('edge-tooltip');
 const detailVersion=document.getElementById('detail-version');
 const rowCapacity=document.getElementById('nodes-per-row');
 const showUnconnected=document.getElementById('unconnected');
-const unconnectedByView={};
 const showChanges=document.getElementById('show-changes');
 const callersMenu=document.getElementById('caller-menu');
 let callerButton=null;
@@ -31,7 +32,7 @@ let restoringState=true,stateTimer;
 function saveViewerState(){
     if(restoringState||!svg)return;
     clearTimeout(stateTimer);
-    const state={v:view.value,d:direction.value,c:normalizeColumns(rowCapacity.value),
+    const state={g:groupChains.checked,e:showExpressions.checked,d:direction.value,c:normalizeColumns(rowCapacity.value),
         u:showUnconnected.checked,r:showChanges?showChanges.checked:true,
         z:scale,x:box.scrollLeft,y:box.scrollTop,n:selectedId};
     // Per history entry: two visits to the same graph may have different views.
@@ -42,10 +43,11 @@ function restoreViewerState(){
     restoringState=true;
     const state=history.state?.bptGraph;
     if(state){
-        if(['simplified','full','expressions'].includes(state.v))view.value=state.v;
+        if(typeof state.g==='boolean')groupChains.checked=state.g;
+        if(typeof state.e==='boolean')showExpressions.checked=state.e;
         if(['TB','LR'].includes(state.d))direction.value=state.d;
         rowCapacity.value=String(normalizeColumns(state.c));
-        if(typeof state.u==='boolean')unconnectedByView[view.value]=state.u;
+        if(typeof state.u==='boolean')showUnconnected.checked=state.u;
         if(showChanges&&typeof state.r==='boolean')showChanges.checked=state.r;
     }else if(showChanges&&new URL(location.href).searchParams.get('r')==='0')showChanges.checked=false;
     choose();
@@ -65,9 +67,9 @@ function focusLinkedNode(){
     // A call may be a member of a folded action chain in the selected view.
     const find=target=>[...graphIndex(target).nodes.values()].find(e=>JSON.parse(e.node.dataset.nodeIds).includes(id));
     let entry=find(svg);
-    if(!entry&&view.value!=='full'){
+    if(!entry&&presentationKey()!=='full'){
         const full=document.getElementById((showChanges&&!showChanges.checked?'final-':'')+'full-'+direction.value).querySelector('svg');
-        if(find(full)){view.value='full';choose();entry=find(svg)}
+        if(find(full)){groupChains.checked=false;showExpressions.checked=false;choose();entry=find(svg)}
     }
     if(!entry)return;
     highlight(entry.node.dataset.nodeId);
@@ -99,7 +101,6 @@ function changeReview(){
     box.scrollLeft=x;box.scrollTop=y;saveViewerState();
 }
 function changeUnconnected(){
-    unconnectedByView[view.value]=showUnconnected.checked;
     const selected=graphIndex(svg).selected;
     closeDetails();svg.classList.toggle('hide-unconnected',!showUnconnected.checked);
     applyRowLayout(svg,rowCapacity.value,showUnconnected.checked);
@@ -248,8 +249,7 @@ document.querySelectorAll('.graph-node').forEach(node=>{
 });
 function choose(){
     if(svg)highlight(null);
-    showUnconnected.checked=unconnectedByView[view.value]??(view.value==='full');
-    closeDetails();const id=(showChanges&&!showChanges.checked?'final-':'')+view.value+'-'+direction.value;
+    closeDetails();const id=(showChanges&&!showChanges.checked?'final-':'')+presentationKey()+'-'+direction.value;
     document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==id);
     svg=document.getElementById(id).querySelector('svg');
     changeUnconnected();

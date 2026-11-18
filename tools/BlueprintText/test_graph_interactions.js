@@ -45,10 +45,13 @@ const allSections = [...page.matchAll(/<section id="([^"]+)"[^>]*>([\s\S]*?)<\/s
     return {id, nodes, edges, svg, querySelector: () => svg};
 });
 const sections=allSections.filter(s=>!s.id.startsWith('final-'));
-assert.equal(sections.length, 6);
-const handlers = {}, view = {value: ''}, direction = {value: ''};
-const ui=Object.fromEntries(['unconnected','nodes-per-row','detail-version','node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
-ui['unconnected'].checked=true;
+assert.equal(sections.length, 8);
+const handlers = {}, direction = {value: ''};
+const ui=Object.fromEntries(['group-chains','expressions','unconnected','nodes-per-row','detail-version','node-details','detail-text','detail-ids','copy-status','copy-detail-ids','copy-details','close-details','edge-tooltip'].map(id=>[id,element()]));
+ui['unconnected'].checked=false;
+// Use preset names only as a test helper for the independent checkbox pairs.
+const view={get value(){return ui.expressions.checked?(ui['group-chains'].checked?'combined':'expressions'):(ui['group-chains'].checked?'simplified':'full')},
+    set value(key){ui['group-chains'].checked=['simplified','combined'].includes(key);ui.expressions.checked=['expressions','combined'].includes(key)}};
 if(page.includes('id="show-changes"')){ui['show-changes']=element();ui['show-changes'].checked=true}
 if(page.includes('id="caller-menu"')){
     const menu=ui['caller-menu']=element(),link=element();
@@ -71,7 +74,7 @@ const document = {
     execCommand(){if(fallbackFails)return false;clipboard=textarea.value;return true},
     querySelector: () => box,
     querySelectorAll: selector => selector === 'section' ? allSections : allSections.flatMap(s => s.nodes),
-    getElementById: id => id === 'view' ? view : id === 'direction' ? direction : ui[id] || allSections.find(s => s.id === id),
+    getElementById: id => id === 'direction' ? direction : ui[id] || allSections.find(s => s.id === id),
     addEventListener: (event, fn, capture) => {handlers[(capture?'capture-':'')+event] = fn},
 };
 const windowHandlers={},history={state:{unrelated:'keep'},replaceState(state){this.state=structuredClone(state)}};
@@ -80,13 +83,15 @@ const context = vm.createContext({document,window:{addEventListener(event,fn){wi
     history,location,URL,setTimeout,clearTimeout,
     navigator:{clipboard:{async writeText(text){if(clipboardFails)throw new Error('denied');clipboard=text}}}});
 vm.runInContext(page.match(/<script>([\s\S]*?)<\/script>/)[1], context);
-assert.equal(ui.unconnected.checked,false,'Simplified starts without unused outputs');
-view.value='full';context.choose();assert.equal(ui.unconnected.checked,true,'Full starts with unused outputs');
-view.value='expressions';context.choose();assert.equal(ui.unconnected.checked,false,'Expressions starts without unused outputs');
+assert.equal(ui.unconnected.checked,false,'Unused outputs start hidden');
+for(const key of ['full','expressions','combined']){
+    view.value=key;context.choose();assert.equal(ui.unconnected.checked,false,'Presentation options must not enable unused outputs');
+}
 view.value='simplified';context.choose();
 ui.unconnected.checked=true;context.changeUnconnected();
-view.value='full';context.choose();
-view.value='simplified';context.choose();assert.equal(ui.unconnected.checked,true,'Explicit filter choice survives view switching');
+for(const key of ['full','expressions','combined','simplified']){
+    view.value=key;context.choose();assert.equal(ui.unconnected.checked,true,'Explicit filter choice survives every option combination');
+}
 const background = {closest: () => null};
 if(ui['caller-menu']){
     const menu=ui['caller-menu'],button=element();
@@ -116,7 +121,7 @@ if(ui['caller-menu']){
 {
     const initialView=view.value,initialDirection=direction.value;
     const full=sections.find(s=>s.id==='full-TB'),target=full.nodes.at(-1),originalIds=target.dataset.nodeIds;
-    // Simulate a source node represented only in Full, not in the simplified view.
+    // Simulate an ID only available in the fully expanded source topology.
     target.dataset.nodeIds=JSON.stringify([...JSON.parse(originalIds),'hidden search target']);
     view.value='simplified';direction.value='TB';context.choose();history.state=null;
     location.href='file:///preview/graph.html#node-hidden%20search%20target';context.focusLinkedNode();
@@ -195,7 +200,7 @@ for (const section of sections) {
     context.fit(true); assert.ok(parseFloat(section.svg.style.height) <= box.clientHeight);
     forbidGraphScan=false;
 }
-console.log('Passed: incoming/outgoing links, immediate neighbors, all clear actions, keyboard, view reset, zoom/fit in all six variants (DOM stand-in).');
+console.log('Passed: incoming/outgoing links, immediate neighbors, clear actions, keyboard, option reset, zoom/fit in all eight variants (DOM stand-in).');
 // A large sparse graph must touch only the selected neighborhood after indexing.
 {
     const nodes=Array.from({length:5000},(_,i)=>element({nodeId:String(i)}));
@@ -292,7 +297,7 @@ for(const [value,expected] of [['6','6'],['0','1'],['30','12'],['','8']]){
     assert.ok(node.querySelector('title').removed,'Replace native unselectable tooltip');
     assert.match(page, /#node-details\{position:absolute;/);
     assert.match(page, /<aside id="node-details"[\s\S]*<\/aside><\/main>/);
-    for(const mode of ['full','expressions']){
+    for(const mode of ['full','expressions','combined']){
     history.state={...history.state,unrelated:'keep'};
     if(ui['show-changes'])ui['show-changes'].checked=true;
     view.value=mode;direction.value='LR';ui['nodes-per-row'].value='5';

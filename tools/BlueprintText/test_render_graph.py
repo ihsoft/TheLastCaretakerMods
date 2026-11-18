@@ -426,9 +426,9 @@ class GraphRenderingTests(unittest.TestCase):
             svg = ET.fromstring(render(document, view=view)[0])
             labels = ' '.join(visible_text(t) for t in svg.findall('.//{*}text'))
             self.assertNotIn('Input: target', labels)
-            self.assertEqual('Default__BFL_Test_C' in labels, view == 'full')
+            self.assertNotIn('Default__BFL_Test_C', labels)
 
-    def test_getter_chain_keeps_type_references_in_details_and_full(self):
+    def test_getter_chain_keeps_type_references_in_details_only(self):
         rule = '/Game/Settings/BP_Rule.BP_Rule_C'
         document = {'schema': 1, 'asset': '/Game/Test', 'pinTemplates': {
             'rule': {'PinType.PinCategory': '"object"', 'PinType.PinSubCategoryObject': rule},
@@ -447,8 +447,8 @@ class GraphRenderingTests(unittest.TestCase):
             with self.subTest(view=view):
                 svg = ET.fromstring(render(document, view=view)[0])
                 labels = ' '.join(visible_text(t) for t in svg.findall('.//{*}text'))
-                self.assertEqual('PinType.PinSubCategoryObject' in labels, view == 'full')
-                self.assertEqual('VariableReference' in labels, view == 'full')
+                self.assertNotIn('PinType.PinSubCategoryObject', labels)
+                self.assertNotIn('VariableReference', labels)
                 card = svg.find('.//{*}g[@data-node-id="ReadSocketName"]')
                 details = json.loads(card.find('{*}title').text)
                 parts = details.get('_foldedNodes', [details])
@@ -470,6 +470,30 @@ class GraphRenderingTests(unittest.TestCase):
         self.assertEqual(details['Before']['node']['_typeReferences'][0]['target'], '/Game/Old.Old_C')
         self.assertEqual(details['After']['node']['_typeReferences'][0]['target'], rule)
         self.assertEqual(document, original)
+
+    def test_entry_signature_hides_duplicate_type_but_preserves_custom_default_reference(self):
+        target = '/Game/UI/WBP_Hud.WBP_Hud_C'
+        chosen = '/Game/UI/DA_Theme.DA_Theme'
+        custom = ('CustomProperties UserDefinedPin (PinName="Hud",'
+                  f'PinType=(PinCategory="object",PinSubCategoryObject="{target}"),'
+                  f'PinDefaultValue="{chosen}",DesiredPinDirection=EGPD_Output)')
+        doc = {'schema': 1, 'pinTemplates': {'hud': {
+            'PinType.PinCategory': '"object"', 'PinType.PinSubCategoryObject': target}},
+            'nodes': [{'id': 'entry', 'kind': 'FunctionEntry',
+                       'pins': {'out:Hud': {'type': 'hud'}}, 'custom': [custom]}], 'links': []}
+        original = copy.deepcopy(doc)
+        for view in ('simplified', 'full', 'expressions'):
+            with self.subTest(view=view):
+                svg = ET.fromstring(render(doc, view=view)[0])
+                labels = ' '.join(visible_text(t) for t in svg.findall('.//{*}text'))
+                self.assertIn('Parameter: Hud (WBP_Hud_C reference)', labels)
+                self.assertNotIn('PinType', labels)
+                self.assertNotIn('WBP_Hud.WBP_Hud_C', labels)
+                self.assertIn('DA_Theme.DA_Theme', labels)
+                details = json.loads(svg.find('.//{*}g[@data-node-id="entry"]/{*}title').text)
+                self.assertEqual(details['custom'], [custom])
+                self.assertIn({'field': 'custom / 0 / PinType', 'target': target}, details['_typeReferences'])
+        self.assertEqual(doc, original)
 
     def test_folded_step_titles_wrap_once_at_body_width(self):
         templates = {'number': {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'}}
@@ -661,7 +685,7 @@ class GraphRenderingTests(unittest.TestCase):
                 self.assertEqual(first[2:], (4, 3))
         self.assertEqual(self.example, original)
 
-    def test_hidden_nodes_do_not_create_bypass_links(self):
+    def test_self_and_disabled_nodes_keep_authored_topology(self):
         document = {'schema': 1, 'nodes': [
             {'id': 'start', 'kind': 'event'},
             {'id': 'off', 'kind': 'sequence', 'enabled': False},
@@ -672,16 +696,17 @@ class GraphRenderingTests(unittest.TestCase):
             {'from': 'off.then', 'to': 'self.result.exec'},
             {'from': 'self.result', 'to': 'self.result.target'},
         ]}
-        simplified = render(document)
-        self.assertEqual(simplified[2:], (2, 0))
-        self.assertIn('Self (hidden)', simplified[0])
-        self.assertIn('disabled node (hidden)', simplified[0])
-        self.assertEqual(render(document, view='full')[2:], (4, 3))
+        for group in (False, True):
+            for expressions in (False, True):
+                result = render(document, group_chains=group, expressions=expressions)
+                self.assertEqual(result[2:], (4, 3))
+                self.assertIn('DISABLED', result[0])
+                self.assertNotIn('(hidden)', result[0])
         document['links'].append({'from': 'off.then', 'to': 'missing.exec'})
         with self.assertRaisesRegex(ValueError, 'Unresolved'):
             render(document)
 
-    def test_cycles_and_empty_simplified_graph(self):
+    def test_cycles_remain_visible_when_disabled(self):
         document = {'schema': 1, 'nodes': [{'id': 'loop', 'kind': 'sequence'}],
                     'links': [{'from': 'loop.then', 'to': 'loop.exec'}]}
         for direction in ('TB', 'LR'):
@@ -689,7 +714,7 @@ class GraphRenderingTests(unittest.TestCase):
             ET.fromstring(result[0])
             self.assertEqual(result[2:], (1, 1))
         document['nodes'][0]['enabled'] = False
-        self.assertEqual(render(document)[2:], (0, 0))
+        self.assertEqual(render(document)[2:], (1, 1))
 
     def test_labels_are_escaped(self):
         self.example['graphs'][0]['body']['nodes'][0]['comment'] = '<script>alert("x")</script>'
@@ -763,7 +788,7 @@ class GraphRenderingTests(unittest.TestCase):
             self.assertIn('Branch: then1 — unconnected', labels)
             self.assertNotIn('Branch: then0 — unconnected', labels)
             self.assertIn('Output: result — unconnected', [visible_text(n) for n in ET.fromstring(text).findall('.//{*}text')])
-            self.assertEqual(links, 0 if view == 'simplified' else 1)
+            self.assertEqual(links, 1)
 
     def test_input_parameters_precede_output_types(self):
         node = {'id': 'calculate', 'kind': 'call', 'operation': 'Calculate',
@@ -994,7 +1019,7 @@ class GraphRenderingTests(unittest.TestCase):
         self_doc = copy.deepcopy(document)
         self_doc['nodes'] = self_nodes
         self_doc['links'].append({'from': 'self.out:result', 'to': 'first.in:target'})
-        self.assertEqual(render(self_doc)[2], 4)  # Self hidden, two actions folded.
+        self.assertEqual(render(self_doc)[2], 5)  # Self remains explicit, two actions folded.
         # Merges, multiple execution outputs (even unwired), and cycles are boundaries.
         merge = edges + [('event', 'then', 'second', 'exec', True)]
         self.assertEqual(fold_chains(nodes, merge, merge, templates, mode='action')[2], 0)
@@ -1032,7 +1057,7 @@ class GraphRenderingTests(unittest.TestCase):
             page = output.with_suffix('.html').read_text(encoding='utf-8')
             self.assertIn('<html lang="en">', page)
             self.assertNotRegex(page, r'[\u0400-\u04ff]')
-            for view in ('simplified', 'full', 'expressions'):
+            for view in ('simplified', 'full', 'expressions', 'combined'):
                 for direction in ('TB', 'LR'):
                     self.assertIn(f'id="{view}-{direction}"', page)
             self.assertNotIn('<script src=', page)

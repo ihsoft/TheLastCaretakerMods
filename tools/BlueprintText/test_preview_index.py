@@ -110,7 +110,7 @@ class PreviewIndexTests(unittest.TestCase):
         generate(manifest, self.root / 'markers')
         page = (self.root / 'markers/blueprint-000/graph-000.html').read_text(encoding='utf-8')
         sections = re.findall(r'<section id="([^"]+)"[^>]*>(.*?)</section>', page, re.S)
-        self.assertEqual(len(sections), 12)
+        self.assertEqual(len(sections), 16)
         all_markers = re.findall(r'<marker id="([^"]+)"', page)
         self.assertEqual(len(all_markers), len(set(all_markers)), 'SVG IDs must be unique across hidden variants')
         for name, section in sections:
@@ -138,8 +138,8 @@ class PreviewIndexTests(unittest.TestCase):
         self.assertRegex(page, r'>Show unconnected</label>\s*<label[^>]*><input id="show-changes"')
         self.assertNotIn('Click node: highlight.', page)
         sections = dict(re.findall(r'<section id="([^"]+)"[^>]*>(.*?)</section>', page, re.S))
-        self.assertEqual(len(sections), 12)
-        for view in ('simplified', 'full', 'expressions'):
+        self.assertEqual(len(sections), 16)
+        for view in ('simplified', 'full', 'expressions', 'combined'):
             for direction in ('TB', 'LR'):
                 review = sections[f'{view}-{direction}']
                 final = sections[f'final-{view}-{direction}']

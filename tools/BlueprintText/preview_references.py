@@ -1,6 +1,7 @@
 """Locate literal asset references in editable BPT fields, not registry dependencies."""
 import re
 import call_arguments
+from asset_text_codec import fields as native_fields
 
 ASSET_PATH = re.compile(r'/[A-Za-z0-9_]+(?:/[A-Za-z0-9_]+)+(?:\.[A-Za-z0-9_]+)?')
 
@@ -21,6 +22,19 @@ def references(value, location=()):
 
 def node_references(node, templates):
     fields = {k: v for k, v in node.items() if not k.startswith('_') and k not in ('id', 'kind', 'comment')}
+    # User-defined pin declarations duplicate signature types, but may also
+    # contain meaningful defaults. Keep those fields distinct for presentation.
+    if 'custom' in fields:
+        custom = []
+        for text in fields['custom']:
+            prefix, separator, payload = text.partition(' (') if isinstance(text, str) else ('', '', '')
+            if prefix == 'CustomProperties UserDefinedPin' and separator and payload.endswith(')'):
+                try:
+                    text = native_fields(payload[:-1])
+                except ValueError:
+                    pass  # Unrecognized declarations retain their literal references.
+            custom.append(text)
+        fields['custom'] = custom
     fields['pins'] = {name: dict(templates.get(pin.get('type'), {}), **pin)
                       for name, pin in node.get('pins', {}).items()}
     return references(fields)
@@ -30,6 +44,7 @@ def is_type_reference(field):
     """Signature/owner metadata, distinct from a chosen asset or class value."""
     parts = field.split(' / ')
     return (len(parts) >= 3 and parts[0] == 'pins' and parts[2].startswith('PinType.')) or (
+        len(parts) == 3 and parts[0] == 'custom' and parts[2] == 'PinType') or (
         parts[0] == 'properties' and len(parts) == 2 and parts[1] in (
             'VariableReference', 'FunctionReference', 'EventReference', 'DelegateReference'))
 

@@ -379,7 +379,35 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(details['Before']['Nodes']['sub']['node']['defaults']['in:B'],'0.5')
         self.assertEqual(details['After']['Nodes']['sub']['node']['defaults']['in:B'],'0.75')
 
-    def test_html_contains_mode_in_all_review_variants(self):
+    def test_expressions_and_chain_grouping_compose_without_losing_source_nodes(self):
+        doc = fixture()
+        doc['nodes'] += [
+            dict(id='self', kind='self', pins={'out:result': {'type':'double'}}),
+            read('owner', 'Owner'), read('field', 'Field'),
+            *[dict(id=n, kind='call', operation=n, pins={
+                'in:exec': {'type':'exec'}, 'out:then': {'type':'exec'}}) for n in ('first','second','off')]]
+        doc['nodes'][-1]['enabled'] = False
+        doc['links'] += [{'from':a, 'to':b} for a,b in (
+            ('self.out:result','owner.in:target'), ('owner.out:result','field.in:target'),
+            ('first.out:then','second.in:exec'), ('second.out:then','off.in:exec'))]
+        original = copy.deepcopy(doc)
+        for grouping in (False,True):
+            for expressions in (False,True):
+                for direction in ('TB','LR'):
+                    with self.subTest(grouping=grouping, expressions=expressions, direction=direction):
+                        svg=ET.fromstring(render(doc,group_chains=grouping,expressions=expressions,direction=direction)[0])
+                        cards=[json.loads(g.find('{*}title').text) for g in svg.findall('.//{*}g[@class="graph-node"]')]
+                        parts=[p for c in cards for p in c.get('_foldedNodes',[c])]
+                        self.assertCountEqual([p['id'] for p in parts],[n['id'] for n in doc['nodes']])
+                        self.assertTrue(all('_foldedNodes' not in p for p in parts))
+                        self.assertEqual(any(c.get('_chainKind')=='action' for c in cards),grouping)
+                        self.assertEqual(any(c.get('_chainKind')=='data' for c in cards),grouping)
+                        self.assertEqual(any('_formula' in c for c in cards),expressions)
+                        self.assertIn('self',[c['id'] for c in cards])
+                        self.assertIn('off',[c['id'] for c in cards])
+        self.assertEqual(doc,original)
+
+    def test_html_contains_options_in_all_review_variants(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);source=root/'source.json';old=root/'old.json';review=root/'review.json'
             doc=fixture();old.write_text(json.dumps(doc),encoding='utf-8')
@@ -388,11 +416,13 @@ class ExpressionTests(unittest.TestCase):
             subprocess.run([sys.executable,'-B',str(Path(__file__).with_name('render_graph.py')),str(source),
                             '--output',str(root/'graph.svg'),'--before',str(old),'--review',str(review)],check=True,capture_output=True)
             page=(root/'graph.html').read_text(encoding='utf-8')
-            self.assertIn('<option value="expressions">Expressions</option>',page)
+            self.assertTrue('id="expressions" type="checkbox"' in page)
+            self.assertTrue('id="group-chains" type="checkbox"' in page)
+            self.assertFalse('id="view"' in page)
             for prefix in ('','final-'):
                 for direction in ('TB','LR'):
-                    self.assertIn('id="'+prefix+'expressions-'+direction+'"',page)
-            self.assertIn("['simplified','full','expressions'].includes(state.v)",page)
+                    for key in ('full','simplified','expressions','combined'):
+                        self.assertTrue('id="'+prefix+key+'-'+direction+'"' in page)
 
 
 if __name__ == '__main__':
