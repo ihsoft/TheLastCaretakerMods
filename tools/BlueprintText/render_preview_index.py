@@ -129,11 +129,11 @@ def plan(manifest):
     return data, entries
 
 
-def graph_preview(document, name, directory, stem, marks=None, before=None, asset_context=None, navigation=None):
+def graph_preview(document, name, directory, stem, marks=None, before=None, asset_context=None, navigation=None, columns=8):
     source = directory / f'{stem}.json'
     write(source, document)
     command = [sys.executable, '-B', str(Path(__file__).with_name('render_graph.py')),
-               str(source), '--graph', name, '--output', str(directory / f'{stem}.svg')]
+               str(source), '--graph', name, '--output', str(directory / f'{stem}.svg'), '--columns', str(columns)]
     if asset_context:
         command += ['--asset-context', str(asset_context)]
     if navigation:
@@ -242,7 +242,7 @@ def searchable_nodes(document, pages, directory, snapshot):
     return result
 
 
-def generate(manifest, output):
+def generate(manifest, output, columns=8):
     data, entries = plan(manifest)
     reviewing = any(entry['status'] != 'unchanged' for entry in entries)
     output = Path(output).resolve()
@@ -344,7 +344,7 @@ def generate(manifest, output):
             navigation['beforeCalls'] = resolve_calls(old, name, graph_catalog['before']) if before else {}
             snapshot = 'source' if name in current_graphs else 'before'
             navigation['callers'] = callers[snapshot].get((entry['asset'], name), [])
-            target = graph_preview(after, name, directory, f'graph-{index:03d}', marks, before, asset_context_path, navigation)
+            target = graph_preview(after, name, directory, f'graph-{index:03d}', marks, before, asset_context_path, navigation, columns)
             links = link(target, caption)
             if graph_status:
                 caption_status = ('Nested changes' if graph_status == 'changed' and not navigation['localChanged']
@@ -358,7 +358,7 @@ def generate(manifest, output):
                 before_navigation['calls'] = navigation['beforeCalls']
                 before_navigation['callers'] = callers['before'].get((entry['asset'], name), [])
                 target = graph_preview(before, name, directory, f'graph-{index:03d}-before', asset_context=asset_context_path,
-                    navigation=before_navigation)
+                    navigation=before_navigation, columns=columns)
                 if navigation['comparisonAvailable'] and (navigation['changed'] or navigation.get('movedFrom')):
                     links += ' · ' + link(target, 'Before')
             counted = current_graphs.get(name, old_graphs.get(name))['body']
@@ -419,9 +419,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('manifest', type=Path)
     parser.add_argument('--output', required=True, type=Path, help='New or empty preview directory')
+    parser.add_argument('--columns', type=int, choices=range(1, 13), default=8,
+                        help='Initial target row width in node widths; fragments stay intact')
     args = parser.parse_args()
     try:
-        result = generate(args.manifest, args.output)
+        result = generate(args.manifest, args.output, args.columns)
         print(json.dumps({k: v for k, v in result.items() if k != 'items'}))
     except (ValueError, TypeError, KeyError, OSError, StopIteration) as exc:
         parser.exit(2, f'Blueprint preview batch failed: {exc}\n')

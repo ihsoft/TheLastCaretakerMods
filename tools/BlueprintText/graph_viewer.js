@@ -6,6 +6,7 @@ const edgeTip=document.getElementById('edge-tooltip');
 const detailVersion=document.getElementById('detail-version');
 const rowCapacity=document.getElementById('nodes-per-row');
 const showUnconnected=document.getElementById('unconnected');
+const unconnectedByView={};
 const showChanges=document.getElementById('show-changes');
 const callersMenu=document.getElementById('caller-menu');
 let callerButton=null;
@@ -44,7 +45,7 @@ function restoreViewerState(){
         if(['simplified','full','expressions'].includes(state.v))view.value=state.v;
         if(['TB','LR'].includes(state.d))direction.value=state.d;
         rowCapacity.value=String(normalizeColumns(state.c));
-        if(typeof state.u==='boolean')showUnconnected.checked=state.u;
+        if(typeof state.u==='boolean')unconnectedByView[view.value]=state.u;
         if(showChanges&&typeof state.r==='boolean')showChanges.checked=state.r;
     }else if(showChanges&&new URL(location.href).searchParams.get('r')==='0')showChanges.checked=false;
     choose();
@@ -98,6 +99,7 @@ function changeReview(){
     box.scrollLeft=x;box.scrollTop=y;saveViewerState();
 }
 function changeUnconnected(){
+    unconnectedByView[view.value]=showUnconnected.checked;
     const selected=graphIndex(svg).selected;
     closeDetails();svg.classList.toggle('hide-unconnected',!showUnconnected.checked);
     applyRowLayout(svg,rowCapacity.value,showUnconnected.checked);
@@ -246,10 +248,10 @@ document.querySelectorAll('.graph-node').forEach(node=>{
 });
 function choose(){
     if(svg)highlight(null);
+    showUnconnected.checked=unconnectedByView[view.value]??(view.value==='full');
     closeDetails();const id=(showChanges&&!showChanges.checked?'final-':'')+view.value+'-'+direction.value;
     document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==id);
     svg=document.getElementById(id).querySelector('svg');
-    rowCapacity.disabled=direction.value!=='TB';
     changeUnconnected();
     highlight(null);box.scrollTop=0;box.scrollLeft=0;fit();
 }

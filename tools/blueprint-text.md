@@ -943,19 +943,33 @@ Full, Simplified and Expressions views and top-to-bottom/left-to-right direction
 `-View simplified -Direction TB`; `-Graph` selects a graph when needed. No model,
 network, engine, or catalogue call is involved. Input is never rewritten.
 
-In vertical HTML views, **Nodes per row** selects 1–12 nodes (default 3).
-Changing it rearranges the current graph locally and fits its width; the value
-is retained between all three views. Horizontal views disable this
-control. Standalone SVGs retain the default row capacity.
+**Row width (nodes)** selects a target width of 1–12 standard cards (default 8)
+in both directions. Changing it rearranges the current graph locally and fits
+its width; the value is retained between all three views. Connected fragments
+are laid out separately and packed into rows without splitting them. A fragment
+can exceed the target width. The lower-level `render_graph.py` and
+`render_preview_index.py` accept `--columns 8` to set the initial HTML and
+standalone SVG width; this changes presentation only.
 
-Nodes follow their upstream parents, prioritizing execution dependencies for
-action chains. Data computations sit near their earliest consumer rather than
-at the top of the graph; shared values remain single nodes. Cycles move together.
-Edges curve directly between ports; joins, cycles and wrapped
-rows can still cross. Incoming and outgoing ports place data left of execution
-in vertical views (above execution in horizontal views), with stable pin order.
-Links from the same output pin share one source point; distinct output pins
-keep separate points, including after browser layout changes.
+Primary execution chains align their execution ports, including when card sizes
+or data ports differ. Secondary branches keep execution pin order. Linear pure
+computations move together near their consumers without merging their cards;
+shared values remain single nodes. Data placement considers both producers and
+consumers, penalizes crossing execution, and revisits groups after their
+neighbors are placed. It does not force all data onto one side. Complex cycles
+and shared dependencies can still produce wide layouts and crossing wires.
+Unobstructed execution links curve directly between ports. Execution links that
+would intersect a card or its clearance margin use free orthogonal corridors
+with rounded bends, including back edges and self-loops. Data links retain
+ordinary curves and do not participate in obstacle avoidance; they can cross
+cards. The browser recalculates routing after changing direction, row width or
+visible output rows; standalone SVGs use the
+same routing rules. Wires can still cross or overlap other wires; routing does not
+separate every connection into its own lane. Incoming and outgoing ports place
+data left of execution in vertical views (above execution in horizontal views),
+with stable pin order.
+Links from the same pin share one endpoint; distinct pins keep separate points,
+including after browser layout changes.
 
 In HTML, click a node to highlight its incoming/outgoing links and immediate
 neighbors; unrelated elements dim and link colours retain their meaning.
@@ -965,14 +979,20 @@ links participate; use Full to include hidden technical nodes.
 
 **Show unconnected** controls unconnected output descriptions on every node,
 including execution branches, data types and output defaults, also inside folded
-steps. Connected outputs, input defaults and graph entry/exit signatures
+steps. In the HTML viewer it starts off in Simplified and Expressions, and on
+in Full. Each view remembers its own explicit choice while the page is open.
+Connected outputs, input defaults and graph entry/exit signatures
 remain visible. Unconnected advanced outputs are omitted when BPT declares
 `AdvancedPinDisplay=Hidden`; connected advanced outputs remain visible, and
 Details retains all source pins and defaults. Toggling **Show unconnected** resizes
 cards and reroutes links in both directions. A selected node is centered with
 the current zoom retained; without a selection the view resets and fits its width.
 
-Browser Back/Forward restores each graph visit's view, direction, row capacity,
+Custom event titles use the declared event name. Enhanced Input event titles
+use the referenced action name, omitting the conventional `IA_` / `IAV_` prefix;
+Details retains the exact name and reference. Both are colored as event entries.
+
+Browser Back/Forward restores each graph visit's view, direction, row width,
 unconnected-output filter, review mode, zoom, selected node and scroll position.
 The graph title shows the full nesting path: the Blueprint name links to the
 preview index and ancestor graph names link to their respective pages.
@@ -1231,6 +1251,9 @@ explicit false overrides, pure pins, a connected const-reference input, rejected
 missing-reference/latent cases, asset preservation after rejection and no-op Apply.
 These are editor checks, not gameplay acceptance.
 Offline renderer checks: `python -B tools/BlueprintText/test_render_graph.py`.
+Fragment packing and execution alignment checks:
+`python -B tools/BlueprintText/test_fragment_layout.py`.
+Wire routing checks: `python -B tools/BlueprintText/test_graph_routing.py`.
 Expression presentation checks: `python -B tools/BlueprintText/test_graph_expressions.py`.
 Batch index checks: `python -B tools/BlueprintText/test_preview_index.py`.
 Automatic structural comparison checks: `python -B tools/BlueprintText/test_graph_review.py`.
@@ -1247,8 +1270,13 @@ With Node.js available, run `node tools/BlueprintText/test_graph_interactions.js
 on HTML rendered from the division example to check selection, details, copying and viewer controls
 with a DOM stand-in (not a browser UI test).
 Run `node tools/BlueprintText/test_graph_layout.js <generated.html>`
-to check Python/browser geometry agreement, row capacities, port ordering and
-reversible hide/show layout updates in both directions on any generated preview.
+to check Python/browser geometry agreement, intact fragments, adjustable width,
+port ordering and reversible hide/show layout updates in both directions on any
+generated preview.
+Run `node tools/BlueprintText/test_graph_routing.js <generated.html>` to check
+execution-wire/card clearance through independent path sampling, ordinary data
+curves, Python/browser route agreement, both directions, compact/expanded cards
+and adjustable width.
 The schema-1 engine acceptance runner is
 `tools/BlueprintText/Test-BlueprintText.ps1 -OutputRoot <new directory below Tmp/BlueprintText>`
 with optional `-EngineRoot`. It builds an isolated project, checks compact and

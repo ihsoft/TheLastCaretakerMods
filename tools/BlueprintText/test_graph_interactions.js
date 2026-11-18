@@ -80,6 +80,13 @@ const context = vm.createContext({document,window:{addEventListener(event,fn){wi
     history,location,URL,setTimeout,clearTimeout,
     navigator:{clipboard:{async writeText(text){if(clipboardFails)throw new Error('denied');clipboard=text}}}});
 vm.runInContext(page.match(/<script>([\s\S]*?)<\/script>/)[1], context);
+assert.equal(ui.unconnected.checked,false,'Simplified starts without unused outputs');
+view.value='full';context.choose();assert.equal(ui.unconnected.checked,true,'Full starts with unused outputs');
+view.value='expressions';context.choose();assert.equal(ui.unconnected.checked,false,'Expressions starts without unused outputs');
+view.value='simplified';context.choose();
+ui.unconnected.checked=true;context.changeUnconnected();
+view.value='full';context.choose();
+view.value='simplified';context.choose();assert.equal(ui.unconnected.checked,true,'Explicit filter choice survives view switching');
 const background = {closest: () => null};
 if(ui['caller-menu']){
     const menu=ui['caller-menu'],button=element();
@@ -147,7 +154,7 @@ for (const section of sections) {
     context.choose();assert.equal(section.svg.classList.contains('hide-unconnected'),true);
     ui['unconnected'].checked=true;context.changeUnconnected();
     assert.equal(section.svg.classList.contains('hide-unconnected'),false);
-    assert.equal(ui['nodes-per-row'].disabled,direction.value!=='TB');
+    assert.ok(!ui['nodes-per-row'].disabled,'Fragment width stays adjustable in both directions');
     cleared(section);
     const node = section.nodes.find(n => n.dataset.nodeId === 'sequence');
     assert.ok(node, 'Use the division example fixture');
@@ -212,7 +219,7 @@ console.log('Passed: incoming/outgoing links, immediate neighbors, all clear act
     forbidGraphScan=false;context.previousGraph=previous;vm.runInContext('svg=previousGraph',context);
     console.log('Passed: 5000-node indexed selection, bounded DOM updates, parallel links, self-loop and isolated node.');
 }
-for(const [value,expected] of [['6','6'],['0','1'],['30','12'],['','3']]){
+for(const [value,expected] of [['6','6'],['0','1'],['30','12'],['','8']]){
     ui['nodes-per-row'].value=value;context.changeColumns();
     assert.equal(ui['nodes-per-row'].value,expected);
 }
@@ -288,8 +295,8 @@ for(const [value,expected] of [['6','6'],['0','1'],['30','12'],['','3']]){
     for(const mode of ['full','expressions']){
     history.state={...history.state,unrelated:'keep'};
     if(ui['show-changes'])ui['show-changes'].checked=true;
-    view.value=mode;direction.value='LR';ui['nodes-per-row'].value='5';ui.unconnected.checked=false;
-    context.choose();context.zoom(1.25);context.highlight('sequence');
+    view.value=mode;direction.value='LR';ui['nodes-per-row'].value='5';
+    context.choose();ui.unconnected.checked=false;context.changeUnconnected();context.zoom(1.25);context.highlight('sequence');
     box.scrollLeft=123;box.scrollTop=456;
     windowHandlers.pagehide();
     const saved=structuredClone(history.state),savedWidth=sections.find(s=>s.id===mode+'-LR').svg.style.width;

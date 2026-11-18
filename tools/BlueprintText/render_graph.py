@@ -20,6 +20,8 @@ from preview_references import is_type_reference, is_implicit_target, with_type_
 from graph_hierarchy import select_graph, graph_key
 from asset_text_codec import split_fields
 from graph_expressions import fold_expressions, format_expression
+from graph_layout import layout_boxes, port_fractions
+from graph_routing import edge_path
 
 VIEW_MODES = ('simplified', 'full', 'expressions')
 
@@ -275,7 +277,7 @@ def terminal_exit_ids(nodes, edges, templates):
 
 def node_fill(node, templates, execution_nodes):
     kind = node.get('kind', 'unknown')
-    if kind in ('event', 'customEvent', 'FunctionEntry'):
+    if kind in ('event', 'customEvent', 'CustomEvent', 'EnhancedInputAction', 'FunctionEntry'):
         return '#dce9fc'
     if (any(pin_category(node, alias, templates) == 'exec' for alias in node.get('pins', {}))
             or node['id'] in execution_nodes or node.get('_graphNeverContinues')
@@ -633,7 +635,15 @@ def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, par
         title = "Set " + variable
     elif kind in ("getVariable", "variableGet"):
         title = "Get " + variable
-    elif kind in ("event", "customEvent"):
+    elif kind in ("customEvent", "CustomEvent"):
+        event = native_string(properties.get('CustomFunctionName', '')) or node.get('event')
+        title = "Event " + readable_name(event) if event else "Custom Event"
+    elif kind == "EnhancedInputAction":
+        action = properties.get('InputAction')
+        name = object_label(action) if action else ''
+        title = ("Input: " + readable_name(re.sub(r'^IA(?:V)?_', '', name))
+                 if name and name != 'None' else "Enhanced Input Action")
+    elif kind == "event":
         title = "Event " + short.removeprefix("Receive")
     elif kind == "sequence":
         outputs = node.get('outputs', len([p for p in node.get('pins', {}) if p.startswith('out:then')]) or 2)
@@ -783,26 +793,7 @@ def variable_label(variable):
     return name + ": " + kind
 
 
-def pin_order(pin):
-    # Natural numeric order also handles Sequence then_2 / then_10 and folded steps.
-    name = re.sub(r'\d+', lambda match: match[0].zfill(12), pin)
-    return ({'then': 0, 'else': 1}.get(pin, 2), name)
-
-
-def order_layer(members, parent_edges, boxes, direction):
-    def key(node):
-        parents = parent_edges[node['id']]
-        execution = [edge for edge in parents if edge[4]]
-        available = [edge for edge in (execution or parents) if edge[0] in boxes]
-        if not available:
-            return (float('inf'), (2, ''), node['id'])
-        axis = 0 if direction == 'TB' else 1
-        center = sum(boxes[e[0]][axis] + boxes[e[0]][axis + 2] / 2 for e in available) / len(available)
-        return (center, min(pin_order(e[1]) for e in available), node['id'])
-    return sorted(members, key=key)
-
-
-def render(document, selection=None, view="simplified", direction="TB", review=None, before=None, asset_context=None, graph_context=None, marker_namespace=""):
+def render(document, selection=None, view="simplified", direction="TB", review=None, before=None, asset_context=None, graph_context=None, marker_namespace="", columns=8):
     asset_context = asset_context or {}
     graph_context = graph_context or {}
     if review is not None:
@@ -840,9 +831,6 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         nodes, edges, folded = fold_expressions(nodes, edges, all_edges, document.get('pinTemplates', {}),
                                               graph_context.get('children'), document.get('_reviewRemovedLinks', []))
     rank = layers(nodes, edges, document.get('pinTemplates', {}))
-    groups = defaultdict(list)
-    for node in nodes:
-        groups[rank[node["id"]]].append(node)
     boxes, lines_by_id, changed_lines, title_rows = {}, {}, {}, {}
     connected, connected_outputs, hidden_inputs = defaultdict(set), defaultdict(set), defaultdict(list)
     for source, output, target, pin, _ in all_edges:
@@ -914,9 +902,6 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
             badge_row = title_rows[node_id]
             lines_by_id[node_id].insert(badge_row, {'added': '+ Added', 'changed': '~ Changed', 'removed': '− Removed'}[status])
             changed_lines[node_id] = {i + (i >= badge_row): value for i, value in changed_lines.get(node_id, {}).items()}
-    parent_edges = defaultdict(list)
-    for edge in edges:
-        parent_edges[edge[2]].append(edge)
     card_widths = {n['id']: max(330, max((int(len(line) * 7.3 + 29)
                    for line in lines_by_id[n['id']] if getattr(line, 'code', False)), default=330))
                    for n in nodes}
@@ -926,29 +911,10 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
     compact_lines = {nid: [line for line in lines if not getattr(line, 'unconnected_output', False)]
                      for nid, lines in lines_by_id.items()}
     compact_gaps = {nid: card_section_gaps(lines) for nid, lines in compact_lines.items()}
-    widest = max(card_widths.values(), default=330)
-    row_step, column_step = widest + 50, widest + 170
-    y = 240
-    max_columns = min(3, max((len(m) for m in groups.values()), default=1))
-    for column, members in sorted(groups.items()):
-        members = order_layer(members, parent_edges, boxes, direction)
-        if direction == "LR":
-            y = 240
-            for node in members:
-                height = card_heights[node["id"]]
-                boxes[node["id"]] = (40 + column * column_step, y, card_widths[node['id']], height)
-                y += height + 60
-        else:
-            # Bound row width; large root sets continue downward, not off-screen.
-            for start in range(0, len(members), 3):
-                chunk = members[start:start + 3]
-                offset = (max_columns - len(chunk)) * row_step / 2
-                row_height = max(card_heights[n["id"]] for n in chunk)
-                for index, node in enumerate(chunk):
-                    node_id = node["id"]
-                    height = card_heights[node_id]
-                    boxes[node_id] = (40 + offset + index * row_step, y, card_widths[node_id], height)
-                y += row_height + 110
+    geometry_nodes = [dict(id=n['id'], rank=rank[n['id']], w=card_widths[n['id']],
+                           h=card_heights[n['id']]) for n in nodes]
+    boxes = layout_boxes(geometry_nodes, edges, direction, columns)
+    output_fractions, input_fractions = port_fractions(geometry_nodes, edges)
     right = max((x + w for x, y, w, h in boxes.values()), default=720)
     width = max(950, right + 80)
     bottom = max((y + h for x, y, w, h in boxes.values()), default=240)
@@ -989,43 +955,22 @@ def render(document, selection=None, view="simplified", direction="TB", review=N
         pieces.append(f'<text x="40" y="196" font-size="12"><title>{escape(declaration_text)}</title>{escape(visible_text)}</text>')
     if document.get('_review'):
         pieces.append('<text x="40" y="217" font-size="12">REVIEW · + green: added · ~ purple: changed · − red dashed: removed · Details: Before / After · explicit marks only</text>')
-    incoming, outgoing = defaultdict(list), defaultdict(list)
-    for i, edge in enumerate(edges):
-        outgoing[edge[0]].append(i)
-        incoming[edge[2]].append(i)
     nodes_by_id = {node['id']: node for node in nodes}
-    # Data precedes execution at both ends; geometry never changes pin order.
-    for indices in outgoing.values():
-        indices.sort(key=lambda i: (edges[i][4], pin_order(edges[i][1]), edges[i][2], edges[i][3], i))
-    for indices in incoming.values():
-        indices.sort(key=lambda i: (edges[i][4], pin_order(edges[i][3]), edges[i][0], edges[i][1], i))
-    output_ports = {node_id: list(dict.fromkeys(edges[i][1] for i in indices))
-                    for node_id, indices in outgoing.items()}
     for i, (source, output, target, input_pin, execution) in enumerate(edges):
         x, y, w, h = boxes[source]
         tx, ty, tw, th = boxes[target]
         transform = ''
-        ports = output_ports[source]
-        source_fraction = (ports.index(output) + 1) / (len(ports) + 1)
+        source_fraction = output_fractions[source][output]
+        target_fraction = input_fractions[target][input_pin]
         if direction == "TB":
             sx, sy = x + w * source_fraction, y + h
-            ex, ey = tx + tw * (incoming[target].index(i) + 1) / (len(incoming[target]) + 1), ty
-            bend = max(35, (ey - sy) / 2)
-            path = f'M{sx},{sy} C{sx},{sy+bend} {ex},{ey-bend} {ex},{ey}'
-            if source == target:
-                # Keep a self-loop visible beside its own node, not at a graph-wide lane.
-                side = x + w + 55
-                path = f'M{sx},{sy} C{side},{sy+40} {side},{ey-40} {ex},{ey}'
+            ex, ey = tx + tw * target_fraction, ty
             lx, ly = (sx + ex) / 2, (sy + ey) / 2 - 7
         else:
             sx, sy = x + w, y + h * source_fraction
-            ex, ey = tx, ty + th * (incoming[target].index(i) + 1) / (len(incoming[target]) + 1)
-            bend = max(35, (ex - sx) / 2)
-            path = f'M{sx},{sy} C{sx+bend},{sy} {ex-bend},{ey} {ex},{ey}'
-            if source == target:
-                side = y + h + 55
-                path = f'M{sx},{sy} C{sx+40},{side} {ex-40},{side} {ex},{ey}'
+            ex, ey = tx, ty + th * target_fraction
             lx, ly = (sx + ex) / 2, (sy + ey) / 2 - 7
+        path = edge_path((sx, sy), (ex, ey), boxes, source, target, direction == 'LR', execution)
         label_text, anchor = output + ' → ' + ('' if execution else 'Input: ') + input_pin, 'middle'
         branch_choice = execution
         if branch_choice:
@@ -1179,6 +1124,8 @@ def main():
     parser.add_argument('--graph-context', type=Path, help='Tool-owned nested navigation; never part of editable BPT')
     parser.add_argument("--view", choices=VIEW_MODES, default="simplified")
     parser.add_argument("--direction", choices=("TB", "LR"), default="TB", help="Top-to-bottom (default) or left-to-right")
+    parser.add_argument('--columns', type=int, choices=range(1, 13), default=8,
+                        help='Target row width in node widths; connected fragments stay intact')
     args = parser.parse_args()
     try:
         if args.output.suffix.lower() != ".svg":
@@ -1202,7 +1149,7 @@ def main():
             if any(review.values()):
                 has_review = True
                 document = reviewed
-        variants = {(view, direction): render(document, args.graph, view, direction, asset_context=asset_context, graph_context=graph_context)
+        variants = {(view, direction): render(document, args.graph, view, direction, asset_context=asset_context, graph_context=graph_context, columns=args.columns)
                     for view in VIEW_MODES for direction in ("TB", "LR")}
         svg, title, nodes, links = variants[args.view, args.direction]
         sections = ''.join(f'<section id="{view}-{direction}"' +
@@ -1216,7 +1163,7 @@ def main():
                 child.pop('changed', None)
             sections += ''.join(f'<section id="final-{view}-{direction}" hidden>' +
                 render(final_document, args.graph, view, direction,
-                       asset_context=asset_context, graph_context=final_context, marker_namespace='final-')[0] + '</section>'
+                       asset_context=asset_context, graph_context=final_context, marker_namespace='final-', columns=args.columns)[0] + '</section>'
                 for view in VIEW_MODES for direction in ('TB', 'LR'))
         page = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>''' + escape(title) + '''</title>
 <style>body{margin:0;background:#f8fafc;font:14px 'Segoe UI',sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr}nav{padding:10px 18px;background:#fff;border-bottom:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,select{padding:6px 10px}main{overflow:auto;min-height:0;position:relative}svg{display:block}</style>
@@ -1225,13 +1172,14 @@ def main():
 <nav><label>View <select id="view" onchange="choose()"><option value="simplified">Simplified</option><option value="full">Full</option><option value="expressions">Expressions</option></select></label>
 <label>Direction <select id="direction" onchange="choose()"><option value="TB">Top to bottom</option><option value="LR">Left to right</option></select></label>
 <button onclick="zoom(.8)" aria-label="Zoom out">−</button><button onclick="zoom(1.25)" aria-label="Zoom in">+</button><button onclick="fit()">Fit width</button><button onclick="fit(true)">Fit graph</button>
-<label>Nodes per row <input id="nodes-per-row" type="number" min="1" max="12" step="1" value="3" style="width:4em;padding:6px" onchange="changeColumns()" title="Maximum nodes per row in top-to-bottom view"></label>
+<label>Row width (nodes) <input id="nodes-per-row" type="number" min="1" max="12" step="1" value="8" style="width:4em;padding:6px" onchange="changeColumns()" title="Target row width. Connected fragments stay together, even when wider."></label>
 <label title="Show unconnected outputs on every node, including execution branches and output defaults."><input id="unconnected" type="checkbox" checked onchange="changeUnconnected()">Show unconnected</label>
 <style>svg.hide-unconnected [data-unconnected-output="true"]{display:none}svg.hide-unconnected [data-card-row]{transform:translateY(var(--compact-dy,0px))}</style>
 <span id="copy-status" role="status" aria-live="polite"></span></nav><main>''' + sections + '''
 <aside id="node-details" hidden aria-label="Node details"><div class="detail-toolbar"><select id="detail-version" aria-label="Details version" hidden><option>After</option><option>Before</option></select><button id="copy-detail-ids">Copy IDs</button><button id="copy-details">Copy contents</button><button id="close-details" aria-label="Close details">×</button></div><div id="detail-ids"></div><pre id="detail-text" tabindex="0"></pre></aside></main><div id="edge-tooltip" role="tooltip" hidden></div>
 <script>''' + (Path(__file__).with_name('graph_layout.js').read_text(encoding='utf-8')) + '\n' + (Path(__file__).with_name('graph_viewer.js').read_text(encoding='utf-8')) + '''
 ''' + f'view.value="{args.view}";direction.value="{args.direction}";' + '''restoreViewerState();</script></html>'''
+        page = page.replace('step="1" value="8"', f'step="1" value="{args.columns}"', 1)
         if has_review:
             page = page.replace('>Show unconnected</label>', '>Show unconnected</label>\n<label title="Turn off to see only the final graph, without review marks or removed nodes."><input id="show-changes" type="checkbox" checked onchange="changeReview()">Show changes</label>', 1)
         page = page.replace('<aside id="node-details"', caller_navigation(graph_context.get('callers', [])) + '<aside id="node-details"', 1)

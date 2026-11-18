@@ -5,6 +5,7 @@ vm.runInContext(fs.readFileSync(__dirname+'/graph_layout.js','utf8'),context);
 const page=fs.readFileSync(process.argv[2],'utf8');
 const decode=s=>s.replace(/&quot;/g,'"').replace(/&#x27;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
 const layouts=[...page.matchAll(/<svg data-layout="([^"]+)"/g)].map(m=>JSON.parse(decode(m[1])));
+const defaultColumns=Number(page.match(/id="nodes-per-row"[^>]*value="(\d+)"/)[1]);
 assert.equal(layouts.length,6,'All three views and both directions contain geometry');
 assert.equal(context.layoutRows({nodes:[],edges:[],direction:'TB',minWidth:1800},3).width,1800,
     'A long hierarchy title remains inside the viewport after browser reflow');
@@ -21,7 +22,7 @@ for(const direction of ['TB','LR'])for(const columns of [1,3,6]){
         edges:[['source','value','a','x',false],['source','value','b','x',false],
                ['source','other','a','y',false],['source','then','a','exec',true],
                ['source','then','b','exec',true],['source','else','b','exec',true]]};
-    const paths=context.layoutRows(data,columns).edges.map(e=>e.path.split(' C')[0]);
+    const paths=context.layoutRows(data,columns).edges.map(e=>e.path.split(' ')[0]);
     assert.equal(paths[0],paths[1],'Fan-out from one data pin shares its origin');
     assert.equal(paths[3],paths[4],'Fan-out from one execution pin shares its origin');
     assert.equal(new Set([paths[0],paths[2],paths[3],paths[5]]).size,4,'Distinct pins keep separate origins');
@@ -35,8 +36,21 @@ for(const columns of [2,3,6,12]){
     assert.ok(b.get('zLeft').x<b.get('aRight').x,'then branch precedes else regardless of IDs');
     assert.ok(b.get('aChild').x<b.get('zChild').x,'execution parents take priority over crossed data dependencies');
 }
+for(const direction of ['TB','LR'])for(const columns of [1,3,8,12]){
+    const data={direction,nodes:[],edges:[]};
+    for(let i=0;i<13;i++){
+        data.nodes.push({id:`event${i}`,rank:0,w:330,h:70+i},{id:`call${i}`,rank:1,w:330,h:170-i});
+        data.edges.push([`event${i}`,'then',`call${i}`,'exec',true]);
+    }
+    const result=context.layoutRows(data,columns);
+    for(const [source,,target] of data.edges){
+        const a=result.boxes.get(source),b=result.boxes.get(target);
+        if(direction==='TB'){assert.ok(Math.abs(a.x+a.w/2-b.x-b.w/2)<1e-7);assert.equal(b.y-a.y-a.h,110)}
+        else{assert.ok(Math.abs(a.y+a.h/2-b.y-b.h/2)<1e-7);assert.equal(b.x-a.x-a.w,170)}
+    }
+}
 for(const data of layouts){
-    const original=JSON.stringify(data),normal=context.layoutRows(data,3);
+    const original=JSON.stringify(data),normal=context.layoutRows(data,defaultColumns);
     // Default browser layout agrees with the standalone Python SVG layout.
     for(const n of data.nodes){const b=normal.boxes.get(n.id);assert.equal(b.x,n.x);assert.equal(b.y,n.y)}
     const nodes=data.nodes.map(n=>{const rect=element(),frame=element();return Object.assign(element(),{dataset:{nodeId:n.id},rect,frame,querySelector:s=>s==='.nested-graph-frame'?frame:rect})});
@@ -45,7 +59,7 @@ for(const data of layouts){
         return {parts,querySelector:s=>parts[s]};
     });
     const svg=Object.assign(element(),{dataset:{layout:original},querySelectorAll:s=>s==='.graph-node'?nodes:edges});
-    for(const columns of [1,6,12,3]){
+    for(const columns of [1,6,12,defaultColumns]){
         context.applyRowLayout(svg,columns);
         const result=context.layoutRows(data,columns),rows=new Map();
         const incoming=new Map(),outgoing=new Map();
@@ -69,7 +83,8 @@ for(const data of layouts){
             assert.ok(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y,
                 'Cards of different widths never overlap after reflow');
         }
-        if(data.direction!=='LR')assert.ok([...rows.values()].every(count=>count<=columns));
+        // Width is a packing target; a connected fragment must never be split
+        // merely to meet a hard per-row node cap.
         edges.forEach((e,i)=>{
             assert.equal(e.parts['.edge-line'].attributes.d,result.edges[i].path);
             assert.equal(e.parts['.edge-hit'].attributes.d,result.edges[i].path);
@@ -77,17 +92,24 @@ for(const data of layouts){
             if(label)assert.equal(e.parts['.label'].attributes.x,String(label.x));
         });
         // The sequence ends back at the original layout, with no accumulated translation.
-        if(columns===3)assert.ok(nodes.every(n=>n.attributes.transform==='translate(0,0)'));
+        if(columns===defaultColumns)assert.ok(nodes.every(n=>n.attributes.transform==='translate(0,0)'));
     }
-    context.applyRowLayout(svg,3,false);
+    context.applyRowLayout(svg,defaultColumns,false);
     const compactData=JSON.parse(original);
     for(const n of compactData.nodes)n.h=n.compactH??n.h;
-    const compact=context.layoutRows(compactData,3);
+    const compact=context.layoutRows(compactData,defaultColumns);
     for(const n of nodes){
         assert.equal(n.rect.attributes.height,String(compact.boxes.get(n.dataset.nodeId).h));
         assert.equal(n.frame.attributes.height,String(compact.boxes.get(n.dataset.nodeId).h-8),'Inner frame follows compact card height');
     }
-    assert.ok(compact.height<=normal.height);
+    // Pin alignment can move a whole chain when one card shrinks. The total
+    // height need not decrease, but the resulting cards must remain disjoint.
+    const compactBoxes=[...compact.boxes.values()];
+    for(let i=0;i<compactBoxes.length;i++)for(let j=i+1;j<compactBoxes.length;j++){
+        const a=compactBoxes[i],b=compactBoxes[j];
+        assert.ok(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y,
+            'Shrinking cards preserves non-overlapping execution chains');
+    }
     for(const n of data.nodes)if(n.compactH<n.h){
         assert.equal(normal.boxes.get(n.id).h-compact.boxes.get(n.id).h,n.h-n.compactH,'Every hidden row reduces its own card height');
     }
@@ -95,7 +117,7 @@ for(const data of layouts){
     // Changing row capacity while hidden must keep reduced card heights.
     context.applyRowLayout(svg,6,false);
     for(const n of nodes)assert.equal(n.rect.attributes.height,String(compact.boxes.get(n.dataset.nodeId).h));
-    context.applyRowLayout(svg,3,true);
+    context.applyRowLayout(svg,defaultColumns,true);
     for(const n of nodes){
         assert.equal(n.rect.attributes.height,String(normal.boxes.get(n.dataset.nodeId).h));
         assert.equal(n.frame.attributes.height,String(normal.boxes.get(n.dataset.nodeId).h-8),'Inner frame restores its expanded height');
@@ -103,4 +125,4 @@ for(const data of layouts){
     assert.ok(nodes.every(n=>n.attributes.transform==='translate(0,0)'));
     assert.equal(JSON.stringify(data),original);
 }
-console.log('Passed: browser/default SVG layout agreement, 1/6/12/3 row capacities, edge hit paths, labels and reversible SVG updates.');
+console.log('Passed: intact fragments, execution alignment, browser/SVG agreement, adjustable width, edge hit paths and reversible SVG updates.');

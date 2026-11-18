@@ -22,6 +22,23 @@ def visible_text(element):
 
 
 class GraphRenderingTests(unittest.TestCase):
+    def test_event_titles_identify_custom_callbacks_and_input_actions(self):
+        cases = [
+            ({'kind':'CustomEvent','properties':{'CustomFunctionName':'"OnRailgunIdleDebitTimer"'}},
+             'Event On Railgun Idle Debit Timer'),
+            ({'kind':'customEvent','event':'ReloadFinished'}, 'Event Reload Finished'),
+            ({'kind':'EnhancedInputAction','properties':{'InputAction':
+              '"/Script/EnhancedInput.InputAction\'/Game/Input/IA_Reload.IA_Reload\'"'}}, 'Input: Reload'),
+            ({'kind':'EnhancedInputAction','properties':{'InputAction':
+              '"/Script/Voyage.VoyageInputAction\'/Game/Input/IAV_ADS.IAV_ADS\'"'}}, 'Input: ADS'),
+            ({'kind':'CustomEvent'}, 'Custom Event'),
+            ({'kind':'EnhancedInputAction','properties':{'InputAction':'None'}}, 'Enhanced Input Action'),
+        ]
+        for node, expected in cases:
+            original = copy.deepcopy(node)
+            self.assertEqual(node_lines(node, set(), wrap=False)[0], expected)
+            self.assertEqual(node, original)
+
     def test_hidden_advanced_outputs_follow_metadata_and_keep_connected_results(self):
         templates = {'bool': {'PinType.PinCategory':'"bool"'},
                      'advanced': {'PinType.PinCategory':'"real"', 'PinType.PinSubCategory':'"double"', 'bAdvancedView':'True'}}
