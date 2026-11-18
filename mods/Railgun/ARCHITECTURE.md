@@ -18,6 +18,23 @@ The cassette and ADS equipment have no authored graphs. Their parents,
 components, defaults and referenced class identities remain required. The
 operator's Construction Script assigns its two input contexts.
 
+The operator's EventGraph dispatches input, possession, tick and lifetime events
+to named local stages. Those stages keep entry/exit camera ownership, ADS mode,
+aim tracking, the shot transaction, recoil and resource teardown separate.
+`ApplyRailgunAimToShell` owns the repeated yaw/pitch component updates; its callers
+retain their original tick, input and recoil ordering. Input remains on the
+possessed pawn with its native contexts, rather than in another Actor whose
+lifetime would need to track possession.
+
+The shell coordinates input-context preparation and station creation through
+local stages. The HUD owns its display caches and shares its status selection
+through `RefreshRailgunHudStatus`; charge, range and magazine presentation remain
+widget responsibilities. These owner-stateful operations are local functions,
+not a shared stateless library. Projectile initialization, travel and hit handling
+stay with the projectile. Its water-crossing search keeps loop-carried local state
+and early exits together; the larger search body is a deliberate boundary, not a
+template for unrelated logic in one graph.
+
 The maintained project and synchronized BPT hold authored state. See
 [BUILD.md](BUILD.md) for source layout, editor support, working copies,
 DataAsset authoring, serialization and candidate validation. Native API

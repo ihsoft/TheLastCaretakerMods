@@ -290,11 +290,16 @@ The supported selection is one connected region: a pure calculation, or a
 region with one execution entry and at most one continuation. Several callers
 may share that entry; terminal branches retain their original termination.
 Common call, get/set, branch, sequence, cast, struct, select, reroute and existing
-collapsed nodes are supported. Entry/result/event nodes and other special
-classes are rejected. Boundary pins require concrete scalar or array types;
+collapsed nodes are supported, as are array construction/calls, macro instances
+and delegate creation/binding/unbinding. Entry/result/event nodes and other special
+classes are rejected. Special pin types may remain internal to the selection;
+boundary pins require concrete scalar or array types;
 wildcards, references, weak pointers, delegates, maps, sets and split pins are
 outside this operation. Existing derived-to-base object/class connections keep
-the source type. Other type conversions and dependency paths that leave the
+the source type, as do existing self-object connections, by-value const consumers
+and scalar real float/double conversions. The original consumer retains its
+type and conversion; extraction does not infer new conversions. Other type
+conversions and dependency paths that leave the
 selection and re-enter it are rejected. A rejection changes neither source nor
 project assets; use its reason to choose a supported boundary or discuss a tool
 extension, rather than bypassing the check.

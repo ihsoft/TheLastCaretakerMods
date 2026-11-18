@@ -831,66 +831,6 @@
             }
           },
           {
-            "id": "K2Node_IfThenElse_2",
-            "kind": "branch",
-            "properties": {
-              "NodePosX": "3060",
-              "NodeGuid": "32594D1F42A3A6373F967785CB445E7A"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "EA29537D4829F591059AD3AF293124B4",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Condition": {
-                "id": "F95E1ED348B382555A0806AAFE4AA6E0",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              },
-              "out:then": {
-                "id": "85AFB3BB4B6BBE05B3A633AFA15E4BC7",
-                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
-              },
-              "out:else": {
-                "id": "E2E2AABE4C703C67DCA92583C959A322",
-                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
-              }
-            },
-            "defaults": {
-              "in:Condition": "true"
-            }
-          },
-          {
-            "id": "K2Node_IfThenElse_3",
-            "kind": "branch",
-            "properties": {
-              "NodePosX": "3240",
-              "NodeGuid": "474CFD7E46714412E703DFA5543885CA"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "7B76F8664DFD69B54F155A97EBAE2787",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Condition": {
-                "id": "3A348DA2461BD106FF5C4B9D5F989E4E",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              },
-              "out:then": {
-                "id": "BDC974F54DE9A155FA2454AEC780F40F",
-                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
-              },
-              "out:else": {
-                "id": "9886E95941DE7F0C91D1E5B8FFB1D846",
-                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
-              }
-            },
-            "defaults": {
-              "in:Condition": "true"
-            }
-          },
-          {
             "id": "K2Node_IfThenElse_4",
             "kind": "branch",
             "properties": {
@@ -943,66 +883,6 @@
               },
               "out:else": {
                 "id": "09F758394A393FF2F3FE2FADC7C92EEC",
-                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
-              }
-            },
-            "defaults": {
-              "in:Condition": "true"
-            }
-          },
-          {
-            "id": "K2Node_IfThenElse_6",
-            "kind": "branch",
-            "properties": {
-              "NodePosX": "6480",
-              "NodeGuid": "8399F7694D5D298A43287EA408320578"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "159C76BF4F9A5BB2630961BFE96CE7CE",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Condition": {
-                "id": "F9338A1E48353D94301397ACFA6A962E",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              },
-              "out:then": {
-                "id": "F5E8367E483C239247D674925783C9B5",
-                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
-              },
-              "out:else": {
-                "id": "EB54D89F4D4300ED95723F8A1E39FE5B",
-                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
-              }
-            },
-            "defaults": {
-              "in:Condition": "true"
-            }
-          },
-          {
-            "id": "K2Node_IfThenElse_7",
-            "kind": "branch",
-            "properties": {
-              "NodePosX": "6660",
-              "NodeGuid": "CBDC0EF542BF343919B0C7AB1AB41CF4"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "96B050704222FAD143535EA645632FC1",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Condition": {
-                "id": "A319363E4B2C888D975B64B6B214AD0F",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              },
-              "out:then": {
-                "id": "B95985064B589DEEA4FEF1A7DDB8BAD8",
-                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
-              },
-              "out:else": {
-                "id": "B32A7D58430DF97D3C5BCC88AFB3F53A",
                 "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
               }
             },
@@ -1522,20 +1402,12 @@
             "to": "K2Node_IfThenElse_5.in:Condition"
           },
           {
-            "from": "K2Node_CallFunction_8.out:then",
-            "to": "K2Node_IfThenElse_6.in:exec"
-          },
-          {
             "from": "K2Node_CallFunction_9.out:result",
             "to": "K2Node_CallFunction_11.in:right"
           },
           {
             "from": "K2Node_DynamicCast_0.out:AsVoyage Weather Subsystem",
             "to": "K2Node_CallFunction_8.in:target"
-          },
-          {
-            "from": "K2Node_DynamicCast_0.out:CastFailed",
-            "to": "K2Node_IfThenElse_7.in:exec"
           },
           {
             "from": "K2Node_DynamicCast_0.out:then",
@@ -1550,52 +1422,24 @@
             "to": "K2Node_VariableSet_1.in:exec"
           },
           {
-            "from": "K2Node_IfThenElse_0.out:else",
-            "to": "K2Node_IfThenElse_3.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_0.out:then",
             "to": "K2Node_MacroInstance_0.in:Execute"
-          },
-          {
-            "from": "K2Node_IfThenElse_1.out:else",
-            "to": "K2Node_IfThenElse_2.in:exec"
           },
           {
             "from": "K2Node_IfThenElse_1.out:then",
             "to": "K2Node_VariableSet_2.in:exec"
           },
           {
-            "from": "K2Node_IfThenElse_3.out:then",
-            "to": "K2Node_IfThenElse_4.in:exec"
-          },
-          {
-            "from": "K2Node_IfThenElse_4.out:else",
-            "to": "K2Node_IfThenElse_7.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_4.out:then",
             "to": "K2Node_DynamicCast_0.in:exec"
-          },
-          {
-            "from": "K2Node_IfThenElse_5.out:else",
-            "to": "K2Node_IfThenElse_6.in:exec"
           },
           {
             "from": "K2Node_IfThenElse_5.out:then",
             "to": "K2Node_CallFunction_8.in:exec"
           },
           {
-            "from": "K2Node_IfThenElse_7.out:then",
-            "to": "K2Node_IfThenElse_8.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_8.out:then",
             "to": "K2Node_CallFunction_12.in:exec"
-          },
-          {
-            "from": "K2Node_MacroInstance_0.out:Completed",
-            "to": "K2Node_IfThenElse_3.in:exec"
           },
           {
             "from": "K2Node_MacroInstance_0.out:Index",
@@ -1604,10 +1448,6 @@
           {
             "from": "K2Node_MacroInstance_0.out:LoopBody",
             "to": "K2Node_IfThenElse_1.in:exec"
-          },
-          {
-            "from": "K2Node_MacroInstance_1.out:Completed",
-            "to": "K2Node_IfThenElse_7.in:exec"
           },
           {
             "from": "K2Node_MacroInstance_1.out:Index",
@@ -1674,8 +1514,24 @@
             "to": "K2Node_IfThenElse_0.in:exec"
           },
           {
-            "from": "K2Node_VariableSet_2.out:then",
-            "to": "K2Node_IfThenElse_2.in:exec"
+            "from": "K2Node_IfThenElse_0.out:else",
+            "to": "K2Node_IfThenElse_4.in:exec"
+          },
+          {
+            "from": "K2Node_MacroInstance_0.out:Completed",
+            "to": "K2Node_IfThenElse_4.in:exec"
+          },
+          {
+            "from": "K2Node_DynamicCast_0.out:CastFailed",
+            "to": "K2Node_IfThenElse_8.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_4.out:else",
+            "to": "K2Node_IfThenElse_8.in:exec"
+          },
+          {
+            "from": "K2Node_MacroInstance_1.out:Completed",
+            "to": "K2Node_IfThenElse_8.in:exec"
           }
         ]
       }
@@ -2054,36 +1910,6 @@
             }
           },
           {
-            "id": "K2Node_IfThenElse_2",
-            "kind": "branch",
-            "properties": {
-              "NodePosX": "2520",
-              "NodeGuid": "878E90244441458AD5634A821BE5AF4B"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "14CBCF2644CEB486236907B31E2C6373",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Condition": {
-                "id": "97FE7713445860408016A4A8813B9883",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              },
-              "out:then": {
-                "id": "DB89BE2F480EC2608B02E69E4A34D749",
-                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
-              },
-              "out:else": {
-                "id": "6D8400CA46599E6E7E20ABABC49E543D",
-                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
-              }
-            },
-            "defaults": {
-              "in:Condition": "true"
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -2200,10 +2026,6 @@
             "to": "K2Node_CallArrayFunction_3.in:exec"
           },
           {
-            "from": "K2Node_CallArrayFunction_3.out:then",
-            "to": "K2Node_IfThenElse_2.in:exec"
-          },
-          {
             "from": "K2Node_CallFunction_0.out:result",
             "to": "K2Node_IfThenElse_1.in:Condition"
           },
@@ -2228,24 +2050,12 @@
             "to": "K2Node_IfThenElse_0.in:exec"
           },
           {
-            "from": "K2Node_IfThenElse_0.out:else",
-            "to": "K2Node_IfThenElse_2.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_0.out:then",
             "to": "K2Node_IfThenElse_1.in:exec"
           },
           {
-            "from": "K2Node_IfThenElse_1.out:else",
-            "to": "K2Node_IfThenElse_2.in:exec"
-          },
-          {
             "from": "K2Node_IfThenElse_1.out:then",
             "to": "K2Node_CallArrayFunction_1.in:exec"
-          },
-          {
-            "from": "K2Node_IfThenElse_2.out:then",
-            "to": "K2Node_FunctionResult_0.in:exec"
           },
           {
             "from": "K2Node_VariableGet_0.out:WakeAcceptingSamples",
@@ -2266,6 +2076,18 @@
           {
             "from": "K2Node_VariableGet_4.out:WakeExpiries",
             "to": "K2Node_CallArrayFunction_3.in:TargetArray"
+          },
+          {
+            "from": "K2Node_CallArrayFunction_3.out:then",
+            "to": "K2Node_FunctionResult_0.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_0.out:else",
+            "to": "K2Node_FunctionResult_0.in:exec"
+          },
+          {
+            "from": "K2Node_IfThenElse_1.out:else",
+            "to": "K2Node_FunctionResult_0.in:exec"
           }
         ]
       }

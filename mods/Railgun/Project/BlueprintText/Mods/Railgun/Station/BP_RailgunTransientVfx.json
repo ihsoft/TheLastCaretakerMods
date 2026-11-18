@@ -1447,36 +1447,6 @@
             }
           },
           {
-            "id": "K2Node_IfThenElse_1",
-            "kind": "branch",
-            "properties": {
-              "NodePosX": "7020",
-              "NodeGuid": "3FCDAA024CA614EBA3B285B221871B63"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "DD50DDDF41F8F0C5F082929C5F81AB60",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Condition": {
-                "id": "19D953694573A0B52454E6B20583901C",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              },
-              "out:then": {
-                "id": "91CCF2674E42A2DCF2B5789A77B1EC3D",
-                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
-              },
-              "out:else": {
-                "id": "C70741F048ADC7D00CAD06B0F390E563",
-                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
-              }
-            },
-            "defaults": {
-              "in:Condition": "true"
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -1566,10 +1536,6 @@
             "to": "K2Node_CallFunction_19.in:exec"
           },
           {
-            "from": "K2Node_CallFunction_19.out:then",
-            "to": "K2Node_IfThenElse_1.in:exec"
-          },
-          {
             "from": "K2Node_CallFunction_2.out:result",
             "to": "K2Node_CallFunction_3.in:Asset"
           },
@@ -1634,10 +1600,6 @@
             "to": "K2Node_CallFunction_33.in:exec"
           },
           {
-            "from": "K2Node_CallFunction_33.out:then",
-            "to": "K2Node_IfThenElse_1.in:exec"
-          },
-          {
             "from": "K2Node_CallFunction_4.out:then",
             "to": "K2Node_CallFunction_5.in:exec"
           },
@@ -1680,10 +1642,6 @@
           {
             "from": "K2Node_IfThenElse_0.out:then",
             "to": "K2Node_CallFunction_6.in:exec"
-          },
-          {
-            "from": "K2Node_IfThenElse_1.out:then",
-            "to": "K2Node_CallFunction_34.in:exec"
           },
           {
             "from": "K2Node_VariableGet_0.out:RailgunImpactVfxComponent",
@@ -1812,6 +1770,14 @@
           {
             "from": "K2Node_VariableGet_1.out:WaterOnly",
             "to": "K2Node_IfThenElse_0.in:Condition"
+          },
+          {
+            "from": "K2Node_CallFunction_19.out:then",
+            "to": "K2Node_CallFunction_34.in:exec"
+          },
+          {
+            "from": "K2Node_CallFunction_33.out:then",
+            "to": "K2Node_CallFunction_34.in:exec"
           }
         ]
       }

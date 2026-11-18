@@ -15,7 +15,9 @@ TYPE_DEFAULTS = dict(PinCategory='""', PinSubCategory='""', PinSubCategoryObject
                      bIsUObjectWrapper='False', bSerializeAsSinglePrecisionFloat='False')
 NODE_CLASSES = {'CallFunction', 'VariableGet', 'VariableSet', 'IfThenElse', 'ExecutionSequence',
                 'Self', 'DynamicCast', 'Knot', 'MakeStruct', 'BreakStruct', 'Select',
-                'EnumEquality', 'CommutativeAssociativeBinaryOperator', 'Composite'}
+                'EnumEquality', 'CommutativeAssociativeBinaryOperator', 'Composite',
+                'MakeArray', 'CallArrayFunction', 'MacroInstance', 'CreateDelegate',
+                'AddDelegate', 'RemoveDelegate'}
 
 
 def uid():
@@ -163,7 +165,22 @@ def collapse(document, selection, selected, name, boundary_names=None):
         # Existing object/class edges may point from a derived value to a base parameter.
         # Carry the actual source type through the tunnel, keeping the old conversion
         # at the original target. No class hierarchy discovery or guessed casts.
-        ignored = {'PinSubCategoryObject'} if source_type['PinCategory'] in ('"object"', '"class"') else set()
+        # Const on a by-value consumer does not change the carried value. Keep
+        # the source type on the tunnel and the consumer qualifier on its pin.
+        # Reference boundaries were rejected above; their aliasing is different.
+        ignored = {'bIsConst'}
+        if source_type['PinCategory'] in ('"object"', '"class"'):
+            ignored.add('PinSubCategoryObject')
+        if (source_type['PinCategory'] == target_type['PinCategory'] == '"object"'
+                and source_type['PinSubCategory'] == '"self"'
+                and target_type['PinSubCategory'] == '""'):
+            # Collapsing stays inside this Blueprint, so self keeps its owner.
+            ignored.add('PinSubCategory')
+        if (source_type['PinCategory'] == target_type['PinCategory'] == '"real"'
+                and {source_type['PinSubCategory'], target_type['PinSubCategory']} <= {'"float"', '"double"'}
+                and source_type['ContainerType'] == target_type['ContainerType'] == 'None'):
+            # Preserve an existing scalar real conversion at the old consumer.
+            ignored.add('PinSubCategory')
         if any(source_type[k] != target_type[k] for k in source_type.keys() - ignored):
             raise ValueError('Unsupported boundary type conversion: ' + str(edge))
     crossing = {e['from'] for e in incoming + outgoing}

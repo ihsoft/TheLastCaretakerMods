@@ -123,6 +123,59 @@ class CollapseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'inverse check'):
             verify_inverse(source, after, result['childGraph'])
 
+    def test_internal_loop_array_and_delegate_keep_their_links_and_metadata(self):
+        source = fixture()
+        def node(identity, kind, **pins):
+            source['classes'][kind] = '/Script/BlueprintGraph.K2Node_' + kind
+            return dict(id=identity, kind=kind, properties={'NodeGuid': uid()},
+                        pins={a.replace('_', ':', 1): dict(id=uid(), type=t) for a, t in pins.items()})
+        source['pinTemplates'].update(
+            array={'PinType.PinCategory': '"int"', 'PinType.ContainerType': 'Array'},
+            array_ref={'PinType.PinCategory': '"int"', 'PinType.ContainerType': 'Array', 'PinType.bIsReference': 'True'},
+            delegate={'PinType.PinCategory': '"delegate"'})
+        body = source['graphs'][0]['body']
+        body['nodes'] = [body['nodes'][0], body['nodes'][-1],
+            node('Array', 'MakeArray', in_Item='int', out_Array='array'),
+            node('Length', 'CallArrayFunction', in_Array='array_ref', out_Count='int'),
+            node('Loop', 'MacroInstance', in_exec='exec', in_LastIndex='int', out_LoopBody='exec', out_Completed='exec'),
+            node('Delegate', 'CreateDelegate', out_Delegate='delegate'),
+            node('Bind', 'AddDelegate', in_exec='exec', in_Delegate='delegate', out_then='exec'),
+            node('Unbind', 'RemoveDelegate', in_exec='exec', in_Delegate='delegate', out_then='exec')]
+        body['nodes'][4]['properties']['MacroGraphReference'] = '(MacroGraph="/Engine/EditorBlueprintResources/StandardMacros.StandardMacros:ForLoop")'
+        body['nodes'][5]['properties']['SelectedFunctionName'] = '"Callback"'
+        edges = [('Entry.out:Input', 'Array.in:Item'), ('Array.out:Array', 'Length.in:Array'),
+                 ('Length.out:Count', 'Loop.in:LastIndex'), ('Entry.out:then', 'Loop.in:exec'),
+                 ('Loop.out:LoopBody', 'Bind.in:exec'), ('Bind.out:then', 'Unbind.in:exec'),
+                 ('Delegate.out:Delegate', 'Bind.in:Delegate'), ('Delegate.out:Delegate', 'Unbind.in:Delegate'),
+                 ('Loop.out:Completed', 'Result.in:exec')]
+        body['links'] = [dict(zip(('from', 'to'), e)) for e in edges]
+        selected = ['Array', 'Length', 'Loop', 'Delegate', 'Bind', 'Unbind']
+        after, result = collapse(source, 'Run', selected, 'VisitBindings')
+        verify_inverse(source, after, result['childGraph'])
+        child = select_graph(after, result['childGraph'])
+        self.assertIn(dict(zip(('from', 'to'), ('Loop.out:LoopBody', 'Bind.in:exec'))), child['body']['links'])
+        self.assertFalse(any(e['from'] == 'Unbind.out:then' for e in child['body']['links']))
+        # Internal special pins are preserved; admitting these node classes
+        # must not admit delegate or reference pins at the new boundary.
+        for selected in (['Delegate'], ['Length']):
+            with self.subTest(selected=selected), self.assertRaises(ValueError):
+                collapse(source, 'Run', selected, 'InvalidBoundary')
+        self.assertEqual(codec.compare(after, codec.compact(codec.native(after))), [])
+
+    def test_by_value_const_consumer_preserved_without_accepting_reference_boundary(self):
+        source = fixture()
+        source['pinTemplates']['const_int'] = {'PinType.PinCategory': '"int"', 'PinType.bIsConst': 'True'}
+        source['graphs'][0]['body']['nodes'][2]['pins']['in:A']['type'] = 'const_int'
+        after, result = collapse(source, 'Run', ['Math'], 'CalculateConstInput')
+        verify_inverse(source, after, result['childGraph'])
+        child = select_graph(after, result['childGraph'])
+        entry_pin = next(iter(child['body']['nodes'][0]['pins'].values()))
+        self.assertEqual(after['pinTemplates'][entry_pin['type']]['PinType.bIsConst'], 'False')
+        self.assertEqual(child['body']['nodes'][1]['pins']['in:A']['type'], 'const_int')
+        source['pinTemplates']['const_int']['PinType.bIsReference'] = 'True'
+        with self.assertRaisesRegex(ValueError, 'Reference'):
+            collapse(source, 'Run', ['Math'], 'InvalidReference')
+
     def test_existing_derived_object_edge_carries_source_type(self):
         source = fixture()
         source['pinTemplates']['int'] = {'PinType.PinCategory': '"object"',
@@ -136,6 +189,33 @@ class CollapseTests(unittest.TestCase):
         self.assertEqual(after['pinTemplates'][pin['type']]['PinType.PinSubCategoryObject'],
                          source['pinTemplates']['derived']['PinType.PinSubCategoryObject'])
         verify_inverse(source, after, result['childGraph'])
+
+    def test_existing_self_object_edge_keeps_blueprint_context(self):
+        source = fixture()
+        source['pinTemplates']['int'] = {'PinType.PinCategory': '"object"',
+            'PinType.PinSubCategoryObject': '"/Script/CoreUObject.Class\'/Script/CoreUObject.Object\'"'}
+        source['pinTemplates']['self'] = {'PinType.PinCategory': '"object"', 'PinType.PinSubCategory': '"self"'}
+        source['graphs'][0]['body']['nodes'][0]['pins']['out:Input']['type'] = 'self'
+        after, result = collapse(source, 'Run', ['Math'], 'UseOwner')
+        verify_inverse(source, after, result['childGraph'])
+        entry_pin = next(iter(select_graph(after, result['childGraph'])['body']['nodes'][0]['pins'].values()))
+        self.assertEqual(after['pinTemplates'][entry_pin['type']]['PinType.PinSubCategory'], '"self"')
+
+    def test_existing_scalar_real_conversion_stays_at_consumer(self):
+        source = fixture()
+        source['pinTemplates']['int'] = {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"double"'}
+        source['pinTemplates']['float'] = {'PinType.PinCategory': '"real"', 'PinType.PinSubCategory': '"float"'}
+        source['graphs'][0]['body']['nodes'][0]['pins']['out:Input']['type'] = 'float'
+        after, result = collapse(source, 'Run', ['Math'], 'UseDeltaTime')
+        verify_inverse(source, after, result['childGraph'])
+        child = select_graph(after, result['childGraph'])
+        entry_pin = next(iter(child['body']['nodes'][0]['pins'].values()))
+        self.assertEqual(after['pinTemplates'][entry_pin['type']]['PinType.PinSubCategory'], '"float"')
+        self.assertEqual(child['body']['nodes'][1]['pins']['in:A']['type'], 'int')
+        for metadata in source['pinTemplates'].values():
+            metadata['PinType.ContainerType'] = 'Array'
+        with self.assertRaisesRegex(ValueError, 'type conversion'):
+            collapse(source, 'Run', ['Math'], 'InvalidArrayConversion')
 
     def test_review_retains_prior_pin_metadata_edits(self):
         source = fixture()

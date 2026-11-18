@@ -67,8 +67,50 @@ These problems can coexist. Choose edits for the identified cause rather than
 starting with a target node count or a preferred abstraction. A presentation
 defect alone is not a reason to change the represented algorithm.
 
+Start a cleanup with the graph hierarchy, not a full-document rewrite. Look for
+empty or disabled-only implementations, redundant value plumbing, duplicated
+operations, and graphs that mix responsibilities. Inspect the selected regions
+and their callers before transforming them. A large graph is a reason to review
+its structure, not permission to change its algorithm.
+
+## Remove inert structure and redundant plumbing
+
+Remove an empty or entirely disabled implementation when it has no required
+declaration, caller or inherited-behavior contract. Do not retain it because
+"BPT might require it": BPT can represent absent graphs and a Blueprint with
+`graphs: []`. Delete the graph record, rather than leaving an empty record and
+calling that removal. Remove or update its owning collapsed call when applicable.
+
+Distinguish implementation from contract before deletion. A function entry,
+interface implementation or intentional no-op override may still define required
+behavior. Check direct callers, delegate/timer bindings and relevant external or
+inherited contracts; absence of a local wire is not proof of disuse. In particular,
+removing an override can expose parent behavior. Preserve the Blueprint itself
+when its class identity, defaults, components or inherited behavior are needed.
+If ordinary Apply rejects a justified removal, investigate its concrete diagnostic;
+do not invent dummy nodes or retain a placeholder to satisfy an assumed tool need.
+
+Prefer a setter's `Output_Get` to a separate nearby Get of the same variable on
+the same target, used in the same evaluation context. For example, assigning an
+aim angle and immediately applying it should not need another getter node. Inspect
+all consumers before removing a shared getter. Keep a separate read when it serves
+another execution path or makes a different reading point clear.
+
+`Output_Get` reads the variable; it is not an immutable snapshot of the assignment.
+Unreal expands it into a getter during compilation. Do not substitute the setter's
+input value, remove an intentional captured value, or claim a runtime speedup
+from this visual simplification. Setter callbacks and changing target expressions
+can make superficially similar reads different.
+
+A branch with a literal condition and no meaningful alternative is routing noise,
+not a decision. Connect its incoming paths directly to the selected continuation,
+or leave them terminal when that continuation is absent. Preserve execution count,
+order and termination; do not turn several incoming paths into a Sequence.
+
 ## Separate flow from implementation
 
+Decompose from the overall behavior toward its implementation. Each graph is an
+implementation detail of its caller and may coordinate the operations beneath it.
 Keep one level of detail in a graph. A coordinating graph should show meaningful
 stages, their order, and the decisions that select them. Put the mechanics of a
 stage in an operation named for its purpose, such as `AcquireAltitudeLock` or
@@ -84,6 +126,16 @@ and treat the resulting small caller as finished decomposition.
 Stop when the remaining nodes express one understandable operation. Adding levels
 to meet a node limit can make navigation and reasoning harder. Judge the caller
 and implementation together, including parameters, state access and failure paths.
+
+About 15–30 nodes is a useful working size, not a lower bound or hard limit.
+Beyond that range, look for a complete operation at a different level of detail.
+Review the extracted body as well as the smaller caller: hiding hundreds of nodes
+one click deeper does not finish the work. A small dispatcher or a short meaningful
+operation need not be padded. A cohesive larger operation, such as a coupled loop
+or a set of required assignments, can be clearer than several fragments with many
+crossing values. Keep such an exception for its concrete boundary constraint,
+not merely because its nodes fit on a wide canvas. Preview folding does not make
+the underlying operation smaller.
 
 Check whether the operation's name, boundary and surrounding flow let a reader
 understand its caller without repeatedly opening the implementation:
@@ -104,14 +156,26 @@ coherent design.
 | Form | Use when |
 | --- | --- |
 | Collapsed graph | A local stage or expression needs a name and a separate view while retaining its surrounding graph context. |
-| Function | The same complete operation is reused, with participant or value differences expressed as parameters. |
+| Function | A complete callable operation has a useful contract; reuse shares one implementation, with genuine participant or value differences expressed as parameters. A single caller can also justify that contract. |
 | Separate Blueprint object | A responsibility has its own state, lifecycle and small useful interface. Define that ownership before moving it. |
+| Blueprint Function Library | Stateless pure calculations or predicates are shared across Blueprint owners. Follow the supported [library contract](../tools/blueprint-text.md#blueprint-function-libraries). |
 
 A collapsed graph represents a local implementation, not a reusable definition
 shared by several calls. A function supplies one implementation for its callers.
 Neither form removes that implementation from the owning Blueprint's complete
 BPT document. Moving a responsibility to another object is a larger ownership
 decision, not an automatic next step after reducing a graph's node count.
+
+Choose Blueprint ownership before growing a large collection of unrelated local
+subgraphs. An entry actor can discover and connect participants while a widget
+owns presentation, a possessed pawn owns its input/possession contract, and a
+separately lived effect owns its own completion. These are responsibility examples,
+not a mandatory object per category. Separate only when the new owner can keep its
+state and lifecycle coherent behind a small interface. Repeated cross-object
+property access, bidirectional dependencies and new readiness/teardown plumbing
+are costs to weigh against the separation. Do not move input away from its engine
+owner just to make a Blueprint smaller, or introduce a library for one owner's
+stateful operation. Share a local function first when the callers have one owner.
 
 Parameterize genuine differences in repeated algorithms, such as the socket to
 clean up or the mesh and transform to instantiate. Prefer separate named policies
@@ -144,10 +208,6 @@ For a behavior-preserving edit, account for:
 Pass an already-produced value across a boundary when that preserves its original
 use. Do not add caches, replace live reads with snapshots, or change pure/impure
 execution as an incidental part of a readability edit.
-
-Use a setter's `Output_Get` in place of a nearby redundant getter only when the
-variable, target and evaluation context match. Do not treat `Output_Get` as an
-immutable snapshot of the assignment or remove a deliberate captured value.
 
 Equivalent calls can share one node when their receivers, arguments and
 continuations match and routing execution to that node preserves invocation
