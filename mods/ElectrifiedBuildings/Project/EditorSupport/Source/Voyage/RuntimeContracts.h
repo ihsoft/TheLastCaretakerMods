@@ -7,7 +7,6 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "RuntimeContracts.generated.h"
-
 UENUM(BlueprintType)
 enum class EModuleResourceCategory : uint8 { Unknown, Electricity, Water, Gas, Data, Mooring, Fuel, Count };
 
@@ -38,6 +37,8 @@ public:
     UPROPERTY(Category="ElectrifiedBuildings", BlueprintReadOnly) TSet<AActor*> OverlapsTagged;
 };
 
+UENUM()
+enum class EModuleResourceType : uint8 { Electricity, Petrol, Oil, SaltWater, FreshWater, PhysicalEnergy, Data, Custom1, Custom2, Custom3, Methane, Oxygen, Steam, Worker, Unknown, Mooring, Diesel, CarbonDioxide, Count };
 class UModuleSocketComponent;
 class UVoyageModuleComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVoyageModuleCompDelegate, UVoyageModuleComponent*, Module);
@@ -59,11 +60,12 @@ class VOYAGE_API UVoyageModuleComponent : public UActorComponent
 public:
     UPROPERTY(Category="ElectrifiedBuildings", BlueprintReadOnly) TMap<FName, FModuleRuntimeRequirements> RuntimeRequirements;
     UPROPERTY(BlueprintAssignable, Category="ElectrifiedBuildings") FVoyageModuleCompDelegate OnModuleGroupsChanged;
+    UFUNCTION(Category="ElectrifiedBuildings", BlueprintCallable) void BroadcastConnectionsChanged() {}
     UFUNCTION(Category="ElectrifiedBuildings", BlueprintCallable) void AddExternalSocket(UModuleSocketComponent* Socket) {}
     UFUNCTION(Category="ElectrifiedBuildings", BlueprintCallable) void RemoveExternalSocket(UModuleSocketComponent* Socket) {}
 };
 
-UENUM()
+UENUM(BlueprintType)
 enum class EModuleSocketType : uint8
 {
     ST_Any,
@@ -71,9 +73,6 @@ enum class EModuleSocketType : uint8
     ST_Output,
     ST_Max
 };
-
-UENUM()
-enum class EModuleResourceType : uint8 { Electricity, Petrol, Oil, SaltWater, FreshWater, PhysicalEnergy, Data, Custom1, Custom2, Custom3, Methane, Oxygen, Steam, Worker, Unknown, Mooring, Diesel, CarbonDioxide, Count };
 
 // Unauthored enum values below are identity-only; authored category/socket values use current mappings.
 UENUM()
@@ -88,7 +87,7 @@ struct VOYAGE_API FModuleCustomRequirement
     GENERATED_BODY()
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct VOYAGE_API FModuleSocketBandwidth
 {
     GENERATED_BODY()
@@ -110,11 +109,11 @@ struct VOYAGE_API FModuleSocketIOData
 
     // A distinct mirror default preserves the authored zero-valued ST_Any
     // override in unversioned data.
-    UPROPERTY() EModuleSocketType Type = EModuleSocketType::ST_Max;
+    UPROPERTY(BlueprintReadWrite, Category="ElectrifiedBuildings") EModuleSocketType Type = EModuleSocketType::ST_Max;
     UPROPERTY(Category="ModuleSocketIOData", BlueprintReadOnly) EModuleResourceType ResourceType = EModuleResourceType::Unknown;
-    UPROPERTY() FModuleSocketBandwidth Bandwidth;
+    UPROPERTY(BlueprintReadOnly, Category="ElectrifiedBuildings") FModuleSocketBandwidth Bandwidth;
     UPROPERTY() bool bIgnoreCableBandwidth = false;
-    UPROPERTY() EModuleSocketType DefaultDirection = EModuleSocketType::ST_Any;
+    UPROPERTY(Category="ElectrifiedBuildings", BlueprintReadWrite) EModuleSocketType DefaultDirection = EModuleSocketType::ST_Any;
     UPROPERTY() bool bBalanceResourceLevels = false;
     UPROPERTY() bool bMatchByResourceCategory = false;
     UPROPERTY() EModuleResourceCategory ResourceCategory = EModuleResourceCategory::Unknown;
@@ -132,6 +131,8 @@ class VOYAGE_API UModuleSocketComponent : public UBoxComponent
     GENERATED_BODY()
 
 public:
+    UFUNCTION(Category="ElectrifiedBuildings", BlueprintCallable) void SetSocketDirectionType(EModuleSocketType CustomType) {}
+    UFUNCTION(Category="ElectrifiedBuildings", BlueprintPure) EModuleSocketType GetPlugType() const { return Port.Type; }
     UFUNCTION(Category="ElectrifiedBuildings", BlueprintCallable) void SetSocketID(FName Name) {}
 
     // Preserve native property order for unversioned root-component serialization.
@@ -140,8 +141,8 @@ public:
     UPROPERTY() float LeakMultiplier = 0.0f;
     UPROPERTY(EditAnywhere, Category="ElectrifiedBuildings") bool bAddModuleRequirement = true;
     UPROPERTY() FModuleCustomRequirement CustomRequirement;
-    UPROPERTY(Category="ModuleSocketComponent", EditAnywhere) bool bAutoInitialize = true;
-    UPROPERTY(Category="ModuleSocketComponent", EditAnywhere, BlueprintReadOnly) FModuleSocketIOData Port;
+    UPROPERTY(Category="ModuleSocketComponent", EditAnywhere, BlueprintReadWrite) bool bAutoInitialize = true;
+    UPROPERTY(Category="ModuleSocketComponent", EditAnywhere, BlueprintReadWrite) FModuleSocketIOData Port;
     UPROPERTY() bool bAcceptsSignals = false;
     UPROPERTY(Category="ModuleSocketComponent", EditAnywhere) FName OwningModule;
     UPROPERTY() bool bStandalone = false;
@@ -206,4 +207,14 @@ class VOYAGE_API UVoyageMiscBlueprintFunctionLibrary : public UBlueprintFunction
 public:
     UFUNCTION(Category="ElectrifiedBuildings", BlueprintCallable) static UVoyageModuleComponent* GetModuleFromActor(AActor* Actor) { return nullptr; }
     UFUNCTION(Category="ElectrifiedBuildings", BlueprintCallable) static bool RenameObject(UObject* Object, FString NewName, UObject* NewOuter) { return false; }
+};
+
+// Runtime access only: this native component is never serialized in our package.
+UCLASS(BlueprintType)
+class VOYAGE_API UVoyageCustomModuleComponent : public UVoyageModuleComponent
+{
+    GENERATED_BODY()
+public:
+    UPROPERTY(BlueprintReadWrite, Category="ElectrifiedBuildings") TMap<EModuleResourceType, double> MaxResources;
+    UPROPERTY(BlueprintReadWrite, Category="ElectrifiedBuildings") TSet<EModuleResourceType> ActiveFlowResources;
 };

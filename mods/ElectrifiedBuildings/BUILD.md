@@ -50,6 +50,8 @@ the [shared release workflow](../../docs/release-and-installation-rule.md).
 
 BPT Apply establishes compilation and fresh-process equivalence; the producer
 validates cook and package scope. Gameplay changes require checks of supported
-controls, input/output power, rejection of ambiguous inlet matches, and cable
-restoration after reload and location streaming. Placement changes require
+controls, input/output power, inlet mode changes, reserve charging and discharge
+after removing external power, rejection of ambiguous inlet matches, and cable
+restoration after reload and location streaming. Check reserve persistence
+across save/load and streaming separately from cable restoration. Placement changes require
 visual review in game. These checks are separate from successful packaging.

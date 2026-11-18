@@ -25,8 +25,31 @@ explicit exclusions taking precedence. Matching inlet actors are deduplicated.
 
 Creation requires exactly one inlet **for that control**. With zero or multiple
 candidates, no socket is created; later discovery events can reconsider the
-control. Separate building supplies are not joined. Power availability, cable
-direction and transfer rates remain the game's responsibility.
+control. Separate building supplies are not joined.
+
+## Inlet reserve and direction
+
+Each resolved inlet receives a 200 Wh electrical reserve through its native
+`VoyageCustomModuleComponent.MaxResources` entry. Larger existing capacity is
+preserved. Configuration changes capacity only; it never grants charge.
+Electricity is removed from that inlet's `ActiveFlowResources` set so the native
+no-incoming-flow timeout does not discard stored energy. The game continues to
+charge the reserve and consume it for connected loads. Other resource entries
+are untouched.
+
+The inlet's electrical sockets allow Input, Output and Equalize: `Port.Type`
+and `Port.DefaultDirection` become `ST_Any`, automatic initialization is disabled,
+and the current direction is initialized through `SetSocketDirectionType`.
+`BroadcastConnectionsChanged` notifies the native network. Configuration is
+recorded once per inlet/socket; later discovery does not reset a player's mode.
+The added sockets use native unlimited input/output bandwidth (`-1/-1`), while
+cable bandwidth, peer policies and available energy still constrain transfer.
+
+Original capacity and socket settings are recorded for conditional EndPlay
+restoration on valid objects whose settings still match the mod's values.
+Electricity membership is restored only on inlets where the mod removed it.
+These ownership records are session state, not a separate energy or cable save
+system. The game owns stored resource amounts and their consumption.
 
 ## Lifecycle
 

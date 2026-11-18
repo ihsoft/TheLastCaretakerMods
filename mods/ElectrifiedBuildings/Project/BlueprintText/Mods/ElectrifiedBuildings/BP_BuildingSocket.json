@@ -74,7 +74,8 @@
         "properties": {
           "DataAsset": "/Game/Data/Assets/ModuleSockets/DA_Socket_ElectricData.DA_Socket_ElectricData",
           "bAddModuleRequirement": "False",
-          "Port": "(Type=ST_Any,ResourceType=Unknown,Bandwidth=(Input=0.000000,Output=0.000000,ItemBandwidthInKg=0.000000),bIgnoreCableBandwidth=False,DefaultDirection=ST_Any,bBalanceResourceLevels=False,bMatchByResourceCategory=False,ResourceCategory=Electricity,AdditionalAcceptedResourceTypes=())",
+          "bAutoInitialize": "False",
+          "Port": "(Type=ST_Any,ResourceType=Electricity,Bandwidth=(Input=-1.000000,Output=-1.000000,ItemBandwidthInKg=0.000000),bIgnoreCableBandwidth=False,DefaultDirection=ST_Any,bBalanceResourceLevels=False,bMatchByResourceCategory=False,ResourceCategory=Electricity,AdditionalAcceptedResourceTypes=())",
           "bIsVirtualShareToGroup": "True",
           "ConnectSound": "/Game/Audio/SFX/World/Systems/Sys_Cables/CUE_Sys_Cable_Electric_Connect.CUE_Sys_Cable_Electric_Connect",
           "DisconnectSound": "/Game/Audio/SFX/World/Systems/Sys_Cables/CUE_Sys_Cable_Electric_Disconnect.CUE_Sys_Cable_Electric_Disconnect",
