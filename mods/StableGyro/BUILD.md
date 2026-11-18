@@ -98,12 +98,14 @@ bypassing mapping, source-readiness or serialization checks. Candidate numbering
 comes from `version.txt`.
 
 The producer checks source readiness and the installed game build, then
-prepares native support and cooks a disposable project copy. It does not refresh
-or write maintained assets. If an item's or mesh's recorded source build differs
+cooks a disposable project copy through the shared pipeline, which owns native
+and BPT preparation. It does not refresh or write maintained assets. If an item's
+or mesh's recorded source build differs
 from the installed build, stop and ask whether to refresh those inputs; do not
 run an updater automatically. Ordinary item-reference edits follow
 [item authoring](#item-authoring); an edited refresh recipe
-alone does not change the saved asset. The build does not apply recipes or BPT.
+alone does not change the saved asset. The build does not apply refresh recipes
+or BPT edits.
 The producer supplies one package inventory to the
 [shared cook and container stages](../../tools/mod-setup.md#cook-and-container-stages).
 The compass display selects tagged serialization for the reason recorded in

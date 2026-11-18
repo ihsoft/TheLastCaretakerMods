@@ -138,4 +138,51 @@ foreach ($invalid in @('{}','{"schemaVersion":1,"steamBuildId":"invalid"}','{"sc
 $markerArgs.StatePath=Join-Path $fixture 'missing-source.json'
 Reject { Assert-VoyageModAssetSourceBuild @markerArgs } 'missing marker cannot authorize reuse'
 
+# Cook owns preparation and rejects failed script imports even when Unreal exits successfully.
+@'
+param($ProjectFile,$PluginSource,$EngineRoot,$OutputRoot)
+'prepared cook support'
+'@ | Set-Content -LiteralPath (Join-Path $fixture 'tools/Prepare-UnrealEditorSupport.ps1')
+@'
+param($Operation,$FilePath,$ArgumentList)
+$log=($ArgumentList | Where-Object { $_ -like '-abslog=*' }).Substring(8)
+if ($env:MOD_PIPELINE_COOK_IMPORT_FAIL -eq '1') {
+    "LogLinker: Warning: [AssetLog] Owned.uasset: VerifyImport: Failed to find script package for import object 'Package /Script/MissingCompiler'" | Set-Content $log
+} else {
+    'LogTemp: Warning: harmless fixture warning' | Set-Content $log
+}
+$cooked=Join-Path (Split-Path -Parent $ArgumentList[0]) 'Saved/Cooked/Windows/Voyage/Content'
+[IO.Directory]::CreateDirectory($cooked) | Out-Null
+'cooked asset' | Set-Content (Join-Path $cooked 'Owned.uasset')
+'cooked exports' | Set-Content (Join-Path $cooked 'Owned.uexp')
+'@ | Set-Content -LiteralPath (Join-Path $fixture 'tools/Invoke-UnrealQueued.ps1')
+$previousCookFailure=$env:MOD_PIPELINE_COOK_IMPORT_FAIL
+try {
+    foreach ($case in @('prepare','import','success')) {
+        $env:MOD_PIPELINE_PREPARE_FAIL=if($case -eq 'prepare'){'1'}else{''}
+        $env:MOD_PIPELINE_COOK_IMPORT_FAIL=if($case -eq 'import'){'1'}else{''}
+        $cookOutput=New-VoyageModRun -ModRoot $mod -OutputRoot (Join-Path $fixture ('Tmp/Example/cook-'+$case))
+        $cookProject=New-VoyageModProjectCopy -ModRoot $mod -Destination (Join-Path $cookOutput 'Project')
+        $cookArgs=@{ModRoot=$mod;ProjectFile=$cookProject;EngineRoot='fixture';OutputRoot=$cookOutput;Packages=@('/Game/Owned')}
+        if($case -eq 'success') {
+            $result=Invoke-VoyageModCookAssets @cookArgs
+            Check (Test-Path (Join-Path $result.stage 'Voyage/Content/Owned.uexp')) 'successful cook stages exports despite harmless warning'
+            Check (Test-Path (Join-Path $cookOutput 'prepare.log')) 'cook prepares dependencies itself'
+        } else {
+            $message=''
+            try { Invoke-VoyageModCookAssets @cookArgs | Out-Null } catch { $message=$_.Exception.Message }
+            Check ($message.Length -gt 0) "cook rejects $case failure"
+            Check (-not (Test-Path (Join-Path $cookOutput 'stage/Voyage/Content/Owned.uasset'))) "failed $case cook does not stage assets"
+            if($case -eq 'prepare') {
+                Check (-not (Test-Path (Join-Path $cookOutput 'cook-unversioned.log'))) 'failed preparation never launches cook'
+            } else {
+                Check ($message -like '*Owned.uasset*MissingCompiler*cook-unversioned.log*') 'missing script diagnostic identifies asset dependency and log'
+            }
+        }
+    }
+} finally {
+    $env:MOD_PIPELINE_PREPARE_FAIL=$previousPrepareFailure
+    $env:MOD_PIPELINE_COOK_IMPORT_FAIL=$previousCookFailure
+}
+
 [pscustomobject]@{status='passed';checks=$script:checks;evidence=$fixture} | ConvertTo-Json

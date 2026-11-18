@@ -116,19 +116,12 @@ foreach ($relativePath in @('Content/Data/Assets/Modules/DA_Item_Module_GyroCopt
         throw "Maintained item asset is missing: $relativePath. Restore it from Git or run Build/Update-StableGyroItemAsset.ps1."
     }
 }
-Write-Host '2/4 Preparing maintained project inputs'
+Write-Host '2/4 Copying maintained project inputs'
 $phase.Restart()
 $project = & (Join-Path $modRoot 'New-StableGyroProjectCopy.ps1') -Destination (Join-Path $releaseRoot 'Project')
 $projectRoot = Split-Path -Parent $project
-$support = & (Join-Path $repoRoot 'tools/Prepare-UnrealEditorSupport.ps1') `
-    -ProjectFile $project -EngineRoot $EngineRoot `
-    -OutputRoot (Join-Path $releaseRoot 'editor-support') | ConvertFrom-Json
-$loadedModules = @($support.providers | ForEach-Object loadedModules)
-if ('Voyage' -notin $loadedModules -or 'VoyageItemPatchEditor' -notin $loadedModules) {
-    throw 'Project support must provide Voyage and VoyageItemPatchEditor.'
-}
 $phase.Stop()
-$timings.EditorSupport = $phase.Elapsed.TotalSeconds
+$timings.ProjectCopy = $phase.Elapsed.TotalSeconds
 
 Write-Host '3/4 Cooking and packaging the release inventory'
 $phase.Restart()

@@ -41,7 +41,8 @@ failure handling.
 | Preview an exported HUD layout and copy review adjustments | `BlueprintText/Render-WidgetPreview.ps1` | [HUD preview](blueprint-text.md#hud-widget-preview) |
 | Create a mod skeleton | `New-ModSkeleton.ps1` | [Mod setup](mod-setup.md) |
 | Share project copies, asset source-build markers, source-update acceptance, editor tests, grouped cook and container packaging | `VoyageModPipeline.psm1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
-| Check shared project-copy and editor-test failure boundaries offline | `Test-VoyageModPipeline.ps1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
+| Check shared copy, editor-test and cook-failure boundaries offline | `Test-VoyageModPipeline.ps1` | [Shared mod pipeline](mod-setup.md#shared-mod-pipeline) |
+| Check saved BPT calls through fresh-copy preparation and shared cook | `Test-VoyageModCook.ps1` | [Shared cook maintenance checks](mod-setup.md#shared-cook-maintenance-checks) |
 | Maintain generated settings in an existing procedural producer | `New-VoyageModSettings.ps1` | [Compatibility interface](VoyageModSettings/legacy-generation.md) |
 | Validate a changed settings schema or default INI | `Validate-VoyageModSettings.ps1` | [INI preparation](mod-setup.md#runtime-ini-preparation) |
 | Merge local development INI copies (not installation) | `Merge-VoyageModIni.ps1` | [Mod setup](mod-setup.md#existing-user-ini) |

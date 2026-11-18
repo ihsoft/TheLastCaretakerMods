@@ -20,7 +20,10 @@ The owner of a mod or tool supplies the plugin's source, reflected types and
 stub implementations. This tool supplies no game classes and does not infer
 schemas, edit assets, generate Blueprint graphs, cook a release or install a mod
 into the game. BPT workspaces and the VoyageItem updater prepare declared project
-dependencies through this mechanism; other producers must call it explicitly.
+dependencies through this mechanism. The [shared mod cook](mod-setup.md#shared-mod-pipeline)
+and [DataAsset reader](data-asset-conversion.md#native-readback) own their complete
+preparation, including BPT; their callers do not repeat it. A standalone native
+consumer owns preparation when its public operation does not already provide it.
 
 Loading or cooking an asset through native mirrors does not establish that its
 fields are editable in the standard Unreal Details panel. That requires editor

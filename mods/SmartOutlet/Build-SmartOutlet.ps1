@@ -29,8 +29,6 @@ $fingerprint = Get-Content -LiteralPath $fingerprintPath -Raw | ConvertFrom-Json
 $buildGate = & (Join-Path $repoRoot 'tools/Assert-VoyageModGameBuild.ps1') -ModRoot $modRoot -ActualSteamBuildId ([string]$fingerprint.steam.buildId) -IgnorePinnedGameVersion:$IgnorePinnedGameVersion
 $settingsTemplate = Join-Path $modRoot 'Assets/SmartOutlet.ini'
 $project = & (Join-Path $modRoot 'New-SmartOutletProjectCopy.ps1') -Destination $projectRoot
-$bptWorkspace = Join-Path $repoRoot ('Tmp/BlueprintText/SmartOutlet-build-' + [guid]::NewGuid().ToString('N'))
-& (Join-Path $repoRoot 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $bptWorkspace > (Join-Path $output 'prepare.log')
 $ownedNames = @('BP_OutletController', 'ModActor', 'WBP_PortModeAction', 'M_PortGlow', 'Settings/BP_SectionedIniFileParser', 'Settings/BP_OutletRule', 'Settings/BP_StorageProfile')
 $packages = @($ownedNames | ForEach-Object { '/Game/Mods/SmartOutlet/' + $_ })
 $cook = Invoke-VoyageModCook -ModRoot $modRoot -ProjectFile $project -EngineRoot $EngineRoot -OutputRoot $output -Packages $packages -ParserVersion UE5_8 `

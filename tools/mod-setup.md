@@ -137,8 +137,15 @@ property tags; remaining packages use unversioned properties. The mod architectu
 owns the reason for choosing a different serialization mode. Ordinary additive
 mods can omit this option.
 
-The cook operation prepares the private `UnrealCookSupport` editor provider in
-the working project through the shared support tool. It passes each group's
+The cook operation prepares declared native dependencies and BPT through the
+shared workspace `Prepare` operation before loading assets. Saved BPT nodes are
+compiler inputs even though their module does not ship. Mod builders do not
+repeat this preparation or inspect its module list. Required plugin references
+remain part of the maintained project; preparation installs providers only in
+the working copy and reuses the shared provider cache.
+
+Cook also prepares its private `UnrealCookSupport` editor provider through the
+shared support tool. It passes each group's
 inventory by file, calls Unreal's stock cooker, checks its output serialization,
 and stages every group before another cook can clear the cook directory. It
 preserves asset companions including `.m.ubulk`. The provider has no game types
@@ -146,6 +153,13 @@ or runtime payload and is reused through the normal editor-support cache.
 Additional cook arguments may select renderer/shader/cache policy, but may not
 replace the package inventory, serialization mode, commandlet or output target.
 The working project must be below the supplied run `OutputRoot`.
+
+Failed preparation stops before cook. Cook errors and unresolved script-package
+imports (`VerifyImport: Failed to find script package`) reject the result before
+staging that group, even when Unreal exits successfully. Other warnings are not
+made fatal by this check. The diagnostic identifies the failing asset/dependency
+and log location. Fix the dependency or source, then build a fresh candidate;
+never package a stage left by a failed operation.
 
 For a required cooked-format conversion, call `Invoke-VoyageModCookAssets`,
 apply the [shared DataAsset conversion](data-asset-conversion.md) under the
@@ -178,8 +192,9 @@ container and validation reports under the [output lifecycle](../docs/artifact-l
 
 For changes to these mechanics, run
 [`Test-VoyageModPipeline.ps1`](Test-VoyageModPipeline.ps1) in Windows PowerShell
-5.1. It uses isolated fixtures below `Tmp/tests/`, including junction rejection
-and test failure evidence. Installation changes use
+5.1. It uses isolated fixtures below `Tmp/tests/` for junction rejection, test
+failure evidence, preparation failures and cook rejection of unresolved script
+imports while allowing unrelated warnings. Installation changes use
 `Test-Install-VoyageRelease.ps1 -WithSettings`, also with
 `-WithContentPluginDescriptor` when that payload is affected; it covers complete
 INI replacement and coupled rollback against a synthetic game directory.
@@ -187,6 +202,21 @@ These checks launch no Unreal process and write no real installed game files.
 Run a consumer's public test/build when the change affects its integration;
 do not repeat the shared suite in every mod. The
 [test scope rule](../docs/testing-rule.md) governs retained coverage and run scope.
+
+### Shared cook maintenance checks
+
+For changes at the BPT/preparation/cook boundary, run the engine integration check:
+
+```powershell
+python -B tools/run_powershell.py tools/Test-VoyageModCook.ps1 `
+  -OutputRoot '<fresh directory below Tmp/BlueprintText>' -EngineRoot '<editor root>'
+```
+
+It authors an isolated fixture, cooks a source-only checkout through the shared
+pipeline and reads back compiled calls/arguments. It also checks rejection of
+an unavailable declared provider before cook. It uses no maintained mod assets
+and installs nothing. `result.json` reports acceptance; logs and readback stay
+under `OutputRoot` for diagnosis. This checks compiler integration, not gameplay.
 
 ## Runtime INI preparation
 

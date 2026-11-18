@@ -20,8 +20,6 @@ Import-Module (Join-Path $repo 'tools/VoyageModPipeline.psm1')
 $output = New-VoyageModRun -ModRoot $modRoot -OutputRoot $OutputRoot
 $project = & (Join-Path $modRoot 'New-ContainerLidLabelProjectCopy.ps1') -Destination (Join-Path $output 'Project')
 $projectRoot = Split-Path -Parent $project
-$bptWorkspace = Join-Path $repo ('Tmp/BlueprintText/ContainerLidLabel-build-' + [guid]::NewGuid().ToString('N'))
-& (Join-Path $repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $bptWorkspace > (Join-Path $output 'prepare.log')
 $fingerprintPath = Join-Path $output 'game-fingerprint.json'
 & (Join-Path $repo 'tools/Get-VoyageBuildFingerprint.ps1') -GameRoot $GameRoot -OutputPath $fingerprintPath | Out-Null
 $fingerprint = Get-Content $fingerprintPath -Raw | ConvertFrom-Json

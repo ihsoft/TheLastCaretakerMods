@@ -39,9 +39,8 @@ working project. It reads one native DataAsset and its owned objects through
 Unreal reflection, with an exact expected class. It never saves asset packages.
 Both the project and a fresh output directory must be below repository `Tmp/`;
 linked paths are rejected. The operation owns the Unreal queue, prepares declared
-native dependencies and attaches its shared reader plugin. Other plugins enabled
-by the project must also be available: use BPT `Prepare` first for a project
-that enables `BlueprintTextWorkspace`.
+native dependencies and BPT through the shared workspace `Prepare` operation,
+then attaches its shared reader plugin. Callers do not prepare the project first.
 
 ```powershell
 $native = python -B tools/run_powershell.py tools/Read-VoyageDataAsset.ps1 `

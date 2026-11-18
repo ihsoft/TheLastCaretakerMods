@@ -38,7 +38,6 @@ $output = New-VoyageModRun -ModRoot $PSScriptRoot -OutputRoot $OutputRoot -Kind 
 $version = $releaseVersion
 $project = & (Join-Path $PSScriptRoot 'New-RailgunProjectCopy.ps1') -Destination (Join-Path $output 'Project')
 $projectRoot = Split-Path -Parent $project
-$bptWorkspace = Join-Path $repo ('Tmp/BlueprintText/Railgun-build-' + [Guid]::NewGuid().ToString('N'))
 $releaseStaging = Join-Path $output 'candidate'
 $settingsDefaults = Join-Path $PSScriptRoot 'Assets/Railgun.ini'
 $preparedSettingsDirectory = Join-Path $output 'settings'
@@ -102,8 +101,6 @@ if (-not (Test-Path -LiteralPath $content -PathType Container)) {
 $ddc = [IO.Path]::GetFullPath($CacheRoot)
 [Environment]::SetEnvironmentVariable('UE-LocalDataCachePath', $ddc, 'Process')
 $null = New-Item -ItemType Directory -Path $ddc -Force
-& (Join-Path $repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare `
-    -ProjectFile $project -WorkspaceRoot $bptWorkspace -EngineRoot $EngineRoot > (Join-Path $output 'prepare.log')
 $primaryNativePaths = @{}
 foreach ($entry in $dataAssetContract.assets) {
     $native = & (Join-Path $repo 'tools/Read-VoyageDataAsset.ps1') -ProjectFile $project `

@@ -45,7 +45,8 @@ completed asset change. Preserve and reconcile both sides of any conflict.
 Before accepting working-copy changes, check for concurrent edits in the
 maintained project and review the intended changes. Transfer only intentionally
 changed saved assets, synchronized BPT and deliberately authored configuration
-or other source files. Do not copy generated directories or the entire working
+or other source files, including required `.uproject` plugin references introduced
+by those assets. Do not copy generated directories or the entire working
 project back. Within the maintained Project, only `Intermediate/` may be a
 temporary ignored directory; no `Plugins/` or `Saved/` exclusions are needed.
 
@@ -98,6 +99,9 @@ the same workspace preparation installs declared native support and BPT even
 when its plugin directory is absent. Keep the required reference in the project;
 no manual plugin disabling or DLL copying is needed. Preparation finishes by
 loading BPT with the project dependencies enabled.
+The [shared mod cooker](mod-setup.md#shared-mod-pipeline) and
+[native DataAsset reader](data-asset-conversion.md#native-readback) own this
+preparation for their operations; mod builders do not repeat it.
 Existing binary installations update their package format on preparation. If a
 previous build disabled the plugin, follow [receipt recovery](unreal-editor-support.md#recovery)
 before resuming asset operations.

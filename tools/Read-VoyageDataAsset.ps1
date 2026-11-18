@@ -33,8 +33,10 @@ if ([IO.Path]::GetExtension($project) -ine '.uproject' -or -not (Test-Path -Lite
 }
 if (Test-Path -LiteralPath $output) { throw "Readback output must be fresh: $output" }
 $null = New-Item -ItemType Directory -Path $output
+$workspace = Join-Path $repo ('Tmp/BlueprintText/data-asset-read-' + [guid]::NewGuid().ToString('N'))
+& (Join-Path $PSScriptRoot 'BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare `
+    -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $workspace > (Join-Path $output 'project-support.json')
 $prepare = Join-Path $PSScriptRoot 'Prepare-UnrealEditorSupport.ps1'
-& $prepare -ProjectFile $project -EngineRoot $EngineRoot -OutputRoot (Join-Path $output 'project-support') > (Join-Path $output 'project-support.json')
 & $prepare -ProjectFile $project -EngineRoot $EngineRoot `
     -PluginSource (Join-Path $PSScriptRoot 'AssetPackaging/DataAssetReader/DataAssetReader.uplugin') `
     -OutputRoot (Join-Path $output 'reader-support') > (Join-Path $output 'reader-support.json')

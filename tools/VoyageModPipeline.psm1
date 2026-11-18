@@ -320,6 +320,10 @@ function Invoke-VoyageModCookAssets {
     $stage = Join-Path $output 'stage'
     Assert-ModChild $stage $output
     if (Test-Path -LiteralPath $stage) { throw "Cook output already exists: $stage" }
+    # Saved editor nodes are compiler inputs, even though their modules never ship.
+    $workspace = Join-Path $context.repo ('Tmp/BlueprintText/' + $context.name + '-cook-' + [guid]::NewGuid().ToString('N'))
+    & (Join-Path $context.repo 'tools/BlueprintText/Invoke-BlueprintWorkspace.ps1') -Action Prepare `
+        -ProjectFile $project -EngineRoot $EngineRoot -WorkspaceRoot $workspace > (Join-Path $output 'prepare.log')
     [IO.Directory]::CreateDirectory($stage) | Out-Null
     & (Join-Path $context.repo 'tools/Prepare-UnrealEditorSupport.ps1') -ProjectFile $project `
         -PluginSource (Join-Path $PSScriptRoot 'UnrealCookSupport/UnrealCookSupport.uplugin') `
@@ -343,8 +347,9 @@ function Invoke-VoyageModCookAssets {
             -FilePath (Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe') `
             -ArgumentList $arguments > (Join-Path $output ('cook-' + $group.name + '-console.log'))
         if (-not (Test-Path -LiteralPath $log -PathType Leaf)) { throw "Cook log missing: $log" }
-        if (Select-String -LiteralPath $log -Pattern 'LogBlueprint: Error:|LogLinker: Error:|LogCook: Error:|LogStaticMesh: Error: Bad MeshDescription' -Quiet) {
-            throw "Cook errors: $log"
+        $failure = Select-String -LiteralPath $log -Pattern 'LogBlueprint: Error:|LogLinker: Error:|LogCook: Error:|LogStaticMesh: Error: Bad MeshDescription|VerifyImport: Failed to find script package' | Select-Object -First 1
+        if ($failure) {
+            throw "Cook failed; no release can be packaged. $($failure.Line.Trim()) See ${log}:$($failure.LineNumber)"
         }
         # The next cook can clear Saved/Cooked; stage each completed group first.
         foreach ($package in $group.packages) {

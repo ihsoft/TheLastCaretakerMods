@@ -164,7 +164,10 @@ working copies, run paths, editor-test orchestration, cook, container packaging,
 explicit source-update acceptance and cleanup. Keep path containment, linked-path
 rejection, source selection and failure evidence there rather than in per-mod
 copies; keep mod entry points thin. One mod-owned release inventory drives cook,
-staging and container verification. Select tagged versus unversioned cook as data for the
+staging and container verification. The shared cook owns preparation of declared
+native support and BPT before loading assets; do not duplicate dependency setup
+or module-load checks in mod builders. Required project declarations remain
+maintained inputs. Select tagged versus unversioned cook as data for the
 shared cooker; a different serialization mode does not justify a local cooker.
 A required cooked-asset conversion may sit between the shared cook and container
 stages. Game script-object metadata and large-inventory transport also belong to
