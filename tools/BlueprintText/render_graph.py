@@ -593,7 +593,8 @@ def unconnected_outputs(node, connected, pin_templates):
 def node_lines(node, connected_inputs, hidden_inputs=(), pin_templates=None, parent=None,
                step_inputs=(), step_outputs=(), wrap=True, connected_outputs=()):
     if '_formula' in node:
-        lines = [f'Expression · {len(node["_foldedNodes"])} operations']
+        count = len(node['_foldedNodes'])
+        lines = [f'Expression · {count} {"operation" if count == 1 else "operations"}']
         result_pin = next(p for alias, p in node['pins'].items() if alias.startswith('out:'))
         result_type = pin_type_label((pin_templates or {}).get(result_pin['type'], {}))
         formula_lines = [CardLine(row, code=True) for row in format_expression(

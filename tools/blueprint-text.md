@@ -1028,8 +1028,9 @@ A sole unused execution output is treated as a terminal path; unused alternative
 remain visible.
 
 **Show expressions** is an independent presentation option, not another editable
-format. It folds recognized pure scalar arithmetic, comparisons, boolean operations, select,
-min/max and supported Vector calls into bounded formula cards. Native function identity and pin types
+format. It folds recognized pure arithmetic, comparisons, boolean operations,
+select, numeric conversions, predicates and supported Vector/container calls
+into bounded formula cards. Native function identity and pin types
 must match; unsupported operations and incomplete signatures stay as nodes.
 Variable reads, shared results and graph boundaries remain separate. Operand
 order, parentheses, select alternatives and numeric conversions are preserved;
@@ -1039,11 +1040,31 @@ are on, formulas form first, then other eligible chains group; formula cards are
 not folded again into chains. Turn both options off or use Details to inspect
 the original nodes, pins and links; edit the BPT graph normally.
 
+Supported predicates include object/class validity and comparisons, class
+inheritance, name/byte comparisons, string equality/search/length/emptiness,
+numeric-string and text-emptiness checks. `IsValid(object)` stays a named Unreal
+check, not a replacement for `object != null`. String equality distinguishes
+exact and case-insensitive matching; search flags remain labelled arguments.
+Instance predicates (`IsPlayerControlled`, `HasAuthority`, `IsLocalController`,
+actor/component tags and socket existence) retain the receiver, for example
+`Self.IsPlayerControlled()` or `Target.ActorHasTag(Name("Enabled"))`.
+
+Array/set/map count, emptiness and membership checks and array index validation
+require concrete container element/key/value types. Numeric formulas also cover
+integer arithmetic, clamp, abs, rounding, ranges and nearly-equal checks.
+Integer division/remainder retain named calls; enum-to-byte and float/double
+conversions stay explicit. Tolerances and inclusive-range flags are never dropped.
+Only supported explicit literals are rendered: missing operands, unresolved
+asset/object literals, unknown signatures, mutable-reference inputs and
+multi-output calls remain nodes. Random/time/search-for-object calls are not
+expanded merely because Unreal marks them pure.
+
 Vector formulas support `Vector(x, y, z)`, `dot(a, b)`, vector select,
-addition/subtraction and vector-times-number multiplication. `VInterpTo_Constant`
+addition/subtraction, vector-times-number multiplication, length, distance,
+normalization, lerp and nearly-zero checks. `VInterpTo_Constant`
 remains a named call with labelled current/target/time/speed arguments; its
 interpolation algorithm is not expanded. Only the native `CoreUObject.Vector`
-type is recognized, not arbitrary structs or containers. Vector defaults require
+type is recognized for vector arithmetic, not arbitrary structs. Vector defaults require
 three explicit numeric components; unsupported representations remain as nodes.
 A `MakeVector` whose components are numeric defaults and have no incoming links
 can be repeated as a literal in each consuming expression. Its source node and
@@ -1053,7 +1074,9 @@ constructor card; computed shared vectors are never duplicated this way.
 Expression cards list typed inputs before `Output (type): formula`, separated by
 a small vertical gap. Known names are retained; anonymous inputs use local
 `value1`, `value2`, etc. in first-use order, reusing the name for repeated uses
-and avoiding collisions with real names. Formulas use monospace text, two-space
+and avoiding collisions with real names. Distinct same-name reads within one
+formula receive local numeric suffixes; reads outside that formula do not
+affect its input names. Formulas use monospace text, two-space
 structural indentation and a target width of 60 characters. Long identifiers are
 not split; cards widen as needed. Service labels use the ordinary bold label
 font. Repeated uses of one source pin in one expression share a single arrow;
@@ -1268,7 +1291,8 @@ Offline renderer checks: `python -B tools/BlueprintText/test_render_graph.py`.
 Fragment packing and execution alignment checks:
 `python -B tools/BlueprintText/test_fragment_layout.py`.
 Wire routing checks: `python -B tools/BlueprintText/test_graph_routing.py`.
-Expression presentation checks: `python -B tools/BlueprintText/test_graph_expressions.py`.
+Expression presentation and operation-boundary checks:
+`python -B -m unittest discover -s tools/BlueprintText -p 'test*expression*.py'`.
 Batch index checks: `python -B tools/BlueprintText/test_preview_index.py`.
 Automatic structural comparison checks: `python -B tools/BlueprintText/test_graph_review.py`.
 Function navigation checks: `python -B tools/BlueprintText/test_preview_graph_links.py`.

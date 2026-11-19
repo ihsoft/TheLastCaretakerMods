@@ -347,8 +347,15 @@ class ExpressionTests(unittest.TestCase):
     def test_different_reads_with_same_name_have_distinct_symbols(self):
         doc=fixture();doc['nodes'][1]['variable']='Deceleration'
         group=next(n for n in folded(doc)[0] if '_formula' in n)
-        self.assertIn('Deceleration_rate',group['_formula'])
-        self.assertIn('Deceleration_dt',group['_formula'])
+        self.assertIn('Deceleration_1',group['_formula'])
+        self.assertIn('Deceleration_2',group['_formula'])
+
+    def test_reads_outside_expression_do_not_pollute_local_names(self):
+        doc=fixture()
+        doc['nodes'].append(read('unrelated', 'Deceleration'))
+        group=next(n for n in folded(doc)[0] if '_formula' in n)
+        self.assertIn('(Deceleration - 0.5)',group['_formula'])
+        self.assertNotIn('Deceleration_',group['_formula'])
 
     def test_limits_and_cycles_do_not_duplicate_or_drop_nodes(self):
         doc=fixture()

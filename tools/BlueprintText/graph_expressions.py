@@ -4,6 +4,7 @@ import re
 from collections import Counter, defaultdict, deque
 
 from asset_text_codec import fields
+from expression_operations import OPERATIONS as EXTRA_OPERATIONS, METHODS, CONTAINERS, LABELS, INFIX
 
 
 MATH_OWNER = '"/Script/CoreUObject.Class\'/Script/Engine.KismetMathLibrary\'"'
@@ -31,9 +32,9 @@ OPERATIONS['VInterpTo_Constant'] = ('VInterpTo_Constant', ('Current', 'Target', 
 
 VECTOR_TYPE = '"/Script/CoreUObject.ScriptStruct\'/Script/CoreUObject.Vector\'"'
 NUMBER = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
-CALL_OPERATORS = ('select', 'min', 'max', 'float', 'double', 'Vector', 'dot', 'NOT', 'VInterpTo_Constant')
 ARGUMENT_LABELS = {'select': ('', 'true: ', 'false: '),
                    'VInterpTo_Constant': ('current: ', 'target: ', 'deltaTime: ', 'interpSpeed: ')}
+ARGUMENT_LABELS.update(LABELS)
 
 
 def unquote(value):
@@ -47,32 +48,70 @@ def member(node, field):
         return {}
 
 
+def value_identity(metadata):
+    """Concrete element identity; reference/const and UObject storage wrappers are transport flags."""
+    return tuple(metadata.get('PinType.' + key, default) for key, default in (
+        ('PinCategory', '""'), ('PinSubCategory', '""'), ('PinSubCategoryObject', 'None'),
+        ('PinSubCategoryMemberReference', '()'), ('bIsWeakPointer', 'False')))
+
+
 def expression_type(pin, templates):
     metadata = templates.get(pin.get('type'), {})
     category = unquote(metadata.get('PinType.PinCategory', '""'))
-    if (metadata.get('PinType.ContainerType', 'None') != 'None'
-            or metadata.get('PinType.bIsReference', 'False') != 'False'):
+    if (metadata.get('PinType.bIsReference', 'False') == 'True'
+            and metadata.get('PinType.bIsConst', 'False') != 'True'):
         return None
+    if category in ('', 'wildcard', 'exec'):
+        return None
+    container = metadata.get('PinType.ContainerType', 'None')
+    if container in ('Array', 'Set', 'Map'):
+        terminal = metadata.get('PinType.PinValueType', '()') if container == 'Map' else '()'
+        try:
+            terminal = tuple(sorted(fields(terminal[1:-1]).items()))
+        except ValueError:
+            return None
+        if container == 'Map' and unquote(dict(terminal).get('TerminalCategory', '""')) in ('', 'wildcard'):
+            return None
+        return container, value_identity(metadata), terminal
+    if container != 'None':
+        return None
+    subtype = metadata.get('PinType.PinSubCategoryObject', 'None')
+    if category == 'byte' and subtype != 'None':
+        return 'enum', subtype
     if category == 'struct':
-        return 'Vector' if metadata.get('PinType.PinSubCategoryObject') == VECTOR_TYPE else None
+        return 'Vector' if subtype == VECTOR_TYPE else ('struct', subtype)
     return unquote(metadata.get('PinType.PinSubCategory', '""')) if category == 'real' else category
+
+
+def method_spec(node, templates):
+    ref = member(node, 'FunctionReference')
+    owner = ref.get('MemberParent')
+    if not owner and ref.get('bSelfContext') == 'True' and 'MemberGuid' not in ref:
+        target = next((p for a, p in node.get('pins', {}).items()
+                       if a.startswith('in:') and p.get('name', a[3:]) == 'self'), {})
+        owner = templates.get(target.get('type'), {}).get('PinType.PinSubCategoryObject')
+    return METHODS.get((owner, unquote(ref.get('MemberName', '""'))))
 
 
 def describe(node, templates):
     props = node.get('properties', {})
-    if (node.get('kind') != 'call' or props.get('bDefaultsToPureFunc') != 'True'
+    if (node.get('kind') not in ('call', 'CallArrayFunction') or props.get('bDefaultsToPureFunc') != 'True'
             or node.get('_graphLink') or node.get('enabled') is False
             or props.get('EnabledState', 'Enabled') != 'Enabled' or node.get('comment')
             or props.get('NodeComment') or node.get('developmentOnly')):
         return None
     ref = member(node, 'FunctionReference')
-    operation = OPERATIONS.get(unquote(ref.get('MemberName', '""')))
-    if ref.get('MemberParent') != MATH_OWNER or operation is None:
+    name = unquote(ref.get('MemberName', '""'))
+    key = ref.get('MemberParent'), name
+    method = method_spec(node, templates)
+    container = CONTAINERS.get(key)
+    operation = (OPERATIONS.get(name) if key[0] == MATH_OWNER else None) or EXTRA_OPERATIONS.get(key) or method
+    if operation is None and container is None:
         return None
     inputs, outputs = {}, []
     for alias, pin in node.get('pins', {}).items():
         name = pin.get('name', alias.split(':', 1)[1])
-        if alias.startswith('in:') and name == 'self':
+        if alias.startswith('in:') and name == 'self' and not method:
             continue  # Only the unconnected static-library target is omitted.
         if alias.startswith('out:'):
             outputs.append(alias)
@@ -80,25 +119,74 @@ def describe(node, templates):
             inputs[name] = alias
         else:
             return None
-    symbol, names, types, result = operation
+    if container:
+        symbol, names, kind, result = container
+        if set(inputs) != set(names) or len(outputs) != 1:
+            return None
+        target = node['pins'][inputs[names[0]]]
+        target_type = expression_type(target, templates)
+        if not isinstance(target_type, tuple) or target_type[0] != kind:
+            return None
+        types = [target_type]
+        if len(names) == 2:
+            item = node['pins'][inputs[names[1]]]
+            item_type = expression_type(item, templates)
+            if names[1] == 'IndexToTest':
+                if item_type != 'int':
+                    return None
+            elif (templates[item['type']].get('PinType.ContainerType', 'None') != 'None'
+                  or value_identity(templates[item['type']]) != value_identity(templates[target['type']])):
+                return None
+            if item_type is None:
+                return None
+            types.append(item_type)
+    else:
+        symbol, names, types, result = operation
     if set(inputs) != set(names) or len(outputs) != 1:
         return None
-    if any(expression_type(node['pins'][inputs[n]], templates) != t for n, t in zip(names, types)):
+    actual = [expression_type(node['pins'][inputs[n]], templates) for n in names]
+    for kind, expected in zip(actual, types):
+        if kind == expected:
+            continue
+        if expected == 'byte' and isinstance(kind, tuple) and kind[0] == 'enum':
+            continue
+        if expected == 'SearchCase' and kind == ('enum', '"/Script/CoreUObject.Enum\'/Script/CoreUObject.ESearchCase\'"'):
+            continue
         return None
+    if not container and 'byte' in types and len(set(actual)) != 1:
+        return None  # Never compare unrelated enums as if they were one type.
     if expression_type(node['pins'][outputs[0]], templates) != result:
         return None
-    return symbol, [inputs[n] for n in names], outputs[0], types
+    return symbol, [inputs[n] for n in names], outputs[0], actual
 
 
 def literal(node, alias, kind, templates):
     pin = node['pins'][alias]
+    if (pin.get('name', alias[3:]) == 'self' and method_spec(node, templates)
+            and member(node, 'FunctionReference').get('bSelfContext') == 'True'
+            and not pin.get('DefaultObject') and alias not in node.get('defaults', {})):
+        return 'Self'
     if templates.get(pin['type'], {}).get('bDefaultValueIsIgnored') == 'True':
         return None
     value = node.get('arguments', {}).get(alias, node.get('defaults', {}).get(alias))
+    if kind in ('object', 'class'):
+        if value == 'None' or pin.get('DefaultObject') == 'None':
+            return 'null'
+        return None  # Do not replace a referenced asset/object with a guessed label.
     if not isinstance(value, str):
         return None
     if kind == 'bool':
         return value if value in ('true', 'false') else None
+    if kind in ('string', 'name'):
+        quoted = json.dumps(value, ensure_ascii=False)
+        return quoted if kind == 'string' else 'Name(' + quoted + ')'
+    if isinstance(kind, tuple) and kind[0] == 'enum':
+        if re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*(?:::[A-Za-z_][A-Za-z_0-9]*)?', value):
+            enum = unquote(kind[1]).rstrip("'").rsplit('.', 1)[-1]
+            return enum + '.' + value.rsplit('::', 1)[-1]
+        return None
+    if kind in ('int', 'byte') and re.fullmatch(r'[+-]?\d+', value):
+        return value
     if kind == 'Vector':
         parts = [part.strip() for part in value.split(',')]
         if len(parts) == 3 and all(re.fullmatch(NUMBER, part) for part in parts):
@@ -109,13 +197,18 @@ def literal(node, alias, kind, templates):
     return None
 
 
+def compatible_types(actual, expected):
+    return (actual == expected or {actual, expected} == {'float', 'double'}
+            or (expected == 'byte' and isinstance(actual, tuple) and actual[0] == 'enum'))
+
+
 def formula(symbol, args):
+    if symbol.startswith('@'):
+        return args[0] + '.' + symbol[1:] + '(' + ', '.join(args[1:]) + ')'
     if symbol in ARGUMENT_LABELS:
         return symbol + '(' + ', '.join(label + arg for label, arg in zip(ARGUMENT_LABELS[symbol], args)) + ')'
-    if symbol in ('min', 'max', 'Vector', 'dot'):
+    if symbol not in INFIX and symbol != 'NOT':
         return symbol + '(' + ', '.join(args) + ')'
-    if symbol in ('float', 'double'):
-        return symbol + '(' + args[0] + ')'
     if symbol == 'NOT':
         return 'NOT (' + args[0] + ')'
     return '(' + (' ' + symbol + ' ').join(args) + ')'
@@ -138,7 +231,10 @@ def format_expression(tree, width=60, label='Output:'):
         if len(single) <= width or isinstance(node, str):
             return [single]
         op, args = node['op'], node['args']
-        if op in CALL_OPERATORS:
+        if op not in INFIX:
+            if op.startswith('@'):
+                prefix += flat_expression(args[0]) + '.'
+                op, args = op[1:], args[1:]
             lines = [pad + prefix + ('NOT ' if op == 'NOT' else op) + '(']
             labels = ARGUMENT_LABELS.get(op, ('',) * len(args))
             for i, (arg, arg_label) in enumerate(zip(args, labels)):
@@ -193,7 +289,7 @@ def fold_expressions(nodes, edges, original_edges, templates, children=None, rem
                 continue
             source, output = wired[alias][0][:2]
             actual = expression_type(by_id.get(source, {}).get('pins', {}).get('out:' + output, {}), templates)
-            if actual != kind and {actual, kind} != {'float', 'double'}:
+            if not compatible_types(actual, kind):
                 compatible = False
         if not compatible:
             continue
@@ -245,6 +341,7 @@ def fold_expressions(nodes, edges, original_edges, templates, children=None, rem
                 anonymous.add(endpoint)
             symbols[node['id'], alias[4:]] = name
             counts[name] += 1
+    base_symbols = dict(symbols)
     # Distinct reads with the same name must not look like one captured value.
     for endpoint, name in list(symbols.items()):
         if counts[name] > 1:
@@ -299,8 +396,22 @@ def fold_expressions(nodes, edges, original_edges, templates, children=None, rem
         expression, members, inputs, constants = build(nid, max_nodes)
         # Fallback aliases belong to this expression's boundary, not graph order.
         # Rename leaves structurally, so value1 never rewrites value10 or a literal.
-        reserved = {p['name'] for endpoint, p in inputs.items() if endpoint not in anonymous}
+        local_counts = Counter(base_symbols[e] for e in inputs if e not in anonymous)
+        reserved = set(local_counts)
         renamed, number = {}, 1
+        for endpoint, pin in inputs.items():
+            if endpoint in anonymous:
+                continue
+            base = base_symbols[endpoint]
+            name = base
+            if local_counts[base] > 1:
+                suffix = 1
+                while f'{base}_{suffix}' in reserved:
+                    suffix += 1
+                name = f'{base}_{suffix}'
+            renamed[pin['name']] = name
+            pin['name'] = name
+            reserved.add(name)
         for endpoint, pin in inputs.items():
             if endpoint not in anonymous:
                 continue
