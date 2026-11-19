@@ -3444,21 +3444,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "180",
-              "NodeGuid": "555E99854C77636F3EE77DB056DEDCA8"
-            },
-            "pins": {
-              "out:target": {
-                "id": "6D7E8F3E433393A33C57C48BF3CBF77D",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -3657,10 +3642,6 @@
           {
             "from": "K2Node_FunctionEntry_0.out:then",
             "to": "K2Node_CallFunction_0.in:exec"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_0.in:target"
           },
           {
             "from": "K2Node_VariableGet_0.out:RailgunStatusChargingBlink",
@@ -4344,36 +4325,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1080",
-              "NodeGuid": "53FEF70745FDCAA2E3E62DB9B223AFCB"
-            },
-            "pins": {
-              "out:target": {
-                "id": "DD2FBC7D4F9CEA39DA7085B8B3C5FA4F",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_1",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "5580",
-              "NodeGuid": "062040A04380C02D20D1C2997CF6AE97"
-            },
-            "pins": {
-              "out:target": {
-                "id": "BF2A2C894680B652DB9CBAB7BFABE03E",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -4765,14 +4716,6 @@
           {
             "from": "K2Node_IfThenElse_3.out:then",
             "to": "K2Node_CallFunction_12.in:exec"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_2.in:target"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_CallFunction_13.in:target"
           },
           {
             "from": "K2Node_VariableGet_0.out:RailgunHudStatusState",

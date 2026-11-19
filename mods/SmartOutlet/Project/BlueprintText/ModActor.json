@@ -1561,21 +1561,6 @@
             }
           },
           {
-            "id": "Self",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "320",
-              "NodeGuid": "F3EAE269E2334D97BE7DD1F4AF49BB5E"
-            },
-            "pins": {
-              "out:target": {
-                "id": "E0ACF086D14D46B9BE69D44C442D3495",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "WriteSettingsParser",
             "kind": "setVariable",
             "properties": {
@@ -1681,10 +1666,6 @@
           {
             "from": "ReadUnlockFlag.out:result",
             "to": "WriteUnlockSaltWaterTank.in:UnlockSaltWaterTank"
-          },
-          {
-            "from": "Self.out:target",
-            "to": "CreateParser.in:target"
           },
           {
             "from": "WriteSettingsParser.out:then",
@@ -9820,21 +9801,6 @@
             ]
           },
           {
-            "id": "Self",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "320",
-              "NodeGuid": "DE627248E8FC4266A08B1DE72E53440D"
-            },
-            "pins": {
-              "out:target": {
-                "id": "9CA670669B464454A2BA77E6E0E79C50",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "SoftClass",
             "kind": "call",
             "properties": {
@@ -9943,10 +9909,6 @@
           {
             "from": "ReadSettingsParser.out:SettingsParser",
             "to": "ReadSettings.in:Parser"
-          },
-          {
-            "from": "Self.out:target",
-            "to": "CreateProfile.in:target"
           },
           {
             "from": "SoftClass.out:result",

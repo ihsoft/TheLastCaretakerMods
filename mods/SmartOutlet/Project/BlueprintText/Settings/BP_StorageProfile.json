@@ -216,21 +216,6 @@
             ]
           },
           {
-            "id": "Self",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "320",
-              "NodeGuid": "3893763B2B6742E8B59E3443B0CB7E2E"
-            },
-            "pins": {
-              "out:target": {
-                "id": "7D19FD9DCB4D4E8C850B65B6D28C998C",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "Supported",
             "kind": "branch",
             "properties": {
@@ -365,10 +350,6 @@
           {
             "from": "ReadSettings.out:then",
             "to": "ValidRule.in:exec"
-          },
-          {
-            "from": "Self.out:target",
-            "to": "CreateRule.in:target"
           },
           {
             "from": "Supported.out:else",
@@ -1277,26 +1258,6 @@
       "PinType.PinSubCategory": "\"\"",
       "PinType.PinSubCategoryMemberReference": "()",
       "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/SmartOutlet/Settings/BP_SectionedIniFileParser.BP_SectionedIniFileParser_C'\"",
-      "PinType.PinValueType": "()",
-      "PinType.bIsConst": "False",
-      "PinType.bIsReference": "False",
-      "PinType.bIsUObjectWrapper": "False",
-      "PinType.bIsWeakPointer": "False",
-      "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "bAdvancedView": "False",
-      "bDefaultValueIsIgnored": "False",
-      "bDefaultValueIsReadOnly": "False",
-      "bHidden": "False",
-      "bNotConnectable": "False",
-      "bOrphanedPin": "False"
-    },
-    "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8": {
-      "PersistentGuid": "00000000000000000000000000000000",
-      "PinType.ContainerType": "None",
-      "PinType.PinCategory": "\"object\"",
-      "PinType.PinSubCategory": "\"self\"",
-      "PinType.PinSubCategoryMemberReference": "()",
-      "PinType.PinSubCategoryObject": "None",
       "PinType.PinValueType": "()",
       "PinType.bIsConst": "False",
       "PinType.bIsReference": "False",

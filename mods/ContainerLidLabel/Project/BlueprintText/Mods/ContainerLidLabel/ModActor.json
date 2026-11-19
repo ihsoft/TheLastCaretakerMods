@@ -1594,21 +1594,6 @@
             }
           },
           {
-            "id": "CreateParserSelf",
-            "kind": "self",
-            "properties": {
-              "NodePosY": "220",
-              "NodeGuid": "E2BC42F79E4D4AE18396DC3E2506721E"
-            },
-            "pins": {
-              "out:target": {
-                "id": "F0D9464768B240D0918F861EA2F48FB7",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "Entry",
             "kind": "FunctionEntry",
             "properties": {
@@ -1982,10 +1967,6 @@
           {
             "from": "CreateParser.out:then",
             "to": "LoadIni.in:exec"
-          },
-          {
-            "from": "CreateParserSelf.out:target",
-            "to": "CreateParser.in:target"
           },
           {
             "from": "Entry.out:then",
@@ -4403,26 +4384,6 @@
       "PinType.PinSubCategory": "\"\"",
       "PinType.PinSubCategoryMemberReference": "()",
       "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/ContainerLidLabel/Settings/BP_IniFileParser.BP_IniFileParser_C'\"",
-      "PinType.PinValueType": "()",
-      "PinType.bIsConst": "False",
-      "PinType.bIsReference": "False",
-      "PinType.bIsUObjectWrapper": "False",
-      "PinType.bIsWeakPointer": "False",
-      "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "bAdvancedView": "False",
-      "bDefaultValueIsIgnored": "False",
-      "bDefaultValueIsReadOnly": "False",
-      "bHidden": "False",
-      "bNotConnectable": "False",
-      "bOrphanedPin": "False"
-    },
-    "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8": {
-      "PersistentGuid": "00000000000000000000000000000000",
-      "PinType.ContainerType": "None",
-      "PinType.PinCategory": "\"object\"",
-      "PinType.PinSubCategory": "\"self\"",
-      "PinType.PinSubCategoryMemberReference": "()",
-      "PinType.PinSubCategoryObject": "None",
       "PinType.PinValueType": "()",
       "PinType.bIsConst": "False",
       "PinType.bIsReference": "False",

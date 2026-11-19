@@ -1983,21 +1983,6 @@
             }
           },
           {
-            "id": "K2Node_Self_5",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "27360",
-              "NodeGuid": "5230D5A040749548DF4B7CA83F886594"
-            },
-            "pins": {
-              "out:target": {
-                "id": "1E44B7F84C2E8E7A08B636AB86D9F00C",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_38",
             "kind": "getVariable",
             "properties": {
@@ -2088,10 +2073,6 @@
           {
             "from": "K2Node_IfThenElse_21.out:then",
             "to": "K2Node_DynamicCast_3.in:exec"
-          },
-          {
-            "from": "K2Node_Self_5.out:target",
-            "to": "K2Node_CallFunction_61.in:ContextObject"
           },
           {
             "from": "K2Node_VariableGet_38.out:ShotController",
@@ -2730,21 +2711,6 @@
             }
           },
           {
-            "id": "K2Node_Self_4",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "10440",
-              "NodeGuid": "8A803EE2489FF7EF9EAA189C0DD95760"
-            },
-            "pins": {
-              "out:target": {
-                "id": "2BB401DA401B5995B86731AD2057FC69",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_15",
             "kind": "getVariable",
             "properties": {
@@ -2907,10 +2873,6 @@
           {
             "from": "K2Node_IfThenElse_3.out:else",
             "to": "K2Node_CallFunction_20.in:exec"
-          },
-          {
-            "from": "K2Node_Self_4.out:target",
-            "to": "K2Node_CallFunction_19.in:target"
           },
           {
             "from": "K2Node_VariableGet_15.out:ShotDone",
@@ -4710,36 +4672,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1260",
-              "NodeGuid": "95B40C1D48FD49F8AFC33EBE8FF0FA36"
-            },
-            "pins": {
-              "out:target": {
-                "id": "042641494019AFB597EFD8B3586B9175",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_2",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "4860",
-              "NodeGuid": "4F94956E405751E82A55C09F1251A91D"
-            },
-            "pins": {
-              "out:target": {
-                "id": "B9AF45474C7FAE213AFEED948DFE120E",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableSet_1",
             "kind": "setVariable",
             "properties": {
@@ -5012,14 +4944,6 @@
           {
             "from": "K2Node_CallFunction_4.out:result",
             "to": "K2Node_VariableSet_1.in:ShotOrigin"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_4.in:target"
-          },
-          {
-            "from": "K2Node_Self_2.out:target",
-            "to": "K2Node_CallFunction_11.in:target"
           },
           {
             "from": "K2Node_VariableSet_1.out:Output_Get",
@@ -6171,21 +6095,6 @@
             }
           },
           {
-            "id": "K2Node_Self_1",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "2880",
-              "NodeGuid": "8CFEE3CB4C618BC7C42E3589D71436EA"
-            },
-            "pins": {
-              "out:target": {
-                "id": "88FCC3094415B99577F503BA697C175F",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableSet_6",
             "kind": "setVariable",
             "properties": {
@@ -6288,10 +6197,6 @@
           {
             "from": "K2Node_IfThenElse_0.out:then",
             "to": "K2Node_DynamicCast_0.in:exec"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_CallFunction_6.in:target"
           },
           {
             "from": "K2Node_VariableSet_6.out:then",

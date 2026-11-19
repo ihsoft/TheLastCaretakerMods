@@ -22395,21 +22395,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1620",
-              "NodeGuid": "2329422B4B94C14DB47D248FAE332202"
-            },
-            "pins": {
-              "out:target": {
-                "id": "1F42D56A4DF999B06CC53E82745AE7E0",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Self_1",
             "kind": "self",
             "properties": {
@@ -22682,10 +22667,6 @@
                 "id": "B1485ADDA7504FD6832A78C3F3418DDD",
                 "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
                 "name": "execute"
-              },
-              "in:self": {
-                "id": "357F9F34C10C440E84CEC9C64E148DBF",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8"
               }
             }
           },
@@ -22832,14 +22813,6 @@
             "to": "K2Node_VariableSet_11.in:ComponentTags"
           },
           {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_5.in:target"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_CallFunction_14.in:target"
-          },
-          {
             "from": "K2Node_VariableGet_0.out:NativeStation",
             "to": "K2Node_CallFunction_0.in:Object"
           },
@@ -22886,10 +22859,6 @@
           {
             "from": "K2Node_IfThenElse_3.out:then",
             "to": "K2Node_Composite_FindModelEntryReference.in:exec"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_Composite_FindModelEntryReference.in:self"
           },
           {
             "from": "K2Node_VariableSet_12.out:then",
@@ -26208,15 +26177,10 @@
                 "id": "329E077CDACC474F86612117CB964FB2",
                 "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
                 "name": "execute"
-              },
-              "out:self": {
-                "id": "C84C61579D094B81943999DAA574AA04",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8"
               }
             },
             "custom": [
-              "CustomProperties UserDefinedPin (PinName=\"execute\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Output)",
-              "CustomProperties UserDefinedPin (PinName=\"self\",PinType=(PinCategory=\"object\",PinSubCategory=\"self\"),DesiredPinDirection=EGPD_Output)"
+              "CustomProperties UserDefinedPin (PinName=\"execute\",PinType=(PinCategory=\"exec\"),DesiredPinDirection=EGPD_Output)"
             ]
           },
           {
@@ -26441,10 +26405,6 @@
           {
             "from": "K2Node_Tunnel_Entry.out:exec",
             "to": "K2Node_VariableSet_1.in:exec"
-          },
-          {
-            "from": "K2Node_Tunnel_Entry.out:self",
-            "to": "K2Node_CallFunction_12.in:target"
           }
         ]
       }

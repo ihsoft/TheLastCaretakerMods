@@ -1041,21 +1041,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "3960",
-              "NodeGuid": "7F1D2A104FBB8AFF4FC12A9862158A5C"
-            },
-            "pins": {
-              "out:target": {
-                "id": "18B942044CE0DC19CF6D80BE7B6A1D1E",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -1468,10 +1453,6 @@
           {
             "from": "K2Node_MakeStruct_0.out:VoyageFluidImpulse",
             "to": "K2Node_CallFunction_8.in:Impulse"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_5.in:ContextObject"
           },
           {
             "from": "K2Node_VariableGet_0.out:WakeLocations",
@@ -2988,26 +2969,6 @@
       "PinType.PinSubCategory": "\"\"",
       "PinType.PinSubCategoryMemberReference": "()",
       "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Voyage.VoyageWeatherSubsystem'\"",
-      "PinType.PinValueType": "()",
-      "PinType.bIsConst": "False",
-      "PinType.bIsReference": "False",
-      "PinType.bIsUObjectWrapper": "False",
-      "PinType.bIsWeakPointer": "False",
-      "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "bAdvancedView": "False",
-      "bDefaultValueIsIgnored": "False",
-      "bDefaultValueIsReadOnly": "False",
-      "bHidden": "False",
-      "bNotConnectable": "False",
-      "bOrphanedPin": "False"
-    },
-    "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8": {
-      "PersistentGuid": "00000000000000000000000000000000",
-      "PinType.ContainerType": "None",
-      "PinType.PinCategory": "\"object\"",
-      "PinType.PinSubCategory": "\"self\"",
-      "PinType.PinSubCategoryMemberReference": "()",
-      "PinType.PinSubCategoryObject": "None",
       "PinType.PinValueType": "()",
       "PinType.bIsConst": "False",
       "PinType.bIsReference": "False",

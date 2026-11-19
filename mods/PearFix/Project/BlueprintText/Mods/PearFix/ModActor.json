@@ -5288,22 +5288,6 @@
             }
           },
           {
-            "id": "ScheduleSelf",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1080",
-              "NodePosY": "240",
-              "NodeGuid": "1E5112BB50BD49CEB907474427AEDF32"
-            },
-            "pins": {
-              "out:target": {
-                "id": "BCACD90822E142ECAB44EF5C53A1FBEE",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "Scheduled",
             "kind": "getVariable",
             "properties": {
@@ -5391,10 +5375,6 @@
           {
             "from": "RememberTree.out:then",
             "to": "AlreadyScheduled.in:exec"
-          },
-          {
-            "from": "ScheduleSelf.out:target",
-            "to": "Schedule.in:Object"
           },
           {
             "from": "Scheduled.out:BatchScheduled",
@@ -5504,21 +5484,6 @@
               "in:FunctionName": "ProcessPendingTrees"
             },
             "declarationDefaults": {}
-          },
-          {
-            "id": "CancelBatchTimerSelf",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "360",
-              "NodeGuid": "2558D4670A77410E98B6178AED4BAF10"
-            },
-            "pins": {
-              "out:target": {
-                "id": "F5D6D2DC82A443BBA22EB02F782ADA82",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
           },
           {
             "id": "ClearPending",
@@ -5834,10 +5799,6 @@
           {
             "from": "CancelBatchTimer.out:then",
             "to": "TakeBatch.in:exec"
-          },
-          {
-            "from": "CancelBatchTimerSelf.out:target",
-            "to": "CancelBatchTimer.in:Object"
           },
           {
             "from": "ClearPending.out:then",
@@ -6284,21 +6245,6 @@
             "declarationDefaults": {}
           },
           {
-            "id": "CancelBatchSelf",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "360",
-              "NodeGuid": "33F6EAD7A42D4FA7B3021AB21CF68AAA"
-            },
-            "pins": {
-              "out:target": {
-                "id": "B1D7CD3BB97D4D409FB4C5230E28C796",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "DropBatch",
             "kind": "CallArrayFunction",
             "properties": {
@@ -6582,10 +6528,6 @@
           {
             "from": "CancelBatch.out:then",
             "to": "DropPending.in:exec"
-          },
-          {
-            "from": "CancelBatchSelf.out:target",
-            "to": "CancelBatch.in:Object"
           },
           {
             "from": "DropBatch.out:then",
@@ -9070,26 +9012,6 @@
       "PinType.PinValueType": "()",
       "PinType.bIsConst": "True",
       "PinType.bIsReference": "True",
-      "PinType.bIsUObjectWrapper": "False",
-      "PinType.bIsWeakPointer": "False",
-      "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "bAdvancedView": "False",
-      "bDefaultValueIsIgnored": "False",
-      "bDefaultValueIsReadOnly": "False",
-      "bHidden": "False",
-      "bNotConnectable": "False",
-      "bOrphanedPin": "False"
-    },
-    "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8": {
-      "PersistentGuid": "00000000000000000000000000000000",
-      "PinType.ContainerType": "None",
-      "PinType.PinCategory": "\"object\"",
-      "PinType.PinSubCategory": "\"self\"",
-      "PinType.PinSubCategoryMemberReference": "()",
-      "PinType.PinSubCategoryObject": "None",
-      "PinType.PinValueType": "()",
-      "PinType.bIsConst": "False",
-      "PinType.bIsReference": "False",
       "PinType.bIsUObjectWrapper": "False",
       "PinType.bIsWeakPointer": "False",
       "PinType.bSerializeAsSinglePrecisionFloat": "False",

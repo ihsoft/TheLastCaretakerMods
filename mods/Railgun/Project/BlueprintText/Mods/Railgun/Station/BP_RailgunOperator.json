@@ -1751,36 +1751,6 @@
             "defaults": {
               "in:Condition": "true"
             }
-          },
-          {
-            "id": "K2Node_Self_18",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "200520",
-              "NodeGuid": "C33559B5444952E4316C4FBFA15642F1"
-            },
-            "pins": {
-              "out:target": {
-                "id": "E753219A471A6F70034C7C82CB1FFFFB",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_19",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "201240",
-              "NodeGuid": "648179C445A8B9C57024DC8D59B0ABA9"
-            },
-            "pins": {
-              "out:target": {
-                "id": "EC2D9A3E484C5EEABB706FB16C94B246",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
           }
         ],
         "links": [
@@ -1867,14 +1837,6 @@
           {
             "from": "K2Node_IfThenElse_207.out:then",
             "to": "K2Node_CallFunction_446.in:exec"
-          },
-          {
-            "from": "K2Node_Self_18.out:target",
-            "to": "K2Node_CallFunction_445.in:target"
-          },
-          {
-            "from": "K2Node_Self_19.out:target",
-            "to": "K2Node_CallFunction_446.in:target"
           }
         ]
       }
@@ -4732,36 +4694,6 @@
             }
           },
           {
-            "id": "K2Node_Self_5",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "44460",
-              "NodeGuid": "63A1C4BD48CB5448FB5513A2D8A737A5"
-            },
-            "pins": {
-              "out:target": {
-                "id": "0FE87C14456114BDBB9DF9BE32A5E36F",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_6",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "45180",
-              "NodeGuid": "FD04C6FB46B2111FCCB94BA2BDEFEA48"
-            },
-            "pins": {
-              "out:target": {
-                "id": "0964919A4DA0A14ABFFB6E8982C9A418",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -5105,14 +5037,6 @@
           {
             "from": "K2Node_IfThenElse_57.out:then",
             "to": "K2Node_CallFunction_131.in:exec"
-          },
-          {
-            "from": "K2Node_Self_5.out:target",
-            "to": "K2Node_CallFunction_114.in:target"
-          },
-          {
-            "from": "K2Node_Self_6.out:target",
-            "to": "K2Node_CallFunction_116.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:OldController",
@@ -6785,51 +6709,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "7920",
-              "NodeGuid": "8CB546E441032C832DDE6B8CDBC6C32D"
-            },
-            "pins": {
-              "out:target": {
-                "id": "713AC74B41AA419E6AB4B98A27C86770",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_1",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "8640",
-              "NodeGuid": "0AB8B3E646D3A60CEAD343A87DE31A21"
-            },
-            "pins": {
-              "out:target": {
-                "id": "975A8A92410014D3B3D722AFB441A8BD",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_2",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "9180",
-              "NodeGuid": "17D8035B43250AD3D421D0A6969C57A3"
-            },
-            "pins": {
-              "out:target": {
-                "id": "00E7F5A845186DD132EDBC99E0A67593",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -7199,18 +7078,6 @@
           {
             "from": "K2Node_IfThenElse_9.out:then",
             "to": "K2Node_IfThenElse_10.in:exec"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_36.in:target"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_CallFunction_38.in:target"
-          },
-          {
-            "from": "K2Node_Self_2.out:target",
-            "to": "K2Node_CallFunction_39.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:NewController",
@@ -10367,36 +10234,6 @@
             }
           },
           {
-            "id": "K2Node_Self_3",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "24120",
-              "NodeGuid": "7BA5042F4AE494841F211A8926129C09"
-            },
-            "pins": {
-              "out:target": {
-                "id": "8982E89343661C108F6EC68D34F906A5",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_4",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "24480",
-              "NodeGuid": "DC3426E14B34FF65817D0E92E4D09AAF"
-            },
-            "pins": {
-              "out:target": {
-                "id": "D6A2FD3040D5F95CB23E39A7E7A84383",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -10721,14 +10558,6 @@
           {
             "from": "K2Node_IfThenElse_28.out:then",
             "to": "K2Node_DynamicCast_4.in:exec"
-          },
-          {
-            "from": "K2Node_Self_3.out:target",
-            "to": "K2Node_CallFunction_73.in:target"
-          },
-          {
-            "from": "K2Node_Self_4.out:target",
-            "to": "K2Node_CallFunction_74.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:exec",
@@ -12989,21 +12818,6 @@
             }
           },
           {
-            "id": "K2Node_Self_7",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "53640",
-              "NodeGuid": "B35089C2425319C4CE2F38890295C58B"
-            },
-            "pins": {
-              "out:target": {
-                "id": "C657B34442A3EA7D2B580090407D5ADB",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -13227,10 +13041,6 @@
             "to": "K2Node_Composite_TrackWideViewAim.in:exec"
           },
           {
-            "from": "K2Node_Self_7.out:target",
-            "to": "K2Node_CallFunction_133.in:target"
-          },
-          {
             "from": "K2Node_Tunnel_Entry.out:exec",
             "to": "K2Node_IfThenElse_58.in:exec"
           },
@@ -13441,21 +13251,6 @@
             }
           },
           {
-            "id": "K2Node_Self_10",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "132480",
-              "NodeGuid": "561B629B4FAC66370C9067ADDE28CAD9"
-            },
-            "pins": {
-              "out:target": {
-                "id": "3B78E9B54724B09156B4EAA33A8CFCF3",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -13532,7 +13327,7 @@
             "id": "K2Node_VariableGet_229",
             "kind": "getVariable",
             "properties": {
-              "VariableReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunOperator.BP_RailgunOperator_C'\",MemberName=\"RailgunADSServiceHolster\")",
+              "VariableReference": "(MemberName=\"RailgunADSServiceHolster\",bSelfContext=True)",
               "NodePosX": "132660",
               "NodeGuid": "F48526C34A79B40168F157BF588979F0"
             },
@@ -13543,7 +13338,7 @@
               },
               "in:target": {
                 "id": "16B67CFF4EAF0878CD7B5DB4112E5F09",
-                "type": "p_c7887f8c0613d83ad3c26df05208fb937dc0cda7ef1f2a7a62ab85b2bcee696e",
+                "type": "p_79036e60d819009b10d77ae61f3f787bf31deb1471abf18a30aeebc2892d2847",
                 "name": "self"
               }
             }
@@ -13713,10 +13508,6 @@
           {
             "from": "K2Node_IfThenElse_144.out:then",
             "to": "K2Node_VariableSet_63.in:exec"
-          },
-          {
-            "from": "K2Node_Self_10.out:target",
-            "to": "K2Node_VariableGet_229.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:exec",
@@ -14329,36 +14120,6 @@
             }
           },
           {
-            "id": "K2Node_Self_8",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "56880",
-              "NodeGuid": "C8FFDAE14CD6CE1602F857915549419A"
-            },
-            "pins": {
-              "out:target": {
-                "id": "AE04E0104B896465565E73AFA05018A4",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_9",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "58680",
-              "NodeGuid": "AF38A1BD439CA7558254939E5EC151E6"
-            },
-            "pins": {
-              "out:target": {
-                "id": "1444F4A4433BF2A9A67E9197B2D048E1",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -14443,7 +14204,7 @@
             "id": "K2Node_VariableGet_90",
             "kind": "getVariable",
             "properties": {
-              "VariableReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunOperator.BP_RailgunOperator_C'\",MemberName=\"RailgunADSServiceHolster\")",
+              "VariableReference": "(MemberName=\"RailgunADSServiceHolster\",bSelfContext=True)",
               "NodePosX": "57060",
               "NodeGuid": "ECD7CEB6441502D578DA8BB67F6BCBBF"
             },
@@ -14454,7 +14215,7 @@
               },
               "in:target": {
                 "id": "B9ED46BE49FFD486D779AB9C0660E0D6",
-                "type": "p_c7887f8c0613d83ad3c26df05208fb937dc0cda7ef1f2a7a62ab85b2bcee696e",
+                "type": "p_79036e60d819009b10d77ae61f3f787bf31deb1471abf18a30aeebc2892d2847",
                 "name": "self"
               }
             }
@@ -14483,7 +14244,7 @@
             "id": "K2Node_VariableGet_92",
             "kind": "getVariable",
             "properties": {
-              "VariableReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunOperator.BP_RailgunOperator_C'\",MemberName=\"RailgunADSServiceHolster\")",
+              "VariableReference": "(MemberName=\"RailgunADSServiceHolster\",bSelfContext=True)",
               "NodePosX": "58860",
               "NodeGuid": "557B0C3649E7628BA038C489EFF251D2"
             },
@@ -14494,7 +14255,7 @@
               },
               "in:target": {
                 "id": "8A9D7A9F481BBCDC399EF88ED97673FF",
-                "type": "p_c7887f8c0613d83ad3c26df05208fb937dc0cda7ef1f2a7a62ab85b2bcee696e",
+                "type": "p_79036e60d819009b10d77ae61f3f787bf31deb1471abf18a30aeebc2892d2847",
                 "name": "self"
               }
             }
@@ -14688,14 +14449,6 @@
           {
             "from": "K2Node_IfThenElse_89.out:then",
             "to": "K2Node_Tunnel_Exit.in:then"
-          },
-          {
-            "from": "K2Node_Self_8.out:target",
-            "to": "K2Node_VariableGet_90.in:target"
-          },
-          {
-            "from": "K2Node_Self_9.out:target",
-            "to": "K2Node_VariableGet_92.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:exec",
@@ -25950,21 +25703,6 @@
             }
           },
           {
-            "id": "K2Node_Self_21",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "213660",
-              "NodeGuid": "9E46278940452EC2FCCFAC9F7819F23B"
-            },
-            "pins": {
-              "out:target": {
-                "id": "6B8787184B5655C501FD03B29787B13F",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -26410,10 +26148,6 @@
           {
             "from": "K2Node_IfThenElse_223.out:then",
             "to": "K2Node_VariableSet_94.in:exec"
-          },
-          {
-            "from": "K2Node_Self_21.out:target",
-            "to": "K2Node_CallFunction_472.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:ActionValue",
@@ -27156,21 +26890,6 @@
             }
           },
           {
-            "id": "K2Node_Self_20",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "201600",
-              "NodeGuid": "058C9E1B4DD7066D85634B85A5B367FE"
-            },
-            "pins": {
-              "out:target": {
-                "id": "7249B141408AF62DC8D815B11E940DC5",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -27624,10 +27343,6 @@
           {
             "from": "K2Node_IfThenElse_211.out:then",
             "to": "K2Node_VariableSet_92.in:exec"
-          },
-          {
-            "from": "K2Node_Self_20.out:target",
-            "to": "K2Node_CallFunction_447.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:ActionValue",
@@ -28177,21 +27892,6 @@
             }
           },
           {
-            "id": "K2Node_Self_15",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "140940",
-              "NodeGuid": "807CD9FA427264AB6FF3F68EC350B56F"
-            },
-            "pins": {
-              "out:target": {
-                "id": "0D75D5B9489DFF020F61178054B55240",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -28427,10 +28127,6 @@
           {
             "from": "K2Node_MacroInstance_2.out:LoopBody",
             "to": "K2Node_Composite_FireFromAvailableMuzzle.in:exec"
-          },
-          {
-            "from": "K2Node_Self_15.out:target",
-            "to": "K2Node_CallFunction_316.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:exec",
@@ -30578,21 +30274,6 @@
             }
           },
           {
-            "id": "K2Node_Self_17",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "153900",
-              "NodeGuid": "94467A2A410E4BB3F884E3931B050926"
-            },
-            "pins": {
-              "out:target": {
-                "id": "968BCAFF491EE467BA9B169D9D5564CB",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -30858,10 +30539,6 @@
           {
             "from": "K2Node_Self_16.out:target",
             "to": "K2Node_VariableSet_75.in:ShotStation"
-          },
-          {
-            "from": "K2Node_Self_17.out:target",
-            "to": "K2Node_CallFunction_343.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:Value",
@@ -37736,66 +37413,6 @@
             }
           },
           {
-            "id": "K2Node_Self_11",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "133380",
-              "NodeGuid": "E4E455E64EF4297E1FBD32BB65CD4748"
-            },
-            "pins": {
-              "out:target": {
-                "id": "EB1C91C64BDCDCA4FC6DA6B4DC0C9AD4",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_12",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "135900",
-              "NodeGuid": "C56181A743CE02484A5622B399193298"
-            },
-            "pins": {
-              "out:target": {
-                "id": "1773C4C24B365429B2E741994E061301",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_13",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "137700",
-              "NodeGuid": "49DB8B3F4FFD93A3987453BC45E16327"
-            },
-            "pins": {
-              "out:target": {
-                "id": "99D545FE49F9AD25E6F12B93774FA25B",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_14",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "139320",
-              "NodeGuid": "10BFFC4C44D6416738EF74AA6096D4BB"
-            },
-            "pins": {
-              "out:target": {
-                "id": "689B7C264CCC16DF49CC3D82938E4ABE",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -37912,7 +37529,7 @@
             "id": "K2Node_VariableGet_234",
             "kind": "getVariable",
             "properties": {
-              "VariableReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunOperator.BP_RailgunOperator_C'\",MemberName=\"RailgunADSServiceHolster\")",
+              "VariableReference": "(MemberName=\"RailgunADSServiceHolster\",bSelfContext=True)",
               "NodePosX": "136080",
               "NodeGuid": "B3CD5E32484E9BCE6DCF33AB0BA59845"
             },
@@ -37923,7 +37540,7 @@
               },
               "in:target": {
                 "id": "AEB543A44C59100E0360528CA17120B4",
-                "type": "p_c7887f8c0613d83ad3c26df05208fb937dc0cda7ef1f2a7a62ab85b2bcee696e",
+                "type": "p_79036e60d819009b10d77ae61f3f787bf31deb1471abf18a30aeebc2892d2847",
                 "name": "self"
               }
             }
@@ -37952,7 +37569,7 @@
             "id": "K2Node_VariableGet_236",
             "kind": "getVariable",
             "properties": {
-              "VariableReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunOperator.BP_RailgunOperator_C'\",MemberName=\"RailgunADSServiceHolster\")",
+              "VariableReference": "(MemberName=\"RailgunADSServiceHolster\",bSelfContext=True)",
               "NodePosX": "137880",
               "NodeGuid": "127FC8914F7A90CD1F56DC84A96DFACA"
             },
@@ -37963,7 +37580,7 @@
               },
               "in:target": {
                 "id": "460193204CAED7C5FDA4308A9CB4B005",
-                "type": "p_c7887f8c0613d83ad3c26df05208fb937dc0cda7ef1f2a7a62ab85b2bcee696e",
+                "type": "p_79036e60d819009b10d77ae61f3f787bf31deb1471abf18a30aeebc2892d2847",
                 "name": "self"
               }
             }
@@ -37992,7 +37609,7 @@
             "id": "K2Node_VariableGet_238",
             "kind": "getVariable",
             "properties": {
-              "VariableReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunOperator.BP_RailgunOperator_C'\",MemberName=\"RailgunADSServiceHolster\")",
+              "VariableReference": "(MemberName=\"RailgunADSServiceHolster\",bSelfContext=True)",
               "NodePosX": "139500",
               "NodeGuid": "7DFE6E574A61554AAC0A6587A29DBA9E"
             },
@@ -38003,7 +37620,7 @@
               },
               "in:target": {
                 "id": "67203B2A4C20FDB915668C86EA3F37F7",
-                "type": "p_c7887f8c0613d83ad3c26df05208fb937dc0cda7ef1f2a7a62ab85b2bcee696e",
+                "type": "p_79036e60d819009b10d77ae61f3f787bf31deb1471abf18a30aeebc2892d2847",
                 "name": "self"
               }
             }
@@ -38157,22 +37774,6 @@
           {
             "from": "K2Node_IfThenElse_156.out:then",
             "to": "K2Node_CallFunction_315.in:exec"
-          },
-          {
-            "from": "K2Node_Self_11.out:target",
-            "to": "K2Node_CallFunction_301.in:target"
-          },
-          {
-            "from": "K2Node_Self_12.out:target",
-            "to": "K2Node_VariableGet_234.in:target"
-          },
-          {
-            "from": "K2Node_Self_13.out:target",
-            "to": "K2Node_VariableGet_236.in:target"
-          },
-          {
-            "from": "K2Node_Self_14.out:target",
-            "to": "K2Node_VariableGet_238.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:exec",
@@ -39581,24 +39182,10 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodeGuid": "526D97C14FC98A77C46540BE6045875C"
-            },
-            "pins": {
-              "out:target": {
-                "id": "3A18BCD44C4EF09A662A1BA85FDC6BE6",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
-              "VariableReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Voyage.VoyageVehiclePawn'\",MemberName=\"InputControls\")",
+              "VariableReference": "(MemberName=\"InputControls\",bSelfContext=True)",
               "NodePosX": "180",
               "NodeGuid": "DC5A90984DA2698FBDEE5DA52021CB3B"
             },
@@ -39609,7 +39196,7 @@
               },
               "in:target": {
                 "id": "677AAE9646C18E77E22CFA827240881B",
-                "type": "p_d46b4036d0861af22d420ddb9646b75d4d3326e3add98268f5a07197d369f9de",
+                "type": "p_ac8ccfd1fac8817146c0a1ce8561bda5fceab04fa705b020e9f69f7b949d0879",
                 "name": "self"
               }
             }
@@ -39745,10 +39332,6 @@
           {
             "from": "K2Node_FunctionEntry_0.out:then",
             "to": "K2Node_VariableSet_0.in:exec"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_VariableGet_0.in:target"
           },
           {
             "from": "K2Node_VariableGet_0.out:InputControls",
@@ -40024,40 +39607,10 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "360",
-              "NodeGuid": "B8375DAC40B4D610E8A74AADC6E30285"
-            },
-            "pins": {
-              "out:target": {
-                "id": "04B0D9EE4EAFC3BBAB41B79413C75B9D",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_1",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "2160",
-              "NodeGuid": "2455885748A6AC0319AD52B36E102AD9"
-            },
-            "pins": {
-              "out:target": {
-                "id": "EABE62B847C4F20C4ABD0EBFA0A48497",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
-              "VariableReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunOperator.BP_RailgunOperator_C'\",MemberName=\"RailgunADSServiceHolster\")",
+              "VariableReference": "(MemberName=\"RailgunADSServiceHolster\",bSelfContext=True)",
               "NodePosX": "540",
               "NodeGuid": "51C780424E1CA55F9ADA62A941512DE3"
             },
@@ -40068,7 +39621,7 @@
               },
               "in:target": {
                 "id": "93DD52634D9AD3530EDFCAAFD4B80681",
-                "type": "p_c7887f8c0613d83ad3c26df05208fb937dc0cda7ef1f2a7a62ab85b2bcee696e",
+                "type": "p_79036e60d819009b10d77ae61f3f787bf31deb1471abf18a30aeebc2892d2847",
                 "name": "self"
               }
             }
@@ -40117,7 +39670,7 @@
             "id": "K2Node_VariableGet_3",
             "kind": "getVariable",
             "properties": {
-              "VariableReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunOperator.BP_RailgunOperator_C'\",MemberName=\"RailgunADSServiceHolster\")",
+              "VariableReference": "(MemberName=\"RailgunADSServiceHolster\",bSelfContext=True)",
               "NodePosX": "2340",
               "NodeGuid": "00B72D8A456B99EBA29550971A1F9BD2"
             },
@@ -40128,7 +39681,7 @@
               },
               "in:target": {
                 "id": "8FE173F04F3BF1430031B3BDA7ADACAB",
-                "type": "p_c7887f8c0613d83ad3c26df05208fb937dc0cda7ef1f2a7a62ab85b2bcee696e",
+                "type": "p_79036e60d819009b10d77ae61f3f787bf31deb1471abf18a30aeebc2892d2847",
                 "name": "self"
               }
             }
@@ -40317,14 +39870,6 @@
           {
             "from": "K2Node_MakeStruct_0.out:VoyageHolsterSlotOverride",
             "to": "K2Node_CallFunction_2.in:InOverride"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_VariableGet_0.in:target"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_VariableGet_3.in:target"
           },
           {
             "from": "K2Node_VariableGet_0.out:RailgunADSServiceHolster",
@@ -40547,21 +40092,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1260",
-              "NodeGuid": "A0C2A94F4617519176F28A90E0B0C997"
-            },
-            "pins": {
-              "out:target": {
-                "id": "32A0D9CC4E11AA791AB2FE9C863DE455",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -40604,7 +40134,7 @@
             "id": "K2Node_VariableGet_2",
             "kind": "getVariable",
             "properties": {
-              "VariableReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunOperator.BP_RailgunOperator_C'\",MemberName=\"RailgunADSServiceHolster\")",
+              "VariableReference": "(MemberName=\"RailgunADSServiceHolster\",bSelfContext=True)",
               "NodePosX": "1440",
               "NodeGuid": "1F3EC46146EEAE0DE02534AC193E4A36"
             },
@@ -40615,7 +40145,7 @@
               },
               "in:target": {
                 "id": "75269CCD48EF372F79631EB8A44B8A06",
-                "type": "p_c7887f8c0613d83ad3c26df05208fb937dc0cda7ef1f2a7a62ab85b2bcee696e",
+                "type": "p_79036e60d819009b10d77ae61f3f787bf31deb1471abf18a30aeebc2892d2847",
                 "name": "self"
               }
             }
@@ -40795,10 +40325,6 @@
             "to": "K2Node_CallFunction_1.in:exec"
           },
           {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_VariableGet_2.in:target"
-          },
-          {
             "from": "K2Node_VariableGet_0.out:RailgunADSServiceActor",
             "to": "K2Node_CallFunction_0.in:Object"
           },
@@ -40865,22 +40391,6 @@
               "in:target": {
                 "id": "3EF0EF4456CB424DAA083FC94DC5152D",
                 "type": "p_2f092b9d5cea8ffa430df55daaf95bb35c15cf030b0a9a6824aa20f284f322fb",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "IniOwner",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "200",
-              "NodePosY": "650",
-              "NodeGuid": "480B745FC14040BBA64E399CC20E4927"
-            },
-            "pins": {
-              "out:target": {
-                "id": "6D390142A3504A3AB5CA8891766D9977",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
                 "name": "self"
               }
             }
@@ -41944,10 +41454,6 @@
           {
             "from": "CreateIniParser.out:then",
             "to": "StoreIniParser.in:exec"
-          },
-          {
-            "from": "IniOwner.out:target",
-            "to": "CreateIniParser.in:target"
           },
           {
             "from": "K2Node_CallFunction_0.out:result",
@@ -44954,51 +44460,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "540",
-              "NodeGuid": "2C548E85402AFAE2C5B6F884617A97E1"
-            },
-            "pins": {
-              "out:target": {
-                "id": "A40C875F4A23A55A40B2CC93F5F7C8EB",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_1",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1620",
-              "NodeGuid": "46F8CA37457D5A4DB7C185815C047D5E"
-            },
-            "pins": {
-              "out:target": {
-                "id": "CD7CADB84EED3B2F72123E82A9B5414C",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_2",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "2520",
-              "NodeGuid": "A784E1D24C81241ADC7A41A6AF44C17C"
-            },
-            "pins": {
-              "out:target": {
-                "id": "7F58D8A9472D92DBC4E86C9466BAECB0",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -45154,18 +44615,6 @@
           {
             "from": "K2Node_MakeStruct_3.out:PlayerInputInterfaceAction",
             "to": "K2Node_MakeArray_0.in:[3]"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_0.in:target"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_CallFunction_1.in:target"
-          },
-          {
-            "from": "K2Node_Self_2.out:target",
-            "to": "K2Node_CallFunction_2.in:target"
           },
           {
             "from": "K2Node_VariableGet_0.out:ActionDescription",
@@ -46089,21 +45538,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "180",
-              "NodeGuid": "7445185A43DCA83F7B9E3EAB03C68FF1"
-            },
-            "pins": {
-              "out:target": {
-                "id": "DA0FA397401EB2DB51F97286871DC037",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -46781,10 +46215,6 @@
           {
             "from": "K2Node_MacroInstance_1.out:LoopBody",
             "to": "K2Node_IfThenElse_6.in:exec"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_0.in:target"
           },
           {
             "from": "K2Node_VariableGet_0.out:RailgunReloadSourceInventory",
@@ -52177,51 +51607,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1080",
-              "NodeGuid": "44424A3B4B3219E8CA59EEA3135DA442"
-            },
-            "pins": {
-              "out:target": {
-                "id": "95FAA75C48FC40706D4ABFA5D4553B21",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_1",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "3240",
-              "NodeGuid": "AE6537FF45FDD8610F6520811F66D458"
-            },
-            "pins": {
-              "out:target": {
-                "id": "7CFFB7694B233DA09B66CFBDE219ECC2",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_2",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "4860",
-              "NodeGuid": "733C198941E79334641FD2ADA29BF1EB"
-            },
-            "pins": {
-              "out:target": {
-                "id": "0A921ADF4DA55C035C34D09618F96702",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_1",
             "kind": "getVariable",
             "properties": {
@@ -52533,18 +51918,6 @@
           {
             "from": "K2Node_IfThenElse_9.out:then",
             "to": "K2Node_IfThenElse_10.in:exec"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_1.in:target"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_CallFunction_5.in:target"
-          },
-          {
-            "from": "K2Node_Self_2.out:target",
-            "to": "K2Node_CallFunction_9.in:target"
           },
           {
             "from": "K2Node_VariableGet_1.out:RailgunViewController",
@@ -53065,21 +52438,6 @@
             }
           },
           {
-            "id": "K2Node_Self_3",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "10980",
-              "NodeGuid": "2EFB34DB46E045D82FFB2883F85ABCFA"
-            },
-            "pins": {
-              "out:target": {
-                "id": "D5005BC4447ED896C2416E9DF91F9AFD",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_Tunnel_Entry",
             "kind": "Tunnel",
             "properties": {
@@ -53330,10 +52688,6 @@
           {
             "from": "K2Node_IfThenElse_12.out:then",
             "to": "K2Node_VariableSet_3.in:exec"
-          },
-          {
-            "from": "K2Node_Self_3.out:target",
-            "to": "K2Node_CallFunction_26.in:target"
           },
           {
             "from": "K2Node_Tunnel_Entry.out:AsCharacter",
@@ -54769,21 +54123,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1080",
-              "NodeGuid": "5E7A2CCA4A8A1092F33E28956ADFD45F"
-            },
-            "pins": {
-              "out:target": {
-                "id": "B7DB890342DE29D5F4228C8C05DEECD9",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -55011,10 +54350,6 @@
           {
             "from": "K2Node_IfThenElse_2.out:then",
             "to": "K2Node_CallFunction_1.in:exec"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_1.in:WorldContextObject"
           },
           {
             "from": "K2Node_VariableGet_0.out:RailgunIdleDebitActive",
@@ -55722,36 +55057,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "5040",
-              "NodeGuid": "DCE5B55B4EDD2C88A120D28BFB2544CE"
-            },
-            "pins": {
-              "out:target": {
-                "id": "563443DC4C3AE30D3B112CAF7407165C",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_1",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "6120",
-              "NodeGuid": "4B2BEB4F41861CF1B06F958C2CE010D2"
-            },
-            "pins": {
-              "out:target": {
-                "id": "E5D235424DE1137F154244974868D972",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -56195,14 +55500,6 @@
           {
             "from": "K2Node_IfThenElse_3.out:then",
             "to": "K2Node_VariableSet_0.in:exec"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_12.in:Object"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_CallFunction_14.in:target"
           },
           {
             "from": "K2Node_VariableGet_0.out:RailgunChargeAmount",
@@ -64301,51 +63598,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "360",
-              "NodeGuid": "1D64A40F4A25A5D9BEDC43954523039E"
-            },
-            "pins": {
-              "out:target": {
-                "id": "DA820E4D43C1F43AD3C5D2B3EEBF21CB",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_1",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1080",
-              "NodeGuid": "73D232794FA6301A85FDFD883FE1942D"
-            },
-            "pins": {
-              "out:target": {
-                "id": "5280C6E64CAF6FDADEDD2F9170DC91D6",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_2",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "9720",
-              "NodeGuid": "18E6038B4A926C98972F1AA02370D19F"
-            },
-            "pins": {
-              "out:target": {
-                "id": "ED64FC00433210B653F7D083A3733863",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -64616,18 +63868,6 @@
           {
             "from": "K2Node_IfThenElse_2.out:then",
             "to": "K2Node_VariableSet_0.in:exec"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_0.in:target"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_CallFunction_2.in:target"
-          },
-          {
-            "from": "K2Node_Self_2.out:target",
-            "to": "K2Node_CallFunction_19.in:target"
           },
           {
             "from": "K2Node_VariableGet_0.out:RailgunTeardownPending",
@@ -66101,51 +65341,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1080",
-              "NodeGuid": "5D7DE75B45528D9B26C5C4ADE4171D15"
-            },
-            "pins": {
-              "out:target": {
-                "id": "6D688F2646CEE164AC8049A19CD18D2C",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_1",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "2340",
-              "NodeGuid": "261D5BA24DF1047776915F87C4ED97B9"
-            },
-            "pins": {
-              "out:target": {
-                "id": "A23C4BF84C30C1BB9A3384B7D8EFDDF0",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_2",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "3060",
-              "NodeGuid": "DAFEF95A4173E5589A6A39A670957D02"
-            },
-            "pins": {
-              "out:target": {
-                "id": "B50CC4DA4E9460620D2AD7A71364822E",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -66336,18 +65531,6 @@
           {
             "from": "K2Node_IfThenElse_2.out:then",
             "to": "K2Node_CallFunction_7.in:exec"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_1.in:target"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_CallFunction_6.in:target"
-          },
-          {
-            "from": "K2Node_Self_2.out:target",
-            "to": "K2Node_CallFunction_7.in:target"
           },
           {
             "from": "K2Node_VariableGet_0.out:RailgunShellOwner",
@@ -69013,36 +68196,6 @@
             }
           },
           {
-            "id": "K2Node_Self_0",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1440",
-              "NodeGuid": "07A8BA2B44F3FA6B693A0D86EC199DA3"
-            },
-            "pins": {
-              "out:target": {
-                "id": "3AF5189248C1EDB82EB010982C69F50E",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "K2Node_Self_1",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "3600",
-              "NodeGuid": "8CEFB7644B9F0B52B595658A3395166F"
-            },
-            "pins": {
-              "out:target": {
-                "id": "75AC52764F1B731ECD34D7A99D43F29F",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "K2Node_VariableGet_0",
             "kind": "getVariable",
             "properties": {
@@ -69365,14 +68518,6 @@
           {
             "from": "K2Node_MakeStruct_0.out:PlayerInputInterfaceAction",
             "to": "K2Node_MakeArray_0.in:[0]"
-          },
-          {
-            "from": "K2Node_Self_0.out:target",
-            "to": "K2Node_CallFunction_2.in:target"
-          },
-          {
-            "from": "K2Node_Self_1.out:target",
-            "to": "K2Node_CallFunction_7.in:target"
           },
           {
             "from": "K2Node_VariableGet_0.out:RailgunEntryReady",
@@ -72374,27 +71519,6 @@
       "PinType.PinSubCategory": "\"\"",
       "PinType.PinSubCategoryMemberReference": "()",
       "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Settings/BP_IniFileParser.BP_IniFileParser_C'\"",
-      "PinType.PinValueType": "()",
-      "PinType.bIsConst": "False",
-      "PinType.bIsReference": "False",
-      "PinType.bIsUObjectWrapper": "False",
-      "PinType.bIsWeakPointer": "False",
-      "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "bAdvancedView": "False",
-      "bDefaultValueIsIgnored": "False",
-      "bDefaultValueIsReadOnly": "False",
-      "bHidden": "False",
-      "bNotConnectable": "False",
-      "bOrphanedPin": "False"
-    },
-    "p_c7887f8c0613d83ad3c26df05208fb937dc0cda7ef1f2a7a62ab85b2bcee696e": {
-      "PersistentGuid": "00000000000000000000000000000000",
-      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
-      "PinType.ContainerType": "None",
-      "PinType.PinCategory": "\"object\"",
-      "PinType.PinSubCategory": "\"\"",
-      "PinType.PinSubCategoryMemberReference": "()",
-      "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/Railgun/Station/BP_RailgunOperator.BP_RailgunOperator_C'\"",
       "PinType.PinValueType": "()",
       "PinType.bIsConst": "False",
       "PinType.bIsReference": "False",
@@ -75540,6 +74664,27 @@
       "bDefaultValueIsIgnored": "True",
       "bDefaultValueIsReadOnly": "False",
       "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_ac8ccfd1fac8817146c0a1ce8561bda5fceab04fa705b020e9f69f7b949d0879": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/Voyage.VoyageVehiclePawn'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "True",
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     }

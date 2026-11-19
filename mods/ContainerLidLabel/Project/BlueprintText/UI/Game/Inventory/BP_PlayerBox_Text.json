@@ -118,21 +118,6 @@
             }
           },
           {
-            "id": "CreateTextBlockSelf",
-            "kind": "self",
-            "properties": {
-              "NodePosX": "1020",
-              "NodeGuid": "AC0F00A0507B4CA38419E3C12673E382"
-            },
-            "pins": {
-              "out:target": {
-                "id": "2E4B40203B254B61A548152228406259",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
-                "name": "self"
-              }
-            }
-          },
-          {
             "id": "CreateTextBlock_1",
             "kind": "GenericCreateObject",
             "properties": {
@@ -162,21 +147,6 @@
               "in:target": {
                 "id": "B5B6AF3E21EF4BF7BE8DC4D40462384C",
                 "type": "p_2f092b9d5cea8ffa430df55daaf95bb35c15cf030b0a9a6824aa20f284f322fb",
-                "name": "self"
-              }
-            }
-          },
-          {
-            "id": "CreateTextBlock_1Self",
-            "kind": "self",
-            "properties": {
-              "NodePosY": "260",
-              "NodeGuid": "AD0738E5059F4B0A854AB063E93DD3B7"
-            },
-            "pins": {
-              "out:target": {
-                "id": "498EA35656BC40968290606DFCD94E8F",
-                "type": "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8",
                 "name": "self"
               }
             }
@@ -318,20 +288,12 @@
             "to": "WriteTextBlock.in:exec"
           },
           {
-            "from": "CreateTextBlockSelf.out:target",
-            "to": "CreateTextBlock.in:target"
-          },
-          {
             "from": "CreateTextBlock_1.out:result",
             "to": "WriteTextBlock_1.in:TextBlock_1"
           },
           {
             "from": "CreateTextBlock_1.out:then",
             "to": "WriteTextBlock_1.in:exec"
-          },
-          {
-            "from": "CreateTextBlock_1Self.out:target",
-            "to": "CreateTextBlock_1.in:target"
           },
           {
             "from": "K2Node_FunctionEntry_0.out:IsSmallContainer",
@@ -726,26 +688,6 @@
       "PinType.PinSubCategory": "\"\"",
       "PinType.PinSubCategoryMemberReference": "()",
       "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/UMG.TextBlock'\"",
-      "PinType.PinValueType": "()",
-      "PinType.bIsConst": "False",
-      "PinType.bIsReference": "False",
-      "PinType.bIsUObjectWrapper": "False",
-      "PinType.bIsWeakPointer": "False",
-      "PinType.bSerializeAsSinglePrecisionFloat": "False",
-      "bAdvancedView": "False",
-      "bDefaultValueIsIgnored": "False",
-      "bDefaultValueIsReadOnly": "False",
-      "bHidden": "False",
-      "bNotConnectable": "False",
-      "bOrphanedPin": "False"
-    },
-    "p_1bb154832de9571fbd911a611c6b44c126d56a9d665b9489879b54bcf55a08f8": {
-      "PersistentGuid": "00000000000000000000000000000000",
-      "PinType.ContainerType": "None",
-      "PinType.PinCategory": "\"object\"",
-      "PinType.PinSubCategory": "\"self\"",
-      "PinType.PinSubCategoryMemberReference": "()",
-      "PinType.PinSubCategoryObject": "None",
       "PinType.PinValueType": "()",
       "PinType.bIsConst": "False",
       "PinType.bIsReference": "False",
