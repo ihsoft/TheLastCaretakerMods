@@ -111,30 +111,3 @@ bool UBlueprintTextCallFunction::RefreshArguments(FString& Error)
     TGuardValue<bool> Guard(bUpdatingArguments,true);return Arguments(true,Error);
 }
 bool UBlueprintTextCallFunction::CheckArguments(FString& Error) const {return Arguments(false,Error);}
-void UBlueprintTextCallFunction::ReconstructNode()
-{
-    TGuardValue<bool> Guard(bUpdatingArguments,true);Super::ReconstructNode();
-}
-void UBlueprintTextCallFunction::PostReconstructNode()
-{
-    Super::PostReconstructNode();FString Error;RefreshArguments(Error);
-}
-void UBlueprintTextCallFunction::PinDefaultValueChanged(UEdGraphPin* Pin)
-{
-    if(!bUpdatingArguments && IsArgument(Pin))
-    {
-        TSharedPtr<FJsonObject> Overrides;
-        if(FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(BPTArgumentOverrides),Overrides) && Overrides)
-        {
-            Overrides->SetStringField(Pin->PinName.ToString(),Pin->DefaultValue);
-            BPTArgumentOverrides.Reset();
-            FJsonSerializer::Serialize(Overrides.ToSharedRef(),TJsonWriterFactory<TCHAR,TCondensedJsonPrintPolicy<TCHAR>>::Create(&BPTArgumentOverrides));
-        }
-    }
-    Super::PinDefaultValueChanged(Pin);
-}
-void UBlueprintTextCallFunction::ValidateNodeDuringCompilation(FCompilerResultsLog& MessageLog) const
-{
-    Super::ValidateNodeDuringCompilation(MessageLog);FString Error;
-    if(!const_cast<UBlueprintTextCallFunction*>(this)->RefreshArguments(Error))MessageLog.Error(*FString::Printf(TEXT("@@ %s"),*Error),this);
-}

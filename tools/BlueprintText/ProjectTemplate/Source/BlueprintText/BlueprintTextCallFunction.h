@@ -2,7 +2,7 @@
 #include "K2Node_CallFunction.h"
 #include "BlueprintTextCallFunction.generated.h"
 
-// Editor-only call authoring state. Compilation remains UK2Node_CallFunction's.
+// Legacy load compatibility only. New imports save ordinary UK2Node_CallFunction nodes.
 UCLASS()
 class UBlueprintTextCallFunction : public UK2Node_CallFunction
 {
@@ -18,10 +18,6 @@ public:
     static bool DeclarationDefault(const UFunction* Function,FName Name,FString& Value);
     bool RefreshArguments(FString& Error);
     bool CheckArguments(FString& Error) const;
-    virtual void ReconstructNode() override;
-    virtual void PostReconstructNode() override;
-    virtual void PinDefaultValueChanged(UEdGraphPin* Pin) override;
-    virtual void ValidateNodeDuringCompilation(FCompilerResultsLog& MessageLog) const override;
 private:
     bool bUpdatingArguments = false;
     bool Arguments(bool bWrite, FString& Error) const;

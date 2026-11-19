@@ -4,7 +4,7 @@ Apply these rules when authoring or simplifying Blueprint graphs through BPT.
 The objective is human understanding of the behavior authored by the agent.
 Node count is a review signal, not a quota or evidence of faster execution.
 The [workspace workflow](../tools/blueprint-workspace.md) owns editing,
-synchronization and preview; the [format guide](../tools/blueprint-text.md)
+asset acceptance and preview; the [format guide](../tools/blueprint-text.md)
 owns supported graph representations.
 
 ## BPT is an AI-to-Human interface
@@ -39,7 +39,12 @@ requirement, omit that argument and let the callee supply its own default;
 BPT rejects the omission if that parameter has no default. Do not ask an agent
 to enumerate or compare callee defaults before deciding what its caller needs.
 The [BPT argument contract](../tools/blueprint-text.md#optional-call-arguments)
-preserves this difference between a fixed requirement and reliance on the callee.
+accepts this distinction while applying the request. Saved nodes use native
+Unreal semantics: an explicit value equal to the current default can be reset
+when the declaration is reconstructed. When a future graph must keep a fixed
+value across declaration changes, connect a constant to that input. This is a
+specific stability requirement, not a reason to add constants to every call or
+rewrite existing graphs during a tool migration.
 
 For simple Unreal arithmetic and logic, write every operand explicitly as a
 value or connection. Express `1 + 1` with both operands, even if an engine

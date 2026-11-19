@@ -1,4 +1,4 @@
-"""Versioned call argument semantics; legacy nodes have no `arguments` member."""
+"""Exchange-time call arguments and legacy node decoding; saved calls are native."""
 CALL_CLASS = '/Script/BlueprintText.BlueprintTextCallFunction'
 CALL_CLASSES = (CALL_CLASS, '/Script/BlueprintTextPrototype.BlueprintTextCallFunction')
 LEGACY_CLASS = '/Script/BlueprintGraph.K2Node_CallFunction'

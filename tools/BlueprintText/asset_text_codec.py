@@ -289,7 +289,10 @@ def compact(document):
     result['pinTemplates'] = {type_ids[s]: json.loads(s) for s in signatures}
     result['classes'] = {}
     for graph, nodes in zip(result['graphs'], parsed):
-        check_keys(graph, {'name', 'kind', 'properties', 'text', 'nodeCount', 'owner'}, 'native graph')
+        check_keys(graph, {'name', 'kind', 'properties', 'text', 'nodeCount', 'owner', 'callArguments'}, 'native graph')
+        calls = graph.pop('callArguments', {})
+        if not isinstance(calls, dict) or set(calls) - {n['id'] for n in nodes}:
+            raise ValueError('Transient call arguments refer to an unknown node')
         if len(nodes) != graph['nodeCount']:
             raise ValueError('Native node count does not match the envelope')
         lookup, all_pins, pin_ids = {}, {}, set()
@@ -305,8 +308,9 @@ def compact(document):
         output, links = [], []
         for node in sorted(nodes, key=lambda n: n['id']):
             declaration = parameter_defaults.decode(node)
-            managed = node['class'] in call_arguments.CALL_CLASSES
-            if managed:
+            legacy_managed = node['class'] in call_arguments.CALL_CLASSES
+            managed = legacy_managed or node['id'] in calls
+            if legacy_managed:
                 node['class'] = call_arguments.LEGACY_CLASS
             short = node['class'].rsplit('.', 1)[-1]
             kind = KINDS.get(short, short.removeprefix('K2Node_'))
@@ -317,8 +321,18 @@ def compact(document):
             if declaration is not None:
                 item['parameterDefaults'] = declaration
             if managed:
-                overrides = json.loads(unquote(item['properties'].pop(call_arguments.STATE, '"{}"')))
-                declared_defaults = json.loads(unquote(item['properties'].pop(call_arguments.DECLARATION_STATE, '"{}"')))
+                if legacy_managed:
+                    # Migration exports the stored pin values, not a new intent contract.
+                    item['properties'].pop(call_arguments.STATE, None)
+                    item['properties'].pop(call_arguments.DECLARATION_STATE, None)
+                    overrides = {unquote(p['PinName']): unquote(p.get('DefaultValue', '""'))
+                                 for p in node['pins'] if call_arguments.eligible(pin_alias(node, p), p)}
+                    declared_defaults = calls.get(node['id'], {}).get('declarationDefaults', {})
+                else:
+                    state = calls[node['id']]
+                    check_keys(state, {'arguments', 'declarationDefaults'}, 'transient call arguments')
+                    overrides = state['arguments']
+                    declared_defaults = state.get('declarationDefaults', {})
                 item['arguments'] = {}
                 item['declarationDefaults'] = {}
             defaults = {}
@@ -420,12 +434,12 @@ def native(document):
             seen.add((a, b))
             connections[a].append(endpoints[b]); connections[b].append(endpoints[a])
         blocks = []
+        calls = {}
         for node in nodes:
             cls = document['classes'][node['kind']]
             if 'arguments' in node:
                 if cls != call_arguments.LEGACY_CLASS or set(node['properties']) & {call_arguments.STATE,call_arguments.DECLARATION_STATE}:
                     raise ValueError('arguments requires an ordinary call without raw BPT state')
-                cls = call_arguments.CALL_CLASS
             lines = [f'Begin Object Class={cls} Name={quote(node["id"])}']
             props = copy.deepcopy(node['properties'])
             declared = {node['pins'][a].get('name',a[4:]): v for a,v in node.get('parameterDefaults',{}).items()}
@@ -434,9 +448,8 @@ def native(document):
             lines += [f'   {k}={v}' for k, v in props.items()]
             if 'arguments' in node:
                 state = {node['pins'][k].get('name', k[3:]): v for k, v in node['arguments'].items()}
-                lines.append(f'   {call_arguments.STATE}={quote(json.dumps(state, sort_keys=True))}')
                 declared_snapshot = {node['pins'][k].get('name',k[3:]): v for k,v in node.get('declarationDefaults',{}).items()}
-                lines.append(f'   {call_arguments.DECLARATION_STATE}={quote(json.dumps(declared_snapshot, sort_keys=True))}')
+                calls[node['id']] = dict(arguments=state, declarationDefaults=declared_snapshot)
             if set(node.get('defaults', {})) - set(node['pins']):
                 raise ValueError('Default refers to an unknown pin')
             for alias, pin in node['pins'].items():
@@ -477,6 +490,8 @@ def native(document):
             blocks.append('\n'.join(lines))
         del graph['format'], graph['body']
         graph['text'], graph['nodeCount'] = '\n'.join(blocks) + '\n', len(nodes)
+        if calls:
+            graph['callArguments'] = calls
     del result['classes'], result['pinTemplates']
     result['dependencies'] = sorted(dependencies)
     return result
@@ -540,13 +555,72 @@ def add_call(document, catalog, operation, node_id, graph_name):
     return compact(native(result))
 
 
+def compare_materialized(expected, actual):
+    """Compare requested values with saved native pins, without persistent intent.
+
+    Only declaration snapshots from the fresh exporter resolve omissions; an
+    incorrect saved pin cannot serve as its own expected value.
+    """
+    expected, actual = copy.deepcopy(expected), copy.deepcopy(actual)
+    def identity(g):
+        return g['properties'].get('GraphGuid', (g['name'], str(g.get('owner', {}))))
+    graphs = {identity(g): g for g in actual['graphs']}
+    for graph in expected['graphs']:
+        saved_graph = graphs.get(identity(graph), {})
+        saved = {n['id']: n for n in saved_graph.get('body', {}).get('nodes', [])}
+        for node in graph['body']['nodes']:
+            peer = saved.get(node['id'], {})
+            if 'arguments' not in node:
+                continue
+            for alias in node['pins']:
+                if not call_arguments.governed(node, alias, expected['pinTemplates']):
+                    continue
+                if alias not in node['arguments']:
+                    defaults = peer.get('declarationDefaults', {})
+                    connected = any(l['to'] == node['id'] + '.' + alias for l in graph['body']['links'])
+                    if alias not in defaults and not connected:
+                        raise ValueError('Missing required argument (no declaration default): ' + alias)
+                    # Wired literals are inactive; retain their saved representation.
+                    node['arguments'][alias] = defaults.get(alias, peer.get('arguments', {}).get(alias, ''))
+    # Native-equal defaults may be omitted in the fresh snapshot. Resolve them
+    # independently; explicit-equal author intent does not survive native save.
+    for graph in actual['graphs']:
+        for node in graph['body']['nodes']:
+            if 'arguments' not in node:
+                continue
+            for alias in node['pins']:
+                if call_arguments.governed(node, alias, actual['pinTemplates']) and alias not in node['arguments']:
+                    if alias not in node.get('declarationDefaults', {}):
+                        raise ValueError('Export omitted an argument without a declaration default: ' + alias)
+                    node['arguments'][alias] = node['declarationDefaults'][alias]
+    # Legacy sources can still supply literal defaults; compare effective state.
+    for document in (expected, actual):
+        for graph in document['graphs']:
+            for node in graph['body']['nodes']:
+                if 'arguments' in node:
+                    node.setdefault('defaults', {}).update(node.pop('arguments'))
+                    node.pop('declarationDefaults', None)
+                if node['kind'] == 'call':
+                    for alias, pin in node['pins'].items():
+                        if call_arguments.eligible(alias, document['pinTemplates'][pin['type']]):
+                            # Native text omits an empty FString DefaultValue;
+                            # the explicit exchange snapshot spells it out.
+                            node.setdefault('defaults', {}).setdefault(alias, '')
+                            key = '__materialized_' + pin['id']
+                            document['pinTemplates'][key] = {k:v for k,v in document['pinTemplates'][pin['type']].items() if k != 'AutogeneratedDefaultValue'}
+                            pin['type'] = key
+                if not node.get('defaults'):
+                    node.pop('defaults', None)
+    return compare(expected, actual)
+
+
 def compare(expected, actual):
     """Canonical field comparison; only node.pins mappings have significant key order."""
     def comparison_source(document):
         document = copy.deepcopy(document)
-        # Declaration snapshots are independently checked against materialized pins
-        # by the engine exporter. They may change when a selected callee changes.
-        # Intent and explicit overrides still participate in strict comparison.
+        # Compare pending requests, including explicit overrides. Derived snapshots
+        # may change when a selected callee changes. Apply acceptance separately
+        # compares effective values through compare_materialized.
         for graph in document['graphs']:
             for node in graph['body']['nodes']:
                 if 'arguments' in node:
@@ -766,9 +840,14 @@ def main():
     parser.add_argument('--graph', default='EventGraph')
     parser.add_argument('--catalog', type=Path)
     parser.add_argument('--actual', type=Path)
+    parser.add_argument('--materialized', action='store_true',
+                        help='Compare effective values after Unreal save; only for compare/batch-compare')
     parser.add_argument('--asset', help='Destination /Game package for relocate')
     args = parser.parse_args()
     try:
+        if args.materialized and args.mode not in ('compare', 'batch-compare'):
+            raise ValueError('--materialized requires compare or batch-compare')
+        comparator = compare_materialized if args.materialized else compare
         if args.mode in ('template', 'add-call') and (not args.operation or not args.id):
             raise ValueError('template/add-call require --operation and --id')
         if args.mode == 'add-call' and args.catalog is None:
@@ -805,14 +884,14 @@ def main():
                 rows = []
                 for index, source in enumerate(sources):
                     actual = compact(json.loads((args.actual / f'{index}.native.json').read_text(encoding='utf-8-sig')))
-                    diffs = compare(source, actual)
+                    diffs = comparator(source, actual)
                     rows.append({'asset': source['asset'], 'equal': not diffs, 'differences': diffs})
                     (args.actual / f'{index}.json').write_text(json.dumps(actual,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
                 output = {'equal': all(row['equal'] for row in rows), 'assets': rows}
         elif args.mode == 'add-call':
             output = add_call(data, json.loads(args.catalog.read_text(encoding='utf-8-sig')), args.operation, args.id, args.graph)
         elif args.mode == 'compare':
-            diffs = compare(data, json.loads(args.actual.read_text(encoding='utf-8-sig')))
+            diffs = comparator(data, json.loads(args.actual.read_text(encoding='utf-8-sig')))
             output = {'equal': not diffs, 'differences': diffs}
         else:
             output = template(data, args.operation, args.id) if args.mode == 'template' else (compact(data) if args.mode == 'compact' else native(data))

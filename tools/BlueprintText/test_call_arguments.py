@@ -1,9 +1,14 @@
 """Intent preservation, legacy transition, review and rejection at the codec boundary."""
 import copy
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 import call_arguments as args
 import parameter_defaults
-from asset_text_codec import compact, native, add_call, compare
+from asset_text_codec import compact, native, add_call, compare, compare_materialized
 from test_asset_text_codec import fixture
 from test_call_templates import catalog, OPERATION
 from graph_review import review_marks
@@ -22,7 +27,9 @@ class ArgumentTests(unittest.TestCase):
         self.assertEqual(self.node['arguments'], {})
         self.assertNotIn(self.key, self.node.get('defaults', {}))
         self.assertEqual(compare(self.doc, compact(native(self.doc))), [])
-        self.assertIn(args.CALL_CLASS, native(self.doc)['graphs'][0]['text'])
+        self.assertNotIn(args.CALL_CLASS, native(self.doc)['graphs'][0]['text'])
+        self.assertIn(args.LEGACY_CLASS, native(self.doc)['graphs'][0]['text'])
+        self.assertNotIn(args.STATE, native(self.doc)['graphs'][0]['text'])
 
     def test_explicit_equal_is_not_inheritance(self):
         before = copy.deepcopy(self.doc)
@@ -30,6 +37,58 @@ class ArgumentTests(unittest.TestCase):
         self.assertTrue(compare(before, self.doc))
         result = compact(native(self.doc))
         self.assertEqual(next(n for n in result['graphs'][0]['body']['nodes'] if n['id']=='Call')['arguments'], {self.key:'true'})
+
+    def test_import_comparison_cli_accepts_native_equal_default_normalization(self):
+        from blueprint_workspace import OWNER, write
+        actual = copy.deepcopy(self.doc)
+        self.node['arguments'][self.key] = 'true'
+        with tempfile.TemporaryDirectory(dir=OWNER) as directory:
+            root = Path(directory)
+            write(root/'source.json', self.doc)
+            write(root/'actual.json', actual)
+            write(root/'batch.json', {'assets':['source.json']})
+            write(root/'reopened/0.native.json', native(actual))
+            for mode, source, saved in (('compare','source.json','actual.json'),
+                                        ('batch-compare','batch.json','reopened')):
+                command = [sys.executable, '-B', str(Path(__file__).with_name('asset_text_codec.py')),
+                           mode, str(root/source), '--actual', str(root/saved), '--output', str(root/'result.json')]
+                strict = subprocess.run(command, capture_output=True, text=True)
+                self.assertEqual(strict.returncode, 1, strict.stderr)
+                materialized = subprocess.run(command + ['--materialized'], capture_output=True, text=True)
+                self.assertEqual(materialized.returncode, 0, materialized.stderr)
+                self.assertTrue(json.loads((root/'result.json').read_text())['equal'])
+
+    def test_materialized_comparison_resolves_omission_from_declaration_not_actual_pin(self):
+        actual = copy.deepcopy(self.doc)
+        saved = next(n for n in actual['graphs'][0]['body']['nodes'] if n['id']=='Call')
+        saved['arguments'][self.key] = 'true'
+        self.assertEqual(compare_materialized(self.doc, actual), [])
+        saved['arguments'][self.key] = 'false'
+        self.assertTrue(compare_materialized(self.doc, actual))
+        self.node['arguments'][self.key] = 'false'
+        self.assertEqual(compare_materialized(self.doc, actual), [])
+        saved['arguments'][self.key] = 'true'
+        self.assertTrue(compare_materialized(self.doc, actual))
+
+    def test_materialized_comparison_rejects_unwired_missing_required(self):
+        actual = copy.deepcopy(self.doc)
+        saved = next(n for n in actual['graphs'][0]['body']['nodes'] if n['id']=='Call')
+        saved['declarationDefaults'].clear()
+        saved['arguments'][self.key] = 'false'
+        with self.assertRaisesRegex(ValueError, 'Missing required argument'):
+            compare_materialized(self.doc, actual)
+
+    def test_legacy_node_migration_uses_stored_value_not_serialized_intent(self):
+        source = native(self.doc)
+        graph = source['graphs'][0]
+        graph.pop('callArguments')
+        graph['text'] = graph['text'].replace(args.LEGACY_CLASS, args.CALL_CLASS)
+        result = compact(source)
+        node = next(n for n in result['graphs'][0]['body']['nodes'] if n['id']=='Call')
+        self.assertEqual(node['arguments'][self.key], 'true')
+        rebuilt = native(result)['graphs'][0]['text']
+        self.assertNotIn(args.CALL_CLASS, rebuilt)
+        self.assertNotIn(args.STATE, rebuilt)
 
     def test_legacy_migration_preserves_literals(self):
         self.node.pop('arguments')

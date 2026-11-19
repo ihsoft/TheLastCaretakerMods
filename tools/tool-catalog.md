@@ -16,6 +16,8 @@ failure handling.
 | Validate a cooked/re-extracted VoyageItem against its original and recipe | `Test-VoyageItemPatch.ps1` | [VoyageItem project updates](voyage-item-patch.md) |
 | Import/export Blueprint text or discover operations | `BlueprintText/Invoke-BlueprintText.ps1` | [BlueprintText](blueprint-text.md) |
 | Operate a Blueprint JSON workspace in an existing project | `BlueprintText/Invoke-BlueprintWorkspace.ps1` | [Blueprint workspace](blueprint-workspace.md) |
+| Review two Git revisions of saved Blueprint/DataAsset assets | `BlueprintText/Compare-BlueprintAssetRevisions.ps1` | [Git asset review](blueprint-workspace.md#compare-native-asset-revisions) |
+| Duplicate a native UObject or function-library asset into a mod | `BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action CopyAsset` | [Native library copy](blueprint-workspace.md#copy-a-native-library-asset) |
 | Inspect/edit a project DataAsset; review changes or full state against an exported baseline | `BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action ExportDataAsset`, then `Apply`/`Preview` (optional paired `-ComparisonWorkspace`/`-ComparisonLabel`) | [DataAsset workflow](blueprint-workspace.md#edit-an-existing-dataasset) |
 | Preview a saved project Static Mesh or rigid Actor Blueprint assembly interactively | `BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action ModelPreview` | [Project model preview](blueprint-workspace.md#preview-a-project-model) |
 | Generate native or pure static Blueprint library call templates for a workspace source | `BlueprintText/Invoke-BlueprintWorkspace.ps1 -Action CallTemplates` | [Call templates](blueprint-workspace.md#create-reflected-native-call-nodes) |

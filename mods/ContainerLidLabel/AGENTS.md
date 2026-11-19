@@ -4,8 +4,8 @@ Start with the [repository index](../../AGENTS.md) and its shared rules.
 
 - [Architecture](ARCHITECTURE.md): DML lifecycle, exact supported classes,
   display ownership, and editor-only C++ boundaries.
-- [Maintained project](Project/Voyage.uproject) and
-  [synchronized BPT](Project/BlueprintText/): source assets and graph review.
+- [Maintained project](Project/Voyage.uproject): source assets; temporary BPT
+  exports and previews support graph review.
   Use the shared [BPT workflow](../../tools/blueprint-workspace.md) for edits.
 - [Build and validation](BUILD.md): the public candidate builder, editor tests,
   package boundary, and installation entry point.

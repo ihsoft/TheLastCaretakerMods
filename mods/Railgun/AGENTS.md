@@ -16,7 +16,7 @@ not alter GLB geometry unless explicitly requested.
 - [Images and audio](BUILD.md#images-and-audio): locate the saved resources and
   export or replace them through the shared authoring tool.
 - [Primary DataAsset authoring](BUILD.md#primary-dataasset-authoring):
-  BPT property editing, synchronized snapshots and the native-read/cook boundary.
+  BPT property editing, temporary previews and the native-read/cook boundary.
 - [Settings parser](ARCHITECTURE.md#settings-parser): the mod-owned shared INI
   component, reload policy and schema bindings.
 - [Candidate producer](Build-Railgun.ps1): use `-Install` for a routine game

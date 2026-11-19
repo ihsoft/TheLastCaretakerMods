@@ -12,7 +12,6 @@ owns installation, game acceptance and candidate selection.
 | Path | Responsibility |
 | --- | --- |
 | `Project/Content/` | Authored assets and required editor reference stubs. |
-| `Project/BlueprintText/` | Synchronized Blueprint and DataAsset JSON, mirroring paths below `/Game/`. |
 | `Project/Config/` | Required renderer, collision, packaging and project settings. |
 | `Project/EditorSupport/` | Native game API mirrors and editor test support. |
 | `Project/Tests/Native/` | Saved Blueprint settings-loader integration test. |
@@ -255,11 +254,10 @@ Accept reviewed changes back into matching paths under `Project/` using the
 Edit ammo, gun and skill in the working copy through the shared
 [BPT DataAsset workflow](../../tools/blueprint-workspace.md#edit-an-existing-dataasset).
 Select the package from [data-assets-contract.json](Build/data-assets-contract.json)
-and export it with `ExportDataAsset` into a DataAsset workspace. The three full
-property snapshots live under `Project/BlueprintText/Data/Assets/`, mirroring
-their `/Game/` paths. Accept a changed asset together with its freshly synchronized
-JSON. Unreal's Details editor is also available; re-export after accepting an
-editor change so the tracked text continues to describe the saved asset.
+and export it with `ExportDataAsset` into a temporary DataAsset workspace.
+Review the full state and changes there, then accept the saved asset. JSON stays
+with the workspace. Unreal's Details editor is also available; export the current
+saved state when beginning a subsequent BPT editing cycle.
 
 Preserve native class/property identities, serialization defaults and
 `VoyageItem::Serialize` behavior when extending the partial mirrors. Save,

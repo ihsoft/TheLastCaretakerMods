@@ -24,13 +24,14 @@ $project=Join-Path $projectFolder 'SectionedIniTest.uproject'
 $support=Join-Path $PSScriptRoot 'Tests/IniParser/EditorSupport/IniParserTestSupport.uplugin'
 @{schema=1;plugins=@(@{source=$support})} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $projectFolder 'EditorSupport.json') -Encoding UTF8
 $tool=Join-Path $PSScriptRoot 'Invoke-BlueprintWorkspace.ps1'
-$workspace=Join-Path $output 'workspace'
+$workspaces=@()
 foreach($parser in @('BP_IniFileParser','BP_SectionedIniFileParser')){
     foreach($name in @('IniTestA','IniTestB')){
-        & $tool -Action AddSource -ProjectFile $project -WorkspaceRoot $workspace -SourcePath (Join-Path $PSScriptRoot "Library/IniFileParser/$parser.json") -Asset "/Game/Mods/$name/$parser" -PythonPath $PythonPath
+        $workspace=Join-Path $output ($name+'-'+$parser)
+        $workspaces+=$workspace
+        & $tool -Action CopyAsset -ProjectFile $project -WorkspaceRoot $workspace -SourcePath (Join-Path $PSScriptRoot "Library/IniFileParser/Project/Content/BlueprintTextLibrary/$parser.uasset") -Asset "/Game/Mods/$name/$parser" -EngineRoot $EngineRoot -PythonPath $PythonPath
     }
 }
-& $tool -Action Apply -WorkspaceRoot $workspace -EngineRoot $EngineRoot -PythonPath $PythonPath
 & $PythonPath -B (Join-Path $PSScriptRoot 'Tests/IniParser/sectioned_cases.py') (Join-Path $output 'typed-cases.json')
 if($LASTEXITCODE -ne 0){throw 'Cannot prepare sectioned typed cases'}
 function RunCases([string]$Name,[string]$Cases,[bool]$Sectioned){
@@ -47,7 +48,7 @@ function RunCases([string]$Name,[string]$Cases,[bool]$Sectioned){
 $flat=RunCases 'flat' (Join-Path $PSScriptRoot 'Tests/IniParser/cases.json') $false
 $typed=RunCases 'typed' (Join-Path $output 'typed-cases.json') $true
 $sections=RunCases 'sections' (Join-Path $PSScriptRoot 'Tests/IniParser/sectioned-cases.json') $true
-& $tool -Action Apply -WorkspaceRoot $workspace -EngineRoot $EngineRoot -PythonPath $PythonPath
+foreach($workspace in $workspaces){ & $tool -Action Apply -WorkspaceRoot $workspace -EngineRoot $EngineRoot -PythonPath $PythonPath }
 $result=@{status='passed';flat=$flat;typed=$typed;sections=$sections;evidence=$output}
 $result | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding UTF8
 $result | ConvertTo-Json -Depth 10 -Compress

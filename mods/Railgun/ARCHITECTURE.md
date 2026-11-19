@@ -35,7 +35,7 @@ stay with the projectile. Its water-crossing search keeps loop-carried local sta
 and early exits together; the larger search body is a deliberate boundary, not a
 template for unrelated logic in one graph.
 
-The maintained project and synchronized BPT hold authored state. See
+The maintained project assets hold authored state. See
 [BUILD.md](BUILD.md) for source layout, editor support, working copies,
 DataAsset authoring, serialization and candidate validation. Native API
 observations below are bounded to the inspected UE 5.8 contracts; the current
@@ -175,8 +175,8 @@ grammar and player-value preservation.
 
 `BP_Module_Railgun` owns the saved component hierarchy and its connections to
 gameplay. The following is a lookup for changing that project, not another model
-recipe. Exact transforms, extents and mesh assignments remain in the assets and
-their synchronized BPT.
+recipe. Exact transforms, extents and mesh assignments remain in the saved assets;
+export their current state to a temporary BPT workspace for inspection.
 
 | Role | Saved binding and purpose |
 | --- | --- |

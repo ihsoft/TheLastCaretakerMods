@@ -269,8 +269,8 @@ checks and cook. Run it with a fresh `-OutputRoot` below `Tmp/BlueprintText/`
 and the selected `-EngineRoot`; it owns the shared Unreal queue.
 
 [Test-CleanProjectSupport.ps1](BlueprintText/Test-CleanProjectSupport.ps1) checks
-two project copies with mandatory BPT references, native support and saved custom
-call nodes. The fresh copy must load both providers without compiling either;
+two legacy project fixtures with mandatory BPT references, native support and
+saved custom call nodes. The fresh copy must load both providers without compiling either;
 changing a test overlay rebuilds only native support, and restoring it reuses
 the retained variant. The runner also checks public source-mode reuse, asset
 preservation, strict Apply/reopen and cook. Use a fresh `-OutputRoot` below

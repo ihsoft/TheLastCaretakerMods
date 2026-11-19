@@ -1,0 +1,8 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1",
+  "FriendlyName": "INI parser Voyage editor declarations",
+  "CanContainContent": false,
+  "Modules": [{"Name": "Voyage", "Type": "Runtime", "LoadingPhase": "Default"}]
+}

@@ -30,11 +30,12 @@ including when a guide shows an older direct `.ps1` invocation.
 | Report game-asset and release tool use | [Tool use and reporting](tool-use-and-reporting.md) |
 | Measure explicitly requested agent work | [Agent work measurement](agent-work-measurement.md) |
 | Create or edit Blueprints for new and existing mods (requires a prepared Unreal project with the needed dependencies) | [Blueprint workspace](blueprint-workspace.md) |
+| Review Blueprint or DataAsset changes between Git asset revisions | [Native asset revision review](blueprint-workspace.md#compare-native-asset-revisions) |
 | Look up BlueprintText formats, schemas and lower-level interfaces | [BlueprintText reference](blueprint-text.md) |
 | Inspect and edit properties of an existing project DataAsset and its owned objects | [DataAsset workflow](blueprint-workspace.md#edit-an-existing-dataasset) |
 | Evaluate or maintain shared BPT tools and guidance | [BPT maintenance](blueprint-text-maintenance.md) |
 | Extract selected BPT nodes into a named collapsed graph | [Workspace Collapse](blueprint-workspace.md#extract-an-operation-into-a-collapsed-graph) |
-| Add a reusable flat or sectioned UObject INI parser to a mod through BPT | [INI parser source library](BlueprintText/Library/IniFileParser/AGENTS.md) |
+| Copy a native flat or sectioned UObject INI parser into a mod | [INI parser source library](BlueprintText/Library/IniFileParser/AGENTS.md) |
 | View or render one exported Blueprint graph offline | [Graph preview](blueprint-text.md#view-one-graph) |
 | Read a BPT graph compactly and reveal exact node/pin details | [Source reading](blueprint-text.md#read-graphs-without-unreal) |
 | Find BPT callers, callbacks and variable accesses across selected sources | [Member-use search](blueprint-text.md#find-member-uses) |

@@ -44,9 +44,9 @@ python -B tools/run_powershell.py tools/BlueprintText/Invoke-BlueprintWorkspace.
 ```
 
 Follow the [shared BPT workflow](../../tools/blueprint-workspace.md) for editing,
-Apply, Preview and selective source acceptance. Maintained text under
-`Project/BlueprintText/<package>.json` corresponds to
-`Project/Content/<package>.uasset`; routine builds use the saved assets.
+Apply, Preview and selective source acceptance. JSON remains in the temporary
+workspace; accept changed `Project/Content/<package>.uasset` files. Routine
+builds use the saved assets.
 Keep investigation evidence and game-test results in the ignored local backlog
 until acceptance. No gameplay contract is established by editor-only stubs.
 

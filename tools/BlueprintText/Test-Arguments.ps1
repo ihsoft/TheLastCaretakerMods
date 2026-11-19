@@ -22,6 +22,21 @@ function Engine([string]$Mode,[string]$Name,[int]$Expected=7){
 & $tool -Action Prepare -ProjectFile $project -WorkspaceRoot (Join-Path $output 'prepare') -EngineRoot $EngineRoot -PythonPath $PythonPath
 Engine 'ArgumentFixture' 'fixture'
 Engine 'ArgumentCheck' 'initial'
+@'
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from blueprint_workspace import Workspace, read
+from asset_text_codec import compare_materialized
+w=Workspace(Path(sys.argv[2])/'migration', sys.argv[4]);w.project=Path(sys.argv[3])
+for i, asset in enumerate(('/Game/BPTArgumentCallee','/Game/BPTArgumentCaller')):
+    before=w.export_one(asset,w.run/f'before-{i}.json',f'before-{i}')
+    w.engine_run('MigrateLegacyCalls',f'migrate-{i}',Asset=asset)
+    after=w.export_one(asset,w.run/f'after-{i}.json',f'after-{i}')
+    differences=compare_materialized(before,after)
+    if differences: raise RuntimeError(str(differences[:10]))
+'@ | & $PythonPath -B - $PSScriptRoot $output $project $EngineRoot
+if($LASTEXITCODE){throw 'Native call migration changed represented state.'}
 & $tool -Action Export -ProjectFile $project -WorkspaceRoot $work -Asset @('/Game/BPTArgumentCallee','/Game/BPTArgumentCaller') -EngineRoot $EngineRoot -PythonPath $PythonPath
 foreach($stage in @('move','default')){
     & $PythonPath -B (Join-Path $PSScriptRoot 'argument_fixture.py') $work $stage
@@ -32,7 +47,18 @@ foreach($stage in @('move','default')){
 }
 Engine 'ArgumentReconstruct' 'reconstruct' 9
 Engine 'ArgumentCheck' 'reconstructed-reopen' 9
-Engine 'ArgumentRejectCorruption' 'reject-corruption'
+# Missing required overrides are checked through the real Apply transaction below.
+# Physically detach BPT, then load/compile/save/reopen through built-in editor APIs.
+@'
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from blueprint_workspace import Workspace
+from pluginless_acceptance import verify
+w=Workspace(Path(sys.argv[2])/'pluginless', sys.argv[4]);w.project=Path(sys.argv[3])
+verify(w, ['/Game/BPTArgumentCallee','/Game/BPTArgumentCaller'])
+'@ | & $PythonPath -B - $PSScriptRoot $output $project $EngineRoot
+if($LASTEXITCODE){throw 'Pluginless editor acceptance failed.'}
 & $tool -Action Export -ProjectFile $project -WorkspaceRoot (Join-Path $output 'fresh') -Asset @('/Game/BPTArgumentCallee','/Game/BPTArgumentCaller') -EngineRoot $EngineRoot -PythonPath $PythonPath
 & $tool -Action Apply -WorkspaceRoot (Join-Path $output 'fresh') -EngineRoot $EngineRoot -PythonPath $PythonPath
 $fresh=Join-Path $output 'fresh'
@@ -58,5 +84,5 @@ $cooked=Join-Path $output 'cooked/Arguments/Content/BPTArgumentCaller.uasset'
 & (Join-Path $PSScriptRoot '../Invoke-VoyageBoundedTool.ps1') -Executable (Join-Path $PSScriptRoot '../../.tools/bin/UAssetGUI.exe') -Arguments @('--portable','tojson',$cooked,(Join-Path $output 'cooked-caller.json'),'5.8') -OutputRoot (Join-Path $output 'uasset-read') -MemoryLimitMB 1024 -TimeoutSeconds 60 | Out-Null
 $cookedText=Get-Content -LiteralPath (Join-Path $output 'cooked-caller.json') -Raw
 if($cookedText -match 'BlueprintTextCallFunction|/Script/BlueprintText|BPTArgumentOverrides|BPTDeclarationDefaults|BlueprintText.OptionalParameters'){throw 'Editor argument state leaked into cooked package.'}
-@{status='passed';changedApplies=2;freshReopen=$true;explicitEqualPreserved=$true;zeroFalseEmpty=$true;crossBlueprint=$true;localAndNative=$true;reconstruction=$true;corruptionRejected=$true;missingRequiredRollback=$true;editorStateStrippedByCook=$true;evidence=$output} | ConvertTo-Json | Set-Content (Join-Path $output 'result.json')
+@{status='passed';changedApplies=2;freshReopen=$true;nativeEqualDefaultReset=$true;zeroFalseEmpty=$true;crossBlueprint=$true;localAndNative=$true;reconstruction=$true;pluginlessSaveReopen=$true;missingRequiredRollback=$true;editorStateStrippedByCook=$true;evidence=$output} | ConvertTo-Json | Set-Content (Join-Path $output 'result.json')
 Get-Content (Join-Path $output 'result.json')

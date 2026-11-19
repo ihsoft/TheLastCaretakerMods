@@ -4,10 +4,6 @@
   "Description": "ElectrifiedBuildings DML sockets for building controls",
   "Plugins": [
     {
-      "Name": "BlueprintTextWorkspace",
-      "Enabled": true
-    },
-    {
       "Name": "ElectrifiedBuildingsSupport",
       "Enabled": true
     }

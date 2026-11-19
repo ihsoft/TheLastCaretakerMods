@@ -372,9 +372,9 @@ class AssetTextTests(unittest.TestCase):
         source = compact(fixture())
         source['graphs'][0]['body']['nodes'][0]['properties']['EnabledState'] = 'Disabled'
         svg, _, nodes, links = render(source)
-        self.assertEqual((nodes, links), (1, 0))
+        self.assertEqual((nodes, links), (2, 1))
         self.assertIn('Set Amount', svg)
-        self.assertIn('disabled node (hidden)', svg)
+        self.assertIn('DISABLED', svg)
         self.assertEqual(render(source, view='full')[2:], (2, 1))
 
     def test_tuple_parser_rejects_unbalanced_input(self):

@@ -19,10 +19,10 @@
   is busy, wait or report its recorded owner; never delete an active lock.
 - Preserve unrelated worktree changes and stage only the exact files belonging
   to the validated change.
-- For Blueprints maintained through BPT, commit changed project assets together
-  with their synchronized tracked BPT representations. Follow the
-  [BPT synchronization contract](../tools/blueprint-workspace.md#source-of-truth-and-git);
-  stale exports and unapplied JSON changes do not satisfy this requirement.
+- For BPT-authored changes, commit accepted Unreal assets and maintained source
+  inputs. Keep exported JSON and previews temporary under the
+  [BPT source contract](../tools/blueprint-workspace.md#source-of-truth-and-git).
+  Unapplied JSON is a proposal, not a completed project change.
 - Before committing a change under `mods/<Mod>/`, assess its net player-visible
   effect relative to the latest published release. Update that mod's
   `CHANGELOG.md` in the same proposed commit when the cumulative result changes;

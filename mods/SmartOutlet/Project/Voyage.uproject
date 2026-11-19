@@ -14,10 +14,6 @@
     {
       "Name": "SmartOutletSupport",
       "Enabled": true
-    },
-    {
-      "Name": "BlueprintTextWorkspace",
-      "Enabled": true
     }
   ]
 }

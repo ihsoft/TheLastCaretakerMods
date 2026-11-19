@@ -33,30 +33,30 @@ JSON; Apply writes proposed changes back to project assets. Unapplied JSON edits
 are pending changes. Changes may also originate in Unreal Editor; export the
 current saved project state before starting a new BPT editing cycle.
 
-Commit BPT JSON alongside its corresponding authored Blueprint assets. This is
-an intentional, meaningful duplicate: GitHub cannot expose binary asset changes
-as useful text diffs, while BPT makes their represented structure reviewable.
-At commit time, BPT must match the saved project asset. After editor changes,
-refresh the export. After JSON changes, successfully Apply and use the tool's
-fresh-process comparison as the synchronization check. Subsequent asset edits
-invalidate that check. Do not commit stale exports or unapplied proposals as a
-completed asset change. Preserve and reconcile both sides of any conflict.
+Commit the saved Unreal assets and deliberately maintained project inputs.
+Exported Blueprint/DataAsset JSON, baselines and previews belong in temporary
+workspaces under `Tmp/BlueprintText/`; do not keep a parallel tracked
+`Project/BlueprintText/` tree. BPT is an exchange and review tool, not a project
+extension or a second source format required for building.
 
 Before accepting working-copy changes, check for concurrent edits in the
 maintained project and review the intended changes. Transfer only intentionally
-changed saved assets, synchronized BPT and deliberately authored configuration
-or other source files, including required `.uproject` plugin references introduced
-by those assets. Do not copy generated directories or the entire working
-project back. Within the maintained Project, only `Intermediate/` may be a
-temporary ignored directory; no `Plugins/` or `Saved/` exclusions are needed.
+changed saved assets and authored configuration or other source files. Do not
+copy generated plugins, caches, logs, the BPT plugin reference or the entire
+working project back. Within a maintained Project, only `Intermediate/` may be
+a temporary ignored directory; use disposable copies for engine work.
 
-Keep the committed BPT representations in the owning mod's tracked source tree,
-with an unambiguous mapping to project asset paths. Working copies and manifests
-under `Tmp/BlueprintText/` remain temporary. Copy only synchronized Blueprint
-JSON into the tracked representation; baselines, backups, native intermediates,
-diagnostics, preview resources and rendered previews remain tool-owned output.
-This retention rule does not change the tool's workspace path requirements or
-authorize committing extracted stock game content.
+New saved calls use ordinary Unreal node classes. A project asset must load,
+compile and save without the BPT plugin; native game declarations and other
+actual asset dependencies still have to be available. BPT may be installed in
+the disposable project for exchange operations. It must not be a required
+plugin in the maintained `.uproject`.
+
+For historical review, export the native assets from the two selected revisions
+and render their temporary BPT snapshots with
+[Git asset comparison](#compare-native-asset-revisions). Preview is the human
+review surface; Git binary changes identify the authoritative source revisions.
+Do not reconstruct maintained assets from old exports merely to obtain a diff.
 
 Adopting BPT replaces procedural graph authoring with export-edit-apply. Routine
 release builds use project assets; they must not recreate them from BPT exports
@@ -93,15 +93,9 @@ Changed inputs select a matching cached variant or rebuild through the common
 support tool; each working copy still gets a fresh load check. This does not generate
 game assets or refresh a mod's DataAssets. `Prepare` remains available as an explicit
 dependency/tooling-only operation.
-Projects with saved BPT call nodes keep `BlueprintTextWorkspace` as a required,
-enabled plugin (`Enabled: true`, without `Optional: true`). On a clean checkout,
-the same workspace preparation installs declared native support and BPT even
-when its plugin directory is absent. Keep the required reference in the project;
-no manual plugin disabling or DLL copying is needed. Preparation finishes by
-loading BPT with the project dependencies enabled.
-The [shared mod cooker](mod-setup.md#shared-mod-pipeline) and
-[native DataAsset reader](data-asset-conversion.md#native-readback) own this
-preparation for their operations; mod builders do not repeat it.
+Saved assets do not require `BlueprintTextWorkspace`. Its enabled plugin reference
+is local to the prepared working copy. The loader retains compatibility with
+old BPT call classes for explicit migration; new imports never save those classes.
 Existing binary installations update their package format on preparation. If a
 previous build disabled the plugin, follow [receipt recovery](unreal-editor-support.md#recovery)
 before resuming asset operations.
@@ -159,18 +153,15 @@ or selected sources are rejected; export existing assets to edit them.
 
 ```powershell
 & $tool -Action AddSource -ProjectFile $project -WorkspaceRoot $work `
-  -SourcePath './tools/BlueprintText/Library/IniFileParser/BP_IniFileParser.json' `
-  -Asset '/Game/Mods/Example/Settings/BP_IniFileParser'
+  -SourcePath './Tmp/BlueprintText/exported-library/blueprints/Library/BP_Utility.json' `
+  -Asset '/Game/Mods/Example/BP_Utility'
 # Review/edit the staged source, then apply through the normal transaction:
 & $tool -Action Apply -WorkspaceRoot $work
 ```
 
-The reusable [INI parser library](BlueprintText/Library/IniFileParser/integration.md)
-supplies the flat `BP_IniFileParser.json` and separate `BP_SectionedIniFileParser.json`
-sources; select the documented format and interface before importing a copy.
-Each consumer gets its own package; there is no shared runtime
-package or automatic library-update relationship. After Apply, retain the
-synchronized source with the mod as usual and cook its project normally.
+For distributing maintained components, use native assets through `CopyAsset`
+below. `AddSource` remains useful for temporary exported sources and small
+format templates; it does not justify tracking mod exports.
 
 Relocation rewrites supported own-package references, including class pin types,
 function member owners and object defaults. String values and comments remain
@@ -183,6 +174,32 @@ and [pure static Blueprint Function Libraries](blueprint-text.md#blueprint-funct
 without component/widget sections. The latter have an empty starter source at
 `BlueprintText/Library/BFL_FunctionLibrary.json`. Complex object-bearing struct/container
 defaults may need additional typed relocation support; they fail explicitly.
+
+### Copy a native library asset
+
+`CopyAsset` duplicates a saved uncooked direct-UObject or function-library
+Blueprint into a consumer working project. It prepares dependencies, launches
+Unreal and uses the editor's native asset duplication. Supply a new workspace, an existing
+source `.uasset` below a source project's `Content/`, and an absent destination:
+
+```powershell
+python -B tools/run_powershell.py tools/BlueprintText/Invoke-BlueprintWorkspace.ps1 `
+  -Action CopyAsset -ProjectFile $project -WorkspaceRoot $work `
+  -SourcePath tools/BlueprintText/Library/IniFileParser/Project/Content/BlueprintTextLibrary/BP_IniFileParser.uasset `
+  -Asset /Game/Mods/Example/Settings/BP_IniFileParser
+```
+
+The consumer must supply the source's native/asset dependencies. The library's
+original package path must also be absent from the working project: the tool
+uses it for temporary staging and removes it before fresh-process export.
+Existing destinations are rejected. Failure restores the absent destination;
+an interrupted operation uses `Recover` with the same workspace.
+
+The result is already saved and exported for further editing or Preview.
+Accept the intended `.uasset` into the maintained consumer project; JSON stays
+temporary. Each mod owns its copy and runtime path. Library updates are explicit
+reviewed source updates, not automatic replacements of locally adapted copies.
+Choose the parser through the [INI library index](BlueprintText/Library/IniFileParser/AGENTS.md).
 
 ### Change selected assets
 
@@ -502,10 +519,9 @@ addition/removal require authoring in Unreal followed by a fresh export.
 
 The transaction and `Recover` retain pending source proposals and restore saved
 packages on failed acceptance. Successful Apply advances the accepted baseline.
-Retain the synchronized property JSON alongside the owning asset in the mod's
-tracked BPT tree when accepting changes. It includes the full reflected property
-state, including read-only fields. Native preservation evidence remains temporary
-under `.workspace/`; the saved Unreal asset remains the source of truth.
+Accept the saved asset into the maintained project. The full reflected JSON,
+including read-only fields, and preservation evidence stay in the temporary
+workspace; do not create a tracked DataAsset JSON mirror.
 
 DataAsset `Preview` is offline and in English, with two display modes:
 
@@ -650,3 +666,31 @@ python -B tools/BlueprintText/test_blueprint_workspace.py
 Engine acceptance requires a disposable project with the relevant dependencies.
 Compile/save and fresh-export comparison verify represented editor state, not
 cooked output or gameplay behavior.
+
+## Compare native asset revisions
+
+Use `Compare-BlueprintAssetRevisions.ps1` to review committed native assets
+without retaining JSON mirrors. It exports both Git revisions from separate
+throwaway project snapshots and renders the ordinary BPT comparison:
+
+```powershell
+python -B tools/run_powershell.py tools/BlueprintText/Compare-BlueprintAssetRevisions.ps1 `
+  -ProjectFile mods/Example/Project/Voyage.uproject `
+  -BeforeRevision HEAD~1 -AfterRevision HEAD `
+  -Asset /Game/Mods/Example/ModActor `
+  -OutputRoot Tmp/BlueprintText/example-git-review
+```
+
+Select a fresh output below `Tmp/BlueprintText/` and the matching `EngineRoot`.
+The tool resolves the revisions, extracts each project's tracked inputs and its
+repository-owned declared native dependencies, then exports the selected saved
+assets. It never checks out a revision over the working tree. The result records
+resolved revisions and the preview URL. BPT and Unreal versions still govern
+export compatibility; a missing native dependency or unsupported old asset fails
+explicitly rather than substituting current project content.
+
+Blueprint additions/removals are shown as such. Use `-Kind DataAsset` for property
+comparisons; that mode requires the asset in both revisions and the property
+inventory supported by the ordinary DataAsset comparison. Uncommitted authoring
+changes use the normal workspace's before/current Preview. These are visual
+source comparisons, not gameplay-equivalence checks.

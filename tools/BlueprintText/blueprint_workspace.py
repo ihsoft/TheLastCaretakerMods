@@ -131,6 +131,7 @@ def shared_module_providers(project):
 
 @contextmanager
 def project_operation(project):
+    require_working_project(project)
     # closed() observes all editor processes, so serialize entire engine cycles,
     # including the gaps between subprocesses and rollback after a failed import.
     # Fixed order also coordinates with older tools still using the legacy gate.
@@ -141,6 +142,11 @@ def project_operation(project):
                     raise ValueError('Multiple Blueprint text module providers; resolve before engine work')
                 closed()
                 yield
+
+
+def require_working_project(project):
+    if not Path(project).resolve().is_relative_to(HERE.parents[1] / 'Tmp'):
+        raise ValueError('BPT engine operations require a disposable project below repository Tmp; copy maintained inputs first')
 
 
 def groups(sources):
@@ -503,7 +509,7 @@ class Workspace:
             for i, (_, _, document) in enumerate(entries):
                 actual = codec.compact(read(reopened / f'{i}.native.json'))
                 write(self.run / f'reopened-{i}.json', actual)
-                differences = codec.compare(document, actual)
+                differences = codec.compare_materialized(document, actual)
                 if differences:
                     diagnostic = self.run / f'comparison-{i}.json'
                     write(diagnostic, differences)
@@ -517,10 +523,10 @@ class Workspace:
                 shutil.copyfile(target(self.project, asset), byte_path)
                 updated[asset] = dict(source=str(source.relative_to(self.root)), bytes=str(byte_path.relative_to(self.internal)),
                                       before=baseline.get(asset, {}).get('before'), accepted=str((self.run / f'reopened-{i}.json').relative_to(self.internal)))
-                if any('arguments' in n for g in document['graphs'] for n in g['body']['nodes']):
+                if document != read(self.run / f'reopened-{i}.json'):
                     if source.read_bytes() != proposal_bytes[str(source)]:
                         raise ValueError('Source changed during Apply: ' + str(source))
-                    original = self.run / f'argument-source-{i}.json'
+                    original = self.run / f'source-snapshot-{i}.json'
                     original.write_bytes(proposal_bytes[str(source)])
                     refreshes.append(dict(source=str(source.relative_to(self.root)), original=str(original.relative_to(self.internal)),
                                           refreshed=str((self.run / f'reopened-{i}.json').relative_to(self.internal))))
@@ -535,7 +541,7 @@ class Workspace:
             raise
         return dict(status='applied', assets=len(entries), changed=changed, added=added)
 
-    def export(self, project, assets):
+    def export(self, project, assets, *, prepared=False):
         if self.manifest.exists() or self.root.exists() and any(p.name != '.workspace' for p in self.root.iterdir()):
             raise ValueError('Export requires a new or empty workspace')
         self.project = Path(project).resolve()
@@ -546,7 +552,8 @@ class Workspace:
         for asset in assets:
             if not target(self.project, asset).is_file():
                 raise ValueError('Selected asset is missing: ' + asset)
-        self.prepare(self.project)
+        if not prepared:
+            self.prepare(self.project)
         baseline, records = {}, []
         for i, asset in enumerate(assets):
             file = target(self.project, asset)
@@ -806,6 +813,7 @@ class Workspace:
 
     def prepare(self, project):
         self.project = Path(project).resolve()
+        require_working_project(self.project)
         if self.project.suffix != '.uproject' or not self.project.is_file():
             raise ValueError('ProjectFile must be an existing .uproject')
         providers = shared_module_providers(self.project)
@@ -858,7 +866,7 @@ class Workspace:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['Prepare', 'Export', 'ExportDataAsset', 'Apply', 'Preview', 'ModelPreview', 'MarkStubs', 'Recover', 'AddSource', 'Collapse', 'CallTemplates'])
+    parser.add_argument('action', choices=['Prepare', 'Export', 'ExportDataAsset', 'Apply', 'Preview', 'ModelPreview', 'MarkStubs', 'Recover', 'AddSource', 'CopyAsset', 'Collapse', 'CallTemplates'])
     parser.add_argument('--workspace', required=True)
     parser.add_argument('--project')
     parser.add_argument('--asset', action='append')
@@ -918,12 +926,13 @@ def main():
                 workspace.project = Path(args.project or saved_project).resolve()
                 if workspace.project.suffix != '.uproject' or not workspace.project.is_file():
                     raise ValueError('ProjectFile must be an existing .uproject')
-            elif args.action in ('Export', 'ExportDataAsset', 'Prepare'):
+            elif args.action in ('Export', 'ExportDataAsset', 'Prepare', 'CopyAsset'):
                 if not args.project:
-                    raise ValueError('ProjectFile is required for Export, ExportDataAsset and Prepare')
+                    raise ValueError('ProjectFile is required for ' + args.action)
                 workspace.project = Path(args.project).resolve()
             elif args.action == 'Recover':
-                workspace.project = Path(read(workspace.manifest)['project']).resolve()
+                state = workspace.manifest if workspace.manifest.exists() else workspace.internal / 'recovery.json'
+                workspace.project = Path(read(state)['project']).resolve()
             else:
                 workspace.load()
                 if data_assets and args.project and Path(args.project).resolve() != workspace.project:
@@ -934,6 +943,11 @@ def main():
                 raise ValueError('Interrupted asset write requires Recover before another operation')
             if args.action == 'Prepare':
                 result = workspace.prepare(args.project)
+            elif args.action == 'CopyAsset':
+                if not args.source or not args.asset or len(args.asset) != 1:
+                    raise ValueError('CopyAsset requires SourcePath and exactly one destination Asset')
+                from native_library import copy_asset
+                result = copy_asset(workspace, args.source, args.asset[0])
             elif args.action in ('Export', 'ExportDataAsset'):
                 result = workspace.export(args.project, args.asset)
             elif args.action == 'Apply':

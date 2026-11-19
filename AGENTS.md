@@ -25,7 +25,7 @@ do not load every document just because it is indexed here.
   folders and public commands when creating or unifying a mod; source ownership,
   working copies and the shared Unreal queue.
 - [BlueprintText](tools/blueprint-workspace.md): bidirectional Blueprint editing
-  through JSON, with synchronized text committed for Git review.
+  through temporary JSON, with native assets and visual review.
 - [BPT specialist decisions](docs/blueprint-text-maintenance-rule.md): shared
   BPT ownership, evidence-based proposal review and tool-maintenance criteria.
 - [Research workflow](docs/research-workflow-rule.md): investigate, record

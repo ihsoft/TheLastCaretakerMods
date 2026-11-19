@@ -3,7 +3,7 @@
 ## Source and authoring
 
 `Project/Voyage.uproject` and `Project/Content/` own the maintained assets.
-Synchronized BPT mirrors their paths under `Project/BlueprintText/`.
+BPT JSON and previews stay in temporary workspaces.
 `Project/EditorSupport.json` declares native editor dependencies.
 [Build-ElectrifiedBuildings.ps1](Build-ElectrifiedBuildings.ps1) defines the release
 inventory passed to the shared cook and exact package validation.
@@ -19,7 +19,7 @@ Use the [BPT workspace workflow](../../tools/blueprint-workspace.md) to Export,
 edit, Apply and Preview `/Game/Mods/ElectrifiedBuildings/ModActor`,
 `/Game/Mods/ElectrifiedBuildings/BP_BuildingSocket` and the mod-owned
 `/Game/Mods/ElectrifiedBuildings/Settings/BP_IniFileParser` in that copy. Accept the saved
-assets and synchronized JSON with the shared
+assets with the shared
 [source-update operation](../../tools/mod-setup.md#explicit-source-update-acceptance).
 
 ## Build and install

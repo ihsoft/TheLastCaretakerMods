@@ -71,7 +71,7 @@ The maintained stock-path compilation inputs reflect Steam build `25982825`
 and are authored with Unreal Engine 5.8.2. The `BP_DynamicMeshActor`,
 `BP_DynamicMeshActor_Fruit` and `BP_FarmingSeed` editor stubs are reconstructed
 from inspected stock reflection and Blueprint identities through BlueprintText;
-their synchronized JSON marks them as stubs. `FarmingSeedFruitSocket` is an
+their saved editor-role metadata marks them as stubs. `FarmingSeedFruitSocket` is an
 editor-reconstructed user-defined struct preserving the stock struct and member
 identities. Native declarations in `DiagnosticContracts.h` and
 `PersistentContracts.h` mirror inspected types and delegate signatures; value
@@ -79,7 +79,7 @@ structs preserve field order. These are maintained compilation inputs, not
 copies of stock gameplay implementations. Revalidate them against current
 mappings and affected stock packages when those identities or layouts change.
 
-The maintained Blueprint and its synchronized BPT text are the runtime source.
+The maintained Blueprint asset is the runtime source; BPT exports are temporary.
 `Project/EditorSupport` contains editor-only native reflection declarations;
 stock-path Blueprint stubs provide compile-time dependencies. Neither enters
 the release container. The builder prepares dependencies from the game and

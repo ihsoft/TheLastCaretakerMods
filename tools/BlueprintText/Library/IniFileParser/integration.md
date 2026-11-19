@@ -1,17 +1,17 @@
-# INI parsers BPT library: integration and maintenance
+# Native INI parser library: integration and maintenance
 
 The library provides two supported parsers. Choose by the configuration's shape:
 
 | Source | Use case | Key lookup |
 | --- | --- | --- |
-| [BP_IniFileParser.json](BP_IniFileParser.json) | One flat set of settings; headers have no namespace meaning. | `Name` |
-| [BP_SectionedIniFileParser.json](BP_SectionedIniFileParser.json) | Independent named groups or optional profiles, including empty section declarations. | `Section`, `Name`; `HasSection(Name)` checks presence. |
+| [BP_IniFileParser](Project/Content/BlueprintTextLibrary/BP_IniFileParser.uasset) | One flat set of settings; headers have no namespace meaning. | `Name` |
+| [BP_SectionedIniFileParser](Project/Content/BlueprintTextLibrary/BP_SectionedIniFileParser.uasset) | Independent named groups or optional profiles, including empty section declarations. | `Section`, `Name`; `HasSection(Name)` checks presence. |
 
-Both are schema-2 BlueprintText sources for Blueprints directly derived from
-UObject. Parsing, validation, cache management and typed getters are implemented
-in their graphs. Consumers import their own copy through the ordinary BPT
-workspace. There is no parser asset generator, shared runtime package or additional
-native parser to distribute. Both interfaces are maintained independently.
+Both are uncooked Blueprint assets in the [source project](Project/IniParsers.uproject),
+derived directly from UObject. Parsing, validation, cache management and typed
+getters are implemented in their graphs. Each consumer receives its own native
+copy through Unreal duplication. There is no shared runtime package or additional
+native parser implementation to distribute. Both interfaces are maintained independently.
 
 The interface and format below describe the flat source; the
 [sectioned interface and grammar](#sectioned-parser) follow separately.
@@ -27,30 +27,32 @@ game's reflected owner and signature; it is not a runtime DLL for the mod.
 
 Use a prepared working project copy under `Tmp/<Mod>/`, following the
 [workspace ownership contract](../../../blueprint-workspace.md#source-of-truth-and-git).
-AddSource does not create that project copy. After Apply, accept only the
-intended saved assets and synchronized BPT back into the maintained project.
+CopyAsset does not create that project copy. After review, accept only the
+intended saved assets back into the maintained project.
 
 ```powershell
-$bpt = './tools/BlueprintText/Invoke-BlueprintWorkspace.ps1'
-$work = './Tmp/BlueprintText/my-mod-settings'
-& $bpt -Action AddSource -ProjectFile './Tmp/MyMod/authoring/Project/Voyage.uproject' `
-  -WorkspaceRoot $work `
-  -SourcePath './tools/BlueprintText/Library/IniFileParser/BP_IniFileParser.json' `
+python -B tools/run_powershell.py tools/BlueprintText/Invoke-BlueprintWorkspace.ps1 `
+  -Action CopyAsset -ProjectFile './Tmp/MyMod/authoring/Project/Voyage.uproject' `
+  -WorkspaceRoot './Tmp/BlueprintText/my-mod-settings' `
+  -SourcePath './tools/BlueprintText/Library/IniFileParser/Project/Content/BlueprintTextLibrary/BP_IniFileParser.uasset' `
   -Asset '/Game/Mods/MyMod/Settings/BP_IniFileParser'
-& $bpt -Action Apply -WorkspaceRoot $work
 ```
 
-`AddSource` is offline and copies the source with relocated internal references.
-`Apply` prepares editor dependencies, compiles the asset, and verifies its export
-in a fresh process. Warn before that engine action. Each mod uses a unique package
-path. Existing destination assets are rejected by AddSource; update an existing
-copy through the normal Export/edit/Apply workflow.
+`CopyAsset` launches Unreal, duplicates the saved asset, and exports the result in
+a fresh process after removing its temporary source package. Warn before running
+it. Each mod uses a unique package path; no original library package is required
+at runtime. Existing destinations are rejected. Update a mod-owned copy through
+normal Export/edit/Apply, or explicitly review replacement with a new library
+version. Library fixes do not automatically overwrite consumer adaptations.
 
-The library JSON is the distributable authoring input. Once imported, the mod's
-Unreal project owns its copy; keep synchronized BPT with that asset and cook the
-project through the mod's normal producer. The library does not install, merge or
-package the player's INI. Its owner chooses the read policy and distributes the
-file through the normal release/installation workflow.
+The native `.uasset` is the distributable authoring source. The source project
+contains the minimal Voyage file-reader declaration needed for editing; its
+EditorSupport plugin is not a runtime dependency to ship. The consumer supplies
+its own matching game declarations. BPT JSON is exported into temporary workspaces
+for editing and review, never retained as a second library source.
+
+The library does not install, merge or package the player's INI. The mod owner
+chooses reload policy and distributes the file through the usual release workflow.
 
 ## Blueprint interface
 
@@ -139,7 +141,7 @@ above. The lexical helper graphs preserve the existing shared settings grammar.
 
 ## Sectioned parser
 
-Import `BP_SectionedIniFileParser.json` with the same AddSource/Apply workflow,
+Duplicate `BP_SectionedIniFileParser.uasset` with the same CopyAsset workflow,
 using a distinct destination package such as
 `/Game/Mods/MyMod/Settings/BP_SectionedIniFileParser`. The reader dependency,
 object lifetime and snapshot ownership are the same as for the flat source.
@@ -208,7 +210,7 @@ For the sectioned variant, run:
   -OutputRoot './Tmp/BlueprintText/test-sectioned-ini-parser'
 ```
 
-The sectioned runner imports two copies of each variant through AddSource/Apply,
+The sectioned runner duplicates two native copies of each variant through CopyAsset,
 executes the flat regression unchanged, reuses its typed cases in a named
 namespace, and checks section presence, repeated/empty/malformed headers, opaque
 punctuation, address collisions, case/Unicode identity, global assignments,
@@ -218,13 +220,13 @@ new output directory for each full run; game and installation checks remain with
 the consumer.
 
 The flat runner creates a disposable project, supplies test editor dependencies, imports two
-relocated copies with AddSource/Apply, and executes the BPT functions. The suite
+native copies with CopyAsset, and executes the saved Blueprint functions. The suite
 covers numeric storage and ranges, exact double precision and subnormal values,
 default call pins, strings/escapes, comments, case-sensitive keys, duplicate keys, empty/missing files, reload, independent
 objects, and file-read counts. `-RunOnly -ProjectFile <prepared test project>`
 executes the same cases against existing test copies. On failure, use the
 reported step and diagnostic directory to investigate; after source changes,
-rerun the full test to import fresh copies before accepting the result.
+rerun the full test to duplicate fresh source assets before accepting the result.
 
 `Tests/IniParser/EditorSupport` is test-only. Its native code supplies a file-reader
 mirror and a reflective test driver; it does not implement parsing or generate
@@ -234,5 +236,8 @@ not cooked-game or installation validation. Complete getter, numeric-edge and
 section-grammar coverage belongs to the editor suites. Each consumer needs
 game checks of its own settings lifecycle and value application.
 
-Edit the BPT source through the normal workspace workflow and rerun the tests.
-There is no regeneration step from a parser-specific C++ or Python builder.
+Edit a disposable copy of the library project through the normal BPT workspace
+workflow or Unreal Editor. Review and accept the changed `.uasset`, then rerun
+the tests. BPT is temporary interchange; there is no regeneration step from a
+parser-specific C++ or Python builder. The maintained library project must remain
+free of a required BPT plugin and BPT node classes.

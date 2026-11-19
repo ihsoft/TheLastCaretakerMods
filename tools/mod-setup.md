@@ -82,7 +82,7 @@ diagnostics; inspect the reported run directory before retrying with fresh outpu
 Use these operations when a generator or importer must produce editor assets in
 a disposable project. Ordinary build/test commands do not accept source changes.
 The mod owns the recipe, output validation and exact file list; shared acceptance
-does not establish asset correctness or synchronize BPT.
+does not establish asset correctness or validate a BPT proposal.
 
 Before generation, capture the acceptance paths with `Get-VoyageModSourceSnapshot`.
 Include any recipe files whose concurrent edits would invalidate the result;
@@ -108,8 +108,8 @@ source unchanged. A copy failure or interruption can leave partial changes:
 preserve the run, review current edits and restore affected files from the backup
 or Git; remove partially created files listed as previously absent when restoring
 the old state. The copy is not atomic and does not lock out concurrent writers;
-there is no recovery journal or automatic rollback. Review accepted changes and
-synchronize affected BPT before building or committing.
+there is no recovery journal or automatic rollback. Review accepted saved assets
+through a fresh BPT preview before committing; exported JSON stays temporary.
 
 ### Asset source-build markers
 
@@ -138,11 +138,11 @@ owns the reason for choosing a different serialization mode. Ordinary additive
 mods can omit this option.
 
 The cook operation prepares declared native dependencies and BPT through the
-shared workspace `Prepare` operation before loading assets. Saved BPT nodes are
-compiler inputs even though their module does not ship. Mod builders do not
-repeat this preparation or inspect its module list. Required plugin references
-remain part of the maintained project; preparation installs providers only in
-the working copy and reuses the shared provider cache.
+shared workspace `Prepare` operation before loading assets. This installs tool
+providers only in the disposable working copy and reuses the shared cache;
+mod builders do not repeat it or inspect its module list. Saved native calls do
+not depend on BPT. Do not transfer the generated BPT plugin reference back into
+the maintained project. Actual game/native dependencies retain their ownership.
 
 Cook also prepares its private `UnrealCookSupport` editor provider through the
 shared support tool. It passes each group's

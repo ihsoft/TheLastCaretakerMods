@@ -4,6 +4,8 @@ Prepare, export, safely apply, or preview complete compact Blueprint JSON in an 
 Preview refreshes project dependencies in Unreal, then renders offline. MarkStubs
 persists an explicit role on existing unselected dependencies. Warn before engine work.
 AddSource copies a reusable UObject/function-library source to -Asset in the workspace; it is offline.
+CopyAsset duplicates a native source .uasset into an absent -Asset, using a fresh workspace
+and a disposable consumer project. It runs Unreal and exports the saved result.
 Collapse extracts explicit -Node IDs from -Graph into -Name; it is offline.
 CallTemplates reflects a batch of -Operation native or pure static Blueprint library functions in the selected
 source parent context; it launches Unreal but does not edit Blueprint sources/assets.
@@ -17,7 +19,7 @@ Edit workspace.json and blueprints/*.json. Recover restores interrupted asset wr
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Prepare','Export','ExportDataAsset','Apply','Preview','ModelPreview','MarkStubs','Recover','AddSource','Collapse','CallTemplates')][string]$Action,
+    [Parameter(Mandatory)][ValidateSet('Prepare','Export','ExportDataAsset','Apply','Preview','ModelPreview','MarkStubs','Recover','AddSource','CopyAsset','Collapse','CallTemplates')][string]$Action,
     [Parameter(Mandatory)][string]$WorkspaceRoot,
     [string]$ProjectFile,
     [string[]]$Asset,

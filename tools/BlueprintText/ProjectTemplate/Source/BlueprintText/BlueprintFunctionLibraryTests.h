@@ -92,7 +92,7 @@ bool Check(bool Changed)
     for(const TCHAR* Path:{TEXT("/Game/BPTLibraryCallerA"),TEXT("/Game/BPTLibraryCallerB")})
     {
         auto* BP=LoadObject<UBlueprint>(nullptr,Path);if(!BP || !AssetText::CheckCallArguments(BP))return false;
-        for(UEdGraph* G:BP->FunctionGraphs)for(UEdGraphNode* Node:G->Nodes)if(auto* N=Cast<UBlueprintTextCallFunction>(Node))
+        for(UEdGraph* G:BP->FunctionGraphs)for(UEdGraphNode* Node:G->Nodes)if(auto* N=Cast<UK2Node_CallFunction>(Node))
         {
             auto* F=N->GetTargetFunction();auto* Self=N->FindPin(UEdGraphSchema_K2::PN_Self);
             // Editor nodes may resolve the same declaration through its skeleton class.

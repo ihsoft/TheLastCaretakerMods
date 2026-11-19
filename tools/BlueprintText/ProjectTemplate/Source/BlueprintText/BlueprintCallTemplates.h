@@ -83,10 +83,10 @@ bool Build(const FString& Input,const FString& Output)
         FEdGraphUtilities::ExportNodesToText(Selection,Native);
         auto Entry=MakeShared<FJsonObject>();Entry->SetStringField(Identity,Operation);
         auto Defaults=MakeShared<FJsonObject>();
-        for(const auto* Pin:Call->Pins)if(UBlueprintTextCallFunction::IsArgument(Pin))
+        for(const auto* Pin:Call->Pins)if(BlueprintCallArguments::IsArgument(Pin))
         {
             FString DeclaredValue;
-            if(UBlueprintTextCallFunction::DeclarationDefault(Function,Pin->PinName,DeclaredValue))Defaults->SetStringField(Pin->PinName.ToString(),DeclaredValue);
+            if(BlueprintCallArguments::DeclarationDefault(Function,Pin->PinName,DeclaredValue))Defaults->SetStringField(Pin->PinName.ToString(),DeclaredValue);
         }
         Entry->SetObjectField(TEXT("declarationDefaults"),Defaults);
         Entry->SetStringField(Insertion,Native);Entry->SetBoolField(Pure,Call->IsNodePure());

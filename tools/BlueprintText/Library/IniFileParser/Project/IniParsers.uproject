@@ -1,0 +1,6 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Blueprint libraries",
+  "Description": "Native source assets for the flat and sectioned INI parsers"
+}

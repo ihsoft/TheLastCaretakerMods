@@ -61,7 +61,7 @@ and serialization contracts remain consumer-owned.
 
 This is conversion evidence, not an authoring format. Use the shared
 [BPT DataAsset workflow](blueprint-workspace.md#edit-an-existing-dataasset) to
-edit saved properties and keep their review text synchronized.
+edit saved properties and review temporary exports.
 
 ## Contract and comparison
 

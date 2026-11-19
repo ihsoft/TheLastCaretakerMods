@@ -55,7 +55,7 @@ rollback or automatic replacement workflow is involved.
 
 The operation saves the result, reopens it in another editor process and checks
 the hierarchy, transforms, shared mesh identity, materials and dependency
-boundary again. It exports synchronized BlueprintText for review. Checks are
+boundary again. It exports temporary BlueprintText for review. Checks are
 against the current GLB; no production vertex/triangle count is frozen in a test.
 This proves the saved assembly contract, not shader appearance or game behavior.
 
@@ -72,7 +72,7 @@ and resources with its maintained actor and explicit role bindings. A new
 graph-free `BP_Model` is not a replacement for an actor that already owns gameplay.
 Do not flatten moving groups or bind behavior merely by decorative names.
 
-Accept only the reviewed source assets and synchronized BlueprintText through
+Accept only the reviewed source assets through
 the [project authoring workflow](../docs/unreal-project-rule.md#project-layout-and-temporary-data).
 Keep the selected virtual asset paths or rename through Unreal and refresh BPT;
 moving `.uasset` files alone does not rewrite references. Include referenced

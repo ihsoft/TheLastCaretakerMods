@@ -24,7 +24,7 @@ Changing a parser must not silently change the mod's read policy.
 
 ## Author one settings contract
 
-Use the [BPT INI library](../tools/BlueprintText/Library/IniFileParser/integration.md)
+Use the [native INI library](../tools/BlueprintText/Library/IniFileParser/integration.md)
 for import, object lifetime, getter signatures and grammar. It supplies two
 UObject sources:
 
@@ -33,7 +33,7 @@ UObject sources:
   presence from valid values, including empty sections and global assignments.
 
 Import the selected source into the mod's own package path through BPT. The
-saved asset and synchronized BPT then belong to that project. Both parsers use
+saved asset then belongs to that project; exported BPT remains temporary. Both parsers use
 the existing Voyage file-reading API; no separately installed runtime parser
 package is needed. Their editor tests establish parser behavior, not another
 consumer's game lifecycle.

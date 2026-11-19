@@ -73,7 +73,7 @@ if($Action -eq 'ExportLabels'){
     $reopened=Join-Path $evidence 'reopened'
     [void](New-Item -ItemType Directory -Path $reopened)
     RunEngine 'reopen' @('-Mode=ExportBatch',('-Input='+$native),('-Output='+$reopened))
-    ConvertText @('batch-compare',$sourceManifest,'--actual',$reopened,'--output',$output)
+    ConvertText @('batch-compare',$sourceManifest,'--actual',$reopened,'--materialized','--output',$output)
 }else{
     $input=(Resolve-Path -LiteralPath $InputPath).Path
     if($input -eq $output){throw 'Output must not overwrite source'}
@@ -86,6 +86,6 @@ if($Action -eq 'ExportLabels'){
     $reopened=Join-Path $evidence 'reopened.native.json'
     RunEngine 'reopen' @('-Mode=Export',('-Asset='+$Asset),('-Output='+$reopened))
     ConvertText @('compact',$reopened,'--output',$output)
-    ConvertText @('compare',$input,'--actual',$output,'--output',(Join-Path $evidence 'comparison.json'))
+    ConvertText @('compare',$input,'--actual',$output,'--materialized','--output',(Join-Path $evidence 'comparison.json'))
 }
 [pscustomobject]@{status='passed';action=$Action;asset=$Asset;output=$output;evidence=$evidence}

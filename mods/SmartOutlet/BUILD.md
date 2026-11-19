@@ -1,8 +1,8 @@
 # Smart Outlet build and authoring
 
 `Project/Voyage.uproject` owns release assets and editor dependencies.
-`Project/BlueprintText/` mirrors `/Game/Mods/SmartOutlet/` for review; these are
-synchronized source files, not build inputs. `Assets/SmartOutlet.ini` is the
+Export `/Game/Mods/SmartOutlet/` into a temporary BPT workspace for review.
+`Assets/SmartOutlet.ini` is the
 distributable settings file. Mod-level `Settings/` owns settings-template
 validation; Unreal fixtures live in `Project/Tests/`.
 
@@ -77,8 +77,8 @@ Preparation supplies declared dependencies; builds do not reconstruct assets.
 
 Before transferring authoring changes back, compare the maintained sources
 with the starting snapshot and resolve concurrent edits. Review and transfer
-only intended saved assets and their synchronized BPT (plus intentionally
-authored source/config changes), following
+only intended saved assets (plus intentionally authored source/config changes),
+following
 [project ownership](../../docs/unreal-project-rule.md). Runtime package paths
 remain `/Game/Mods/SmartOutlet/` regardless of the working directory.
 

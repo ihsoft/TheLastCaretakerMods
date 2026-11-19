@@ -43,9 +43,9 @@ current project when needed. Do not retain parallel PNG/WAV files solely to feed
 a build or regenerate an asset that is already maintained in the project.
 
 Use [BlueprintText (BPT)](../tools/blueprint-workspace.md#source-of-truth-and-git)
-as the bidirectional text editing and Git review interface for Blueprints.
-Commit its synchronized text representation alongside the corresponding project
-assets. BPT is an intentional duplicate, not a second source of truth.
+as the bidirectional editing and preview interface for Blueprints. Commit saved
+Unreal assets; keep BPT JSON in temporary workspaces. Saved assets must not
+depend on BPT node classes or a required BPT plugin in the maintained project.
 Prepare required resources, parents and native dependencies before graph work.
 Do not introduce a per-mod C++ graph builder for routine Blueprint authoring.
 A procedural step is appropriate only when the supported declarative format
@@ -65,7 +65,6 @@ create empty folders or placeholder scripts to complete the table.
 | `CHANGELOG.md`, `version.txt` | Publication input and published version under the [release workflow](release-and-installation-rule.md). |
 | `Project/Voyage.uproject` | Maintained project descriptor. |
 | `Project/Content/` | Saved release assets and required editor dependencies; distinguish their package ownership explicitly. |
-| `Project/BlueprintText/` | Synchronized BPT, mirroring virtual asset paths. |
 | `Project/Config/` | Deliberately maintained project configuration, when needed. |
 | `Project/EditorSupport.json`, `Project/EditorSupport/` | Native editor dependencies, when needed; use the [shared dependency declaration](../tools/unreal-editor-support.md#prepare-declared-project-dependencies). |
 | `Assets/` | Review/editing copies, external authoring inputs and distributable files such as `<Mod>.ini`; saved Unreal assets belong in `Project/Content/`. |
@@ -214,13 +213,13 @@ run belongs to that run.
 Use a working copy for interactive Unreal/BPT authoring as well: directly
 opening the maintained project in Unreal recreates standard generated folders.
 Before accepting authoring changes, check for concurrent source edits and review
-the exact changes. Transfer only intentionally changed saved assets, synchronized
-BPT and deliberately authored configuration or other source files. Never copy
+the exact changes. Transfer only intentionally changed saved assets and
+deliberately authored configuration or other source files. Never copy
 the whole working project back. A working copy is not a second source of truth.
 
 Refreshing game-derived project inputs is a source-update stage, separate from
-the disposable build. Review and accept the refreshed assets, owned patches,
-provenance and synchronized BPT into the maintained project through the same
+the disposable build. Review and accept the refreshed assets, owned patches and
+provenance into the maintained project through the same
 authoring boundary before taking the build copy. A build must not silently
 substitute refreshed release assets or write them back as build output.
 Accepting a source update does not itself authorize a commit or establish gameplay.

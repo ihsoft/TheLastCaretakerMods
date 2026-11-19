@@ -4,11 +4,10 @@ This policy applies to research, feature development, builds, releases, and
 installation work across the repository. It governs ignored generated output;
 Git source and documentation follow their owning rules.
 
-Maintained Unreal project assets and their intentionally duplicated,
-synchronized BPT representations are tracked source material, not disposable
+Maintained Unreal project assets are tracked source material, not disposable
 generated output. Follow [project ownership](unreal-project-rule.md) and the
 [BPT Git contract](../tools/blueprint-workspace.md#source-of-truth-and-git).
-BPT workspace baselines, backups, diagnostics and previews remain temporary
+BPT exports, workspace baselines, backups, diagnostics and previews remain temporary
 tool output. Game-derived content remains subject to the Git restrictions below.
 
 An optional backlog for a large task is a local working note, not generated

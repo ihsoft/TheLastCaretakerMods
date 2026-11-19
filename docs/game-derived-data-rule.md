@@ -16,7 +16,7 @@
   condition in the mod's provenance document. Keep intermediate extractions,
   reports and cooked output ignored. Before release, refresh supported
   game-derived inputs and reapply the owned patch through the project's explicit
-  update stage. Accept the changed source assets and synchronized BPT before
+  update stage. Accept the changed source assets before
   taking the build copy, as required by the maintained-project workflow.
   A failed refresh blocks release; an old project asset is not a fallback.
   Editor stubs must remain excluded from the release payload.

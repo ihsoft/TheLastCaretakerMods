@@ -134,7 +134,7 @@ in the mod. Shared BPT's own editor implementation is a tool dependency.
 
 ## Source and execution data
 
-Project contains maintained assets, synchronized BPT, native stand-in sources
+Project contains maintained assets, native stand-in sources
 and test source. Content and any authored Config files are repository data.
 Only Intermediate is ignored inside Project. Engine execution uses a disposable
 copy under Tmp/ContainerLidLabel: preparation, tests and cook never write into

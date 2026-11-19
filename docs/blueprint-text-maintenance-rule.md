@@ -57,7 +57,7 @@ boundary. Use the [test scope rule](testing-rule.md) to decide which checks
 deserve retained regression coverage.
 Do not expand supported state merely by disabling validation.
 
-Preserve the [project and synchronization contract](../tools/blueprint-workspace.md#source-of-truth-and-git).
+Preserve the [native project and temporary exchange contract](../tools/blueprint-workspace.md#source-of-truth-and-git).
 Editor reconstruction, structural comparison, review presentation and gameplay
 are separate evidence levels. A preview improvement must not silently transform
 the source algorithm; an import improvement must not weaken strict comparison

@@ -5,6 +5,7 @@
 #include "EdGraphUtilities.h"
 #include "EdGraphSchema_K2.h"
 #include "K2Node_EditablePinBase.h"
+#include "K2Node_AddComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -41,6 +42,7 @@
 #include "WidgetPreviewResources.h"
 #include "BlueprintNestedGraphs.h"
 #include "BlueprintTextCallFunction.h"
+#include "BlueprintCallArguments.h"
 
 namespace ATNames
 {
@@ -378,6 +380,21 @@ bool ImportComponents(UBlueprint* BP,const FJsonObject& Data,const TSet<UClass*>
     }
     return true;
 }
+bool ValidateComponentTemplateOwners(UBlueprint* BP)
+{
+    // UBlueprint::PostLoad rebuilds this array from stock AddComponent nodes.
+    // A generic function call can execute today but lose its template on recompile.
+    TArray<UK2Node_AddComponent*> Nodes;
+    FBlueprintEditorUtils::GetAllNodesOfClass(BP,Nodes);
+    TSet<UActorComponent*> Referenced;
+    for(const UK2Node_AddComponent* Node:Nodes)Referenced.Add(Node->GetTemplateFromNode());
+    for(UActorComponent* Template:BP->ComponentTemplates)if(!Referenced.Contains(Template))
+    {
+        UE_LOG(LogTemp,Error,TEXT("Component template %s requires a stock K2Node_AddComponent owner; a generic AddComponent call does not survive ordinary editor recompile."),*Template->GetName());
+        return false;
+    }
+    return true;
+}
 #include "BlueprintNativeDefaults.h"
 FString UnsupportedReason(const UBlueprint* BP)
 {
@@ -451,7 +468,7 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
             }
     }
     if(!BP){UE_LOG(LogTemp,Error,TEXT("No Blueprint found in package: %s"),*Asset);return false;}
-    if(!Supported(BP) || !BP->GeneratedClass || !CheckCallArguments(BP))return false;
+    if(!Supported(BP) || !BP->GeneratedClass)return false;
     auto Root=MakeShared<FJsonObject>();
     Root->SetNumberField(ATNames::Valueschema,2);Root->SetStringField(ATNames::Valueformat,ATNames::Valuenative_asset);
     Root->SetStringField(ATNames::Valueasset,Asset);Root->SetStringField(ATNames::Valueparent,BP->ParentClass->GetPathName());
@@ -532,11 +549,15 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
             G->SetObjectField(BlueprintNestedGraphs::Owner,Owner);
         }
         TSet<UObject*> Selection;
+        auto Calls=MakeShared<FJsonObject>();
         for(UEdGraphNode* Node:Graph->Nodes)
         {
             // Match the engine's save-time normalization of user-pin metadata.
             if(auto* Editable=Cast<UK2Node_EditablePinBase>(Node))Editable->UpdateUserDefinedPinDefaultValues();
             Selection.Add(Node);
+            if(auto* Call=Cast<UK2Node_CallFunction>(Node))
+                if(Call->GetClass()==UK2Node_CallFunction::StaticClass() || Call->IsA<UBlueprintTextCallFunction>())
+                    Calls->SetObjectField(Call->GetName(),BlueprintCallArguments::Snapshot(Call));
             for(const UEdGraphPin* Pin:Node->Pins)
                 if(Pin->DefaultObject && Pin->DefaultObject->GetOutermost()!=BP->GetOutermost())
                     DependencyPaths.Add(Pin->DefaultObject->GetPathName());
@@ -545,6 +566,7 @@ bool Export(const FString& Asset, const FString& Path, const FString& PreviewRes
         if(Nested)Text=BlueprintNestedGraphs::ExportNodes(Graph,GraphObjects);
         else FEdGraphUtilities::ExportNodesToText(Selection,Text);
         G->SetStringField(ATNames::Valuetext,Text);G->SetNumberField(ATNames::ValuenodeCount,Graph->Nodes.Num());
+        if(Calls->Values.Num())G->SetObjectField(BlueprintCallArguments::Requests,Calls);
         Graphs.Add(MakeShared<FJsonValueObject>(G));
         for(UEdGraph* Child:Graph->SubGraphs)ExportGraph(Child,BlueprintNestedGraphs::Kind);
     };
@@ -716,7 +738,7 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root,const TSe
       for(int32 Index=0;Index<Pending.Num();)
       {
         auto G=Pending[Index]->AsObject();
-        if(!G.IsValid() || !Keys(*G,{ATNames::Valuename,ATNames::Valuekind,ATNames::Valueproperties,ATNames::Valuetext,ATNames::ValuenodeCount,BlueprintNestedGraphs::Owner}))return false;
+        if(!G.IsValid() || !Keys(*G,{ATNames::Valuename,ATNames::Valuekind,ATNames::Valueproperties,ATNames::Valuetext,ATNames::ValuenodeCount,BlueprintNestedGraphs::Owner,BlueprintCallArguments::Requests}))return false;
         const FString Name=G->GetStringField(ATNames::Valuename);
         UObject* Outer=BP;UK2Node_Composite* Composite=nullptr;
         TSharedPtr<FJsonObject> Owner;
@@ -748,9 +770,8 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root,const TSe
         }
         else return false;
         FString NodeText=G->GetStringField(ATNames::Valuetext);
-        // The retained legacy provider has a different /Script identity.
-        NodeText.ReplaceInline(TEXT("Begin Object Class=/Script/BlueprintText.BlueprintTextCallFunction "),
-            *(TEXT("Begin Object Class=")+UBlueprintTextCallFunction::StaticClass()->GetPathName()+TEXT(" ")));
+        if(NodeText.Contains(TEXT(".BlueprintTextCallFunction ")))
+        {UE_LOG(LogTemp,Error,TEXT("Legacy BPT call text must pass through the compact codec before import."));return false;}
         GraphFactory Factory;Factory.ProcessBuffer(Graph,RF_Transactional,NodeText);
         UEdGraphPin::ResolveAllPinReferences();
         if(Graph->Nodes.Num()!=G->GetIntegerField(ATNames::ValuenodeCount))
@@ -767,7 +788,7 @@ bool PopulateImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root,const TSe
       }
       if(!Progress){UE_LOG(LogTemp,Error,TEXT("Missing or cyclic collapsed graph owner."));return false;}
     }
-    return InterfaceOwners.Num()==0 && Supported(BP);
+    return InterfaceOwners.Num()==0 && ValidateComponentTemplateOwners(BP) && Supported(BP);
 }
 bool FinalizeImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
 {
@@ -782,9 +803,9 @@ bool FinalizeImport(UBlueprint* BP,const TSharedPtr<FJsonObject>& Root)
         {
             auto* Template=FindObject<UActorComponent>(BP->GetOutermost(),*Value->AsString());
             if(!Template){UE_LOG(LogTemp,Error,TEXT("Component template missing after compilation: %s"),*Value->AsString());return false;}
-            // Pre-save migration/compilation takes its templates from the Blueprint.
-            // Post-load pruning may remove these editor entries; the generated class
-            // must still retain every template used by name at runtime.
+            // Retain the declared editor/runtime lists after compilation. Their
+            // stock AddComponent owners were checked before compile, so ordinary
+            // editor reload/recompile can rebuild the same template ownership.
             BP->ComponentTemplates.AddUnique(Template);
             if(List==GeneratedTemplates)GC->ComponentTemplates.Add(Template);
         }
@@ -872,23 +893,34 @@ bool Import(const FString& Path,bool Batch=false)
     for(UBlueprint* BP:Blueprints)FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     for(UBlueprint* BP:Blueprints)FBlueprintCompilationManager::QueueForCompilation(BP);
     FBlueprintCompilationManager::FlushCompilationQueueAndReinstance();
-    // All final declarations now exist, including peers changed in this batch.
+    // Resolve exchange-only argument requests after all peer declarations exist.
     bool HasArguments=false;
-    for(UBlueprint* BP:Blueprints)
+    for(int32 I=0;I<Sources.Num();++I)
     {
-        TArray<UEdGraph*> Graphs;BP->GetAllGraphs(Graphs);
-        for(UEdGraph* Graph:Graphs)for(UEdGraphNode* Node:Graph->Nodes)
-            if(auto* Call=Cast<UBlueprintTextCallFunction>(Node))
+        TArray<UEdGraph*> Graphs;Blueprints[I]->GetAllGraphs(Graphs);
+        for(const auto& Item:Sources[I]->GetArrayField(ATNames::Valuegraphs))
+        {
+            const auto G=Item->AsObject();if(!G->HasField(BlueprintCallArguments::Requests))continue;
+            const FString Id=G->GetObjectField(ATNames::Valueproperties)->GetStringField(TEXT("GraphGuid"));
+            UEdGraph* Graph=nullptr;
+            for(UEdGraph* Candidate:Graphs)if(Candidate->GraphGuid.ToString(EGuidFormats::Digits)==Id)Graph=Candidate;
+            if(!Graph)return false;
+            for(const auto& Pair:G->GetObjectField(BlueprintCallArguments::Requests)->Values)
             {
+                auto* Call=FindObject<UK2Node_CallFunction>(Graph,*Pair.Key);
+                const auto State=Pair.Value->AsObject();
+                if(!Call || Call->GetClass()!=UK2Node_CallFunction::StaticClass() || !State ||
+                    !Keys(*State,{BlueprintCallArguments::Overrides,BlueprintCallArguments::Defaults}))return false;
                 FString Error;HasArguments=true;
-                if(!Call->RefreshArguments(Error)){UE_LOG(LogTemp,Error,TEXT("%s"),*Error);return false;}
+                if(!BlueprintCallArguments::Apply(Call,*State->GetObjectField(BlueprintCallArguments::Overrides),Error))
+                {UE_LOG(LogTemp,Error,TEXT("%s.%s: %s"),*Graph->GetName(),*Pair.Key,*Error);return false;}
             }
+        }
     }
     if(HasArguments)
     {
         for(UBlueprint* BP:Blueprints)FBlueprintCompilationManager::QueueForCompilation(BP);
         FBlueprintCompilationManager::FlushCompilationQueueAndReinstance();
-        for(UBlueprint* BP:Blueprints)if(!CheckCallArguments(BP))return false;
     }
     for(UBlueprint* BP:Blueprints)if(BP->Status==BS_Error || !BP->GeneratedClass)
     {UE_LOG(LogTemp,Error,TEXT("Rebuilt Blueprint failed compilation: %s"),*BP->GetPathName());return false;}
@@ -923,6 +955,8 @@ bool ExportBatch(const FString& Path,const FString& Folder)
 #include "BlueprintArgumentTests.h"
 #include "BlueprintFunctionLibraryTests.h"
 #include "BlueprintDataAssets.h"
+#include "BlueprintNativeCopy.h"
+#include "BlueprintCallMigration.h"
 
 UBlueprintAssetTextCommandlet::UBlueprintAssetTextCommandlet(){IsClient=false;IsServer=false;IsEditor=true;LogToConsole=true;}
 int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
@@ -931,6 +965,8 @@ int32 UBlueprintAssetTextCommandlet::Main(const FString& Params)
     FParse::Value(*Params,ATNames::ValueMode_,Mode);FParse::Value(*Params,ATNames::ValueInput_,Input);
     FParse::Value(*Params,ATNames::ValueOutput_,Output);FParse::Value(*Params,ATNames::ValueAsset_,Asset);
     FString PreviewResources;FParse::Value(*Params,WidgetPreviewResources::ResourcesArgument,PreviewResources);
+    if(Mode==TEXT("CopyBlueprint"))return BlueprintNativeCopy::Copy(Input,Asset)?0:11;
+    if(Mode==TEXT("MigrateLegacyCalls"))return BlueprintCallMigration::Migrate(Asset)?0:12;
     if(Mode==BlueprintDataAssets::ExportMode)return BlueprintDataAssets::Export(Asset,Output)?0:10;
     if(Mode==BlueprintDataAssets::ApplyMode)return BlueprintDataAssets::Apply(Input,Output)?0:10;
     if(Mode==TEXT("FunctionLibraryFixture"))return BlueprintFunctionLibraryTests::Fixture()?0:9;

@@ -5,7 +5,7 @@ a maintained Unreal project; packaging and gameplay acceptance belong to its
 consumer.
 
 - [Workspace workflow](../blueprint-workspace.md): export, edit, apply, preview,
-  recover conflicts and keep saved assets synchronized with tracked BPT.
+  recover conflicts and accept native assets; JSON stays temporary.
 - [Graph design](../../docs/blueprint-graph-design-rule.md): choose readable
   operations and boundaries when authoring or simplifying graphs.
 - [Format reference](../blueprint-text.md): supported state, exact fields and

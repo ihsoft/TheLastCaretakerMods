@@ -57,7 +57,7 @@ function New-VoyageModProjectCopy {
     $source = Join-Path $context.modRoot 'Project'
     Assert-ModUnlinked $source
     $files = @('Voyage.uproject','EditorSupport.json')
-    $directories = @('Content','Config','BlueprintText','EditorSupport','Tests')
+    $directories = @('Content','Config','EditorSupport','Tests')
     foreach ($required in @('Voyage.uproject','Content')) {
         if (-not (Test-Path -LiteralPath (Join-Path $source $required))) { throw "Missing maintained project input: $required" }
     }

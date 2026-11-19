@@ -14,10 +14,6 @@
     {
       "Name": "ContainerLidLabelSupport",
       "Enabled": true
-    },
-    {
-      "Name": "BlueprintTextWorkspace",
-      "Enabled": true
     }
   ]
 }

@@ -1,0 +1,4 @@
+{
+  "schema": 1,
+  "plugins": [{"source": "EditorSupport/IniParserEditorSupport.uplugin"}]
+}

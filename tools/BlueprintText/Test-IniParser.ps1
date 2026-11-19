@@ -34,12 +34,10 @@ if(-not $RunOnly){
     @{FileVersion=3;EngineAssociation='5.8';Plugins=@(@{Name='Fab';Enabled=$false})} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $project -Encoding UTF8
     $support=Join-Path $PSScriptRoot 'Tests/IniParser/EditorSupport/IniParserTestSupport.uplugin'
     @{schema=1;plugins=@(@{source=$support})} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $projectFolder 'EditorSupport.json') -Encoding UTF8
-    $workspace=Join-Path $output 'workspace'
-    $source=Join-Path $PSScriptRoot 'Library/IniFileParser/BP_IniFileParser.json'
+    $source=Join-Path $PSScriptRoot 'Library/IniFileParser/Project/Content/BlueprintTextLibrary/BP_IniFileParser.uasset'
     foreach($name in @('IniTestA','IniTestB')){
-        & (Join-Path $PSScriptRoot 'Invoke-BlueprintWorkspace.ps1') -Action AddSource -ProjectFile $project -WorkspaceRoot $workspace -SourcePath $source -Asset ('/Game/Mods/'+$name+'/BP_IniFileParser') -PythonPath $PythonPath
+        & (Join-Path $PSScriptRoot 'Invoke-BlueprintWorkspace.ps1') -Action CopyAsset -ProjectFile $project -WorkspaceRoot (Join-Path $output $name) -SourcePath $source -Asset ('/Game/Mods/'+$name+'/BP_IniFileParser') -EngineRoot $EngineRoot -PythonPath $PythonPath
     }
-    & (Join-Path $PSScriptRoot 'Invoke-BlueprintWorkspace.ps1') -Action Apply -WorkspaceRoot $workspace -EngineRoot $EngineRoot -PythonPath $PythonPath
 }
 if(@(Get-Process UnrealEditor,UnrealEditor-Cmd -ErrorAction SilentlyContinue).Count){throw 'An uncoordinated editor started during the reserved test operation'}
 $log=Join-Path $output 'test-unreal.log'

@@ -75,7 +75,7 @@ bool Check(int32 Expected,bool Reconstruct)
     if(Reconstruct)
     {
         TArray<UEdGraph*> Graphs;BP->GetAllGraphs(Graphs);
-        for(UEdGraph* G:Graphs)for(UEdGraphNode* N:G->Nodes)if(auto* Call=Cast<UBlueprintTextCallFunction>(N))Call->ReconstructNode();
+        for(UEdGraph* G:Graphs)for(UEdGraphNode* N:G->Nodes)if(auto* Call=Cast<UK2Node_CallFunction>(N))Call->ReconstructNode();
         if(!Compile(BP) || !Save(BP))return false;
     }
     if(!AssetText::CheckCallArguments(BP))return false;
@@ -91,7 +91,7 @@ bool Check(int32 Expected,bool Reconstruct)
     const auto* Float=FindFProperty<FFloatProperty>(Probe,TEXT("InheritedFloat"));
     const auto* Double=FindFProperty<FDoubleProperty>(Probe,TEXT("InheritedDouble"));
     const auto* Int64=FindFProperty<FInt64Property>(Probe,TEXT("InheritedInt64"));
-    return Int(TEXT("Inherited"),Expected) && Int(TEXT("ExplicitEqual"),7) && Int(TEXT("ExplicitZero"),0) &&
+    return Int(TEXT("Inherited"),Expected) && Int(TEXT("ExplicitEqual"),Expected) && Int(TEXT("ExplicitZero"),0) &&
         Int(TEXT("Local"),13) && Int(TEXT("Native"),12) && Int(TEXT("Required"),4) && Bool(TEXT("InheritedBool"),true) && Bool(TEXT("ExplicitFalse"),false) &&
         String(TEXT("InheritedString"),TEXT("alpha")) && String(TEXT("ExplicitEmpty"),TEXT("")) && String(TEXT("InheritedEmpty"),TEXT("")) &&
         Float && Float->GetPropertyValue_InContainer(Args.GetStructMemory())==TNumericLimits<float>::Max() &&

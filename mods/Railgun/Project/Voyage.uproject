@@ -25,10 +25,6 @@
       "Enabled": true
     },
     {
-      "Name": "BlueprintTextWorkspace",
-      "Enabled": true
-    },
-    {
       "Name": "RailgunSupport",
       "Enabled": true
     }
