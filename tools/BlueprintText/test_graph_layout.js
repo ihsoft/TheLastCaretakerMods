@@ -31,6 +31,19 @@ const branches={nodes:[['root',0],['aRight',1],['zLeft',1],['aChild',2],['zChild
     edges:[['root','then','zLeft','exec',true],['root','else','aRight','exec',true],
            ['zLeft','then','aChild','exec',true],['aRight','then','zChild','exec',true],
            ['zLeft','result','zChild','value',false],['aRight','result','aChild','value',false]]};
+const siblings={nodes:[['entry',0,330,70],['first',1,330,100],['last',2,330,70],
+    ['aTarget',0,350,100],['zValue',0,330,80],['bTarget',1,330,80],['yValue',1,390,100]]
+    .map(([id,rank,w,h])=>({id,rank,w,h})),edges:[['entry','then','first','exec',true],
+    ['first','then','last','exec',true],['aTarget','value','first','target',false],
+    ['zValue','value','first','Value',false],['bTarget','value','last','target',false],
+    ['yValue','value','last','Value',false]]};
+for(const direction of ['TB','LR'])for(const columns of [1,8,12]){
+    const boxes=context.fragmentBoxes({...siblings,direction},columns),axis=direction==='TB'?'x':'y',size=direction==='TB'?'w':'h';
+    for(const [value,target,action] of [['zValue','aTarget','entry'],['yValue','bTarget','first']]){
+        assert.ok(boxes.get(value)[axis]+boxes.get(value)[size]<=boxes.get(target)[axis],'Sibling data sources follow consumer port order');
+        assert.ok(boxes.get(target)[axis]+boxes.get(target)[size]<=boxes.get(action)[axis],'Both data sources stay before execution without crossing it');
+    }
+}
 for(const columns of [2,3,6,12]){
     const result=context.layoutRows(branches,columns),b=result.boxes;
     assert.ok(b.get('zLeft').x<b.get('aRight').x,'then branch precedes else regardless of IDs');

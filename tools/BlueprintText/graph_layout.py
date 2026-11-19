@@ -37,6 +37,8 @@ def layout_boxes(nodes, edges, direction='TB', columns=8):
         adjacent[e[0]].append(e[2])
         adjacent[e[2]].append(e[0])
     outputs, inputs = port_fractions(nodes, edges)
+    rank_spans = [(min(by[e[0]]['rank'], by[e[2]]['rank']),
+                   max(by[e[0]]['rank'], by[e[2]]['rank'])) for e in edges]
     cross = lambda n: by[n]['h' if horizontal else 'w']
     flow = lambda n: by[n]['w' if horizontal else 'h']
     delta = lambda e: cross(e[0]) * outputs[e[0]][e[1]] - cross(e[2]) * inputs[e[2]][e[3]]
@@ -88,10 +90,18 @@ def layout_boxes(nodes, edges, direction='TB', columns=8):
             execution = is_exec(chain)
             root = chain[0]
             i = primary_in[root]
-            return (not execution, by[root]['rank'] if execution else -by[chain[-1]]['rank'],
+            if not execution:
+                uses = [edges[j] for n in chain for j in outgoing[n] if edges[j][2] not in chain]
+                consumers = {e[2] for e in uses}
+                # Place the input nearest execution first, then work outward.
+                # A shared producer has no single consumer-owned ordering.
+                anchor = ((next(iter(consumers)), -max(inputs[e[2]][e[3]] for e in uses))
+                          if len(consumers) == 1 else (root, 0))
+                return (True, -by[chain[-1]]['rank'], anchor, root)
+            return (False, by[root]['rank'],
                     edge_key(i) if i is not None else (root, -1, '', '', ''), root)
         occupied, placed = defaultdict(list), {}
-        exec_edges = [edges[i] for n in component for i in outgoing[n] if edges[i][4]]
+        component_edges = [i for n in component for i in outgoing[n]]
         ordered_chains = sorted(chains, key=chain_key)
         schedule = [(chain, False) for chain in ordered_chains] + [
             (chain, True) for _ in range(2) for chain in ordered_chains if not is_exec(chain)]
@@ -130,8 +140,14 @@ def layout_boxes(nodes, edges, direction='TB', columns=8):
             # nearest free space on the opposite side of the primary branch.
             candidates = [v for v in candidates if not execution or v >= desired]
             valid = lambda v: all(v <= lo + 1e-7 or v >= hi - 1e-7 for lo, hi in forbidden)
+            available = placed.keys() | set(chain)
             incident = {i for n in chain for i in incoming[n] + outgoing[n]
-                        if edges[i][0] in placed or edges[i][2] in placed}
+                        if edges[i][0] in available and edges[i][2] in available}
+            comparisons = [(i, j) for i in sorted(incident) for j in component_edges
+                           if j != i and (j not in incident or i < j)
+                           and edges[j][0] in available and edges[j][2] in available
+                           and max(rank_spans[i][0], rank_spans[j][0]) <= min(rank_spans[i][1], rank_spans[j][1])]
+            comparison_edges = sorted({i for pair in comparisons for i in pair})
             def cost(value):
                 if execution:
                     return (abs(value-desired), value)
@@ -139,22 +155,21 @@ def layout_boxes(nodes, edges, direction='TB', columns=8):
                 def endpoints(e):
                     return ((by[e[0]]['rank'], position(e[0]) + cross(e[0])*outputs[e[0]][e[1]]),
                             (by[e[2]]['rank'], position(e[2]) + cross(e[2])*inputs[e[2]][e[3]]))
-                crossings = 0
-                for i in sorted(incident):
-                    e = edges[i]
-                    for spine in exec_edges:
-                        if e[0] in (spine[0], spine[2]) or e[2] in (spine[0], spine[2]):
-                            continue
-                        crossings += segments_cross(*endpoints(e), *endpoints(spine))
+                # Different ports on the same card can cross before reaching it.
+                # Strict intersection already excludes a genuinely shared port.
+                points = {i: endpoints(edges[i]) for i in comparison_edges}
+                crossings = sum((390 if edges[i][4] or edges[j][4] else 195)
+                                for i, j in comparisons
+                                if segments_cross(*points[i], *points[j]))
                 distance = lambda values: sum(abs(value-v) for _, v in values)/max(1, len(values))
                 # Consumers define the computation's location; sources still
                 # contribute, while crossing execution carries a card-width cost.
                 if refine:
                     # Revisit groups after all their neighbors exist. Each move
                     # reduces the same graph-wide distance/crossing objective.
-                    score = sum(abs(value-v) for _, v in incoming_anchors + outgoing_anchors) + 390*crossings
+                    score = sum(abs(value-v) for _, v in incoming_anchors + outgoing_anchors) + crossings
                 else:
-                    score = 2*distance(outgoing_anchors) + distance(incoming_anchors) + 390*crossings
+                    score = 2*distance(outgoing_anchors) + distance(incoming_anchors) + crossings
                 return (round(score, 6), abs(value-(previous if refine else desired)), value)
             shift = min(filter(valid, candidates), key=cost)
             for n in chain:

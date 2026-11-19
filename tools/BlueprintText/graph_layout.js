@@ -27,6 +27,7 @@ function fragmentBoxes(data,columns){
     const incoming=new Map(nodes.map(n=>[n.id,[]])),outgoing=new Map(nodes.map(n=>[n.id,[]])),adjacent=new Map(nodes.map(n=>[n.id,[]]));
     edges.forEach((e,i)=>{outgoing.get(e[0]).push(i);incoming.get(e[2]).push(i);adjacent.get(e[0]).push(e[2]);adjacent.get(e[2]).push(e[0])});
     const [outputs,inputs]=portFractions(nodes,edges);
+    const rankSpans=edges.map(e=>[Math.min(by.get(e[0]).rank,by.get(e[2]).rank),Math.max(by.get(e[0]).rank,by.get(e[2]).rank)]);
     const cross=n=>by.get(n)[horizontal?'h':'w'],flow=n=>by.get(n)[horizontal?'w':'h'];
     const delta=e=>cross(e[0])*outputs.get(e[0]).get(e[1])-cross(e[2])*inputs.get(e[2]).get(e[3]);
     const forward=i=>edges[i][4]&&by.get(edges[i][0]).rank<by.get(edges[i][2]).rank;
@@ -61,9 +62,18 @@ function fragmentBoxes(data,columns){
             chains[chainOf.get(n)].push(n);
         }
         const isExec=chain=>executionNodes.has(chain[0]);
-        const chainKey=chain=>{const execution=isExec(chain),root=chain[0],i=primaryIn.get(root);return [Number(!execution),execution?by.get(root).rank:-by.get(chain.at(-1)).rank,...(i===null?[root,-1,'','','']:edgeKey(i)),root]};
+        const chainKey=chain=>{
+            const execution=isExec(chain),root=chain[0],i=primaryIn.get(root);
+            if(!execution){
+                const uses=chain.flatMap(n=>outgoing.get(n).map(j=>edges[j]).filter(e=>!chain.includes(e[2])));
+                const consumers=new Set(uses.map(e=>e[2]));
+                const anchor=consumers.size===1?[[...consumers][0],-Math.max(...uses.map(e=>inputs.get(e[2]).get(e[3])))]:[root,0];
+                return [1,-by.get(chain.at(-1)).rank,...anchor,root];
+            }
+            return [0,by.get(root).rank,...(i===null?[root,-1,'','','']:edgeKey(i)),root];
+        };
         let occupied=new Map();const placed=new Map();
-        const execEdges=component.flatMap(n=>outgoing.get(n).filter(i=>edges[i][4]).map(i=>edges[i]));
+        const componentEdges=component.flatMap(n=>outgoing.get(n));
         const orderedChains=[...chains].sort((a,b)=>compareKeys(chainKey(a),chainKey(b)));
         const schedule=[...orderedChains.map(chain=>[chain,false]),...[0,1].flatMap(()=>orderedChains.filter(chain=>!isExec(chain)).map(chain=>[chain,true]))];
         for(const [chain,refine] of schedule){
@@ -83,19 +93,24 @@ function fragmentBoxes(data,columns){
             const desired=preferred.length?preferred[Math.floor((preferred.length-1)/2)]:0,forbidden=[];
             for(const n of chain)for(const [lo,hi] of occupied.get(by.get(n).rank)||[])forbidden.push([lo-offsets.get(n)-cross(n)-60,hi-offsets.get(n)+60]);
             const candidates=[desired,...forbidden.flat(),...(refine?[previous]:[]),...(execution?[]:[...incomingAnchors,...outgoingAnchors].map(a=>a[1]))].filter(v=>(!execution||v>=desired)&&forbidden.every(([lo,hi])=>v<=lo+1e-7||v>=hi-1e-7));
-            const incident=[...new Set(chain.flatMap(n=>[...incoming.get(n),...outgoing.get(n)]).filter(i=>placed.has(edges[i][0])||placed.has(edges[i][2])))].sort((a,b)=>a-b);
+            const available=new Set([...placed.keys(),...chain]);
+            const incident=[...new Set(chain.flatMap(n=>[...incoming.get(n),...outgoing.get(n)]).filter(i=>available.has(edges[i][0])&&available.has(edges[i][2])))].sort((a,b)=>a-b);
+            const incidentSet=new Set(incident);
+            const comparisons=incident.flatMap(i=>componentEdges.filter(j=>j!==i&&(!incidentSet.has(j)||i<j)
+                &&available.has(edges[j][0])&&available.has(edges[j][2])
+                &&Math.max(rankSpans[i][0],rankSpans[j][0])<=Math.min(rankSpans[i][1],rankSpans[j][1])).map(j=>[i,j]));
+            const comparisonEdges=[...new Set(comparisons.flat())].sort((a,b)=>a-b);
             const cost=value=>{
                 if(execution)return [Math.abs(value-desired),value];
                 const position=n=>placed.has(n)?placed.get(n):value+offsets.get(n);
                 const endpoints=e=>[[by.get(e[0]).rank,position(e[0])+cross(e[0])*outputs.get(e[0]).get(e[1])],
                     [by.get(e[2]).rank,position(e[2])+cross(e[2])*inputs.get(e[2]).get(e[3])]];
                 let crossings=0;
-                for(const i of incident){const e=edges[i];for(const spine of execEdges){
-                    if([spine[0],spine[2]].includes(e[0])||[spine[0],spine[2]].includes(e[2]))continue;
-                    if(segmentsCross(...endpoints(e),...endpoints(spine)))crossings++;
-                }}
+                const points=new Map(comparisonEdges.map(i=>[i,endpoints(edges[i])]));
+                for(const [i,j] of comparisons)if(segmentsCross(...points.get(i),...points.get(j)))
+                    crossings+=edges[i][4]||edges[j][4]?390:195;
                 const distance=values=>values.reduce((sum,[,v])=>sum+Math.abs(value-v),0)/Math.max(1,values.length);
-                const score=(refine?[...incomingAnchors,...outgoingAnchors].reduce((sum,[,v])=>sum+Math.abs(value-v),0):2*distance(outgoingAnchors)+distance(incomingAnchors))+390*crossings;
+                const score=(refine?[...incomingAnchors,...outgoingAnchors].reduce((sum,[,v])=>sum+Math.abs(value-v),0):2*distance(outgoingAnchors)+distance(incomingAnchors))+crossings;
                 return [Math.round(score*1e6)/1e6,Math.abs(value-(refine?previous:desired)),value];
             };
             const costs=new Map(candidates.map(v=>[v,cost(v)]));

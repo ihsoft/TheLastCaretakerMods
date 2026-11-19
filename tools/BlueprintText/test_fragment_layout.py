@@ -6,6 +6,29 @@ from graph_layout import layout_boxes, port_fractions
 
 
 class FragmentLayoutTests(unittest.TestCase):
+    def test_sibling_inputs_follow_ports_without_crossing_execution(self):
+        # Both consumers have two inputs beside the preceding execution step.
+        # IDs deliberately oppose input order; card widths/heights vary as they
+        # do when expressions or hidden rows change the browser geometry.
+        nodes = [dict(id=n, rank=r, w=w, h=h) for n,r,w,h in [
+            ('entry',0,330,70),('first',1,330,100),('last',2,330,70),
+            ('aTarget',0,350,100),('zValue',0,330,80),
+            ('bTarget',1,330,80),('yValue',1,390,100)]]
+        edges = [('entry','then','first','exec',True),('first','then','last','exec',True),
+                 ('aTarget','value','first','target',False),('zValue','value','first','Value',False),
+                 ('bTarget','value','last','target',False),('yValue','value','last','Value',False)]
+        original = copy.deepcopy((nodes, edges))
+        for direction in ('TB','LR'):
+            axis = int(direction == 'LR')
+            for columns in (1,8,12):
+                for reverse in (False,True):
+                    boxes=layout_boxes(nodes[::-1] if reverse else nodes,
+                                       edges[::-1] if reverse else edges,direction,columns)
+                    for value,target,action in [('zValue','aTarget','entry'),('yValue','bTarget','first')]:
+                        self.assertLessEqual(boxes[value][axis]+boxes[value][axis+2], boxes[target][axis])
+                        self.assertLessEqual(boxes[target][axis]+boxes[target][axis+2], boxes[action][axis])
+        self.assertEqual((nodes,edges),original)
+
     def test_entry_arguments_do_not_pull_computation_across_execution(self):
         nodes = [dict(id=n, rank=r, w=330, h=100) for n, r in
                  [('entry',0),('first',1),('second',2),('branch',3),('result',4),('length',1),('compare',2)]]

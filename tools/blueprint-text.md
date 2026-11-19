@@ -963,10 +963,14 @@ standalone SVG width; this changes presentation only.
 Primary execution chains align their execution ports, including when card sizes
 or data ports differ. Secondary branches keep execution pin order. Linear pure
 computations move together near their consumers without merging their cards;
-shared values remain single nodes. Data placement considers both producers and
-consumers, penalizes crossing execution, and revisits groups after their
-neighbors are placed. It does not force all data onto one side. Complex cycles
-and shared dependencies can still produce wide layouts and crossing wires.
+shared values remain single nodes. Sources with one consumer are initially
+ordered by that consumer's input ports, placing the input nearest execution
+first. Data placement considers both producers and consumers, penalizes crossing
+execution and other data connections, and revisits groups after their neighbors
+are placed. Different ports on the same card still participate in crossing
+checks; sharing a card does not imply sharing a connection point. This does not
+force all data onto one side. Complex cycles and shared dependencies can still
+produce wide layouts and crossing wires.
 Unobstructed execution links curve directly between ports. Execution links that
 would intersect a card or its clearance margin use free orthogonal corridors
 with rounded bends, including back edges and self-loops. Data links retain
