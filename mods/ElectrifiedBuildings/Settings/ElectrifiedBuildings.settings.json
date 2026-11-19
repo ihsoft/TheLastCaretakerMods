@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 2,
+  "settings": [
+    { "id": "BatteryCapacityWh", "type": "number", "storage": "double", "default": 0, "minimum": 0 },
+    { "id": "BidirectionalSockets", "type": "boolean", "default": false }
+  ]
+}

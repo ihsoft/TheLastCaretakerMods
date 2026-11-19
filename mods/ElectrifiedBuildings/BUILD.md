@@ -16,8 +16,9 @@ python -B tools/run_powershell.py mods/ElectrifiedBuildings/New-ElectrifiedBuild
 ```
 
 Use the [BPT workspace workflow](../../tools/blueprint-workspace.md) to Export,
-edit, Apply and Preview `/Game/Mods/ElectrifiedBuildings/ModActor` and
-`/Game/Mods/ElectrifiedBuildings/BP_BuildingSocket` in that copy. Accept the saved
+edit, Apply and Preview `/Game/Mods/ElectrifiedBuildings/ModActor`,
+`/Game/Mods/ElectrifiedBuildings/BP_BuildingSocket` and the mod-owned
+`/Game/Mods/ElectrifiedBuildings/Settings/BP_IniFileParser` in that copy. Accept the saved
 assets and synchronized JSON with the shared
 [source-update operation](../../tools/mod-setup.md#explicit-source-update-acceptance).
 
@@ -27,9 +28,26 @@ assets and synchronized JSON with the shared
 python -B tools/run_powershell.py mods/ElectrifiedBuildings/Build-ElectrifiedBuildings.ps1 -AllowDirtySource
 ```
 
-The producer uses the shared pipeline for project preparation, unversioned cook,
-exact package validation, LogicMods ZIP and release manifest. It returns
-`archivePath`, `releaseManifestPath` and `validationSummaryPath`.
+The producer cooks and validates the shared code once, then uses the standard
+archive and manifest tools for both variants. It returns `variants` (each with
+`variant`, `archivePath`, `releaseManifestPath`) and `validationSummaryPath`.
+
+| Download title | Canonical INI | Capacity (Wh) | Bidirectional |
+| --- | --- | --- | --- |
+| ElectrifiedBuildings — Standard | `Assets/ElectrifiedBuildings.ini` | 0 | false |
+| ElectrifiedBuildings — Expanded | `Assets/Expanded/ElectrifiedBuildings.ini` | 200 | true |
+
+Outputs live in separate `Standard/` and `Expanded/` run directories. Each ZIP
+keeps the canonical `ElectrifiedBuildings-V<N>.zip` leaf name and has its own
+manifest. Publish **both** as separate, simultaneously available downloads on
+the same mod page, with the titles above and their respective player descriptions
+from [README.md](README.md). Both belong to the same mod version; neither replaces
+the other. They install to identical paths; players install one variant, never both.
+The installed INI always has the name `ElectrifiedBuildings.ini`.
+
+Validate either canonical INI after changes with `Validate-VoyageModSettings.ps1`
+and `Settings/ElectrifiedBuildings.settings.json`. Runtime fallbacks remain the
+Standard values. An ordinary build copies both maintained INIs unchanged.
 
 Optional parameters are `-OutputRoot` (a fresh directory below
 `Tmp/ElectrifiedBuildings/`), `-EngineRoot`, `-GameRoot` and
@@ -39,11 +57,12 @@ the installed Steam build differs from [game-build.json](game-build.json).
 Install the selected manifest with the shared installer:
 
 ```powershell
-python -B tools/run_powershell.py tools/Install-VoyageRelease.ps1 -ReleaseManifest <release-manifest.json> -ExpectedMod ElectrifiedBuildings -AllowDirtySource
+python -B tools/run_powershell.py tools/Install-VoyageRelease.ps1 -ReleaseManifest <release-manifest.json> -ExpectedMod ElectrifiedBuildings -SettingsArchivePath Voyage/Content/Paks/LogicMods/ElectrifiedBuildings.ini -AllowDirtySource
 ```
 
-DML must be installed. The payload is the container triplet in
-`Voyage/Content/Paks/LogicMods`. Versioning, installation and publication follow
+DML must be installed. The payload is the container triplet and the complete
+`ElectrifiedBuildings.ini` in `Voyage/Content/Paks/LogicMods`. The shared installer
+replaces the INI with the archived copy. Versioning, installation and publication follow
 the [shared release workflow](../../docs/release-and-installation-rule.md).
 
 ## Validation boundary

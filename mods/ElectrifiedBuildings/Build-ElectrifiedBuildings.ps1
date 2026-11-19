@@ -27,13 +27,26 @@ $workspace = Join-Path $repo ('Tmp/BlueprintText/ElectrifiedBuildings-build-' + 
 $packages = @(
     '/Game/Mods/ElectrifiedBuildings/ModActor'
     '/Game/Mods/ElectrifiedBuildings/BP_BuildingSocket'
+    '/Game/Mods/ElectrifiedBuildings/Settings/BP_IniFileParser'
 )
 $cooked = Invoke-VoyageModCook -ModRoot $PSScriptRoot -ProjectFile $project -EngineRoot $EngineRoot -OutputRoot $run -Packages $packages -ParserVersion 'UE5_8'
 $version = 'V' + (1 + [int]([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'version.txt')).Trim()))
-$archive = Join-Path $run ('ElectrifiedBuildings-' + $version + '.zip')
-$null = & (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') -Container $cooked.container -Archive $archive -LogicMods
-$manifestPath = Join-Path $run 'release-manifest.json'
-$null = & (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $run -Mod 'ElectrifiedBuildings' -Version $version -Container $cooked.container -Archive $archive -SourcePath $PSScriptRoot -GameRoot $GameRoot -OutputPath $manifestPath -LogicMods -AllowDirtySource:$AllowDirtySource
+$variants = foreach ($variant in @('Standard', 'Expanded')) {
+    $variantRoot = Join-Path $run $variant
+    New-Item -ItemType Directory -Path $variantRoot | Out-Null
+    foreach ($extension in @('.pak', '.ucas', '.utoc')) {
+        Copy-Item -LiteralPath ([IO.Path]::ChangeExtension($cooked.container, $extension)) -Destination $variantRoot
+    }
+    $variantContainer = Join-Path $variantRoot ([IO.Path]::GetFileName($cooked.container))
+    $archive = Join-Path $variantRoot ('ElectrifiedBuildings-' + $version + '.zip')
+    $iniSource = if ($variant -eq 'Standard') { 'Assets/ElectrifiedBuildings.ini' } else { 'Assets/Expanded/ElectrifiedBuildings.ini' }
+    $ini = Join-Path $variantRoot 'ElectrifiedBuildings.ini'
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $iniSource) -Destination $ini
+    $null = & (Join-Path $repo 'tools/New-VoyageVortexArchive.ps1') -Container $variantContainer -Archive $archive -LogicMods -AdditionalFile $ini -AdditionalDestination 'Voyage/Content/Paks/LogicMods/ElectrifiedBuildings.ini'
+    $manifestPath = Join-Path $variantRoot 'release-manifest.json'
+    $null = & (Join-Path $repo 'tools/New-VoyageReleaseManifest.ps1') -ReleaseRoot $variantRoot -Mod 'ElectrifiedBuildings' -Version $version -Container $variantContainer -Archive $archive -SourcePath $PSScriptRoot -GameRoot $GameRoot -OutputPath $manifestPath -LogicMods -AllowDirtySource:$AllowDirtySource
+    [ordered]@{ variant=$variant; archivePath=$archive; releaseManifestPath=$manifestPath }
+}
 $summaryPath = Join-Path $run 'validation-summary.json'
 [ordered]@{
     status = 'passed'
@@ -45,4 +58,4 @@ $summaryPath = Join-Path $run 'validation-summary.json'
 } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
 Remove-VoyageModScratch -ModRoot $PSScriptRoot -RunRoot $run -Path (Split-Path -Parent $project)
 Remove-VoyageModScratch -ModRoot $PSScriptRoot -RunRoot $run -Path $cooked.stage
-[ordered]@{ status='built'; archivePath=$archive; releaseManifestPath=$manifestPath; validationSummaryPath=$summaryPath } | ConvertTo-Json
+[ordered]@{ status='built'; variants=@($variants); validationSummaryPath=$summaryPath } | ConvertTo-Json -Depth 4

@@ -29,15 +29,25 @@ control. Separate building supplies are not joined.
 
 ## Inlet reserve and direction
 
-Each resolved inlet receives a 200 Wh electrical reserve through its native
-`VoyageCustomModuleComponent.MaxResources` entry. Larger existing capacity is
-preserved. Configuration changes capacity only; it never grants charge.
-Electricity is removed from that inlet's `ActiveFlowResources` set so the native
+`ModActor` reads `Paks/LogicMods/ElectrifiedBuildings.ini` relative to the game
+Content directory in `InitializeSettings`, before initial discovery on BeginPlay.
+Reloading the save creates a fresh settings snapshot; there is no file polling.
+The imported flat INI parser owns parsing and typed validation. Missing or invalid
+values use `BatteryCapacityWh=0` and `BidirectionalSockets=false`.
+
+With `BatteryCapacityWh=0`, the native inlet capacity and energy expiry are
+untouched. A positive value sets each resolved inlet's capacity in Wh through its
+native `VoyageCustomModuleComponent.MaxResources` entry.
+Configuration changes capacity only; it never grants charge.
+For a positive capacity, Electricity is removed from that inlet's `ActiveFlowResources` set so the native
 no-incoming-flow timeout does not discard stored energy. The game continues to
 charge the reserve and consume it for connected loads. Other resource entries
 are untouched.
 
-The inlet's electrical sockets allow Input, Output and Equalize: `Port.Type`
+With `BidirectionalSockets=false`, stock inlet sockets are untouched and added
+sockets receive `ST_Output` policy and default direction before finishing spawn.
+With `true`, added sockets remain bidirectional and the inlet's electrical
+sockets allow Input, Output and Equalize: `Port.Type`
 and `Port.DefaultDirection` become `ST_Any`, automatic initialization is disabled,
 and the current direction is initialized through `SetSocketDirectionType`.
 `BroadcastConnectionsChanged` notifies the native network. Configuration is
@@ -91,7 +101,7 @@ implementation or source layout. The mod has no separate cable-save format.
 ## Project dependencies
 
 [Build-ElectrifiedBuildings.ps1](Build-ElectrifiedBuildings.ps1) defines the
-two-package release inventory.
+three-package release inventory, including the mod-owned INI parser.
 The mod is additive and requires DML; editor support is excluded from the payload.
 
 [RuntimeContracts.h](Project/EditorSupport/Source/Voyage/RuntimeContracts.h)

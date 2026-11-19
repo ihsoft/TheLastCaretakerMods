@@ -218,3 +218,10 @@ public:
     UPROPERTY(BlueprintReadWrite, Category="ElectrifiedBuildings") TMap<EModuleResourceType, double> MaxResources;
     UPROPERTY(BlueprintReadWrite, Category="ElectrifiedBuildings") TSet<EModuleResourceType> ActiveFlowResources;
 };
+UCLASS()
+class VOYAGE_API UVoyageEditorBlueprintFunctionLibrary : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+public:
+    UFUNCTION(BlueprintCallable, Category="ElectrifiedBuildings") static TArray<FString> LoadFileToArray(FString InPath) { return {}; }
+};

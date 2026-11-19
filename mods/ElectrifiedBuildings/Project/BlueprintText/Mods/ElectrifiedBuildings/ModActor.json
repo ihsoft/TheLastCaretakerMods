@@ -243,6 +243,22 @@
       "FriendlyName": "\"RetainedInlets\"",
       "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
       "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"BatteryCapacityWh\"",
+      "VarGuid": "4C67D49F8B684F35AE7170ACCA49CE24",
+      "VarType": "(PinCategory=\"real\",PinSubCategory=\"double\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"BatteryCapacityWh\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
+    },
+    {
+      "VarName": "\"BidirectionalSockets\"",
+      "VarGuid": "C74FA982F1BE4A1A8AF2E69FA4757BDB",
+      "VarType": "(PinCategory=\"bool\",PinSubCategoryMemberReference=(MemberGuid=00000000000000000000000000000000),PinValueType=())",
+      "FriendlyName": "\"BidirectionalSockets\"",
+      "Category": "NSLOCTEXT(\"KismetSchema\", \"Default\", \"Default\")",
+      "PropertyFlags": "65541"
     }
   ],
   "defaults": {
@@ -273,7 +289,9 @@
     "OriginalAuto": "()",
     "OriginalDefaults": "()",
     "OriginalDirections": "()",
-    "RetainedInlets": ""
+    "RetainedInlets": "",
+    "BatteryCapacityWh": "0.000000",
+    "BidirectionalSockets": "False"
   },
   "graphs": [
     {
@@ -829,6 +847,30 @@
             }
           },
           {
+            "id": "ReadSettings",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberName=\"InitializeSettings\",MemberGuid=8B892F66B6644AF390A851CDE6C44BC0,bSelfContext=True)",
+              "NodeGuid": "3F2786CB083D402D9800199196A28683"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "BCCF49B0255C4E2A9A14EBF16FBE6D22",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "6416D5EC555547BBB9E94D357AE22D1F",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "1363BD08F2274D0981D32665DFF8C57E",
+                "type": "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15",
+                "name": "self"
+              }
+            }
+          },
+          {
             "id": "RememberOutletClass",
             "kind": "setVariable",
             "properties": {
@@ -986,7 +1028,7 @@
           },
           {
             "from": "Begin.out:then",
-            "to": "LoadBuildingSocket.in:exec"
+            "to": "ReadSettings.in:exec"
           },
           {
             "from": "ButtonClassType.out:AsActor",
@@ -1071,6 +1113,10 @@
           {
             "from": "LoadWarehouseDoor.out:then",
             "to": "KeepWarehouseDoor.in:exec"
+          },
+          {
+            "from": "ReadSettings.out:then",
+            "to": "LoadBuildingSocket.in:exec"
           },
           {
             "from": "RememberOutletClass.out:then",
@@ -1270,6 +1316,54 @@
             }
           },
           {
+            "id": "BothDirections",
+            "kind": "branch",
+            "properties": {
+              "NodeGuid": "032CBDB9337741AB9F6C631C78980264"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "65EF1BCD75B14DCDA2266665D60BDD18",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "7EC505716FFD4C438E3C26BB03873017",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "4CACBB004DC344E4B52BD329D2C77DDB",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "C5C694E5F2C04C91A84AD0711E5891F0",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            }
+          },
+          {
+            "id": "ConfiguredModes",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"BidirectionalSockets\",MemberGuid=C74FA982F1BE4A1A8AF2E69FA4757BDB,bSelfContext=True)",
+              "NodeGuid": "038E04DE4997464BA5E2E2F79988D209"
+            },
+            "pins": {
+              "out:BidirectionalSockets": {
+                "id": "73D69132F52C4B87BD9A689D172EC753",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "in:target": {
+                "id": "F2A1E901AC7940429C6A46865103A5D9",
+                "type": "p_338e87926a8aa4e93f767811e39c027d9ffd6fb0d426ad6b196f8c435ece7642",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:BidirectionalSockets": "false"
+            }
+          },
+          {
             "id": "Created",
             "kind": "FunctionResult",
             "properties": {
@@ -1291,6 +1385,43 @@
             "custom": [
               "CustomProperties UserDefinedPin (PinName=\"Outlet\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.Actor'\"),DesiredPinDirection=EGPD_Input)"
             ]
+          },
+          {
+            "id": "DefaultOutput",
+            "kind": "SetFieldsInStruct",
+            "properties": {
+              "bMadeAfterOverridePinRemoval": "True",
+              "ShowPinForProperties(0)": "(PropertyName=\"Type\",PropertyFriendlyName=\"Type\",PropertyTooltip=NSLOCTEXT(\"UObjectToolTips\", \"ModuleSocketIOData:Type\", \"A distinct mirror default preserves the authored zero-valued ST_Any\\noverride in unversioned data.\"),CategoryName=\"ElectrifiedBuildings\",bCanToggleVisibility=True)",
+              "ShowPinForProperties(1)": "(PropertyName=\"DefaultDirection\",PropertyFriendlyName=\"Default Direction\",CategoryName=\"ElectrifiedBuildings\",bShowPin=True,bCanToggleVisibility=True)",
+              "StructType": "\"/Script/CoreUObject.ScriptStruct'/Script/Voyage.ModuleSocketIOData'\"",
+              "NodeGuid": "855A9B57905D40DEBBEC4B28D58723EC"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "88F380E842694161A6877CD8D8CEF9A7",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "7B6C2B77F46A4B22A27CA0E5B598CDAD",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:StructRef": {
+                "id": "74A94C608CC84734A823BB2FD55D625D",
+                "type": "p_c20d53ece8bb630338755b3c988d8ebc3b4bf60606765b3a0ae855ba4c3af56a"
+              },
+              "out:StructOut": {
+                "id": "671853CA833E47DE8A1FB29BC48B9852",
+                "type": "p_dd1c5b5a1ff52a55474eab8af0255519f5f180018f7e548e2da93c9fb6a8aafe"
+              },
+              "in:DefaultDirection": {
+                "id": "8AA31C2770014858915F39811C94DDAF",
+                "type": "p_c27b750d30c3d5d2f1655fbd60dc25e0d068b3e5bb1f86d8da9a4a58480964ec"
+              }
+            },
+            "defaults": {
+              "in:DefaultDirection": "ST_Output"
+            }
           },
           {
             "id": "DeferredOutlet",
@@ -1592,6 +1723,25 @@
             }
           },
           {
+            "id": "HelperPort",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Voyage.ModuleSocketComponent'\",MemberName=\"Port\")",
+              "NodeGuid": "45E4440A7A48457FA0875C72BF84BF85"
+            },
+            "pins": {
+              "out:Port": {
+                "id": "EED9113E2BE34C1599CA06C610A4B704",
+                "type": "p_75e7720df8ddae62c351c1b357341e84d05a0685fb07e4a9a16d22a5a4a25f77"
+              },
+              "in:target": {
+                "id": "E5A4AF0EEB5447EE91ECAA6954DD34CB",
+                "type": "p_59a7958681e147da096482199d6bfecd2b0ccf2cb91e7e129e7d131b94494376",
+                "name": "self"
+              }
+            }
+          },
+          {
             "id": "HostName",
             "kind": "call",
             "properties": {
@@ -1741,6 +1891,43 @@
             "custom": [
               "CustomProperties UserDefinedPin (PinName=\"Outlet\",PinType=(PinCategory=\"object\",PinSubCategoryObject=\"/Script/CoreUObject.Class'/Script/Engine.Actor'\"),DesiredPinDirection=EGPD_Input)"
             ]
+          },
+          {
+            "id": "OutputOnly",
+            "kind": "SetFieldsInStruct",
+            "properties": {
+              "bMadeAfterOverridePinRemoval": "True",
+              "ShowPinForProperties(0)": "(PropertyName=\"Type\",PropertyFriendlyName=\"Type\",PropertyTooltip=NSLOCTEXT(\"UObjectToolTips\", \"ModuleSocketIOData:Type\", \"A distinct mirror default preserves the authored zero-valued ST_Any\\noverride in unversioned data.\"),CategoryName=\"ElectrifiedBuildings\",bShowPin=True,bCanToggleVisibility=True)",
+              "ShowPinForProperties(1)": "(PropertyName=\"DefaultDirection\",PropertyFriendlyName=\"Default Direction\",CategoryName=\"ElectrifiedBuildings\",bCanToggleVisibility=True)",
+              "StructType": "\"/Script/CoreUObject.ScriptStruct'/Script/Voyage.ModuleSocketIOData'\"",
+              "NodeGuid": "73C39DEB8C9C46D6A2E5BE6E480583BC"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "F7A07B25FD1048F9A6BF5F60528AD59F",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "74CEDDD7D2C348B3B79A61267D586299",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:StructRef": {
+                "id": "EBD1109AA79147B3822ADB8B5584D97C",
+                "type": "p_0c669f9aecf5c3143666a2071c37e41a0fe5c2776e2a0d18fe7a371ed4a13873"
+              },
+              "out:StructOut": {
+                "id": "D2F2872919EF4B18885D851C835C92C3",
+                "type": "p_a1c3bc0073152044d0eda9a604347ad1781400a53211a261d4c5e1d3ae5f8759"
+              },
+              "in:Type": {
+                "id": "4EE65930524B4EBC9A405CDBBA96ED77",
+                "type": "p_abdc53d0aaa731ad2aefc58246563078ee01e547a5d9f4b8192eb3254ef87cf1"
+              }
+            },
+            "defaults": {
+              "in:Type": "ST_Output"
+            }
           },
           {
             "id": "PlaceOnControl",
@@ -2151,6 +2338,22 @@
             "to": "PlaceOnControl.in:exec"
           },
           {
+            "from": "BothDirections.out:else",
+            "to": "OutputOnly.in:exec"
+          },
+          {
+            "from": "BothDirections.out:then",
+            "to": "FinishOutlet.in:exec"
+          },
+          {
+            "from": "ConfiguredModes.out:BidirectionalSockets",
+            "to": "BothDirections.in:Condition"
+          },
+          {
+            "from": "DefaultOutput.out:then",
+            "to": "FinishOutlet.in:exec"
+          },
+          {
             "from": "DeferredOutlet.out:result",
             "to": "AttachBeforeBeginPlay.in:target"
           },
@@ -2263,6 +2466,14 @@
             "to": "RenameOutlet.in:exec"
           },
           {
+            "from": "HelperPort.out:Port",
+            "to": "DefaultOutput.in:StructRef"
+          },
+          {
+            "from": "HelperPort.out:Port",
+            "to": "OutputOnly.in:StructRef"
+          },
+          {
             "from": "HostName.out:result",
             "to": "PrefixName.in:right"
           },
@@ -2289,6 +2500,10 @@
           {
             "from": "NativeSocketName.out:result",
             "to": "SocketName.in:InString"
+          },
+          {
+            "from": "OutputOnly.out:then",
+            "to": "DefaultOutput.in:exec"
           },
           {
             "from": "PlaceOnControl.out:then",
@@ -2328,7 +2543,7 @@
           },
           {
             "from": "ShareWithBuilding.out:then",
-            "to": "FinishOutlet.in:exec"
+            "to": "BothDirections.in:exec"
           },
           {
             "from": "SocketName.out:result",
@@ -2337,6 +2552,10 @@
           {
             "from": "SocketType.out:AsModule Socket Component",
             "to": "AssignSocketID.in:target"
+          },
+          {
+            "from": "SocketType.out:AsModule Socket Component",
+            "to": "HelperPort.in:target"
           },
           {
             "from": "SocketType.out:AsModule Socket Component",
@@ -11599,6 +11818,28 @@
             }
           },
           {
+            "id": "ConfiguredCapacity",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"BatteryCapacityWh\",MemberGuid=4C67D49F8B684F35AE7170ACCA49CE24,bSelfContext=True)",
+              "NodeGuid": "FAF0B574F4A248479682923069366370"
+            },
+            "pins": {
+              "out:BatteryCapacityWh": {
+                "id": "6AF50B8B855B4183933D0A98DA303F16",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:target": {
+                "id": "8C0CE81210B246ED95744BD9B2BEF9BA",
+                "type": "p_338e87926a8aa4e93f767811e39c027d9ffd6fb0d426ad6b196f8c435ece7642",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:BatteryCapacityWh": "0.0"
+            }
+          },
+          {
             "id": "Entry",
             "kind": "FunctionEntry",
             "properties": {
@@ -11918,7 +12159,7 @@
             },
             "defaults": {
               "in:left": "0.0",
-              "in:right": "200.0",
+              "in:right": "0.0",
               "out:result": "false"
             }
           },
@@ -11958,6 +12199,10 @@
           {
             "from": "BaseCapacity.out:Value",
             "to": "StillOwnedCapacity.in:left"
+          },
+          {
+            "from": "ConfiguredCapacity.out:BatteryCapacityWh",
+            "to": "StillOwnedCapacity.in:right"
           },
           {
             "from": "Entry.out:Module",
@@ -12113,11 +12358,82 @@
             }
           },
           {
-            "id": "BelowTargetCapacity",
+            "id": "CanIncrease",
+            "kind": "branch",
+            "properties": {
+              "NodeGuid": "92B2A0B19409421EA56C9C675B61A1CD"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "C4A88D468DF94A9496DE371007500BE5",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "4EB158A3C89F4D67AE595E133FDD8074",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "F8C1D3F1FD574C0289E23E77CF7AA97F",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "FB74D2203FA049D69C41ABEE4018DF8D",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            }
+          },
+          {
+            "id": "ConfiguredCapacity",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"BatteryCapacityWh\",MemberGuid=4C67D49F8B684F35AE7170ACCA49CE24,bSelfContext=True)",
+              "NodeGuid": "8B772FC996514544BBA986A8F69952A0"
+            },
+            "pins": {
+              "out:BatteryCapacityWh": {
+                "id": "162804D968354B809120BD1686F2AA77",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:target": {
+                "id": "3F18D9FD021D45049C720B5B3CFFE454",
+                "type": "p_338e87926a8aa4e93f767811e39c027d9ffd6fb0d426ad6b196f8c435ece7642",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:BatteryCapacityWh": "0.0"
+            }
+          },
+          {
+            "id": "Custom",
+            "kind": "cast",
+            "properties": {
+              "TargetType": "\"/Script/CoreUObject.Class'/Script/Voyage.VoyageCustomModuleComponent'\"",
+              "PureState": "Pure",
+              "NodeGuid": "4F045653BAD24D61A2F6B040AEBBCB1F"
+            },
+            "pins": {
+              "in:Object": {
+                "id": "1E797E74F4404676A30EACF95B331214",
+                "type": "p_5ce4ab9cc1e24fcc43bae7b944e13ce938a412ba1e9609fc1ddabed2e3284d92"
+              },
+              "out:AsVoyage Custom Module Component": {
+                "id": "91BDC3F75F514918811F18960CAECDD0",
+                "type": "p_2aa448015659d9799fc92db0bdc3a3492d7a85c43304f0769c730dfcccaf40d7"
+              },
+              "out:bSuccess": {
+                "id": "2CDD6E969B6A49C69189C17CBAA72304",
+                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
+              }
+            }
+          },
+          {
+            "id": "DifferentCapacity",
             "kind": "call",
             "properties": {
               "bDefaultsToPureFunc": "True",
-              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Less_DoubleDouble\")",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"NotEqual_DoubleDouble\")",
               "NodeGuid": "4C6971A01BAE462AA2A5D4CBDBB5EF0E"
             },
             "pins": {
@@ -12145,57 +12461,8 @@
             },
             "defaults": {
               "in:left": "0.0",
-              "in:right": "200.0",
+              "in:right": "0.0",
               "out:result": "false"
-            }
-          },
-          {
-            "id": "CanIncrease",
-            "kind": "branch",
-            "properties": {
-              "NodeGuid": "92B2A0B19409421EA56C9C675B61A1CD"
-            },
-            "pins": {
-              "in:exec": {
-                "id": "C4A88D468DF94A9496DE371007500BE5",
-                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
-                "name": "execute"
-              },
-              "in:Condition": {
-                "id": "4EB158A3C89F4D67AE595E133FDD8074",
-                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
-              },
-              "out:then": {
-                "id": "F8C1D3F1FD574C0289E23E77CF7AA97F",
-                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
-              },
-              "out:else": {
-                "id": "FB74D2203FA049D69C41ABEE4018DF8D",
-                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
-              }
-            }
-          },
-          {
-            "id": "Custom",
-            "kind": "cast",
-            "properties": {
-              "TargetType": "\"/Script/CoreUObject.Class'/Script/Voyage.VoyageCustomModuleComponent'\"",
-              "PureState": "Pure",
-              "NodeGuid": "4F045653BAD24D61A2F6B040AEBBCB1F"
-            },
-            "pins": {
-              "in:Object": {
-                "id": "1E797E74F4404676A30EACF95B331214",
-                "type": "p_5ce4ab9cc1e24fcc43bae7b944e13ce938a412ba1e9609fc1ddabed2e3284d92"
-              },
-              "out:AsVoyage Custom Module Component": {
-                "id": "91BDC3F75F514918811F18960CAECDD0",
-                "type": "p_2aa448015659d9799fc92db0bdc3a3492d7a85c43304f0769c730dfcccaf40d7"
-              },
-              "out:bSuccess": {
-                "id": "2CDD6E969B6A49C69189C17CBAA72304",
-                "type": "p_2c22bd80f64a0b3b6e71eb7d53d0fd1766ac3e76e7c8922ac221ac5494618cf9"
-              }
             }
           },
           {
@@ -12259,8 +12526,7 @@
             },
             "defaults": {
               "in:TargetMap": "Electricity",
-              "in:Key": "Electricity",
-              "in:Value": "200.0"
+              "in:Key": "Electricity"
             }
           },
           {
@@ -12451,6 +12717,43 @@
             }
           },
           {
+            "id": "PositiveCapacity",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetMathLibrary'\",MemberName=\"Greater_DoubleDouble\")",
+              "NodeGuid": "75B037BEBC4945CF8CC21ADA9CBA86B4"
+            },
+            "pins": {
+              "in:target": {
+                "id": "80E2187119234F189254628AD2E60729",
+                "type": "p_80fb213c477f67d9fdd693ff5dd42e9da1157c0ca521a24f3469fd6398d33f25",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetMathLibrary\""
+              },
+              "in:left": {
+                "id": "4865CB4E595F49DCBD4644DE1B93C8BC",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "884F4D231E0642469BA719AC3DF8306D",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "AE890452B8824765A314BBBEB32598B5",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:left": "0.0",
+              "in:right": "0.0",
+              "out:result": "false"
+            }
+          },
+          {
             "id": "Remember",
             "kind": "call",
             "properties": {
@@ -12514,6 +12817,32 @@
                 "type": "p_2aa448015659d9799fc92db0bdc3a3492d7a85c43304f0769c730dfcccaf40d7"
               }
             }
+          },
+          {
+            "id": "StorageEnabled",
+            "kind": "branch",
+            "properties": {
+              "NodeGuid": "F8F1D640FDBA43BEA22E949AA9B1724D"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "3A625088B59D456A9036F343ADE51DD1",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "A8F5D0201CA144AA9508DBC38925B325",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "DDF60E9E14F34E9A8E2B0C1128D173DA",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "3F1FB6CB8256424C814636E4A0A8A836",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
+            }
           }
         ],
         "links": [
@@ -12523,7 +12852,7 @@
           },
           {
             "from": "BaseCapacity.out:Value",
-            "to": "BelowTargetCapacity.in:left"
+            "to": "DifferentCapacity.in:left"
           },
           {
             "from": "BaseCapacity.out:Value",
@@ -12534,12 +12863,20 @@
             "to": "HasCapacity.in:Condition"
           },
           {
-            "from": "BelowTargetCapacity.out:result",
-            "to": "CanIncrease.in:Condition"
-          },
-          {
             "from": "CanIncrease.out:then",
             "to": "Remember.in:exec"
+          },
+          {
+            "from": "ConfiguredCapacity.out:BatteryCapacityWh",
+            "to": "DifferentCapacity.in:right"
+          },
+          {
+            "from": "ConfiguredCapacity.out:BatteryCapacityWh",
+            "to": "Expand.in:Value"
+          },
+          {
+            "from": "ConfiguredCapacity.out:BatteryCapacityWh",
+            "to": "PositiveCapacity.in:left"
           },
           {
             "from": "Custom.out:AsVoyage Custom Module Component",
@@ -12566,12 +12903,16 @@
             "to": "RetainEnergy.in:Module"
           },
           {
+            "from": "DifferentCapacity.out:result",
+            "to": "CanIncrease.in:Condition"
+          },
+          {
             "from": "Entry.out:Module",
             "to": "Custom.in:Object"
           },
           {
             "from": "Entry.out:then",
-            "to": "HasOwner.in:exec"
+            "to": "StorageEnabled.in:exec"
           },
           {
             "from": "Expand.out:then",
@@ -12610,12 +12951,20 @@
             "to": "HasOwner.in:Condition"
           },
           {
+            "from": "PositiveCapacity.out:result",
+            "to": "StorageEnabled.in:Condition"
+          },
+          {
             "from": "Remember.out:then",
             "to": "Expand.in:exec"
           },
           {
             "from": "RetainEnergy.out:then",
             "to": "AlreadyConfigured.in:exec"
+          },
+          {
+            "from": "StorageEnabled.out:then",
+            "to": "HasOwner.in:exec"
           }
         ]
       }
@@ -12712,6 +13061,28 @@
             },
             "defaults": {
               "out:bAutoInitialize": "false"
+            }
+          },
+          {
+            "id": "ConfiguredModes",
+            "kind": "getVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"BidirectionalSockets\",MemberGuid=C74FA982F1BE4A1A8AF2E69FA4757BDB,bSelfContext=True)",
+              "NodeGuid": "90CE67FDE4D44A15BFA2B29E100AF906"
+            },
+            "pins": {
+              "out:BidirectionalSockets": {
+                "id": "6FAA9E2751544EBBB163463F83E165AA",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "in:target": {
+                "id": "E35E45810F8443818593C5AE6F49CC6F",
+                "type": "p_338e87926a8aa4e93f767811e39c027d9ffd6fb0d426ad6b196f8c435ece7642",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:BidirectionalSockets": "false"
             }
           },
           {
@@ -13007,6 +13378,32 @@
             "defaults": {
               "in:right": "0",
               "out:result": "false"
+            }
+          },
+          {
+            "id": "ModesEnabled",
+            "kind": "branch",
+            "properties": {
+              "NodeGuid": "664CC901DE6140FAB362F6F8A3B7EF45"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "9CDA90F7031C496C80AC11FAAF49F66E",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "in:Condition": {
+                "id": "0180F05E74A6487EA45CEDE29ECF45F8",
+                "type": "p_716fc88797b5977a9059f233d24de8b221970421c9c184c038d344bc19005d9c"
+              },
+              "out:then": {
+                "id": "39B7D1DD3570426FA296B8666BABFD1A",
+                "type": "p_1b4b489e536a40f6ba9367bbc3f2a35e45343abeaee2f3b291e2c10e1cf270d5"
+              },
+              "out:else": {
+                "id": "6DD6601BC4DB444CB97C3B294B54B843",
+                "type": "p_2d12f681e12e87f1b80618871e84d0d050ce087311155b9069a84ff6fc4f3951"
+              }
             }
           },
           {
@@ -13493,6 +13890,10 @@
             "to": "RememberAuto.in:Value"
           },
           {
+            "from": "ConfiguredModes.out:BidirectionalSockets",
+            "to": "ModesEnabled.in:Condition"
+          },
+          {
             "from": "Custom.out:AsVoyage Custom Module Component",
             "to": "InletActor.in:target"
           },
@@ -13566,7 +13967,7 @@
           },
           {
             "from": "Entry.out:then",
-            "to": "HasOwner.in:exec"
+            "to": "ModesEnabled.in:exec"
           },
           {
             "from": "Equalize.out:then",
@@ -13583,6 +13984,10 @@
           {
             "from": "IsElectric.out:result",
             "to": "ElectricOnly.in:Condition"
+          },
+          {
+            "from": "ModesEnabled.out:then",
+            "to": "HasOwner.in:exec"
           },
           {
             "from": "NativeData.out:ResourceType",
@@ -15531,9 +15936,370 @@
           }
         ]
       }
+    },
+    {
+      "name": "InitializeSettings",
+      "kind": "function",
+      "properties": {
+        "GraphGuid": "8B892F66B6644AF390A851CDE6C44BC0"
+      },
+      "format": "compact",
+      "body": {
+        "nodes": [
+          {
+            "id": "Content",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetSystemLibrary'\",MemberName=\"GetProjectContentDirectory\")",
+              "NodePosX": "300",
+              "NodePosY": "380",
+              "NodeGuid": "6223480B934F4DBA9CBF64BD5D4D88A0"
+            },
+            "pins": {
+              "in:target": {
+                "id": "82665E0A5D284D0DA74DA4F74EDF2F7B",
+                "type": "p_2d9d8faa11f4a0a49f4efb43f85b5a73349ac94f340955877811f0c1f7ecd123",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetSystemLibrary\""
+              },
+              "out:result": {
+                "id": "EAA57138D27243C6ABC56F34E79CBEFE",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            }
+          },
+          {
+            "id": "CreateParser",
+            "kind": "GenericCreateObject",
+            "properties": {
+              "NodePosX": "280",
+              "NodeGuid": "63653C29B12B4766947BD0267254A4A2"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "E18F32BD0BA94999AA038DCE1BBC4F13",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "84F4372978164E4C99F30AB1337CA280",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:Class": {
+                "id": "1AC2E7C41DF04AD78D79F76BF0ECDD86",
+                "type": "p_b91f6429501f0f0b300136c6fe87e19693e653aa9ada1cc8f98323cc46b37e7f",
+                "DefaultObject": "\"/Game/Mods/ElectrifiedBuildings/Settings/BP_IniFileParser.BP_IniFileParser_C\""
+              },
+              "out:result": {
+                "id": "6B56C7463FDE48D3AD5599227F7F2539",
+                "type": "p_f938f969378d113f57a46df98df0f174d99b7d0da9b2ffe5d9684fd3a0df9bc9",
+                "name": "ReturnValue"
+              },
+              "in:target": {
+                "id": "AD95783C355147B390963EB3315C20E3",
+                "type": "p_2f092b9d5cea8ffa430df55daaf95bb35c15cf030b0a9a6824aa20f284f322fb",
+                "name": "self"
+              }
+            }
+          },
+          {
+            "id": "Entry",
+            "kind": "FunctionEntry",
+            "properties": {
+              "ExtraFlags": "201457664",
+              "FunctionReference": "(MemberName=\"InitializeSettings\")",
+              "bIsEditable": "True",
+              "NodeGuid": "D550E7F0EC6645009A551CEABBF326D1"
+            },
+            "pins": {
+              "out:then": {
+                "id": "6B0AD7F06D8E4F3DB44CDF8CA0D301B6",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              }
+            }
+          },
+          {
+            "id": "IniPath",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/CoreUObject.Class'/Script/Engine.KismetStringLibrary'\",MemberName=\"Concat_StrStr\")",
+              "NodePosX": "580",
+              "NodePosY": "380",
+              "NodeGuid": "BA5A5B1B09874C17A6DD0529888EC3F0"
+            },
+            "pins": {
+              "in:target": {
+                "id": "744EC4A092A64FC891ED71339BBBCBED",
+                "type": "p_84fc1c36e97a12a3b55ee10c0841fa18d79d198fbd47437ed579bde57cc11c87",
+                "name": "self",
+                "DefaultObject": "\"/Script/Engine.Default__KismetStringLibrary\""
+              },
+              "in:left": {
+                "id": "0C388B7AE0CA4FF99EC982E40BA9F662",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "A"
+              },
+              "in:right": {
+                "id": "289C635B0ABE43E4ABE2BD8657E79C5D",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "B"
+              },
+              "out:result": {
+                "id": "04EADD12D1954EED9241C7019B6D98EE",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701",
+                "name": "ReturnValue"
+              }
+            },
+            "defaults": {
+              "in:right": "Paks/LogicMods/ElectrifiedBuildings.ini"
+            }
+          },
+          {
+            "id": "LoadIni",
+            "kind": "call",
+            "properties": {
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/ElectrifiedBuildings/Settings/BP_IniFileParser.BP_IniFileParser_C'\",MemberName=\"Load\",MemberGuid=5AB0170045F64C70ADC51783B4CFE29D)",
+              "NodePosX": "850",
+              "NodeGuid": "CA2C808664D444F6ACBCF001FC28E2E3"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "F3125BC295F84FAC861B5900B382EDF5",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "207E78749489423483A78A7BBAF2C9AE",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:target": {
+                "id": "6E846A66C57F4EAA904A2B374A0AB4A3",
+                "type": "p_e573879b004195048e2e984e05bec1261b2110fbe78231a639aa6109c31357f7",
+                "name": "self"
+              },
+              "in:Path": {
+                "id": "B2195162B265487DA52C9C100950D395",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              }
+            }
+          },
+          {
+            "id": "ReadBatteryCapacityWh",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/ElectrifiedBuildings/Settings/BP_IniFileParser.BP_IniFileParser_C'\",MemberName=\"GetDouble\",MemberGuid=A240098E853C4AA8A8971BED4E215420)",
+              "NodePosX": "1120",
+              "NodePosY": "250",
+              "NodeGuid": "A1CB2B67994647DB9B63B9AA74E92491"
+            },
+            "pins": {
+              "in:target": {
+                "id": "4EE21A86E6A94919BA8EC597C54FF6F4",
+                "type": "p_e573879b004195048e2e984e05bec1261b2110fbe78231a639aa6109c31357f7",
+                "name": "self"
+              },
+              "in:Name": {
+                "id": "073B2949155D40758BC1A21D40B2EABC",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:Default": {
+                "id": "A5903BB6646E470488EF7E309E83A951",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "in:Min": {
+                "id": "4F26325D71204730BF4C2A8DF343608E",
+                "type": "p_079af7ef56d52bd00e4ee6260ba5d94382e0bee54de0ce21b4003387dc0b0a5f"
+              },
+              "in:Max": {
+                "id": "65085F4A46D94EAABC8DF0113F44359A",
+                "type": "p_ec3ccb52b4202f635b8427ca3e32db99cb75652ef844db43f62bf7b2b66f5723"
+              },
+              "out:result": {
+                "id": "3508983DDBCC4E208A6518242D9E92C0",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9",
+                "name": "ReturnValue"
+              }
+            },
+            "arguments": {
+              "in:Name": "BatteryCapacityWh",
+              "in:Min": "0.0"
+            },
+            "declarationDefaults": {
+              "in:Default": "0.0",
+              "in:Min": "-1.7976931348623157e308",
+              "in:Max": "1.7976931348623157e308"
+            },
+            "defaults": {
+              "out:result": "0.0"
+            }
+          },
+          {
+            "id": "ReadBidirectionalSockets",
+            "kind": "call",
+            "properties": {
+              "bDefaultsToPureFunc": "True",
+              "FunctionReference": "(MemberParent=\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/ElectrifiedBuildings/Settings/BP_IniFileParser.BP_IniFileParser_C'\",MemberName=\"GetBool\",MemberGuid=DB185E3659654D4EAA913FE3FC7E13DD)",
+              "NodePosX": "1120",
+              "NodePosY": "250",
+              "NodeGuid": "B55FD1CF8C284E6EA6F603333D2224EE"
+            },
+            "pins": {
+              "in:target": {
+                "id": "95DD5C3DB8A34FA8AB6A8760379B9BC2",
+                "type": "p_e573879b004195048e2e984e05bec1261b2110fbe78231a639aa6109c31357f7",
+                "name": "self"
+              },
+              "in:Name": {
+                "id": "946881473EA44787B1E30E004A973072",
+                "type": "p_c8d2eb4c22f2b1905d9df97819a6cf567f9dae2b80c5e32b0197929f947dd701"
+              },
+              "in:Default": {
+                "id": "889F9016E7814A23B806C8EFA296858E",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:result": {
+                "id": "1A9499EA74D741519D754369A5B5CCE5",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0",
+                "name": "ReturnValue"
+              }
+            },
+            "arguments": {
+              "in:Name": "BidirectionalSockets"
+            },
+            "declarationDefaults": {
+              "in:Default": "false"
+            },
+            "defaults": {
+              "out:result": "false"
+            }
+          },
+          {
+            "id": "StoreBatteryCapacityWh",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"BatteryCapacityWh\",MemberGuid=4C67D49F8B684F35AE7170ACCA49CE24,bSelfContext=True)",
+              "NodeGuid": "D6B04E062CAA4A0CB24616EC764D9279"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "702E6DF30A554BD691BC45D4116483F7",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "E2A2F7614F034159BAC1C5D7AB95F0D4",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:BatteryCapacityWh": {
+                "id": "B04E23C3AF7F4834B0AE14D6B6B89C57",
+                "type": "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9"
+              },
+              "out:Output_Get": {
+                "id": "6EC2C02FC77D4142878B8FB3652F184C",
+                "type": "p_3cf45d08eba2231a6ece81821b9a165836ee41d8af3f5074d6543780bae35c4a"
+              },
+              "in:target": {
+                "id": "75A1BB818A3A4374A7FB3D2815361ECF",
+                "type": "p_338e87926a8aa4e93f767811e39c027d9ffd6fb0d426ad6b196f8c435ece7642",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "in:BatteryCapacityWh": "0.0",
+              "out:Output_Get": "0.0"
+            }
+          },
+          {
+            "id": "StoreBidirectionalSockets",
+            "kind": "setVariable",
+            "properties": {
+              "VariableReference": "(MemberName=\"BidirectionalSockets\",MemberGuid=C74FA982F1BE4A1A8AF2E69FA4757BDB,bSelfContext=True)",
+              "NodeGuid": "4207B938AE0F4DFEB0F268BA5301AA72"
+            },
+            "pins": {
+              "in:exec": {
+                "id": "002606D35C694D8A9CB8DBD0A9AB9F9F",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e",
+                "name": "execute"
+              },
+              "out:then": {
+                "id": "5493426D1F304AE98E7ADCADFEE9D793",
+                "type": "p_a396bddf66679aeb43f73553548141692f67a5f31b4824e42c25ccfe33b7a85e"
+              },
+              "in:BidirectionalSockets": {
+                "id": "A53A78DE32F44A52A6166F195AD890B3",
+                "type": "p_8842a5d84da4d97373ad79429e516ea1dd86ae877965478e970abc85e93c95e0"
+              },
+              "out:Output_Get": {
+                "id": "48C1795804AF46868D040A5FF8E47914",
+                "type": "p_b2a7bd72f8a232636d2a3951831b0b467cc223b358b7bdc1ec0304d59059c0f2"
+              },
+              "in:target": {
+                "id": "F34AC7896DFF4117B2A7909132581D4A",
+                "type": "p_338e87926a8aa4e93f767811e39c027d9ffd6fb0d426ad6b196f8c435ece7642",
+                "name": "self"
+              }
+            },
+            "defaults": {
+              "out:Output_Get": "false"
+            }
+          }
+        ],
+        "links": [
+          {
+            "from": "Content.out:result",
+            "to": "IniPath.in:left"
+          },
+          {
+            "from": "CreateParser.out:result",
+            "to": "LoadIni.in:target"
+          },
+          {
+            "from": "CreateParser.out:result",
+            "to": "ReadBatteryCapacityWh.in:target"
+          },
+          {
+            "from": "CreateParser.out:result",
+            "to": "ReadBidirectionalSockets.in:target"
+          },
+          {
+            "from": "CreateParser.out:then",
+            "to": "LoadIni.in:exec"
+          },
+          {
+            "from": "Entry.out:then",
+            "to": "CreateParser.in:exec"
+          },
+          {
+            "from": "IniPath.out:result",
+            "to": "LoadIni.in:Path"
+          },
+          {
+            "from": "LoadIni.out:then",
+            "to": "StoreBatteryCapacityWh.in:exec"
+          },
+          {
+            "from": "ReadBatteryCapacityWh.out:result",
+            "to": "StoreBatteryCapacityWh.in:BatteryCapacityWh"
+          },
+          {
+            "from": "ReadBidirectionalSockets.out:result",
+            "to": "StoreBidirectionalSockets.in:BidirectionalSockets"
+          },
+          {
+            "from": "StoreBatteryCapacityWh.out:then",
+            "to": "StoreBidirectionalSockets.in:exec"
+          }
+        ]
+      }
     }
   ],
   "dependencies": [
+    "/Game/Mods/ElectrifiedBuildings/Settings/BP_IniFileParser.BP_IniFileParser_C",
     "/Script/Engine.Actor",
     "/Script/Engine.Default__BlueprintMapLibrary",
     "/Script/Engine.Default__BlueprintSetLibrary",
@@ -15549,6 +16315,27 @@
     "/Script/Voyage.VoyageModuleSubsystem"
   ],
   "pinTemplates": {
+    "p_079af7ef56d52bd00e4ee6260ba5d94382e0bee54de0ce21b4003387dc0b0a5f": {
+      "AutogeneratedDefaultValue": "\"-1.7976931348623157e308\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
     "p_329809ab00420089ce7bc1e01ab513598f30a6167be043688eaaa2cf36668e76": {
       "AutogeneratedDefaultValue": "\"/Script/Engine.ActorComponent\"",
       "PersistentGuid": "00000000000000000000000000000000",
@@ -15612,6 +16399,28 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
+    "p_3cf45d08eba2231a6ece81821b9a165836ee41d8af3f5074d6543780bae35c4a": {
+      "AutogeneratedDefaultValue": "\"0.0\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Retrieves the value of the variable, can use instead of a separate Get node\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
     "p_624a3235fc17c53e4839645b112c3c0ced4cc9149235b739e96df85d13fb7bc9": {
       "AutogeneratedDefaultValue": "\"0.0\"",
       "PersistentGuid": "00000000000000000000000000000000",
@@ -15660,6 +16469,27 @@
       "PinType.ContainerType": "None",
       "PinType.PinCategory": "\"int\"",
       "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "None",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_ec3ccb52b4202f635b8427ca3e32db99cb75652ef844db43f62bf7b2b66f5723": {
+      "AutogeneratedDefaultValue": "\"1.7976931348623157e308\"",
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"real\"",
+      "PinType.PinSubCategory": "\"double\"",
       "PinType.PinSubCategoryMemberReference": "()",
       "PinType.PinSubCategoryObject": "None",
       "PinType.PinValueType": "()",
@@ -16617,6 +17447,27 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
+    "p_e573879b004195048e2e984e05bec1261b2110fbe78231a639aa6109c31357f7": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/ElectrifiedBuildings/Settings/BP_IniFileParser.BP_IniFileParser_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
     "p_723dcd154772738b3c6355b44a5972c888e2900a96979b13c28a76084b143d15": {
       "PersistentGuid": "00000000000000000000000000000000",
       "PinFriendlyName": "NSLOCTEXT(\"K2Node\", \"Target\", \"Target\")",
@@ -16890,6 +17741,27 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
+    "p_2f092b9d5cea8ffa430df55daaf95bb35c15cf030b0a9a6824aa20f284f322fb": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinFriendlyName": "\"Outer\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.Class'/Script/CoreUObject.Object'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
     "p_fb2628edbf36a7688415e2d7e2d1d2fe80352465c3ebed5ee7d12f390b0c40aa": {
       "PersistentGuid": "00000000000000000000000000000000",
       "PinToolTip": "\"End Play Reason\\nEEndPlayReason Enum\"",
@@ -16948,6 +17820,50 @@
       "PinType.bIsWeakPointer": "False",
       "PinType.bSerializeAsSinglePrecisionFloat": "False",
       "ReferencePassThroughConnection": "DefaultEqualize 2A895B76CA5041B0B7CF3C6B12D88888",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_dd1c5b5a1ff52a55474eab8af0255519f5f180018f7e548e2da93c9fb6a8aafe": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Reference to the input struct\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/Voyage.ModuleSocketIOData'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "True",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "ReferencePassThroughConnection": "DefaultOutput 74A94C608CC84734A823BB2FD55D625D",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_a1c3bc0073152044d0eda9a604347ad1781400a53211a261d4c5e1d3ae5f8759": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinToolTip": "\"Reference to the input struct\"",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/Voyage.ModuleSocketIOData'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "True",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "ReferencePassThroughConnection": "OutputOnly EBD1109AA79147B3822ADB8B5584D97C",
       "bAdvancedView": "False",
       "bDefaultValueIsIgnored": "False",
       "bDefaultValueIsReadOnly": "False",
@@ -18362,6 +19278,26 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
+    "p_f938f969378d113f57a46df98df0f174d99b7d0da9b2ffe5d9684fd3a0df9bc9": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"object\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/Engine.BlueprintGeneratedClass'/Game/Mods/ElectrifiedBuildings/Settings/BP_IniFileParser.BP_IniFileParser_C'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "False",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
     "p_76deda82db767a70046c946059451b034fd5e732677741bdb65b994910ffb6ca": {
       "PersistentGuid": "00000000000000000000000000000000",
       "PinType.ContainerType": "None",
@@ -18684,6 +19620,48 @@
       "bNotConnectable": "False",
       "bOrphanedPin": "False"
     },
+    "p_c20d53ece8bb630338755b3c988d8ebc3b4bf60606765b3a0ae855ba4c3af56a": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/Voyage.ModuleSocketIOData'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "True",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "ReferencePassThroughConnection": "DefaultOutput 671853CA833E47DE8A1FB29BC48B9852",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
+    "p_0c669f9aecf5c3143666a2071c37e41a0fe5c2776e2a0d18fe7a371ed4a13873": {
+      "PersistentGuid": "00000000000000000000000000000000",
+      "PinType.ContainerType": "None",
+      "PinType.PinCategory": "\"struct\"",
+      "PinType.PinSubCategory": "\"\"",
+      "PinType.PinSubCategoryMemberReference": "()",
+      "PinType.PinSubCategoryObject": "\"/Script/CoreUObject.ScriptStruct'/Script/Voyage.ModuleSocketIOData'\"",
+      "PinType.PinValueType": "()",
+      "PinType.bIsConst": "False",
+      "PinType.bIsReference": "True",
+      "PinType.bIsUObjectWrapper": "False",
+      "PinType.bIsWeakPointer": "False",
+      "PinType.bSerializeAsSinglePrecisionFloat": "False",
+      "ReferencePassThroughConnection": "OutputOnly D2F2872919EF4B18885D851C835C92C3",
+      "bAdvancedView": "False",
+      "bDefaultValueIsIgnored": "False",
+      "bDefaultValueIsReadOnly": "False",
+      "bHidden": "False",
+      "bNotConnectable": "False",
+      "bOrphanedPin": "False"
+    },
     "p_4105c0027dfd316a61fab25b7ce700d32fcc23df38ad053d7430024ae3e25e31": {
       "PersistentGuid": "00000000000000000000000000000000",
       "PinType.ContainerType": "None",
@@ -18792,10 +19770,11 @@
     "event": "/Script/BlueprintGraph.K2Node_Event",
     "call": "/Script/BlueprintGraph.K2Node_CallFunction",
     "setVariable": "/Script/BlueprintGraph.K2Node_VariableSet",
-    "FunctionResult": "/Script/BlueprintGraph.K2Node_FunctionResult",
-    "FunctionEntry": "/Script/BlueprintGraph.K2Node_FunctionEntry",
     "branch": "/Script/BlueprintGraph.K2Node_IfThenElse",
     "getVariable": "/Script/BlueprintGraph.K2Node_VariableGet",
+    "FunctionResult": "/Script/BlueprintGraph.K2Node_FunctionResult",
+    "SetFieldsInStruct": "/Script/BlueprintGraph.K2Node_SetFieldsInStruct",
+    "FunctionEntry": "/Script/BlueprintGraph.K2Node_FunctionEntry",
     "cast": "/Script/BlueprintGraph.K2Node_DynamicCast",
     "CallArrayFunction": "/Script/BlueprintGraph.K2Node_CallArrayFunction",
     "MacroInstance": "/Script/BlueprintGraph.K2Node_MacroInstance",
@@ -18803,6 +19782,6 @@
     "AddDelegate": "/Script/BlueprintGraph.K2Node_AddDelegate",
     "CreateDelegate": "/Script/BlueprintGraph.K2Node_CreateDelegate",
     "RemoveDelegate": "/Script/BlueprintGraph.K2Node_RemoveDelegate",
-    "SetFieldsInStruct": "/Script/BlueprintGraph.K2Node_SetFieldsInStruct"
+    "GenericCreateObject": "/Script/BlueprintGraph.K2Node_GenericCreateObject"
   }
 }
