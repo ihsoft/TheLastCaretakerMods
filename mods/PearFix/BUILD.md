@@ -14,9 +14,10 @@ Defaults: engine `P:/UnrealEngine/UE_5.8`, game
 `P:/SteamLibrary/steamapps/common/Voyage`. Optional `-EngineRoot`, `-GameRoot`,
 and fresh `-OutputRoot` select those locations. The producer checks the pinned
 game build, prepares dependencies, cooks, verifies the exact package inventory,
-and writes `PearFix-V1.zip`, `release-manifest.json`, and `build-result.json`
-under a fresh `Tmp/PearFix/` run. It does not install or publish. Version `0`
-remains unchanged until a numbered release is published.
+and writes `PearFix-V<N+1>.zip`, `release-manifest.json`, and `build-result.json`
+under a fresh `Tmp/PearFix/` run, where N is the published version in
+`version.txt`. It does not install or publish. The published version changes
+only after publication is confirmed.
 
 Only `/Game/Mods/PearFix/ModActor` enters the container. Stock-path editor stubs
 and the native editor support module are compilation dependencies, not payload.
