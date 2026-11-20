@@ -2,6 +2,8 @@
 
 ## Next
 
+## V7
+
 - Added a compass to the Gyro.
 - Added a player-centered minimap with the stock player marker and POIs, configurable coverage and transparency.
 - Minimap opacity defaults to 0.6; setting it to 0 disables the minimap and its toggle hint while keeping Open Map available.
