@@ -21,4 +21,6 @@ Start with the [repository index](../../AGENTS.md) for shared rules and knowledg
   inputs, source-state owners and contract-specific revalidation.
 - [Gameplay validation](BUILD.md#gameplay-validation): required scenarios for
   affected behavior; distinguish them from established compatibility.
+- [Map UI](ARCHITECTURE.md#minimap-and-interactive-map): player centering,
+  coverage, opacity composition and the native interactive overlay.
 - [Changelog](CHANGELOG.md): cumulative player-facing notes for publication.

@@ -3,6 +3,10 @@
 ## Next
 
 - Added a compass to the Gyro.
+- Added a player-centered minimap with the stock player marker and POIs, configurable coverage and transparency.
+- Minimap opacity defaults to 0.6; setting it to 0 disables the minimap and its toggle hint while keeping Open Map available.
+- Added Open Map on the third action (V by default) and Toggle minimap on Inspect (G by default), with compact hints beside health and charge.
+- The full-screen map supports the stock map controls, markers, cardinal directions and cursor coordinates/distance.
 
 ## V6
 

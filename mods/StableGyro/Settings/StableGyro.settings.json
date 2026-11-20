@@ -14,8 +14,8 @@
       "id": "EnablePitchCorrection",
       "runtimeName": "EnablePitchCorrection",
       "key": "EnablePitchCorrection",
-      "type": "boolean"
-      ,"default": true
+      "type": "boolean",
+      "default": true
     },
     {
       "id": "EnableAltitudeControl",
@@ -109,6 +109,24 @@
       "default": 150.0,
       "minimum": 1.0,
       "maximum": 10000.0
+    },
+    {
+      "id": "MinimapSizeKm",
+      "runtimeName": "MinimapSizeKm",
+      "key": "MinimapSizeKm",
+      "type": "number",
+      "default": 6.0,
+      "minimum": 0.1,
+      "maximum": 10.0
+    },
+    {
+      "id": "MinimapOpacity",
+      "runtimeName": "MinimapOpacity",
+      "key": "MinimapOpacity",
+      "type": "number",
+      "default": 0.6,
+      "minimum": 0.0,
+      "maximum": 1.0
     }
   ]
 }

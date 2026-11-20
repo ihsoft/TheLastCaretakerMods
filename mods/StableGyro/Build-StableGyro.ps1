@@ -1,4 +1,4 @@
-# Build a candidate from maintained project assets through the shared pipeline.
+﻿# Build a candidate from maintained project assets through the shared pipeline.
 # Optional installation uses the same public installer as an existing candidate.
 
 [CmdletBinding()]
@@ -133,13 +133,24 @@ $packages = @(
     '/Game/Mods/StableGyro/IAV_GyroPitchReset',
     '/Game/Mods/StableGyroCtrl/BP_GyroCopter_StablePilot',
     '/Game/Mods/StableGyro/UI/WBP_StableGyroCompassHUD',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroMapHints',
     '/Game/Mods/StableGyro/UI/WBP_StableGyroCameraCompass',
     '/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroMinimap',
+    '/Game/Mods/StableGyro/UI/M_StableGyroMinimapComposite',
+    '/Game/Mods/StableGyro/UI/DA_StableGyroMap',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroMapScreen',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroMinimapDisplay',
     '/Game/Game/Input/Vehicle/IMC_GyroCopter_Keyboard',
     '/Game/Mods/StableGyro/StableGyroMooringPlatePositiveY/StaticMeshes/StableGyroMooringPlatePositiveY'
 )
-# The compass inherits TickFrequency through partial native editor mirrors.
-$taggedPackages = @('/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay')
+# These UI assets use partial native editor mirrors and need tagged properties.
+$taggedPackages = @(
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroCompassDisplay',
+    '/Game/Mods/StableGyro/UI/DA_StableGyroMap',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroMapScreen',
+    '/Game/Mods/StableGyro/UI/WBP_StableGyroMinimapDisplay'
+)
 $cook = Invoke-VoyageModCook -ModRoot $modRoot -ProjectFile $project -EngineRoot $EngineRoot `
     -OutputRoot $releaseRoot -Packages $packages -TaggedPackages $taggedPackages `
     -ParserVersion $retocCompatibilityVersion -GameRoot $GameRoot -Retoc $Retoc `

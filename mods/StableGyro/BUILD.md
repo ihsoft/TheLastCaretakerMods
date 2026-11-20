@@ -3,10 +3,9 @@
 ## Source layout
 
 `Project/Voyage.uproject` and `Project/Content/` own the maintained Unreal assets.
-`Project/BlueprintText/` mirrors their `/Game/` paths, including the two HUD
-dependency stubs under `UI/Game/` and the item's full DataAsset property snapshot at
-`Data/Assets/Modules/DA_Item_Module_GyroCopter.json`. Native declarations and their dependency
-declaration live under `Project/EditorSupport/` and `Project/EditorSupport.json`.
+BPT exports and previews stay in temporary workspaces under `Tmp/BlueprintText/`;
+there is no maintained JSON mirror in the project. Native declarations and their
+dependency declaration live under `Project/EditorSupport/` and `Project/EditorSupport.json`.
 `Project/Config/` contains deliberately maintained configuration. Only
 `Project/Intermediate/` is ignored temporary project storage.
 
@@ -35,9 +34,9 @@ including intended uncommitted edits. The
 [shared copy operation](../../tools/mod-setup.md#shared-mod-pipeline) preserves
 the declared native dependencies at the new location. Use that project with the shared
 [BPT workflow](../../tools/blueprint-workspace.md); BPT preparation installs its
-own editor plugin into the copy. Export/apply and synchronize the corresponding
-tracked JSON when accepting asset changes. Check concurrent source edits and
-transfer only intentionally changed assets, text and configuration. Do not open
+own editor plugin into the copy. Saved assets use native Unreal nodes and do not
+require BPT to load or compile. Check concurrent source edits and
+transfer only intentionally changed assets and maintained configuration. Do not open
 the maintained source project in Unreal or copy an entire working project back.
 
 ### Item authoring
@@ -60,9 +59,9 @@ mod override, edit `objects["."].properties.DroppedActor.value` using the export
 native text syntax. This is a soft object reference containing a generated-class
 path. BPT edits saved objects without reconstructing the item or generator.
 The current mod contract changes only `DroppedActor`; `DroppedMesh` remains null.
-Accept the deliberately changed `.uasset` and synchronized property JSON into
-their corresponding `Project/Content/` and `Project/BlueprintText/` paths after
-checking concurrent edits. A read-only adoption/export needs only the JSON.
+Accept the deliberately changed `.uasset` into its `Project/Content/` path after
+checking concurrent edits. Property JSON remains in the temporary workspace;
+a read-only export does not change maintained source.
 
 Keep `Build/Item.patch.json`'s replacement value consistent with an accepted
 intentional change to `DroppedActor`, so a later stock refresh reapplies that
@@ -108,9 +107,17 @@ alone does not change the saved asset. The build does not apply refresh recipes
 or BPT edits.
 The producer supplies one package inventory to the
 [shared cook and container stages](../../tools/mod-setup.md#cook-and-container-stages).
-The compass display selects tagged serialization for the reason recorded in
+The compass display and selected map UI assets use tagged serialization for the
+reason and package list recorded in
 [release serialization](ARCHITECTURE.md#release-serialization); the other packages
 use unversioned properties. No local cook or container implementation is needed.
+
+The minimap's owned UI composite material requires inline shader code: keep
+`bShareMaterialShaderCode=False` and `bSharedMaterialNativeLibraries=False` in
+`Config/DefaultGame.ini` under `UnrealEd.ProjectPackagingSettings`. The release
+does not carry a separate shader library. A material package and a successful
+container inventory check alone do not establish shader availability in game;
+see the shared [material packaging contract](../../docs/voyage-cooked-asset-toolchain-knowledge.md#self-contained-materials-in-additive-mods).
 
 The result contains `status: built`, `archivePath`, `releaseManifestPath` and
 `validationSummaryPath`. The common `release-manifest.json` owns candidate
@@ -169,10 +176,8 @@ The item updater replaces the item and its owned crafting-generator stub using
 [shared source-build marker](../../tools/mod-setup.md#asset-source-build-markers).
 A stale saved item override can otherwise mask changes
 to stock item data. Unsupported stock data fails in the shared item tool.
-Before acceptance, it exports the refreshed DataAsset through BPT and includes
-the synchronized property JSON in the same guarded source update. A failed
-export stops acceptance; the previous maintained item and snapshot stay together.
-The updater accepts only the item/generator pair, the item's property JSON and its source state. If the
+The updater accepts only the item/generator pair and its source state. For a
+property review, export the saved item through BPT in a fresh working copy. If the
 shared updater creates a missing dependency or string table, removes a dependency,
 or changes another content file, acceptance fails before any maintained-source
 write. The working copy remains for a separately reviewed dependency repair.
@@ -225,7 +230,7 @@ python -B tools/run_powershell.py tools/Validate-VoyageModSettings.ps1 `
 ```
 
 The validator does not create members or rewrite graphs. Ordinary builds copy
-the INI unchanged. Synchronize BPT and build after accepting the asset changes;
+the INI unchanged. Build after accepting the asset changes;
 changed runtime loaders require their graph and game checks.
 
 To remove an option, remove its INI entry, schema entry and every consumer.
@@ -249,3 +254,6 @@ every game build. Established applicability remains in
 | Horizontal damping | Climb, descent, neutral, directional and reversing input; contact release, no Z modification, and no horizontal-state reset from the vertical Collective gate. |
 | Four-port/cargo lifecycle | Four simultaneous connections, short/held cargo input and once-per-press behavior, shared live hold threshold in input/hint, saved extra connections loaded with four-port mode disabled, late restoration and native two-port behavior in disabled mode. |
 | Mesh/HUD/fuel/settings | Plate placement, detail/material appearance; compass heading from camera and visibility with the vehicle HUD; fuel capacity/consumption without refilling or losing stored resources; missing/invalid settings and next-entry reload. Installation must copy the complete candidate INI. |
+| Minimap controls and hints | Inspect press hides/shows only the minimap once per press; both Open Map and Toggle minimap cards remain beside health/charge without obstructing notifications. Check that the shared horizontal row packs cards by their content width without overlap or a fixed inter-card gap; remapped keys, held Inspect, exit/re-entry, fullscreen map open/close from both minimap states, and HUD/UI scaling. |
+| Map rendering and settings | Player marker stays centered during flight; POIs and explored regions remain visible; no ship paths/course drawing escapes the map. Coverage 6 means about 3 km to each edge. Opacity affects background and icons together, including after re-entry; compare positive opacity, zero and one, plus missing/invalid INI values. Zero must prevent minimap creation and hide Toggle while Open Map still works; recreate the HUD/restart after settings edits. |
+| Interactive map | Third action opens the complete stock map chrome; test pan/zoom, markers, cursor coordinates/distance, Escape close and restored gyro controls/HUD. The full-screen view must not follow the pawn while being panned or inherit passive-map opacity. |
