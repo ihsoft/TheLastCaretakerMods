@@ -34,6 +34,40 @@ owned display references at initialization and let the vehicle HUD control
 visibility. Avoid a second native updater competing for the same presentation.
 This does not establish another vehicle's HUD ownership or lifecycle.
 
+## Embedded maps and full-screen map overlays
+
+The stock `/Game/UI/Game/Locator/BP_MinimapWidget` supplies the map display.
+`/Game/UI/Screen/Recycler/BP_VoyageMapOverlayWidget` supplies a complete screen:
+its `ScreenWidget` map, standard action hints, cardinal directions, and cursor
+coordinates/distance. Choose the display for an embedded HUD map and the full
+overlay when those screen controls are needed.
+
+A child of the stock overlay can be selected by a mod-owned
+`VoyageOverlayWidgetData` and opened through
+`VoyagePlayerController.ShowOverlayWidget(data, Overlay)`. This path has game
+confirmation for a vehicle map and retains the native overlay/input lifecycle
+and Escape close behavior. Set the map's `Source` and initial center from the
+intended pawn; continuously centering a full-screen map would compete with user
+panning. A following HUD map and a pannable screen therefore need separate
+instances and update policies. Do not assume the action that opened the screen
+remains available from its vehicle context while Overlay mode is active.
+
+### Map extent and marker selection
+
+Native inspection on Steam build `25982825` establishes square map dimensions
+of `1,000,000 cm` per side and a visible world extent of `Dimensions * Zoom`.
+Thus the side length in kilometres is `10 * Zoom`, not a radius.
+`SetZoom` clamps to `0.01..1`, corresponding to `0.1..10 km` across.
+`SetCenterLocation` takes world XY coordinates in centimetres.
+
+The inspected stock minimap excludes `Player` through `TypeExcludeFilters`.
+Remove that exclusion when the existing player marker should be visible;
+there is no need to draw a replacement marker. `PathLineColor` and
+`ForwardLineColor` with zero alpha, together with zero corresponding thickness,
+disable the trajectory and heading lines without replacing the stock widget.
+These fields control presentation; they do not establish availability of every
+POI or another locator mode's filtering behavior.
+
 ## Actor attachment and save restoration
 
 In an observed stock snapshot,
@@ -321,6 +355,25 @@ not establish that `InvalidationBox` alone fixes the issue, that all runtime
    changing indicators and animations. Video frame inspection can distinguish
    a brief missing row from overlapping text; static readback cannot.
 
+### A compact row of selected action cards
+
+For a small independent row, a game-confirmed composition uses one stock
+`/Game/UI/Game/Inputs/BP_ButtonInfo_Vertical_Container` per action, each with
+`ButtonInfoWidgetClass` explicitly set to `BP_ButtonInfoDetailed_Vertical` from
+the same directory. Call `SetActions(context, action, overrides, recreate=true)`
+with a concrete action and a one-element override array for that same action.
+The stock cards retain action descriptions and key presentation; the mod owns
+only their selection and outer layout.
+
+Add those containers to a mod-owned UMG `HorizontalBox` with Auto child slots.
+When the row is a Canvas child, enable auto-size on its Canvas slot. Desired
+card widths then determine placement instead of independent fixed X offsets.
+The inspected detailed-vertical card already has two logical units of outer
+content padding on each side; account for those margins before adding row gaps.
+The game check covers two keyboard action cards and their spacing, not every
+localization, remapping or device transition. It does not establish the behavior
+of passing a null action with multiple overrides to another container.
+
 ## Selecting a complete vehicle HUD
 
 The full HUD class and the standard provided-action rows are separate
@@ -355,6 +408,28 @@ description text, and localized label are fragile identities.
 An `AddToViewport` overlay is useful as a lifecycle marker but is not equivalent
 to a standard hint: it can ignore pause hiding, rebindings, input-device glyphs,
 layout rules, and other native HUD state.
+
+### Uniform opacity across nested retainers
+
+An inherited widget can composite part of its UI through a `RetainerBox`, so
+changing an outer widget's render opacity need not fade every layer uniformly.
+On Steam build `25982825`, `BP_MinimapWidget` uses the opaque
+`M_Terminal_Retainer_Inst_Map` effect internally; a game check left its background
+opaque while other elements faded through the outer `SetRenderOpacity`.
+
+A verified composition for this case is an outer, mod-owned `RetainerBox` with
+a UI-domain `AlphaComposite` effect material. Bind its render texture parameter
+to the same name sampled by the material. Multiply both sampled RGB and sampled
+alpha by the opacity scalar; changing alpha alone does not scale the
+premultiplied color contribution. Parameter names belong to the material,
+not to a required game interface.
+
+Obtain the effect instance through `GetEffectMaterial` and set the scalar with
+`SetScalarParameterValue` in `Construct`, after Slate creation. A fixed setting
+does not require a Tick update. This is an option for a demonstrated compositing
+boundary, not a requirement to wrap every HUD. Ship the material under the
+[self-contained shader contract](voyage-cooked-asset-toolchain-knowledge.md#self-contained-materials-in-additive-mods);
+serialized widget/material references alone do not prove shader delivery.
 
 ### Cooked widget animations
 

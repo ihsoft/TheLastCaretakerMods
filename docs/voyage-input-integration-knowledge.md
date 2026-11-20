@@ -143,6 +143,9 @@ Standard hints are driven by provided-action records, not merely by Enhanced
 Input bindings. Multiple input contexts do not imply multiple hint widgets:
 the stock renderer can show the provider's complete action list. Keep the
 renderer count tied to the intended UI, not the number of input components.
+For a small independently placed subset, the
+[compact action-card row](vehicle-and-hud-modding-patterns-knowledge.md#a-compact-row-of-selected-action-cards)
+describes stock card selection and layout without fixed per-card positions.
 
 Validate remapping, settings changes, repeated possession and release, and
 device switching as distinct behaviors. A successful keyboard test alone does
